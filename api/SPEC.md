@@ -53,8 +53,8 @@ authentication. There are multiple methods for authentication
 that can be enabled (see
 [authentication](#reference/authentication)).
 
-The process for authentication across multiple requests is
-still TODO. Please assume this already works for now.
+Authentication is done with the login endpoint. The login endpoint
+returns an access token that is set as the `token` cookie.
 
 ## Error Response
 
@@ -171,10 +171,12 @@ shown to the user as documentation.
 
         [{
           "name": "token",
-          "help": "Multi-line description, can contain '\n'."
+          "help": "base64-encoded human-friendly docs",
+          "keys": ["token"]
         }, {
           "name": "password",
-          "help": "Another multi-line description."
+          "help": "base64-encoded human-friendly docs",
+          "keys": ["username", "password"]
         }]
 
 ## Single Auth Method [/sys/auth/{id}]
@@ -209,6 +211,26 @@ Disables an authentication method. Previously authenticated sessions
 are immediately invalidated.
 
 + Response 204
+
+## Login [/sys/login]
+### Login [PUT]
+
+Authenticate with Vault, returning an access token to use for
+future requests. This access token should be passed in as a cookie
+for future requests.
+
+It can be renewed like any other Vault secret, and will expire
+like any other Vault secret.
+
+The token will also be set in the standard `Set-Cookie` headers.
+
++ Response 200 (application/json)
+
+        {
+            "vault_id": "UUID",
+            "lease_duration": 3600,
+            "key": "value"
+        }
 
 # Group Mounts
 
@@ -309,8 +331,18 @@ fields which are guaranteed to exist:
 - `vault_id` (string) - A unique ID used for renewal and
   revocation.
 
+- `renewable` (bool) - If true, then this key can be renewed.
+  If a key can't be renewed, then a new key must be requested
+  after the lease duration period.
+
 - `lease_duration` (int) - The time in seconds that a secret is
   valid for before it must be renewed.
+
+- `lease_duration_max` (int) - The maximum amount of time in
+  seconds that a secret is valid for. This will always be
+  greater than or equal to `lease_duration`. The difference
+  between this and `lease_duration` is an overlap window
+  where multiple keys may be valid.
 
 If the return value is not a secret, then the return structure
 is an arbitrary JSON object.
@@ -337,3 +369,116 @@ the logical backend.
         }
 
 + Response 204
+
+# Group Lease Management
+
+## Renew Key [/sys/renew/{id}]
+
++ Parameters
+    + id (required, string) ... The `vault_id` of the secret
+      to renew.
+
+### Renew [PUT]
+
++ Response 200 (application/json)
+
+        {
+            "vault_id": "...",
+            "lease_duration": 3600,
+            "access_key": "foo",
+            "secret_key": "bar"
+        }
+
+## Revoke Key [/sys/revoke/{id}]
+
++ Parameters
+    + id (required, string) ... The `vault_id` of the secret
+      to revoke.
+
+### Revoke [PUT]
+
++ Response 204
+
+# Group Backend: AWS
+
+## Root Key [/aws/root]
+### Set the Key [PUT]
+
+Set the root key that the logical backend will use to create
+new secrets, IAM policies, etc.
+
++ Request (application/json)
+
+        {
+            "access_key": "key",
+            "secret_key": "key",
+            "region": "us-east-1"
+        }
+
++ Response 204
+
+## Policies [/aws/policies]
+### List Policies [GET]
+
+List all the policies that can be used to create keys.
+
++ Response 200 (application/json)
+
+        [{
+            "name": "root",
+            "description": "Root access"
+        }, {
+            "name": "web-deploy",
+            "description": "Enough permissions to deploy the web app."
+        }]
+
+## Single Policy [/aws/policies/{name}]
+
++ Parameters
+    + name (required, string) ... Name of the policy.
+
+### Read [GET]
+
+Read a policy.
+
++ Response 200 (application/json)
+
+        {
+            "policy": "base64-encoded policy"
+        }
+
+### Upsert [PUT]
+
+Create or update a policy.
+
++ Request (application/json)
+
+        {
+            "policy": "base64-encoded policy"
+        }
+
++ Response 204
+
+### Delete [DELETE]
+
+Delete the policy with the given name.
+
++ Response 204
+
+## Generate Access Keys [/aws/keys/{policy}]
+### Create [GET]
+
+This generates a new keypair for the given policy.
+
++ Parameters
+    + policy (required, string) ... The policy under which to create
+      the key pair.
+
++ Response 200 (application/json)
+
+        {
+            "vault_id": "...",
+            "lease_duration": 3600,
+            "access_key": "foo",
+            "secret_key": "bar"
+        }
