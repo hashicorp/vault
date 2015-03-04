@@ -24,15 +24,17 @@ func init() {
 			}, nil
 		},
 
-		/*
-			"get": func() (cli.Command, error) {
-				return nil, nil
-			},
+		"get": func() (cli.Command, error) {
+			return &command.GetCommand{
+				Meta: meta,
+			}, nil
+		},
 
-			"put": func() (cli.Command, error) {
-				return nil, nil
-			},
-		*/
+		"put": func() (cli.Command, error) {
+			return &command.PutCommand{
+				Meta: meta,
+			}, nil
+		},
 
 		"seal": func() (cli.Command, error) {
 			return &command.SealCommand{
