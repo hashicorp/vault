@@ -1,7 +1,10 @@
 package command
 
 import (
+	"os"
 	"strings"
+
+	"github.com/hashicorp/vault/helper/password"
 )
 
 // UnsealCommand is a Command that unseals the vault.
@@ -16,6 +19,12 @@ func (c *UnsealCommand) Run(args []string) int {
 		return 1
 	}
 
+	value, err := password.Read(os.Stdin)
+	if err != nil {
+		return 1
+	}
+
+	c.Ui.Output(value)
 	return 0
 }
 
