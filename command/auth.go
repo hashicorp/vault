@@ -37,7 +37,21 @@ Usage: vault auth [options]
   This command outputs the mechanism vault is using along with documentation
   for how to authenticate.
 
-Options:
+General Options:
+
+  -address=TODO           The address of the Vault server.
+
+  -ca-cert=path           Path to a PEM encoded CA cert file to use to
+                          verify the Vault server SSL certificate.
+
+  -ca-path=path           Path to a directory of PEM encoded CA cert files
+                          to verify the Vault server SSL certificate. If both
+                          -ca-cert and -ca-path are specified, -ca-path is used.
+
+  -insecure               Do not verify TLS certificate. This is highly
+                          not recommended.
+
+Auth Options:
 
   -method=name    Outputs help for the authentication method with the given
                   name for the remote server. If this authentication method
