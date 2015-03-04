@@ -11,9 +11,37 @@ import (
 var Commands map[string]cli.CommandFactory
 
 func init() {
-	ui := &cli.BasicUi{Writer: os.Stdout}
+	ui := &cli.BasicUi{
+		Writer:      os.Stdout,
+		ErrorWriter: os.Stderr,
+	}
+	meta := command.Meta{Ui: ui}
 
 	Commands = map[string]cli.CommandFactory{
+		"auth": func() (cli.Command, error) {
+			return &command.AuthCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		/*
+			"get": func() (cli.Command, error) {
+				return nil, nil
+			},
+
+			"put": func() (cli.Command, error) {
+				return nil, nil
+			},
+
+			"seal": func() (cli.Command, error) {
+				return nil, nil
+			},
+
+			"unseal": func() (cli.Command, error) {
+				return nil, nil
+			},
+		*/
+
 		"version": func() (cli.Command, error) {
 			ver := Version
 			rel := VersionPrerelease
