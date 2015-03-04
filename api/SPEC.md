@@ -4,6 +4,11 @@ FORMAT: 1A
 
 The Vault API gives you full access to the Vault project.
 
+If you're browsing this API specifiction in GitHub or in raw
+format, please excuse some of the odd formatting. This document
+is in api-blueprint format that is read by viewers such as
+Apiary.
+
 ## Sealed vs. Unsealed
 
 Whenever an individual Vault server is started, it is started
@@ -35,6 +40,12 @@ distinct operators to use the unseal API (or more likely the
 have to transmit their key in order to unseal the vault in a
 distributed fashion.
 
+## Transport
+
+The API is expected to be accessed over a TLS connection at
+all times, with a valid certificate that is verified by a well
+behaved client.
+
 ## Authentication
 
 Once the Vault is unsealed, every other operation requires
@@ -45,12 +56,27 @@ that can be enabled (see
 The process for authentication across multiple requests is
 still TODO. Please assume this already works for now.
 
+## Error Response
+
+A common JSON structure is always returned to return errors:
+
+        {
+            "errors": [
+                "message",
+                "another message"
+            ]
+        }
+
+This structure will be sent down for any non-20x HTTP status.
+
 ## HTTP Status Codes
 
 The following HTTP status codes are used throughout the API.
 
 - `200` - Success with data.
 - `204` - Success, no data returned.
+- `400` - Invalid request, missing or invalid data. See the
+   "validation" section for more details on the error response.
 - `401` - Unauthorized, your authentication details are either
    incorrect or you don't have access to this feature.
 - `404` - Invalid path. This can both mean that the path truly
