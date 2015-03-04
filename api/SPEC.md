@@ -170,11 +170,13 @@ shown to the user as documentation.
 + Response 200 (application/json)
 
         [{
-          "name": "token",
+          "id": "token",
+          "type": "token",
           "help": "base64-encoded human-friendly docs",
           "keys": ["token"]
         }, {
-          "name": "password",
+          "id": "password",
+          "type": "password",
           "help": "base64-encoded human-friendly docs",
           "keys": ["username", "password"]
         }]
@@ -182,7 +184,7 @@ shown to the user as documentation.
 ## Single Auth Method [/sys/auth/{id}]
 
 + Parameters
-    + id (required, string) ... The name of the auth method.
+    + id (required, string) ... The ID of the auth method.
 
 ### Enable an auth method [PUT]
 Enables an authentication method.
@@ -193,13 +195,13 @@ authentication method you're enabling in order to determine what
 parameters you must give it.
 
 If an authentication method is already enabled, then this can be
-used to change the configuration. Multiple authentication methods
-with the same type but different settings cannot be enabled at this
-time in Vault.
+used to change the configuration, including even the type of
+the configuration.
 
 + Request (application/json)
 
         {
+            "type": "type",
             "key": "value",
             "key2": "value2"
         }
@@ -219,10 +221,14 @@ Authenticate with Vault, returning an access token to use for
 future requests. This access token should be passed in as a cookie
 for future requests.
 
-It can be renewed like any other Vault secret, and will expire
-like any other Vault secret.
+The request body of this request is arbitrary depending on the
+authentication method being used above. Authentication strategies
+are treated like middleware: each one will be tried in turn, and
+if one succeeds, then the user will be authentiated. Otherwise,
+it is an authentication failure.
 
-The token will also be set in the standard `Set-Cookie` headers.
+The response can be treated like any normal Vault secret:
+renewed, revoked, etc.
 
 + Response 200 (application/json)
 
@@ -231,6 +237,49 @@ The token will also be set in the standard `Set-Cookie` headers.
             "lease_duration": 3600,
             "key": "value"
         }
+
+# Group ACLs
+
+ACLs are named permission sets that identities returned by
+credential stores are bound to. This separates _authetication_
+from _authorization_.
+
+## ACLs [/sys/acls]
+### List all ACLs [GET]
+
+List all the ACLs.
+
++ Response 200 (application/json)
+
+        [{
+            "id": "root",
+            "acl": "base64-encoded HCL describing ACL"
+        }]
+
+## Single ACL [/sys/acls/{id}]
+
++ Parameters
+    + id (required, string) ... The ID of the ACL
+
+### Upsert [PUT]
+
+Create or update an ACL with the given ID.
+
++ Request (application/json)
+
+        {
+            "acl": "base64-encoded HCL"
+        }
+
++ Response 204
+
+### Delete [DELETE]
+
+Delete an ACL with the given ID. Any identities bound to this
+ACL will immediately become "deny all" despite already being
+authenticated.
+
++ Response 204
 
 # Group Mounts
 
