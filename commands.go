@@ -36,11 +36,13 @@ func init() {
 			"seal": func() (cli.Command, error) {
 				return nil, nil
 			},
-
-			"unseal": func() (cli.Command, error) {
-				return nil, nil
-			},
 		*/
+
+		"unseal": func() (cli.Command, error) {
+			return &command.UnsealCommand{
+				Meta: meta,
+			}, nil
+		},
 
 		"version": func() (cli.Command, error) {
 			ver := Version
