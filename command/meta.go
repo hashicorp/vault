@@ -22,6 +22,12 @@ const (
 // Vault command inherits.
 type Meta struct {
 	Ui cli.Ui
+
+	// These are set by the command line flags.
+	flagAddress  string
+	flagCACert   string
+	flagCAPath   string
+	flagInsecure bool
 }
 
 // FlagSet returns a FlagSet with the common flags that every
@@ -30,6 +36,15 @@ type Meta struct {
 // server settings on the commands that don't talk to a server.
 func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 	f := flag.NewFlagSet(n, flag.ContinueOnError)
+
+	// FlagSetServer tells us to enable the settings for selecting
+	// the server information.
+	if fs&FlagSetServer != 0 {
+		f.StringVar(&m.flagAddress, "address", "", "")
+		f.StringVar(&m.flagCACert, "ca-cert", "", "")
+		f.StringVar(&m.flagCAPath, "ca-path", "", "")
+		f.BoolVar(&m.flagInsecure, "insecure", false, "")
+	}
 
 	// Create an io.Writer that writes to our Ui properly for errors.
 	// This is kind of a hack, but it does the job. Basically: create
