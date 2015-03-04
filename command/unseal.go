@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -21,6 +22,13 @@ func (c *UnsealCommand) Run(args []string) int {
 
 	value, err := password.Read(os.Stdin)
 	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error attempting to ask for password. The raw error message\n"+
+				"is shown below, but the most common reason for this error is\n"+
+				"that you attempted to pipe a value into unseal. This is not\n"+
+				"allowed. The value must be typed directly into the command\n"+
+				"after it is executed.\n\n"+
+				"Raw error: %s", err))
 		return 1
 	}
 
