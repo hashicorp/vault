@@ -20,7 +20,6 @@ func (c *VersionCommand) Help() string {
 }
 
 func (c *VersionCommand) Run(_ []string) int {
-
 	var versionString bytes.Buffer
 
 	fmt.Fprintf(&versionString, "Vault v%s", c.Version)
