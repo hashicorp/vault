@@ -14,7 +14,9 @@ type UnsealCommand struct {
 }
 
 func (c *UnsealCommand) Run(args []string) int {
+	var reset bool
 	flags := c.Meta.FlagSet("unseal", FlagSetDefault)
+	flags.BoolVar(&reset, "reset", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -66,6 +68,11 @@ General Options:
   -insecure               Do not verify TLS certificate. This is highly
                           not recommended. This is especially not recommended
                           for unsealing a vault.
+
+Unseal Options:
+
+  -reset                  Reset the unsealing process by throwing away
+                          prior keys in process to unseal the vault.
 
 `
 	return strings.TrimSpace(helpText)

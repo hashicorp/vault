@@ -32,11 +32,13 @@ func init() {
 			"put": func() (cli.Command, error) {
 				return nil, nil
 			},
-
-			"seal": func() (cli.Command, error) {
-				return nil, nil
-			},
 		*/
+
+		"seal": func() (cli.Command, error) {
+			return &command.SealCommand{
+				Meta: meta,
+			}, nil
+		},
 
 		"unseal": func() (cli.Command, error) {
 			return &command.UnsealCommand{
