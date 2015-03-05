@@ -16,7 +16,7 @@ type InmemBackend struct {
 }
 
 // NewInmem constructs a new in-memory backend
-func newInmem() *InmemBackend {
+func NewInmem() *InmemBackend {
 	in := &InmemBackend{
 		root: radix.New(),
 	}

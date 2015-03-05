@@ -46,7 +46,7 @@ func NewBackend(t string, conf map[string]string) (Backend, error) {
 // be used with NewBackend.
 var BuiltinBackends = map[string]Factory{
 	"inmem": func(map[string]string) (Backend, error) {
-		return newInmem(), nil
+		return NewInmem(), nil
 	},
 	"consul": newConsulBackend,
 	"file":   newFileBackend,
