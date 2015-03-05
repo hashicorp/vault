@@ -1,6 +1,9 @@
 package vault
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // LogicalBackend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
@@ -55,6 +58,24 @@ type Request struct {
 // Response is a struct that stores the response of a request.
 // It is used to abstract the details of the higher level request protocol.
 type Response struct {
+	// IsSecret is used to indicate this is secret material instead of policy or configuration.
+	// Non-secrets never have a VaultID or renewable properties.
+	IsSecret bool
+
+	// The lease settings if applicable.
+	Lease *Lease
+
+	// Response data is an opaque map that must have string keys.
+	Data map[string]interface{}
+}
+
+// Lease is used to provide more information about the lease
+type Lease struct {
+	VaultID      string        // VaultID is the unique identifier used for renewal and revocation
+	Renewable    bool          // Is the VaultID renewable
+	Duration     time.Duration // Current lease duration
+	MaxDuration  time.Duration // Maximum lease duration
+	MaxIncrement time.Duration // Maximum increment to lease duration
 }
 
 // Factory is the factory function to create a logical backend.
