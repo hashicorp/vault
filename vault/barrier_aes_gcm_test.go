@@ -7,6 +7,21 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
+// mockBarrier returns a physical backend, security barrier, and master key
+func mockBarrier(t *testing.T) (physical.Backend, SecurityBarrier, []byte) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	b.Initialize(key)
+	b.Unseal(key)
+	return inm, b, key
+}
+
 func TestAESGCMBarrier_Basic(t *testing.T) {
 	inm := physical.NewInmem()
 	b, err := NewAESGCMBarrier(inm)
