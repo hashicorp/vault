@@ -1,5 +1,7 @@
 package physical
 
+import "fmt"
+
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
 // datd outside of Vault. As such, it is completely untrusted,
@@ -25,4 +27,27 @@ type Backend interface {
 type Entry struct {
 	Key   string
 	Value []byte
+}
+
+// Factory is the factory function to create a physical backend.
+type Factory func(map[string]string) (Backend, error)
+
+// NewBackend returns a new Bckend with the given type and configuration.
+// The backend is looked up in the BuiltinBackends variable.
+func NewBackend(t string, conf map[string]string) (Backend, error) {
+	f, ok := BuiltinBackends[t]
+	if !ok {
+		return nil, fmt.Errorf("unknown physical backend type: %s", t)
+	}
+	return f(conf)
+}
+
+// BuiltinBackends is the list of built-in physical backends that can
+// be used with NewBackend.
+var BuiltinBackends = map[string]Factory{
+	"inmem": func(map[string]string) (Backend, error) {
+		return newInmem(), nil
+	},
+	"consul": newConsulBackend,
+	"file":   newFileBackend,
 }

@@ -6,9 +6,8 @@ package physical
 type FileBackend struct {
 }
 
-// NewFileBackend constructs a Filebackend using the given directory
-func NewFileBackend(dir string) (*FileBackend, error) {
+// newFileBackend constructs a Filebackend using the given directory
+func newFileBackend(conf map[string]string) (Backend, error) {
 	// TODO:
-	f := &FileBackend{}
-	return f, nil
+	return nil, nil
 }

@@ -5,6 +5,22 @@ import (
 	"testing"
 )
 
+func testNewBackend(t *testing.T) {
+	_, err := NewBackend("foobar", nil)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	b, err := NewBackend("inmem", nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if b == nil {
+		t.Fatalf("expected backend")
+	}
+}
+
 func testBackend(t *testing.T, b Backend) {
 	// Should be empty
 	keys, err := b.List("")
