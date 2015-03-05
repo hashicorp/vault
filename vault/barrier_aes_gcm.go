@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -15,6 +16,12 @@ const (
 	// future versioning of barrier implementations.
 	aesgcmVersionByte = 0x1
 )
+
+// barrierInit is the JSON encoded value stored
+type barrierInit struct {
+	Version int    // Version is the current format version
+	Key     []byte // Key is the primary encryption key
+}
 
 // AESGCMBarrier is a SecurityBarrier implementation that
 // uses a 128bit AES encryption cipher with the Galois Counter Mode.
@@ -82,15 +89,26 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 	}
 	defer memzero(encrypt)
 
-	// Generate the barrier init value
-	value := b.encrypt(gcm, encrypt)
+	// Create the barrier init entry
+	init := barrierInit{
+		Version: 1,
+		Key:     encrypt,
+	}
+	buf, err := json.Marshal(init)
+	if err != nil {
+		return fmt.Errorf("failed to create barrier entry: %v", err)
+	}
+	defer memzero(buf)
+
+	// Encrypt the barrier init value
+	value := b.encrypt(gcm, buf)
 
 	// Create the barrierInitPath
-	init := &physical.Entry{
+	pe := &physical.Entry{
 		Key:   barrierInitPath,
 		Value: value,
 	}
-	if err := b.backend.Put(init); err != nil {
+	if err := b.backend.Put(pe); err != nil {
 		return fmt.Errorf("failed to create initialization key: %v", err)
 	}
 	return nil
@@ -138,14 +156,21 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 	}
 
 	// Decrypt the barrier init key
-	encryptKey, err := b.decrypt(gcm, out.Value)
+	plain, err := b.decrypt(gcm, out.Value)
 	if err != nil {
 		return err
 	}
-	defer memzero(encryptKey)
+	defer memzero(plain)
+
+	// Unmarshal the barrier init
+	var init barrierInit
+	if err := json.Unmarshal(plain, &init); err != nil {
+		return fmt.Errorf("failed to unmarshal barrier init file")
+	}
+	defer memzero(init.Key)
 
 	// Initialize the master encryption key
-	b.primary, err = b.aeadFromKey(encryptKey)
+	b.primary, err = b.aeadFromKey(init.Key)
 	if err != nil {
 		return err
 	}
