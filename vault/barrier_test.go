@@ -88,6 +88,11 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Unseal should no-op when done twice
+	if err := b.Unseal(key); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	// Should no longer be sealed
 	sealed, err = b.Sealed()
 	if err != nil {
