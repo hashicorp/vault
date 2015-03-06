@@ -1,8 +1,15 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"time"
+)
+
+var (
+	// ErrUnsupportedOperation is returned if the operation is not supported
+	// by the logical backend.
+	ErrUnsupportedOperation = errors.New("unsupported operation")
 )
 
 // LogicalBackend interface must be implemented to be "mountable" at
@@ -34,6 +41,7 @@ const (
 	WriteOperation            = "write"
 	DeleteOperation           = "delete"
 	ListOperation             = "list"
+	RevokeOperation           = "revoke"
 	HelpOperation             = "help"
 )
 
@@ -49,6 +57,9 @@ type Request struct {
 	// and the AWS logical backend is mounted at "prod/aws/", then the
 	// final path is "foo" since the mount prefix is trimmed.
 	Path string
+
+	// Request data is an opaque map that must have string keys.
+	Data map[string]interface{}
 
 	// View is the storage view of this logical backend. It can be used
 	// to durably store and retrieve state from the backend.
@@ -73,6 +84,7 @@ type Response struct {
 type Lease struct {
 	VaultID      string        // VaultID is the unique identifier used for renewal and revocation
 	Renewable    bool          // Is the VaultID renewable
+	Revokable    bool          // Is the secret revokable. Must support 'Revoke' operation.
 	Duration     time.Duration // Current lease duration
 	MaxDuration  time.Duration // Maximum lease duration
 	MaxIncrement time.Duration // Maximum increment to lease duration
