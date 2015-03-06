@@ -29,12 +29,12 @@ func TestRouter_Mount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "noop", "prod/aws/", view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = r.Mount(n, "prod/aws/", view)
+	err = r.Mount(n, "noop", "prod/aws/", view)
 	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
 		t.Fatalf("err: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestRouter_Unmount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "noop", "prod/aws/", view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestRouter_Remount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "noop", "prod/aws/", view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestRouter_RootPath(t *testing.T) {
 			"policy/*",
 		},
 	}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "noop", "prod/aws/", view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
