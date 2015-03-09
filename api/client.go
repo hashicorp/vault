@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/url"
 )
 
 // Config is used to configure the creation of the client.
@@ -31,12 +32,51 @@ func DefaultConfig() *Config {
 // Client is the client to the Vault API. Create a client with
 // NewClient.
 type Client struct {
+	addr   *url.URL
 	config Config
 }
 
 // NewClient returns a new client for the given configuration.
 func NewClient(c Config) (*Client, error) {
+	u, err := url.Parse(c.Address)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Client{
+		addr:   u,
 		config: c,
 	}, nil
+}
+
+// NewRequest creates a new raw request object to query the Vault server
+// configured for this client. This is an advanced method and generally
+// doesn't need to be called externally.
+func (c *Client) NewRequest(method, path string) *Request {
+	return &Request{
+		Method: method,
+		URL: &url.URL{
+			Scheme: c.addr.Scheme,
+			Host:   c.addr.Host,
+			Path:   path,
+		},
+		Params: make(map[string][]string),
+	}
+}
+
+// RawRequest performs the raw request given. This request may be against
+// a Vault server not configured with this client. This is an advanced operation
+// that generally won't need to be called externally.
+func (c *Client) RawRequest(r *Request) (*http.Response, error) {
+	req, err := r.ToHTTP()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.config.HttpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
