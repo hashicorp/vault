@@ -63,11 +63,8 @@ func interpolatePolynomial(x_samples, y_samples []uint8, x uint8) uint8 {
 			denom := add(x_samples[i], x_samples[j])
 			term := div(num, denom)
 			basis = mult(basis, term)
-			//println(fmt.Sprintf("Num: %d Denom: %d Term: %d Basis: %d",
-			//    num, denom, term, basis))
 		}
 		group := mult(y_samples[i], basis)
-		//println(fmt.Sprintf("Group: %d", group))
 		result = add(result, group)
 	}
 	return result
@@ -203,9 +200,7 @@ func Combine(parts [][]byte) ([]byte, error) {
 		}
 
 		// Interpolte the polynomial and compute the value at 0
-		println(fmt.Sprintf("byte: %d x: %v y: %v", idx, x_samples, y_samples))
 		val := interpolatePolynomial(x_samples, y_samples, 0)
-		println(fmt.Sprintf("byte: %d out: %v", idx, val))
 
 		// Evaluate the 0th value to get the intercept
 		secret[idx] = val
