@@ -87,6 +87,10 @@ type Core struct {
 	// the threshold number of parts is available.
 	unlockParts [][]byte
 
+	// mounts is loaded after unseal since it is a protected
+	// configuration
+	mounts *MountTable
+
 	logger *log.Logger
 }
 
@@ -339,6 +343,13 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		return false, err
 	}
 
+	// Do post-unseal setup
+	if err := c.postUnseal(); err != nil {
+		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+		c.barrier.Seal()
+		return false, err
+	}
+
 	// Success!
 	c.logger.Printf("[INFO] core: vault is unsealed")
 	c.sealed = false
@@ -356,4 +367,15 @@ func (c *Core) Seal() error {
 	c.logger.Printf("[INFO] core: vault is being sealed")
 	c.sealed = true
 	return c.barrier.Seal()
+}
+
+// postUnseal is invoked after the barrier is unsealed, but before
+// allowing any user operations. This allows us to setup any state that
+// requires the Vault to be unsealed such as mount tables, logical backends,
+// credential stores, etc.
+func (c *Core) postUnseal() error {
+	if err := c.loadMounts(); err != nil {
+		return err
+	}
+	return nil
 }

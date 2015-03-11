@@ -279,7 +279,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 	// Should not route anything
 	req := &Request{
 		Operation: ReadOperation,
-		Path:      "sys/test",
+		Path:      "sys/mounts",
 	}
 	_, err := c.HandleRequest(req)
 	if err != ErrSealed {
