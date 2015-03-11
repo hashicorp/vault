@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/hashicorp/vault/physical"
@@ -43,11 +44,6 @@ type SealConfig struct {
 	// SecretThreshold is the number of parts required
 	// to open the vault. This is the T value of Shamir
 	SecretThreshold int `json:"secret_threshold"`
-
-	// SecretProgress is the number of parts already provided.
-	// Once the SecretThreshold is reached, an unseal attempt
-	// is made.
-	SecretProgress int `json:"secret_progress"`
 }
 
 // Validate is used to sanity check the seal configuration
@@ -94,20 +90,32 @@ type Core struct {
 	logger *log.Logger
 }
 
-// NewCore is used to construct a new core
-func NewCore(physical physical.Backend) (*Core, error) {
+// CoreConfig is used to parameterize a core
+type CoreConfig struct {
+	physical physical.Backend
+	logger   *log.Logger
+}
+
+// NewCore isk used to construct a new core
+func NewCore(conf *CoreConfig) (*Core, error) {
 	// Construct a new AES-GCM barrier
-	barrier, err := NewAESGCMBarrier(physical)
+	barrier, err := NewAESGCMBarrier(conf.physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
 	}
 
+	// Make a default logger if not provided
+	if conf.logger == nil {
+		conf.logger = log.New(os.Stderr, "", log.LstdFlags)
+	}
+
 	// Setup the core
 	c := &Core{
-		physical: physical,
+		physical: conf.physical,
 		barrier:  barrier,
 		router:   NewRouter(),
 		sealed:   true,
+		logger:   conf.logger,
 	}
 
 	// Create and mount the system backend
@@ -172,7 +180,6 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	// Encode the seal configuration
-	config.SecretProgress = 0
 	buf, err := json.Marshal(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode seal configuration: %v", err)
@@ -257,6 +264,13 @@ func (c *Core) SealConfig() (*SealConfig, error) {
 		return nil, fmt.Errorf("seal validation failed: %v", err)
 	}
 	return &conf, nil
+}
+
+// SecretProgress returns the number of keys provided so far
+func (c *Core) SecretProgress() int {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return len(c.unlockParts)
 }
 
 // Unseal is used to provide one of the key parts to
