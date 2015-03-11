@@ -7,6 +7,16 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
+func testCore(t *testing.T) *Core {
+	inm := physical.NewInmem()
+	conf := &CoreConfig{physical: inm}
+	c, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	return c
+}
+
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{physical: inm}
@@ -100,13 +110,7 @@ func TestCore_Init(t *testing.T) {
 }
 
 func TestCore_Init_MultiShare(t *testing.T) {
-	inm := physical.NewInmem()
-	conf := &CoreConfig{physical: inm}
-	c, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
+	c := testCore(t)
 	sealConf := &SealConfig{
 		SecretShares:    5,
 		SecretThreshold: 3,
@@ -127,5 +131,140 @@ func TestCore_Init_MultiShare(t *testing.T) {
 	}
 	if !reflect.DeepEqual(outConf, sealConf) {
 		t.Fatalf("bad: %v expect: %v", outConf, sealConf)
+	}
+}
+
+func TestCore_Unseal_MultiShare(t *testing.T) {
+	c := testCore(t)
+
+	_, err := c.Unseal([]byte("testing"))
+	if err != ErrNotInit {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealConf := &SealConfig{
+		SecretShares:    5,
+		SecretThreshold: 3,
+	}
+	res, err := c.Initialize(sealConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+
+	if prog := c.SecretProgress(); prog != 0 {
+		t.Fatalf("bad progress: %d", prog)
+	}
+
+	for i := 0; i < 5; i++ {
+		unseal, err := c.Unseal(res.SecretShares[i])
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Ignore redundant
+		_, err = c.Unseal(res.SecretShares[i])
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i >= 2 {
+			if !unseal {
+				t.Fatalf("should be unsealed")
+			}
+			if prog := c.SecretProgress(); prog != 0 {
+				t.Fatalf("bad progress: %d", prog)
+			}
+		} else {
+			if unseal {
+				t.Fatalf("should not be unsealed")
+			}
+			if prog := c.SecretProgress(); prog != i+1 {
+				t.Fatalf("bad progress: %d", prog)
+			}
+		}
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+
+	err = c.Seal()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ignore redundant
+	err = c.Seal()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+}
+
+func TestCore_Unseal_Single(t *testing.T) {
+	c := testCore(t)
+
+	_, err := c.Unseal([]byte("testing"))
+	if err != ErrNotInit {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealConf := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+	res, err := c.Initialize(sealConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+
+	if prog := c.SecretProgress(); prog != 0 {
+		t.Fatalf("bad progress: %d", prog)
+	}
+
+	unseal, err := c.Unseal(res.SecretShares[0])
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !unseal {
+		t.Fatalf("should be unsealed")
+	}
+	if prog := c.SecretProgress(); prog != 0 {
+		t.Fatalf("bad progress: %d", prog)
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
 	}
 }
