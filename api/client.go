@@ -78,5 +78,10 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 		return nil, err
 	}
 
-	return &Response{Response: resp}, nil
+	result := &Response{Response: resp}
+	if err := result.Error(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
