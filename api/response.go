@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -16,4 +19,48 @@ type Response struct {
 func (r *Response) DecodeJSON(out interface{}) error {
 	dec := json.NewDecoder(r.Body)
 	return dec.Decode(out)
+}
+
+// Error returns an error response if there is one. If there is an error,
+// this will fully consume the response body, but will not close it. The
+// body must still be closed manually.
+func (r *Response) Error() error {
+	// 200 to 399 are okay status codes
+	if r.StatusCode >= 200 && r.StatusCode < 400 {
+		return nil
+	}
+
+	// We have an error. Let's copy the body into our own buffer first,
+	// so that if we can't decode JSON, we can at least copy it raw.
+	var bodyBuf bytes.Buffer
+	if _, err := io.Copy(&bodyBuf, r.Body); err != nil {
+		return err
+	}
+
+	// Decode the error response if we can. Note that we wrap the bodyBuf
+	// in a bytes.Reader here so that the JSON decoder doesn't move the
+	// read pointer for the original buffer.
+	var resp ErrorResponse
+	dec := json.NewDecoder(bytes.NewReader(bodyBuf.Bytes()))
+	if err := dec.Decode(&resp); err != nil {
+		// Ignore the decoding error and just drop the raw response
+		return fmt.Errorf(
+			"Error making API request. Code: %d. Raw Message:\n\n%s",
+			r.StatusCode, bodyBuf.String())
+	}
+
+	var errBody bytes.Buffer
+	errBody.WriteString(fmt.Sprintf(
+		"Error making API request. Code: %d. Errors:\n\n", r.StatusCode))
+	for _, err := range resp.Errors {
+		errBody.WriteString(fmt.Sprintf("* %s", err))
+	}
+
+	return fmt.Errorf(errBody.String())
+}
+
+// ErrorResponse is the raw structure of errors when they're returned by the
+// HTTP API.
+type ErrorResponse struct {
+	Errors []string
 }
