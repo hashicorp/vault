@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/shamir"
 )
 
 const (
@@ -34,9 +35,9 @@ var (
 
 // SealConfig is used to describe the seal configuration
 type SealConfig struct {
-	// SecretParts is the number of parts the secret is
+	// SecretShares is the number of shares the secret is
 	// split into. This is the N value of Shamir
-	SecretParts int `json:"secret_parts"`
+	SecretShares int `json:"secret_shares"`
 
 	// SecretThreshold is the number of parts required
 	// to open the vault. This is the T value of Shamir
@@ -50,14 +51,14 @@ type SealConfig struct {
 
 // Validate is used to sanity check the seal configuration
 func (s *SealConfig) Validate() error {
-	if s.SecretParts <= 0 {
-		return fmt.Errorf("must have a positive number for secret parts")
+	if s.SecretShares < 1 {
+		return fmt.Errorf("secret shares must be at least one")
 	}
-	if s.SecretThreshold <= 0 {
-		return fmt.Errorf("must have a positive number for secret threshold")
+	if s.SecretThreshold < 1 {
+		return fmt.Errorf("secret threshold must be at least one")
 	}
-	if s.SecretThreshold > s.SecretParts {
-		return fmt.Errorf("secret threshold cannot be larger than secret parts")
+	if s.SecretThreshold > s.SecretShares {
+		return fmt.Errorf("secret threshold cannot be larger than secret shares")
 	}
 	return nil
 }
@@ -65,7 +66,7 @@ func (s *SealConfig) Validate() error {
 // InitResult is used to provide the key parts back after
 // they are generated as part of the initialization.
 type InitResult struct {
-	SecretParts [][]byte
+	SecretShares [][]byte
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -156,11 +157,6 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		return nil, fmt.Errorf("invalid seal configuration: %v", err)
 	}
 
-	// TODO: Remove restrict
-	if config.SecretParts != 1 {
-		return nil, fmt.Errorf("Unsupported configuration")
-	}
-
 	// Avoid an initialization race
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
@@ -206,14 +202,20 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 
 	// Return the master key if only a single key part is used
 	results := new(InitResult)
-	if config.SecretParts == 1 {
-		results.SecretParts = append(results.SecretParts, masterKey)
+	if config.SecretShares == 1 {
+		results.SecretShares = append(results.SecretShares, masterKey)
 
 	} else {
-		// TODO: Support multiple parts
-		panic("unsupported")
+		// Split the master key using the Shamir algorithm
+		shares, err := shamir.Split(masterKey, config.SecretShares, config.SecretThreshold)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
+			return nil, fmt.Errorf("failed to generate shares: %v", err)
+		}
+		results.SecretShares = shares
 	}
 
+	c.logger.Printf("[INFO] core: security barrier initialized")
 	return results, nil
 }
 
