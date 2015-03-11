@@ -1,17 +1,10 @@
-package logical
+package vault
 
 import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/hashicorp/vault/vault"
 )
-
-func init() {
-	// Register the generic backend
-	vault.BuiltinBackends["generic"] = newGenericBackend
-}
 
 // GenericBackend is used for the storing generic secrets. These are not
 // materialized in any way. The value that is written to this backend
@@ -20,27 +13,27 @@ func init() {
 type GenericBackend struct{}
 
 // newGenericBackend is a factory constructor for the generic backend
-func newGenericBackend(map[string]string) (vault.LogicalBackend, error) {
+func newGenericBackend(map[string]string) (LogicalBackend, error) {
 	b := &GenericBackend{}
 	return b, nil
 }
 
 // HandleRequest is used to handle a request and generate a response.
 // The backends must check the operation type and handle appropriately.
-func (g *GenericBackend) HandleRequest(req *vault.Request) (*vault.Response, error) {
+func (g *GenericBackend) HandleRequest(req *Request) (*Response, error) {
 	switch req.Operation {
-	case vault.ReadOperation:
+	case ReadOperation:
 		return g.handleRead(req)
-	case vault.WriteOperation:
+	case WriteOperation:
 		return g.handleWrite(req)
-	case vault.ListOperation:
+	case ListOperation:
 		return g.handleList(req)
-	case vault.DeleteOperation:
+	case DeleteOperation:
 		return g.handleDelete(req)
-	case vault.HelpOperation:
+	case HelpOperation:
 		return g.handleHelp(req)
 	default:
-		return nil, vault.ErrUnsupportedOperation
+		return nil, ErrUnsupportedOperation
 	}
 }
 
@@ -50,7 +43,7 @@ func (g *GenericBackend) RootPaths() []string {
 	return nil
 }
 
-func (g *GenericBackend) handleRead(req *vault.Request) (*vault.Response, error) {
+func (g *GenericBackend) handleRead(req *Request) (*Response, error) {
 	// Read the path
 	out, err := req.View.Get(req.Path)
 	if err != nil {
@@ -70,11 +63,11 @@ func (g *GenericBackend) handleRead(req *vault.Request) (*vault.Response, error)
 
 	// Check if there is a lease key
 	leaseVal, ok := raw["lease"].(string)
-	var lease *vault.Lease
+	var lease *Lease
 	if ok {
 		leaseDuration, err := time.ParseDuration(leaseVal)
 		if err == nil {
-			lease = &vault.Lease{
+			lease = &Lease{
 				Renewable:    false,
 				Revokable:    false,
 				Duration:     leaseDuration,
@@ -85,7 +78,7 @@ func (g *GenericBackend) handleRead(req *vault.Request) (*vault.Response, error)
 	}
 
 	// Generate the response
-	resp := &vault.Response{
+	resp := &Response{
 		IsSecret: true,
 		Lease:    lease,
 		Data:     raw,
@@ -93,7 +86,7 @@ func (g *GenericBackend) handleRead(req *vault.Request) (*vault.Response, error)
 	return resp, nil
 }
 
-func (g *GenericBackend) handleWrite(req *vault.Request) (*vault.Response, error) {
+func (g *GenericBackend) handleWrite(req *Request) (*Response, error) {
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
@@ -106,7 +99,7 @@ func (g *GenericBackend) handleWrite(req *vault.Request) (*vault.Response, error
 	}
 
 	// Write out a new key
-	entry := &vault.Entry{
+	entry := &Entry{
 		Key:   req.Path,
 		Value: buf,
 	}
@@ -116,7 +109,7 @@ func (g *GenericBackend) handleWrite(req *vault.Request) (*vault.Response, error
 	return nil, nil
 }
 
-func (g *GenericBackend) handleDelete(req *vault.Request) (*vault.Response, error) {
+func (g *GenericBackend) handleDelete(req *Request) (*Response, error) {
 	// Delete the key at the request path
 	if err := req.View.Delete(req.Path); err != nil {
 		return nil, err
@@ -124,7 +117,7 @@ func (g *GenericBackend) handleDelete(req *vault.Request) (*vault.Response, erro
 	return nil, nil
 }
 
-func (g *GenericBackend) handleList(req *vault.Request) (*vault.Response, error) {
+func (g *GenericBackend) handleList(req *Request) (*Response, error) {
 	// List the keys at the prefix given by the request
 	keys, err := req.View.List(req.Path)
 	if err != nil {
@@ -132,7 +125,7 @@ func (g *GenericBackend) handleList(req *vault.Request) (*vault.Response, error)
 	}
 
 	// Generate the response
-	resp := &vault.Response{
+	resp := &Response{
 		IsSecret: false,
 		Lease:    nil,
 		Data: map[string]interface{}{
@@ -142,8 +135,8 @@ func (g *GenericBackend) handleList(req *vault.Request) (*vault.Response, error)
 	return resp, nil
 }
 
-func (g *GenericBackend) handleHelp(req *vault.Request) (*vault.Response, error) {
-	resp := &vault.Response{
+func (g *GenericBackend) handleHelp(req *Request) (*Response, error) {
+	resp := &Response{
 		IsSecret: false,
 		Lease:    nil,
 		Data: map[string]interface{}{

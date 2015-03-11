@@ -98,14 +98,16 @@ type Lease struct {
 type Factory func(map[string]string) (LogicalBackend, error)
 
 // BuiltinBackends contains all of the available backends
-var BuiltinBackends = map[string]Factory{}
+var BuiltinBackends = map[string]Factory{
+	"generic": newGenericBackend,
+}
 
 // NewBackend returns a new logical Backend with the given type and configuration.
 // The backend is looked up in the BuiltinBackends variable.
 func NewBackend(t string, conf map[string]string) (LogicalBackend, error) {
 	f, ok := BuiltinBackends[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown physical backend type: %s", t)
+		return nil, fmt.Errorf("unknown logical backend type: %s", t)
 	}
 	return f(conf)
 }

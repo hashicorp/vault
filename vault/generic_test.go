@@ -1,17 +1,16 @@
-package logical
+package vault
 
 import (
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/vault"
 )
 
 // mockRequest returns a request with a real view attached
-func mockRequest(t *testing.T, op vault.Operation, path string) *vault.Request {
+func mockRequest(t *testing.T, op Operation, path string) *Request {
 	inm := physical.NewInmem()
-	b, err := vault.NewAESGCMBarrier(inm)
+	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -22,10 +21,10 @@ func mockRequest(t *testing.T, op vault.Operation, path string) *vault.Request {
 	b.Unseal(key)
 
 	// Create the barrier view
-	view := vault.NewBarrierView(b, "logical/")
+	view := NewBarrierView(b, "logical/")
 
 	// Create the request
-	req := &vault.Request{
+	req := &Request{
 		Operation: op,
 		Path:      path,
 		Data:      make(map[string]interface{}),
@@ -52,7 +51,7 @@ func TestGenericBackend_Write(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := mockRequest(t, vault.WriteOperation, "foo")
+	req := mockRequest(t, WriteOperation, "foo")
 	req.Data["raw"] = "test"
 
 	resp, err := b.HandleRequest(req)
@@ -78,7 +77,7 @@ func TestGenericBackend_Read(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := mockRequest(t, vault.WriteOperation, "foo")
+	req := mockRequest(t, WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	req.Data["lease"] = "1h"
 
@@ -86,7 +85,7 @@ func TestGenericBackend_Read(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req2 := mockRequest(t, vault.ReadOperation, "foo")
+	req2 := mockRequest(t, ReadOperation, "foo")
 	req2.View = req.View
 
 	resp, err := b.HandleRequest(req2)
@@ -131,7 +130,7 @@ func TestGenericBackend_Delete(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := mockRequest(t, vault.WriteOperation, "foo")
+	req := mockRequest(t, WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	req.Data["lease"] = "1h"
 
@@ -139,7 +138,7 @@ func TestGenericBackend_Delete(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req2 := mockRequest(t, vault.DeleteOperation, "foo")
+	req2 := mockRequest(t, DeleteOperation, "foo")
 	req2.View = req.View
 
 	resp, err := b.HandleRequest(req2)
@@ -150,7 +149,7 @@ func TestGenericBackend_Delete(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
-	req3 := mockRequest(t, vault.ReadOperation, "foo")
+	req3 := mockRequest(t, ReadOperation, "foo")
 	req3.View = req.View
 
 	resp, err = b.HandleRequest(req3)
@@ -168,7 +167,7 @@ func TestGenericBackend_List(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := mockRequest(t, vault.WriteOperation, "foo/bar")
+	req := mockRequest(t, WriteOperation, "foo/bar")
 	req.Data["raw"] = "test"
 	req.Data["lease"] = "1h"
 
@@ -176,7 +175,7 @@ func TestGenericBackend_List(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req2 := mockRequest(t, vault.ListOperation, "")
+	req2 := mockRequest(t, ListOperation, "")
 	req2.View = req.View
 
 	resp, err := b.HandleRequest(req2)
@@ -205,7 +204,7 @@ func TestGenericBackend_Help(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := mockRequest(t, vault.HelpOperation, "foo")
+	req := mockRequest(t, HelpOperation, "foo")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
