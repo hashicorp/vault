@@ -1,6 +1,9 @@
 package vault
 
-import "testing"
+import (
+	"regexp"
+	"testing"
+)
 
 func TestMemZero(t *testing.T) {
 	b := []byte{1, 2, 3, 4}
@@ -14,5 +17,21 @@ func TestRandBytes(t *testing.T) {
 	b := randbytes(12)
 	if len(b) != 12 {
 		t.Fatalf("bad: %v", b)
+	}
+}
+
+func TestGenerateUUID(t *testing.T) {
+	prev := generateUUID()
+	for i := 0; i < 100; i++ {
+		id := generateUUID()
+		if prev == id {
+			t.Fatalf("Should get a new ID!")
+		}
+
+		matched, err := regexp.MatchString(
+			"[\\da-f]{8}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{12}", id)
+		if !matched || err != nil {
+			t.Fatalf("expected match %s %v %s", id, matched, err)
+		}
 	}
 }
