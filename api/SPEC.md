@@ -220,7 +220,11 @@ are immediately invalidated.
 
 Authenticate with Vault, returning an access token to use for
 future requests. This access token should be passed in as a cookie
-for future requests.
+for future requests with the key `token`.
+
+The token will also be set using the `Set-Cookie` headers as well,
+so if the HTTP client being used has a well behaved cookie jar
+implementation, the token will automatically be set for future requests.
 
 The request body of this request is arbitrary depending on the
 authentication method being used above. Authentication strategies

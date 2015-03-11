@@ -4,6 +4,13 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"time"
+)
+
+const (
+	// TokenCookieName is the name of the cookie that contains the
+	// access token after logging in.
+	TokenCookieName = "token"
 )
 
 // Config is used to configure the creation of the client.
@@ -24,8 +31,8 @@ type Config struct {
 
 // DefaultConfig returns a default configuration for the client. It is
 // safe to modify the return value of this function.
-func DefaultConfig() *Config {
-	config := &Config{
+func DefaultConfig() Config {
+	config := Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: http.DefaultClient,
 	}
@@ -52,20 +59,44 @@ func NewClient(c Config) (*Client, error) {
 	//
 	// If no cookie jar is set on the client, we set a default empty
 	// cookie jar.
-	client := *c.HttpClient
-	if client.Jar == nil {
+	if c.HttpClient.Jar == nil {
 		jar, err := cookiejar.New(&cookiejar.Options{})
 		if err != nil {
 			return nil, err
 		}
 
-		client.Jar = jar
+		c.HttpClient.Jar = jar
 	}
 
 	return &Client{
 		addr:   u,
 		config: c,
 	}, nil
+}
+
+// Token returns the access token being used by this client. It will
+// return the empty string if there is no token set.
+func (c *Client) Token() string {
+	r := c.NewRequest("GET", "/")
+	for _, cookie := range c.config.HttpClient.Jar.Cookies(r.URL) {
+		if cookie.Name == TokenCookieName {
+			return cookie.Value
+		}
+	}
+
+	return ""
+}
+
+// ClearToken deletes the token cookie if it is set or does nothing otherwise.
+func (c *Client) ClearToken() {
+	r := c.NewRequest("GET", "/")
+	c.config.HttpClient.Jar.SetCookies(r.URL, []*http.Cookie{
+		&http.Cookie{
+			Name:    TokenCookieName,
+			Value:   "",
+			Expires: time.Now().Add(-1 * time.Hour),
+		},
+	})
 }
 
 // NewRequest creates a new raw request object to query the Vault server
