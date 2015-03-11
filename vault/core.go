@@ -129,7 +129,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *Request) (*Response, error) {
-	// TODO:
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+
+	// TODO: Enforce ACLs
+
+	// Route the request
 	return c.router.Route(req)
 }
 

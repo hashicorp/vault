@@ -268,3 +268,40 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("should not be sealed")
 	}
 }
+
+func TestCore_Route_Sealed(t *testing.T) {
+	c := testCore(t)
+	sealConf := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+
+	// Should not route anything
+	req := &Request{
+		Operation: ReadOperation,
+		Path:      "sys/test",
+	}
+	_, err := c.HandleRequest(req)
+	if err != ErrSealed {
+		t.Fatalf("err: %v", err)
+	}
+
+	res, err := c.Initialize(sealConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	unseal, err := c.Unseal(res.SecretShares[0])
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !unseal {
+		t.Fatalf("should be unsealed")
+	}
+
+	// Should not error after unseal
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
