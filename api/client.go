@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 )
 
@@ -14,7 +15,10 @@ type Config struct {
 	Address string
 
 	// HttpClient is the HTTP client to use. http.DefaultClient will be
-	// used if not specified.
+	// used if not specified. The HTTP client must have the cookie jar set
+	// to be able to store cookies, otherwise authentication (login) will
+	// not work properly. If the jar is nil, a default empty cookie jar
+	// will be set.
 	HttpClient *http.Client
 }
 
@@ -41,6 +45,21 @@ func NewClient(c Config) (*Client, error) {
 	u, err := url.Parse(c.Address)
 	if err != nil {
 		return nil, err
+	}
+
+	// Make a copy of the HTTP client so we can configure it without
+	// affecting the original
+	//
+	// If no cookie jar is set on the client, we set a default empty
+	// cookie jar.
+	client := *c.HttpClient
+	if client.Jar == nil {
+		jar, err := cookiejar.New(&cookiejar.Options{})
+		if err != nil {
+			return nil, err
+		}
+
+		client.Jar = jar
 	}
 
 	return &Client{
