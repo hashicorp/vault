@@ -7,16 +7,43 @@ type SystemBackend struct {
 	core *Core
 }
 
-func (s *SystemBackend) HandleRequest(*Request) (*Response, error) {
-	return nil, nil
+func (s *SystemBackend) HandleRequest(req *Request) (*Response, error) {
+	// Switch on the path to route to the appropriate handler
+	switch {
+	case req.Path == "mounts":
+		return s.handleMountTable(req)
+	default:
+		return nil, ErrUnsupportedPath
+	}
 }
 
 func (s *SystemBackend) RootPaths() []string {
-	return []string{
-		"acls*",    // Restrict all access to ACLs
-		"auth/*",   // Restrict modifications to ACLs
-		"mounts/*", // Restrict modifications to mounts
-		"remount",  // Restrict modifications to mounts
-		"seal",     // Restrict re-sealing to root
+	return []string{}
+}
+
+// handleMountTable handles the "mounts" endpoint to provide the mount table
+func (s *SystemBackend) handleMountTable(req *Request) (*Response, error) {
+	switch req.Operation {
+	case ReadOperation:
+	case HelpOperation:
+		return HelpResponse("logical backend mount table", nil), nil
+	default:
+		return nil, ErrUnsupportedOperation
 	}
+
+	s.core.mountsLock.RLock()
+	defer s.core.mountsLock.RUnlock()
+
+	resp := &Response{
+		IsSecret: false,
+		Data:     make(map[string]interface{}),
+	}
+	for _, entry := range s.core.mounts.Entries {
+		info := map[string]string{
+			"type":        entry.Type,
+			"description": entry.Description,
+		}
+		resp.Data[entry.Path] = info
+	}
+	return resp, nil
 }

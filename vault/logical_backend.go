@@ -111,3 +111,14 @@ func NewBackend(t string, conf map[string]string) (LogicalBackend, error) {
 	}
 	return f(conf)
 }
+
+// HelpResponse is used to format a help response
+func HelpResponse(text string, seeAlso []string) *Response {
+	return &Response{
+		IsSecret: false,
+		Data: map[string]interface{}{
+			"help":     text,
+			"see_also": seeAlso,
+		},
+	}
+}

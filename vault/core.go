@@ -89,7 +89,8 @@ type Core struct {
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
-	mounts *MountTable
+	mounts     *MountTable
+	mountsLock sync.RWMutex
 
 	logger *log.Logger
 }
