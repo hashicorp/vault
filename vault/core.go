@@ -121,13 +121,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		sealed:   true,
 		logger:   conf.logger,
 	}
-
-	// Create and mount the system backend
-	sys := &SystemBackend{
-		core: c,
-	}
-	c.router.Mount(sys, "system", "sys/", nil)
-
 	return c, nil
 }
 
@@ -149,9 +142,12 @@ func (c *Core) HandleRequest(req *Request) (*Response, error) {
 func (c *Core) Initialized() (bool, error) {
 	// Check the barrier first
 	init, err := c.barrier.Initialized()
-	if err != nil || !init {
+	if err != nil {
 		c.logger.Printf("[ERR] core: barrier init check failed: %v", err)
 		return false, err
+	}
+	if !init {
+		return false, nil
 	}
 	if !init {
 		c.logger.Printf("[INFO] core: security barrier not initialized")
@@ -375,6 +371,9 @@ func (c *Core) Seal() error {
 // credential stores, etc.
 func (c *Core) postUnseal() error {
 	if err := c.loadMounts(); err != nil {
+		return err
+	}
+	if err := c.setupMounts(); err != nil {
 		return err
 	}
 	return nil
