@@ -34,6 +34,7 @@ func (c *Core) loadMounts() error {
 		return errors.New("failed to setup mount table")
 	}
 	if raw != nil {
+		c.mounts = &MountTable{}
 		if err := json.Unmarshal(raw.Value, c.mounts); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode mount table: %v", err)
 			return errors.New("failed to setup mount table")

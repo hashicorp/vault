@@ -17,6 +17,28 @@ func testCore(t *testing.T) *Core {
 	return c
 }
 
+func testUnsealedCore(t *testing.T) (*Core, []byte) {
+	c := testCore(t)
+	sealConf := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+	res, err := c.Initialize(sealConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	master := make([]byte, len(res.SecretShares[0]))
+	copy(master, res.SecretShares[0])
+	unseal, err := c.Unseal(res.SecretShares[0])
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !unseal {
+		t.Fatalf("should be unsealed")
+	}
+	return c, master
+}
+
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{physical: inm}

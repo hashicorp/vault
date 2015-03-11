@@ -10,6 +10,10 @@ var (
 	// ErrUnsupportedOperation is returned if the operation is not supported
 	// by the logical backend.
 	ErrUnsupportedOperation = errors.New("unsupported operation")
+
+	// ErrUnsupportedPath is returned if the path is not supported
+	// by the logical backend.
+	ErrUnsupportedPath = errors.New("unsupported path")
 )
 
 // LogicalBackend interface must be implemented to be "mountable" at
