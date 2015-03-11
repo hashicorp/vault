@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -261,11 +262,65 @@ func (c *Core) SealConfig() (*SealConfig, error) {
 // Unseal is used to provide one of the key parts to
 // unseal the Vault.
 func (c *Core) Unseal(key []byte) (bool, error) {
+	// Get the seal configuration
+	config, err := c.SealConfig()
+	if err != nil {
+		return false, err
+	}
+
+	// Ensure the barrier is initialized
+	if config == nil {
+		return false, ErrNotInit
+	}
+
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
-	// TODO
-	return false, nil
+	// Check if already unsealed
+	if !c.sealed {
+		return true, nil
+	}
+
+	// Check if we already have this piece
+	for _, existing := range c.unlockParts {
+		if bytes.Equal(existing, key) {
+			return false, nil
+		}
+	}
+
+	// Store this key
+	c.unlockParts = append(c.unlockParts, key)
+
+	// Check if we don't have enough keys to unlock
+	if len(c.unlockParts) < config.SecretThreshold {
+		c.logger.Printf("[DEBUG] core: cannot unseal, have %d of %d keys",
+			len(c.unlockParts), config.SecretThreshold)
+		return false, nil
+	}
+
+	// Recover the master key
+	var masterKey []byte
+	if config.SecretThreshold == 1 {
+		masterKey = c.unlockParts[0]
+		c.unlockParts = nil
+	} else {
+		masterKey, err = shamir.Combine(c.unlockParts)
+		c.unlockParts = nil
+		if err != nil {
+			return false, fmt.Errorf("failed to compute master key: %v", err)
+		}
+	}
+	defer memzero(masterKey)
+
+	// Attempt to unlock
+	if err := c.barrier.Unseal(masterKey); err != nil {
+		return false, err
+	}
+
+	// Success!
+	c.logger.Printf("[INFO] core: vault is unsealed")
+	c.sealed = false
+	return true, nil
 }
 
 // Seal is used to re-seal the Vault. This requires the Vaultto
