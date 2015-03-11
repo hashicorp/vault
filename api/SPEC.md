@@ -91,7 +91,7 @@ The following HTTP status codes are used throughout the API.
 
 # Group Seal/Unseal
 
-## Seal [/sys/seal]
+## Seal Status [/sys/seal-status]
 ### Seal Status [GET]
 Returns the status of whether the vault is currently
 sealed or not, as well as the progress of unsealing.
@@ -116,6 +116,7 @@ The response has the following attributes:
             "progress": 1
         }
 
+## Seal [/sys/seal]
 ### Seal [PUT]
 Seal the vault.
 

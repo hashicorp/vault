@@ -67,7 +67,7 @@ func (c *Client) NewRequest(method, path string) *Request {
 // RawRequest performs the raw request given. This request may be against
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
-func (c *Client) RawRequest(r *Request) (*http.Response, error) {
+func (c *Client) RawRequest(r *Request) (*Response, error) {
 	req, err := r.ToHTTP()
 	if err != nil {
 		return nil, err
@@ -78,5 +78,5 @@ func (c *Client) RawRequest(r *Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	return resp, nil
+	return &Response{Response: resp}, nil
 }
