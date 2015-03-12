@@ -7,6 +7,11 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
+var (
+	// invalidKey is used to test Unseal
+	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
+)
+
 func testCore(t *testing.T) *Core {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{Physical: inm}
@@ -159,7 +164,7 @@ func TestCore_Init_MultiShare(t *testing.T) {
 func TestCore_Unseal_MultiShare(t *testing.T) {
 	c := testCore(t)
 
-	_, err := c.Unseal([]byte("testing"))
+	_, err := c.Unseal(invalidKey)
 	if err != ErrNotInit {
 		t.Fatalf("err: %v", err)
 	}
@@ -244,7 +249,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 func TestCore_Unseal_Single(t *testing.T) {
 	c := testCore(t)
 
-	_, err := c.Unseal([]byte("testing"))
+	_, err := c.Unseal(invalidKey)
 	if err != ErrNotInit {
 		t.Fatalf("err: %v", err)
 	}

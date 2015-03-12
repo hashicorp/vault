@@ -5,6 +5,13 @@ import (
 	"fmt"
 )
 
+const (
+	// ShareOverhead is the byte size overhead of each share
+	// when using Split on a secret. This is caused by appending
+	// a one byte tag to the share.
+	ShareOverhead = 1
+)
+
 // polynomial represents a polynomial of arbitrary degree
 type polynomial struct {
 	coefficients []uint8

@@ -121,6 +121,11 @@ func (b *AESGCMBarrier) GenerateKey() ([]byte, error) {
 	return buf, err
 }
 
+// KeyLength is used to sanity check a key
+func (b *AESGCMBarrier) KeyLength() (int, int) {
+	return aes.BlockSize, aes.BlockSize
+}
+
 // Sealed checks if the barrier has been unlocked yet. The Barrier
 // is not expected to be able to perform any CRUD until it is unsealed.
 func (b *AESGCMBarrier) Sealed() (bool, error) {

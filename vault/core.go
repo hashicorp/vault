@@ -54,6 +54,12 @@ func (s *SealConfig) Validate() error {
 	if s.SecretThreshold < 1 {
 		return fmt.Errorf("secret threshold must be at least one")
 	}
+	if s.SecretShares > 255 {
+		return fmt.Errorf("secret shares must be less than 256")
+	}
+	if s.SecretThreshold > 255 {
+		return fmt.Errorf("secret threshold must be less than 256")
+	}
 	if s.SecretThreshold > s.SecretShares {
 		return fmt.Errorf("secret threshold cannot be larger than secret shares")
 	}
@@ -64,6 +70,16 @@ func (s *SealConfig) Validate() error {
 // they are generated as part of the initialization.
 type InitResult struct {
 	SecretShares [][]byte
+}
+
+// ErrInvalidKey is returned if there is an error with a
+// provided unseal key.
+type ErrInvalidKey struct {
+	Reason string
+}
+
+func (e *ErrInvalidKey) Error() string {
+	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -285,6 +301,16 @@ func (c *Core) SecretProgress() int {
 // Unseal is used to provide one of the key parts to
 // unseal the Vault.
 func (c *Core) Unseal(key []byte) (bool, error) {
+	// Verify the key length
+	min, max := c.barrier.KeyLength()
+	max += shamir.ShareOverhead
+	if len(key) < min {
+		return false, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+	}
+	if len(key) > max {
+		return false, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+	}
+
 	// Get the seal configuration
 	config, err := c.SealConfig()
 	if err != nil {

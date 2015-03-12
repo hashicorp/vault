@@ -39,6 +39,9 @@ type SecurityBarrier interface {
 	// GenerateKey is used to generate a new key
 	GenerateKey() ([]byte, error)
 
+	// KeyLength is used to sanity check a key
+	KeyLength() (int, int)
+
 	// Sealed checks if the barrier has been unlocked yet. The Barrier
 	// is not expected to be able to perform any CRUD until it is unsealed.
 	Sealed() (bool, error)

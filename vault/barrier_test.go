@@ -50,6 +50,15 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Validate minimum key length
+	min, max := b.KeyLength()
+	if min < 16 {
+		t.Fatalf("minimum key size too small: %d", min)
+	}
+	if max < min {
+		t.Fatalf("maximum key size smaller than min")
+	}
+
 	// Unseal should not work
 	if err := b.Unseal(key); err != ErrBarrierNotInit {
 		t.Fatalf("err: %v", err)
