@@ -10,6 +10,30 @@ func testSystem(t *testing.T) *SystemBackend {
 	return &SystemBackend{c}
 }
 
+func TestSystem_verifyRoot(t *testing.T) {
+	s := testSystem(t)
+	r := NewRouter()
+	r.Mount(s, "system", "sys/", nil)
+
+	root := []string{
+		"sys/mount/prod/",
+	}
+	nonRoot := []string{
+		"sys/mounts",
+	}
+
+	for _, key := range root {
+		if !r.RootPath(key) {
+			t.Fatalf("expected '%s' to be root path", key)
+		}
+	}
+	for _, key := range nonRoot {
+		if r.RootPath(key) {
+			t.Fatalf("expected '%s' to be non-root path", key)
+		}
+	}
+}
+
 func TestSystem_mounts(t *testing.T) {
 	s := testSystem(t)
 
