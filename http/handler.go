@@ -11,9 +11,9 @@ import (
 // its own to mount the Vault API within another web server.
 func Handler(core *vault.Core) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/sys/seal-status", handleSysSealStatus(core))
-	mux.Handle("/sys/seal", handleSysSeal(core))
-	mux.Handle("/sys/unseal", handleSysUnseal(core))
+	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+	mux.Handle("/v1/sys/seal", handleSysSeal(core))
+	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 	return mux
 }
 

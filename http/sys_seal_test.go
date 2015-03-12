@@ -12,7 +12,7 @@ func TestSysSealStatus(t *testing.T) {
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
-	resp, err := http.Get(addr + "/sys/seal-status")
+	resp, err := http.Get(addr + "/v1/sys/seal-status")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
