@@ -23,12 +23,11 @@ func (c *Sys) Mount(path, mountType, description string) error {
 	}
 
 	body := map[string]string{
-		"path":        path,
 		"type":        mountType,
 		"description": description,
 	}
 
-	r := c.c.NewRequest("POST", "/sys/mounts")
+	r := c.c.NewRequest("POST", fmt.Sprintf("/sys/mounts/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}

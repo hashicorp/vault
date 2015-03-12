@@ -311,6 +311,7 @@ Lists all the active mount points.
             }
         }
 
+## Single Mount [/sys/mounts/{path}]
 ### New Mount [POST]
 
 Mount a logical backend to a new path.
@@ -321,14 +322,12 @@ read/write mechanism once it is mounted.
 + Request (application/json)
 
         {
-            "path": "aws-eu",
             "type": "aws",
             "description": "EU AWS tokens"
         }
 
 + Response 204
 
-## Single Mount [/sys/mounts/{path}]
 ### Unmount [DELETE]
 
 Unmount a mount point.
