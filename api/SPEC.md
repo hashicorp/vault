@@ -89,6 +89,44 @@ The following HTTP status codes are used throughout the API.
 - `503` - Vault is down for maintenance or is currently sealed.
    Try again later.
 
+# Group Initialization
+
+## Initialization [/sys/init]
+### Initialization Status [GET]
+Returns the status of whether the vault is initialized or not. The
+vault doesn't have to be unsealed for this operation.
+
++ Response 200 (application/json)
+
+        {
+            "initialized": true
+        }
+
+### Initialize [POST]
+Initialize the vault. This is an unauthenticated request to initially
+setup a new vault. Although this is unauthenticated, it is still safe:
+data cannot be in vault prior to initialization, and any future
+authentication will fail if you didn't initialize it yourself.
+Additionally, once initialized, a vault cannot be reinitialized.
+
+This API is the only time Vault will ever be aware of your keys, and
+the only time the keys will ever be returned in one unit. Care should
+be taken to ensure that the output of this request is never logged,
+and that the keys are properly distributed.
+
++ Request (application/json)
+
+        {
+            "secret_shares": 5,
+            "secret_threshold": 3,
+        }
+
++ Response 200 (application/json)
+
+        {
+            "keys": ["one", "two", "three"]
+        }
+
 # Group Seal/Unseal
 
 ## Seal Status [/sys/seal-status]
