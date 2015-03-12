@@ -21,6 +21,12 @@ func NewBarrierView(barrier SecurityBarrier, prefix string) *BarrierView {
 	}
 }
 
+// SubView constructs a nested sub-view using the given prefix
+func (v *BarrierView) SubView(prefix string) *BarrierView {
+	sub := v.expandKey(prefix)
+	return &BarrierView{barrier: v.barrier, prefix: sub}
+}
+
 // Put is used to insert or update an entry
 func (v *BarrierView) Put(entry *Entry) error {
 	nested := &Entry{
