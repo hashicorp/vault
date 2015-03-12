@@ -97,16 +97,13 @@ func TestSysUnseal(t *testing.T) {
 }
 
 func TestSysUnseal_badKey(t *testing.T) {
-	// TODO: wait on Armon to fix error message from core
-	t.Skip()
-
 	core := testCore(t)
 	testCoreInit(t, core)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
 	resp := testHttpPut(t, addr+"/v1/sys/unseal", map[string]interface{}{
-		"key": "foo",
+		"key": "0123",
 	})
 
 	var actual map[string]interface{}

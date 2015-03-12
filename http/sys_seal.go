@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -55,8 +56,12 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 		// Attempt the unseal
 		if _, err := core.Unseal(key); err != nil {
-			respondError(w, http.StatusInternalServerError, err)
-			return
+			// Ignore ErrInvalidKey because its a user error that we
+			// mask away. We just show them the seal status.
+			if !errwrap.ContainsType(err, new(vault.ErrInvalidKey)) {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
 		}
 
 		// Return the seal status
