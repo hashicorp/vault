@@ -8,9 +8,7 @@ func (c *Sys) Renew(id string) (*Secret, error) {
 	}
 	defer resp.Body.Close()
 
-	// TODO: parse secret
-
-	return nil, nil
+	return ParseSecret(resp.Body)
 }
 
 func (c *Sys) Revoke(id string) error {
