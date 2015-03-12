@@ -48,6 +48,12 @@ func init() {
 			}, nil
 		},
 
+		"server": func() (cli.Command, error) {
+			return &command.ServerCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			ver := Version
 			rel := VersionPrerelease

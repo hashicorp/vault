@@ -1,0 +1,3 @@
+backend "consul" {
+    foo = "bar"
+}
