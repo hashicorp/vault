@@ -19,10 +19,6 @@ const (
 	// it even with the Vault sealed. This is required so that we know
 	// how many secret parts must be used to reconstruct the master key.
 	coreSealConfigPath = "core/seal-config"
-
-	// expirationSubPath is the sub-path used for the expiration manager
-	// view. This is nested under the system view.
-	expirationSubPath = "expire/"
 )
 
 var (
@@ -114,6 +110,10 @@ type Core struct {
 
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView
+
+	// expiration manager is used for managing vaultIDs,
+	// renewal, expiration and revocation
+	expiration *ExpirationManager
 
 	logger *log.Logger
 }
@@ -408,6 +408,9 @@ func (c *Core) postUnseal() error {
 		return err
 	}
 	if err := c.setupMounts(); err != nil {
+		return err
+	}
+	if err := c.setupExpiration(); err != nil {
 		return err
 	}
 	return nil
