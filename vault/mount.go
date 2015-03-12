@@ -16,6 +16,10 @@ const (
 	// backendBarrierPrefix is the prefix to the UUID used in the
 	// barrier view for the backends.
 	backendBarrierPrefix = "logical/"
+
+	// systemBarrierPrefix is sthe prefix used for the
+	// system logical backend.
+	systemBarrierPrefix = "sys/"
 )
 
 var (
@@ -118,21 +122,25 @@ func (c *Core) persistMounts(table *MountTable) error {
 // initialize the logical backends and setup the router
 func (c *Core) setupMounts() error {
 	var backend LogicalBackend
+	var view *BarrierView
 	var err error
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
 		if entry.Type == "system" {
 			backend = &SystemBackend{core: c}
+			view = NewBarrierView(c.barrier, systemBarrierPrefix+entry.UUID+"/")
+			c.systemView = view
+
 		} else {
 			backend, err = NewBackend(entry.Type, nil)
 			if err != nil {
 				c.logger.Printf("[ERR] core: failed to create mount entry %#v: %v", entry, err)
 				return loadMountsFailed
 			}
-		}
 
-		// Create a barrier view using the UUID
-		view := NewBarrierView(c.barrier, backendBarrierPrefix+entry.UUID+"/")
+			// Create a barrier view using the UUID
+			view = NewBarrierView(c.barrier, backendBarrierPrefix+entry.UUID+"/")
+		}
 
 		// Mount the backend
 		if err := c.router.Mount(backend, entry.Type, entry.Path, view); err != nil {

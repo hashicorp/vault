@@ -19,6 +19,10 @@ const (
 	// it even with the Vault sealed. This is required so that we know
 	// how many secret parts must be used to reconstruct the master key.
 	coreSealConfigPath = "core/seal-config"
+
+	// expirationSubPath is the sub-path used for the expiration manager
+	// view. This is nested under the system view.
+	expirationSubPath = "expire/"
 )
 
 var (
@@ -107,6 +111,9 @@ type Core struct {
 	// configuration
 	mounts     *MountTable
 	mountsLock sync.RWMutex
+
+	// systemView is the barrier view for the system backend
+	systemView *BarrierView
 
 	logger *log.Logger
 }
