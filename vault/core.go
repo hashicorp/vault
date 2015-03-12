@@ -97,30 +97,30 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	physical physical.Backend
-	logger   *log.Logger
+	Physical physical.Backend
+	Logger   *log.Logger
 }
 
 // NewCore isk used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
 	// Construct a new AES-GCM barrier
-	barrier, err := NewAESGCMBarrier(conf.physical)
+	barrier, err := NewAESGCMBarrier(conf.Physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
 	}
 
 	// Make a default logger if not provided
-	if conf.logger == nil {
-		conf.logger = log.New(os.Stderr, "", log.LstdFlags)
+	if conf.Logger == nil {
+		conf.Logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 
 	// Setup the core
 	c := &Core{
-		physical: conf.physical,
+		physical: conf.Physical,
 		barrier:  barrier,
 		router:   NewRouter(),
 		sealed:   true,
-		logger:   conf.logger,
+		logger:   conf.Logger,
 	}
 	return c, nil
 }

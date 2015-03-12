@@ -9,7 +9,7 @@ import (
 
 func testCore(t *testing.T) *Core {
 	inm := physical.NewInmem()
-	conf := &CoreConfig{physical: inm}
+	conf := &CoreConfig{Physical: inm}
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -41,7 +41,7 @@ func testUnsealedCore(t *testing.T) (*Core, []byte) {
 
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
-	conf := &CoreConfig{physical: inm}
+	conf := &CoreConfig{Physical: inm}
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
