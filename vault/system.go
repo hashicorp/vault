@@ -16,6 +16,8 @@ func (s *SystemBackend) HandleRequest(req *Request) (*Response, error) {
 		return s.handleMountTable(req)
 	case strings.HasPrefix(req.Path, "mount/"):
 		return s.handleMountOperation(req)
+	case req.Path == "remount":
+		return s.handleRemount(req)
 	default:
 		return nil, ErrUnsupportedPath
 	}
@@ -24,6 +26,7 @@ func (s *SystemBackend) HandleRequest(req *Request) (*Response, error) {
 func (s *SystemBackend) RootPaths() []string {
 	return []string{
 		"mount/*",
+		"remount",
 	}
 }
 
@@ -105,6 +108,31 @@ func (s *SystemBackend) handleUnmount(req *Request) (*Response, error) {
 
 	// Attempt unmount
 	if err := s.core.unmountPath(suffix); err != nil {
+		return ErrorResponse(err.Error()), ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleRemount is used to remount a path
+func (s *SystemBackend) handleRemount(req *Request) (*Response, error) {
+	// Only accept write operations
+	switch req.Operation {
+	case WriteOperation:
+	case HelpOperation:
+		return HelpResponse("remount a backend path", []string{"sys/mount/", "sys/mounts"}), nil
+	default:
+		return nil, ErrUnsupportedOperation
+	}
+
+	// Get the paths
+	fromPath := req.GetString("from")
+	toPath := req.GetString("to")
+	if fromPath == "" || toPath == "" {
+		return ErrorResponse("both 'from' and 'to' path must be specified as a string"), ErrInvalidRequest
+	}
+
+	// Attempt remount
+	if err := s.core.remountPath(fromPath, toPath); err != nil {
 		return ErrorResponse(err.Error()), ErrInvalidRequest
 	}
 	return nil, nil

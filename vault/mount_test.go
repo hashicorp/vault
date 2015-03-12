@@ -95,6 +95,45 @@ func TestCore_UnmountPath(t *testing.T) {
 	}
 }
 
+func TestCore_RemountPath(t *testing.T) {
+	c, key := testUnsealedCore(t)
+	err := c.remountPath("secret", "foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount("foo/bar")
+	if match != "foo/" {
+		t.Fatalf("failed remount")
+	}
+
+	conf := &CoreConfig{Physical: c.physical}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	unseal, err := c2.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !unseal {
+		t.Fatalf("should be unsealed")
+	}
+
+	// Verify matching mount tables
+	if !reflect.DeepEqual(c.mounts, c2.mounts) {
+		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
+	}
+}
+
+func TestCore_RemountPath_Protected(t *testing.T) {
+	c, _ := testUnsealedCore(t)
+	err := c.remountPath("sys", "foo")
+	if err.Error() != "cannot remount 'sys/'" {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestDefaultMountTable(t *testing.T) {
 	table := defaultMountTable()
 	verifyDefaultTable(t, table)

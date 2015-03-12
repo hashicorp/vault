@@ -17,6 +17,7 @@ func TestSystem_verifyRoot(t *testing.T) {
 
 	root := []string{
 		"sys/mount/prod/",
+		"sys/remount",
 	}
 	nonRoot := []string{
 		"sys/mounts",
@@ -157,5 +158,81 @@ func TestSystem_unmount_invalid(t *testing.T) {
 	}
 	if resp.Data["error"] != "no matching mount" {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystem_remount(t *testing.T) {
+	s := testSystem(t)
+
+	req := &Request{
+		Operation: WriteOperation,
+		Path:      "remount",
+		Data: map[string]interface{}{
+			"from": "secret",
+			"to":   "foo",
+		},
+	}
+	resp, err := s.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystem_remount_invalid(t *testing.T) {
+	s := testSystem(t)
+
+	req := &Request{
+		Operation: WriteOperation,
+		Path:      "remount",
+		Data: map[string]interface{}{
+			"from": "unknown",
+			"to":   "foo",
+		},
+	}
+	resp, err := s.HandleRequest(req)
+	if err != ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "no matching mount at 'unknown/'" {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystem_remount_system(t *testing.T) {
+	s := testSystem(t)
+
+	req := &Request{
+		Operation: WriteOperation,
+		Path:      "remount",
+		Data: map[string]interface{}{
+			"from": "sys",
+			"to":   "foo",
+		},
+	}
+	resp, err := s.HandleRequest(req)
+	if err != ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "cannot remount 'sys/'" {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystem_remount_help(t *testing.T) {
+	s := testSystem(t)
+
+	req := &Request{
+		Operation: HelpOperation,
+		Path:      "remount",
+	}
+	resp, err := s.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["help"] != "remount a backend path" {
+		t.Fatalf("got: %#v", resp.Data)
 	}
 }
