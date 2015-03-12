@@ -14,6 +14,9 @@ var (
 	// ErrBarrierNotInit is returned if a non-initialized barrier
 	// is attempted to be unsealed.
 	ErrBarrierNotInit = errors.New("Vault is not initialized")
+
+	// ErrBarrierInvalidKey is returned if the Unseal key is invalid
+	ErrBarrierInvalidKey = errors.New("Unseal failed, invalid key")
 )
 
 const (

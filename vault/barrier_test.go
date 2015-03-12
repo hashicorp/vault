@@ -219,4 +219,17 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Reseal should prevent any updates
+	if err := b.Seal(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Modify the key
+	key[0]++
+
+	// Unseal should fail
+	if err := b.Unseal(key); err != ErrBarrierInvalidKey {
+		t.Fatalf("err: %v", err)
+	}
 }

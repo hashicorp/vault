@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/physical"
@@ -163,6 +164,9 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 	// Decrypt the barrier init key
 	plain, err := b.decrypt(gcm, out.Value)
 	if err != nil {
+		if strings.Contains(err.Error(), "message authentication failed") {
+			return ErrBarrierInvalidKey
+		}
 		return err
 	}
 	defer memzero(plain)
