@@ -14,6 +14,9 @@ var (
 	// ErrUnsupportedPath is returned if the path is not supported
 	// by the logical backend.
 	ErrUnsupportedPath = errors.New("unsupported path")
+
+	// ErrInvalidRequest is returned if the request is invalid
+	ErrInvalidRequest = errors.New("invalid request")
 )
 
 // LogicalBackend interface must be implemented to be "mountable" at
@@ -70,6 +73,21 @@ type Request struct {
 	View *BarrierView
 }
 
+// Get returns a data field and guards for nil Data
+func (r *Request) Get(key string) interface{} {
+	if r.Data == nil {
+		return nil
+	}
+	return r.Data[key]
+}
+
+// GetString returns a data field as a string
+func (r *Request) GetString(key string) string {
+	raw := r.Get(key)
+	s, _ := raw.(string)
+	return s
+}
+
 // Response is a struct that stores the response of a request.
 // It is used to abstract the details of the higher level request protocol.
 type Response struct {
@@ -119,6 +137,16 @@ func HelpResponse(text string, seeAlso []string) *Response {
 		Data: map[string]interface{}{
 			"help":     text,
 			"see_also": seeAlso,
+		},
+	}
+}
+
+// ErrorResponse is used to format an error response
+func ErrorResponse(text string) *Response {
+	return &Response{
+		IsSecret: false,
+		Data: map[string]interface{}{
+			"error": text,
 		},
 	}
 }
