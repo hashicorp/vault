@@ -91,6 +91,17 @@ func (r *Router) Remount(src, dst string) error {
 	return nil
 }
 
+// MatchingMOunt returns the mount prefix that would be used for a path
+func (r *Router) MatchingMount(path string) string {
+	r.l.RLock()
+	mount, _, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return ""
+	}
+	return mount
+}
+
 // Route is used to route a given request
 func (r *Router) Route(req *Request) (*Response, error) {
 	// Find the mount point

@@ -39,6 +39,14 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	if path := r.MatchingMount("prod/aws/foo"); path != "prod/aws/" {
+		t.Fatalf("bad: %s", path)
+	}
+
+	if path := r.MatchingMount("stage/aws/foo"); path != "" {
+		t.Fatalf("bad: %s", path)
+	}
+
 	req := &Request{
 		Path: "prod/aws/foo",
 	}
