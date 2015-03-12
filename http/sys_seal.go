@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/hex"
 	"errors"
 	"net/http"
 
@@ -32,7 +33,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 		// Parse the request
 		var req UnsealRequest
-		if err := parseRequest(r, req); err != nil {
+		if err := parseRequest(r, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -43,8 +44,17 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			return
 		}
 
+		// Decode the key, which is hex encoded
+		key, err := hex.DecodeString(req.Key)
+		if err != nil {
+			respondError(
+				w, http.StatusBadRequest,
+				errors.New("'key' must be a valid hex-string"))
+			return
+		}
+
 		// Attempt the unseal
-		if _, err := core.Unseal([]byte(req.Key)); err != nil {
+		if _, err := core.Unseal(key); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
