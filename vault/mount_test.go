@@ -29,6 +29,72 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	}
 }
 
+func TestCore_MountEntry(t *testing.T) {
+	c, key := testUnsealedCore(t)
+	me := &MountEntry{
+		Path: "foo",
+		Type: "generic",
+	}
+	err := c.mountEntry(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount("foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	conf := &CoreConfig{physical: c.physical}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	unseal, err := c2.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !unseal {
+		t.Fatalf("should be unsealed")
+	}
+
+	// Verify matching mount tables
+	if !reflect.DeepEqual(c.mounts, c2.mounts) {
+		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
+	}
+}
+
+func TestCore_UnmountPath(t *testing.T) {
+	c, key := testUnsealedCore(t)
+	err := c.unmountPath("secret")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount("secret/foo")
+	if match != "" {
+		t.Fatalf("backend present")
+	}
+
+	conf := &CoreConfig{physical: c.physical}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	unseal, err := c2.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !unseal {
+		t.Fatalf("should be unsealed")
+	}
+
+	// Verify matching mount tables
+	if !reflect.DeepEqual(c.mounts, c2.mounts) {
+		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
+	}
+}
+
 func TestDefaultMountTable(t *testing.T) {
 	table := defaultMountTable()
 	verifyDefaultTable(t, table)

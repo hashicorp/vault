@@ -202,6 +202,7 @@ func (c *Core) unmountPath(path string) error {
 		if newTable.Entries[i].Path == path {
 			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
 			newTable.Entries = newTable.Entries[:n-1]
+			break
 		}
 	}
 
