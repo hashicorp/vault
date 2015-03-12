@@ -56,6 +56,21 @@ func (c *Config) Merge(c2 *Config) *Config {
 	return result
 }
 
+// LoadConfig loads the configuration at the given path, regardless if
+// its a file or directory.
+func LoadConfig(path string) (*Config, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if fi.IsDir() {
+		return LoadConfigDir(path)
+	} else {
+		return LoadConfigFile(path)
+	}
+}
+
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
 	// Read the file

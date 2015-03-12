@@ -1,8 +1,10 @@
 package command
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 )
 
@@ -28,6 +30,23 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
+	var config *server.Config
+	for _, path := range configPath {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error loading configuration from %s: %s", path, err))
+			return 1
+		}
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	// Initialize the listeners
 
 	return 0
 }
