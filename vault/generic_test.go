@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
-// mockRequest returns a request with a real view attached
-func mockRequest(t *testing.T, op Operation, path string) *Request {
+// mockView returns a view attached to a barrier / backend
+func mockView(t *testing.T, prefix string) *BarrierView {
 	inm := physical.NewInmem()
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
@@ -21,7 +21,13 @@ func mockRequest(t *testing.T, op Operation, path string) *Request {
 	b.Unseal(key)
 
 	// Create the barrier view
-	view := NewBarrierView(b, "logical/")
+	view := NewBarrierView(b, prefix)
+	return view
+}
+
+// mockRequest returns a request with a real view attached
+func mockRequest(t *testing.T, op Operation, path string) *Request {
+	view := mockView(t, "logical/")
 
 	// Create the request
 	req := &Request{

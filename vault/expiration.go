@@ -1,6 +1,11 @@
 package vault
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"path"
+	"time"
+)
 
 const (
 	// expirationSubPath is the sub-path used for the expiration manager
@@ -61,5 +66,68 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*Lea
 // lease. The secret gets assigned a vaultId and the management of
 // of lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(req *Request, resp *Response) (string, error) {
-	return "", nil
+	// Ignore if there is no lease
+	if resp == nil || resp.Lease == nil {
+		return "", nil
+	}
+
+	// Validate the lease
+	if err := resp.Lease.Validate(); err != nil {
+		return "", err
+	}
+
+	// Cannot register a non-secret (e.g. a policy or configuration key)
+	if !resp.IsSecret {
+		return "", fmt.Errorf("cannot attach lease to non-secret")
+	}
+
+	// Create a lease entry
+	le := leaseEntry{
+		VaultID:   path.Join(req.Path, generateUUID()),
+		Path:      req.Path,
+		Data:      resp.Data,
+		Lease:     resp.Lease,
+		IssueTime: time.Now().UTC(),
+	}
+
+	// Encode the entry
+	buf, err := le.encode()
+	if err != nil {
+		return "", fmt.Errorf("failed to encode lease entry: %v", err)
+	}
+
+	// Write out to the view
+	ent := Entry{
+		Key:   le.VaultID,
+		Value: buf,
+	}
+	if err := m.view.Put(&ent); err != nil {
+		return "", fmt.Errorf("failed to persist lease entry: %v", err)
+	}
+
+	// TODO: Automatic revoke timer...
+
+	// Done
+	return le.VaultID, nil
+}
+
+// leaseEntry is used to structure the values the expiration
+// manager stores. This is used to handle renew and revocation.
+type leaseEntry struct {
+	VaultID   string
+	Path      string
+	Data      map[string]interface{}
+	Lease     *Lease
+	IssueTime time.Time
+}
+
+// encode is used to JSON encode the lease entry
+func (l *leaseEntry) encode() ([]byte, error) {
+	return json.Marshal(l)
+}
+
+// decodeLeaseEntry is used to reverse encode and return a new entry
+func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
+	out := new(leaseEntry)
+	return out, json.Unmarshal(buf, out)
 }
