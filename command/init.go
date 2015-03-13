@@ -39,9 +39,24 @@ func (c *InitCommand) Run(args []string) int {
 		return 1
 	}
 
-	for _, key := range resp.Keys {
-		c.Ui.Output(fmt.Sprintf("Key: %s", key))
+	for i, key := range resp.Keys {
+		c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, key))
 	}
+
+	c.Ui.Output(fmt.Sprintf(
+		"\n"+
+			"Vault initialized with %d keys and a key threshold of %d!\n\n"+
+			"Please securely distribute the above keys. Whenever a Vault server\n"+
+			"is started, it must be unsealed with %d (the threshold)\n of the"+
+			"keys above (any of the keys, as long as the total number equals\n"+
+			"the threshold).\n\n"+
+			"Vault does not store the original master key. If you lose the keys\n"+
+			"above such that you no longer have the minimum number (the\n"+
+			"threshold), then your Vault will not be able to be unsealed.",
+		shares,
+		threshold,
+		threshold,
+	))
 
 	return 0
 }
