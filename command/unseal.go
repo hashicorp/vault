@@ -22,6 +22,14 @@ func (c *UnsealCommand) Run(args []string) int {
 		return 1
 	}
 
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 2
+	}
+
+	fmt.Printf("Key (will be hidden): ")
 	value, err := password.Read(os.Stdin)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -34,7 +42,23 @@ func (c *UnsealCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(value)
+	status, err := client.Sys().Unseal(strings.TrimSpace(value))
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error attempting unseal: %s", err))
+		return 1
+	}
+
+	c.Ui.Output(fmt.Sprintf(
+		"Sealed: %v\n"+
+			"Key Shares: %d\n"+
+			"Key Threshold: %d\n"+
+			"Unseal Progress: %d",
+		status.Sealed,
+		status.N,
+		status.T,
+		status.Progress,
+	))
 	return 0
 }
 
