@@ -1,0 +1,117 @@
+body.page-sub{
+    #footer{
+        padding: 0 0 40px 0;
+        .col-md-5{
+            padding-top: 40px;
+            border-top: 1px solid $faint-gray;
+        }
+    }
+}
+
+#footer{
+    padding: 40px 0;
+    color: black;   
+
+    .footer-links{
+        margin-bottom: 20px;
+
+        .li-under a:hover::after,
+        .li-under a:focus::after {
+            opacity: 1;
+            -webkit-transform: skewY(15deg) translateY(8px);
+            -moz-transform: skewY(15deg) translateY(8px);
+            transform: skewY(15deg) translateY(8px);
+        }
+
+        .li-under a::after {
+            background-color: $purple;
+        }
+
+        li{
+            a{
+                @include v-nav-style();
+            }
+        }
+    }
+
+    .pull-right{
+        padding-right: 15px;
+    }
+
+    .footer-hashi{
+        font-size: 11px;
+        a{
+            color: black;
+            font-weight: 600;            
+        }
+
+        span{
+            margin-right: 4px;
+        }
+
+        .hashi-logo{
+            display: inline-block;
+            vertical-align: middle;
+            i{
+                display: inline-block;
+                margin-top: -6px;
+                width: 16px;
+                height: 17px;
+                background: image-url('../images/icon-hashicorp-logo.png') 0 0 no-repeat;
+                @include img-retina('../images/icon-hashicorp-logo.png', '../images/icon-hashicorp-logo@2x.png', 16px, 17px);
+            }
+        }
+    }
+}
+
+@media (max-width: 992px) {
+
+}
+
+@media (max-width: 768px) {
+
+    body.page-sub{
+        #footer{
+            .col-md-5{
+                &:last-child{
+                    padding-top: 0;
+                    border-top: none;
+                }
+            }
+        }
+    }
+
+    #footer{
+        padding: 100px 0 40px;
+        text-align: center;
+
+        .footer-links{
+            float: none;
+            display: inline-block;
+        }
+
+        .footer-hashi {
+            float: none;
+            display: inline-block;
+
+            .pull-right{
+                float: none !important;
+            }
+        }
+    }
+}
+
+@media (max-width: 320px) {
+
+    #footer{
+        text-align: center;
+
+        .footer-links{
+            .li-under{
+                float: none !important;
+            }
+        }
+    }
+}
+
+

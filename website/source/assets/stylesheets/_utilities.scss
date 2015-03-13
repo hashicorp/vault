@@ -1,0 +1,68 @@
+//
+// Utility classes
+// --------------------------------------------------
+
+
+//
+// -------------------------
+
+@mixin anti-alias() {
+	text-rendering: optimizeLegibility;
+ 	 -webkit-font-smoothing: antialiased;
+}
+
+@mixin consul-gradient-bg() {
+	background: #694a9c; /* Old browsers */
+	background: -moz-linear-gradient(left, #694a9c 0%, #cd2028 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#694a9c), color-stop(100%,#cd2028)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(left, #694a9c 0%,#cd2028 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(left, #694a9c 0%,#cd2028 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(left, #694a9c 0%,#cd2028 100%); /* IE10+ */
+	background: linear-gradient(to right, #694a9c 0%,#cd2028 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#694a9c', endColorstr='#cd2028',GradientType=1 ); /* IE6-9 */
+
+}
+
+@mixin lato-light() {
+  font-family: $font-family-lato;
+  font-weight: 300;
+}
+
+@mixin open-light() {
+  font-family: $font-family-open-sans;
+  font-weight: 300;
+}
+
+@mixin open() {
+  font-family: $font-family-open-sans;
+  font-weight: 400;
+}
+
+@mixin open-bold() {
+  font-family: $font-family-open-sans;
+  font-weight: 600;
+}
+
+@mixin skewY($skew) {
+	-webkit-transform: skewY($skew);
+  -moz-transform: skewY($skew);
+  -ms-transform: skewY($skew);
+  -o-transform: skewY($skew);
+  transform: skewY($skew);
+}
+
+@mixin v-nav-style{
+  margin: 0 15px;
+  padding: 0;
+  line-height: 26px;
+  color: $black;
+  font-size: 14px;
+  font-weight: 300;
+  @include transition( color 0.3s ease );  
+  
+  &:hover{
+        color: $blue;
+        @include transition( color 0.3s ease );
+        background-color: transparent;
+    }  
+}
