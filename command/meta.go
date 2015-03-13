@@ -2,9 +2,14 @@ package command
 
 import (
 	"bufio"
+	"crypto/tls"
 	"flag"
 	"io"
+	"net"
+	"net/http"
+	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
@@ -28,6 +33,39 @@ type Meta struct {
 	flagCACert   string
 	flagCAPath   string
 	flagInsecure bool
+}
+
+// Client returns the API client to a Vault server given the configured
+// flag settings for this command.
+func (m *Meta) Client() (*api.Client, error) {
+	config := api.DefaultConfig()
+	if m.flagAddress != "" {
+		config.Address = m.flagAddress
+	}
+
+	// If we need custom TLS configuration, then set it
+	if m.flagCACert != "" || m.flagCAPath != "" || m.flagInsecure {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: m.flagInsecure,
+		}
+
+		// TODO: Root CAs
+
+		client := *http.DefaultClient
+		client.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSClientConfig:     tlsConfig,
+			TLSHandshakeTimeout: 10 * time.Second,
+		}
+
+		config.HttpClient = &client
+	}
+
+	return api.NewClient(config)
 }
 
 // FlagSet returns a FlagSet with the common flags that every

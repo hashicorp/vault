@@ -26,3 +26,6 @@ _testmain.go
 # Other dirs
 bin/
 pkg/
+
+# Vault-specific
+example.hcl

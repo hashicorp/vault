@@ -48,6 +48,12 @@ func init() {
 			}, nil
 		},
 
+		"init": func() (cli.Command, error) {
+			return &command.InitCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"server": func() (cli.Command, error) {
 			return &command.ServerCommand{
 				Meta: meta,
