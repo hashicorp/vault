@@ -372,16 +372,19 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	if err := c.barrier.Unseal(masterKey); err != nil {
 		return false, err
 	}
+	c.logger.Printf("[INFO] core: vault is unsealed")
 
 	// Do post-unseal setup
+	c.logger.Printf("[INFO] core: post-unseal setup starting")
 	if err := c.postUnseal(); err != nil {
 		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 		c.barrier.Seal()
+		c.logger.Printf("[WARN] core: vault is sealed")
 		return false, err
 	}
+	c.logger.Printf("[INFO] core: post-unseal setup complete")
 
 	// Success!
-	c.logger.Printf("[INFO] core: vault is unsealed")
 	c.sealed = false
 	return true, nil
 }
@@ -397,13 +400,18 @@ func (c *Core) Seal() error {
 	c.sealed = true
 
 	// Do pre-seal teardown
+	c.logger.Printf("[INFO] core: pre-seal teardown starting")
 	if err := c.preSeal(); err != nil {
 		c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
 		return fmt.Errorf("internal error")
 	}
+	c.logger.Printf("[INFO] core: pre-seal teardown complete")
 
-	c.logger.Printf("[INFO] core: vault is being sealed")
-	return c.barrier.Seal()
+	if err := c.barrier.Seal(); err != nil {
+		return err
+	}
+	c.logger.Printf("[INFO] core: vault is sealed")
+	return nil
 }
 
 // postUnseal is invoked after the barrier is unsealed, but before
