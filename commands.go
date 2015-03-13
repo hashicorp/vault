@@ -42,6 +42,12 @@ func init() {
 			}, nil
 		},
 
+		"seal-status": func() (cli.Command, error) {
+			return &command.SealStatusCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"unseal": func() (cli.Command, error) {
 			return &command.UnsealCommand{
 				Meta: meta,
