@@ -16,5 +16,5 @@ func tcpListenerFactory(config map[string]string) (net.Listener, error) {
 		return nil, err
 	}
 
-	return ln, nil
+	return listenerWrapTLS(ln, config)
 }

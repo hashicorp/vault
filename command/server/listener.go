@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 )
@@ -22,4 +23,33 @@ func NewListener(t string, config map[string]string) (net.Listener, error) {
 	}
 
 	return f(config)
+}
+
+func listenerWrapTLS(
+	ln net.Listener, config map[string]string) (net.Listener, error) {
+	if v, ok := config["tls_disable"]; ok && v != "" {
+		return ln, nil
+	}
+
+	certFile, ok := config["tls_cert_file"]
+	if !ok {
+		return nil, fmt.Errorf("'tls_cert_file' must be set")
+	}
+
+	keyFile, ok := config["tls_key_file"]
+	if !ok {
+		return nil, fmt.Errorf("'tls_key_file' must be set")
+	}
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("error loading TLS cert: %s", err)
+	}
+
+	tlsConf := &tls.Config{}
+	tlsConf.Certificates = []tls.Certificate{cert}
+	tlsConf.NextProtos = []string{"http/1.1"}
+
+	ln = tls.NewListener(ln, tlsConf)
+	return ln, nil
 }
