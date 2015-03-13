@@ -14,6 +14,24 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 	return NewExpirationManager(router, view)
 }
 
+func TestExpiration_StartStop(t *testing.T) {
+	exp := mockExpiration(t)
+	err := exp.Start()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	err = exp.Restore()
+	if err.Error() != "cannot restore while running" {
+		t.Fatalf("err: %v", err)
+	}
+
+	err = exp.Stop()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestExpiration_Register(t *testing.T) {
 	exp := mockExpiration(t)
 	req := &Request{

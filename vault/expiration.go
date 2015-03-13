@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"sync"
 	"time"
 )
 
@@ -18,8 +19,11 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
-	router *Router
-	view   *BarrierView
+	router   *Router
+	view     *BarrierView
+	doneCh   chan struct{}
+	stopCh   chan struct{}
+	stopLock sync.Mutex
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -67,19 +71,53 @@ func (c *Core) stopExpiration() error {
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
 func (m *ExpirationManager) Restore() error {
+	m.stopLock.Lock()
+	defer m.stopLock.Unlock()
+	if m.stopCh != nil {
+		return fmt.Errorf("cannot restore while running")
+	}
+
+	// TODO: Restore...
 	return nil
 }
 
 // Start is used to continue automatic revocation. This
 // should only be called when the Vault is unsealed.
 func (m *ExpirationManager) Start() error {
+	m.stopLock.Lock()
+	defer m.stopLock.Unlock()
+	if m.stopCh == nil {
+		m.doneCh = make(chan struct{})
+		m.stopCh = make(chan struct{})
+		go m.run(m.doneCh, m.stopCh)
+	}
 	return nil
 }
 
 // Stop is used to prevent further automatic revocations.
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
+	m.stopLock.Lock()
+	defer m.stopLock.Unlock()
+	if m.stopCh != nil {
+		doneCh := m.doneCh
+		close(m.stopCh)
+		m.stopCh = nil
+		m.doneCh = nil
+		<-doneCh // Wait for completion
+	}
 	return nil
+}
+
+// run is a long running goroutine that manages background expiration
+func (m *ExpirationManager) run(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	for {
+		select {
+		case <-stopCh:
+			return
+		}
+	}
 }
 
 // Revoke is used to revoke a secret named by the given vaultID
