@@ -160,12 +160,14 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Create a lease entry
+	now := time.Now().UTC()
 	le := leaseEntry{
 		VaultID:   path.Join(req.Path, generateUUID()),
 		Path:      req.Path,
 		Data:      resp.Data,
 		Lease:     resp.Lease,
-		IssueTime: time.Now().UTC(),
+		IssueTime: now,
+		RenewTime: now,
 	}
 
 	// Encode the entry
