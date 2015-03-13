@@ -386,7 +386,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	return true, nil
 }
 
-// Seal is used to re-seal the Vault. This requires the Vaultto
+// Seal is used to re-seal the Vault. This requires the Vault to
 // be unsealed again to perform any further operations.
 func (c *Core) Seal() error {
 	c.stateLock.Lock()
@@ -394,8 +394,15 @@ func (c *Core) Seal() error {
 	if c.sealed {
 		return nil
 	}
-	c.logger.Printf("[INFO] core: vault is being sealed")
 	c.sealed = true
+
+	// Do pre-seal teardown
+	if err := c.preSeal(); err != nil {
+		c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+		return fmt.Errorf("internal error")
+	}
+
+	c.logger.Printf("[INFO] core: vault is being sealed")
 	return c.barrier.Seal()
 }
 
@@ -411,6 +418,15 @@ func (c *Core) postUnseal() error {
 		return err
 	}
 	if err := c.setupExpiration(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// preSeal is invoked before the barrier is sealed, allowing
+// for any state teardown required.
+func (c *Core) preSeal() error {
+	if err := c.unloadMounts(); err != nil {
 		return err
 	}
 	return nil

@@ -332,3 +332,14 @@ func TestCore_Route_Sealed(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 }
+
+// Attempt to unseal after doing a first seal
+func TestCore_SealUnseal(t *testing.T) {
+	c, key := testUnsealedCore(t)
+	if err := c.Seal(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if unseal, err := c.Unseal(key); err != nil || !unseal {
+		t.Fatalf("err: %v", err)
+	}
+}

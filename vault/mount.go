@@ -151,6 +151,15 @@ func (c *Core) setupMounts() error {
 	return nil
 }
 
+// unloadMounts is used before we seal the vault to reset the mounts to
+// their unloaded state. This is reversed by load and setup mounts.
+func (c *Core) unloadMounts() error {
+	c.mounts = nil
+	c.router = NewRouter()
+	c.systemView = nil
+	return nil
+}
+
 // mountEntry is used to create a new mount entry
 func (c *Core) mountEntry(me *MountEntry) error {
 	c.mountsLock.Lock()
