@@ -11,7 +11,7 @@ import (
 
 func TestSysInit_get(t *testing.T) {
 	core := vault.TestCore(t)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	{
@@ -55,7 +55,7 @@ func TestSysInit_get(t *testing.T) {
 
 func TestSysInit_put(t *testing.T) {
 	core := vault.TestCore(t)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	resp := testHttpPut(t, addr+"/v1/sys/init", map[string]interface{}{

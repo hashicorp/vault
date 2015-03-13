@@ -12,7 +12,7 @@ import (
 func TestSysSealStatus(t *testing.T) {
 	core := vault.TestCore(t)
 	vault.TestCoreInit(t, core)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	resp, err := http.Get(addr + "/v1/sys/seal-status")
@@ -37,7 +37,7 @@ func TestSysSealStatus(t *testing.T) {
 func TestSysSeal(t *testing.T) {
 	core := vault.TestCore(t)
 	vault.TestCoreInit(t, core)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	resp := testHttpPut(t, addr+"/v1/sys/seal", nil)
@@ -54,7 +54,7 @@ func TestSysSeal(t *testing.T) {
 
 func TestSysSeal_unsealed(t *testing.T) {
 	core := vault.TestCore(t)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	keys := vault.TestCoreInit(t, core)
@@ -77,7 +77,7 @@ func TestSysSeal_unsealed(t *testing.T) {
 func TestSysUnseal(t *testing.T) {
 	core := vault.TestCore(t)
 	keys := vault.TestCoreInit(t, core)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	resp := testHttpPut(t, addr+"/v1/sys/unseal", map[string]interface{}{
@@ -101,7 +101,7 @@ func TestSysUnseal(t *testing.T) {
 func TestSysUnseal_badKey(t *testing.T) {
 	core := vault.TestCore(t)
 	vault.TestCoreInit(t, core)
-	ln, addr := testServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	resp := testHttpPut(t, addr+"/v1/sys/unseal", map[string]interface{}{
