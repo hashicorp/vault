@@ -112,6 +112,23 @@ type Lease struct {
 	MaxIncrement time.Duration // Maximum increment to lease duration
 }
 
+// Validate is used to sanity check a lease
+func (l *Lease) Validate() error {
+	if l.Duration <= 0 {
+		return fmt.Errorf("lease duration must be greater than zero")
+	}
+	if l.MaxDuration <= 0 {
+		return fmt.Errorf("maximum lease duration must be greater than zero")
+	}
+	if l.Duration > l.MaxDuration {
+		return fmt.Errorf("lease duration cannot be greater than maximum lease duration")
+	}
+	if l.MaxIncrement < 0 {
+		return fmt.Errorf("maximum lease increment cannot be negative")
+	}
+	return nil
+}
+
 // Factory is the factory function to create a logical backend.
 type Factory func(map[string]string) (LogicalBackend, error)
 
