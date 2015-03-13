@@ -5,7 +5,7 @@ import (
 )
 
 func (c *Sys) ListAuth() ([]*AuthResponse, error) {
-	r := c.c.NewRequest("GET", "/sys/auth")
+	r := c.c.NewRequest("GET", "/v1/sys/auth")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func (c *Sys) EnableAuth(id string, opts *AuthRequest) error {
 	}
 	body["type"] = opts.Type
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/sys/auth/%s", id))
+	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/auth/%s", id))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (c *Sys) EnableAuth(id string, opts *AuthRequest) error {
 }
 
 func (c *Sys) DisableAuth(id string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/sys/auth/%s", id))
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", id))
 	resp, err := c.c.RawRequest(r)
 	defer resp.Body.Close()
 	return err

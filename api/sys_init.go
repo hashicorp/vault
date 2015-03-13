@@ -1,7 +1,7 @@
 package api
 
 func (c *Sys) InitStatus() (bool, error) {
-	r := c.c.NewRequest("GET", "/sys/init")
+	r := c.c.NewRequest("GET", "/v1/sys/init")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return false, err
@@ -19,7 +19,7 @@ func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
 		"secret_threshold": opts.SecretThreshold,
 	}
 
-	r := c.c.NewRequest("PUT", "/sys/init")
+	r := c.c.NewRequest("PUT", "/v1/sys/init")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}

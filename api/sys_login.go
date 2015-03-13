@@ -11,7 +11,7 @@ import (
 // at any time from the client using `client.Token()` and it can be cleared
 // with `sys.Logout()`.
 func (c *Sys) Login(vars map[string]string) error {
-	r := c.c.NewRequest("PUT", "/sys/login")
+	r := c.c.NewRequest("PUT", "/v1/sys/login")
 	if err := r.SetJSONBody(vars); err != nil {
 		return err
 	}
