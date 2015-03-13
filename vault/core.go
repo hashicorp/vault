@@ -426,6 +426,9 @@ func (c *Core) postUnseal() error {
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
+	if err := c.stopExpiration(); err != nil {
+		return err
+	}
 	if err := c.unloadMounts(); err != nil {
 		return err
 	}

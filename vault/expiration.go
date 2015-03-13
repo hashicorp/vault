@@ -41,6 +41,44 @@ func (c *Core) setupExpiration() error {
 	// Create the manager
 	mgr := NewExpirationManager(c.router, view)
 	c.expiration = mgr
+
+	// Restore the existing state
+	if err := c.expiration.Restore(); err != nil {
+		return fmt.Errorf("expiration state restore failed: %v", err)
+	}
+
+	// Start the expiration manager
+	if err := c.expiration.Start(); err != nil {
+		return fmt.Errorf("expiration start failed: %v", err)
+	}
+	return nil
+}
+
+// stopExpiration is used to stop the expiration manager before
+// sealing the Vault.
+func (c *Core) stopExpiration() error {
+	if err := c.expiration.Stop(); err != nil {
+		return err
+	}
+	c.expiration = nil
+	return nil
+}
+
+// Restore is used to recover the lease states when starting.
+// This is used after starting the vault.
+func (m *ExpirationManager) Restore() error {
+	return nil
+}
+
+// Start is used to continue automatic revocation. This
+// should only be called when the Vault is unsealed.
+func (m *ExpirationManager) Start() error {
+	return nil
+}
+
+// Stop is used to prevent further automatic revocations.
+// This must be called before sealing the view.
+func (m *ExpirationManager) Stop() error {
 	return nil
 }
 
