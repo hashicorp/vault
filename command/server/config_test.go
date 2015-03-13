@@ -15,7 +15,7 @@ func TestLoadConfigFile(t *testing.T) {
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
-				Config: map[string]interface{}{
+				Config: map[string]string{
 					"address": "127.0.0.1:443",
 				},
 			},
@@ -23,7 +23,7 @@ func TestLoadConfigFile(t *testing.T) {
 
 		Backend: &Backend{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},
@@ -43,7 +43,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
-				Config: map[string]interface{}{
+				Config: map[string]string{
 					"address": "127.0.0.1:443",
 				},
 			},
@@ -51,7 +51,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 
 		Backend: &Backend{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},
@@ -71,7 +71,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
-				Config: map[string]interface{}{
+				Config: map[string]string{
 					"address": "127.0.0.1:443",
 				},
 			},
@@ -79,7 +79,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 
 		Backend: &Backend{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},
@@ -99,7 +99,7 @@ func TestLoadConfigDir(t *testing.T) {
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
-				Config: map[string]interface{}{
+				Config: map[string]string{
 					"address": "127.0.0.1:443",
 				},
 			},
@@ -107,7 +107,7 @@ func TestLoadConfigDir(t *testing.T) {
 
 		Backend: &Backend{
 			Type: "consul",
-			Config: map[string]interface{}{
+			Config: map[string]string{
 				"foo": "bar",
 			},
 		},

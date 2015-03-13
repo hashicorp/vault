@@ -21,7 +21,7 @@ type Config struct {
 // Listener is the listener configuration for the server.
 type Listener struct {
 	Type   string
-	Config map[string]interface{}
+	Config map[string]string
 }
 
 func (l *Listener) GoString() string {
@@ -31,7 +31,7 @@ func (l *Listener) GoString() string {
 // Backend is the backend configuration for the server.
 type Backend struct {
 	Type   string
-	Config map[string]interface{}
+	Config map[string]string
 }
 
 func (b *Backend) GoString() string {
@@ -217,7 +217,7 @@ func loadListeners(os *hclobj.Object) ([]*Listener, error) {
 	for _, obj := range allNames {
 		k := obj.Key
 
-		var config map[string]interface{}
+		var config map[string]string
 		if err := hcl.DecodeObject(&config, obj); err != nil {
 			return nil, fmt.Errorf(
 				"Error reading config for %s: %s",
@@ -267,7 +267,7 @@ func loadBackend(os *hclobj.Object) (*Backend, error) {
 	obj := allNames[0]
 	result.Type = obj.Key
 
-	var config map[string]interface{}
+	var config map[string]string
 	if err := hcl.DecodeObject(&config, obj); err != nil {
 		return nil, fmt.Errorf(
 			"Error reading config for backend %s: %s",

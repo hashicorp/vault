@@ -2,10 +2,15 @@ package command
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/vault"
 )
 
 // ServerCommand is a Command that starts the Vault server.
@@ -46,8 +51,43 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	// Initialize the listeners
+	// Initialize the backend
+	backend, err := physical.NewBackend(
+		config.Backend.Type, config.Backend.Config)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing backend of type %s: %s",
+			config.Backend.Type, err))
+		return 1
+	}
 
+	// Initialize the core
+	core, err := vault.NewCore(&vault.CoreConfig{
+		Physical: backend,
+	})
+
+	// Initialize the listeners
+	lns := make([]net.Listener, 0, len(config.Listeners))
+	for _, lnConfig := range config.Listeners {
+		ln, err := server.NewListener(lnConfig.Type, lnConfig.Config)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error initializing listener of type %s: %s",
+				lnConfig.Type, err))
+			return 1
+		}
+
+		lns = append(lns, ln)
+	}
+
+	// Initialize the HTTP server
+	server := &http.Server{}
+	server.Handler = vaulthttp.Handler(core)
+	for _, ln := range lns {
+		go server.Serve(ln)
+	}
+
+	<-make(chan struct{})
 	return 0
 }
 
