@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/vault"
 )
 
 func TestSysInit_get(t *testing.T) {
-	core := testCore(t)
+	core := vault.TestCore(t)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
@@ -30,7 +32,7 @@ func TestSysInit_get(t *testing.T) {
 		}
 	}
 
-	testCoreInit(t, core)
+	vault.TestCoreInit(t, core)
 
 	{
 		// Post-init
@@ -52,7 +54,7 @@ func TestSysInit_get(t *testing.T) {
 }
 
 func TestSysInit_put(t *testing.T) {
-	core := testCore(t)
+	core := vault.TestCore(t)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 

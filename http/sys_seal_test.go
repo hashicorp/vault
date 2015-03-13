@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/vault"
 )
 
 func TestSysSealStatus(t *testing.T) {
-	core := testCore(t)
-	testCoreInit(t, core)
+	core := vault.TestCore(t)
+	vault.TestCoreInit(t, core)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
@@ -33,8 +35,8 @@ func TestSysSealStatus(t *testing.T) {
 }
 
 func TestSysSeal(t *testing.T) {
-	core := testCore(t)
-	testCoreInit(t, core)
+	core := vault.TestCore(t)
+	vault.TestCoreInit(t, core)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
@@ -51,11 +53,11 @@ func TestSysSeal(t *testing.T) {
 }
 
 func TestSysSeal_unsealed(t *testing.T) {
-	core := testCore(t)
+	core := vault.TestCore(t)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
-	keys := testCoreInit(t, core)
+	keys := vault.TestCoreInit(t, core)
 	if _, err := core.Unseal(keys[0]); err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -73,8 +75,8 @@ func TestSysSeal_unsealed(t *testing.T) {
 }
 
 func TestSysUnseal(t *testing.T) {
-	core := testCore(t)
-	keys := testCoreInit(t, core)
+	core := vault.TestCore(t)
+	keys := vault.TestCoreInit(t, core)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
@@ -97,8 +99,8 @@ func TestSysUnseal(t *testing.T) {
 }
 
 func TestSysUnseal_badKey(t *testing.T) {
-	core := testCore(t)
-	testCoreInit(t, core)
+	core := vault.TestCore(t)
+	vault.TestCoreInit(t, core)
 	ln, addr := testServer(t, core)
 	defer ln.Close()
 
