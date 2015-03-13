@@ -77,6 +77,7 @@ func TestLeaseEntry(t *testing.T) {
 			MaxDuration: time.Hour,
 		},
 		IssueTime: time.Now(),
+		RenewTime: time.Now(),
 	}
 
 	enc, err := le.encode()

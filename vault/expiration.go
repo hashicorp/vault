@@ -195,6 +195,7 @@ type leaseEntry struct {
 	Data      map[string]interface{}
 	Lease     *Lease
 	IssueTime time.Time
+	RenewTime time.Time
 }
 
 // encode is used to JSON encode the lease entry
