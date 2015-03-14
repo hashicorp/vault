@@ -52,6 +52,37 @@ type Path struct {
 	Callback func(*vault.Request, *FieldData) (*vault.Response, error)
 }
 
+// vault.LogicalBackend impl.
+func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
+	// Find the matching route
+	path, captures := b.route(req.Path)
+	if path == nil {
+		return nil, vault.ErrUnsupportedPath
+	}
+
+	// Build up the data for the route, with the URL taking priority
+	// for the fields over the PUT data.
+	raw := make(map[string]interface{}, len(path.Fields))
+	for k, v := range req.Data {
+		raw[k] = v
+	}
+	for k, v := range captures {
+		raw[k] = v
+	}
+
+	// Call the callback with the request and the data
+	return path.Callback(req, &FieldData{
+		Raw:    raw,
+		Schema: path.Fields,
+	})
+}
+
+// vault.LogicalBackend impl.
+func (b *Backend) RootPaths() []string {
+	// TODO
+	return nil
+}
+
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)

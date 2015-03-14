@@ -3,6 +3,8 @@ package backend
 import (
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/vault"
 )
 
 func BenchmarkBackendRoute(b *testing.B) {
@@ -30,6 +32,106 @@ func BenchmarkBackendRoute(b *testing.B) {
 		if p := backend.Route("aws/policy/foo"); p == nil {
 			b.Fatal("p should not be nil")
 		}
+	}
+}
+
+func TestBackend_impl(t *testing.T) {
+	var _ vault.LogicalBackend = new(Backend)
+}
+
+func TestBackendHandleRequest(t *testing.T) {
+	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
+		return &vault.Response{
+			Data: map[string]interface{}{
+				"value": data.Get("value"),
+			},
+		}, nil
+	}
+
+	b := &Backend{
+		Paths: []*Path{
+			&Path{
+				Pattern: "foo/bar",
+				Fields: map[string]*FieldSchema{
+					"value": &FieldSchema{Type: TypeInt},
+				},
+				Callback: callback,
+			},
+		},
+	}
+
+	resp, err := b.HandleRequest(&vault.Request{
+		Path: "foo/bar",
+		Data: map[string]interface{}{"value": "42"},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data["value"] != 42 {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestBackendHandleRequest_404(t *testing.T) {
+	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
+		return &vault.Response{
+			Data: map[string]interface{}{
+				"value": data.Get("value"),
+			},
+		}, nil
+	}
+
+	b := &Backend{
+		Paths: []*Path{
+			&Path{
+				Pattern: `foo/bar`,
+				Fields: map[string]*FieldSchema{
+					"value": &FieldSchema{Type: TypeInt},
+				},
+				Callback: callback,
+			},
+		},
+	}
+
+	_, err := b.HandleRequest(&vault.Request{
+		Path: "foo/baz",
+		Data: map[string]interface{}{"value": "84"},
+	})
+	if err != vault.ErrUnsupportedPath {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+func TestBackendHandleRequest_urlPriority(t *testing.T) {
+	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
+		return &vault.Response{
+			Data: map[string]interface{}{
+				"value": data.Get("value"),
+			},
+		}, nil
+	}
+
+	b := &Backend{
+		Paths: []*Path{
+			&Path{
+				Pattern: `foo/(?P<value>\d+)`,
+				Fields: map[string]*FieldSchema{
+					"value": &FieldSchema{Type: TypeInt},
+				},
+				Callback: callback,
+			},
+		},
+	}
+
+	resp, err := b.HandleRequest(&vault.Request{
+		Path: "foo/42",
+		Data: map[string]interface{}{"value": "84"},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data["value"] != 42 {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 
