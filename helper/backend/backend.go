@@ -1,10 +1,15 @@
 package backend
 
 import (
+	"bytes"
+	"fmt"
 	"regexp"
+	"sort"
 	"sync"
+	"text/template"
 
 	"github.com/hashicorp/vault/vault"
+	"github.com/mitchellh/go-wordwrap"
 )
 
 // Backend is an implementation of vault.LogicalBackend that allows
@@ -50,7 +55,26 @@ type Path struct {
 	// Callbacks are the set of callbacks that are called for a given
 	// operation. If a callback for a specific operation is not present,
 	// then vault.ErrUnsupportedOperation is automatically generated.
+	//
+	// The help operation is the only operation that the Path will
+	// automatically handle if the Help field is set. If both the Help
+	// field is set and there is a callback registered here, then the
+	// callback will be called.
 	Callbacks map[vault.Operation]OperationFunc
+
+	// Help is text describing how to use this path. This will be used
+	// to auto-generate the help operation. The Path will automatically
+	// generate a parameter listing and URL structure based on the
+	// regular expression, so the help text should just contain a description
+	// of what happens.
+	//
+	// HelpSynopsis is a one-sentence description of the path. This will
+	// be automatically line-wrapped at 80 characters.
+	//
+	// HelpDescription is a long-form description of the path. This will
+	// be automatically line-wrapped at 80 characters.
+	HelpSynopsis    string
+	HelpDescription string
 }
 
 // OperationFunc is the callback called for an operation on a path.
@@ -75,10 +99,17 @@ func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
 	}
 
 	// Look up the callback for this operation
-	if path.Callbacks == nil {
-		return nil, vault.ErrUnsupportedOperation
+	var callback OperationFunc
+	var ok bool
+	if path.Callbacks != nil {
+		callback, ok = path.Callbacks[req.Operation]
 	}
-	callback, ok := path.Callbacks[req.Operation]
+	if !ok {
+		if req.Operation == vault.HelpOperation && path.HelpSynopsis != "" {
+			callback = path.helpCallback
+			ok = true
+		}
+	}
 	if !ok {
 		return nil, vault.ErrUnsupportedOperation
 	}
@@ -137,10 +168,56 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
+func (p *Path) helpCallback(req *vault.Request, data *FieldData) (*vault.Response, error) {
+	var tplData pathTemplateData
+	tplData.Request = req.Path
+	tplData.RoutePattern = p.Pattern
+	tplData.Synopsis = wordwrap.WrapString(p.HelpSynopsis, 80)
+	tplData.Description = wordwrap.WrapString(p.HelpDescription, 80)
+
+	// Alphabetize the fields
+	fieldKeys := make([]string, 0, len(p.Fields))
+	for k, _ := range p.Fields {
+		fieldKeys = append(fieldKeys, k)
+	}
+	sort.Strings(fieldKeys)
+
+	// Build the field help
+	tplData.Fields = make([]pathTemplateFieldData, len(fieldKeys))
+	for i, k := range fieldKeys {
+		schema := p.Fields[k]
+		description := wordwrap.WrapString(schema.Description, 60)
+		if description == "" {
+			description = "<no description>"
+		}
+
+		tplData.Fields[i] = pathTemplateFieldData{
+			Key:         k,
+			Type:        schema.Type.String(),
+			Description: description,
+		}
+	}
+
+	// Parse the help template
+	tpl, err := template.New("root").Parse(pathHelpTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing template: %s", err)
+	}
+
+	// Execute the template and store the output
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, &tplData); err != nil {
+		return nil, fmt.Errorf("error executing template: %s", err)
+	}
+
+	return vault.HelpResponse(buf.String(), nil), nil
+}
+
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
-	Type    FieldType
-	Default interface{}
+	Type        FieldType
+	Default     interface{}
+	Description string
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
@@ -165,3 +242,37 @@ func (t FieldType) Zero() interface{} {
 		panic("unknown type: " + t.String())
 	}
 }
+
+type pathTemplateData struct {
+	Request      string
+	RoutePattern string
+	Synopsis     string
+	Description  string
+	Fields       []pathTemplateFieldData
+}
+
+type pathTemplateFieldData struct {
+	Key         string
+	Type        string
+	Description string
+	URL         bool
+}
+
+const pathHelpTemplate = `
+Request:        {{.Request}}
+Matching Route: {{.RoutePattern}}
+
+{{.Synopsis}}
+
+## Parameters
+
+{{range .Fields}}
+### {{.Key}} (type: {{.Type}})
+
+{{.Description}}
+
+{{end}}
+## Description
+
+{{.Description}}
+`

@@ -108,6 +108,33 @@ func TestBackendHandleRequest_404(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_help(t *testing.T) {
+	b := &Backend{
+		Paths: []*Path{
+			&Path{
+				Pattern: "foo/bar",
+				Fields: map[string]*FieldSchema{
+					"value": &FieldSchema{Type: TypeInt},
+				},
+				HelpSynopsis:    "foo",
+				HelpDescription: "bar",
+			},
+		},
+	}
+
+	resp, err := b.HandleRequest(&vault.Request{
+		Operation: vault.HelpOperation,
+		Path:      "foo/bar",
+		Data:      map[string]interface{}{"value": "42"},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data["help"] == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
 func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
 		return &vault.Response{
