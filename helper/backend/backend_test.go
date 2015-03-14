@@ -19,10 +19,15 @@ func BenchmarkBackendRoute(b *testing.B) {
 		backend.Paths = append(backend.Paths, &Path{Pattern: p})
 	}
 
+	// Warm any caches
+	backend.Route("aws/policy/foo")
+
+	// Reset the timer since we did a lot above
 	b.ResetTimer()
+
+	// Run through and route. We do a sanity check of the return value
 	for i := 0; i < b.N; i++ {
-		p := backend.Route("aws/policy/foo")
-		if p == nil {
+		if p := backend.Route("aws/policy/foo"); p == nil {
 			b.Fatal("p should not be nil")
 		}
 	}

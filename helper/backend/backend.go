@@ -19,7 +19,8 @@ type Backend struct {
 	// backend is in use).
 	Paths []*Path
 
-	once sync.Once
+	once    sync.Once
+	pathsRe []*regexp.Regexp
 }
 
 // Path is a single path that the backend responds to.
@@ -52,18 +53,22 @@ type Path struct {
 }
 
 func (b *Backend) Route(path string) *Path {
-	regexps := make([]*regexp.Regexp, len(b.Paths))
-	for i, p := range b.Paths {
-		regexps[i] = regexp.MustCompile(p.Pattern)
-	}
+	b.once.Do(b.init)
 
-	for i, re := range regexps {
+	for i, re := range b.pathsRe {
 		if re.MatchString(path) {
 			return b.Paths[i]
 		}
 	}
 
 	return nil
+}
+
+func (b *Backend) init() {
+	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
+	for i, p := range b.Paths {
+		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+	}
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.
