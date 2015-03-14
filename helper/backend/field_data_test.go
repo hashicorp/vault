@@ -43,6 +43,18 @@ func TestFieldDataGet(t *testing.T) {
 			"",
 		},
 
+		"string type, unset value with default": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{
+					Type:    TypeString,
+					Default: "bar",
+				},
+			},
+			map[string]interface{}{},
+			"foo",
+			"bar",
+		},
+
 		"int type, int value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeInt},

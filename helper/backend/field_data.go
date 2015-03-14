@@ -27,7 +27,7 @@ func (d *FieldData) Get(k string) interface{} {
 
 	value, ok := d.GetOk(k)
 	if !ok {
-		value = schema.Type.Zero()
+		value = schema.DefaultOrZero()
 	}
 
 	return value
@@ -47,7 +47,7 @@ func (d *FieldData) GetOk(k string) (interface{}, bool) {
 	}
 
 	if ok && result == nil {
-		result = schema.Type.Zero()
+		result = schema.DefaultOrZero()
 	}
 
 	return result, ok
