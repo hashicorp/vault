@@ -1,6 +1,9 @@
 package backend
 
 import (
+	"regexp"
+	"sync"
+
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -10,7 +13,13 @@ import (
 //
 // This is recommended over implementing vault.LogicalBackend directly.
 type Backend struct {
+	// Paths are the various routes that the backend responds to.
+	// This cannot be modified after construction (i.e. dynamically changing
+	// paths, including adding or removing, is not allowed once the
+	// backend is in use).
 	Paths []*Path
+
+	once sync.Once
 }
 
 // Path is a single path that the backend responds to.
@@ -40,6 +49,21 @@ type Path struct {
 	// Callback is what is called when this path is requested with
 	// a valid set of data.
 	Callback func(*vault.Request, *FieldData) (*vault.Response, error)
+}
+
+func (b *Backend) Route(path string) *Path {
+	regexps := make([]*regexp.Regexp, len(b.Paths))
+	for i, p := range b.Paths {
+		regexps[i] = regexp.MustCompile(p.Pattern)
+	}
+
+	for i, re := range regexps {
+		if re.MatchString(path) {
+			return b.Paths[i]
+		}
+	}
+
+	return nil
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.
