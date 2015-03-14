@@ -52,16 +52,10 @@ type Path struct {
 	Callback func(*vault.Request, *FieldData) (*vault.Response, error)
 }
 
+// Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
-	b.once.Do(b.init)
-
-	for i, re := range b.pathsRe {
-		if re.MatchString(path) {
-			return b.Paths[i]
-		}
-	}
-
-	return nil
+	result, _ := b.route(path)
+	return result
 }
 
 func (b *Backend) init() {
@@ -69,6 +63,34 @@ func (b *Backend) init() {
 	for i, p := range b.Paths {
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
 	}
+}
+
+func (b *Backend) route(path string) (*Path, map[string]string) {
+	b.once.Do(b.init)
+
+	for i, re := range b.pathsRe {
+		matches := re.FindStringSubmatch(path)
+		if matches == nil {
+			continue
+		}
+
+		// We have a match, determine the mapping of the captures and
+		// store that for returning.
+		var captures map[string]string
+		path := b.Paths[i]
+		if captureNames := re.SubexpNames(); len(captureNames) > 1 {
+			captures = make(map[string]string, len(captureNames))
+			for i, name := range captureNames {
+				if name != "" {
+					captures[name] = matches[i]
+				}
+			}
+		}
+
+		return path, captures
+	}
+
+	return nil, nil
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.
