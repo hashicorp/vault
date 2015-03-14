@@ -47,10 +47,14 @@ type Path struct {
 	// trailing '*' to denote that it is a prefix, and not an exact match.
 	Root string
 
-	// Callback is what is called when this path is requested with
-	// a valid set of data.
-	Callback func(*vault.Request, *FieldData) (*vault.Response, error)
+	// Callbacks are the set of callbacks that are called for a given
+	// operation. If a callback for a specific operation is not present,
+	// then vault.ErrUnsupportedOperation is automatically generated.
+	Callbacks map[vault.Operation]OperationFunc
 }
+
+// OperationFunc is the callback called for an operation on a path.
+type OperationFunc func(*vault.Request, *FieldData) (*vault.Response, error)
 
 // vault.LogicalBackend impl.
 func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
@@ -70,8 +74,17 @@ func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
 		raw[k] = v
 	}
 
+	// Look up the callback for this operation
+	if path.Callbacks == nil {
+		return nil, vault.ErrUnsupportedOperation
+	}
+	callback, ok := path.Callbacks[req.Operation]
+	if !ok {
+		return nil, vault.ErrUnsupportedOperation
+	}
+
 	// Call the callback with the request and the data
-	return path.Callback(req, &FieldData{
+	return callback(req, &FieldData{
 		Raw:    raw,
 		Schema: path.Fields,
 	})

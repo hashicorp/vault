@@ -55,14 +55,17 @@ func TestBackendHandleRequest(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callback: callback,
+				Callbacks: map[vault.Operation]OperationFunc{
+					vault.ReadOperation: callback,
+				},
 			},
 		},
 	}
 
 	resp, err := b.HandleRequest(&vault.Request{
-		Path: "foo/bar",
-		Data: map[string]interface{}{"value": "42"},
+		Operation: vault.ReadOperation,
+		Path:      "foo/bar",
+		Data:      map[string]interface{}{"value": "42"},
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -88,16 +91,52 @@ func TestBackendHandleRequest_404(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callback: callback,
+				Callbacks: map[vault.Operation]OperationFunc{
+					vault.ReadOperation: callback,
+				},
 			},
 		},
 	}
 
 	_, err := b.HandleRequest(&vault.Request{
-		Path: "foo/baz",
-		Data: map[string]interface{}{"value": "84"},
+		Operation: vault.ReadOperation,
+		Path:      "foo/baz",
+		Data:      map[string]interface{}{"value": "84"},
 	})
 	if err != vault.ErrUnsupportedPath {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
+	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
+		return &vault.Response{
+			Data: map[string]interface{}{
+				"value": data.Get("value"),
+			},
+		}, nil
+	}
+
+	b := &Backend{
+		Paths: []*Path{
+			&Path{
+				Pattern: `foo/bar`,
+				Fields: map[string]*FieldSchema{
+					"value": &FieldSchema{Type: TypeInt},
+				},
+				Callbacks: map[vault.Operation]OperationFunc{
+					vault.ReadOperation: callback,
+				},
+			},
+		},
+	}
+
+	_, err := b.HandleRequest(&vault.Request{
+		Operation: vault.WriteOperation,
+		Path:      "foo/bar",
+		Data:      map[string]interface{}{"value": "84"},
+	})
+	if err != vault.ErrUnsupportedOperation {
 		t.Fatalf("err: %s", err)
 	}
 }
@@ -118,14 +157,17 @@ func TestBackendHandleRequest_urlPriority(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callback: callback,
+				Callbacks: map[vault.Operation]OperationFunc{
+					vault.ReadOperation: callback,
+				},
 			},
 		},
 	}
 
 	resp, err := b.HandleRequest(&vault.Request{
-		Path: "foo/42",
-		Data: map[string]interface{}{"value": "84"},
+		Operation: vault.ReadOperation,
+		Path:      "foo/42",
+		Data:      map[string]interface{}{"value": "84"},
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
