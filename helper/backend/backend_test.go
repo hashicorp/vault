@@ -5,6 +5,29 @@ import (
 	"testing"
 )
 
+func BenchmarkBackendRoute(b *testing.B) {
+	patterns := []string{
+		"foo",
+		"bar/(?P<name>.+?)",
+		"baz/(?P<name>what)",
+		`aws/policy/(?P<policy>\w)`,
+		`aws/(?P<policy>\w)`,
+	}
+
+	backend := &Backend{Paths: make([]*Path, 0, len(patterns))}
+	for _, p := range patterns {
+		backend.Paths = append(backend.Paths, &Path{Pattern: p})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p := backend.Route("aws/policy/foo")
+		if p == nil {
+			b.Fatal("p should not be nil")
+		}
+	}
+}
+
 func TestBackendRoute(t *testing.T) {
 	cases := map[string]struct {
 		Patterns []string
