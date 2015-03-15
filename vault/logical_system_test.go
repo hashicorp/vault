@@ -71,7 +71,7 @@ func TestSystemBackend_mount_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "unknown logical backend type: nope" {
+	if resp.Data["error"] != "unknown backend type: nope" {
 		t.Fatalf("bad: %v", resp)
 	}
 }

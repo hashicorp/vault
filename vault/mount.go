@@ -9,25 +9,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// TEMPORARY!
-
-// BuiltinBackends contains all of the available backends
-var BuiltinBackends = map[string]logical.Factory{
-	"generic": PassthroughBackendFactory,
-}
-
-// NewBackend returns a new logical Backend with the given type and configuration.
-// The backend is looked up in the BuiltinBackends variable.
-func NewBackend(t string, conf map[string]string) (logical.Backend, error) {
-	f, ok := BuiltinBackends[t]
-	if !ok {
-		return nil, fmt.Errorf("unknown logical backend type: %s", t)
-	}
-	return f(conf)
-}
-
-// TEMPORARY!
-
 const (
 	// coreMountConfigPath is used to store the mount configuration.
 	// Mounts are protected within the Vault itself, which means they
@@ -103,7 +84,7 @@ func (c *Core) mount(me *MountEntry) error {
 	}
 
 	// Lookup the new backend
-	backend, err := NewBackend(me.Type, nil)
+	backend, err := c.newBackend(me.Type, nil)
 	if err != nil {
 		return err
 	}
@@ -288,24 +269,29 @@ func (c *Core) setupMounts() error {
 	var err error
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
+		barrierPrefix := backendBarrierPrefix
 		if entry.Type == "system" {
-			backend = &SystemBackend{Core: c}
-			view = NewBarrierView(c.barrier, systemBarrierPrefix+entry.UUID+"/")
+			barrierPrefix = systemBarrierPrefix
+		}
+
+		backend, err = c.newBackend(entry.Type, nil)
+		if err != nil {
+			c.logger.Printf(
+				"[ERR] core: failed to create mount entry %#v: %v",
+				entry, err)
+			return loadMountsFailed
+		}
+
+		// Create a barrier view using the UUID
+		view = NewBarrierView(c.barrier, barrierPrefix+entry.UUID+"/")
+
+		if entry.Type == "system" {
 			c.systemView = view
-
-		} else {
-			backend, err = NewBackend(entry.Type, nil)
-			if err != nil {
-				c.logger.Printf("[ERR] core: failed to create mount entry %#v: %v", entry, err)
-				return loadMountsFailed
-			}
-
-			// Create a barrier view using the UUID
-			view = NewBarrierView(c.barrier, backendBarrierPrefix+entry.UUID+"/")
 		}
 
 		// Mount the backend
-		if err := c.router.Mount(backend, entry.Type, entry.Path, view); err != nil {
+		err = c.router.Mount(backend, entry.Type, entry.Path, view)
+		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
 			return loadMountsFailed
 		}
@@ -320,6 +306,15 @@ func (c *Core) unloadMounts() error {
 	c.router = NewRouter()
 	c.systemView = nil
 	return nil
+}
+
+func (c *Core) newBackend(t string, conf map[string]string) (logical.Backend, error) {
+	f, ok := c.backends[t]
+	if !ok {
+		return nil, fmt.Errorf("unknown backend type: %s", t)
+	}
+
+	return f(conf)
 }
 
 // defaultMountTable creates a default mount table

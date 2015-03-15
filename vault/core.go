@@ -96,6 +96,9 @@ type Core struct {
 	// router is responsible for managing the mount points for logical backends.
 	router *Router
 
+	// backends is the mapping of backends to use for this core
+	backends map[string]logical.Factory
+
 	// stateLock protects mutable state
 	stateLock sync.RWMutex
 	sealed    bool
@@ -121,6 +124,7 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
+	Backends map[string]logical.Factory
 	Physical physical.Backend
 	Logger   *log.Logger
 }
@@ -146,6 +150,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		sealed:   true,
 		logger:   conf.Logger,
 	}
+
+	// Setup the backends
+	backends := make(map[string]logical.Factory)
+	for k, f := range conf.Backends {
+		backends[k] = f
+	}
+	backends["generic"] = PassthroughBackendFactory
+	backends["system"] = func(map[string]string) (logical.Backend, error) {
+		return &SystemBackend{Core: c}, nil
+	}
+
+	c.backends = backends
 	return c, nil
 }
 
