@@ -67,7 +67,7 @@ func (e *MountEntry) Clone() *MountEntry {
 }
 
 // Mount is used to mount a new backend to the mount table.
-func (c *Core) Mount(me *MountEntry) error {
+func (c *Core) mount(me *MountEntry) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
@@ -110,7 +110,7 @@ func (c *Core) Mount(me *MountEntry) error {
 // Unmount is used to unmount a path.
 //
 // TODO: document what happens to all secrets currently out for this path.
-func (c *Core) Unmount(path string) error {
+func (c *Core) unmount(path string) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
@@ -154,7 +154,7 @@ func (c *Core) Unmount(path string) error {
 }
 
 // Remount is used to remount a path at a new mount point.
-func (c *Core) Remount(src, dst string) error {
+func (c *Core) remount(src, dst string) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 

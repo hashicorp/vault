@@ -35,7 +35,7 @@ func TestCore_Mount(t *testing.T) {
 		Path: "foo",
 		Type: "generic",
 	}
-	err := c.Mount(me)
+	err := c.mount(me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestCore_Mount(t *testing.T) {
 
 func TestCore_Unmount(t *testing.T) {
 	c, key := TestCoreUnsealed(t)
-	err := c.Unmount("secret")
+	err := c.unmount("secret")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestCore_Unmount(t *testing.T) {
 
 func TestCore_Remount(t *testing.T) {
 	c, key := TestCoreUnsealed(t)
-	err := c.Remount("secret", "foo")
+	err := c.remount("secret", "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestCore_Remount(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _ := TestCoreUnsealed(t)
-	err := c.Remount("sys", "foo")
+	err := c.remount("sys", "foo")
 	if err.Error() != "cannot remount 'sys/'" {
 		t.Fatalf("err: %v", err)
 	}
