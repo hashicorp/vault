@@ -41,7 +41,7 @@ func TestCoreInit(t *testing.T, core *Core) []byte {
 func TestCoreUnsealed(t *testing.T) (*Core, []byte) {
 	core := TestCore(t)
 	key := TestCoreInit(t, core)
-	if _, err := core.Unseal(key); err != nil {
+	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -54,4 +54,12 @@ func TestCoreUnsealed(t *testing.T) (*Core, []byte) {
 	}
 
 	return core, key
+}
+
+// TestKeyCopy is a silly little function to just copy the key so that
+// it can be used with Unseal easily.
+func TestKeyCopy(key []byte) []byte {
+	result := make([]byte, len(key))
+	copy(result, key)
+	return result
 }
