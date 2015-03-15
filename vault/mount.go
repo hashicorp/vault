@@ -289,7 +289,7 @@ func (c *Core) setupMounts() error {
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
 		if entry.Type == "system" {
-			backend = &SystemBackend2{Core: c}
+			backend = &SystemBackend{Core: c}
 			view = NewBarrierView(c.barrier, systemBarrierPrefix+entry.UUID+"/")
 			c.systemView = view
 

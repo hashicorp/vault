@@ -9,11 +9,11 @@ import (
 // SystemBackend implements logical.Backend and is used to interact with
 // the core of the system. This backend is hardcoded to exist at the "sys"
 // prefix. Conceptually it is similar to procfs on Linux.
-type SystemBackend2 struct {
+type SystemBackend struct {
 	Core *Core
 }
 
-func (b *SystemBackend2) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *SystemBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	// Switch on the path to route to the appropriate handler
 	switch {
 	case req.Path == "mounts":
@@ -27,7 +27,7 @@ func (b *SystemBackend2) HandleRequest(req *logical.Request) (*logical.Response,
 	}
 }
 
-func (b *SystemBackend2) RootPaths() []string {
+func (b *SystemBackend) RootPaths() []string {
 	return []string{
 		"mount/*",
 		"remount",
@@ -35,7 +35,7 @@ func (b *SystemBackend2) RootPaths() []string {
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
-func (b *SystemBackend2) handleMountTable(req *logical.Request) (*logical.Response, error) {
+func (b *SystemBackend) handleMountTable(req *logical.Request) (*logical.Response, error) {
 	switch req.Operation {
 	case logical.ReadOperation:
 	default:
@@ -61,7 +61,7 @@ func (b *SystemBackend2) handleMountTable(req *logical.Request) (*logical.Respon
 }
 
 // handleMountOperation is used to mount or unmount a path
-func (b *SystemBackend2) handleMountOperation(req *logical.Request) (*logical.Response, error) {
+func (b *SystemBackend) handleMountOperation(req *logical.Request) (*logical.Response, error) {
 	switch req.Operation {
 	case logical.WriteOperation:
 		return b.handleMount(req)
@@ -73,7 +73,7 @@ func (b *SystemBackend2) handleMountOperation(req *logical.Request) (*logical.Re
 }
 
 // handleMount is used to mount a new path
-func (b *SystemBackend2) handleMount(req *logical.Request) (*logical.Response, error) {
+func (b *SystemBackend) handleMount(req *logical.Request) (*logical.Response, error) {
 	suffix := strings.TrimPrefix(req.Path, "mount/")
 	if len(suffix) == 0 {
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
@@ -101,7 +101,7 @@ func (b *SystemBackend2) handleMount(req *logical.Request) (*logical.Response, e
 }
 
 // handleUnmount is used to unmount a path
-func (b *SystemBackend2) handleUnmount(req *logical.Request) (*logical.Response, error) {
+func (b *SystemBackend) handleUnmount(req *logical.Request) (*logical.Response, error) {
 	suffix := strings.TrimPrefix(req.Path, "mount/")
 	if len(suffix) == 0 {
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
@@ -116,7 +116,7 @@ func (b *SystemBackend2) handleUnmount(req *logical.Request) (*logical.Response,
 }
 
 // handleRemount is used to remount a path
-func (b *SystemBackend2) handleRemount(req *logical.Request) (*logical.Response, error) {
+func (b *SystemBackend) handleRemount(req *logical.Request) (*logical.Response, error) {
 	// Only accept write operations
 	switch req.Operation {
 	case logical.WriteOperation:

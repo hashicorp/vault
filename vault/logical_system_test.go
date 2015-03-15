@@ -8,7 +8,7 @@ import (
 )
 
 func TestSystemBackend_impl(t *testing.T) {
-	var _ logical.Backend = new(SystemBackend2)
+	var _ logical.Backend = new(SystemBackend)
 }
 
 func TestSystemBackend_RootPaths(t *testing.T) {
@@ -147,7 +147,7 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 }
 
-func testSystemBackend(t *testing.T) *SystemBackend2 {
+func testSystemBackend(t *testing.T) *SystemBackend {
 	c, _ := TestCoreUnsealed(t)
-	return &SystemBackend2{Core: c}
+	return &SystemBackend{Core: c}
 }
