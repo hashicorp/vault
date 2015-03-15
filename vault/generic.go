@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 // GenericBackend is used for the storing generic secrets. These are not
@@ -99,7 +101,7 @@ func (g *GenericBackend) handleWrite(req *Request) (*Response, error) {
 	}
 
 	// Write out a new key
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   req.Path,
 		Value: buf,
 	}

@@ -1,6 +1,14 @@
 package vault
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hashicorp/vault/logical"
+)
+
+func TestBarrierView_impl(t *testing.T) {
+	var _ logical.Storage = new(BarrierView)
+}
 
 func TestBarrierView(t *testing.T) {
 	_, barrier, _ := mockBarrier(t)
@@ -31,16 +39,16 @@ func TestBarrierView(t *testing.T) {
 	}
 
 	// Try to put the same entry via the view
-	if err := view.Put(entry); err != nil {
+	if err := view.Put(entry.Logical()); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Check it is nested
-	out, err = barrier.Get("foo/test")
+	entry, err = barrier.Get("foo/test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if out == nil {
+	if entry == nil {
 		t.Fatalf("missing nested foo/test")
 	}
 
@@ -50,20 +58,20 @@ func TestBarrierView(t *testing.T) {
 	}
 
 	// Check the nested key
-	out, err = barrier.Get("foo/test")
+	entry, err = barrier.Get("foo/test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if out != nil {
+	if entry != nil {
 		t.Fatalf("nested foo/test should be gone")
 	}
 
 	// Check the non-nested key
-	out, err = barrier.Get("test")
+	entry, err = barrier.Get("test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if out == nil {
+	if entry == nil {
 		t.Fatalf("root test missing")
 	}
 }
@@ -92,17 +100,17 @@ func TestBarrierView_SubView(t *testing.T) {
 	}
 
 	// Try to put the same entry via the view
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	if err := view.Put(entry); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Check it is nested
-	out, err = barrier.Get("foo/bar/test")
+	bout, err := barrier.Get("foo/bar/test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if out == nil {
+	if bout == nil {
 		t.Fatalf("missing nested foo/bar/test")
 	}
 
@@ -121,11 +129,11 @@ func TestBarrierView_SubView(t *testing.T) {
 	}
 
 	// Check the nested key
-	out, err = barrier.Get("foo/bar/test")
+	bout, err = barrier.Get("foo/bar/test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if out != nil {
+	if bout != nil {
 		t.Fatalf("nested foo/bar/test should be gone")
 	}
 }

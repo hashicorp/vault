@@ -6,6 +6,8 @@ import (
 	"path"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -173,7 +175,7 @@ func (m *ExpirationManager) Register(req *Request, resp *Response) (string, erro
 	}
 
 	// Write out to the view
-	ent := Entry{
+	ent := logical.StorageEntry{
 		Key:   le.VaultID,
 		Value: buf,
 	}

@@ -1,6 +1,10 @@
 package vault
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/hashicorp/vault/logical"
+)
 
 var (
 	// ErrBarrierSealed is returned if an operation is performed on
@@ -75,4 +79,12 @@ type SecurityBarrier interface {
 type Entry struct {
 	Key   string
 	Value []byte
+}
+
+// Logical turns the Entry into a logical storage entry.
+func (e *Entry) Logical() *logical.StorageEntry {
+	return &logical.StorageEntry{
+		Key:   e.Key,
+		Value: e.Value,
+	}
 }

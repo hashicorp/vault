@@ -1,12 +1,18 @@
 package vault
 
-import "strings"
+import (
+	"strings"
 
-// BarrierView is used to wrap a barrier and ensure all access is automatically
-// prefixed. This means that nothing outside of the given prefix can be
-// accessed through the view, which is an additional layer of security when
-// interacting with the security barrier. Conceptually this is like a
-// "chroot" into the barrier.
+	"github.com/hashicorp/vault/logical"
+)
+
+// BarrierView wraps a SecurityBarrier and ensures all access is automatically
+// prefixed. This is used to prevent anyone with access to the view to access
+// any data in the durable storage outside of their prefix. Conceptually this
+// is like a "chroot" into the barrier.
+//
+// BarrierView implements logical.Storage so it can be passed in as the
+// durable storage mechanism for logical views.
 type BarrierView struct {
 	barrier SecurityBarrier
 	prefix  string
@@ -21,14 +27,32 @@ func NewBarrierView(barrier SecurityBarrier, prefix string) *BarrierView {
 	}
 }
 
-// SubView constructs a nested sub-view using the given prefix
-func (v *BarrierView) SubView(prefix string) *BarrierView {
-	sub := v.expandKey(prefix)
-	return &BarrierView{barrier: v.barrier, prefix: sub}
+// logical.Storage impl.
+func (v *BarrierView) List(prefix string) ([]string, error) {
+	return v.barrier.List(v.expandKey(prefix))
 }
 
-// Put is used to insert or update an entry
-func (v *BarrierView) Put(entry *Entry) error {
+// logical.Storage impl.
+func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
+	entry, err := v.barrier.Get(v.expandKey(key))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	if entry != nil {
+		entry.Key = v.truncateKey(entry.Key)
+	}
+
+	return &logical.StorageEntry{
+		Key:   entry.Key,
+		Value: entry.Value,
+	}, nil
+}
+
+// logical.Storage impl.
+func (v *BarrierView) Put(entry *logical.StorageEntry) error {
 	nested := &Entry{
 		Key:   v.expandKey(entry.Key),
 		Value: entry.Value,
@@ -36,27 +60,15 @@ func (v *BarrierView) Put(entry *Entry) error {
 	return v.barrier.Put(nested)
 }
 
-// Get is used to fetch an entry
-func (v *BarrierView) Get(key string) (*Entry, error) {
-	entry, err := v.barrier.Get(v.expandKey(key))
-	if err != nil {
-		return nil, err
-	}
-	if entry != nil {
-		entry.Key = v.truncateKey(entry.Key)
-	}
-	return entry, nil
-}
-
-// Delete is used to permanently delete an entry
+// logical.Storage impl.
 func (v *BarrierView) Delete(key string) error {
 	return v.barrier.Delete(v.expandKey(key))
 }
 
-// List is used ot list all the keys under a given
-// prefix, up to the next prefix.
-func (v *BarrierView) List(prefix string) ([]string, error) {
-	return v.barrier.List(v.expandKey(prefix))
+// SubView constructs a nested sub-view using the given prefix
+func (v *BarrierView) SubView(prefix string) *BarrierView {
+	sub := v.expandKey(prefix)
+	return &BarrierView{barrier: v.barrier, prefix: sub}
 }
 
 // expandKey is used to expand to the full key path with the prefix
