@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
 )
@@ -149,7 +150,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 }
 
 // HandleRequest is used to handle a new incoming request
-func (c *Core) HandleRequest(req *Request) (*Response, error) {
+func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {

@@ -136,14 +136,14 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 
 // Renew is used to renew a secret using the given vaultID
 // and a renew interval. The increment may be ignored.
-func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*Lease, error) {
+func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*logical.Lease, error) {
 	return nil, nil
 }
 
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a vaultId and the management of
 // of lease is assumed by the expiration manager.
-func (m *ExpirationManager) Register(req *Request, resp *Response) (string, error) {
+func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
 	// Ignore if there is no lease
 	if resp == nil || resp.Lease == nil {
 		return "", nil
@@ -195,7 +195,7 @@ type leaseEntry struct {
 	VaultID   string
 	Path      string
 	Data      map[string]interface{}
-	Lease     *Lease
+	Lease     *logical.Lease
 	IssueTime time.Time
 	RenewTime time.Time
 }

@@ -8,6 +8,11 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+// logical.Factory
+func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
+	return new(PassthroughBackend), nil
+}
+
 // PassthroughBackend is used storing secrets directly into the physical
 // backend. The secrest are encrypted in the durable storage and custom lease
 // information can be specified, but otherwise this backend doesn't do anything
@@ -27,7 +32,7 @@ func (b *PassthroughBackend) HandleRequest(req *logical.Request) (*logical.Respo
 	case logical.ListOperation:
 		return b.handleList(req)
 	default:
-		return nil, ErrUnsupportedOperation
+		return nil, logical.ErrUnsupportedOperation
 	}
 }
 

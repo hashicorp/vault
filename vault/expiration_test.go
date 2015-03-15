@@ -5,12 +5,28 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/physical"
 )
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t *testing.T) *ExpirationManager {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	b.Initialize(key)
+	b.Unseal(key)
+
+	// Create the barrier view
+	view := NewBarrierView(b, "expire/")
+
 	router := NewRouter()
-	view := mockView(t, "expire/")
 	return NewExpirationManager(router, view)
 }
 
@@ -34,13 +50,13 @@ func TestExpiration_StartStop(t *testing.T) {
 
 func TestExpiration_Register(t *testing.T) {
 	exp := mockExpiration(t)
-	req := &Request{
-		Operation: ReadOperation,
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
 		Path:      "prod/aws/foo",
 	}
-	resp := &Response{
+	resp := &logical.Response{
 		IsSecret: true,
-		Lease: &Lease{
+		Lease: &logical.Lease{
 			Duration:    time.Hour,
 			MaxDuration: time.Hour,
 		},
@@ -71,7 +87,7 @@ func TestLeaseEntry(t *testing.T) {
 		Data: map[string]interface{}{
 			"testing": true,
 		},
-		Lease: &Lease{
+		Lease: &logical.Lease{
 			Renewable:   true,
 			Duration:    time.Minute,
 			MaxDuration: time.Hour,

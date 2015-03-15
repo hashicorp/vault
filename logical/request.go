@@ -1,5 +1,9 @@
 package logical
 
+import (
+	"errors"
+)
+
 // Request is a struct that stores the parameters and context
 // of a request being made to Vault. It is used to abstract
 // the details of the higher level request protocol from the handlers.
@@ -46,4 +50,17 @@ const (
 	ListOperation             = "list"
 	RevokeOperation           = "revoke"
 	HelpOperation             = "help"
+)
+
+var (
+	// ErrUnsupportedOperation is returned if the operation is not supported
+	// by the logical backend.
+	ErrUnsupportedOperation = errors.New("unsupported operation")
+
+	// ErrUnsupportedPath is returned if the path is not supported
+	// by the logical backend.
+	ErrUnsupportedPath = errors.New("unsupported path")
+
+	// ErrInvalidRequest is returned if the request is invalid
+	ErrInvalidRequest = errors.New("invalid request")
 )

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 type NoopBackend struct {
@@ -11,11 +13,12 @@ type NoopBackend struct {
 	Paths []string
 }
 
-func (n *NoopBackend) HandleRequest(req *Request) (*Response, error) {
+func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	n.Paths = append(n.Paths, req.Path)
 	if req.Storage == nil {
 		return nil, fmt.Errorf("missing view")
 	}
+
 	return nil, nil
 }
 
@@ -47,7 +50,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	req := &Request{
+	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
 	resp, err := r.Route(req)
@@ -80,7 +83,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := &Request{
+	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
 	_, err = r.Route(req)
@@ -110,7 +113,7 @@ func TestRouter_Remount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := &Request{
+	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
 	_, err = r.Route(req)
@@ -118,7 +121,7 @@ func TestRouter_Remount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req = &Request{
+	req = &logical.Request{
 		Path: "stage/aws/foo",
 	}
 	_, err = r.Route(req)

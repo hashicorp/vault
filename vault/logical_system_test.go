@@ -68,7 +68,7 @@ func TestSystemBackend_mount_invalid(t *testing.T) {
 	req := logical.TestRequest(t, logical.WriteOperation, "mount/prod/secret/")
 	req.Data["type"] = "nope"
 	resp, err := b.HandleRequest(req)
-	if err != ErrInvalidRequest {
+	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != "unknown logical backend type: nope" {
@@ -94,7 +94,7 @@ func TestSystemBackend_unmount_invalid(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.DeleteOperation, "mount/foo/")
 	resp, err := b.HandleRequest(req)
-	if err != ErrInvalidRequest {
+	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != "no matching mount" {
@@ -124,7 +124,7 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 	req.Data["from"] = "unknown"
 	req.Data["to"] = "foo"
 	resp, err := b.HandleRequest(req)
-	if err != ErrInvalidRequest {
+	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != "no matching mount at 'unknown/'" {
@@ -139,7 +139,7 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	req.Data["from"] = "sys"
 	req.Data["to"] = "foo"
 	resp, err := b.HandleRequest(req)
-	if err != ErrInvalidRequest {
+	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != "cannot remount 'sys/'" {

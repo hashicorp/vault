@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -272,8 +273,8 @@ func TestCore_Route_Sealed(t *testing.T) {
 	}
 
 	// Should not route anything
-	req := &Request{
-		Operation: ReadOperation,
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
 		Path:      "sys/mounts",
 	}
 	_, err := c.HandleRequest(req)

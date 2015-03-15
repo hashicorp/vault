@@ -23,7 +23,7 @@ func (b *SystemBackend2) HandleRequest(req *logical.Request) (*logical.Response,
 	case req.Path == "remount":
 		return b.handleRemount(req)
 	default:
-		return nil, ErrUnsupportedPath
+		return nil, logical.ErrUnsupportedPath
 	}
 }
 
@@ -39,7 +39,7 @@ func (b *SystemBackend2) handleMountTable(req *logical.Request) (*logical.Respon
 	switch req.Operation {
 	case logical.ReadOperation:
 	default:
-		return nil, ErrUnsupportedOperation
+		return nil, logical.ErrUnsupportedOperation
 	}
 
 	b.Core.mountsLock.RLock()
@@ -68,7 +68,7 @@ func (b *SystemBackend2) handleMountOperation(req *logical.Request) (*logical.Re
 	case logical.DeleteOperation:
 		return b.handleUnmount(req)
 	default:
-		return nil, ErrUnsupportedOperation
+		return nil, logical.ErrUnsupportedOperation
 	}
 }
 
@@ -76,13 +76,13 @@ func (b *SystemBackend2) handleMountOperation(req *logical.Request) (*logical.Re
 func (b *SystemBackend2) handleMount(req *logical.Request) (*logical.Response, error) {
 	suffix := strings.TrimPrefix(req.Path, "mount/")
 	if len(suffix) == 0 {
-		return logical.ErrorResponse("path cannot be blank"), ErrInvalidRequest
+		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
 
 	// Get the type and description (optionally)
 	logicalType := req.GetString("type")
 	if logicalType == "" {
-		return logical.ErrorResponse("backend type must be specified as a string"), ErrInvalidRequest
+		return logical.ErrorResponse("backend type must be specified as a string"), logical.ErrInvalidRequest
 	}
 	description := req.GetString("description")
 
@@ -95,7 +95,7 @@ func (b *SystemBackend2) handleMount(req *logical.Request) (*logical.Response, e
 
 	// Attempt mount
 	if err := b.Core.mount(me); err != nil {
-		return logical.ErrorResponse(err.Error()), ErrInvalidRequest
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
 }
@@ -104,12 +104,12 @@ func (b *SystemBackend2) handleMount(req *logical.Request) (*logical.Response, e
 func (b *SystemBackend2) handleUnmount(req *logical.Request) (*logical.Response, error) {
 	suffix := strings.TrimPrefix(req.Path, "mount/")
 	if len(suffix) == 0 {
-		return logical.ErrorResponse("path cannot be blank"), ErrInvalidRequest
+		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
 
 	// Attempt unmount
 	if err := b.Core.unmount(suffix); err != nil {
-		return logical.ErrorResponse(err.Error()), ErrInvalidRequest
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	return nil, nil
@@ -119,9 +119,9 @@ func (b *SystemBackend2) handleUnmount(req *logical.Request) (*logical.Response,
 func (b *SystemBackend2) handleRemount(req *logical.Request) (*logical.Response, error) {
 	// Only accept write operations
 	switch req.Operation {
-	case WriteOperation:
+	case logical.WriteOperation:
 	default:
-		return nil, ErrUnsupportedOperation
+		return nil, logical.ErrUnsupportedOperation
 	}
 
 	// Get the paths
@@ -130,12 +130,12 @@ func (b *SystemBackend2) handleRemount(req *logical.Request) (*logical.Response,
 	if fromPath == "" || toPath == "" {
 		return logical.ErrorResponse(
 				"both 'from' and 'to' path must be specified as a string"),
-			ErrInvalidRequest
+			logical.ErrInvalidRequest
 	}
 
 	// Attempt remount
 	if err := b.Core.remount(fromPath, toPath); err != nil {
-		return logical.ErrorResponse(err.Error()), ErrInvalidRequest
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	return nil, nil

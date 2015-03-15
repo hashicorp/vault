@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/logical"
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -25,13 +26,13 @@ func NewRouter() *Router {
 // mountEntry is used to represent a mount point
 type mountEntry struct {
 	mtype     string
-	backend   LogicalBackend
+	backend   logical.Backend
 	view      *BarrierView
 	rootPaths *radix.Tree
 }
 
 // Mount is used to expose a logical backend at a given prefix
-func (r *Router) Mount(backend LogicalBackend, mtype, prefix string, view *BarrierView) error {
+func (r *Router) Mount(backend logical.Backend, mtype, prefix string, view *BarrierView) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -103,7 +104,7 @@ func (r *Router) MatchingMount(path string) string {
 }
 
 // Route is used to route a given request
-func (r *Router) Route(req *Request) (*Response, error) {
+func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)

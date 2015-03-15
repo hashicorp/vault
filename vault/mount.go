@@ -5,7 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/logical"
 )
+
+// TEMPORARY!
+
+// BuiltinBackends contains all of the available backends
+var BuiltinBackends = map[string]logical.Factory{
+	"generic": PassthroughBackendFactory,
+}
+
+// NewBackend returns a new logical Backend with the given type and configuration.
+// The backend is looked up in the BuiltinBackends variable.
+func NewBackend(t string, conf map[string]string) (logical.Backend, error) {
+	f, ok := BuiltinBackends[t]
+	if !ok {
+		return nil, fmt.Errorf("unknown logical backend type: %s", t)
+	}
+	return f(conf)
+}
+
+// TEMPORARY!
 
 const (
 	// coreMountConfigPath is used to store the mount configuration.
@@ -262,13 +283,13 @@ func (c *Core) persistMounts(table *MountTable) error {
 // setupMounts is invoked after we've loaded the mount table to
 // initialize the logical backends and setup the router
 func (c *Core) setupMounts() error {
-	var backend LogicalBackend
+	var backend logical.Backend
 	var view *BarrierView
 	var err error
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
 		if entry.Type == "system" {
-			backend = &SystemBackend{core: c}
+			backend = &SystemBackend2{Core: c}
 			view = NewBarrierView(c.barrier, systemBarrierPrefix+entry.UUID+"/")
 			c.systemView = view
 
