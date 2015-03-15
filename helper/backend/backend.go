@@ -8,15 +8,15 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/go-wordwrap"
 )
 
-// Backend is an implementation of vault.LogicalBackend that allows
+// Backend is an implementation of logical.Backend that allows
 // the implementer to code a backend using a much more programmer-friendly
 // framework that handles a lot of the routing and validation for you.
 //
-// This is recommended over implementing vault.LogicalBackend directly.
+// This is recommended over implementing logical.Backend directly.
 type Backend struct {
 	// Paths are the various routes that the backend responds to.
 	// This cannot be modified after construction (i.e. dynamically changing
@@ -54,13 +54,13 @@ type Path struct {
 
 	// Callbacks are the set of callbacks that are called for a given
 	// operation. If a callback for a specific operation is not present,
-	// then vault.ErrUnsupportedOperation is automatically generated.
+	// then logical.ErrUnsupportedOperation is automatically generated.
 	//
 	// The help operation is the only operation that the Path will
 	// automatically handle if the Help field is set. If both the Help
 	// field is set and there is a callback registered here, then the
 	// callback will be called.
-	Callbacks map[vault.Operation]OperationFunc
+	Callbacks map[logical.Operation]OperationFunc
 
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically
@@ -78,14 +78,14 @@ type Path struct {
 }
 
 // OperationFunc is the callback called for an operation on a path.
-type OperationFunc func(*vault.Request, *FieldData) (*vault.Response, error)
+type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
 
-// vault.LogicalBackend impl.
-func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
+// logical.Backend impl.
+func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	// Find the matching route
 	path, captures := b.route(req.Path)
 	if path == nil {
-		return nil, vault.ErrUnsupportedPath
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	// Build up the data for the route, with the URL taking priority
@@ -105,13 +105,13 @@ func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
 		callback, ok = path.Callbacks[req.Operation]
 	}
 	if !ok {
-		if req.Operation == vault.HelpOperation && path.HelpSynopsis != "" {
+		if req.Operation == logical.HelpOperation && path.HelpSynopsis != "" {
 			callback = path.helpCallback
 			ok = true
 		}
 	}
 	if !ok {
-		return nil, vault.ErrUnsupportedOperation
+		return nil, logical.ErrUnsupportedOperation
 	}
 
 	// Call the callback with the request and the data
@@ -121,7 +121,7 @@ func (b *Backend) HandleRequest(req *vault.Request) (*vault.Response, error) {
 	})
 }
 
-// vault.LogicalBackend impl.
+// logical.Backend impl.
 func (b *Backend) RootPaths() []string {
 	// TODO
 	return nil
@@ -168,7 +168,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (p *Path) helpCallback(req *vault.Request, data *FieldData) (*vault.Response, error) {
+func (p *Path) helpCallback(req *logical.Request, data *FieldData) (*logical.Response, error) {
 	var tplData pathTemplateData
 	tplData.Request = req.Path
 	tplData.RoutePattern = p.Pattern
@@ -210,7 +210,7 @@ func (p *Path) helpCallback(req *vault.Request, data *FieldData) (*vault.Respons
 		return nil, fmt.Errorf("error executing template: %s", err)
 	}
 
-	return vault.HelpResponse(buf.String(), nil), nil
+	return logical.HelpResponse(buf.String(), nil), nil
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.

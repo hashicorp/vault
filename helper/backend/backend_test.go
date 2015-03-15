@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/logical"
 )
 
 func BenchmarkBackendRoute(b *testing.B) {
@@ -36,12 +36,12 @@ func BenchmarkBackendRoute(b *testing.B) {
 }
 
 func TestBackend_impl(t *testing.T) {
-	var _ vault.LogicalBackend = new(Backend)
+	var _ logical.Backend = new(Backend)
 }
 
 func TestBackendHandleRequest(t *testing.T) {
-	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
-		return &vault.Response{
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
 			Data: map[string]interface{}{
 				"value": data.Get("value"),
 			},
@@ -55,15 +55,15 @@ func TestBackendHandleRequest(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callbacks: map[vault.Operation]OperationFunc{
-					vault.ReadOperation: callback,
+				Callbacks: map[logical.Operation]OperationFunc{
+					logical.ReadOperation: callback,
 				},
 			},
 		},
 	}
 
-	resp, err := b.HandleRequest(&vault.Request{
-		Operation: vault.ReadOperation,
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "42"},
 	})
@@ -76,8 +76,8 @@ func TestBackendHandleRequest(t *testing.T) {
 }
 
 func TestBackendHandleRequest_404(t *testing.T) {
-	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
-		return &vault.Response{
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
 			Data: map[string]interface{}{
 				"value": data.Get("value"),
 			},
@@ -91,19 +91,19 @@ func TestBackendHandleRequest_404(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callbacks: map[vault.Operation]OperationFunc{
-					vault.ReadOperation: callback,
+				Callbacks: map[logical.Operation]OperationFunc{
+					logical.ReadOperation: callback,
 				},
 			},
 		},
 	}
 
-	_, err := b.HandleRequest(&vault.Request{
-		Operation: vault.ReadOperation,
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
 		Path:      "foo/baz",
 		Data:      map[string]interface{}{"value": "84"},
 	})
-	if err != vault.ErrUnsupportedPath {
+	if err != logical.ErrUnsupportedPath {
 		t.Fatalf("err: %s", err)
 	}
 }
@@ -122,8 +122,8 @@ func TestBackendHandleRequest_help(t *testing.T) {
 		},
 	}
 
-	resp, err := b.HandleRequest(&vault.Request{
-		Operation: vault.HelpOperation,
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.HelpOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "42"},
 	})
@@ -136,8 +136,8 @@ func TestBackendHandleRequest_help(t *testing.T) {
 }
 
 func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
-	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
-		return &vault.Response{
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
 			Data: map[string]interface{}{
 				"value": data.Get("value"),
 			},
@@ -151,26 +151,26 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callbacks: map[vault.Operation]OperationFunc{
-					vault.ReadOperation: callback,
+				Callbacks: map[logical.Operation]OperationFunc{
+					logical.ReadOperation: callback,
 				},
 			},
 		},
 	}
 
-	_, err := b.HandleRequest(&vault.Request{
-		Operation: vault.WriteOperation,
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.WriteOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "84"},
 	})
-	if err != vault.ErrUnsupportedOperation {
+	if err != logical.ErrUnsupportedOperation {
 		t.Fatalf("err: %s", err)
 	}
 }
 
 func TestBackendHandleRequest_urlPriority(t *testing.T) {
-	callback := func(req *vault.Request, data *FieldData) (*vault.Response, error) {
-		return &vault.Response{
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
 			Data: map[string]interface{}{
 				"value": data.Get("value"),
 			},
@@ -184,15 +184,15 @@ func TestBackendHandleRequest_urlPriority(t *testing.T) {
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
 				},
-				Callbacks: map[vault.Operation]OperationFunc{
-					vault.ReadOperation: callback,
+				Callbacks: map[logical.Operation]OperationFunc{
+					logical.ReadOperation: callback,
 				},
 			},
 		},
 	}
 
-	resp, err := b.HandleRequest(&vault.Request{
-		Operation: vault.ReadOperation,
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
 		Path:      "foo/42",
 		Data:      map[string]interface{}{"value": "84"},
 	})

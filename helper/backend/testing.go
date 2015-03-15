@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/logical"
 )
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
@@ -21,7 +21,7 @@ type TestCase struct {
 	PreCheck func()
 
 	// Backend is the backend that will be mounted.
-	Backend vault.LogicalBackend
+	Backend logical.Backend
 
 	// Steps are the set of operations that are run for this test case.
 	Steps []TestStep
@@ -36,7 +36,7 @@ type TestCase struct {
 // TestStep is a single step within a TestCase.
 type TestStep struct {
 	// Operation is the operation to execute
-	Operation vault.Operation
+	Operation logical.Operation
 
 	// Path is the request path. The mount prefix will be automatically added.
 	Path string
@@ -51,7 +51,7 @@ type TestStep struct {
 }
 
 // TestCheckFunc is the callback used for Check in TestStep.
-type TestCheckFunc func(*vault.Response) error
+type TestCheckFunc func(*logical.Response) error
 
 // TestTeardownFunc is the callback used for Teardown in TestCase.
 type TestTeardownFunc func() error
