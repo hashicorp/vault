@@ -2,9 +2,12 @@ package testing
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
@@ -116,6 +119,53 @@ func Test(t TestT, c TestCase) {
 		t.Fatal("error unsealing core: ", err)
 	} else if sealed {
 		t.Fatal("vault shouldn't be sealed")
+	}
+
+	// Create an HTTP API server and client
+	ln, addr := http.TestServer(nil, core)
+	defer ln.Close()
+	clientConfig := api.DefaultConfig()
+	clientConfig.Address = addr
+	client, err := api.NewClient(clientConfig)
+	if err != nil {
+		t.Fatal("error initializing HTTP client: ", err)
+	}
+
+	// Mount the backend
+	prefix := "mnt"
+	if err := client.Sys().Mount(prefix, "test", "acceptance test"); err != nil {
+		t.Fatal("error mounting backend: ", err)
+	}
+
+	// Make requests
+	for i, s := range c.Steps {
+		log.Printf("[WARN] Executing test step %d", i+1)
+
+		// Make sure to prefix the path with where we mounted the thing
+		path := fmt.Sprintf("%s/%s", prefix, s.Path)
+
+		// Create the request
+		req := &logical.Request{
+			Operation: s.Operation,
+			Path:      path,
+			Data:      s.Data,
+		}
+
+		// Make the request
+		resp, err := core.HandleRequest(req)
+		if err == nil && s.Check != nil {
+			// Call the test method
+			err = s.Check(resp)
+		}
+		if err != nil {
+			t.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
+			break
+		}
+	}
+
+	// Cleanup
+	if c.Teardown != nil {
+		c.Teardown()
 	}
 }
 

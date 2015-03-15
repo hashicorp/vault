@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"testing"
@@ -9,9 +10,16 @@ import (
 )
 
 func TestServer(t *testing.T, core *vault.Core) (net.Listener, string) {
+	fail := func(format string, args ...interface{}) {
+		panic(fmt.Sprintf(format, args...))
+	}
+	if t != nil {
+		fail = t.Fatalf
+	}
+
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf("err: %s", err)
+		fail("err: %s", err)
 	}
 	addr := "http://" + ln.Addr().String()
 
