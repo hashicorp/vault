@@ -305,9 +305,13 @@ func (c *Core) SecretProgress() int {
 	return len(c.unlockParts)
 }
 
-// Unseal is used to provide one of the key parts to
-// unseal the Vault.
-func (c *Core) Unseal(key []byte) (bool, error) {
+// Unseal is used to provide one of the key parts to unseal the Vault.
+func (c *Core) Unseal(keyRaw []byte) (bool, error) {
+	// Copy the key since it is modified in-place and we don't want to
+	// modify the parameter.
+	key := make([]byte, len(keyRaw))
+	copy(key, keyRaw)
+
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead

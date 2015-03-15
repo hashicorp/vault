@@ -12,38 +12,6 @@ var (
 	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 )
 
-func testCore(t *testing.T) *Core {
-	inm := physical.NewInmem()
-	conf := &CoreConfig{Physical: inm}
-	c, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	return c
-}
-
-func testUnsealedCore(t *testing.T) (*Core, []byte) {
-	c := testCore(t)
-	sealConf := &SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
-	}
-	res, err := c.Initialize(sealConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	master := make([]byte, len(res.SecretShares[0]))
-	copy(master, res.SecretShares[0])
-	unseal, err := c.Unseal(res.SecretShares[0])
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
-	}
-	return c, master
-}
-
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{Physical: inm}
@@ -137,7 +105,7 @@ func TestCore_Init(t *testing.T) {
 }
 
 func TestCore_Init_MultiShare(t *testing.T) {
-	c := testCore(t)
+	c := TestCore(t)
 	sealConf := &SealConfig{
 		SecretShares:    5,
 		SecretThreshold: 3,
@@ -162,7 +130,7 @@ func TestCore_Init_MultiShare(t *testing.T) {
 }
 
 func TestCore_Unseal_MultiShare(t *testing.T) {
-	c := testCore(t)
+	c := TestCore(t)
 
 	_, err := c.Unseal(invalidKey)
 	if err != ErrNotInit {
@@ -247,7 +215,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 }
 
 func TestCore_Unseal_Single(t *testing.T) {
-	c := testCore(t)
+	c := TestCore(t)
 
 	_, err := c.Unseal(invalidKey)
 	if err != ErrNotInit {
@@ -297,7 +265,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 }
 
 func TestCore_Route_Sealed(t *testing.T) {
-	c := testCore(t)
+	c := TestCore(t)
 	sealConf := &SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
@@ -335,7 +303,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 
 // Attempt to unseal after doing a first seal
 func TestCore_SealUnseal(t *testing.T) {
-	c, key := testUnsealedCore(t)
+	c, key := TestCoreUnsealed(t)
 	if err := c.Seal(); err != nil {
 		t.Fatalf("err: %v", err)
 	}

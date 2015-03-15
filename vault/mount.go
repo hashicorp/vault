@@ -66,6 +66,147 @@ func (e *MountEntry) Clone() *MountEntry {
 	}
 }
 
+// Mount is used to mount a new backend to the mount table.
+func (c *Core) Mount(me *MountEntry) error {
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(me.Path, "/") {
+		me.Path += "/"
+	}
+
+	// Verify there is no conflicting mount
+	if match := c.router.MatchingMount(me.Path); match != "" {
+		return fmt.Errorf("existing mount at '%s'", match)
+	}
+
+	// Lookup the new backend
+	backend, err := NewBackend(me.Type, nil)
+	if err != nil {
+		return err
+	}
+
+	// Generate a new UUID and view
+	me.UUID = generateUUID()
+	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
+
+	// Update the mount table
+	newTable := c.mounts.Clone()
+	newTable.Entries = append(newTable.Entries, me)
+	if err := c.persistMounts(newTable); err != nil {
+		return errors.New("failed to update mount table")
+	}
+	c.mounts = newTable
+
+	// Mount the backend
+	if err := c.router.Mount(backend, me.Type, me.Path, view); err != nil {
+		return err
+	}
+	c.logger.Printf("[INFO] core: mounted '%s' type: %s", me.Path, me.Type)
+	return nil
+}
+
+// Unmount is used to unmount a path.
+//
+// TODO: document what happens to all secrets currently out for this path.
+func (c *Core) Unmount(path string) error {
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	// Verify exact match of the route
+	match := c.router.MatchingMount(path)
+	if match == "" || path != match {
+		return fmt.Errorf("no matching mount")
+	}
+
+	// Remove the entry from the mount table
+	newTable := c.mounts.Clone()
+	n := len(newTable.Entries)
+	for i := 0; i < n; i++ {
+		if newTable.Entries[i].Path == path {
+			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
+			newTable.Entries = newTable.Entries[:n-1]
+			break
+		}
+	}
+
+	// Update the mount table
+	if err := c.persistMounts(newTable); err != nil {
+		return errors.New("failed to update mount table")
+	}
+	c.mounts = newTable
+
+	// Unmount the backend
+	if err := c.router.Unmount(path); err != nil {
+		return err
+	}
+
+	// TODO: Delete data in view?
+	// TODO: Handle revocation?
+	c.logger.Printf("[INFO] core: unmounted '%s'", path)
+	return nil
+}
+
+// Remount is used to remount a path at a new mount point.
+func (c *Core) Remount(src, dst string) error {
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(src, "/") {
+		src += "/"
+	}
+	if !strings.HasSuffix(dst, "/") {
+		dst += "/"
+	}
+
+	// Prevent sys/ from being remounted
+	for _, p := range protectedMounts {
+		if src == p {
+			return fmt.Errorf("cannot remount '%s'", p)
+		}
+	}
+
+	// Verify exact match of the route
+	match := c.router.MatchingMount(src)
+	if match == "" || src != match {
+		return fmt.Errorf("no matching mount at '%s'", src)
+	}
+
+	// Verify there is no conflicting mount
+	if match := c.router.MatchingMount(dst); match != "" {
+		return fmt.Errorf("existing mount at '%s'", match)
+	}
+
+	// Update the entry in the mount table
+	newTable := c.mounts.Clone()
+	for _, ent := range newTable.Entries {
+		if ent.Path == src {
+			ent.Path = dst
+			break
+		}
+	}
+
+	// Update the mount table
+	if err := c.persistMounts(newTable); err != nil {
+		return errors.New("failed to update mount table")
+	}
+	c.mounts = newTable
+
+	// Remount the backend
+	if err := c.router.Remount(src, dst); err != nil {
+		return err
+	}
+	c.logger.Printf("[INFO] core: remounted '%s' to '%s'", src, dst)
+	return nil
+}
+
 // loadMounts is invoked as part of postUnseal to load the mount table
 func (c *Core) loadMounts() error {
 	// Load the existing mount table
@@ -157,145 +298,6 @@ func (c *Core) unloadMounts() error {
 	c.mounts = nil
 	c.router = NewRouter()
 	c.systemView = nil
-	return nil
-}
-
-// mountEntry is used to create a new mount entry
-func (c *Core) mountEntry(me *MountEntry) error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
-
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(me.Path, "/") {
-		me.Path += "/"
-	}
-
-	// Verify there is no conflicting mount
-	if match := c.router.MatchingMount(me.Path); match != "" {
-		return fmt.Errorf("existing mount at '%s'", match)
-	}
-
-	// Lookup the new backend
-	backend, err := NewBackend(me.Type, nil)
-	if err != nil {
-		return err
-	}
-
-	// Generate a new UUID and view
-	me.UUID = generateUUID()
-	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
-
-	// Update the mount table
-	newTable := c.mounts.Clone()
-	newTable.Entries = append(newTable.Entries, me)
-	if err := c.persistMounts(newTable); err != nil {
-		return errors.New("failed to update mount table")
-	}
-	c.mounts = newTable
-
-	// Mount the backend
-	if err := c.router.Mount(backend, me.Type, me.Path, view); err != nil {
-		return err
-	}
-	c.logger.Printf("[INFO] core: mounted '%s' type: %s", me.Path, me.Type)
-	return nil
-}
-
-// unmountPath is used to unmount a path
-func (c *Core) unmountPath(path string) error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
-
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	// Verify exact match of the route
-	match := c.router.MatchingMount(path)
-	if match == "" || path != match {
-		return fmt.Errorf("no matching mount")
-	}
-
-	// Remove the entry from the mount table
-	newTable := c.mounts.Clone()
-	n := len(newTable.Entries)
-	for i := 0; i < n; i++ {
-		if newTable.Entries[i].Path == path {
-			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
-			newTable.Entries = newTable.Entries[:n-1]
-			break
-		}
-	}
-
-	// Update the mount table
-	if err := c.persistMounts(newTable); err != nil {
-		return errors.New("failed to update mount table")
-	}
-	c.mounts = newTable
-
-	// Unmount the backend
-	if err := c.router.Unmount(path); err != nil {
-		return err
-	}
-
-	// TODO: Delete data in view?
-	// TODO: Handle revocation?
-	c.logger.Printf("[INFO] core: unmounted '%s'", path)
-	return nil
-}
-
-// remountPath is used to remount a path
-func (c *Core) remountPath(src, dst string) error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
-
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(src, "/") {
-		src += "/"
-	}
-	if !strings.HasSuffix(dst, "/") {
-		dst += "/"
-	}
-
-	// Prevent sys/ from being remounted
-	for _, p := range protectedMounts {
-		if src == p {
-			return fmt.Errorf("cannot remount '%s'", p)
-		}
-	}
-
-	// Verify exact match of the route
-	match := c.router.MatchingMount(src)
-	if match == "" || src != match {
-		return fmt.Errorf("no matching mount at '%s'", src)
-	}
-
-	// Verify there is no conflicting mount
-	if match := c.router.MatchingMount(dst); match != "" {
-		return fmt.Errorf("existing mount at '%s'", match)
-	}
-
-	// Update the entry in the mount table
-	newTable := c.mounts.Clone()
-	for _, ent := range newTable.Entries {
-		if ent.Path == src {
-			ent.Path = dst
-			break
-		}
-	}
-
-	// Update the mount table
-	if err := c.persistMounts(newTable); err != nil {
-		return errors.New("failed to update mount table")
-	}
-	c.mounts = newTable
-
-	// Remount the backend
-	if err := c.router.Remount(src, dst); err != nil {
-		return err
-	}
-	c.logger.Printf("[INFO] core: remounted '%s' to '%s'", src, dst)
 	return nil
 }
 

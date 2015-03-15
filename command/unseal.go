@@ -11,6 +11,10 @@ import (
 // UnsealCommand is a Command that unseals the vault.
 type UnsealCommand struct {
 	Meta
+
+	// Key can be used to pre-seed the key. If it is set, it will not
+	// be asked with the `password` helper.
+	Key string
 }
 
 func (c *UnsealCommand) Run(args []string) int {
@@ -29,17 +33,20 @@ func (c *UnsealCommand) Run(args []string) int {
 		return 2
 	}
 
-	fmt.Printf("Key (will be hidden): ")
-	value, err := password.Read(os.Stdin)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error attempting to ask for password. The raw error message\n"+
-				"is shown below, but the most common reason for this error is\n"+
-				"that you attempted to pipe a value into unseal. This is not\n"+
-				"allowed. The value must be typed directly into the command\n"+
-				"after it is executed.\n\n"+
-				"Raw error: %s", err))
-		return 1
+	value := c.Key
+	if value == "" {
+		fmt.Printf("Key (will be hidden): ")
+		value, err = password.Read(os.Stdin)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error attempting to ask for password. The raw error message\n"+
+					"is shown below, but the most common reason for this error is\n"+
+					"that you attempted to pipe a value into unseal. This is not\n"+
+					"allowed. The value must be typed directly into the command\n"+
+					"after it is executed.\n\n"+
+					"Raw error: %s", err))
+			return 1
+		}
 	}
 
 	status, err := client.Sys().Unseal(strings.TrimSpace(value))
@@ -59,6 +66,7 @@ func (c *UnsealCommand) Run(args []string) int {
 		status.T,
 		status.Progress,
 	))
+
 	return 0
 }
 

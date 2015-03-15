@@ -6,7 +6,7 @@ import (
 )
 
 func TestCore_DefaultMountTable(t *testing.T) {
-	c, key := testUnsealedCore(t)
+	c, key := TestCoreUnsealed(t)
 	verifyDefaultTable(t, c.mounts)
 
 	// Start a second core with same physical
@@ -29,13 +29,13 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	}
 }
 
-func TestCore_MountEntry(t *testing.T) {
-	c, key := testUnsealedCore(t)
+func TestCore_Mount(t *testing.T) {
+	c, key := TestCoreUnsealed(t)
 	me := &MountEntry{
 		Path: "foo",
 		Type: "generic",
 	}
-	err := c.mountEntry(me)
+	err := c.Mount(me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -64,9 +64,9 @@ func TestCore_MountEntry(t *testing.T) {
 	}
 }
 
-func TestCore_UnmountPath(t *testing.T) {
-	c, key := testUnsealedCore(t)
-	err := c.unmountPath("secret")
+func TestCore_Unmount(t *testing.T) {
+	c, key := TestCoreUnsealed(t)
+	err := c.Unmount("secret")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -95,9 +95,9 @@ func TestCore_UnmountPath(t *testing.T) {
 	}
 }
 
-func TestCore_RemountPath(t *testing.T) {
-	c, key := testUnsealedCore(t)
-	err := c.remountPath("secret", "foo")
+func TestCore_Remount(t *testing.T) {
+	c, key := TestCoreUnsealed(t)
+	err := c.Remount("secret", "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -126,9 +126,9 @@ func TestCore_RemountPath(t *testing.T) {
 	}
 }
 
-func TestCore_RemountPath_Protected(t *testing.T) {
-	c, _ := testUnsealedCore(t)
-	err := c.remountPath("sys", "foo")
+func TestCore_Remount_Protected(t *testing.T) {
+	c, _ := TestCoreUnsealed(t)
+	err := c.Remount("sys", "foo")
 	if err.Error() != "cannot remount 'sys/'" {
 		t.Fatalf("err: %v", err)
 	}

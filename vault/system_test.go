@@ -6,7 +6,7 @@ import (
 )
 
 func testSystem(t *testing.T) *SystemBackend {
-	c, _ := testUnsealedCore(t)
+	c, _ := TestCoreUnsealed(t)
 	return &SystemBackend{c}
 }
 
