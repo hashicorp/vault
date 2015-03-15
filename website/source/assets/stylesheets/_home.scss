@@ -30,11 +30,11 @@
 
 	#diagram{
 		display: inline-block;
-		width: 481px;
-		height: 198px;		
+		width: 490px;
+		height: 193px;
 		margin-top: 120px;
 	    background: image-url('../images/hero.png') 0 0 no-repeat;
-	   	@include img-retina("../images/hero.png", "../images/hero@2x.png", 481px, 198px);
+	   	@include img-retina("../images/hero.png", "../images/hero@2x.png", 490px, 193px);
 	}
 
 	p{
