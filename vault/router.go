@@ -116,12 +116,12 @@ func (r *Router) Route(req *Request) (*Response, error) {
 	// Adjust the path, attach the barrier view
 	original := req.Path
 	req.Path = strings.TrimPrefix(req.Path, mount)
-	req.View = me.view
+	req.Storage = me.view
 
 	// Reset the request before returning
 	defer func() {
 		req.Path = original
-		req.View = nil
+		req.Storage = nil
 	}()
 
 	// Invoke the backend

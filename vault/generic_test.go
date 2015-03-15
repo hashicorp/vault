@@ -34,7 +34,7 @@ func mockRequest(t *testing.T, op Operation, path string) *Request {
 		Operation: op,
 		Path:      path,
 		Data:      make(map[string]interface{}),
-		View:      view,
+		Storage:   view,
 	}
 	return req
 }
@@ -68,7 +68,7 @@ func TestGenericBackend_Write(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
-	out, err := req.View.Get("foo")
+	out, err := req.Storage.Get("foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestGenericBackend_Read(t *testing.T) {
 	}
 
 	req2 := mockRequest(t, ReadOperation, "foo")
-	req2.View = req.View
+	req2.Storage = req.Storage
 
 	resp, err := b.HandleRequest(req2)
 	if err != nil {
@@ -145,7 +145,7 @@ func TestGenericBackend_Delete(t *testing.T) {
 	}
 
 	req2 := mockRequest(t, DeleteOperation, "foo")
-	req2.View = req.View
+	req2.Storage = req.Storage
 
 	resp, err := b.HandleRequest(req2)
 	if err != nil {
@@ -156,7 +156,7 @@ func TestGenericBackend_Delete(t *testing.T) {
 	}
 
 	req3 := mockRequest(t, ReadOperation, "foo")
-	req3.View = req.View
+	req3.Storage = req.Storage
 
 	resp, err = b.HandleRequest(req3)
 	if err != nil {
@@ -182,7 +182,7 @@ func TestGenericBackend_List(t *testing.T) {
 	}
 
 	req2 := mockRequest(t, ListOperation, "")
-	req2.View = req.View
+	req2.Storage = req.Storage
 
 	resp, err := b.HandleRequest(req2)
 	if err != nil {

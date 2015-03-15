@@ -47,7 +47,7 @@ func (g *GenericBackend) RootPaths() []string {
 
 func (g *GenericBackend) handleRead(req *Request) (*Response, error) {
 	// Read the path
-	out, err := req.View.Get(req.Path)
+	out, err := req.Storage.Get(req.Path)
 	if err != nil {
 		return nil, fmt.Errorf("read failed: %v", err)
 	}
@@ -105,7 +105,7 @@ func (g *GenericBackend) handleWrite(req *Request) (*Response, error) {
 		Key:   req.Path,
 		Value: buf,
 	}
-	if err := req.View.Put(entry); err != nil {
+	if err := req.Storage.Put(entry); err != nil {
 		return nil, fmt.Errorf("failed to write: %v", err)
 	}
 	return nil, nil
@@ -113,7 +113,7 @@ func (g *GenericBackend) handleWrite(req *Request) (*Response, error) {
 
 func (g *GenericBackend) handleDelete(req *Request) (*Response, error) {
 	// Delete the key at the request path
-	if err := req.View.Delete(req.Path); err != nil {
+	if err := req.Storage.Delete(req.Path); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -121,7 +121,7 @@ func (g *GenericBackend) handleDelete(req *Request) (*Response, error) {
 
 func (g *GenericBackend) handleList(req *Request) (*Response, error) {
 	// List the keys at the prefix given by the request
-	keys, err := req.View.List(req.Path)
+	keys, err := req.Storage.List(req.Path)
 	if err != nil {
 		return nil, err
 	}

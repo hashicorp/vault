@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 var (
@@ -70,7 +72,7 @@ type Request struct {
 
 	// View is the storage view of this logical backend. It can be used
 	// to durably store and retrieve state from the backend.
-	View *BarrierView
+	Storage logical.Storage
 }
 
 // Get returns a data field and guards for nil Data

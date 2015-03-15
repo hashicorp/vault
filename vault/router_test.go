@@ -13,7 +13,7 @@ type NoopBackend struct {
 
 func (n *NoopBackend) HandleRequest(req *Request) (*Response, error) {
 	n.Paths = append(n.Paths, req.Path)
-	if req.View == nil {
+	if req.Storage == nil {
 		return nil, fmt.Errorf("missing view")
 	}
 	return nil, nil
