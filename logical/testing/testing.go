@@ -1,4 +1,4 @@
-package backend
+package testing
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/vault"
 )
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
@@ -85,6 +87,35 @@ func Test(t TestT, c TestCase) {
 	// Run the PreCheck if we have it
 	if c.PreCheck != nil {
 		c.PreCheck()
+	}
+
+	// Create an in-memory Vault core
+	core, err := vault.NewCore(&vault.CoreConfig{
+		Physical: physical.NewInmem(),
+		Backends: map[string]logical.Factory{
+			"test": func(map[string]string) (logical.Backend, error) {
+				return c.Backend, nil
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal("error initializing core: ", err)
+	}
+
+	// Initialize the core
+	init, err := core.Initialize(&vault.SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	})
+	if err != nil {
+		t.Fatal("error initializing core: ", err)
+	}
+
+	// Unseal the core
+	if sealed, err := core.Unseal(init.SecretShares[0]); err != nil {
+		t.Fatal("error unsealing core: ", err)
+	} else if sealed {
+		t.Fatal("vault shouldn't be sealed")
 	}
 }
 
