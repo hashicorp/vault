@@ -3,7 +3,6 @@
 //= require jquery.waypoints.min
 
 //= require lib/String.substitute
-//= require lib/Vector
 //= require lib/Function.prototype.bind
 //= require lib/Base
 //= require lib/Chainable

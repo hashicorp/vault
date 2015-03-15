@@ -27,11 +27,10 @@ var Init = {
 
 	initializeWaypoints: function(){
 		$('#header').waypoint(function(event, direction) {
-			console.log('waypoint header ', $(this)[0]);
 		    $(this.element).addClass('showit');
 		}, {
 		    offset: function() {
-		       return 25%;
+		    	return '25%';
 		    }
 		});
 
@@ -39,7 +38,7 @@ var Init = {
 		    $(this.element).addClass('showit');
 		}, {
 		    offset: function() {
-		       return 25%;
+		    	return '25%';
 		    }
 		});			
 	},	
