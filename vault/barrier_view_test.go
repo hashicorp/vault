@@ -10,6 +10,12 @@ func TestBarrierView_impl(t *testing.T) {
 	var _ logical.Storage = new(BarrierView)
 }
 
+func TestBarrierView_spec(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "foo/")
+	logical.TestStorage(t, view)
+}
+
 func TestBarrierView(t *testing.T) {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")

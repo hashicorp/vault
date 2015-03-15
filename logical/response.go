@@ -66,3 +66,12 @@ func ErrorResponse(text string) *Response {
 		},
 	}
 }
+
+// ListResponse is used to format a response to a list operation.
+func ListResponse(keys []string) *Response {
+	return &Response{
+		Data: map[string]interface{}{
+			"keys": keys,
+		},
+	}
+}
