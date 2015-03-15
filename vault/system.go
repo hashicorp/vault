@@ -93,7 +93,7 @@ func (s *SystemBackend) handleMount(req *Request) (*Response, error) {
 	}
 
 	// Attempt mount
-	if err := s.core.mountEntry(me); err != nil {
+	if err := s.core.Mount(me); err != nil {
 		return ErrorResponse(err.Error()), ErrInvalidRequest
 	}
 	return nil, nil
@@ -107,7 +107,7 @@ func (s *SystemBackend) handleUnmount(req *Request) (*Response, error) {
 	}
 
 	// Attempt unmount
-	if err := s.core.unmountPath(suffix); err != nil {
+	if err := s.core.Unmount(suffix); err != nil {
 		return ErrorResponse(err.Error()), ErrInvalidRequest
 	}
 	return nil, nil
@@ -132,7 +132,7 @@ func (s *SystemBackend) handleRemount(req *Request) (*Response, error) {
 	}
 
 	// Attempt remount
-	if err := s.core.remountPath(fromPath, toPath); err != nil {
+	if err := s.core.Remount(fromPath, toPath); err != nil {
 		return ErrorResponse(err.Error()), ErrInvalidRequest
 	}
 	return nil, nil
