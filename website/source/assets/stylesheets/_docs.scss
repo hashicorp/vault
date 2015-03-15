@@ -43,14 +43,14 @@ body.layout-intro{
 		color: $dark-blue;
 	}
 
-	.docs-sidenav{
+	.nav.docs-sidenav{
 		padding-bottom: 15px;
 
 		:last-child{
 			border-bottom: none;
 		}
 
-		//all li > a
+		//all li
 		li{
 			position: relative;
 
@@ -58,72 +58,75 @@ body.layout-intro{
 				padding: 10px 0 10px 8px;
 				font-size: 13px;
 				color: $dark-blue;
-				@include transition( all 300ms cubic-bezier(.17,.67,.83,.67) );
-				@include translate3d(0, 0, 0);
+
+				&:before{
+					@include bez-1-transition();
+				}
 
 				&:hover{
 					background-color: transparent !important;
-					@include transition( all 300ms cubic-bezier(.17,.67,.83,.67) );
-					@include translate3d(5px, 0, 0);
+
+					&:before{
+						@include bez-1-transition();
+					}
 				}
 			}
 		}
 
+		$parent-active-state: -14px;
+		$parent-default-state: -10px;
+		$child-active-state: -4px;
+		$child-default-state: 0px;	
 
+		//first teir li
 		> li {
 			margin: 0 0 0 10px;
-
-			>.nav{
-				li{
-					a{
-						color: $dark-blue;
-					}
-				}
-			}
 
 			&.active {
 				>a{
           			color: lighten($black, 4%);
-          			@include open();
 
 					&:hover{
-						background-color: transparent !important;
-						@include transition( none );
-						@include translate3d(0, 0, 0);
+						&:before{
+							left: $parent-default-state;
+						}					
 					}
 
 					&:before{
 						background: url(../images/triangle-sprite.png) 0 0 no-repeat;
 						@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 7px, 25px);
-					}					
+					}									
 				}
 
 				.nav {
 					display: block;
-
-		          	li.active a {
-		            	color: $black;
-						@include open();
-		          	}
 				}
 			}
 
 			> a {
         		-webkit-font-smoothing: antialiased;
+
+				&:hover{
+					&:before{
+						left: $parent-active-state;
+					}					
+				}
+
 				&:before{
 					content: '';
 					position: absolute;
 			        width: 7px;
 			        height: 8px;
 					top: 15px;
-					left: -10px;
+					left: $parent-default-state;
 					overflow: hidden;
 					background: url(../images/triangle-sprite.png) 0 -9px no-repeat;
 					@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 7px, 25px);
 				}
 			}
-		}
+		}		
 
+		//nested ul.nav
 		.nav {
 			display: none;
 			margin-bottom: 15px;
@@ -133,11 +136,14 @@ body.layout-intro{
 
 				&.active{
 					> a{
+		            	color: $black;
+
 						&:hover{
-							background-color: transparent !important;
-							@include transition( none );
-							@include translate3d(0, 0, 0);
-						}						
+							&:before{
+								left: $child-default-state;
+							}					
+						}
+
 						&:before{
 							background: url(../images/triangle-sprite.png) 0 0 no-repeat;
 							@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 5px, 19px);
@@ -148,7 +154,13 @@ body.layout-intro{
 				> a{
           			-webkit-font-smoothing: antialiased;
 					padding: 6px 15px;
-					
+
+					&:hover{
+						&:before{
+							left: $child-active-state;
+						}					
+					}
+
 					&:before{
 						opacity: .75;
 						content: '';
@@ -156,7 +168,7 @@ body.layout-intro{
 				        width: 5px;
 				        height: 7px;
 						top: 12px;
-						left: 0px;
+						left: $child-default-state;
 						overflow: hidden;
 						background: url(../images/triangle-sprite.png) 0 -13px no-repeat;
 						@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 5px, 19px);

@@ -66,3 +66,7 @@
         background-color: transparent;
     }  
 }
+
+@mixin bez-1-transition{
+  @include transition( all 300ms ease-in-out );
+}
