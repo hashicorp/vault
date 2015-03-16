@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+func testHttpDelete(t *testing.T, addr string) *http.Response {
+	return testHttpData(t, "DELETE", addr, nil)
+}
+
 func testHttpPost(t *testing.T, addr string, body interface{}) *http.Response {
 	return testHttpData(t, "POST", addr, body)
 }
