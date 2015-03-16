@@ -66,6 +66,12 @@ func init() {
 			}, nil
 		},
 
+		"mounts": func() (cli.Command, error) {
+			return &command.MountsCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			ver := Version
 			rel := VersionPrerelease
