@@ -82,7 +82,7 @@ func (v *BarrierView) truncateKey(full string) string {
 	return strings.TrimPrefix(full, v.prefix)
 }
 
-// ScanView is used to scan all the keys in a view recursively
+// ScanView is used to scan all the keys in a view iteratively
 func ScanView(view *BarrierView, cb func(path string)) error {
 	frontier := []string{""}
 	for len(frontier) > 0 {

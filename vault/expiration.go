@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +17,15 @@ const (
 	// expirationSubPath is the sub-path used for the expiration manager
 	// view. This is nested under the system view.
 	expirationSubPath = "expire/"
+
+	// maxRevokeAttempts limits how many revoke attempts are made
+	maxRevokeAttempts = 6
+
+	// revokeRetryBase is a baseline retry time
+	revokeRetryBase = 10 * time.Second
+
+	// minRevokeDelay is used to prevent an instant revoke on restore
+	minRevokeDelay = 5 * time.Second
 )
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -28,7 +38,7 @@ type ExpirationManager struct {
 	logger *log.Logger
 
 	pending     map[string]*time.Timer
-	pendingLock sync.RWMutex
+	pendingLock sync.Mutex
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -76,7 +86,45 @@ func (c *Core) stopExpiration() error {
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
 func (m *ExpirationManager) Restore() error {
-	// TODO: Restore...
+	m.pendingLock.Lock()
+	defer m.pendingLock.Unlock()
+
+	// Accumulate existing leases
+	var existing []string
+	cb := func(path string) {
+		existing = append(existing, path)
+	}
+
+	// Scan for all the leases
+	if err := ScanView(m.view, cb); err != nil {
+		return fmt.Errorf("failed to scan for leases: %v", err)
+	}
+
+	// Restore each key
+	for _, vaultID := range existing {
+		// Load the entry
+		le, err := m.loadEntry(vaultID)
+		if err != nil {
+			return err
+		}
+
+		// If there is no entry, nothing to restore
+		if le == nil {
+			continue
+		}
+
+		// Determine the remaining time to expiration
+		expires := time.Now().UTC().Sub(le.ExpireTime)
+		if expires <= 0 {
+			expires = minRevokeDelay
+		}
+
+		// Setup revocation timer
+		m.pending[le.VaultID] = time.AfterFunc(expires, func() {
+			m.expireID(le.VaultID)
+		})
+	}
+	m.logger.Printf("[INFO] expire: restored %d leases", len(m.pending))
 	return nil
 }
 
@@ -95,6 +143,34 @@ func (m *ExpirationManager) Stop() error {
 
 // Revoke is used to revoke a secret named by the given vaultID
 func (m *ExpirationManager) Revoke(vaultID string) error {
+	// Load the entry
+	le, err := m.loadEntry(vaultID)
+	if err != nil {
+		return err
+	}
+
+	// If there is no entry, nothing to revoke
+	if le == nil {
+		return nil
+	}
+
+	// Revoke the entry
+	if err := m.revokeEntry(le); err != nil {
+		return err
+	}
+
+	// Delete the entry
+	if err := m.deleteEntry(vaultID); err != nil {
+		return err
+	}
+
+	// Clear the expiration handler
+	m.pendingLock.Lock()
+	if timer, ok := m.pending[vaultID]; ok {
+		timer.Stop()
+		delete(m.pending, vaultID)
+	}
+	m.pendingLock.Unlock()
 	return nil
 }
 
@@ -102,13 +178,87 @@ func (m *ExpirationManager) Revoke(vaultID string) error {
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
+	// Accumulate existing leases
+	var existing []string
+	cb := func(path string) {
+		existing = append(existing, path)
+	}
+
+	// Ensure there is a trailing slash
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
+	// Scan for all the leases in the prefix
+	if err := ScanView(m.view.SubView(prefix), cb); err != nil {
+		return fmt.Errorf("failed to scan for leases: %v", err)
+	}
+
+	// Revoke all the keys
+	for idx, vaultID := range existing {
+		if err := m.Revoke(vaultID); err != nil {
+			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
+				vaultID, idx+1, len(existing), err)
+		}
+	}
 	return nil
 }
 
 // Renew is used to renew a secret using the given vaultID
 // and a renew interval. The increment may be ignored.
 func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*logical.Lease, error) {
-	return nil, nil
+	// Load the entry
+	le, err := m.loadEntry(vaultID)
+	if err != nil {
+		return nil, err
+	}
+
+	// If there is no entry, cannot review
+	if le == nil {
+		return nil, fmt.Errorf("lease not found")
+	}
+
+	// Determine the remaining lease time
+	end := le.IssueTime.Add(le.Lease.MaxDuration)
+	now := time.Now().UTC()
+	remain := end.Sub(now)
+	if remain < 0 {
+		return nil, fmt.Errorf("lease expired")
+	}
+
+	// Set the default increment if none provided
+	if increment == 0 {
+		increment = le.Lease.Duration
+	}
+
+	// Determine the maximum lease renew
+	if increment > le.Lease.MaxIncrement && le.Lease.MaxIncrement != 0 {
+		increment = le.Lease.MaxIncrement
+	}
+
+	if increment > remain {
+		increment = remain
+	}
+
+	// Update the lease entry
+	le.ExpireTime = now.Add(increment)
+	if err := m.persistEntry(le); err != nil {
+		return nil, err
+	}
+
+	// Update the expiration time
+	m.pendingLock.Lock()
+	if timer, ok := m.pending[vaultID]; ok {
+		timer.Reset(increment)
+	}
+	m.pendingLock.Unlock()
+
+	// Return a new lease with updated durations
+	lease := new(logical.Lease)
+	*lease = *le.Lease
+	lease.Duration = increment
+	lease.MaxDuration = remain
+	return lease, nil
 }
 
 // Register is used to take a request and response with an associated
@@ -133,12 +283,12 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	// Create a lease entry
 	now := time.Now().UTC()
 	le := leaseEntry{
-		VaultID:   path.Join(req.Path, generateUUID()),
-		Path:      req.Path,
-		Data:      resp.Data,
-		Lease:     resp.Lease,
-		IssueTime: now,
-		RenewTime: now,
+		VaultID:    path.Join(req.Path, generateUUID()),
+		Path:       req.Path,
+		Data:       resp.Data,
+		Lease:      resp.Lease,
+		IssueTime:  now,
+		ExpireTime: now.Add(resp.Lease.Duration),
 	}
 
 	// Encode the entry
@@ -148,10 +298,9 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 
 	// Setup revocation timer
 	m.pendingLock.Lock()
-	timer := time.AfterFunc(resp.Lease.Duration, func() {
+	m.pending[le.VaultID] = time.AfterFunc(resp.Lease.Duration, func() {
 		m.expireID(le.VaultID)
 	})
-	m.pending[le.VaultID] = timer
 	m.pendingLock.Unlock()
 
 	// Done
@@ -165,22 +314,16 @@ func (m *ExpirationManager) expireID(vaultID string) {
 	delete(m.pending, vaultID)
 	m.pendingLock.Unlock()
 
-	// Load the entry
-	le, err := m.loadEntry(vaultID)
-	if err != nil {
-		m.logger.Printf("[ERR] expire: failed to read entry '%s': %v", vaultID, err)
+	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
+		err := m.Revoke(vaultID)
+		if err == nil {
+			m.logger.Printf("[INFO] expire: revoked '%s'", vaultID)
+			return
+		}
+		m.logger.Printf("[ERR] expire: failed to revoke '%s': %v", vaultID, err)
+		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-
-	// Revoke the entry
-	if err := m.revokeEntry(le); err != nil {
-		m.logger.Printf("[ERR] expire: failed to revoke entry '%s': %v", vaultID, err)
-	}
-
-	// Delete the entry
-	if err := m.deleteEntry(vaultID); err != nil {
-		m.logger.Printf("[ERR] expire: failed to delete entry '%s': %v", vaultID, err)
-	}
-	m.logger.Printf("[INFO] expire: revoked '%s'", vaultID)
+	m.logger.Printf("[ERR] expire: maximum revoke attempts for '%s' reached", vaultID)
 }
 
 // revokeEntry is used to attempt revocation of an internal entry
@@ -191,7 +334,10 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 		Data:      le.Data,
 	}
 	_, err := m.router.Route(req)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to revoke entry: %v", err)
+	}
+	return nil
 }
 
 // loadEntry is used to read a lease entry
@@ -240,13 +386,12 @@ func (m *ExpirationManager) deleteEntry(vaultID string) error {
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
-	VaultID        string                 `json:"vault_id"`
-	Path           string                 `json:"path"`
-	Data           map[string]interface{} `json:"data"`
-	Lease          *logical.Lease         `json:"lease"`
-	IssueTime      time.Time              `json:"issue_time"`
-	RenewTime      time.Time              `json:"renew_time"`
-	RevokeAttempts int                    `json:"renew_attempts"`
+	VaultID    string                 `json:"vault_id"`
+	Path       string                 `json:"path"`
+	Data       map[string]interface{} `json:"data"`
+	Lease      *logical.Lease         `json:"lease"`
+	IssueTime  time.Time              `json:"issue_time"`
+	ExpireTime time.Time              `json:"expire_time"`
 }
 
 // encode is used to JSON encode the lease entry
