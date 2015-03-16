@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -141,5 +143,43 @@ func TestBarrierView_SubView(t *testing.T) {
 	}
 	if bout != nil {
 		t.Fatalf("nested foo/bar/test should be gone")
+	}
+}
+
+func TestBarrierView_Scan(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "view/")
+
+	expect := []string{}
+	ent := []*logical.StorageEntry{
+		&logical.StorageEntry{Key: "foo", Value: []byte("test")},
+		&logical.StorageEntry{Key: "zip", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/bar", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/zap", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/bar/baz", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/bar/zoo", Value: []byte("test")},
+	}
+
+	for _, e := range ent {
+		expect = append(expect, e.Key)
+		if err := view.Put(e); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	var out []string
+	cb := func(path string) {
+		out = append(out, path)
+	}
+
+	// Collect the keys
+	if err := ScanView(view, cb); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sort.Strings(out)
+	sort.Strings(expect)
+	if !reflect.DeepEqual(out, expect) {
+		t.Fatalf("out: %v expect: %v", out, expect)
 	}
 }

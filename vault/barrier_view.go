@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -79,4 +80,31 @@ func (v *BarrierView) expandKey(suffix string) string {
 // truncateKey is used to remove the prefix of the key
 func (v *BarrierView) truncateKey(full string) string {
 	return strings.TrimPrefix(full, v.prefix)
+}
+
+// ScanView is used to scan all the keys in a view recursively
+func ScanView(view *BarrierView, cb func(path string)) error {
+	frontier := []string{""}
+	for len(frontier) > 0 {
+		n := len(frontier)
+		current := frontier[n-1]
+		frontier = frontier[:n-1]
+
+		// List the contents
+		contents, err := view.List(current)
+		if err != nil {
+			return fmt.Errorf("list failed at path '%s': %v", current, err)
+		}
+
+		// Handle the contents in the directory
+		for _, c := range contents {
+			fullPath := current + c
+			if strings.HasSuffix(c, "/") {
+				frontier = append(frontier, fullPath)
+			} else {
+				cb(fullPath)
+			}
+		}
+	}
+	return nil
 }
