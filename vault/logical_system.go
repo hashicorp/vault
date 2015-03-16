@@ -29,7 +29,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 
 			&framework.Path{
-				Pattern: "mount/(?P<path>.+?)",
+				Pattern: "mount/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{

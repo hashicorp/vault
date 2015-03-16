@@ -15,7 +15,8 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/mounts", handleSysMounts(core))
+	mux.Handle("/v1/sys/mounts", handleSysListMounts(core))
+	mux.Handle("/v1/sys/mount/", handleSysMount(core))
 	mux.Handle("/v1/", handleLogical(core))
 	return mux
 }
