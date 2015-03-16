@@ -4,13 +4,13 @@ import (
 	"strings"
 )
 
-// GetCommand is a Command that gets data from the Vault.
-type GetCommand struct {
+// ReadCommand is a Command that gets data from the Vault.
+type ReadCommand struct {
 	Meta
 }
 
-func (c *GetCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("put", FlagSetDefault)
+func (c *ReadCommand) Run(args []string) int {
+	flags := c.Meta.FlagSet("read", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -19,11 +19,11 @@ func (c *GetCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *GetCommand) Synopsis() string {
-	return "Get data or secrets from Vault"
+func (c *ReadCommand) Synopsis() string {
+	return "Read data or secrets from Vault"
 }
 
-func (c *GetCommand) Help() string {
+func (c *ReadCommand) Help() string {
 	helpText := `
 Usage: vault get [options] path
 
