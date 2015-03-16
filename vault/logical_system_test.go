@@ -198,6 +198,56 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_revoke(t *testing.T) {
+	core, b := testCoreSystemBackend(t)
+
+	// Create a key with a lease
+	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
+	req.Data["foo"] = "bar"
+	req.Data["lease"] = "1h"
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a VaultID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Lease == nil || resp.Lease.VaultID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Attempt renew
+	req2 := logical.TestRequest(t, logical.WriteOperation, "revoke/"+resp.Lease.VaultID)
+	resp2, err := b.HandleRequest(req2)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp2)
+	}
+	if resp2 != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestSystemBackend_revoke_invalidID(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Attempt renew
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke/foobarbaz")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _ := TestCoreUnsealed(t)
 	return NewSystemBackend(c)

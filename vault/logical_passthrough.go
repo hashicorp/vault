@@ -30,6 +30,7 @@ func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 					logical.WriteOperation:  b.handleWrite,
 					logical.DeleteOperation: b.handleDelete,
 					logical.ListOperation:   b.handleList,
+					logical.RevokeOperation: b.handleRevoke,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(passthroughHelpSynopsis),
@@ -44,6 +45,12 @@ func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 // information can be specified, but otherwise this backend doesn't do anything
 // fancy.
 type PassthroughBackend struct{}
+
+func (b *PassthroughBackend) handleRevoke(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// This is a no-op
+	return nil, nil
+}
 
 func (b *PassthroughBackend) handleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

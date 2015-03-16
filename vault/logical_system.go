@@ -89,6 +89,24 @@ func NewSystemBackend(core *Core) logical.Backend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["renew"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["renew"][1]),
 			},
+
+			&framework.Path{
+				Pattern: "revoke/(?P<vault_id>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"vault_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["vault_id"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: b.handleRevoke,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["revoke"][1]),
+			},
 		},
 	}
 }
@@ -210,6 +228,19 @@ func (b *SystemBackend) handleRenew(
 	return resp, err
 }
 
+// handleRevoke is used to revoke a given VaultID
+func (b *SystemBackend) handleRevoke(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	vaultID := data.Get("vault_id").(string)
+
+	// Invoke the expiration manager directly
+	if err := b.Core.expiration.Revoke(vaultID); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
 	"mounts": {
@@ -270,5 +301,15 @@ lease and to prevent an automatic revocation.
 	"increment": {
 		"The desired increment in seconds to the lease",
 		"",
+	},
+
+	"revoke": {
+		"Revoke a leased secret immediately",
+		`
+When a secret is generated with a lease, it is automatically revoked
+at the end of the lease period if not renewed. However, in some cases
+you may want to force an immediate revocation. This endpoint can be
+used to revoke the secret with the given Vault ID.
+		`,
 	},
 }
