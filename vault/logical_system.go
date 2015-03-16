@@ -2,6 +2,7 @@ package vault
 
 import (
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -65,6 +66,28 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "renew/(?P<vault_id>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"vault_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["vault_id"][0]),
+					},
+					"increment": &framework.FieldSchema{
+						Type:        framework.TypeInt,
+						Description: strings.TrimSpace(sysHelp["increment"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: b.handleRenew,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["renew"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["renew"][1]),
 			},
 		},
 	}
@@ -169,6 +192,20 @@ func (b *SystemBackend) handleRemount(
 	return nil, nil
 }
 
+// handleRenew is used to renew a lease with a given VaultID
+func (b *SystemBackend) handleRenew(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	vaultID := data.Get("vault_id").(string)
+	incrementRaw := data.Get("increment").(int)
+
+	// Convert the increment
+	increment := time.Duration(incrementRaw) * time.Second
+
+	// Invoke the expiration manager directly
+	return b.Core.expiration.Renew(vaultID, increment)
+}
+
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
 	"mounts": {
@@ -209,5 +246,25 @@ west coast.
 		`
 Change the mount point of an already-mounted backend.
 		`,
+	},
+
+	"renew": {
+		"Renew a lease on a secret",
+		`
+When a secret is read, it may optionally include a lease interval
+and a boolean indicating if renew is possible. For secrets that support
+lease renewal, this endpoint is used to extend the validity of the
+lease and to prevent an automatic revocation.
+		`,
+	},
+
+	"vault_id": {
+		"The vault identifier to renew. This is included with a lease.",
+		"",
+	},
+
+	"increment": {
+		"The desired increment in seconds to the lease",
+		"",
 	},
 }

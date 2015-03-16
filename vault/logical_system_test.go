@@ -143,7 +143,53 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_renew(t *testing.T) {
+	core, b := testCoreSystemBackend(t)
+
+	// Create a key with a lease
+	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
+	req.Data["foo"] = "bar"
+	req.Data["lease"] = "1h"
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a VaultID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Lease == nil || resp.Lease.VaultID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Attempt renew
+	req2 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Lease.VaultID)
+	req2.Data["increment"] = 100
+	resp2, err := b.HandleRequest(req2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if resp2.Lease.VaultID != resp.Lease.VaultID {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp2.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _ := TestCoreUnsealed(t)
 	return NewSystemBackend(c)
+}
+
+func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend) {
+	c, _ := TestCoreUnsealed(t)
+	return c, NewSystemBackend(c)
 }

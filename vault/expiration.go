@@ -241,6 +241,9 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 		return nil, err
 	}
 
+	// Attach the VaultID
+	resp.Lease.VaultID = vaultID
+
 	// Update the lease entry
 	le.Data = resp.Data
 	le.Lease = resp.Lease

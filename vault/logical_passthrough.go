@@ -26,6 +26,7 @@ func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead,
+					logical.RenewOperation:  b.handleRead,
 					logical.WriteOperation:  b.handleWrite,
 					logical.DeleteOperation: b.handleDelete,
 					logical.ListOperation:   b.handleList,
