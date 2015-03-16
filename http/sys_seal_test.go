@@ -57,8 +57,8 @@ func TestSysSeal_unsealed(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	keys := vault.TestCoreInit(t, core)
-	if _, err := core.Unseal(keys[0]); err != nil {
+	key := vault.TestCoreInit(t, core)
+	if _, err := core.Unseal(key); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -76,12 +76,12 @@ func TestSysSeal_unsealed(t *testing.T) {
 
 func TestSysUnseal(t *testing.T) {
 	core := vault.TestCore(t)
-	keys := vault.TestCoreInit(t, core)
+	key := vault.TestCoreInit(t, core)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
 	resp := testHttpPut(t, addr+"/v1/sys/unseal", map[string]interface{}{
-		"key": hex.EncodeToString(keys[0]),
+		"key": hex.EncodeToString(key),
 	})
 
 	var actual map[string]interface{}

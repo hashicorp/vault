@@ -11,13 +11,13 @@ import (
 
 func TestUnseal(t *testing.T) {
 	core := vault.TestCore(t)
-	keys := vault.TestCoreInit(t, core)
+	key := vault.TestCoreInit(t, core)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
 	c := &UnsealCommand{
-		Key: hex.EncodeToString(keys[0]),
+		Key: hex.EncodeToString(key),
 		Meta: Meta{
 			Ui: ui,
 		},
