@@ -1,7 +1,10 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 )
 
@@ -11,6 +14,9 @@ const DefaultDataKey = "value"
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {
 	Meta
+
+	// The fields below can be overwritten for tests
+	testStdin io.Reader
 }
 
 func (c *WriteCommand) Run(args []string) int {
@@ -31,7 +37,22 @@ func (c *WriteCommand) Run(args []string) int {
 	if path[0] == '/' {
 		path = path[1:]
 	}
-	data := map[string]interface{}{DefaultDataKey: args[1]}
+	var data map[string]interface{}
+	if args[1] == "-" {
+		var stdin io.Reader = os.Stdin
+		if c.testStdin != nil {
+			stdin = c.testStdin
+		}
+
+		dec := json.NewDecoder(stdin)
+		if err := dec.Decode(&data); err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error decoding JSON of stdin: %s", err))
+			return 1
+		}
+	} else {
+		data = map[string]interface{}{DefaultDataKey: args[1]}
+	}
 
 	client, err := c.Client()
 	if err != nil {
