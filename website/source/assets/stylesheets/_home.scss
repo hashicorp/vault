@@ -14,12 +14,70 @@
     } */
 
 	#logo-lockup{
+		position: relative;
 		display: inline-block;
-		width: 186px;
-		height: 34px;
+		width: 228px;
+		height: 43px;
 		margin-top: 120px;
 	    background: image-url('../images/logo-lockup.png') 0 0 no-repeat;
-	   	@include img-retina("../images/logo-lockup.png", "../images/logo-lockup@2x.png", 186px, 34px);
+	   	@include img-retina("../images/logo-lockup.png", "../images/logo-lockup@2x.png", 228px, 43px);
+
+	   	.keys{
+	   		position: absolute;
+	   		left: 15px;
+	   		top: 8px;
+	   		width: 12px;
+	   		span{
+	   			width: 3px;
+	   			height: 3px;
+	   			border-radius: 2px;
+	   			float: left;
+	   			margin-left: 1px;
+	   			margin-bottom: 1px;
+	   			background-color: $blue;
+
+	   			&:nth-child(1){
+	   				opacity: 1;
+	   			}
+
+	   			&:nth-child(2){
+	   				opacity: .4;
+	   			}
+
+	   			&:nth-child(3){
+	   				opacity: .8;
+	   			}
+
+	   			&:nth-child(4){
+	   				opacity: 1;
+	   			}
+
+	   			&:nth-child(5){
+	   				opacity: .9;
+	   			}
+
+	   			&:nth-child(6){
+	   				opacity: .4;
+	   			}
+
+	   			&:nth-child(7){
+	   				opacity: .65;
+	   			}
+
+	   			&:nth-child(8){
+	   				opacity: .7;
+	   			}
+
+	   			&:nth-child(9){
+	   				opacity: 1;
+	   			}	   				
+
+	   			&:nth-child(10){
+	   				opacity: 1;
+	   				margin-left: 5px;
+	   			}
+	   		}
+	   	}
 	}
 
 	#tag-line{
