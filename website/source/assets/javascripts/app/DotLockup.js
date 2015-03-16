@@ -40,7 +40,7 @@ DotLockup = Base.extend({
 	animateOff: function(){
 		var deferred = $.Deferred();
 
-		this.updateEachKeyClass('full off', '', 1250, 150, deferred.resolve, true);
+		this.updateEachKeyClass('full off', '', 1000, 150, deferred.resolve, true);
 		
 		return deferred;
 	},
@@ -51,7 +51,7 @@ DotLockup = Base.extend({
 			len = _this.$keys.length,
 			presses = _this.randomNumbersIn(len),
 			delay = 250,
-			interval = 1000;
+			interval = 600;
 
 		for(var i=0; i < len; i++){
 			(function(index){
