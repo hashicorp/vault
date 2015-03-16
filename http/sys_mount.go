@@ -8,57 +8,69 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysListMounts(core *vault.Core) http.Handler {
+func handleSysMounts(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
+		switch r.Method {
+		case "GET":
+			handleSysListMounts(core, w, r)
+		case "POST":
+			fallthrough
+		case "DELETE":
+			handleSysMountUnmount(core, w, r)
+		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
-
-		resp, err := core.HandleRequest(&logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "sys/mounts",
-		})
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		respondOk(w, resp.Data)
 	})
 }
 
-func handleSysMountUnmount(core *vault.Core) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "POST":
-		case "DELETE":
-		default:
-			respondError(w, http.StatusMethodNotAllowed, nil)
-			return
-		}
+func handleSysListMounts(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		respondError(w, http.StatusMethodNotAllowed, nil)
+		return
+	}
 
-		// Determine the path...
-		prefix := "/v1/sys/mount/"
-		if !strings.HasPrefix(r.URL.Path, prefix) {
-			respondError(w, http.StatusNotFound, nil)
-			return
-		}
-		path := r.URL.Path[len(prefix):]
-		if path == "" {
-			respondError(w, http.StatusNotFound, nil)
-			return
-		}
-
-		switch r.Method {
-		case "POST":
-			handleSysMount(core, w, r, path)
-		case "DELETE":
-			handleSysUnmount(core, w, r, path)
-		default:
-			panic("should never happen")
-		}
+	resp, err := core.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "sys/mounts",
 	})
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respondOk(w, resp.Data)
+}
+
+func handleSysMountUnmount(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+	case "DELETE":
+	default:
+		respondError(w, http.StatusMethodNotAllowed, nil)
+		return
+	}
+
+	// Determine the path...
+	prefix := "/v1/sys/mounts/"
+	if !strings.HasPrefix(r.URL.Path, prefix) {
+		respondError(w, http.StatusNotFound, nil)
+		return
+	}
+	path := r.URL.Path[len(prefix):]
+	if path == "" {
+		respondError(w, http.StatusNotFound, nil)
+		return
+	}
+
+	switch r.Method {
+	case "POST":
+		handleSysMount(core, w, r, path)
+	case "DELETE":
+		handleSysUnmount(core, w, r, path)
+	default:
+		panic("should never happen")
+	}
 }
 
 func handleSysMount(

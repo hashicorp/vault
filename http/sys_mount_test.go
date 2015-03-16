@@ -41,7 +41,7 @@ func TestSysMount(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPost(t, addr+"/v1/sys/mount/foo", map[string]interface{}{
+	resp := testHttpPost(t, addr+"/v1/sys/mounts/foo", map[string]interface{}{
 		"type":        "generic",
 		"description": "foo",
 	})
@@ -79,13 +79,13 @@ func TestSysUnmount(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPost(t, addr+"/v1/sys/mount/foo", map[string]interface{}{
+	resp := testHttpPost(t, addr+"/v1/sys/mounts/foo", map[string]interface{}{
 		"type":        "generic",
 		"description": "foo",
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpDelete(t, addr+"/v1/sys/mount/foo")
+	resp = testHttpDelete(t, addr+"/v1/sys/mounts/foo")
 	testResponseStatus(t, resp, 204)
 
 	resp, err := http.Get(addr + "/v1/sys/mounts")
