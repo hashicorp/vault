@@ -7,10 +7,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestSystemBackend_impl(t *testing.T) {
-	var _ logical.Backend = new(SystemBackend)
-}
-
 func TestSystemBackend_RootPaths(t *testing.T) {
 	expected := []string{
 		"mount/*",
@@ -147,7 +143,7 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 }
 
-func testSystemBackend(t *testing.T) *SystemBackend {
+func testSystemBackend(t *testing.T) logical.Backend {
 	c, _ := TestCoreUnsealed(t)
-	return &SystemBackend{Core: c}
+	return NewSystemBackend(c)
 }

@@ -158,7 +158,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	backends["generic"] = PassthroughBackendFactory
 	backends["system"] = func(map[string]string) (logical.Backend, error) {
-		return &SystemBackend{Core: c}, nil
+		return NewSystemBackend(c), nil
 	}
 
 	c.backends = backends
