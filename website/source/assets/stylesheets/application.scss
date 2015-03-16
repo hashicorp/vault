@@ -1,7 +1,7 @@
 @import 'bootstrap-sprockets';
 @import 'bootstrap';
 
-@import url("//fonts.googleapis.com/css?family=Lato:300,400,700|Open+Sans:300,600,400");
+@import url("//fonts.googleapis.com/css?family=Lato:300,400,700|Open+Sans:300,600,400|Ubuntu+Mono");
 
 // Core variables and mixins
 @import '_variables';
@@ -28,3 +28,7 @@
 @import '_community';
 @import '_docs';
 @import '_downloads';
+
+// Demo
+@import '_demo';
+

@@ -1,0 +1,31 @@
+<!-- TODO Precompile ember templates -->
+
+<script type="text/x-handlebars" data-template-name="application">
+    {{outlet}}
+</script>
+
+<script type="text/x-handlebars" data-template-name="demo">
+    <div class="terminal">
+        {{outlet}}
+    </div>
+</script>
+
+<script type="text/x-handlebars" data-template-name="demo/crud">
+{{#if notCleared}}
+    <div class="welcome">
+        Any Vault command you run passes through remotely to
+        the real Vault interface, so feel free to explore, but
+        be careful of the values you set.
+    </div>
+{{/if}}
+
+<div class="log">
+{{#each line in currentLog}}
+{{logPrefix}}{{line}}
+{{/each}}
+</div>
+
+<form {{action "submitText" on="submit"}}>
+    {{logPrefix}} {{input value=currentText class="shell" spellcheck="false"}}
+</form>
+</script>
