@@ -34,6 +34,10 @@ var (
 	// ErrNotInit is returned if a non-initialized barrier
 	// is attempted to be unsealed.
 	ErrNotInit = errors.New("Vault is not initialized")
+
+	// ErrInternalError is returned when we don't want to leak
+	// any information about an internal error
+	ErrInternalError = errors.New("internal error")
 )
 
 // SealConfig is used to describe the seal configuration
@@ -176,7 +180,20 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	// TODO: Enforce ACLs
 
 	// Route the request
-	return c.router.Route(req)
+	resp, err := c.router.Route(req)
+
+	// Check if there is a lease, we must register this
+	if resp != nil && resp.IsSecret && resp.Lease != nil {
+		vaultID, err := c.expiration.Register(req, resp)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to register lease (request: %#v, response: %#v): %v", req, resp, err)
+			return nil, ErrInternalError
+		}
+		resp.Lease.VaultID = vaultID
+	}
+
+	// Return the response and error
+	return resp, err
 }
 
 // Initialized checks if the Vault is already initialized

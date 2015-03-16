@@ -3,6 +3,7 @@ package vault
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -310,5 +311,46 @@ func TestCore_SealUnseal(t *testing.T) {
 	}
 	if unseal, err := c.Unseal(key); err != nil || !unseal {
 		t.Fatalf("err: %v", err)
+	}
+}
+
+// Ensure we get a VaultID
+func TestCore_HandleRequest_Lease(t *testing.T) {
+	c, _ := TestCoreUnsealed(t)
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Lease == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Lease.Duration != time.Hour {
+		t.Fatalf("bad: %#v", resp.Lease)
+	}
+	if resp.Lease.VaultID == "" {
+		t.Fatalf("bad: %#v", resp.Lease)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
 	}
 }
