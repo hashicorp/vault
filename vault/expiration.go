@@ -185,8 +185,8 @@ func (m *ExpirationManager) expireID(vaultID string) {
 
 // revokeEntry is used to attempt revocation of an internal entry
 func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
-	req := &Request{
-		Operation: RevokeOperation,
+	req := &logical.Request{
+		Operation: logical.RevokeOperation,
 		Path:      le.Path,
 		Data:      le.Data,
 	}
