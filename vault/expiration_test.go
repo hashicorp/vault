@@ -64,6 +64,97 @@ func TestExpiration_Register(t *testing.T) {
 	}
 }
 
+func TestExpiration_revokeEntry(t *testing.T) {
+	exp := mockExpiration(t)
+
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	exp.router.Mount(noop, "noop", "", view)
+
+	le := &leaseEntry{
+		VaultID: "foo/bar/1234",
+		Path:    "foo/bar",
+		Data: map[string]interface{}{
+			"testing": true,
+		},
+		Lease: &logical.Lease{
+			Duration: time.Minute,
+		},
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now(),
+	}
+
+	err := exp.revokeEntry(le)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := noop.Requests[0]
+	if req.Operation != logical.RevokeOperation {
+		t.Fatalf("Bad: %v", req)
+	}
+	if req.Path != le.Path {
+		t.Fatalf("Bad: %v", req)
+	}
+	if !reflect.DeepEqual(req.Data, le.Data) {
+		t.Fatalf("Bad: %v", req)
+	}
+}
+
+func TestExpiration_renewEntry(t *testing.T) {
+	exp := mockExpiration(t)
+
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			IsSecret: true,
+			Lease: &logical.Lease{
+				Renewable: true,
+				Duration:  time.Hour,
+			},
+			Data: map[string]interface{}{
+				"testing": false,
+			},
+		},
+	}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	exp.router.Mount(noop, "noop", "", view)
+
+	le := &leaseEntry{
+		VaultID: "foo/bar/1234",
+		Path:    "foo/bar",
+		Data: map[string]interface{}{
+			"testing": true,
+		},
+		Lease: &logical.Lease{
+			Duration: time.Minute,
+		},
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now(),
+	}
+
+	resp, err := exp.renewEntry(le)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(resp, noop.Response) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req := noop.Requests[0]
+	if req.Operation != logical.RenewOperation {
+		t.Fatalf("Bad: %v", req)
+	}
+	if req.Path != le.Path {
+		t.Fatalf("Bad: %v", req)
+	}
+	if !reflect.DeepEqual(req.Data, le.Data) {
+		t.Fatalf("Bad: %v", req)
+	}
+}
+
 func TestExpiration_PersistLoadDelete(t *testing.T) {
 	exp := mockExpiration(t)
 	le := &leaseEntry{

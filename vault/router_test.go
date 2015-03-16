@@ -9,17 +9,19 @@ import (
 )
 
 type NoopBackend struct {
-	Root  []string
-	Paths []string
+	Root     []string
+	Paths    []string
+	Requests []*logical.Request
+	Response *logical.Response
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	n.Paths = append(n.Paths, req.Path)
+	n.Requests = append(n.Requests, req)
 	if req.Storage == nil {
 		return nil, fmt.Errorf("missing view")
 	}
-
-	return nil, nil
+	return n.Response, nil
 }
 
 func (n *NoopBackend) RootPaths() []string {
