@@ -114,7 +114,7 @@ func (m *ExpirationManager) Restore() error {
 		}
 
 		// Determine the remaining time to expiration
-		expires := time.Now().UTC().Sub(le.ExpireTime)
+		expires := le.ExpireTime.Sub(time.Now().UTC())
 		if expires <= 0 {
 			expires = minRevokeDelay
 		}

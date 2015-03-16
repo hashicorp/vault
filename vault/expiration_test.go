@@ -34,6 +34,67 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 	return NewExpirationManager(router, view, logger)
 }
 
+func TestExpiration_Restore(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	exp.router.Mount(noop, "noop", "prod/aws/", view)
+
+	paths := []string{
+		"prod/aws/foo",
+		"prod/aws/sub/bar",
+		"prod/aws/zip",
+	}
+	for _, path := range paths {
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      path,
+		}
+		resp := &logical.Response{
+			IsSecret: true,
+			Lease: &logical.Lease{
+				Duration: 20 * time.Millisecond,
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	// Stop everything
+	err := exp.Stop()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Restore
+	err = exp.Restore()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure all are reaped
+	start := time.Now()
+	for time.Now().Sub(start) < time.Second {
+		if len(noop.Requests) < 3 {
+			time.Sleep(5 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	for _, req := range noop.Requests {
+		if req.Operation != logical.RevokeOperation {
+			t.Fatalf("Bad: %v", req)
+		}
+	}
+}
+
 func TestExpiration_Register(t *testing.T) {
 	exp := mockExpiration(t)
 	req := &logical.Request{
