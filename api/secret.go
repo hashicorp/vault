@@ -14,7 +14,7 @@ type Secret struct {
 	Renewable        bool
 	LeaseDuration    int                    `mapstructure:"lease_duration"`
 	LeaseDurationMax int                    `mapstructure:"lease_duration_max"`
-	Data             map[string]interface{} `mapstructure:"-"`
+	Data             map[string]interface{} `mapstructure:"data"`
 }
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.
