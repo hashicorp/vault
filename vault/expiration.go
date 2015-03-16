@@ -178,24 +178,26 @@ func (m *ExpirationManager) Revoke(vaultID string) error {
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
+	// Ensure there is a trailing slash
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
 	// Accumulate existing leases
 	var existing []string
 	cb := func(path string) {
 		existing = append(existing, path)
 	}
 
-	// Ensure there is a trailing slash
-	if !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
-	}
-
 	// Scan for all the leases in the prefix
-	if err := ScanView(m.view.SubView(prefix), cb); err != nil {
+	sub := m.view.SubView(prefix)
+	if err := ScanView(sub, cb); err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 
 	// Revoke all the keys
-	for idx, vaultID := range existing {
+	for idx, suffix := range existing {
+		vaultID := prefix + suffix
 		if err := m.Revoke(vaultID); err != nil {
 			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
 				vaultID, idx+1, len(existing), err)
@@ -224,7 +226,7 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	}
 
 	// Attempt to renew the entry
-	resp, err := m.renewEntry(le)
+	resp, err := m.renewEntry(le, increment)
 	if err != nil {
 		return nil, err
 	}
@@ -325,10 +327,13 @@ func (m *ExpirationManager) expireID(vaultID string) {
 
 // revokeEntry is used to attempt revocation of an internal entry
 func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
+	data := map[string]interface{}{
+		"previous": le.Data,
+	}
 	req := &logical.Request{
 		Operation: logical.RevokeOperation,
 		Path:      le.Path,
-		Data:      le.Data,
+		Data:      data,
 	}
 	_, err := m.router.Route(req)
 	if err != nil {
@@ -338,11 +343,15 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 }
 
 // renewEntry is used to attempt renew of an internal entry
-func (m *ExpirationManager) renewEntry(le *leaseEntry) (*logical.Response, error) {
+func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+	data := map[string]interface{}{
+		"previous":  le.Data,
+		"increment": increment,
+	}
 	req := &logical.Request{
 		Operation: logical.RenewOperation,
 		Path:      le.Path,
-		Data:      le.Data,
+		Data:      data,
 	}
 	resp, err := m.router.Route(req)
 	if err != nil {
