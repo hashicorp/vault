@@ -70,11 +70,8 @@ func (b *PassthroughBackend) handleRead(
 		leaseDuration, err := time.ParseDuration(leaseVal)
 		if err == nil {
 			lease = &logical.Lease{
-				Renewable:    false,
-				Revokable:    false,
-				Duration:     leaseDuration,
-				MaxDuration:  leaseDuration,
-				MaxIncrement: 0,
+				Renewable: false,
+				Duration:  leaseDuration,
 			}
 		}
 	}

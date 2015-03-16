@@ -60,11 +60,8 @@ func TestPassthroughBackend_Read(t *testing.T) {
 	expected := &logical.Response{
 		IsSecret: true,
 		Lease: &logical.Lease{
-			Renewable:    false,
-			Revokable:    false,
-			Duration:     time.Hour,
-			MaxDuration:  time.Hour,
-			MaxIncrement: 0,
+			Renewable: false,
+			Duration:  time.Hour,
 		},
 		Data: map[string]interface{}{
 			"raw":   "test",

@@ -49,6 +49,7 @@ const (
 	DeleteOperation           = "delete"
 	ListOperation             = "list"
 	RevokeOperation           = "revoke"
+	RenewOperation            = "renew"
 	HelpOperation             = "help"
 )
 

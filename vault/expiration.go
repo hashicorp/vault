@@ -206,7 +206,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 
 // Renew is used to renew a secret using the given vaultID
 // and a renew interval. The increment may be ignored.
-func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*logical.Lease, error) {
+func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*logical.Response, error) {
 	// Load the entry
 	le, err := m.loadEntry(vaultID)
 	if err != nil {
@@ -218,31 +218,31 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 		return nil, fmt.Errorf("lease not found")
 	}
 
-	// Determine the remaining lease time
-	end := le.IssueTime.Add(le.Lease.MaxDuration)
-	now := time.Now().UTC()
-	remain := end.Sub(now)
-	if remain < 0 {
+	// Determine if the lease is expired
+	if le.ExpireTime.Before(time.Now().UTC()) {
 		return nil, fmt.Errorf("lease expired")
 	}
 
-	// Set the default increment if none provided
-	if increment <= 0 {
-		increment = le.Lease.Duration
+	// Attempt to renew the entry
+	resp, err := m.renewEntry(le)
+	if err != nil {
+		return nil, err
 	}
 
-	// Determine the maximum lease renew
-	if increment > le.Lease.MaxIncrement && le.Lease.MaxIncrement != 0 {
-		increment = le.Lease.MaxIncrement
+	// Fast-path if there is no lease
+	if resp == nil || resp.Lease == nil || !resp.IsSecret {
+		return resp, nil
 	}
 
-	// Restrict the increment to avoid exceeding maximum duration
-	if increment > remain {
-		increment = remain
+	// Validate the lease
+	if err := resp.Lease.Validate(); err != nil {
+		return nil, err
 	}
 
 	// Update the lease entry
-	le.ExpireTime = now.Add(increment)
+	le.Data = resp.Data
+	le.Lease = resp.Lease
+	le.ExpireTime = time.Now().UTC().Add(resp.Lease.Duration)
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -250,16 +250,12 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	// Update the expiration time
 	m.pendingLock.Lock()
 	if timer, ok := m.pending[vaultID]; ok {
-		timer.Reset(increment)
+		timer.Reset(resp.Lease.Duration)
 	}
 	m.pendingLock.Unlock()
 
-	// Return a new lease with updated durations
-	lease := new(logical.Lease)
-	*lease = *le.Lease
-	lease.Duration = increment
-	lease.MaxDuration = remain
-	return lease, nil
+	// Return the response
+	return resp, nil
 }
 
 // Register is used to take a request and response with an associated
@@ -339,6 +335,20 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 		return fmt.Errorf("failed to revoke entry: %v", err)
 	}
 	return nil
+}
+
+// renewEntry is used to attempt renew of an internal entry
+func (m *ExpirationManager) renewEntry(le *leaseEntry) (*logical.Response, error) {
+	req := &logical.Request{
+		Operation: logical.RenewOperation,
+		Path:      le.Path,
+		Data:      le.Data,
+	}
+	resp, err := m.router.Route(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to renew entry: %v", err)
+	}
+	return resp, nil
 }
 
 // loadEntry is used to read a lease entry

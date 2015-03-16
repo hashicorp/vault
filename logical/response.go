@@ -21,12 +21,10 @@ type Response struct {
 
 // Lease is used to provide more information about the lease
 type Lease struct {
-	VaultID      string        // VaultID is the unique identifier used for renewal and revocation
-	Renewable    bool          // Is the VaultID renewable
-	Revokable    bool          // Is the secret revokable. Must support 'Revoke' operation.
-	Duration     time.Duration // Current lease duration
-	MaxDuration  time.Duration // Maximum lease duration
-	MaxIncrement time.Duration // Maximum increment to lease duration
+	VaultID     string        // VaultID is the unique identifier used for renewal and revocation
+	Renewable   bool          // Is the VaultID renewable
+	Duration    time.Duration // Current lease duration
+	GracePeriod time.Duration // Lease revocation grace period (Duration+GracePeriod=RevokePeriod)
 }
 
 // Validate is used to sanity check a lease
@@ -34,14 +32,8 @@ func (l *Lease) Validate() error {
 	if l.Duration <= 0 {
 		return fmt.Errorf("lease duration must be greater than zero")
 	}
-	if l.MaxDuration <= 0 {
-		return fmt.Errorf("maximum lease duration must be greater than zero")
-	}
-	if l.Duration > l.MaxDuration {
-		return fmt.Errorf("lease duration cannot be greater than maximum lease duration")
-	}
-	if l.MaxIncrement < 0 {
-		return fmt.Errorf("maximum lease increment cannot be negative")
+	if l.GracePeriod < 0 {
+		return fmt.Errorf("grace period cannot be less than zero")
 	}
 	return nil
 }
