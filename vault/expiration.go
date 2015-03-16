@@ -227,7 +227,7 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	}
 
 	// Set the default increment if none provided
-	if increment == 0 {
+	if increment <= 0 {
 		increment = le.Lease.Duration
 	}
 
@@ -236,6 +236,7 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 		increment = le.Lease.MaxIncrement
 	}
 
+	// Restrict the increment to avoid exceeding maximum duration
 	if increment > remain {
 		increment = remain
 	}
