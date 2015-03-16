@@ -15,6 +15,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 		PathsRoot: []string{
 			"mounts/*",
 			"remount",
+			"revoke-prefix/*",
 		},
 
 		Paths: []*framework.Path{
@@ -106,6 +107,24 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["revoke"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "revoke-prefix/(?P<prefix>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"prefix": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["revoke-prefix-path"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: b.handleRevokePrefix,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-prefix"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["revoke-prefix"][1]),
 			},
 		},
 	}
@@ -241,6 +260,19 @@ func (b *SystemBackend) handleRevoke(
 	return nil, nil
 }
 
+// handleRevokePrefix is used to revoke a prefix with many VaultIDs
+func (b *SystemBackend) handleRevokePrefix(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	prefix := data.Get("prefix").(string)
+
+	// Invoke the expiration manager directly
+	if err := b.Core.expiration.RevokePrefix(prefix); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
 	"mounts": {
@@ -311,5 +343,22 @@ at the end of the lease period if not renewed. However, in some cases
 you may want to force an immediate revocation. This endpoint can be
 used to revoke the secret with the given Vault ID.
 		`,
+	},
+
+	"revoke-prefix": {
+		"Revoke all secrets generated in a given prefix",
+		`
+Revokes all the secrets generated under a given mount prefix. As
+an example, "prod/aws/" might be the AWS logical backend, and due to
+a change in the "ops" policy, we may want to invalidate all the secrets
+generated. We can do a revoke prefix at "prod/aws/ops" to revoke all
+the ops secrets. This does a prefix match on the Vault IDs and revokes
+all matching leases.
+		`,
+	},
+
+	"revoke-prefix-path": {
+		`The path to revoke keys under. Example: "prod/aws/ops"`,
+		"",
 	},
 }
