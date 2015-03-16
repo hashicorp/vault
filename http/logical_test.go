@@ -39,3 +39,15 @@ func TestLogical(t *testing.T) {
 		t.Fatalf("bad: %#v", actual)
 	}
 }
+
+func TestLogical_noExist(t *testing.T) {
+	core, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/v1/secret/foo")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 404)
+}
