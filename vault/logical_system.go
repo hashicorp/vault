@@ -203,7 +203,11 @@ func (b *SystemBackend) handleRenew(
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Invoke the expiration manager directly
-	return b.Core.expiration.Renew(vaultID, increment)
+	resp, err := b.Core.expiration.Renew(vaultID, increment)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return resp, err
 }
 
 // sysHelp is all the help text for the sys backend.

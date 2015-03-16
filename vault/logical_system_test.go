@@ -184,6 +184,20 @@ func TestSystemBackend_renew(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_renew_invalidID(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Attempt renew
+	req := logical.TestRequest(t, logical.WriteOperation, "renew/foobarbaz")
+	resp, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "lease not found" {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _ := TestCoreUnsealed(t)
 	return NewSystemBackend(c)
