@@ -25,10 +25,9 @@ func TestLogical(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"vault_id":           "",
-		"renewable":          false,
-		"lease_duration":     float64(0),
-		"lease_duration_max": float64(0),
+		"vault_id":       "",
+		"renewable":      false,
+		"lease_duration": float64(0),
 		"data": map[string]interface{}{
 			"data": "bar",
 		},

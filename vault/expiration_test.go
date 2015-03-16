@@ -62,8 +62,7 @@ func TestExpiration_Register(t *testing.T) {
 	resp := &logical.Response{
 		IsSecret: true,
 		Lease: &logical.Lease{
-			Duration:    time.Hour,
-			MaxDuration: time.Hour,
+			Duration: time.Hour,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -93,12 +92,10 @@ func TestLeaseEntry(t *testing.T) {
 			"testing": true,
 		},
 		Lease: &logical.Lease{
-			Renewable:   true,
-			Duration:    time.Minute,
-			MaxDuration: time.Hour,
+			Duration: time.Minute,
 		},
-		IssueTime: time.Now(),
-		RenewTime: time.Now(),
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now(),
 	}
 
 	enc, err := le.encode()
