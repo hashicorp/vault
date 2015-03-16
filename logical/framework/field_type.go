@@ -1,4 +1,4 @@
-package backend
+package framework
 
 //go:generate stringer -type=FieldType field_type.go
 

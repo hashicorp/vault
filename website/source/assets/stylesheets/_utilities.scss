@@ -70,3 +70,28 @@
 @mixin bez-1-transition{
   @include transition( all 300ms ease-in-out );
 }
+
+
+@keyframes press {
+  0% {
+    opacity: 1;
+  } 
+  50% {
+    opacity: .55
+  } 
+  100% {
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes press {
+  0% {
+    opacity: 1;
+  } 
+  50% {
+    opacity: .55
+  } 
+  100% {
+    opacity: 1;
+  }   
+}

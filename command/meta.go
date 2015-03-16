@@ -7,11 +7,15 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
+
+// EnvVaultAddress can be used to set the address of Vault
+const EnvVaultAddress = "VAULT_ADDR"
 
 // FlagSetFlags is an enum to define what flags are present in the
 // default FlagSet returned by Meta.FlagSet.
@@ -39,6 +43,9 @@ type Meta struct {
 // flag settings for this command.
 func (m *Meta) Client() (*api.Client, error) {
 	config := api.DefaultConfig()
+	if v := os.Getenv(EnvVaultAddress); v != "" {
+		config.Address = v
+	}
 	if m.flagAddress != "" {
 		config.Address = m.flagAddress
 	}

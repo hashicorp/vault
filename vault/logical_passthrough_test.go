@@ -8,12 +8,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestPassthroughBackend_impl(t *testing.T) {
-	var _ logical.Backend = new(PassthroughBackend)
-}
-
 func TestPassthroughBackend_RootPaths(t *testing.T) {
-	var b PassthroughBackend
+	b := testPassthroughBackend()
 	root := b.RootPaths()
 	if len(root) != 0 {
 		t.Fatalf("unexpected: %v", root)
@@ -21,7 +17,7 @@ func TestPassthroughBackend_RootPaths(t *testing.T) {
 }
 
 func TestPassthroughBackend_Write(t *testing.T) {
-	var b PassthroughBackend
+	b := testPassthroughBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
 
@@ -43,7 +39,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 }
 
 func TestPassthroughBackend_Read(t *testing.T) {
-	var b PassthroughBackend
+	b := testPassthroughBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	req.Data["lease"] = "1h"
@@ -82,7 +78,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 }
 
 func TestPassthroughBackend_Delete(t *testing.T) {
-	var b PassthroughBackend
+	b := testPassthroughBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	storage := req.Storage
@@ -113,7 +109,7 @@ func TestPassthroughBackend_Delete(t *testing.T) {
 }
 
 func TestPassthroughBackend_List(t *testing.T) {
-	var b PassthroughBackend
+	b := testPassthroughBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	storage := req.Storage
@@ -140,4 +136,9 @@ func TestPassthroughBackend_List(t *testing.T) {
 	if !reflect.DeepEqual(resp, expected) {
 		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
 	}
+}
+
+func testPassthroughBackend() logical.Backend {
+	b, _ := PassthroughBackendFactory(nil)
+	return b
 }

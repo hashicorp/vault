@@ -3,6 +3,8 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -21,19 +23,25 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
-	router   *Router
-	view     *BarrierView
-	doneCh   chan struct{}
-	stopCh   chan struct{}
-	stopLock sync.Mutex
+	router *Router
+	view   *BarrierView
+	logger *log.Logger
+
+	pending     map[string]*time.Timer
+	pendingLock sync.RWMutex
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(router *Router, view *BarrierView) *ExpirationManager {
+func NewExpirationManager(router *Router, view *BarrierView, logger *log.Logger) *ExpirationManager {
+	if logger == nil {
+		logger = log.New(os.Stderr, "", log.LstdFlags)
+	}
 	exp := &ExpirationManager{
-		router: router,
-		view:   view,
+		router:  router,
+		view:    view,
+		logger:  logger,
+		pending: make(map[string]*time.Timer),
 	}
 	return exp
 }
@@ -45,17 +53,12 @@ func (c *Core) setupExpiration() error {
 	view := c.systemView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c.router, view)
+	mgr := NewExpirationManager(c.router, view, c.logger)
 	c.expiration = mgr
 
 	// Restore the existing state
 	if err := c.expiration.Restore(); err != nil {
 		return fmt.Errorf("expiration state restore failed: %v", err)
-	}
-
-	// Start the expiration manager
-	if err := c.expiration.Start(); err != nil {
-		return fmt.Errorf("expiration start failed: %v", err)
 	}
 	return nil
 }
@@ -73,53 +76,21 @@ func (c *Core) stopExpiration() error {
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
 func (m *ExpirationManager) Restore() error {
-	m.stopLock.Lock()
-	defer m.stopLock.Unlock()
-	if m.stopCh != nil {
-		return fmt.Errorf("cannot restore while running")
-	}
-
 	// TODO: Restore...
-	return nil
-}
-
-// Start is used to continue automatic revocation. This
-// should only be called when the Vault is unsealed.
-func (m *ExpirationManager) Start() error {
-	m.stopLock.Lock()
-	defer m.stopLock.Unlock()
-	if m.stopCh == nil {
-		m.doneCh = make(chan struct{})
-		m.stopCh = make(chan struct{})
-		go m.run(m.doneCh, m.stopCh)
-	}
 	return nil
 }
 
 // Stop is used to prevent further automatic revocations.
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
-	m.stopLock.Lock()
-	defer m.stopLock.Unlock()
-	if m.stopCh != nil {
-		doneCh := m.doneCh
-		close(m.stopCh)
-		m.stopCh = nil
-		m.doneCh = nil
-		<-doneCh // Wait for completion
+	// Stop all the pending expiration timers
+	m.pendingLock.Lock()
+	for _, timer := range m.pending {
+		timer.Stop()
 	}
+	m.pending = make(map[string]*time.Timer)
+	m.pendingLock.Unlock()
 	return nil
-}
-
-// run is a long running goroutine that manages background expiration
-func (m *ExpirationManager) run(doneCh, stopCh chan struct{}) {
-	defer close(doneCh)
-	for {
-		select {
-		case <-stopCh:
-			return
-		}
-	}
 }
 
 // Revoke is used to revoke a secret named by the given vaultID
@@ -160,18 +131,91 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Create a lease entry
+	now := time.Now().UTC()
 	le := leaseEntry{
 		VaultID:   path.Join(req.Path, generateUUID()),
 		Path:      req.Path,
 		Data:      resp.Data,
 		Lease:     resp.Lease,
-		IssueTime: time.Now().UTC(),
+		IssueTime: now,
+		RenewTime: now,
 	}
 
 	// Encode the entry
+	if err := m.persistEntry(&le); err != nil {
+		return "", err
+	}
+
+	// Setup revocation timer
+	m.pendingLock.Lock()
+	timer := time.AfterFunc(resp.Lease.Duration, func() {
+		m.expireID(le.VaultID)
+	})
+	m.pending[le.VaultID] = timer
+	m.pendingLock.Unlock()
+
+	// Done
+	return le.VaultID, nil
+}
+
+// expireID is invoked when a given ID is expired
+func (m *ExpirationManager) expireID(vaultID string) {
+	// Clear from the pending expiration
+	m.pendingLock.Lock()
+	delete(m.pending, vaultID)
+	m.pendingLock.Unlock()
+
+	// Load the entry
+	le, err := m.loadEntry(vaultID)
+	if err != nil {
+		m.logger.Printf("[ERR] expire: failed to read entry '%s': %v", vaultID, err)
+	}
+
+	// Revoke the entry
+	if err := m.revokeEntry(le); err != nil {
+		m.logger.Printf("[ERR] expire: failed to revoke entry '%s': %v", vaultID, err)
+	}
+
+	// Delete the entry
+	if err := m.deleteEntry(vaultID); err != nil {
+		m.logger.Printf("[ERR] expire: failed to delete entry '%s': %v", vaultID, err)
+	}
+	m.logger.Printf("[INFO] expire: revoked '%s'", vaultID)
+}
+
+// revokeEntry is used to attempt revocation of an internal entry
+func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
+	req := &logical.Request{
+		Operation: logical.RevokeOperation,
+		Path:      le.Path,
+		Data:      le.Data,
+	}
+	_, err := m.router.Route(req)
+	return err
+}
+
+// loadEntry is used to read a lease entry
+func (m *ExpirationManager) loadEntry(vaultID string) (*leaseEntry, error) {
+	out, err := m.view.Get(vaultID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read lease entry: %v", err)
+	}
+	if out == nil {
+		return nil, nil
+	}
+	le, err := decodeLeaseEntry(out.Value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode lease entry: %v", err)
+	}
+	return le, nil
+}
+
+// persistEntry is used to persist a lease entry
+func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
+	// Encode the entry
 	buf, err := le.encode()
 	if err != nil {
-		return "", fmt.Errorf("failed to encode lease entry: %v", err)
+		return fmt.Errorf("failed to encode lease entry: %v", err)
 	}
 
 	// Write out to the view
@@ -180,24 +224,29 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		Value: buf,
 	}
 	if err := m.view.Put(&ent); err != nil {
-		return "", fmt.Errorf("failed to persist lease entry: %v", err)
+		return fmt.Errorf("failed to persist lease entry: %v", err)
 	}
+	return nil
+}
 
-	// TODO: Automatic revoke timer...
-
-	// Done
-	return le.VaultID, nil
+// deleteEntry is used to delete a lease entry
+func (m *ExpirationManager) deleteEntry(vaultID string) error {
+	if err := m.view.Delete(vaultID); err != nil {
+		return fmt.Errorf("failed to delete lease entry: %v", err)
+	}
+	return nil
 }
 
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
-	VaultID   string
-	Path      string
-	Data      map[string]interface{}
-	Lease     *logical.Lease
-	IssueTime time.Time
-	RenewTime time.Time
+	VaultID        string                 `json:"vault_id"`
+	Path           string                 `json:"path"`
+	Data           map[string]interface{} `json:"data"`
+	Lease          *logical.Lease         `json:"lease"`
+	IssueTime      time.Time              `json:"issue_time"`
+	RenewTime      time.Time              `json:"renew_time"`
+	RevokeAttempts int                    `json:"renew_attempts"`
 }
 
 // encode is used to JSON encode the lease entry

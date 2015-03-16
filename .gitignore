@@ -29,3 +29,4 @@ pkg/
 
 # Vault-specific
 example.hcl
+example.vault.d

@@ -1,4 +1,4 @@
-package backend
+package framework
 
 import (
 	"bytes"
@@ -24,6 +24,12 @@ type Backend struct {
 	// backend is in use).
 	Paths []*Path
 
+	// PathsRoot is the list of path patterns that denote the
+	// paths above that require root-level privileges. These can't be
+	// regular expressions, it is either exact match or prefix match.
+	// For prefix match, append '*' as a suffix.
+	PathsRoot []string
+
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
@@ -45,12 +51,6 @@ type Path struct {
 	// Note that only named capture fields are available in every operation,
 	// whereas all fields are avaiable in the Write operation.
 	Fields map[string]*FieldSchema
-
-	// Root if not blank, denotes that this path requires root
-	// privileges and the path pattern that is the root path. This can't
-	// be a regular expression and must be an exact path. It may have a
-	// trailing '*' to denote that it is a prefix, and not an exact match.
-	Root string
 
 	// Callbacks are the set of callbacks that are called for a given
 	// operation. If a callback for a specific operation is not present,
@@ -123,8 +123,7 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 
 // logical.Backend impl.
 func (b *Backend) RootPaths() []string {
-	// TODO
-	return nil
+	return b.PathsRoot
 }
 
 // Route looks up the path that would be used for a given path string.

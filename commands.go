@@ -24,14 +24,14 @@ func init() {
 			}, nil
 		},
 
-		"get": func() (cli.Command, error) {
-			return &command.GetCommand{
+		"read": func() (cli.Command, error) {
+			return &command.ReadCommand{
 				Meta: meta,
 			}, nil
 		},
 
-		"put": func() (cli.Command, error) {
-			return &command.PutCommand{
+		"write": func() (cli.Command, error) {
+			return &command.WriteCommand{
 				Meta: meta,
 			}, nil
 		},
@@ -62,6 +62,12 @@ func init() {
 
 		"server": func() (cli.Command, error) {
 			return &command.ServerCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"mounts": func() (cli.Command, error) {
+			return &command.MountsCommand{
 				Meta: meta,
 			}, nil
 		},

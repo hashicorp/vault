@@ -7,13 +7,9 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestSystemBackend_impl(t *testing.T) {
-	var _ logical.Backend = new(SystemBackend)
-}
-
 func TestSystemBackend_RootPaths(t *testing.T) {
 	expected := []string{
-		"mount/*",
+		"mounts/*",
 		"remount",
 	}
 
@@ -50,7 +46,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 func TestSystemBackend_mount(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "mount/prod/secret/")
+	req := logical.TestRequest(t, logical.WriteOperation, "mounts/prod/secret/")
 	req.Data["type"] = "generic"
 
 	resp, err := b.HandleRequest(req)
@@ -65,13 +61,13 @@ func TestSystemBackend_mount(t *testing.T) {
 func TestSystemBackend_mount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "mount/prod/secret/")
+	req := logical.TestRequest(t, logical.WriteOperation, "mounts/prod/secret/")
 	req.Data["type"] = "nope"
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "unknown logical backend type: nope" {
+	if resp.Data["error"] != "unknown backend type: nope" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -79,7 +75,7 @@ func TestSystemBackend_mount_invalid(t *testing.T) {
 func TestSystemBackend_unmount(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.DeleteOperation, "mount/secret/")
+	req := logical.TestRequest(t, logical.DeleteOperation, "mounts/secret/")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -92,7 +88,7 @@ func TestSystemBackend_unmount(t *testing.T) {
 func TestSystemBackend_unmount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.DeleteOperation, "mount/foo/")
+	req := logical.TestRequest(t, logical.DeleteOperation, "mounts/foo/")
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -147,7 +143,7 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 }
 
-func testSystemBackend(t *testing.T) *SystemBackend {
+func testSystemBackend(t *testing.T) logical.Backend {
 	c, _ := TestCoreUnsealed(t)
-	return &SystemBackend{Core: c}
+	return NewSystemBackend(c)
 }

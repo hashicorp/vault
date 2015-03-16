@@ -1,4 +1,4 @@
-(function(Sidebar){
+(function(Sidebar, DotLockup){
 
 // Quick and dirty IE detection
 var isIE = (function(){
@@ -25,6 +25,10 @@ var Init = {
 		new Sidebar();
 	},
 
+	initializeDotLockup: function(){
+		new DotLockup();
+	},
+
 	initializeWaypoints: function(){
 		$('#header').waypoint(function(event, direction) {
 		    $(this.element).addClass('showit');
@@ -46,6 +50,7 @@ var Init = {
 	Pages: {
 		'page-home': function(){
 			Init.initializeSidebar();
+			Init.initializeDotLockup();
 			Init.initializeWaypoints();
 		}
 	}
@@ -54,4 +59,4 @@ var Init = {
 
 Init.start();
 
-})(window.Sidebar);
+})(window.Sidebar, window.DotLockup);

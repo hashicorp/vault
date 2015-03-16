@@ -1,29 +1,64 @@
 package command
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"strings"
 )
 
-// GetCommand is a Command that gets data from the Vault.
-type GetCommand struct {
+// ReadCommand is a Command that gets data from the Vault.
+type ReadCommand struct {
 	Meta
 }
 
-func (c *GetCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("put", FlagSetDefault)
+func (c *ReadCommand) Run(args []string) int {
+	flags := c.Meta.FlagSet("read", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
+	args = flags.Args()
+	if len(args) != 1 {
+		c.Ui.Error("read expects one argument")
+		flags.Usage()
+		return 1
+	}
+	path := args[0]
+
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 2
+	}
+
+	secret, err := client.Logical().Read(path)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error reading %s: %s", path, err))
+		return 1
+	}
+
+	b, err := json.Marshal(secret)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error reading %s: %s", path, err))
+		return 1
+	}
+
+	var out bytes.Buffer
+	json.Indent(&out, b, "", "\t")
+	c.Ui.Output(out.String())
 	return 0
 }
 
-func (c *GetCommand) Synopsis() string {
-	return "Get data or secrets from Vault"
+func (c *ReadCommand) Synopsis() string {
+	return "Read data or secrets from Vault"
 }
 
-func (c *GetCommand) Help() string {
+func (c *ReadCommand) Help() string {
 	helpText := `
 Usage: vault get [options] path
 

@@ -27,6 +27,7 @@
 	   		left: 15px;
 	   		top: 8px;
 	   		width: 12px;
+
 	   		span{
 	   			width: 3px;
 	   			height: 3px;
@@ -35,9 +36,10 @@
 	   			margin-left: 1px;
 	   			margin-bottom: 1px;
 	   			background-color: $blue;
+	   			transition: all 250ms ease-in;
 
 	   			&:nth-child(1){
-	   				opacity: 1;
+	   				opacity: .85;
 	   			}
 
 	   			&:nth-child(2){
@@ -49,15 +51,15 @@
 	   			}
 
 	   			&:nth-child(4){
-	   				opacity: 1;
-	   			}
-
-	   			&:nth-child(5){
 	   				opacity: .9;
 	   			}
 
+	   			&:nth-child(5){
+	   				opacity: .8;
+	   			}
+
 	   			&:nth-child(6){
-	   				opacity: .4;
+	   				opacity: .5;
 	   			}
 
 	   			&:nth-child(7){
@@ -76,6 +78,28 @@
 	   				opacity: 1;
 	   				margin-left: 5px;
 	   			}
+
+	   			&.full{
+	   				opacity: 1;
+	   				transition: all 250ms ease-in;
+	   			}
+
+	   			&.full.off{
+	   				opacity: .55;
+	   				transition: all 250ms ease-in;
+	   			}
+
+	   			&.full.press{
+
+					animation-name: press;
+					-webkit-animation-name: press;
+
+					animation-duration: 1s;	
+					-webkit-animation-duration: 1s;
+
+					animation-timing-function: ease;	
+					-webkit-animation-timing-function: ease;
+	   			}  			
 	   		}
 	   	}
 	}

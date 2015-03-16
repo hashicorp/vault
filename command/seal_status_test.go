@@ -17,7 +17,7 @@ func TestSealStatus(t *testing.T) {
 	}
 
 	core := vault.TestCore(t)
-	keys := vault.TestCoreInit(t, core)
+	key := vault.TestCoreInit(t, core)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
@@ -26,10 +26,8 @@ func TestSealStatus(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	for _, k := range keys {
-		if _, err := core.Unseal(k); err != nil {
-			t.Fatalf("err: %s", err)
-		}
+	if _, err := core.Unseal(key); err != nil {
+		t.Fatalf("err: %s", err)
 	}
 
 	if code := c.Run(args); code != 0 {

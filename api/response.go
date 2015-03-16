@@ -45,13 +45,20 @@ func (r *Response) Error() error {
 	if err := dec.Decode(&resp); err != nil {
 		// Ignore the decoding error and just drop the raw response
 		return fmt.Errorf(
-			"Error making API request. Code: %d. Raw Message:\n\n%s",
+			"Error making API request.\n\n"+
+				"URL: %s %s\n"+
+				"Code: %d. Raw Message:\n\n%s",
+			r.Request.Method, r.Request.URL.String(),
 			r.StatusCode, bodyBuf.String())
 	}
 
 	var errBody bytes.Buffer
 	errBody.WriteString(fmt.Sprintf(
-		"Error making API request. Code: %d. Errors:\n\n", r.StatusCode))
+		"Error making API request.\n\n"+
+			"URL: %s %s\n"+
+			"Code: %d. Errors:\n\n",
+		r.Request.Method, r.Request.URL.String(),
+		r.StatusCode))
 	for _, err := range resp.Errors {
 		errBody.WriteString(fmt.Sprintf("* %s", err))
 	}

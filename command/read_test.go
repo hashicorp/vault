@@ -1,7 +1,6 @@
 package command
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/hashicorp/vault/http"
@@ -9,30 +8,23 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func TestUnseal(t *testing.T) {
-	core := vault.TestCore(t)
-	key := vault.TestCoreInit(t, core)
+func TestRead(t *testing.T) {
+	core, _ := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
-	c := &UnsealCommand{
-		Key: hex.EncodeToString(key),
+	c := &ReadCommand{
 		Meta: Meta{
 			Ui: ui,
 		},
 	}
 
-	args := []string{"-address", addr}
+	args := []string{
+		"-address", addr,
+		"sys/mounts",
+	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if sealed {
-		t.Fatal("should not be sealed")
 	}
 }

@@ -8,7 +8,19 @@ import (
 	"testing"
 )
 
+func testHttpDelete(t *testing.T, addr string) *http.Response {
+	return testHttpData(t, "DELETE", addr, nil)
+}
+
+func testHttpPost(t *testing.T, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "POST", addr, body)
+}
+
 func testHttpPut(t *testing.T, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "PUT", addr, body)
+}
+
+func testHttpData(t *testing.T, method string, addr string, body interface{}) *http.Response {
 	bodyReader := new(bytes.Buffer)
 	if body != nil {
 		enc := json.NewEncoder(bodyReader)
@@ -17,7 +29,7 @@ func testHttpPut(t *testing.T, addr string, body interface{}) *http.Response {
 		}
 	}
 
-	req, err := http.NewRequest("PUT", addr, bodyReader)
+	req, err := http.NewRequest(method, addr, bodyReader)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
