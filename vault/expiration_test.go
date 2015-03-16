@@ -33,26 +33,6 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 	return NewExpirationManager(router, view, logger)
 }
 
-/*
-func TestExpiration_StartStop(t *testing.T) {
-	exp := mockExpiration(t)
-		err := exp.Start()
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-
-	err := exp.Restore()
-	if err.Error() != "cannot restore while running" {
-		t.Fatalf("err: %v", err)
-	}
-
-	err = exp.Stop()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-}
-*/
-
 func TestExpiration_Register(t *testing.T) {
 	exp := mockExpiration(t)
 	req := &logical.Request{
@@ -81,6 +61,46 @@ func TestExpiration_Register(t *testing.T) {
 
 	if len(id) <= len(req.Path) {
 		t.Fatalf("bad: %s", id)
+	}
+}
+
+func TestExpiration_PersistLoadDelete(t *testing.T) {
+	exp := mockExpiration(t)
+	le := &leaseEntry{
+		VaultID: "foo/bar/1234",
+		Path:    "foo/bar",
+		Data: map[string]interface{}{
+			"testing": true,
+		},
+		Lease: &logical.Lease{
+			Duration: time.Minute,
+		},
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now(),
+	}
+	if err := exp.persistEntry(le); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	out, err := exp.loadEntry("foo/bar/1234")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, le) {
+		t.Fatalf("out: %#v expect: %#v", out, le)
+	}
+
+	err = exp.deleteEntry("foo/bar/1234")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	out, err = exp.loadEntry("foo/bar/1234")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("out: %#v", out)
 	}
 }
 
