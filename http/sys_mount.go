@@ -87,7 +87,7 @@ func handleSysMount(
 
 	_, err := core.HandleRequest(&logical.Request{
 		Operation: logical.WriteOperation,
-		Path:      "sys/mount/" + path,
+		Path:      "sys/mounts/" + path,
 		Data: map[string]interface{}{
 			"type":        req.Type,
 			"description": req.Description,
@@ -108,7 +108,7 @@ func handleSysUnmount(
 	path string) {
 	_, err := core.HandleRequest(&logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "sys/mount/" + path,
+		Path:      "sys/mounts/" + path,
 	})
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)

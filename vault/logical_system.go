@@ -12,13 +12,13 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 	return &framework.Backend{
 		PathsRoot: []string{
-			"mount/*",
+			"mounts/*",
 			"remount",
 		},
 
 		Paths: []*framework.Path{
 			&framework.Path{
-				Pattern: "mounts",
+				Pattern: "mounts$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.handleMountTable,
@@ -29,7 +29,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 
 			&framework.Path{
-				Pattern: "mount/(?P<path>.+)",
+				Pattern: "mounts/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -129,7 +129,7 @@ func (b *SystemBackend) handleMount(
 // handleUnmount is used to unmount a path
 func (b *SystemBackend) handleUnmount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	suffix := strings.TrimPrefix(req.Path, "mount/")
+	suffix := strings.TrimPrefix(req.Path, "mounts/")
 	if len(suffix) == 0 {
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
