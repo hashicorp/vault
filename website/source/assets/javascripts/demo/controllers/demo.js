@@ -4,6 +4,7 @@ Demo.DemoController = Ember.ObjectController.extend({
   logPrefix: "$ ",
   cursor: 0,
   notCleared: true,
+  isLoading: false,
 
   setFromHistory: function() {
     var index = this.get('currentLog.length') + this.get('cursor');
@@ -14,6 +15,6 @@ Demo.DemoController = Ember.ObjectController.extend({
   actions: {
     close: function() {
       this.transitionTo('index');
-    }
+    },
   }
 });
