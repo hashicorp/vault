@@ -96,13 +96,13 @@
   }
 }
 
-#demo-app.loading .loading-bar{
+#demo-app .loading-bar{
     display: block;
-    -webkit-animation: shift-rightwards 1s ease-in-out infinite;
-    -moz-animation: shift-rightwards 1s ease-in-out infinite;
-    -ms-animation: shift-rightwards 1s ease-in-out infinite;
-    -o-animation: shift-rightwards 1s ease-in-out infinite;
-    animation: shift-rightwards 1s ease-in-out infinite;
+    -webkit-animation: shift-rightwards 2s ease-in-out infinite;
+    -moz-animation: shift-rightwards 2s ease-in-out infinite;
+    -ms-animation: shift-rightwards 2s ease-in-out infinite;
+    -o-animation: shift-rightwards 2s ease-in-out infinite;
+    animation: shift-rightwards 2s ease-in-out infinite;
     -webkit-animation-delay: .4s;
     -moz-animation-delay: .4s;
     -o-animation-delay: .4s;
