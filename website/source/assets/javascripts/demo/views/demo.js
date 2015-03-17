@@ -73,8 +73,6 @@ Demo.DemoView = Ember.View.extend({
     var cursor = this.get('controller.cursor'),
         currentLength = this.get('controller.currentLog.length');
 
-    console.log(ev);
-
     switch(ev.keyCode) {
       // Down arrow
       case 40:
