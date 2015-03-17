@@ -39,6 +39,8 @@ func (m *RollbackManager) Start() {
 		return
 	}
 
+	m.Logger.Printf("[INFO] rollback: starting rollback manager")
+
 	var mounts map[string]*uint32
 	tick := time.NewTicker(m.Period)
 	defer tick.Stop()
@@ -48,6 +50,7 @@ func (m *RollbackManager) Start() {
 
 		// If we're quitting, then stop
 		if atomic.LoadUint32(&m.running) != 1 {
+			m.Logger.Printf("[INFO] rollback: stopping rollback manager")
 			return
 		}
 
@@ -100,4 +103,33 @@ func (m *RollbackManager) rollback(path string, state *uint32) {
 			"[ERR] rollback: error rolling back %s: %s",
 			path, err)
 	}
+}
+
+// The methods below are the hooks from core that are called pre/post seal.
+
+func (c *Core) startRollback() error {
+	// Ensure if we had a rollback it was stopped. This should never
+	// be the case but it doesn't hurt to check.
+	if c.rollback != nil {
+		c.rollback.Stop()
+	}
+
+	c.rollback = &RollbackManager{
+		Logger: c.logger,
+		Router: c.router,
+		Mounts: c.mounts,
+		Period: 1 * time.Minute,
+	}
+	go c.rollback.Start()
+
+	return nil
+}
+
+func (c *Core) stopRollback() error {
+	if c.rollback != nil {
+		c.rollback.Stop()
+		c.rollback = nil
+	}
+
+	return nil
 }
