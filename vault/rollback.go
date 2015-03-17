@@ -99,6 +99,12 @@ func (m *RollbackManager) rollback(path string, state *uint32) {
 		Path:      path,
 	}
 	if _, err := m.Router.Route(req); err != nil {
+		// If the error is an unsupported operation, then it doesn't
+		// matter, the backend doesn't support it.
+		if err == logical.ErrUnsupportedOperation {
+			return
+		}
+
 		m.Logger.Printf(
 			"[ERR] rollback: error rolling back %s: %s",
 			path, err)
