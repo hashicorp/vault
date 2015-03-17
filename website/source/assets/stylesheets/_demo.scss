@@ -11,11 +11,34 @@
     overflow: scroll;
     font-size: 18px;
     font-family: 'Ubuntu Mono', 'Monaco', monospace;
+    @include box-shadow(0px -2px 30px 0px rgba(0, 0, 0, 0.40));
 }
 
 .terminal {
-    padding: 0px 25px;
+    padding: 0px 65px 0 25px;
     padding-bottom: 50px;
+
+    .close-terminal{
+        display: inline-block;
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 60px;
+        height: 60px;
+        color: #8B8A8F;
+        background-color: #202021;
+        text-align: center;
+        line-height: 60px;
+        font-size: 30px;
+        @include lato-light();
+        transition: all 250ms ease-in;
+
+        &:hover{
+            text-decoration: none;
+            color: $white;
+            transition: all 250ms ease-in;
+        }
+    }
 
     .welcome {
         padding-top: 20px;
