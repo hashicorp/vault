@@ -6,9 +6,11 @@
 
 <script type="text/x-handlebars" data-template-name="demo">
     <div class="terminal">
-        <a class="close-terminal" href="#">X</a>
+        <span class="close-terminal" {{action "close"}}>X</span>
         {{outlet}}
+        {{#if isLoading}}
         <div class="loading-bar"></div>
+        {{/if}}
     </div>
 </script>
 

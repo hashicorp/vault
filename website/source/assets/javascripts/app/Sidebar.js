@@ -16,7 +16,7 @@ Sidebar = Base.extend({
     	this.$sidebarHeader = $('#sidebar .sidebar-header');
     	this.$toggleButton = $('.navbar-toggle');
 
-    	this.sidebarImg = this.$sidebarHeader.css('background-image');    	
+    	this.sidebarImg = this.$sidebarHeader.css('background-image');
 
 		this.addEventListeners();
 	},

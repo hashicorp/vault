@@ -2,7 +2,15 @@ Demo.DemoView = Ember.View.extend({
   classNames: ['demo-overlay'],
 
   didInsertElement: function() {
-    var element  = this.$();
+    var controller = this.get('controller'),
+        overlay    = $('.sidebar-overlay'),
+        element    = this.$();
+
+    overlay.addClass('active');
+
+    overlay.on('click', function() {
+      controller.transitionTo('index');
+    });
 
     element.hide().fadeIn(300);
 
@@ -44,6 +52,9 @@ Demo.DemoView = Ember.View.extend({
   },
 
   willDestroyElement: function() {
+    // Remove overlay
+    $('.sidebar-overlay').removeClass('active');
+
     var element  = this.$();
 
     element.fadeOut(400);
@@ -61,8 +72,6 @@ Demo.DemoView = Ember.View.extend({
   keyDown: function(ev) {
     var cursor = this.get('controller.cursor'),
         currentLength = this.get('controller.currentLog.length');
-
-    console.log(ev);
 
     switch(ev.keyCode) {
       // Down arrow
@@ -97,6 +106,16 @@ Demo.DemoView = Ember.View.extend({
         break;
     }
   },
+
+  deFocus: function() {
+    var element = this.$().find('input.shell');
+
+    // defocus while loading
+    if (this.get('controller.isLoading')) {
+      element.blur()
+    }
+
+  }.observes('controller.isLoading'),
 
   submitted: function() {
     var element  = this.$();
