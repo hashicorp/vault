@@ -11,6 +11,7 @@
     overflow: scroll;
     font-size: 18px;
     font-family: 'Ubuntu Mono', 'Monaco', monospace;
+    @include box-shadow(0px -2px 30px 0px rgba(0, 0, 0, 0.40));
 }
 
 .terminal {
