@@ -245,9 +245,10 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	resp.Lease.VaultID = vaultID
 
 	// Update the lease entry
+	leaseTotal := resp.Lease.Duration + resp.Lease.GracePeriod
 	le.Data = resp.Data
 	le.Lease = resp.Lease
-	le.ExpireTime = time.Now().UTC().Add(resp.Lease.Duration)
+	le.ExpireTime = time.Now().UTC().Add(leaseTotal)
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -255,7 +256,7 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	// Update the expiration time
 	m.pendingLock.Lock()
 	if timer, ok := m.pending[vaultID]; ok {
-		timer.Reset(resp.Lease.Duration)
+		timer.Reset(leaseTotal)
 	}
 	m.pendingLock.Unlock()
 
@@ -284,13 +285,14 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 
 	// Create a lease entry
 	now := time.Now().UTC()
+	leaseTotal := resp.Lease.Duration + resp.Lease.GracePeriod
 	le := leaseEntry{
 		VaultID:    path.Join(req.Path, generateUUID()),
 		Path:       req.Path,
 		Data:       resp.Data,
 		Lease:      resp.Lease,
 		IssueTime:  now,
-		ExpireTime: now.Add(resp.Lease.Duration),
+		ExpireTime: now.Add(leaseTotal),
 	}
 
 	// Encode the entry
@@ -300,7 +302,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 
 	// Setup revocation timer
 	m.pendingLock.Lock()
-	m.pending[le.VaultID] = time.AfterFunc(resp.Lease.Duration, func() {
+	m.pending[le.VaultID] = time.AfterFunc(leaseTotal, func() {
 		m.expireID(le.VaultID)
 	})
 	m.pendingLock.Unlock()
