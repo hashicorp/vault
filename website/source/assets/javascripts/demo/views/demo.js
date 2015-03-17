@@ -107,6 +107,16 @@ Demo.DemoView = Ember.View.extend({
     }
   },
 
+  deFocus: function() {
+    var element = this.$().find('input.shell');
+
+    // defocus while loading
+    if (this.get('controller.isLoading')) {
+      element.blur()
+    }
+
+  }.observes('controller.isLoading'),
+
   submitted: function() {
     var element  = this.$();
 
