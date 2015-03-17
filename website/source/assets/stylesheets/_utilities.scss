@@ -55,16 +55,16 @@
   margin: 0 15px;
   padding: 0;
   line-height: 26px;
-  color: $black;
+  color: #2E2E2E;
   font-size: 14px;
-  font-weight: 300;
-  @include transition( color 0.3s ease );  
-  
+  font-weight: 400;
+  @include transition( color 0.3s ease );
+
   &:hover{
         color: $blue;
         @include transition( color 0.3s ease );
         background-color: transparent;
-    }  
+    }
 }
 
 @mixin bez-1-transition{
@@ -75,10 +75,10 @@
 @keyframes press {
   0% {
     opacity: 1;
-  } 
+  }
   50% {
     opacity: .55
-  } 
+  }
   100% {
     opacity: 1;
   }
@@ -87,11 +87,11 @@
 @-webkit-keyframes press {
   0% {
     opacity: 1;
-  } 
+  }
   50% {
     opacity: .55
-  } 
+  }
   100% {
     opacity: 1;
-  }   
+  }
 }

@@ -35,7 +35,7 @@
                 border: 1px solid $black;
                 border-radius: 0;
             }
-        }        
+        }
     }
 
 
@@ -83,7 +83,7 @@
             li > a {
                 color: $gray;
                 font-size: 14px;
-                font-weight: 300;
+                font-weight: 400;
                 padding: 4px 20px;
                 @include transition( color 0.3s ease );
             }
@@ -94,7 +94,7 @@
         background-color: transparent;
         color: $black;
         @include transition( color 0.3s ease );
-    }    
+    }
 }
 
 @media (min-width: 992px) {

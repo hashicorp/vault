@@ -72,7 +72,7 @@
 
 	   			&:nth-child(9){
 	   				opacity: 1;
-	   			}	   				
+	   			}
 
 	   			&:nth-child(10){
 	   				opacity: 1;
@@ -97,9 +97,9 @@
 					animation-duration: 600ms;
 					-webkit-animation-duration: 600ms;
 
-					animation-timing-function: ease;	
+					animation-timing-function: ease;
 					-webkit-animation-timing-function: ease;
-	   			}  			
+	   			}
 	   		}
 	   	}
 	}
@@ -173,10 +173,10 @@
 			    background: image-url('../images/graphic-audit.png') 0 0 no-repeat;
 			   	@include img-retina("../images/graphic-audit.png", "../images/graphic-audit@2x.png", 491px, 129px);
 			}
-		}		
+		}
 
 		.graphic{
-			display: inline-block;			
+			display: inline-block;
 		}
 
 		h3{
@@ -242,7 +242,7 @@
 		    	outline: 0;
 			}
 		}
-	}	
+	}
 }
 
 #demos{
@@ -368,7 +368,7 @@
 					background-color: transparent;
 					overflow:auto;
 					font-weight: 500;
-					-webkit-font-smoothing: subpixel-antialiased;
+					-webkit-font-smoothing: antialiased;
 
 					.txt-spe {
 						color: lighten($blue, 5%);
@@ -526,9 +526,9 @@
 				    background: image-url('../images/graphic-audit.png') center 0 no-repeat;
 				   	@include img-retina("../images/graphic-audit.png", "../images/graphic-audit@2x.png", 320px, 84px);
 				}
-			}			
+			}
 		}
-	}	
+	}
 
 	.feature-footer{
 		text-align: center;
@@ -569,7 +569,7 @@
 				    background: image-url('../images/graphic-audit.png') center 0 no-repeat;
 				   	@include img-retina("../images/graphic-audit.png", "../images/graphic-audit@2x.png", 290px, 76px);
 				}
-			}			
+			}
 		}
 	}
 
