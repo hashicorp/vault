@@ -140,8 +140,8 @@ type SystemBackend struct {
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.mountsLock.RLock()
-	defer b.Core.mountsLock.RUnlock()
+	b.Core.mounts.Lock()
+	defer b.Core.mounts.Unlock()
 
 	resp := &logical.Response{
 		IsSecret: false,

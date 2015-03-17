@@ -113,8 +113,7 @@ type Core struct {
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
-	mounts     *MountTable
-	mountsLock sync.RWMutex
+	mounts *MountTable
 
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView

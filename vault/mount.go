@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -36,6 +37,9 @@ var (
 
 // MountTable is used to represent the internal mount table
 type MountTable struct {
+	// This lock should be held whenever modifying the Entries field.
+	sync.RWMutex
+
 	Entries []*MountEntry `json:"entries"`
 }
 
@@ -70,8 +74,8 @@ func (e *MountEntry) Clone() *MountEntry {
 
 // Mount is used to mount a new backend to the mount table.
 func (c *Core) mount(me *MountEntry) error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
+	c.mounts.Lock()
+	defer c.mounts.Unlock()
 
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(me.Path, "/") {
@@ -113,8 +117,8 @@ func (c *Core) mount(me *MountEntry) error {
 //
 // TODO: document what happens to all secrets currently out for this path.
 func (c *Core) unmount(path string) error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
+	c.mounts.Lock()
+	defer c.mounts.Unlock()
 
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
@@ -157,8 +161,8 @@ func (c *Core) unmount(path string) error {
 
 // Remount is used to remount a path at a new mount point.
 func (c *Core) remount(src, dst string) error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
+	c.mounts.Lock()
+	defer c.mounts.Unlock()
 
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(src, "/") {
