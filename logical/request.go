@@ -44,13 +44,14 @@ func (r *Request) GetString(key string) string {
 type Operation string
 
 const (
-	ReadOperation   Operation = "read"
-	WriteOperation            = "write"
-	DeleteOperation           = "delete"
-	ListOperation             = "list"
-	RevokeOperation           = "revoke"
-	RenewOperation            = "renew"
-	HelpOperation             = "help"
+	ReadOperation     Operation = "read"
+	WriteOperation              = "write"
+	DeleteOperation             = "delete"
+	ListOperation               = "list"
+	RevokeOperation             = "revoke"
+	RenewOperation              = "renew"
+	RollbackOperation           = "rollback"
+	HelpOperation               = "help"
 )
 
 var (
