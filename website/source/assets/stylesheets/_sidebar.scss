@@ -1,4 +1,4 @@
-  
+
 // Base variables
 // --------------------------------------------------
 $screen-tablet:          768px;
@@ -460,7 +460,7 @@ $sidebar-font-weight: 300;
   bottom: 0;
   opacity: 0;
   background: $white;
-  z-index: $zindex-sidebar-fixed - 1;
+  z-index: 2;
 
   -webkit-transition: visibility 0 linear .4s,opacity .4s cubic-bezier(.4,0,.2,1);
   -moz-transition: visibility 0 linear .4s,opacity .4s cubic-bezier(.4,0,.2,1);
@@ -473,7 +473,7 @@ $sidebar-font-weight: 300;
 }
 
 .sidebar-overlay.active {
-  opacity: 0.8;
+  opacity: 0.3;
   visibility: visible;
   -webkit-transition-delay: 0;
   -moz-transition-delay: 0;
