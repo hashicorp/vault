@@ -83,7 +83,10 @@ func TestACL_Layered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	testLayeredACL(t, acl)
+}
 
+func testLayeredACL(t *testing.T, acl *ACL) {
 	if acl.RootPrivilege("sys/mount/foo") {
 		t.Fatalf("unexpected root")
 	}
