@@ -172,6 +172,39 @@ func TestBackendHandleRequest_rollback(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
+	var called uint32
+	callback := func(kind string, data interface{}) bool {
+		if data == "foo" {
+			atomic.AddUint32(&called, 1)
+		}
+
+		return true
+	}
+
+	b := &Backend{
+		Rollback:       callback,
+		RollbackMinAge: 5 * time.Second,
+	}
+
+	storage := new(logical.InmemStorage)
+	if _, err := PutWAL(storage, "kind", "foo"); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.RollbackOperation,
+		Path:      "",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if v := atomic.LoadUint32(&called); v != 0 {
+		t.Fatalf("bad: %#v", v)
+	}
+}
+
 func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
