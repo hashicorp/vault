@@ -90,13 +90,8 @@ func (m *ExpirationManager) Restore() error {
 	defer m.pendingLock.Unlock()
 
 	// Accumulate existing leases
-	var existing []string
-	cb := func(path string) {
-		existing = append(existing, path)
-	}
-
-	// Scan for all the leases
-	if err := ScanView(m.view, cb); err != nil {
+	existing, err := CollectKeys(m.view)
+	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 
@@ -184,14 +179,9 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	}
 
 	// Accumulate existing leases
-	var existing []string
-	cb := func(path string) {
-		existing = append(existing, path)
-	}
-
-	// Scan for all the leases in the prefix
 	sub := m.view.SubView(prefix)
-	if err := ScanView(sub, cb); err != nil {
+	existing, err := CollectKeys(sub)
+	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 

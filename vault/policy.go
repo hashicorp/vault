@@ -27,6 +27,7 @@ var (
 type Policy struct {
 	Name  string        `hcl:"name"`
 	Paths []*PathPolicy `hcl:"path,expand"`
+	Raw   string
 }
 
 // PathPolicy represents a policy for a path in the namespace
@@ -40,7 +41,7 @@ type PathPolicy struct {
 // the ACL
 func Parse(rules string) (*Policy, error) {
 	// Decode the rules
-	p := &Policy{}
+	p := &Policy{Raw: rules}
 	if err := hcl.Decode(p, rules); err != nil {
 		return nil, fmt.Errorf("Failed to parse ACL rules: %v", err)
 	}

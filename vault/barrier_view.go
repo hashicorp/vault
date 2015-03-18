@@ -108,3 +108,18 @@ func ScanView(view *BarrierView, cb func(path string)) error {
 	}
 	return nil
 }
+
+// CollectKeys is used to collect all the keys in a view
+func CollectKeys(view *BarrierView) ([]string, error) {
+	// Accumulate the keys
+	var existing []string
+	cb := func(path string) {
+		existing = append(existing, path)
+	}
+
+	// Scan for all the keys
+	if err := ScanView(view, cb); err != nil {
+		return nil, err
+	}
+	return existing, nil
+}

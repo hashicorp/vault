@@ -183,3 +183,37 @@ func TestBarrierView_Scan(t *testing.T) {
 		t.Fatalf("out: %v expect: %v", out, expect)
 	}
 }
+
+func TestBarrierView_CollectKeys(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "view/")
+
+	expect := []string{}
+	ent := []*logical.StorageEntry{
+		&logical.StorageEntry{Key: "foo", Value: []byte("test")},
+		&logical.StorageEntry{Key: "zip", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/bar", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/zap", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/bar/baz", Value: []byte("test")},
+		&logical.StorageEntry{Key: "foo/bar/zoo", Value: []byte("test")},
+	}
+
+	for _, e := range ent {
+		expect = append(expect, e.Key)
+		if err := view.Put(e); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	// Collect the keys
+	out, err := CollectKeys(view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sort.Strings(out)
+	sort.Strings(expect)
+	if !reflect.DeepEqual(out, expect) {
+		t.Fatalf("out: %v expect: %v", out, expect)
+	}
+}
