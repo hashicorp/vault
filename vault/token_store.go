@@ -122,6 +122,9 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 
 // Lookup is used to find a token given its ID
 func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
+	if id == "" {
+		return nil, fmt.Errorf("cannot lookup blank token")
+	}
 	return ts.lookupSalted(ts.saltID(id))
 }
 
@@ -150,6 +153,9 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 // Revoke is used to invalidate a given token, any child tokens
 // will be orphaned.
 func (ts *TokenStore) Revoke(id string) error {
+	if id == "" {
+		return fmt.Errorf("cannot revoke blank token")
+	}
 	return ts.revokeSalted(ts.saltID(id))
 }
 
@@ -181,6 +187,11 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 // RevokeTree is used to invalide a given token and all
 // child tokens.
 func (ts *TokenStore) RevokeTree(id string) error {
+	// Verify the token is not blank
+	if id == "" {
+		return fmt.Errorf("cannot revoke blank token")
+	}
+
 	// Get the salted ID
 	saltedId := ts.saltID(id)
 
@@ -237,7 +248,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 }
 
 // RevokeAll is used to invalidate all generated tokens.
-func (ts *TokenStore) RevokeAll(entry *TokenEntry) error {
+func (ts *TokenStore) RevokeAll() error {
 	// Collect all the tokens
 	sub := ts.view.SubView(lookupPrefix)
 	tokens, err := CollectKeys(sub)
