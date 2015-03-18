@@ -327,6 +327,7 @@ func (c *Core) unloadMounts() error {
 	return nil
 }
 
+// newLogicalBackend is used to create and configure a new logical backend by name
 func (c *Core) newLogicalBackend(t string, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.logicalBackends[t]
 	if !ok {

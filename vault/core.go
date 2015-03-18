@@ -119,6 +119,10 @@ type Core struct {
 	// configuration
 	mounts *MountTable
 
+	// auth is loaded after unseal since it is a protected
+	// configuration
+	auth *AuthTable
+
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView
 
@@ -490,6 +494,9 @@ func (c *Core) postUnseal() error {
 		return nil
 	}
 	if err := c.setupTokenStore(); err != nil {
+		return nil
+	}
+	if err := c.loadCredentials(); err != nil {
 		return nil
 	}
 	if err := c.setupCredentials(); err != nil {
