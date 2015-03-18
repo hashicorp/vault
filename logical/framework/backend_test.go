@@ -2,6 +2,7 @@ package framework
 
 import (
 	"reflect"
+	"sync/atomic"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -132,6 +133,38 @@ func TestBackendHandleRequest_help(t *testing.T) {
 	}
 	if resp.Data["help"] == nil {
 		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestBackendHandleRequest_rollback(t *testing.T) {
+	var called uint32
+	callback := func(data interface{}) bool {
+		if data == "foo" {
+			atomic.AddUint32(&called, 1)
+		}
+
+		return true
+	}
+
+	b := &Backend{
+		Rollback: callback,
+	}
+
+	storage := new(logical.InmemStorage)
+	if _, err := PutWAL(storage, "foo"); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.RollbackOperation,
+		Path:      "",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if v := atomic.LoadUint32(&called); v != 1 {
+		t.Fatalf("bad: %#v", v)
 	}
 }
 

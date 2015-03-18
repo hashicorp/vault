@@ -8,6 +8,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/go-wordwrap"
 )
@@ -29,6 +30,11 @@ type Backend struct {
 	// regular expressions, it is either exact match or prefix match.
 	// For prefix match, append '*' as a suffix.
 	PathsRoot []string
+
+	// Rollback is called when a WAL entry (see wal.go) has to be rolled
+	// back. It is called with the data from the entry. Boolean true should
+	// be returned on success. Errors should just be logged.
+	Rollback func(data interface{}) bool
 
 	once    sync.Once
 	pathsRe []*regexp.Regexp
@@ -82,6 +88,12 @@ type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	// Rollbacks are treated outside of the normal request cycle since
+	// the path doesn't matter for them.
+	if req.Operation == logical.RollbackOperation {
+		return b.handleRollback(req)
+	}
+
 	// Find the matching route
 	path, captures := b.route(req.Path)
 	if path == nil {
@@ -165,6 +177,41 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	}
 
 	return nil, nil
+}
+
+func (b *Backend) handleRollback(
+	req *logical.Request) (*logical.Response, error) {
+	if b.Rollback == nil {
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	var merr error
+	keys, err := ListWAL(req.Storage)
+	if err != nil {
+		merr = multierror.Append(merr, err)
+		goto RESPOND_ROLLBACK
+	}
+
+	for _, k := range keys {
+		data, err := GetWAL(req.Storage, k)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+			continue
+		}
+
+		if b.Rollback(data) {
+			if err := DeleteWAL(req.Storage, k); err != nil {
+				merr = multierror.Append(merr, err)
+			}
+		}
+	}
+
+RESPOND_ROLLBACK:
+	if merr == nil {
+		return nil, nil
+	}
+
+	return logical.ErrorResponse(merr.Error()), nil
 }
 
 func (p *Path) helpCallback(req *logical.Request, data *FieldData) (*logical.Response, error) {
