@@ -22,13 +22,15 @@ import (
 // It ensures that only one rollback operation is in-flight at any given
 // time within a single seal/unseal phase.
 type RollbackManager struct {
+	// NOTE: This must always be at the top of the struct to avoid
+	// atomic alignment issues. Go bug.
+	running uint32
+
 	Logger *log.Logger
 	Mounts *MountTable
 	Router *Router
 
 	Period time.Duration // time between rollback calls
-
-	running uint32
 }
 
 // Start starts the rollback manager. This will block until Stop is called
