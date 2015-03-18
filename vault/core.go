@@ -492,12 +492,18 @@ func (c *Core) postUnseal() error {
 	if err := c.setupTokenStore(); err != nil {
 		return nil
 	}
+	if err := c.setupCredentials(); err != nil {
+		return nil
+	}
 	return nil
 }
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
+	if err := c.teardownCredentials(); err != nil {
+		return err
+	}
 	if err := c.teardownTokenStore(); err != nil {
 		return err
 	}
