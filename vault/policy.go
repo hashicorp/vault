@@ -13,6 +13,15 @@ const (
 	PathPolicySudo  = "sudo"
 )
 
+var (
+	pathPolicyLevel = map[string]int{
+		PathPolicyDeny:  0,
+		PathPolicyRead:  1,
+		PathPolicyWrite: 2,
+		PathPolicySudo:  3,
+	}
+)
+
 // Policy is used to represent the policy specified by
 // an ACL configuration.
 type Policy struct {
