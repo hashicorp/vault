@@ -114,7 +114,7 @@ func (c *Core) mount(me *MountEntry) error {
 	c.mounts = newTable
 
 	// Mount the backend
-	if err := c.router.Mount(backend, me.Type, me.Path, view); err != nil {
+	if err := c.router.Mount(backend, me.Path, view); err != nil {
 		return err
 	}
 	c.logger.Printf("[INFO] core: mounted '%s' type: %s", me.Path, me.Type)
@@ -309,7 +309,7 @@ func (c *Core) setupMounts() error {
 		}
 
 		// Mount the backend
-		err = c.router.Mount(backend, entry.Type, entry.Path, view)
+		err = c.router.Mount(backend, entry.Path, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
 			return loadMountsFailed

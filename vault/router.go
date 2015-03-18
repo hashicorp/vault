@@ -25,14 +25,13 @@ func NewRouter() *Router {
 
 // mountEntry is used to represent a mount point
 type mountEntry struct {
-	mtype     string
 	backend   logical.Backend
 	view      *BarrierView
 	rootPaths *radix.Tree
 }
 
 // Mount is used to expose a logical backend at a given prefix
-func (r *Router) Mount(backend logical.Backend, mtype, prefix string, view *BarrierView) error {
+func (r *Router) Mount(backend logical.Backend, prefix string, view *BarrierView) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -58,7 +57,6 @@ func (r *Router) Mount(backend logical.Backend, mtype, prefix string, view *Barr
 
 	// Create a mount entry
 	me := &mountEntry{
-		mtype:     mtype,
 		backend:   backend,
 		view:      view,
 		rootPaths: rootPaths,

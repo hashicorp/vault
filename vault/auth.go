@@ -137,7 +137,7 @@ func (c *Core) setupCredentials() error {
 
 		// Mount the backend
 		path := credentialMountPrefix + entry.Name
-		err = c.router.Mount(backend, "credential:"+entry.Type, path, view)
+		err = c.router.Mount(backend, path, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
 			return loadAuthFailed
