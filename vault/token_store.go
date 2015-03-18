@@ -23,6 +23,10 @@ const (
 	// that token names cannot be guessed as that would compromise their
 	// use.
 	tokenSaltLocation = "salt"
+
+	// tokenSubPath is the sub-path used for the token store
+	// view. This is nested under the system view.
+	tokenSubPath = "token/"
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -61,6 +65,28 @@ func NewTokenStore(view *BarrierView) (*TokenStore, error) {
 		}
 	}
 	return t, nil
+}
+
+// setupTokenStore is used to initialize the token store
+// when the vault is being unsealed.
+func (c *Core) setupTokenStore() error {
+	// Create a sub-view
+	view := c.systemView.SubView(tokenSubPath)
+
+	// Create the token store
+	ts, err := NewTokenStore(view)
+	if err != nil {
+		return err
+	}
+	c.tokens = ts
+	return nil
+}
+
+// teardownTokenStore is used to reverse setupTokenStore
+// when the vault is being sealed.
+func (c *Core) teardownTokenStore() error {
+	c.tokens = nil
+	return nil
 }
 
 // TokenEntry is used to represent a given token

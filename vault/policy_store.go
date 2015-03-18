@@ -2,30 +2,47 @@ package vault
 
 import (
 	"fmt"
-	"log"
-	"os"
 
 	"github.com/hashicorp/vault/logical"
+)
+
+const (
+	// policySubPath is the sub-path used for the policy store
+	// view. This is nested under the system view.
+	policySubPath = "policy/"
 )
 
 // PolicyStore is used to provide durable storage of policy, and to
 // manage ACLs associated with them.
 type PolicyStore struct {
-	view   *BarrierView
-	logger *log.Logger
+	view *BarrierView
 }
 
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
-func NewPolicyStore(view *BarrierView, logger *log.Logger) *PolicyStore {
-	if logger == nil {
-		logger = log.New(os.Stderr, "", log.LstdFlags)
-	}
+func NewPolicyStore(view *BarrierView) *PolicyStore {
 	p := &PolicyStore{
-		view:   view,
-		logger: logger,
+		view: view,
 	}
 	return p
+}
+
+// setupPolicyStore is used to initialize the policy store
+// when the vault is being unsealed.
+func (c *Core) setupPolicyStore() error {
+	// Create a sub-view
+	view := c.systemView.SubView(policySubPath)
+
+	// Create the policy store
+	c.policy = NewPolicyStore(view)
+	return nil
+}
+
+// teardownPolicyStore is used to reverse setupPolicyStore
+// when the vault is being sealed.
+func (c *Core) teardownPolicyStore() error {
+	c.policy = nil
+	return nil
 }
 
 // SetPolicy is used to create or update the given policy

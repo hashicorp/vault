@@ -8,7 +8,7 @@ import (
 func mockPolicyStore(t *testing.T) *PolicyStore {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(view, nil)
+	p := NewPolicyStore(view)
 	return p
 }
 

@@ -125,6 +125,12 @@ type Core struct {
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
+	// policy store is used to manage named ACL policies
+	policy *PolicyStore
+
+	// toekn store is used to manage tokens
+	tokens *TokenStore
+
 	logger *log.Logger
 }
 
@@ -470,12 +476,24 @@ func (c *Core) postUnseal() error {
 	if err := c.startRollback(); err != nil {
 		return err
 	}
+	if err := c.setupPolicyStore(); err != nil {
+		return nil
+	}
+	if err := c.setupTokenStore(); err != nil {
+		return nil
+	}
 	return nil
 }
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
+	if err := c.teardownTokenStore(); err != nil {
+		return err
+	}
+	if err := c.teardownPolicyStore(); err != nil {
+		return err
+	}
 	if err := c.stopRollback(); err != nil {
 		return err
 	}
