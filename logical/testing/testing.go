@@ -95,7 +95,7 @@ func Test(t TestT, c TestCase) {
 	// Create an in-memory Vault core
 	core, err := vault.NewCore(&vault.CoreConfig{
 		Physical: physical.NewInmem(),
-		Backends: map[string]logical.Factory{
+		LogicalBackends: map[string]logical.Factory{
 			"test": func(map[string]string) (logical.Backend, error) {
 				return c.Backend, nil
 			},

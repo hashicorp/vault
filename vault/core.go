@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -100,8 +101,11 @@ type Core struct {
 	// router is responsible for managing the mount points for logical backends.
 	router *Router
 
-	// backends is the mapping of backends to use for this core
-	backends map[string]logical.Factory
+	// logicalBackends is the mapping of backends to use for this core
+	logicalBackends map[string]logical.Factory
+
+	// credentialBackends is the mapping of backends to use for this core
+	credentialBackends map[string]credential.Factory
 
 	// stateLock protects mutable state
 	stateLock sync.RWMutex
@@ -136,9 +140,10 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	Backends map[string]logical.Factory
-	Physical physical.Backend
-	Logger   *log.Logger
+	LogicalBackends    map[string]logical.Factory
+	CredentialBackends map[string]credential.Factory
+	Physical           physical.Backend
+	Logger             *log.Logger
 }
 
 // NewCore isk used to construct a new core
@@ -164,16 +169,21 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Setup the backends
-	backends := make(map[string]logical.Factory)
-	for k, f := range conf.Backends {
-		backends[k] = f
+	logicalBackends := make(map[string]logical.Factory)
+	for k, f := range conf.LogicalBackends {
+		logicalBackends[k] = f
 	}
-	backends["generic"] = PassthroughBackendFactory
-	backends["system"] = func(map[string]string) (logical.Backend, error) {
+	logicalBackends["generic"] = PassthroughBackendFactory
+	logicalBackends["system"] = func(map[string]string) (logical.Backend, error) {
 		return NewSystemBackend(c), nil
 	}
+	c.logicalBackends = logicalBackends
 
-	c.backends = backends
+	credentialBackends := make(map[string]credential.Factory)
+	for k, f := range conf.CredentialBackends {
+		credentialBackends[k] = f
+	}
+	c.credentialBackends = credentialBackends
 	return c, nil
 }
 

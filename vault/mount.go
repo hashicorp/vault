@@ -96,7 +96,7 @@ func (c *Core) mount(me *MountEntry) error {
 	}
 
 	// Lookup the new backend
-	backend, err := c.newBackend(me.Type, nil)
+	backend, err := c.newLogicalBackend(me.Type, nil)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (c *Core) setupMounts() error {
 			barrierPrefix = systemBarrierPrefix
 		}
 
-		backend, err = c.newBackend(entry.Type, nil)
+		backend, err = c.newLogicalBackend(entry.Type, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create mount entry %#v: %v",
@@ -327,8 +327,8 @@ func (c *Core) unloadMounts() error {
 	return nil
 }
 
-func (c *Core) newBackend(t string, conf map[string]string) (logical.Backend, error) {
-	f, ok := c.backends[t]
+func (c *Core) newLogicalBackend(t string, conf map[string]string) (logical.Backend, error) {
+	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
