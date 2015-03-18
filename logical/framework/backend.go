@@ -34,7 +34,7 @@ type Backend struct {
 	// Rollback is called when a WAL entry (see wal.go) has to be rolled
 	// back. It is called with the data from the entry. Boolean true should
 	// be returned on success. Errors should just be logged.
-	Rollback func(data interface{}) bool
+	Rollback func(kind string, data interface{}) bool
 
 	once    sync.Once
 	pathsRe []*regexp.Regexp
@@ -193,13 +193,13 @@ func (b *Backend) handleRollback(
 	}
 
 	for _, k := range keys {
-		data, err := GetWAL(req.Storage, k)
+		kind, data, err := GetWAL(req.Storage, k)
 		if err != nil {
 			merr = multierror.Append(merr, err)
 			continue
 		}
 
-		if b.Rollback(data) {
+		if b.Rollback(kind, data) {
 			if err := DeleteWAL(req.Storage, k); err != nil {
 				merr = multierror.Append(merr, err)
 			}

@@ -138,7 +138,7 @@ func TestBackendHandleRequest_help(t *testing.T) {
 
 func TestBackendHandleRequest_rollback(t *testing.T) {
 	var called uint32
-	callback := func(data interface{}) bool {
+	callback := func(kind string, data interface{}) bool {
 		if data == "foo" {
 			atomic.AddUint32(&called, 1)
 		}
@@ -151,7 +151,7 @@ func TestBackendHandleRequest_rollback(t *testing.T) {
 	}
 
 	storage := new(logical.InmemStorage)
-	if _, err := PutWAL(storage, "foo"); err != nil {
+	if _, err := PutWAL(storage, "kind", "foo"); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 

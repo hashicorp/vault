@@ -20,7 +20,7 @@ func TestWAL(t *testing.T) {
 	}
 
 	// Write an entry to the WAL
-	id, err := PutWAL(s, "bar")
+	id, err := PutWAL(s, "foo", "bar")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -35,9 +35,12 @@ func TestWAL(t *testing.T) {
 	}
 
 	// Should be able to get the value
-	v, err := GetWAL(s, id)
+	kind, v, err := GetWAL(s, id)
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+	if kind != "foo" {
+		t.Fatalf("bad: %#v", kind)
 	}
 	if v != "bar" {
 		t.Fatalf("bad: %#v", v)
@@ -47,7 +50,7 @@ func TestWAL(t *testing.T) {
 	if err := DeleteWAL(s, id); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	v, err = GetWAL(s, id)
+	_, v, err = GetWAL(s, id)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

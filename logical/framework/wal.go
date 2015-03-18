@@ -12,6 +12,10 @@ const WALPrefix = "wal/"
 
 // PutWAL writes some data to the WAL.
 //
+// The kind parameter is used by the framework to allow users to store
+// multiple kinds of WAL data and to easily disambiguate what data they're
+// expecting.
+//
 // Data within the WAL that is uncommitted (CommitWAL hasn't be called)
 // will be given to the rollback callback when an rollback operation is
 // received, allowing the backend to clean up some partial states.
@@ -21,8 +25,11 @@ const WALPrefix = "wal/"
 // This returns a unique ID that can be used to reference this WAL data.
 // WAL data cannot be modified. You can only add to the WAL and commit existing
 // WAL entries.
-func PutWAL(s logical.Storage, data interface{}) (string, error) {
-	value, err := json.Marshal(data)
+func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
+	value, err := json.Marshal(map[string]interface{}{
+		"kind": kind,
+		"data": data,
+	})
 	if err != nil {
 		return "", err
 	}
@@ -40,21 +47,23 @@ func PutWAL(s logical.Storage, data interface{}) (string, error) {
 
 // GetWAL reads a specific entry from the WAL. If the entry doesn't exist,
 // then nil value is returned.
-func GetWAL(s logical.Storage, id string) (interface{}, error) {
+//
+// The kind, value, and error are returned.
+func GetWAL(s logical.Storage, id string) (string, interface{}, error) {
 	entry, err := s.Get(WALPrefix + id)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	if entry == nil {
-		return nil, nil
+		return "", nil, nil
 	}
 
-	var result interface{}
+	var result map[string]interface{}
 	if err := json.Unmarshal(entry.Value, &result); err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
-	return result, nil
+	return result["kind"].(string), result["data"], nil
 }
 
 // DeleteWAL commits the WAL entry with the given ID. Once comitted,
