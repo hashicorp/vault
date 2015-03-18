@@ -31,6 +31,7 @@ var (
 
 	// protectedMounts cannot be remounted
 	protectedMounts = []string{
+		"auth/",
 		"sys/",
 	}
 )
@@ -82,6 +83,13 @@ func (c *Core) mount(me *MountEntry) error {
 		me.Path += "/"
 	}
 
+	// Prevent protected paths from being unmounted
+	for _, p := range protectedMounts {
+		if strings.HasPrefix(me.Path, p) {
+			return fmt.Errorf("cannot mount '%s'", me.Path)
+		}
+	}
+
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(me.Path); match != "" {
 		return fmt.Errorf("existing mount at '%s'", match)
@@ -123,6 +131,13 @@ func (c *Core) unmount(path string) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
+	}
+
+	// Prevent protected paths from being unmounted
+	for _, p := range protectedMounts {
+		if strings.HasPrefix(path, p) {
+			return fmt.Errorf("cannot unmount '%s'", path)
+		}
 	}
 
 	// Verify exact match of the route
@@ -172,10 +187,10 @@ func (c *Core) remount(src, dst string) error {
 		dst += "/"
 	}
 
-	// Prevent sys/ from being remounted
+	// Prevent protected paths from being remounted
 	for _, p := range protectedMounts {
-		if src == p {
-			return fmt.Errorf("cannot remount '%s'", p)
+		if strings.HasPrefix(src, p) {
+			return fmt.Errorf("cannot remount '%s'", src)
 		}
 	}
 
