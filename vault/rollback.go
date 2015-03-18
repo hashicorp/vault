@@ -43,7 +43,19 @@ func (m *RollbackManager) Start() {
 
 	m.Logger.Printf("[INFO] rollback: starting rollback manager")
 
+	// mounts is a mapping of a mount path (i.e. "sys") to a uint32 pointer
+	// we can do atomic operations on. The purpose of this map is to ensure
+	// we only ever have one RollbackOperation request in-flight for each
+	// path.
+	//
+	// When a RollbackOperation is started, the pointer is changed to 0 to 1
+	// atomically. When the operation completes, it is atomatically loaded
+	// to 0 (from anything). Before we start a rollback operation, we use a
+	// CAS 0 to 1 and only start a rollback if that succeeds.
+	//
+	// As a result, we only ever get one in-flight request at one time.
 	var mounts map[string]*uint32
+
 	tick := time.NewTicker(m.Period)
 	defer tick.Stop()
 	for {
@@ -60,6 +72,14 @@ func (m *RollbackManager) Start() {
 		// mounts mapping. Mounts that have since been unmounted will
 		// just "fall off" naturally: they aren't in our new mount mapping
 		// and when their goroutine ends they'll naturally lose the reference.
+		//
+		// The reason we make a new mapping is so that unmounted paths
+		// are automatically removed. If a mount path was in the last mapping
+		// we copy the uint32 pointer. So the result of the copy is: new
+		// mount paths get a new uint32 pointer, unmounted paths are removed
+		// from the map, and existing mount paths nothing changes.
+		//
+		// The purpose of the map is documented above where mounts is defined.
 		newMounts := make(map[string]*uint32)
 		m.Mounts.RLock()
 		for _, e := range m.Mounts.Entries {
