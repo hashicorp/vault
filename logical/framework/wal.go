@@ -3,12 +3,20 @@ package framework
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
 
 // WALPrefix is the prefix within Storage where WAL entries will be written.
 const WALPrefix = "wal/"
+
+type WALEntry struct {
+	ID        string      `json:"-"`
+	Kind      string      `json:"type"`
+	Data      interface{} `json:"data"`
+	CreatedAt int64       `json:"created_at"`
+}
 
 // PutWAL writes some data to the WAL.
 //
@@ -26,9 +34,10 @@ const WALPrefix = "wal/"
 // WAL data cannot be modified. You can only add to the WAL and commit existing
 // WAL entries.
 func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
-	value, err := json.Marshal(map[string]interface{}{
-		"kind": kind,
-		"data": data,
+	value, err := json.Marshal(&WALEntry{
+		Kind:      kind,
+		Data:      data,
+		CreatedAt: time.Now().UTC().Unix(),
 	})
 	if err != nil {
 		return "", err
@@ -49,21 +58,22 @@ func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
 // then nil value is returned.
 //
 // The kind, value, and error are returned.
-func GetWAL(s logical.Storage, id string) (string, interface{}, error) {
+func GetWAL(s logical.Storage, id string) (*WALEntry, error) {
 	entry, err := s.Get(WALPrefix + id)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	if entry == nil {
-		return "", nil, nil
+		return nil, nil
 	}
 
-	var result map[string]interface{}
-	if err := json.Unmarshal(entry.Value, &result); err != nil {
-		return "", nil, err
+	var raw WALEntry
+	if err := json.Unmarshal(entry.Value, &raw); err != nil {
+		return nil, err
 	}
+	raw.ID = id
 
-	return result["kind"].(string), result["data"], nil
+	return &raw, nil
 }
 
 // DeleteWAL commits the WAL entry with the given ID. Once comitted,

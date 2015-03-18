@@ -7,6 +7,7 @@ import (
 	"sort"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
@@ -34,7 +35,8 @@ type Backend struct {
 	// Rollback is called when a WAL entry (see wal.go) has to be rolled
 	// back. It is called with the data from the entry. Boolean true should
 	// be returned on success. Errors should just be logged.
-	Rollback func(kind string, data interface{}) bool
+	Rollback       func(kind string, data interface{}) bool
+	RollbackMinAge time.Duration
 
 	once    sync.Once
 	pathsRe []*regexp.Regexp
@@ -188,25 +190,43 @@ func (b *Backend) handleRollback(
 	var merr error
 	keys, err := ListWAL(req.Storage)
 	if err != nil {
-		merr = multierror.Append(merr, err)
-		goto RESPOND_ROLLBACK
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	if len(keys) == 0 {
+		return nil, nil
 	}
 
+	// Calculate the minimum time that the WAL entries could be
+	// created in order to be rolled back.
+	age := b.RollbackMinAge
+	if age == 0 {
+		age = 10 * time.Minute
+	}
+	minAge := time.Now().UTC().Add(-1 * age)
+
 	for _, k := range keys {
-		kind, data, err := GetWAL(req.Storage, k)
+		entry, err := GetWAL(req.Storage, k)
 		if err != nil {
 			merr = multierror.Append(merr, err)
 			continue
 		}
+		if entry == nil {
+			continue
+		}
 
-		if b.Rollback(kind, data) {
+		// If the entry isn't old enough, then don't roll it back
+		if !time.Unix(entry.CreatedAt, 0).Before(minAge) {
+			continue
+		}
+
+		// Attempt a rollback
+		if b.Rollback(entry.Kind, entry.Data) {
 			if err := DeleteWAL(req.Storage, k); err != nil {
 				merr = multierror.Append(merr, err)
 			}
 		}
 	}
 
-RESPOND_ROLLBACK:
 	if merr == nil {
 		return nil, nil
 	}

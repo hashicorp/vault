@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -147,13 +148,16 @@ func TestBackendHandleRequest_rollback(t *testing.T) {
 	}
 
 	b := &Backend{
-		Rollback: callback,
+		Rollback:       callback,
+		RollbackMinAge: 1 * time.Millisecond,
 	}
 
 	storage := new(logical.InmemStorage)
 	if _, err := PutWAL(storage, "kind", "foo"); err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	time.Sleep(10 * time.Millisecond)
 
 	_, err := b.HandleRequest(&logical.Request{
 		Operation: logical.RollbackOperation,

@@ -35,26 +35,26 @@ func TestWAL(t *testing.T) {
 	}
 
 	// Should be able to get the value
-	kind, v, err := GetWAL(s, id)
+	entry, err := GetWAL(s, id)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if kind != "foo" {
-		t.Fatalf("bad: %#v", kind)
+	if entry.Kind != "foo" {
+		t.Fatalf("bad: %#v", entry)
 	}
-	if v != "bar" {
-		t.Fatalf("bad: %#v", v)
+	if entry.Data != "bar" {
+		t.Fatalf("bad: %#v", entry)
 	}
 
 	// Should be able to delete the value
 	if err := DeleteWAL(s, id); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	_, v, err = GetWAL(s, id)
+	entry, err = GetWAL(s, id)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if v != nil {
-		t.Fatalf("bad: %#v", v)
+	if entry != nil {
+		t.Fatalf("bad: %#v", entry)
 	}
 }
