@@ -1,12 +1,14 @@
-package logical
+package framework
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 func TestWAL(t *testing.T) {
-	s := new(InmemStorage)
+	s := new(logical.InmemStorage)
 
 	// WAL should be empty to start
 	keys, err := ListWAL(s)

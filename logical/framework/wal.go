@@ -1,8 +1,10 @@
-package logical
+package framework
 
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 // WALPrefix is the prefix within Storage where WAL entries will be written.
@@ -19,18 +21,18 @@ const WALPrefix = "wal/"
 // This returns a unique ID that can be used to reference this WAL data.
 // WAL data cannot be modified. You can only add to the WAL and commit existing
 // WAL entries.
-func PutWAL(s Storage, data interface{}) (string, error) {
+func PutWAL(s logical.Storage, data interface{}) (string, error) {
 	value, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}
 
-	id, err := UUID()
+	id, err := logical.UUID()
 	if err != nil {
 		return "", err
 	}
 
-	return id, s.Put(&StorageEntry{
+	return id, s.Put(&logical.StorageEntry{
 		Key:   WALPrefix + id,
 		Value: value,
 	})
@@ -38,7 +40,7 @@ func PutWAL(s Storage, data interface{}) (string, error) {
 
 // GetWAL reads a specific entry from the WAL. If the entry doesn't exist,
 // then nil value is returned.
-func GetWAL(s Storage, id string) (interface{}, error) {
+func GetWAL(s logical.Storage, id string) (interface{}, error) {
 	entry, err := s.Get(WALPrefix + id)
 	if err != nil {
 		return nil, err
@@ -58,12 +60,12 @@ func GetWAL(s Storage, id string) (interface{}, error) {
 // DeleteWAL commits the WAL entry with the given ID. Once comitted,
 // it is assumed that the operation was a success and doesn't need to
 // be rolled back.
-func DeleteWAL(s Storage, id string) error {
+func DeleteWAL(s logical.Storage, id string) error {
 	return s.Delete(WALPrefix + id)
 }
 
 // ListWAL lists all the entries in the WAL.
-func ListWAL(s Storage) ([]string, error) {
+func ListWAL(s logical.Storage) ([]string, error) {
 	keys, err := s.List(WALPrefix)
 	if err != nil {
 		return nil, err
