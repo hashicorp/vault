@@ -19,8 +19,8 @@ const (
 	// barrier view for the credential backends.
 	credentialBarrierPrefix = "auth/"
 
-	// credentialMountPrefix is the mount prefix used for the router
-	credentialMountPrefix = "auth/"
+	// credentialRoutePrefix is the mount prefix used for the router
+	credentialRoutePrefix = "auth/"
 )
 
 var (
@@ -72,7 +72,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	c.auth = newTable
 
 	// Mount the backend
-	path := credentialMountPrefix + entry.Path + "/"
+	path := credentialRoutePrefix + entry.Path + "/"
 	if err := c.router.Mount(backend, path, view); err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (c *Core) disableCredential(path string) error {
 	c.auth = newTable
 
 	// Unmount the backend
-	fullPath := credentialMountPrefix + path + "/"
+	fullPath := credentialRoutePrefix + path + "/"
 	if err := c.router.Unmount(fullPath); err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (c *Core) setupCredentials() error {
 		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 		// Mount the backend
-		path := credentialMountPrefix + entry.Path + "/"
+		path := credentialRoutePrefix + entry.Path + "/"
 		err = c.router.Mount(backend, path, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
