@@ -165,19 +165,19 @@ func TestSystemBackend_renew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil || resp.Lease == nil || resp.Lease.VaultID == "" {
+	if resp == nil || resp.Secret == nil || resp.Secret.VaultID == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// Attempt renew
-	req2 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Lease.VaultID)
+	req2 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.VaultID)
 	req2.Data["increment"] = 100
 	resp2, err := b.HandleRequest(req2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	if resp2.Lease.VaultID != resp.Lease.VaultID {
+	if resp2.Secret.VaultID != resp.Secret.VaultID {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp2.Data["foo"] != "bar" {
@@ -220,12 +220,12 @@ func TestSystemBackend_revoke(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil || resp.Lease == nil || resp.Lease.VaultID == "" {
+	if resp == nil || resp.Secret == nil || resp.Secret.VaultID == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// Attempt revoke
-	req2 := logical.TestRequest(t, logical.WriteOperation, "revoke/"+resp.Lease.VaultID)
+	req2 := logical.TestRequest(t, logical.WriteOperation, "revoke/"+resp.Secret.VaultID)
 	resp2, err := b.HandleRequest(req2)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp2)
@@ -235,7 +235,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	}
 
 	// Attempt renew
-	req3 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Lease.VaultID)
+	req3 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.VaultID)
 	resp3, err := b.HandleRequest(req3)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -280,7 +280,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil || resp.Lease == nil || resp.Lease.VaultID == "" {
+	if resp == nil || resp.Secret == nil || resp.Secret.VaultID == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -295,7 +295,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 
 	// Attempt renew
-	req3 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Lease.VaultID)
+	req3 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.VaultID)
 	resp3, err := b.HandleRequest(req3)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)

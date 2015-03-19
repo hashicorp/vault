@@ -58,10 +58,9 @@ func TestPassthroughBackend_Read(t *testing.T) {
 	}
 
 	expected := &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
+		Secret: &logical.Secret{
 			Renewable: false,
-			Duration:  time.Hour,
+			Lease:     time.Hour,
 		},
 		Data: map[string]interface{}{
 			"raw":   "test",
@@ -69,7 +68,8 @@ func TestPassthroughBackend_Read(t *testing.T) {
 		},
 	}
 
-	resp.Lease.VaultID = ""
+	resp.Secret.InternalData = nil
+	resp.Secret.VaultID = ""
 	if !reflect.DeepEqual(resp, expected) {
 		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
 	}
@@ -124,8 +124,6 @@ func TestPassthroughBackend_List(t *testing.T) {
 	}
 
 	expected := &logical.Response{
-		IsSecret: false,
-		Lease:    nil,
 		Data: map[string]interface{}{
 			"keys": []string{"foo"},
 		},

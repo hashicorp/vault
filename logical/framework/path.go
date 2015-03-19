@@ -53,9 +53,10 @@ type Path struct {
 	HelpDescription string
 }
 
-func (p *Path) helpCallback(req *Request) (*logical.Response, error) {
+func (p *Path) helpCallback(
+	req *logical.Request, data *FieldData) (*logical.Response, error) {
 	var tplData pathTemplateData
-	tplData.Request = req.LogicalRequest.Path
+	tplData.Request = req.Path
 	tplData.RoutePattern = p.Pattern
 	tplData.Synopsis = wordwrap.WrapString(p.HelpSynopsis, 80)
 	tplData.Description = wordwrap.WrapString(p.HelpDescription, 80)

@@ -150,13 +150,12 @@ type SystemBackend struct {
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(
-	req *framework.Request) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.mounts.Lock()
 	defer b.Core.mounts.Unlock()
 
 	resp := &logical.Response{
-		IsSecret: false,
-		Data:     make(map[string]interface{}),
+		Data: make(map[string]interface{}),
 	}
 	for _, entry := range b.Core.mounts.Entries {
 		info := map[string]string{
@@ -171,9 +170,7 @@ func (b *SystemBackend) handleMountTable(
 
 // handleMount is used to mount a new path
 func (b *SystemBackend) handleMount(
-	req *framework.Request) (*logical.Response, error) {
-	data := req.Data
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
@@ -206,8 +203,8 @@ func (b *SystemBackend) handleMount(
 // TODO: Think through error scenario: umount should clean up everything
 //   and should fail if it can't. Perhaps add a "force" flag to YOLO it.
 func (b *SystemBackend) handleUnmount(
-	req *framework.Request) (*logical.Response, error) {
-	suffix := strings.TrimPrefix(req.LogicalRequest.Path, "mounts/")
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	suffix := strings.TrimPrefix(req.Path, "mounts/")
 	if len(suffix) == 0 {
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
@@ -222,10 +219,10 @@ func (b *SystemBackend) handleUnmount(
 
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(
-	req *framework.Request) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get the paths
-	fromPath := req.Data.Get("from").(string)
-	toPath := req.Data.Get("to").(string)
+	fromPath := data.Get("from").(string)
+	toPath := data.Get("to").(string)
 	if fromPath == "" || toPath == "" {
 		return logical.ErrorResponse(
 				"both 'from' and 'to' path must be specified as a string"),
@@ -242,9 +239,7 @@ func (b *SystemBackend) handleRemount(
 
 // handleRenew is used to renew a lease with a given VaultID
 func (b *SystemBackend) handleRenew(
-	req *framework.Request) (*logical.Response, error) {
-	data := req.Data
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	vaultID := data.Get("vault_id").(string)
 	incrementRaw := data.Get("increment").(int)
@@ -262,9 +257,7 @@ func (b *SystemBackend) handleRenew(
 
 // handleRevoke is used to revoke a given VaultID
 func (b *SystemBackend) handleRevoke(
-	req *framework.Request) (*logical.Response, error) {
-	data := req.Data
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	vaultID := data.Get("vault_id").(string)
 
@@ -277,9 +270,7 @@ func (b *SystemBackend) handleRevoke(
 
 // handleRevokePrefix is used to revoke a prefix with many VaultIDs
 func (b *SystemBackend) handleRevokePrefix(
-	req *framework.Request) (*logical.Response, error) {
-	data := req.Data
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 

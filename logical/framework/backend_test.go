@@ -42,10 +42,10 @@ func TestBackend_impl(t *testing.T) {
 }
 
 func TestBackendHandleRequest(t *testing.T) {
-	callback := func(req *Request) (*logical.Response, error) {
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": req.Data.Get("value"),
+				"value": data.Get("value"),
 			},
 		}, nil
 	}
@@ -78,10 +78,10 @@ func TestBackendHandleRequest(t *testing.T) {
 }
 
 func TestBackendHandleRequest_404(t *testing.T) {
-	callback := func(req *Request) (*logical.Response, error) {
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": req.Data.Get("value"),
+				"value": data.Get("value"),
 			},
 		}, nil
 	}
@@ -139,29 +139,21 @@ func TestBackendHandleRequest_help(t *testing.T) {
 
 func TestBackendHandleRequest_renew(t *testing.T) {
 	var called uint32
-	callback := func(*Request) (*logical.Response, error) {
+	callback := func(*logical.Request, *FieldData) (*logical.Response, error) {
 		atomic.AddUint32(&called, 1)
 		return nil, nil
 	}
 
+	secret := &Secret{
+		Type:  "foo",
+		Renew: callback,
+	}
 	b := &Backend{
-		Secrets: []*Secret{
-			&Secret{
-				Type:  "foo",
-				Renew: callback,
-			},
-		},
+		Secrets: []*Secret{secret},
 	}
 
-	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.RenewOperation,
-		Path:      "/foo",
-		Data: map[string]interface{}{
-			"previous_lease": &logical.Lease{
-				VaultID: "foo-bar",
-			},
-		},
-	})
+	_, err := b.HandleRequest(logical.RenewRequest(
+		"/foo", secret.Response(nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -172,29 +164,21 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 
 func TestBackendHandleRequest_revoke(t *testing.T) {
 	var called uint32
-	callback := func(*Request) (*logical.Response, error) {
+	callback := func(*logical.Request, *FieldData) (*logical.Response, error) {
 		atomic.AddUint32(&called, 1)
 		return nil, nil
 	}
 
+	secret := &Secret{
+		Type:   "foo",
+		Revoke: callback,
+	}
 	b := &Backend{
-		Secrets: []*Secret{
-			&Secret{
-				Type:   "foo",
-				Revoke: callback,
-			},
-		},
+		Secrets: []*Secret{secret},
 	}
 
-	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.RevokeOperation,
-		Path:      "/foo",
-		Data: map[string]interface{}{
-			"previous_lease": &logical.Lease{
-				VaultID: "foo-bar",
-			},
-		},
-	})
+	_, err := b.HandleRequest(logical.RevokeRequest(
+		"/foo", secret.Response(nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -272,10 +256,10 @@ func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
 }
 
 func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
-	callback := func(req *Request) (*logical.Response, error) {
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": req.Data.Get("value"),
+				"value": data.Get("value"),
 			},
 		}, nil
 	}
@@ -305,10 +289,10 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 }
 
 func TestBackendHandleRequest_urlPriority(t *testing.T) {
-	callback := func(req *Request) (*logical.Response, error) {
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": req.Data.Get("value"),
+				"value": data.Get("value"),
 			},
 		}, nil
 	}

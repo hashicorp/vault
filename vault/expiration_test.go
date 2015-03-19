@@ -52,9 +52,8 @@ func TestExpiration_Restore(t *testing.T) {
 			Path:      path,
 		}
 		resp := &logical.Response{
-			IsSecret: true,
-			Lease: &logical.Lease{
-				Duration: 20 * time.Millisecond,
+			Secret: &logical.Secret{
+				Lease: 20 * time.Millisecond,
 			},
 			Data: map[string]interface{}{
 				"access_key": "xyz",
@@ -102,9 +101,8 @@ func TestExpiration_Register(t *testing.T) {
 		Path:      "prod/aws/foo",
 	}
 	resp := &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: time.Hour,
+		Secret: &logical.Secret{
+			Lease: time.Hour,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -138,9 +136,8 @@ func TestExpiration_Revoke(t *testing.T) {
 		Path:      "prod/aws/foo",
 	}
 	resp := &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: time.Hour,
+		Secret: &logical.Secret{
+			Lease: time.Hour,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -175,9 +172,8 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		Path:      "prod/aws/foo",
 	}
 	resp := &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: 20 * time.Millisecond,
+		Secret: &logical.Secret{
+			Lease: 20 * time.Millisecond,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -222,9 +218,8 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 			Path:      path,
 		}
 		resp := &logical.Response{
-			IsSecret: true,
-			Lease: &logical.Lease{
-				Duration: 20 * time.Millisecond,
+			Secret: &logical.Secret{
+				Lease: 20 * time.Millisecond,
 			},
 			Data: map[string]interface{}{
 				"access_key": "xyz",
@@ -275,9 +270,8 @@ func TestExpiration_Renew(t *testing.T) {
 		Path:      "prod/aws/foo",
 	}
 	resp := &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: 20 * time.Millisecond,
+		Secret: &logical.Secret{
+			Lease: 20 * time.Millisecond,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -291,9 +285,8 @@ func TestExpiration_Renew(t *testing.T) {
 	}
 
 	noop.Response = &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: 20 * time.Millisecond,
+		Secret: &logical.Secret{
+			Lease: 20 * time.Millisecond,
 		},
 		Data: map[string]interface{}{
 			"access_key": "123",
@@ -331,9 +324,8 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		Path:      "prod/aws/foo",
 	}
 	resp := &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: 20 * time.Millisecond,
+		Secret: &logical.Secret{
+			Lease: 20 * time.Millisecond,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -347,9 +339,8 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	}
 
 	noop.Response = &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			Duration: 20 * time.Millisecond,
+		Secret: &logical.Secret{
+			Lease: 20 * time.Millisecond,
 		},
 		Data: map[string]interface{}{
 			"access_key": "123",
@@ -390,8 +381,8 @@ func TestExpiration_revokeEntry(t *testing.T) {
 		Data: map[string]interface{}{
 			"testing": true,
 		},
-		Lease: &logical.Lease{
-			Duration: time.Minute,
+		Secret: &logical.Secret{
+			Lease: time.Minute,
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
@@ -409,7 +400,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	if req.Path != le.Path {
 		t.Fatalf("Bad: %v", req)
 	}
-	if !reflect.DeepEqual(req.Data["previous_data"], le.Data) {
+	if !reflect.DeepEqual(req.Data, le.Data) {
 		t.Fatalf("Bad: %v", req)
 	}
 }
@@ -419,10 +410,9 @@ func TestExpiration_renewEntry(t *testing.T) {
 
 	noop := &NoopBackend{
 		Response: &logical.Response{
-			IsSecret: true,
-			Lease: &logical.Lease{
+			Secret: &logical.Secret{
 				Renewable: true,
-				Duration:  time.Hour,
+				Lease:     time.Hour,
 			},
 			Data: map[string]interface{}{
 				"testing": false,
@@ -439,8 +429,8 @@ func TestExpiration_renewEntry(t *testing.T) {
 		Data: map[string]interface{}{
 			"testing": true,
 		},
-		Lease: &logical.Lease{
-			Duration: time.Minute,
+		Secret: &logical.Secret{
+			Lease: time.Minute,
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
@@ -462,10 +452,10 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if req.Path != le.Path {
 		t.Fatalf("Bad: %v", req)
 	}
-	if !reflect.DeepEqual(req.Data["previous_data"], le.Data) {
+	if !reflect.DeepEqual(req.Data, le.Data) {
 		t.Fatalf("Bad: %v", req)
 	}
-	if req.Data["increment"] != time.Second {
+	if req.Secret.LeaseIncrement != time.Second {
 		t.Fatalf("Bad: %v", req)
 	}
 }
@@ -478,8 +468,8 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 		Data: map[string]interface{}{
 			"testing": true,
 		},
-		Lease: &logical.Lease{
-			Duration: time.Minute,
+		Secret: &logical.Secret{
+			Lease: time.Minute,
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
@@ -517,8 +507,8 @@ func TestLeaseEntry(t *testing.T) {
 		Data: map[string]interface{}{
 			"testing": true,
 		},
-		Lease: &logical.Lease{
-			Duration: time.Minute,
+		Secret: &logical.Secret{
+			Lease: time.Minute,
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),

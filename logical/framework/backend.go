@@ -44,7 +44,7 @@ type Backend struct {
 }
 
 // OperationFunc is the callback called for an operation on a path.
-type OperationFunc func(*Request) (*logical.Response, error)
+type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -92,13 +92,9 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}
 
 	// Call the callback with the request and the data
-	return callback(&Request{
-		Backend:        b,
-		LogicalRequest: req,
-		Data: &FieldData{
-			Raw:    raw,
-			Schema: path.Fields,
-		},
+	return callback(req, &FieldData{
+		Raw:    raw,
+		Schema: path.Fields,
 	})
 }
 
@@ -161,18 +157,16 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 
 func (b *Backend) handleRevokeRenew(
 	req *logical.Request) (*logical.Response, error) {
-	leaseRaw, ok := req.Data["previous_lease"]
-	if !ok {
-		return nil, fmt.Errorf("no previous lease for revoke")
+	if req.Secret == nil {
+		return nil, fmt.Errorf("request has no secret")
 	}
 
-	lease, ok := leaseRaw.(*logical.Lease)
+	rawSecretType, ok := req.Secret.InternalData["secret_type"]
 	if !ok {
-		return nil, fmt.Errorf("previous_lease is now *logical.Lease")
+		return nil, fmt.Errorf("secret is unsupported by this backend")
 	}
-
-	secretType, secretId := SecretType(lease.VaultID)
-	if secretType == "" {
+	secretType, ok := rawSecretType.(string)
+	if !ok {
 		return nil, fmt.Errorf("secret is unsupported by this backend")
 	}
 
@@ -201,17 +195,9 @@ func (b *Backend) handleRevokeRenew(
 		data = raw.(map[string]interface{})
 	}
 
-	return fn(&Request{
-		Backend:        b,
-		LogicalRequest: req,
-
-		Data: &FieldData{
-			Raw:    data,
-			Schema: secret.Fields,
-		},
-
-		SecretType: secretType,
-		SecretId:   secretId,
+	return fn(req, &FieldData{
+		Raw:    data,
+		Schema: secret.Fields,
 	})
 }
 

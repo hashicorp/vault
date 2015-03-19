@@ -13,7 +13,7 @@ import (
 // logical.Factory
 func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 	var b PassthroughBackend
-	return &framework.Backend{
+	b.Backend = &framework.Backend{
 		Paths: []*framework.Path{
 			&framework.Path{
 				Pattern: ".*",
@@ -44,25 +44,27 @@ func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 				Revoke: b.handleRevoke,
 			},
 		},
-	}, nil
+	}
+
+	return b, nil
 }
 
 // PassthroughBackend is used storing secrets directly into the physical
 // backend. The secrest are encrypted in the durable storage and custom lease
 // information can be specified, but otherwise this backend doesn't do anything
 // fancy.
-type PassthroughBackend struct{}
+type PassthroughBackend struct {
+	*framework.Backend
+}
 
 func (b *PassthroughBackend) handleRevoke(
-	req *framework.Request) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This is a no-op
 	return nil, nil
 }
 
 func (b *PassthroughBackend) handleRead(
-	raw *framework.Request) (*logical.Response, error) {
-	req := raw.LogicalRequest
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Read the path
 	out, err := req.Storage.Get(req.Path)
 	if err != nil {
@@ -81,18 +83,15 @@ func (b *PassthroughBackend) handleRead(
 	}
 
 	// Generate the response
-	resp, err := raw.Backend.Secret("generic").Response(rawData)
-	if err != nil {
-		return nil, fmt.Errorf("read failed: %v", err)
-	}
+	resp := b.Secret("generic").Response(rawData)
 
 	// Check if there is a lease key
 	leaseVal, ok := rawData["lease"].(string)
 	if ok {
 		leaseDuration, err := time.ParseDuration(leaseVal)
 		if err == nil {
-			resp.Lease.Renewable = false
-			resp.Lease.Duration = leaseDuration
+			resp.Secret.Renewable = false
+			resp.Secret.Lease = leaseDuration
 		}
 	}
 
@@ -100,9 +99,7 @@ func (b *PassthroughBackend) handleRead(
 }
 
 func (b *PassthroughBackend) handleWrite(
-	raw *framework.Request) (*logical.Response, error) {
-	req := raw.LogicalRequest
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
@@ -127,9 +124,7 @@ func (b *PassthroughBackend) handleWrite(
 }
 
 func (b *PassthroughBackend) handleDelete(
-	raw *framework.Request) (*logical.Response, error) {
-	req := raw.LogicalRequest
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Delete the key at the request path
 	if err := req.Storage.Delete(req.Path); err != nil {
 		return nil, err
@@ -139,9 +134,7 @@ func (b *PassthroughBackend) handleDelete(
 }
 
 func (b *PassthroughBackend) handleList(
-	raw *framework.Request) (*logical.Response, error) {
-	req := raw.LogicalRequest
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// List the keys at the prefix given by the request
 	keys, err := req.Storage.List(req.Path)
 	if err != nil {

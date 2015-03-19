@@ -341,14 +341,14 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil || resp.Lease == nil || resp.Data == nil {
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Lease.Duration != time.Hour {
-		t.Fatalf("bad: %#v", resp.Lease)
+	if resp.Secret.Lease != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
 	}
-	if resp.Lease.VaultID == "" {
-		t.Fatalf("bad: %#v", resp.Lease)
+	if resp.Secret.VaultID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Data["foo"] != "bar" {
 		t.Fatalf("bad: %#v", resp.Data)

@@ -2,7 +2,6 @@ package logical
 
 import (
 	"errors"
-	"time"
 )
 
 // Request is a struct that stores the parameters and context
@@ -23,6 +22,10 @@ type Request struct {
 
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
+
+	// Secret will be non-nil only for Revoke and Renew operations
+	// to represent the secret that was returned prior.
+	Secret *Secret
 }
 
 // Get returns a data field and guards for nil Data
@@ -42,29 +45,23 @@ func (r *Request) GetString(key string) string {
 
 // RenewRequest creates the structure of the renew request.
 func RenewRequest(
-	path string, increment time.Duration,
-	lease *Lease, data map[string]interface{}) *Request {
+	path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RenewOperation,
 		Path:      path,
-		Data: map[string]interface{}{
-			"previous_lease": lease,
-			"previous_data":  data,
-			"increment":      increment,
-		},
+		Data:      data,
+		Secret:    secret,
 	}
 }
 
 // RevokeRequest creates the structure of the revoke request.
 func RevokeRequest(
-	path string, lease *Lease, data map[string]interface{}) *Request {
+	path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RevokeOperation,
 		Path:      path,
-		Data: map[string]interface{}{
-			"previous_lease": lease,
-			"previous_data":  data,
-		},
+		Data:      data,
+		Secret:    secret,
 	}
 }
 

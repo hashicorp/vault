@@ -222,22 +222,22 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	}
 
 	// Fast-path if there is no lease
-	if resp == nil || resp.Lease == nil || !resp.IsSecret {
+	if resp == nil || resp.Secret == nil || resp.Secret.Lease == 0 {
 		return resp, nil
 	}
 
 	// Validate the lease
-	if err := resp.Lease.Validate(); err != nil {
+	if err := resp.Secret.Validate(); err != nil {
 		return nil, err
 	}
 
 	// Attach the VaultID
-	resp.Lease.VaultID = vaultID
+	resp.Secret.VaultID = vaultID
 
 	// Update the lease entry
-	leaseTotal := resp.Lease.Duration + resp.Lease.GracePeriod
+	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
 	le.Data = resp.Data
-	le.Lease = resp.Lease
+	le.Secret = resp.Secret
 	le.ExpireTime = time.Now().UTC().Add(leaseTotal)
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
@@ -258,29 +258,24 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 // lease. The secret gets assigned a vaultId and the management of
 // of lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
-	// Ignore if there is no lease
-	if resp == nil || resp.Lease == nil {
+	// Ignore if there is no leased secret
+	if resp == nil || resp.Secret == nil || resp.Secret.Lease == 0 {
 		return "", nil
 	}
 
-	// Validate the lease
-	if err := resp.Lease.Validate(); err != nil {
+	// Validate the secret
+	if err := resp.Secret.Validate(); err != nil {
 		return "", err
-	}
-
-	// Cannot register a non-secret (e.g. a policy or configuration key)
-	if !resp.IsSecret {
-		return "", fmt.Errorf("cannot attach lease to non-secret")
 	}
 
 	// Create a lease entry
 	now := time.Now().UTC()
-	leaseTotal := resp.Lease.Duration + resp.Lease.GracePeriod
+	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
 	le := leaseEntry{
 		VaultID:    path.Join(req.Path, generateUUID()),
 		Path:       req.Path,
 		Data:       resp.Data,
-		Lease:      resp.Lease,
+		Secret:     resp.Secret,
 		IssueTime:  now,
 		ExpireTime: now.Add(leaseTotal),
 	}
@@ -323,7 +318,7 @@ func (m *ExpirationManager) expireID(vaultID string) {
 // revokeEntry is used to attempt revocation of an internal entry
 func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	_, err := m.router.Route(logical.RevokeRequest(
-		le.Path, le.Lease, le.Data))
+		le.Path, le.Secret, le.Data))
 	if err != nil {
 		return fmt.Errorf("failed to revoke entry: %v", err)
 	}
@@ -332,8 +327,12 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 
 // renewEntry is used to attempt renew of an internal entry
 func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+	secret := *le.Secret
+	secret.LeaseIncrement = increment
+	secret.VaultID = ""
+
 	resp, err := m.router.Route(logical.RenewRequest(
-		le.Path, increment, le.Lease, le.Data))
+		le.Path, &secret, le.Data))
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}
@@ -389,7 +388,7 @@ type leaseEntry struct {
 	VaultID    string                 `json:"vault_id"`
 	Path       string                 `json:"path"`
 	Data       map[string]interface{} `json:"data"`
-	Lease      *logical.Lease         `json:"lease"`
+	Secret     *logical.Secret        `json:"secret"`
 	IssueTime  time.Time              `json:"issue_time"`
 	ExpireTime time.Time              `json:"expire_time"`
 }

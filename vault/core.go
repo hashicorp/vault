@@ -204,14 +204,20 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	// Route the request
 	resp, err := c.router.Route(req)
 
-	// Check if there is a lease, we must register this
-	if resp != nil && resp.IsSecret && resp.Lease != nil {
+	// If there is a secret, we must register it with the expiration manager.
+	//
+	// TODO(mitchellh): what about secrets with a lease of 0, do we still
+	// record them so they're revoked during unmount?
+	if resp != nil && resp.Secret != nil && resp.Secret.Lease > 0 {
 		vaultID, err := c.expiration.Register(req, resp)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to register lease (request: %#v, response: %#v): %v", req, resp, err)
+			c.logger.Printf(
+				"[ERR] core: failed to register lease "+
+					"(request: %#v, response: %#v): %v", req, resp, err)
 			return nil, ErrInternalError
 		}
-		resp.Lease.VaultID = vaultID
+
+		resp.Secret.VaultID = vaultID
 	}
 
 	// Return the response and error

@@ -1,8 +1,6 @@
 package framework
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -36,32 +34,19 @@ type Secret struct {
 	Revoke OperationFunc
 }
 
-// SecretType is the type of the secret with the given ID.
-func SecretType(id string) (string, string) {
-	idx := strings.Index(id, "-")
-	if idx < 0 {
-		return "", id
+func (s *Secret) Response(data map[string]interface{}) *logical.Response {
+	internalData := map[string]interface{}{
+		"secret_type": s.Type,
 	}
 
-	return id[:idx], id[idx+1:]
-}
-
-func (s *Secret) Response(
-	data map[string]interface{}) (*logical.Response, error) {
-	uuid, err := logical.UUID()
-	if err != nil {
-		return nil, err
-	}
-
-	id := fmt.Sprintf("%s-%s", s.Type, uuid)
 	return &logical.Response{
-		IsSecret: true,
-		Lease: &logical.Lease{
-			VaultID:     id,
-			Renewable:   s.Renew != nil,
-			Duration:    s.DefaultDuration,
-			GracePeriod: s.DefaultGracePeriod,
+		Secret: &logical.Secret{
+			Renewable:        s.Renew != nil,
+			Lease:            s.DefaultDuration,
+			LeaseGracePeriod: s.DefaultGracePeriod,
+			InternalData:     internalData,
 		},
+
 		Data: data,
-	}, nil
+	}
 }
