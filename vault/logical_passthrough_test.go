@@ -69,6 +69,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 		},
 	}
 
+	resp.Lease.VaultID = ""
 	if !reflect.DeepEqual(resp, expected) {
 		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
 	}

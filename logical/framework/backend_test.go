@@ -137,6 +137,39 @@ func TestBackendHandleRequest_help(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_renew(t *testing.T) {
+	var called uint32
+	callback := func(*Request) (*logical.Response, error) {
+		atomic.AddUint32(&called, 1)
+		return nil, nil
+	}
+
+	b := &Backend{
+		Secrets: []*Secret{
+			&Secret{
+				Type:  "foo",
+				Renew: callback,
+			},
+		},
+	}
+
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.RenewOperation,
+		Path:      "/foo",
+		Data: map[string]interface{}{
+			"previous_lease": &logical.Lease{
+				VaultID: "foo-bar",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if v := atomic.LoadUint32(&called); v != 1 {
+		t.Fatalf("bad: %#v", v)
+	}
+}
+
 func TestBackendHandleRequest_revoke(t *testing.T) {
 	var called uint32
 	callback := func(*Request) (*logical.Response, error) {

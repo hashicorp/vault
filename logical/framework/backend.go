@@ -51,8 +51,10 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	// Check for special cased global operations. These don't route
 	// to a specific Path.
 	switch req.Operation {
+	case logical.RenewOperation:
+		fallthrough
 	case logical.RevokeOperation:
-		return b.handleRevoke(req)
+		return b.handleRevokeRenew(req)
 	case logical.RollbackOperation:
 		return b.handleRollback(req)
 	}
@@ -91,6 +93,7 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 
 	// Call the callback with the request and the data
 	return callback(&Request{
+		Backend:        b,
 		LogicalRequest: req,
 		Data: &FieldData{
 			Raw:    raw,
@@ -156,7 +159,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (b *Backend) handleRevoke(
+func (b *Backend) handleRevokeRenew(
 	req *logical.Request) (*logical.Response, error) {
 	leaseRaw, ok := req.Data["previous_lease"]
 	if !ok {
@@ -178,7 +181,18 @@ func (b *Backend) handleRevoke(
 		return nil, fmt.Errorf("secret is unsupported by this backend")
 	}
 
-	if secret.Revoke == nil {
+	var fn OperationFunc
+	switch req.Operation {
+	case logical.RenewOperation:
+		fn = secret.Renew
+	case logical.RevokeOperation:
+		fn = secret.Revoke
+	default:
+		return nil, fmt.Errorf(
+			"invalid operation for revoke/renew: %s", req.Operation)
+	}
+
+	if fn == nil {
 		return nil, logical.ErrUnsupportedOperation
 	}
 
@@ -187,7 +201,10 @@ func (b *Backend) handleRevoke(
 		data = raw.(map[string]interface{})
 	}
 
-	return secret.Revoke(&Request{
+	return fn(&Request{
+		Backend:        b,
+		LogicalRequest: req,
+
 		Data: &FieldData{
 			Raw:    data,
 			Schema: secret.Fields,

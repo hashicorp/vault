@@ -322,16 +322,8 @@ func (m *ExpirationManager) expireID(vaultID string) {
 
 // revokeEntry is used to attempt revocation of an internal entry
 func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
-	data := map[string]interface{}{
-		"previous_lease": le.Lease,
-		"previous_data":  le.Data,
-	}
-	req := &logical.Request{
-		Operation: logical.RevokeOperation,
-		Path:      le.Path,
-		Data:      data,
-	}
-	_, err := m.router.Route(req)
+	_, err := m.router.Route(logical.RevokeRequest(
+		le.Path, le.Lease, le.Data))
 	if err != nil {
 		return fmt.Errorf("failed to revoke entry: %v", err)
 	}
@@ -340,16 +332,8 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 
 // renewEntry is used to attempt renew of an internal entry
 func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
-	data := map[string]interface{}{
-		"previous":  le.Data,
-		"increment": increment,
-	}
-	req := &logical.Request{
-		Operation: logical.RenewOperation,
-		Path:      le.Path,
-		Data:      data,
-	}
-	resp, err := m.router.Route(req)
+	resp, err := m.router.Route(logical.RenewRequest(
+		le.Path, increment, le.Lease, le.Data))
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}

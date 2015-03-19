@@ -26,15 +26,22 @@ func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead,
-					logical.RenewOperation:  b.handleRead,
 					logical.WriteOperation:  b.handleWrite,
 					logical.DeleteOperation: b.handleDelete,
 					logical.ListOperation:   b.handleList,
-					logical.RevokeOperation: b.handleRevoke,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(passthroughHelpSynopsis),
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
+			},
+		},
+
+		Secrets: []*framework.Secret{
+			&framework.Secret{
+				Type: "generic",
+
+				Renew:  b.handleRead,
+				Revoke: b.handleRevoke,
 			},
 		},
 	}, nil
@@ -73,25 +80,22 @@ func (b *PassthroughBackend) handleRead(
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
 
+	// Generate the response
+	resp, err := raw.Backend.Secret("generic").Response(rawData)
+	if err != nil {
+		return nil, fmt.Errorf("read failed: %v", err)
+	}
+
 	// Check if there is a lease key
 	leaseVal, ok := rawData["lease"].(string)
-	var lease *logical.Lease
 	if ok {
 		leaseDuration, err := time.ParseDuration(leaseVal)
 		if err == nil {
-			lease = &logical.Lease{
-				Renewable: false,
-				Duration:  leaseDuration,
-			}
+			resp.Lease.Renewable = false
+			resp.Lease.Duration = leaseDuration
 		}
 	}
 
-	// Generate the response
-	resp := &logical.Response{
-		IsSecret: true,
-		Lease:    lease,
-		Data:     rawData,
-	}
 	return resp, nil
 }
 

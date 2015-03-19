@@ -2,6 +2,7 @@ package logical
 
 import (
 	"errors"
+	"time"
 )
 
 // Request is a struct that stores the parameters and context
@@ -37,6 +38,34 @@ func (r *Request) GetString(key string) string {
 	raw := r.Get(key)
 	s, _ := raw.(string)
 	return s
+}
+
+// RenewRequest creates the structure of the renew request.
+func RenewRequest(
+	path string, increment time.Duration,
+	lease *Lease, data map[string]interface{}) *Request {
+	return &Request{
+		Operation: RenewOperation,
+		Path:      path,
+		Data: map[string]interface{}{
+			"previous_lease": lease,
+			"previous_data":  data,
+			"increment":      increment,
+		},
+	}
+}
+
+// RevokeRequest creates the structure of the revoke request.
+func RevokeRequest(
+	path string, lease *Lease, data map[string]interface{}) *Request {
+	return &Request{
+		Operation: RevokeOperation,
+		Path:      path,
+		Data: map[string]interface{}{
+			"previous_lease": lease,
+			"previous_data":  data,
+		},
+	}
 }
 
 // Operation is an enum that is used to specify the type

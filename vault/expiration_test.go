@@ -409,7 +409,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	if req.Path != le.Path {
 		t.Fatalf("Bad: %v", req)
 	}
-	if !reflect.DeepEqual(req.Data["previous"], le.Data) {
+	if !reflect.DeepEqual(req.Data["previous_data"], le.Data) {
 		t.Fatalf("Bad: %v", req)
 	}
 }
@@ -462,7 +462,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if req.Path != le.Path {
 		t.Fatalf("Bad: %v", req)
 	}
-	if !reflect.DeepEqual(req.Data["previous"], le.Data) {
+	if !reflect.DeepEqual(req.Data["previous_data"], le.Data) {
 		t.Fatalf("Bad: %v", req)
 	}
 	if req.Data["increment"] != time.Second {
