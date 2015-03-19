@@ -136,7 +136,7 @@ func (c *Core) setupCredentials() error {
 		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 		// Mount the backend
-		path := credentialMountPrefix + entry.Name
+		path := credentialMountPrefix + entry.Name + "/"
 		err = c.router.Mount(backend, path, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
@@ -166,7 +166,7 @@ func (c *Core) newCredentialBackend(t string, conf map[string]string) (credentia
 func defaultAuthTable() *AuthTable {
 	table := &AuthTable{}
 	tokenAuth := &AuthEntry{
-		Name:        "token/",
+		Name:        "token",
 		Type:        "token",
 		Description: "token based credentials",
 		UUID:        generateUUID(),

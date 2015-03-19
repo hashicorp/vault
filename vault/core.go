@@ -136,9 +136,6 @@ type Core struct {
 	// policy store is used to manage named ACL policies
 	policy *PolicyStore
 
-	// toekn store is used to manage tokens
-	tokens *TokenStore
-
 	logger *log.Logger
 }
 
@@ -186,6 +183,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	credentialBackends := make(map[string]credential.Factory)
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
+	}
+	credentialBackends["token"] = func(map[string]string) (credential.Backend, error) {
+		return NewTokenStore(c)
 	}
 	c.credentialBackends = credentialBackends
 	return c, nil
@@ -493,9 +493,6 @@ func (c *Core) postUnseal() error {
 	if err := c.setupPolicyStore(); err != nil {
 		return nil
 	}
-	if err := c.setupTokenStore(); err != nil {
-		return nil
-	}
 	if err := c.loadCredentials(); err != nil {
 		return nil
 	}
@@ -509,9 +506,6 @@ func (c *Core) postUnseal() error {
 // for any state teardown required.
 func (c *Core) preSeal() error {
 	if err := c.teardownCredentials(); err != nil {
-		return err
-	}
-	if err := c.teardownTokenStore(); err != nil {
 		return err
 	}
 	if err := c.teardownPolicyStore(); err != nil {

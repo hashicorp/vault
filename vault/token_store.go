@@ -33,15 +33,20 @@ const (
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
 type TokenStore struct {
+	core *Core
 	view *BarrierView
 	salt string
 }
 
 // NewTokenStore is used to construct a token store that is
 // backed by the given barrier view.
-func NewTokenStore(view *BarrierView) (*TokenStore, error) {
+func NewTokenStore(c *Core) (*TokenStore, error) {
+	// Create a sub-view
+	view := c.systemView.SubView(tokenSubPath)
+
 	// Initialize the store
 	t := &TokenStore{
+		core: c,
 		view: view,
 	}
 
@@ -65,28 +70,6 @@ func NewTokenStore(view *BarrierView) (*TokenStore, error) {
 		}
 	}
 	return t, nil
-}
-
-// setupTokenStore is used to initialize the token store
-// when the vault is being unsealed.
-func (c *Core) setupTokenStore() error {
-	// Create a sub-view
-	view := c.systemView.SubView(tokenSubPath)
-
-	// Create the token store
-	ts, err := NewTokenStore(view)
-	if err != nil {
-		return err
-	}
-	c.tokens = ts
-	return nil
-}
-
-// teardownTokenStore is used to reverse setupTokenStore
-// when the vault is being sealed.
-func (c *Core) teardownTokenStore() error {
-	c.tokens = nil
-	return nil
 }
 
 // TokenEntry is used to represent a given token
@@ -290,5 +273,19 @@ func (ts *TokenStore) RevokeAll() error {
 				token, idx+1, len(tokens), err)
 		}
 	}
+	return nil
+}
+
+// HandleRequest is used to handle a request and generate a response.
+// The backends must check the operation type and handle appropriately.
+func (ts *TokenStore) HandleRequest(*logical.Request) (*logical.Response, error) {
+	return nil, logical.ErrUnsupportedOperation
+}
+
+// RootPaths is a list of paths that require root level privileges.
+// These paths will be enforced by the router so that backends do
+// not need to handle the authorization. Paths are enforced exactly
+// or using a prefix match if they end in '*'
+func (ts *TokenStore) RootPaths() []string {
 	return nil
 }

@@ -6,9 +6,8 @@ import (
 )
 
 func mockTokenStore(t *testing.T) *TokenStore {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	ts, err := NewTokenStore(view)
+	c, _ := TestCoreUnsealed(t)
+	ts, err := NewTokenStore(c)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -35,7 +34,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(ts.view)
+	ts2, err := NewTokenStore(ts.core)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
