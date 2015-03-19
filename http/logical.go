@@ -60,10 +60,10 @@ func handleLogical(core *vault.Core) http.Handler {
 		var httpResp interface{}
 		if resp != nil {
 			logicalResp := &LogicalResponse{Data: resp.Data}
-			if resp.IsSecret && resp.Lease != nil {
-				logicalResp.VaultId = resp.Lease.VaultID
-				logicalResp.Renewable = resp.Lease.Renewable
-				logicalResp.LeaseDuration = int(resp.Lease.Duration.Seconds())
+			if resp.Secret != nil {
+				logicalResp.VaultId = resp.Secret.VaultID
+				logicalResp.Renewable = resp.Secret.Renewable
+				logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
 			}
 
 			httpResp = logicalResp

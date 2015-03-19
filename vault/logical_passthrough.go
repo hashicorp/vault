@@ -84,6 +84,7 @@ func (b *PassthroughBackend) handleRead(
 
 	// Generate the response
 	resp := b.Secret("generic").Response(rawData)
+	resp.Secret.Renewable = false
 
 	// Check if there is a lease key
 	leaseVal, ok := rawData["lease"].(string)
