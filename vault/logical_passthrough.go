@@ -47,13 +47,15 @@ func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 type PassthroughBackend struct{}
 
 func (b *PassthroughBackend) handleRevoke(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	req *framework.Request) (*logical.Response, error) {
 	// This is a no-op
 	return nil, nil
 }
 
 func (b *PassthroughBackend) handleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	raw *framework.Request) (*logical.Response, error) {
+	req := raw.LogicalRequest
+
 	// Read the path
 	out, err := req.Storage.Get(req.Path)
 	if err != nil {
@@ -66,13 +68,13 @@ func (b *PassthroughBackend) handleRead(
 	}
 
 	// Decode the data
-	var raw map[string]interface{}
-	if err := json.Unmarshal(out.Value, &raw); err != nil {
+	var rawData map[string]interface{}
+	if err := json.Unmarshal(out.Value, &rawData); err != nil {
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
 
 	// Check if there is a lease key
-	leaseVal, ok := raw["lease"].(string)
+	leaseVal, ok := rawData["lease"].(string)
 	var lease *logical.Lease
 	if ok {
 		leaseDuration, err := time.ParseDuration(leaseVal)
@@ -88,13 +90,15 @@ func (b *PassthroughBackend) handleRead(
 	resp := &logical.Response{
 		IsSecret: true,
 		Lease:    lease,
-		Data:     raw,
+		Data:     rawData,
 	}
 	return resp, nil
 }
 
 func (b *PassthroughBackend) handleWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	raw *framework.Request) (*logical.Response, error) {
+	req := raw.LogicalRequest
+
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
@@ -119,7 +123,9 @@ func (b *PassthroughBackend) handleWrite(
 }
 
 func (b *PassthroughBackend) handleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	raw *framework.Request) (*logical.Response, error) {
+	req := raw.LogicalRequest
+
 	// Delete the key at the request path
 	if err := req.Storage.Delete(req.Path); err != nil {
 		return nil, err
@@ -129,7 +135,9 @@ func (b *PassthroughBackend) handleDelete(
 }
 
 func (b *PassthroughBackend) handleList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	raw *framework.Request) (*logical.Response, error) {
+	req := raw.LogicalRequest
+
 	// List the keys at the prefix given by the request
 	keys, err := req.Storage.List(req.Path)
 	if err != nil {
