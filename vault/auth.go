@@ -64,6 +64,98 @@ func (a *AuthEntry) Clone() *AuthEntry {
 	}
 }
 
+// enableCredential is used to enable a new credential backend
+func (c *Core) enableCredential(entry *AuthEntry) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+
+	// Ensure there is a name
+	if entry.Name == "" {
+		return fmt.Errorf("backend name must be specified")
+	}
+
+	// Look for matching name
+	for _, ent := range c.auth.Entries {
+		if ent.Name == entry.Name {
+			return fmt.Errorf("name already in use")
+		}
+	}
+
+	// Ensure the token backend is a singleton
+	if entry.Type == "token" {
+		return fmt.Errorf("token credential backend cannot be instantiated")
+	}
+
+	// Lookup the new backend
+	backend, err := c.newCredentialBackend(entry.Type, nil)
+	if err != nil {
+		return err
+	}
+
+	// Generate a new UUID and view
+	entry.UUID = generateUUID()
+	view := NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
+
+	// Update the auth table
+	newTable := c.auth.Clone()
+	newTable.Entries = append(newTable.Entries, entry)
+	if err := c.persistAuth(newTable); err != nil {
+		return errors.New("failed to update auth table")
+	}
+	c.auth = newTable
+
+	// Mount the backend
+	path := credentialMountPrefix + entry.Name + "/"
+	if err := c.router.Mount(backend, path, view); err != nil {
+		return err
+	}
+	c.logger.Printf("[INFO] core: enabled credential backend '%s'", entry.Name)
+	return nil
+}
+
+// disableCredential is used to disable an existing credential backend
+func (c *Core) disableCredential(name string) error {
+	c.auth.Lock()
+	defer c.auth.Unlock()
+
+	// Ensure the token backend is not affected
+	if name == "token" {
+		return fmt.Errorf("token credential backend cannot be disabled")
+	}
+
+	// Remove the entry from the mount table
+	found := false
+	newTable := c.auth.Clone()
+	n := len(newTable.Entries)
+	for i := 0; i < n; i++ {
+		if newTable.Entries[i].Name == name {
+			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
+			newTable.Entries = newTable.Entries[:n-1]
+			found = true
+			break
+		}
+	}
+
+	// Ensure there was a match
+	if !found {
+		return fmt.Errorf("no matching backend")
+	}
+
+	// Update the auth table
+	if err := c.persistAuth(newTable); err != nil {
+		return errors.New("failed to update auth table")
+	}
+	c.auth = newTable
+
+	// Unmount the backend
+	path := credentialMountPrefix + name + "/"
+	if err := c.router.Unmount(path); err != nil {
+		return err
+	}
+	c.logger.Printf("[INFO] core: disabled credential backend '%s'", name)
+	return nil
+}
+
 // loadCredentials is invoked as part of postUnseal to load the auth table
 func (c *Core) loadCredentials() error {
 	// Load the existing mount table
