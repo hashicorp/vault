@@ -44,14 +44,17 @@ func (r *Request) GetString(key string) string {
 type Operation string
 
 const (
-	ReadOperation     Operation = "read"
-	WriteOperation              = "write"
-	DeleteOperation             = "delete"
-	ListOperation               = "list"
-	RevokeOperation             = "revoke"
+	// The operations below are called per path
+	ReadOperation   Operation = "read"
+	WriteOperation            = "write"
+	DeleteOperation           = "delete"
+	ListOperation             = "list"
+	HelpOperation             = "help"
+
+	// The operations below are called globally, the path is less relevant.
+	RevokeOperation   Operation = "revoke"
 	RenewOperation              = "renew"
 	RollbackOperation           = "rollback"
-	HelpOperation               = "help"
 )
 
 var (

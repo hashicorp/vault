@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"fmt"
 	"regexp"
 	"sync"
 	"time"
@@ -47,9 +48,12 @@ type OperationFunc func(*Request) (*logical.Response, error)
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
-	// Rollbacks are treated outside of the normal request cycle since
-	// the path doesn't matter for them.
-	if req.Operation == logical.RollbackOperation {
+	// Check for special cased global operations. These don't route
+	// to a specific Path.
+	switch req.Operation {
+	case logical.RevokeOperation:
+		return b.handleRevoke(req)
+	case logical.RollbackOperation:
 		return b.handleRollback(req)
 	}
 
@@ -150,6 +154,48 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	}
 
 	return nil, nil
+}
+
+func (b *Backend) handleRevoke(
+	req *logical.Request) (*logical.Response, error) {
+	leaseRaw, ok := req.Data["previous_lease"]
+	if !ok {
+		return nil, fmt.Errorf("no previous lease for revoke")
+	}
+
+	lease, ok := leaseRaw.(*logical.Lease)
+	if !ok {
+		return nil, fmt.Errorf("previous_lease is now *logical.Lease")
+	}
+
+	secretType, secretId := SecretType(lease.VaultID)
+	if secretType == "" {
+		return nil, fmt.Errorf("secret is unsupported by this backend")
+	}
+
+	secret := b.Secret(secretType)
+	if secret == nil {
+		return nil, fmt.Errorf("secret is unsupported by this backend")
+	}
+
+	if secret.Revoke == nil {
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	var data map[string]interface{}
+	if raw, ok := req.Data["previous_data"]; ok {
+		data = raw.(map[string]interface{})
+	}
+
+	return secret.Revoke(&Request{
+		Data: &FieldData{
+			Raw:    data,
+			Schema: secret.Fields,
+		},
+
+		SecretType: secretType,
+		SecretId:   secretId,
+	})
 }
 
 func (b *Backend) handleRollback(

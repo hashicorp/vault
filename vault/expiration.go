@@ -323,7 +323,8 @@ func (m *ExpirationManager) expireID(vaultID string) {
 // revokeEntry is used to attempt revocation of an internal entry
 func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	data := map[string]interface{}{
-		"previous": le.Data,
+		"previous_lease": le.Lease,
+		"previous_data":  le.Data,
 	}
 	req := &logical.Request{
 		Operation: logical.RevokeOperation,

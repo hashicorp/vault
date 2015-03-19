@@ -37,13 +37,13 @@ type Secret struct {
 }
 
 // SecretType is the type of the secret with the given ID.
-func SecretType(id string) string {
+func SecretType(id string) (string, string) {
 	idx := strings.Index(id, "-")
 	if idx < 0 {
-		return ""
+		return "", id
 	}
 
-	return id[:idx]
+	return id[:idx], id[idx+1:]
 }
 
 func (s *Secret) Response(
