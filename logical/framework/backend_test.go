@@ -319,6 +319,37 @@ func TestBackendRoute(t *testing.T) {
 	}
 }
 
+func TestBackendSecret(t *testing.T) {
+	cases := map[string]struct {
+		Secrets []*Secret
+		Search  string
+		Match   bool
+	}{
+		"no match": {
+			[]*Secret{&Secret{Type: "foo"}},
+			"bar",
+			false,
+		},
+
+		"match": {
+			[]*Secret{&Secret{Type: "foo"}},
+			"foo",
+			true,
+		},
+	}
+
+	for n, tc := range cases {
+		b := &Backend{Secrets: tc.Secrets}
+		result := b.Secret(tc.Search)
+		if tc.Match != (result != nil) {
+			t.Fatalf("bad: %s\n\nExpected match: %v", n, tc.Match)
+		}
+		if result != nil && result.Type != tc.Search {
+			t.Fatalf("bad: %s\n\nExpected matching type: %#v", n, result)
+		}
+	}
+}
+
 func TestFieldSchemaDefaultOrZero(t *testing.T) {
 	cases := map[string]struct {
 		Schema *FieldSchema

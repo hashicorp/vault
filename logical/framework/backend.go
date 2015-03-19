@@ -106,6 +106,17 @@ func (b *Backend) Route(path string) *Path {
 	return result
 }
 
+// Secret is used to look up the secret with the given type.
+func (b *Backend) Secret(k string) *Secret {
+	for _, s := range b.Secrets {
+		if s.Type == k {
+			return s
+		}
+	}
+
+	return nil
+}
+
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
