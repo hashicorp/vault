@@ -121,7 +121,7 @@ type Core struct {
 
 	// auth is loaded after unseal since it is a protected
 	// configuration
-	auth *AuthTable
+	auth *MountTable
 
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView

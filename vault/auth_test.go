@@ -34,14 +34,14 @@ func TestDefaultAuthTable(t *testing.T) {
 	verifyDefaultAuthTable(t, table)
 }
 
-func verifyDefaultAuthTable(t *testing.T, table *AuthTable) {
+func verifyDefaultAuthTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 1 {
 		t.Fatalf("bad: %v", table.Entries)
 	}
 	for idx, entry := range table.Entries {
 		switch idx {
 		case 0:
-			if entry.Name != "token" {
+			if entry.Path != "token" {
 				t.Fatalf("bad: %v", entry)
 			}
 			if entry.Type != "token" {
@@ -55,5 +55,4 @@ func verifyDefaultAuthTable(t *testing.T, table *AuthTable) {
 			t.Fatalf("bad: %v", entry)
 		}
 	}
-
 }
