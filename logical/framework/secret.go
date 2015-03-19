@@ -21,14 +21,19 @@ type Secret struct {
 	// the structure of this secret.
 	Fields map[string]*FieldSchema
 
-	// Renewable is whether or not this secret type can be renewed.
-	Renewable bool
-
 	// DefaultDuration and DefaultGracePeriod are the default values for
 	// the duration of the lease for this secret and its grace period. These
 	// can be manually overwritten with the result of Response().
 	DefaultDuration    time.Duration
 	DefaultGracePeriod time.Duration
+
+	// Below are the operations that can be called on the secret.
+	//
+	// Renew, if not set, will mark the secret as not renewable.
+	//
+	// Revoke is required.
+	Renew  OperationFunc
+	Revoke OperationFunc
 }
 
 // SecretType is the type of the secret with the given ID.
@@ -53,7 +58,7 @@ func (s *Secret) Response(
 		IsSecret: true,
 		Lease: &logical.Lease{
 			VaultID:     id,
-			Renewable:   s.Renewable,
+			Renewable:   s.Renew != nil,
 			Duration:    s.DefaultDuration,
 			GracePeriod: s.DefaultGracePeriod,
 		},

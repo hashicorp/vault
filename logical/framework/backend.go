@@ -27,16 +27,16 @@ type Backend struct {
 	Paths     []*Path
 	PathsRoot []string
 
+	// Secrets is the list of secret types that this backend can
+	// return. It is used to automatically generate proper responses,
+	// and ease specifying callbacks for revocation, renewal, etc.
+	Secrets []*Secret
+
 	// Rollback is called when a WAL entry (see wal.go) has to be rolled
 	// back. It is called with the data from the entry. Boolean true should
 	// be returned on success. Errors should just be logged.
 	Rollback       func(kind string, data interface{}) bool
 	RollbackMinAge time.Duration
-
-	// Secrets is the list of secret types that this backend can
-	// return. It is used to automatically generate proper responses,
-	// and ease specifying callbacks for revocation, renewal, etc.
-	Secrets []*Secret
 
 	once    sync.Once
 	pathsRe []*regexp.Regexp
