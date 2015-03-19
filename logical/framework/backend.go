@@ -1,17 +1,12 @@
 package framework
 
 import (
-	"bytes"
-	"fmt"
 	"regexp"
-	"sort"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/go-wordwrap"
 )
 
 // Backend is an implementation of logical.Backend that allows
@@ -24,12 +19,12 @@ type Backend struct {
 	// This cannot be modified after construction (i.e. dynamically changing
 	// paths, including adding or removing, is not allowed once the
 	// backend is in use).
-	Paths []*Path
-
+	//
 	// PathsRoot is the list of path patterns that denote the
 	// paths above that require root-level privileges. These can't be
 	// regular expressions, it is either exact match or prefix match.
 	// For prefix match, append '*' as a suffix.
+	Paths     []*Path
 	PathsRoot []string
 
 	// Rollback is called when a WAL entry (see wal.go) has to be rolled
@@ -38,55 +33,17 @@ type Backend struct {
 	Rollback       func(kind string, data interface{}) bool
 	RollbackMinAge time.Duration
 
+	// Secrets is the list of secret types that this backend can
+	// return. It is used to automatically generate proper responses,
+	// and ease specifying callbacks for revocation, renewal, etc.
+	Secrets []*Secret
+
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
 
-// Path is a single path that the backend responds to.
-type Path struct {
-	// Pattern is the pattern of the URL that matches this path.
-	//
-	// This should be a valid regular expression. Named captures will be
-	// exposed as fields that should map to a schema in Fields. If a named
-	// capture is not a field in the Fields map, then it will be ignored.
-	Pattern string
-
-	// Fields is the mapping of data fields to a schema describing that
-	// field. Named captures in the Pattern also map to fields. If a named
-	// capture name matches a PUT body name, the named capture takes
-	// priority.
-	//
-	// Note that only named capture fields are available in every operation,
-	// whereas all fields are avaiable in the Write operation.
-	Fields map[string]*FieldSchema
-
-	// Callbacks are the set of callbacks that are called for a given
-	// operation. If a callback for a specific operation is not present,
-	// then logical.ErrUnsupportedOperation is automatically generated.
-	//
-	// The help operation is the only operation that the Path will
-	// automatically handle if the Help field is set. If both the Help
-	// field is set and there is a callback registered here, then the
-	// callback will be called.
-	Callbacks map[logical.Operation]OperationFunc
-
-	// Help is text describing how to use this path. This will be used
-	// to auto-generate the help operation. The Path will automatically
-	// generate a parameter listing and URL structure based on the
-	// regular expression, so the help text should just contain a description
-	// of what happens.
-	//
-	// HelpSynopsis is a one-sentence description of the path. This will
-	// be automatically line-wrapped at 80 characters.
-	//
-	// HelpDescription is a long-form description of the path. This will
-	// be automatically line-wrapped at 80 characters.
-	HelpSynopsis    string
-	HelpDescription string
-}
-
 // OperationFunc is the callback called for an operation on a path.
-type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
+type OperationFunc func(*Request) (*logical.Response, error)
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -129,9 +86,12 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}
 
 	// Call the callback with the request and the data
-	return callback(req, &FieldData{
-		Raw:    raw,
-		Schema: path.Fields,
+	return callback(&Request{
+		LogicalRequest: req,
+		Data: &FieldData{
+			Raw:    raw,
+			Schema: path.Fields,
+		},
 	})
 }
 
@@ -234,51 +194,6 @@ func (b *Backend) handleRollback(
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
-func (p *Path) helpCallback(req *logical.Request, data *FieldData) (*logical.Response, error) {
-	var tplData pathTemplateData
-	tplData.Request = req.Path
-	tplData.RoutePattern = p.Pattern
-	tplData.Synopsis = wordwrap.WrapString(p.HelpSynopsis, 80)
-	tplData.Description = wordwrap.WrapString(p.HelpDescription, 80)
-
-	// Alphabetize the fields
-	fieldKeys := make([]string, 0, len(p.Fields))
-	for k, _ := range p.Fields {
-		fieldKeys = append(fieldKeys, k)
-	}
-	sort.Strings(fieldKeys)
-
-	// Build the field help
-	tplData.Fields = make([]pathTemplateFieldData, len(fieldKeys))
-	for i, k := range fieldKeys {
-		schema := p.Fields[k]
-		description := wordwrap.WrapString(schema.Description, 60)
-		if description == "" {
-			description = "<no description>"
-		}
-
-		tplData.Fields[i] = pathTemplateFieldData{
-			Key:         k,
-			Type:        schema.Type.String(),
-			Description: description,
-		}
-	}
-
-	// Parse the help template
-	tpl, err := template.New("root").Parse(pathHelpTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template: %s", err)
-	}
-
-	// Execute the template and store the output
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, &tplData); err != nil {
-		return nil, fmt.Errorf("error executing template: %s", err)
-	}
-
-	return logical.HelpResponse(buf.String(), nil), nil
-}
-
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
 	Type        FieldType
@@ -308,37 +223,3 @@ func (t FieldType) Zero() interface{} {
 		panic("unknown type: " + t.String())
 	}
 }
-
-type pathTemplateData struct {
-	Request      string
-	RoutePattern string
-	Synopsis     string
-	Description  string
-	Fields       []pathTemplateFieldData
-}
-
-type pathTemplateFieldData struct {
-	Key         string
-	Type        string
-	Description string
-	URL         bool
-}
-
-const pathHelpTemplate = `
-Request:        {{.Request}}
-Matching Route: {{.RoutePattern}}
-
-{{.Synopsis}}
-
-## Parameters
-
-{{range .Fields}}
-### {{.Key}} (type: {{.Type}})
-
-{{.Description}}
-
-{{end}}
-## Description
-
-{{.Description}}
-`

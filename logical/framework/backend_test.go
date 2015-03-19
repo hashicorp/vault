@@ -42,10 +42,10 @@ func TestBackend_impl(t *testing.T) {
 }
 
 func TestBackendHandleRequest(t *testing.T) {
-	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+	callback := func(req *Request) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": data.Get("value"),
+				"value": req.Data.Get("value"),
 			},
 		}, nil
 	}
@@ -78,10 +78,10 @@ func TestBackendHandleRequest(t *testing.T) {
 }
 
 func TestBackendHandleRequest_404(t *testing.T) {
-	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+	callback := func(req *Request) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": data.Get("value"),
+				"value": req.Data.Get("value"),
 			},
 		}, nil
 	}
@@ -206,10 +206,10 @@ func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
 }
 
 func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
-	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+	callback := func(req *Request) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": data.Get("value"),
+				"value": req.Data.Get("value"),
 			},
 		}, nil
 	}
@@ -239,10 +239,10 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 }
 
 func TestBackendHandleRequest_urlPriority(t *testing.T) {
-	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+	callback := func(req *Request) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"value": data.Get("value"),
+				"value": req.Data.Get("value"),
 			},
 		}, nil
 	}
