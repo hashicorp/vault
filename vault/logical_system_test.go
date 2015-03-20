@@ -4,12 +4,14 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
 func TestSystemBackend_RootPaths(t *testing.T) {
 	expected := []string{
 		"mounts/*",
+		"auth/*",
 		"remount",
 		"revoke-prefix/*",
 	}
@@ -301,6 +303,91 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp3.Data["error"] != "lease not found" {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_authTable(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "auth")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"token": map[string]string{
+			"type":        "token",
+			"description": "token based credentials",
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_enableAuth(t *testing.T) {
+	c, b := testCoreSystemBackend(t)
+	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
+		return &NoopCred{}, nil
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
+	req.Data["type"] = "noop"
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_enableAuth_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
+	req.Data["type"] = "nope"
+	resp, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "unknown backend type: nope" {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_disableAuth(t *testing.T) {
+	c, b := testCoreSystemBackend(t)
+	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
+		return &NoopCred{}, nil
+	}
+
+	// Register the backend
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
+	req.Data["type"] = "noop"
+	b.HandleRequest(req)
+
+	// Deregister it
+	req = logical.TestRequest(t, logical.DeleteOperation, "auth/foo")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_disableAuth_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.DeleteOperation, "auth/foo")
+	resp, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "no matching backend" {
 		t.Fatalf("bad: %v", resp)
 	}
 }

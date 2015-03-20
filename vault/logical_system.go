@@ -14,6 +14,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 	return &framework.Backend{
 		PathsRoot: []string{
 			"mounts/*",
+			"auth/*",
 			"remount",
 			"revoke-prefix/*",
 		},
@@ -136,6 +137,44 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-prefix"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["revoke-prefix"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "auth$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAuthTable,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["auth-table"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["auth-table"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "auth/(?P<path>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_path"][0]),
+					},
+					"type": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_type"][0]),
+					},
+					"description": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation:  b.handleEnableAuth,
+					logical.DeleteOperation: b.handleDisableAuth,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["auth"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["auth"][1]),
 			},
 		},
 	}
@@ -281,6 +320,69 @@ func (b *SystemBackend) handleRevokePrefix(
 	return nil, nil
 }
 
+// handleAuthTable handles the "auth" endpoint to provide the auth table
+func (b *SystemBackend) handleAuthTable(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.auth.Lock()
+	defer b.Core.auth.Unlock()
+
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
+	}
+	for _, entry := range b.Core.auth.Entries {
+		info := map[string]string{
+			"type":        entry.Type,
+			"description": entry.Description,
+		}
+		resp.Data[entry.Path] = info
+	}
+
+	return resp, nil
+}
+
+// handleEnableAuth is used to enable a new credential backend
+func (b *SystemBackend) handleEnableAuth(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	path := data.Get("path").(string)
+	logicalType := data.Get("type").(string)
+	description := data.Get("description").(string)
+
+	if logicalType == "" {
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	// Create the mount entry
+	me := &MountEntry{
+		Path:        path,
+		Type:        logicalType,
+		Description: description,
+	}
+
+	// Attempt enabling
+	if err := b.Core.enableCredential(me); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleDisableAuth is used to disable a credential backend
+func (b *SystemBackend) handleDisableAuth(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	suffix := strings.TrimPrefix(req.Path, "auth/")
+	if len(suffix) == 0 {
+		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
+	}
+
+	// Attempt disable
+	if err := b.Core.disableCredential(suffix); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
 	"mounts": {
@@ -377,6 +479,38 @@ all matching leases.
 
 	"revoke-prefix-path": {
 		`The path to revoke keys under. Example: "prod/aws/ops"`,
+		"",
+	},
+
+	"auth-table": {
+		"List the currently enabled credential backends.",
+		`
+List the currently enabled credential backends: the name, the type of the backend,
+and a user friendly description of the purpose for the credential backend.
+		`,
+	},
+
+	"auth": {
+		`Enable a new credential backend with a name.`,
+		`
+Enable a credential mechanism at a new path. A backend can be mounted multiple times at
+multiple paths in order to configure multiple separately configured backends.
+Example: you might have an OAuth backend for GitHub, and one for Google Apps.
+		`,
+	},
+
+	"auth_path": {
+		`The path to mount to. Cannot be delimited. Example: "user"`,
+		"",
+	},
+
+	"auth_type": {
+		`The type of the backend. Example: "userpass"`,
+		"",
+	},
+
+	"auth_desc": {
+		`User-friendly description for this crential backend.`,
 		"",
 	},
 }
