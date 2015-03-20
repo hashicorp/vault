@@ -9,12 +9,15 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
 )
 
 // ServerCommand is a Command that starts the Vault server.
 type ServerCommand struct {
+	LogicalBackends map[string]logical.Factory
+
 	Meta
 }
 
@@ -63,7 +66,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the core
 	core, err := vault.NewCore(&vault.CoreConfig{
-		Physical: backend,
+		Physical:        backend,
+		LogicalBackends: c.LogicalBackends,
 	})
 
 	// Initialize the listeners
