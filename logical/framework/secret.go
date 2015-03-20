@@ -34,10 +34,13 @@ type Secret struct {
 	Revoke OperationFunc
 }
 
-func (s *Secret) Response(data map[string]interface{}) *logical.Response {
-	internalData := map[string]interface{}{
-		"secret_type": s.Type,
+func (s *Secret) Response(
+	data, internal map[string]interface{}) *logical.Response {
+	internalData := make(map[string]interface{})
+	for k, v := range internal {
+		internalData[k] = v
 	}
+	internalData["secret_type"] = s.Type
 
 	return &logical.Response{
 		Secret: &logical.Secret{

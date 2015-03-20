@@ -153,7 +153,7 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 	}
 
 	_, err := b.HandleRequest(logical.RenewRequest(
-		"/foo", secret.Response(nil).Secret, nil))
+		"/foo", secret.Response(nil, nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -178,7 +178,7 @@ func TestBackendHandleRequest_revoke(t *testing.T) {
 	}
 
 	_, err := b.HandleRequest(logical.RevokeRequest(
-		"/foo", secret.Response(nil).Secret, nil))
+		"/foo", secret.Response(nil, nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

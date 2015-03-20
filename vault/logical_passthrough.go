@@ -83,7 +83,7 @@ func (b *PassthroughBackend) handleRead(
 	}
 
 	// Generate the response
-	resp := b.Secret("generic").Response(rawData)
+	resp := b.Secret("generic").Response(rawData, nil)
 	resp.Secret.Renewable = false
 
 	// Check if there is a lease key
