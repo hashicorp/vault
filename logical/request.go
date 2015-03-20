@@ -65,6 +65,14 @@ func RevokeRequest(
 	}
 }
 
+// RollbackRequest creates the structure of the revoke request.
+func RollbackRequest(path string) *Request {
+	return &Request{
+		Operation: RollbackOperation,
+		Path:      path,
+	}
+}
+
 // Operation is an enum that is used to specify the type
 // of request being made
 type Operation string

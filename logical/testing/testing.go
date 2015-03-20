@@ -138,6 +138,7 @@ func Test(t TestT, c TestCase) {
 	}
 
 	// Make requests
+	var revoke []*logical.Request
 	for i, s := range c.Steps {
 		log.Printf("[WARN] Executing test step %d", i+1)
 
@@ -153,6 +154,14 @@ func Test(t TestT, c TestCase) {
 
 		// Make the request
 		resp, err := core.HandleRequest(req)
+		if resp != nil && resp.Secret != nil {
+			// Revoke this secret later
+			revoke = append(revoke, logical.RevokeRequest(
+				req.Path,
+				resp.Secret,
+				resp.Data,
+			))
+		}
 		if err == nil && s.Check != nil {
 			// Call the test method
 			err = s.Check(resp)
@@ -160,6 +169,34 @@ func Test(t TestT, c TestCase) {
 		if err != nil {
 			t.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
 			break
+		}
+	}
+
+	// Revoke any secrets we might have.
+	var failedRevokes []*logical.Secret
+	for _, req := range revoke {
+		log.Printf("[WARN] Revoking secret: %#v", req.Secret)
+		_, err = core.HandleRequest(req)
+		if err != nil {
+			failedRevokes = append(failedRevokes, req.Secret)
+			t.Error(fmt.Sprintf("[ERR] Revoke error: %s", err))
+		}
+	}
+
+	// Perform any rollbacks. This should no-op if there aren't any.
+	log.Printf("[WARN] Requesting RollbackOperation")
+	_, err = core.HandleRequest(logical.RollbackRequest(prefix + "/"))
+	if err != nil {
+		t.Error(fmt.Sprintf("[ERR] Rollback error: %s", err))
+	}
+
+	// If we have any failed revokes, log it.
+	if len(failedRevokes) > 0 {
+		for _, s := range failedRevokes {
+			t.Error(fmt.Sprintf(
+				"WARNING: Revoking the following secret failed. It may\n"+
+					"still exist. Please verify:\n\n%#v",
+				s))
 		}
 	}
 
