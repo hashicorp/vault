@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -288,4 +289,18 @@ func (ts *TokenStore) HandleRequest(*logical.Request) (*logical.Response, error)
 // or using a prefix match if they end in '*'
 func (ts *TokenStore) RootPaths() []string {
 	return nil
+}
+
+// LoginPaths is a list of paths that are unauthenticated and used
+// only for logging in. These paths cannot be reached via HandleRequest,
+// and are sent to HandleLogin instead. Paths are enforced exactly
+// or using a prefix match if they end in '*'
+func (ts *TokenStore) LoginPaths() []string {
+	return nil
+}
+
+// HandleLogin is used to handle a login request and generate a response.
+// The backend is allowed to ignore this request if it is not applicable.
+func (ts *TokenStore) HandleLogin(req *credential.Request) (*credential.Response, error) {
+	return nil, nil
 }

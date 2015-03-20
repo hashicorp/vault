@@ -11,6 +11,7 @@ import (
 
 type NoopCred struct {
 	Root     []string
+	Login    []string
 	Paths    []string
 	Requests []*logical.Request
 	Response *logical.Response
@@ -27,6 +28,14 @@ func (n *NoopCred) HandleRequest(req *logical.Request) (*logical.Response, error
 
 func (n *NoopCred) RootPaths() []string {
 	return n.Root
+}
+
+func (n *NoopCred) LoginPaths() []string {
+	return n.Login
+}
+
+func (n *NoopCred) HandleLogin(req *credential.Request) (*credential.Response, error) {
+	return nil, nil
 }
 
 func TestCore_DefaultAuthTable(t *testing.T) {
