@@ -190,13 +190,8 @@ func (b *Backend) handleRevokeRenew(
 		return nil, logical.ErrUnsupportedOperation
 	}
 
-	var data map[string]interface{}
-	if raw, ok := req.Data["previous_data"]; ok {
-		data = raw.(map[string]interface{})
-	}
-
 	return fn(req, &FieldData{
-		Raw:    data,
+		Raw:    req.Data,
 		Schema: secret.Fields,
 	})
 }

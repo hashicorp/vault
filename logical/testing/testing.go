@@ -115,9 +115,9 @@ func Test(t TestT, c TestCase) {
 	}
 
 	// Unseal the core
-	if sealed, err := core.Unseal(init.SecretShares[0]); err != nil {
+	if unsealed, err := core.Unseal(init.SecretShares[0]); err != nil {
 		t.Fatal("error unsealing core: ", err)
-	} else if sealed {
+	} else if !unsealed {
 		t.Fatal("vault shouldn't be sealed")
 	}
 
@@ -162,6 +162,9 @@ func Test(t TestT, c TestCase) {
 				resp.Data,
 			))
 		}
+		if err == nil && resp.IsError() {
+			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+		}
 		if err == nil && s.Check != nil {
 			// Call the test method
 			err = s.Check(resp)
@@ -176,7 +179,10 @@ func Test(t TestT, c TestCase) {
 	var failedRevokes []*logical.Secret
 	for _, req := range revoke {
 		log.Printf("[WARN] Revoking secret: %#v", req.Secret)
-		_, err = core.HandleRequest(req)
+		resp, err := core.HandleRequest(req)
+		if err == nil && resp.IsError() {
+			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+		}
 		if err != nil {
 			failedRevokes = append(failedRevokes, req.Secret)
 			t.Error(fmt.Sprintf("[ERR] Revoke error: %s", err))
@@ -185,8 +191,11 @@ func Test(t TestT, c TestCase) {
 
 	// Perform any rollbacks. This should no-op if there aren't any.
 	log.Printf("[WARN] Requesting RollbackOperation")
-	_, err = core.HandleRequest(logical.RollbackRequest(prefix + "/"))
-	if err != nil {
+	resp, err := core.HandleRequest(logical.RollbackRequest(prefix + "/"))
+	if err == nil && resp.IsError() {
+		err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+	}
+	if err != nil && err != logical.ErrUnsupportedOperation {
 		t.Error(fmt.Sprintf("[ERR] Rollback error: %s", err))
 	}
 

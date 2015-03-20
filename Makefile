@@ -17,6 +17,14 @@ test: generate
 	TF_ACC= go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
 	@$(MAKE) vet
 
+# testacc runs acceptance tests
+testacc: generate
+	@if [ "$(TEST)" = "./..." ]; then \
+		echo "ERROR: Set TEST to a specific package"; \
+		exit 1; \
+	fi
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
+
 # testrace runs the race checker
 testrace: generate
 	TF_ACC= go test -race $(TEST) $(TESTARGS)

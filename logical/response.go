@@ -13,18 +13,10 @@ type Response struct {
 	Data map[string]interface{}
 }
 
-/*
-// Validate is used to sanity check a lease
-func (l *Lease) Validate() error {
-	if l.Duration <= 0 {
-		return fmt.Errorf("lease duration must be greater than zero")
-	}
-	if l.GracePeriod < 0 {
-		return fmt.Errorf("grace period cannot be less than zero")
-	}
-	return nil
+// IsError returns true if this response seems to indicate an error.
+func (r *Response) IsError() bool {
+	return r != nil && len(r.Data) == 1 && r.Data["error"] != nil
 }
-*/
 
 // HelpResponse is used to format a help response
 func HelpResponse(text string, seeAlso []string) *Response {
