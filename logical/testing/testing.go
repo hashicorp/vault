@@ -190,8 +190,12 @@ func Test(t TestT, c TestCase) {
 	}
 
 	// Perform any rollbacks. This should no-op if there aren't any.
+	// We set the "immediate" flag here that any backend can pick up on
+	// to do all rollbacks immediately even if the WAL entries are new.
 	log.Printf("[WARN] Requesting RollbackOperation")
-	resp, err := core.HandleRequest(logical.RollbackRequest(prefix + "/"))
+	req := logical.RollbackRequest(prefix + "/")
+	req.Data["immediate"] = true
+	resp, err := core.HandleRequest(req)
 	if err == nil && resp.IsError() {
 		err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
 	}

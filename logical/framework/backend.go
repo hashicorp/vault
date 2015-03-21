@@ -224,6 +224,9 @@ func (b *Backend) handleRollback(
 		age = 10 * time.Minute
 	}
 	minAge := time.Now().UTC().Add(-1 * age)
+	if _, ok := req.Data["immediate"]; ok {
+		minAge = time.Now().UTC().Add(1000 * time.Hour)
+	}
 
 	for _, k := range keys {
 		entry, err := GetWAL(req.Storage, k)

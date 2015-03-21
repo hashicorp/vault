@@ -70,6 +70,7 @@ func RollbackRequest(path string) *Request {
 	return &Request{
 		Operation: RollbackOperation,
 		Path:      path,
+		Data:      make(map[string]interface{}),
 	}
 }
 
