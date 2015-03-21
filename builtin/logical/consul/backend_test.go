@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -25,7 +26,7 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
 			testAccStepWritePolicy(t, "test", testPolicy),
-			testAccStepReadToken(t, "test"),
+			testAccStepReadToken(t, "test", config),
 		},
 	})
 }
@@ -84,7 +85,8 @@ func testAccStepConfig(
 	}
 }
 
-func testAccStepReadToken(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepReadToken(
+	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      name,
@@ -97,17 +99,23 @@ func testAccStepReadToken(t *testing.T, name string) logicaltest.TestStep {
 			}
 			log.Printf("[WARN] Generated token: %s", d.Token)
 
-			/*
-				// Build a client and verify that the credentials work
-				creds := aws.Creds(d.AccessKey, d.SecretKey, "")
-				client := ec2.New(creds, "us-east-1", nil)
+			// Build a client and verify that the credentials work
+			config := api.DefaultConfig()
+			config.Address = conf["address"].(string)
+			config.Token = d.Token
+			client, err := api.NewClient(config)
+			if err != nil {
+				return err
+			}
 
-				log.Printf("[WARN] Verifying that the generated credentials work...")
-				_, err := client.DescribeInstances(&ec2.DescribeInstancesRequest{})
-				if err != nil {
-					return err
-				}
-			*/
+			log.Printf("[WARN] Verifying that the generated token works...")
+			_, err = client.KV().Put(&api.KVPair{
+				Key:   "foo",
+				Value: []byte("bar"),
+			}, nil)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
