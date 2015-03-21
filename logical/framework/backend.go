@@ -36,7 +36,11 @@ type Backend struct {
 	// Rollback is called when a WAL entry (see wal.go) has to be rolled
 	// back. It is called with the data from the entry. Boolean true should
 	// be returned on success. Errors should just be logged.
-	Rollback       func(kind string, data interface{}) bool
+	//
+	// RollbackMinAge is the minimum age of a WAL entry before it is attempted
+	// to be rolled back. This should be longer than the maximum time it takes
+	// to successfully create a secret.
+	Rollback       RollbackFunc
 	RollbackMinAge time.Duration
 
 	once    sync.Once
@@ -45,6 +49,9 @@ type Backend struct {
 
 // OperationFunc is the callback called for an operation on a path.
 type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
+
+// RollbackFunc is the callback for rollbacks.
+type RollbackFunc func(*logical.Request, string, interface{}) bool
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -235,7 +242,7 @@ func (b *Backend) handleRollback(
 		}
 
 		// Attempt a rollback
-		if b.Rollback(entry.Kind, entry.Data) {
+		if b.Rollback(req, entry.Kind, entry.Data) {
 			if err := DeleteWAL(req.Storage, k); err != nil {
 				merr = multierror.Append(merr, err)
 			}

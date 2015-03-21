@@ -189,7 +189,7 @@ func TestBackendHandleRequest_revoke(t *testing.T) {
 
 func TestBackendHandleRequest_rollback(t *testing.T) {
 	var called uint32
-	callback := func(kind string, data interface{}) bool {
+	callback := func(req *logical.Request, kind string, data interface{}) bool {
 		if data == "foo" {
 			atomic.AddUint32(&called, 1)
 		}
@@ -224,7 +224,7 @@ func TestBackendHandleRequest_rollback(t *testing.T) {
 
 func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
 	var called uint32
-	callback := func(kind string, data interface{}) bool {
+	callback := func(req *logical.Request, kind string, data interface{}) bool {
 		if data == "foo" {
 			atomic.AddUint32(&called, 1)
 		}
