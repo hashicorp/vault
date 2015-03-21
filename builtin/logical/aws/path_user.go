@@ -84,7 +84,6 @@ func (b *backend) pathUserRead(
 	keyResp, err := client.CreateAccessKey(&iam.CreateAccessKeyRequest{
 		UserName: aws.String(username),
 	})
-	err = fmt.Errorf("SUCK!")
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error creating access keys: %s", err)), nil
