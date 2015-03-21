@@ -1,6 +1,8 @@
 package aws
 
 import (
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -26,6 +28,9 @@ func Backend() *framework.Backend {
 		Secrets: []*framework.Secret{
 			secretAccessKeys(),
 		},
+
+		Rollback:       rollback,
+		RollbackMinAge: 5 * time.Minute,
 	}
 
 	return b.Backend
