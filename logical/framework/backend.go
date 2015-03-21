@@ -181,25 +181,15 @@ func (b *Backend) handleRevokeRenew(
 		return nil, fmt.Errorf("secret is unsupported by this backend")
 	}
 
-	var fn OperationFunc
 	switch req.Operation {
 	case logical.RenewOperation:
-		fn = secret.Renew
+		return secret.HandleRenew(req)
 	case logical.RevokeOperation:
-		fn = secret.Revoke
+		return secret.HandleRevoke(req)
 	default:
 		return nil, fmt.Errorf(
 			"invalid operation for revoke/renew: %s", req.Operation)
 	}
-
-	if fn == nil {
-		return nil, logical.ErrUnsupportedOperation
-	}
-
-	return fn(req, &FieldData{
-		Raw:    req.Data,
-		Schema: secret.Fields,
-	})
 }
 
 func (b *Backend) handleRollback(

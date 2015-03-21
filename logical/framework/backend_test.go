@@ -162,6 +162,30 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_renewExtend(t *testing.T) {
+	secret := &Secret{
+		Type:            "foo",
+		RenewExtend:     true,
+		DefaultDuration: 5 * time.Second,
+	}
+	b := &Backend{
+		Secrets: []*Secret{secret},
+	}
+
+	req := logical.RenewRequest("/foo", secret.Response(nil, nil).Secret, nil)
+	req.Secret.LeaseIncrement = 1 * time.Hour
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp == nil || resp.Secret == nil {
+		t.Fatal("should have secret")
+	}
+	if resp.Secret.Lease != 1*time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+}
+
 func TestBackendHandleRequest_revoke(t *testing.T) {
 	var called uint32
 	callback := func(*logical.Request, *FieldData) (*logical.Response, error) {
