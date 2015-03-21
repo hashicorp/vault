@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
+	"github.com/hashicorp/vault/builtin/logical/consul"
 	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/cli"
@@ -66,7 +67,8 @@ func init() {
 			return &command.ServerCommand{
 				Meta: meta,
 				LogicalBackends: map[string]logical.Factory{
-					"aws": aws.Factory,
+					"aws":    aws.Factory,
+					"consul": consul.Factory,
 				},
 			}, nil
 		},
