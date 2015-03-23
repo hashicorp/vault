@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -25,9 +26,10 @@ func NewRouter() *Router {
 
 // mountEntry is used to represent a mount point
 type mountEntry struct {
-	backend   logical.Backend
-	view      *BarrierView
-	rootPaths *radix.Tree
+	backend    logical.Backend
+	view       *BarrierView
+	rootPaths  *radix.Tree
+	loginPaths *radix.Tree
 }
 
 // Mount is used to expose a logical backend at a given prefix
@@ -41,25 +43,20 @@ func (r *Router) Mount(backend logical.Backend, prefix string, view *BarrierView
 	}
 
 	// Get the root paths
-	paths := backend.RootPaths()
-	var rootPaths *radix.Tree
-	if len(paths) > 0 {
-		rootPaths = radix.New()
-	}
-	for _, path := range paths {
-		// Check if this is a prefix or exact match
-		prefixMatch := len(path) >= 1 && path[len(path)-1] == '*'
-		if prefixMatch {
-			path = path[:len(path)-1]
-		}
-		rootPaths.Insert(path, prefixMatch)
+	rootPaths := pathsToRadix(backend.RootPaths())
+
+	// Check if this is a credential backend, calculate the login paths
+	var loginPaths *radix.Tree
+	if cred, ok := backend.(credential.Backend); ok {
+		loginPaths = pathsToRadix(cred.LoginPaths())
 	}
 
 	// Create a mount entry
 	me := &mountEntry{
-		backend:   backend,
-		view:      view,
-		rootPaths: rootPaths,
+		backend:    backend,
+		view:       view,
+		rootPaths:  rootPaths,
+		loginPaths: loginPaths,
 	}
 	r.root.Insert(prefix, me)
 	return nil
@@ -127,6 +124,43 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	return me.backend.HandleRequest(req)
 }
 
+// RouteLogin is used to route a given login request
+func (r *Router) RouteLogin(req *credential.Request) (*credential.Response, error) {
+	// Ensure this is a login path
+	if !r.LoginPath(req.Path) {
+		return nil, fmt.Errorf("invalid login route '%s'", req.Path)
+	}
+
+	// Find the mount point
+	r.l.RLock()
+	mount, raw, ok := r.root.LongestPrefix(req.Path)
+	r.l.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("no handler for route '%s'", req.Path)
+	}
+	me := raw.(*mountEntry)
+
+	// Adjust the path, attach the barrier view
+	original := req.Path
+	req.Path = strings.TrimPrefix(req.Path, mount)
+	req.Storage = me.view
+
+	// Reset the request before returning
+	defer func() {
+		req.Path = original
+		req.Storage = nil
+	}()
+
+	// Convert to a credential backend
+	cred, ok := me.backend.(credential.Backend)
+	if !ok {
+		return nil, fmt.Errorf("invalid login route '%s'", req.Path)
+	}
+
+	// Invoke the backend
+	return cred.HandleLogin(req)
+}
+
 // RootPath checks if the given path requires root privileges
 func (r *Router) RootPath(path string) bool {
 	r.l.RLock()
@@ -154,4 +188,48 @@ func (r *Router) RootPath(path string) bool {
 
 	// Handle the exact match case
 	return match == remain
+}
+
+// LoginPath checks if the given path is used for logins
+func (r *Router) LoginPath(path string) bool {
+	r.l.RLock()
+	mount, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return false
+	}
+	me := raw.(*mountEntry)
+
+	// Trim to get remaining path
+	remain := strings.TrimPrefix(path, mount)
+
+	// Check the loginPaths of this backend
+	match, raw, ok := me.loginPaths.LongestPrefix(remain)
+	if !ok {
+		return false
+	}
+	prefixMatch := raw.(bool)
+
+	// Handle the prefix match case
+	if prefixMatch {
+		return strings.HasPrefix(remain, match)
+	}
+
+	// Handle the exact match case
+	return match == remain
+}
+
+// pathsToRadix converts a list of paths potentially ending with
+// a wildcard expansion "*" into a radix tree.
+func pathsToRadix(paths []string) *radix.Tree {
+	tree := radix.New()
+	for _, path := range paths {
+		// Check if this is a prefix or exact match
+		prefixMatch := len(path) >= 1 && path[len(path)-1] == '*'
+		if prefixMatch {
+			path = path[:len(path)-1]
+		}
+		tree.Insert(path, prefixMatch)
+	}
+	return tree
 }

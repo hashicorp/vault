@@ -15,6 +15,10 @@ type NoopCred struct {
 	Paths    []string
 	Requests []*logical.Request
 	Response *logical.Response
+
+	LPaths        []string
+	LoginRequests []*credential.Request
+	LoginResponse *credential.Response
 }
 
 func (n *NoopCred) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -35,7 +39,12 @@ func (n *NoopCred) LoginPaths() []string {
 }
 
 func (n *NoopCred) HandleLogin(req *credential.Request) (*credential.Response, error) {
-	return nil, nil
+	n.LPaths = append(n.LPaths, req.Path)
+	n.LoginRequests = append(n.LoginRequests, req)
+	if req.Storage == nil {
+		return nil, fmt.Errorf("missing view")
+	}
+	return n.LoginResponse, nil
 }
 
 func TestCore_DefaultAuthTable(t *testing.T) {

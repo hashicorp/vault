@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -172,5 +173,100 @@ func TestRouter_RootPath(t *testing.T) {
 		if out != tc.expect {
 			t.Fatalf("bad: path: %s expect: %v got %v", tc.path, tc.expect, out)
 		}
+	}
+}
+
+func TestRouter_RouteLogin(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "auth/")
+
+	n := &NoopCred{
+		Login: []string{"bar"},
+	}
+	err := r.Mount(n, "auth/foo/", view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if path := r.MatchingMount("auth/foo/bar"); path != "auth/foo/" {
+		t.Fatalf("bad: %s", path)
+	}
+
+	req := &credential.Request{
+		Path: "auth/foo/bar",
+	}
+	resp, err := r.RouteLogin(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Verify the path
+	if len(n.LPaths) != 1 || n.LPaths[0] != "bar" {
+		t.Fatalf("bad: %v", n.Paths)
+	}
+}
+
+func TestRouter_LoginPath(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "auth/")
+
+	n := &NoopCred{
+		Login: []string{
+			"login",
+			"oauth/*",
+		},
+	}
+	err := r.Mount(n, "auth/foo/", view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type tcase struct {
+		path   string
+		expect bool
+	}
+	tcases := []tcase{
+		{"random", false},
+		{"auth/foo/bar", false},
+		{"auth/foo/login", true},
+		{"auth/foo/oauth", false},
+		{"auth/foo/oauth/redirect", true},
+	}
+
+	for _, tc := range tcases {
+		out := r.LoginPath(tc.path)
+		if out != tc.expect {
+			t.Fatalf("bad: path: %s expect: %v got %v", tc.path, tc.expect, out)
+		}
+	}
+}
+
+func TestPathsToRadix(t *testing.T) {
+	// Provide real paths
+	paths := []string{
+		"foo",
+		"foo/*",
+		"sub/bar*",
+	}
+	r := pathsToRadix(paths)
+
+	raw, ok := r.Get("foo")
+	if !ok || raw.(bool) != false {
+		t.Fatalf("bad: %v (foo)", raw)
+	}
+
+	raw, ok = r.Get("foo/")
+	if !ok || raw.(bool) != true {
+		t.Fatalf("bad: %v (foo/)", raw)
+	}
+
+	raw, ok = r.Get("sub/bar")
+	if !ok || raw.(bool) != true {
+		t.Fatalf("bad: %v (sub/bar)", raw)
 	}
 }
