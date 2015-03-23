@@ -17,6 +17,8 @@ func NewSystemBackend(core *Core) logical.Backend {
 			"auth/*",
 			"remount",
 			"revoke-prefix/*",
+			"policy",
+			"policy/*",
 		},
 
 		Paths: []*framework.Path{
@@ -175,6 +177,41 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["auth"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["auth"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "policy$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handlePolicyList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy-list"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "policy/(?P<name>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-name"][0]),
+					},
+					"rules": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handlePolicyRead,
+					logical.WriteOperation:  b.handlePolicySet,
+					logical.DeleteOperation: b.handlePolicyDelete,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 			},
 		},
 	}
@@ -383,6 +420,71 @@ func (b *SystemBackend) handleDisableAuth(
 	return nil, nil
 }
 
+// handlePolicyList handles the "policy" endpoint to provide the enabled policies
+func (b *SystemBackend) handlePolicyList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the configured policies
+	policies, err := b.Core.policy.ListPolicies()
+
+	// Add the special "root" policy
+	policies = append(policies, "root")
+	return logical.ListResponse(policies), err
+}
+
+// handlePolicyRead handles the "policy/<name>" endpoint to read a policy
+func (b *SystemBackend) handlePolicyRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+
+	policy, err := b.Core.policy.GetPolicy(name)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"name":  name,
+			"rules": policy.Raw,
+		},
+	}, nil
+}
+
+// handlePolicySet handles the "policy/<name>" endpoint to set a policy
+func (b *SystemBackend) handlePolicySet(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+	rules := data.Get("rules").(string)
+
+	// Validate the rules parse
+	parse, err := Parse(rules)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	// Override the name
+	parse.Name = name
+
+	// Update the policy
+	if err := b.Core.policy.SetPolicy(parse); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
+func (b *SystemBackend) handlePolicyDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+	if err := b.Core.policy.DeletePolicy(name); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
 	"mounts": {
@@ -511,6 +613,32 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 
 	"auth_desc": {
 		`User-friendly description for this crential backend.`,
+		"",
+	},
+
+	"policy-list": {
+		`List the configured access control policies.`,
+		`
+List the names of the configured access control policies. Policies are associated
+with client tokens to limit access to keys in the Vault.
+		`,
+	},
+
+	"policy": {
+		`Read, Modify, or Delete an access control policy.`,
+		`
+Read the rules of an existing policy, create or update the rules of a policy,
+or delete a policy.
+		`,
+	},
+
+	"policy-name": {
+		`The name of the policy. Example: "ops"`,
+		"",
+	},
+
+	"policy-rules": {
+		`The rules of the policy. Either given in HCL or JSON format.`,
 		"",
 	},
 }

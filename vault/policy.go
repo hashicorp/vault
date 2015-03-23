@@ -46,11 +46,6 @@ func Parse(rules string) (*Policy, error) {
 		return nil, fmt.Errorf("Failed to parse ACL rules: %v", err)
 	}
 
-	// Validate a name is given
-	if p.Name == "" {
-		return nil, fmt.Errorf("Policy name is missing")
-	}
-
 	// Validate the path policy
 	for _, pp := range p.Paths {
 		switch pp.Policy {

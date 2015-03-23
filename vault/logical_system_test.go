@@ -14,6 +14,8 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"auth/*",
 		"remount",
 		"revoke-prefix/*",
+		"policy",
+		"policy/*",
 	}
 
 	b := testSystemBackend(t)
@@ -389,6 +391,101 @@ func TestSystemBackend_disableAuth_invalid(t *testing.T) {
 	}
 	if resp.Data["error"] != "no matching backend" {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_policyList(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "policy")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"keys": []string{"root"},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_policyCRUD(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Create the policy
+	rules := `path "foo/" { policy = "read" }`
+	req := logical.TestRequest(t, logical.WriteOperation, "policy/foo")
+	req.Data["rules"] = rules
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the policy
+	req = logical.TestRequest(t, logical.ReadOperation, "policy/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"name":  "foo",
+		"rules": rules,
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// List the policies
+	req = logical.TestRequest(t, logical.ReadOperation, "policy")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"keys": []string{"foo", "root"},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// Delete the policy
+	req = logical.TestRequest(t, logical.DeleteOperation, "policy/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the policy (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "policy/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// List the policies (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "policy")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"keys": []string{"root"},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 }
 
