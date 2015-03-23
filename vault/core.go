@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/credential"
@@ -21,6 +22,10 @@ const (
 	// it even with the Vault sealed. This is required so that we know
 	// how many secret parts must be used to reconstruct the master key.
 	coreSealConfigPath = "core/seal-config"
+
+	// clientTokenKey is the key that we set in the response data for
+	// a login request if a client token is generated.
+	clientTokenKey = "client_token"
 )
 
 var (
@@ -219,11 +224,81 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 					"(request: %#v, response: %#v): %v", req, resp, err)
 			return nil, ErrInternalError
 		}
-
 		resp.Secret.VaultID = vaultID
 	}
 
 	// Return the response and error
+	return resp, err
+}
+
+// HandleLogin is used to handle a login request
+func (c *Core) HandleLogin(req *credential.Request) (*credential.Response, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+
+	// Route the request
+	resp, err := c.router.RouteLogin(req)
+
+	// Generate a token if necessary
+	if resp != nil && resp.Secret != nil {
+		// Extract the policy and token metadata
+		var policy []string
+		meta := make(map[string]interface{})
+		for key, val := range resp.Secret.InternalData {
+			// Handle the policy key
+			if key == credential.PolicyKey {
+				list, ok := val.([]string)
+				if ok {
+					policy = list
+				}
+
+				// Handle any metadata
+			} else if strings.HasPrefix(key, credential.MetadataKey) {
+				clean := strings.TrimPrefix(key, credential.MetadataKey)
+				meta[clean] = val
+			}
+		}
+
+		// Generate a token
+		te := TokenEntry{
+			Path:     req.Path,
+			Policies: policy,
+			Meta:     meta,
+		}
+		if err := c.tokenStore.Create(&te); err != nil {
+			c.logger.Printf("[ERR] core: failed to create token: %v", err)
+			return nil, ErrInternalError
+		}
+
+		// Provide the client token via the response
+		if resp.Data == nil {
+			resp.Data = make(map[string]interface{})
+		}
+		resp.Data[clientTokenKey] = te.ID
+
+		// Register with the expiration manager if there is a lease
+		if resp.Secret.Lease > 0 {
+			lReq := &logical.Request{
+				Path: req.Path,
+				Data: req.Data,
+			}
+			lResp := &logical.Response{
+				Secret: resp.Secret,
+				Data:   resp.Data,
+			}
+			vaultID, err := c.expiration.Register(lReq, lResp)
+			if err != nil {
+				c.logger.Printf(
+					"[ERR] core: failed to register lease "+
+						"(request: %#v, response: %#v): %v", req, resp, err)
+				return nil, ErrInternalError
+			}
+			resp.Secret.VaultID = vaultID
+		}
+	}
 	return resp, err
 }
 

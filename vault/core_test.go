@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -352,5 +353,75 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	}
 	if resp.Data["foo"] != "bar" {
 		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
+// Ensure we get a client token
+func TestCore_HandleLogin_Token(t *testing.T) {
+	// Create a badass credential backend that always logs in as armon
+	noop := &NoopCred{
+		Login: []string{"login"},
+		LoginResponse: &credential.Response{
+			Secret: &logical.Secret{
+				InternalData: map[string]interface{}{
+					credential.PolicyKey:            []string{"foo", "bar"},
+					credential.MetadataKey + "user": "armon",
+				},
+				Lease: time.Hour,
+			},
+		},
+	}
+	c, _ := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req.Data["type"] = "noop"
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to login
+	lreq := &credential.Request{
+		Path: "auth/foo/login",
+	}
+	lresp, err := c.HandleLogin(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure we got a client token back
+	clientToken, ok := lresp.Data[clientTokenKey].(string)
+	if !ok || clientToken == "" {
+		t.Fatalf("bad: %#v", lresp)
+	}
+
+	// Check the policy and metadata
+	te, err := c.tokenStore.Lookup(clientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	expect := &TokenEntry{
+		ID:       clientToken,
+		Parent:   "",
+		Policies: []string{"foo", "bar"},
+		Path:     "auth/foo/login",
+		Meta: map[string]interface{}{
+			"user": "armon",
+		},
+	}
+	if !reflect.DeepEqual(te, expect) {
+		t.Fatalf("Bad: %#v expect: %#v", te, expect)
+	}
+
+	// Check that we have a lease with a VaultID
+	if lresp.Secret.Lease != time.Hour {
+		t.Fatalf("bad: %#v", lresp.Secret)
+	}
+	if lresp.Secret.VaultID == "" {
+		t.Fatalf("bad: %#v", lresp.Secret)
 	}
 }
