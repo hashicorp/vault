@@ -75,10 +75,11 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	ID       string   // ID of this entry, generally a random UUID
-	Parent   string   // Parent token, used for revocation trees
-	Source   string   // Used for audit trails, this is something like "source:github.com user:armon"
-	Policies []string // Which named policies should be used
+	ID       string                 // ID of this entry, generally a random UUID
+	Parent   string                 // Parent token, used for revocation trees
+	Policies []string               // Which named policies should be used
+	Path     string                 // Used for audit trails, this is something like "auth/user/login"
+	Meta     map[string]interface{} // Used for auditing. This could include things like "source", "user", "ip"
 }
 
 // saltID is used to apply a salt and hash to an ID to make sure its not reversable

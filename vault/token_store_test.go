@@ -17,7 +17,7 @@ func mockTokenStore(t *testing.T) *TokenStore {
 func TestTokenStore_CreateLookup(t *testing.T) {
 	ts := mockTokenStore(t)
 
-	ent := &TokenEntry{Source: "test", Policies: []string{"dev", "ops"}}
+	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 func TestTokenStore_Revoke(t *testing.T) {
 	ts := mockTokenStore(t)
 
-	ent := &TokenEntry{Source: "test", Policies: []string{"dev", "ops"}}
+	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestTokenStore_Revoke(t *testing.T) {
 func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	ts := mockTokenStore(t)
 
-	ent := &TokenEntry{Source: "test", Policies: []string{"dev", "ops"}}
+	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
