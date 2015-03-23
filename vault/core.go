@@ -136,6 +136,9 @@ type Core struct {
 	// policy store is used to manage named ACL policies
 	policy *PolicyStore
 
+	// token store is used to manage authentication tokens
+	tokenStore *TokenStore
+
 	logger *log.Logger
 }
 

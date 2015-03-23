@@ -202,6 +202,11 @@ func (c *Core) setupCredentials() error {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
 			return loadAuthFailed
 		}
+
+		// Check if this is the token store
+		if entry.Type == "token" {
+			c.tokenStore = backend.(*TokenStore)
+		}
 	}
 	return nil
 }
@@ -210,6 +215,7 @@ func (c *Core) setupCredentials() error {
 // backends to their unloaded state. This is reversed by loadCredentials.
 func (c *Core) teardownCredentials() error {
 	c.auth = nil
+	c.tokenStore = nil
 	return nil
 }
 
