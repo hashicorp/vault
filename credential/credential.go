@@ -7,6 +7,17 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+const (
+	// PolicyKey is the key in the Secret that is read to determine the
+	// associated policies of the user.
+	PolicyKey = "policy"
+
+	// MetadataKey is the prefix checked in the InternalData of a Secret
+	// to attach to a token. For example "meta_user=armon" is used to add
+	// the "user=armon" metadata to a token.
+	MetadataKey = "meta_"
+)
+
 // Backend interface must be implemented for an authentication
 // mechanism to be made available. Requests can flow through credential
 // backends to be converted into a token. The logic of each backend is flexible,
@@ -52,13 +63,15 @@ type Request struct {
 // Response is used to tell the core about an authenticated
 // user and provide enough information to process a request.
 type Response struct {
-	// Authenticated is used to indicate if the request has been
-	// authenticated. A token will be created with the associated
-	// policies.
-	Authenticated bool
+	// Secret is returned to provide a token with a lease. This should
+	// only be returned if the user is authenticated.
+	Secret *logical.Secret
 
-	// Policies is the named policies that should be applied
-	Policies []string
+	// Response data is an opaque map that must have string keys. For
+	// secrets, this data is sent down to the user as-is. To store internal
+	// data that you don't want the user to see, store it in
+	// Secret.InternalData.
+	Data map[string]interface{}
 
 	// Redirect is used to redirect to another location. This can
 	// be used for flows that require going through another system.
