@@ -602,9 +602,6 @@ func (c *Core) postUnseal() error {
 	if err := c.setupMounts(); err != nil {
 		return err
 	}
-	if err := c.setupExpiration(); err != nil {
-		return err
-	}
 	if err := c.startRollback(); err != nil {
 		return err
 	}
@@ -617,12 +614,18 @@ func (c *Core) postUnseal() error {
 	if err := c.setupCredentials(); err != nil {
 		return nil
 	}
+	if err := c.setupExpiration(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
+	if err := c.stopExpiration(); err != nil {
+		return err
+	}
 	if err := c.teardownCredentials(); err != nil {
 		return err
 	}
@@ -630,9 +633,6 @@ func (c *Core) preSeal() error {
 		return err
 	}
 	if err := c.stopRollback(); err != nil {
-		return err
-	}
-	if err := c.stopExpiration(); err != nil {
 		return err
 	}
 	if err := c.unloadMounts(); err != nil {

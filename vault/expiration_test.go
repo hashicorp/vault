@@ -29,9 +29,11 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 	// Create the barrier view
 	view := NewBarrierView(b, "expire/")
 
+	_, ts := mockTokenStore(t)
+
 	router := NewRouter()
 	logger := log.New(os.Stderr, "", log.LstdFlags)
-	return NewExpirationManager(router, view, logger)
+	return NewExpirationManager(router, view, ts, logger)
 }
 
 func TestExpiration_Restore(t *testing.T) {

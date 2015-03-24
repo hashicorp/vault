@@ -33,9 +33,10 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
-	router *Router
-	view   *BarrierView
-	logger *log.Logger
+	router     *Router
+	view       *BarrierView
+	tokenStore *TokenStore
+	logger     *log.Logger
 
 	pending     map[string]*time.Timer
 	pendingLock sync.Mutex
@@ -43,15 +44,16 @@ type ExpirationManager struct {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(router *Router, view *BarrierView, logger *log.Logger) *ExpirationManager {
+func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger *log.Logger) *ExpirationManager {
 	if logger == nil {
 		logger = log.New(os.Stderr, "", log.LstdFlags)
 	}
 	exp := &ExpirationManager{
-		router:  router,
-		view:    view,
-		logger:  logger,
-		pending: make(map[string]*time.Timer),
+		router:     router,
+		view:       view,
+		tokenStore: ts,
+		logger:     logger,
+		pending:    make(map[string]*time.Timer),
 	}
 	return exp
 }
@@ -63,7 +65,7 @@ func (c *Core) setupExpiration() error {
 	view := c.systemView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c.router, view, c.logger)
+	mgr := NewExpirationManager(c.router, view, c.tokenStore, c.logger)
 	c.expiration = mgr
 
 	// Restore the existing state
