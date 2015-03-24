@@ -282,18 +282,10 @@ func (c *Core) HandleLogin(req *credential.Request) (*credential.Response, error
 
 		// Register with the expiration manager if there is a lease
 		if resp.Secret.Lease > 0 {
-			lReq := &logical.Request{
-				Path: req.Path,
-				Data: req.Data,
-			}
-			lResp := &logical.Response{
-				Secret: resp.Secret,
-				Data:   resp.Data,
-			}
-			vaultID, err := c.expiration.Register(lReq, lResp)
+			vaultID, err := c.expiration.RegisterLogin(te.ID, req, resp)
 			if err != nil {
 				c.logger.Printf(
-					"[ERR] core: failed to register lease "+
+					"[ERR] core: failed to register login token lease "+
 						"(request: %#v, response: %#v): %v", req, resp, err)
 				return nil, ErrInternalError
 			}

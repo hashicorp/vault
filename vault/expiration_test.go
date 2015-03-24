@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -113,6 +114,40 @@ func TestExpiration_Register(t *testing.T) {
 	}
 
 	id, err := exp.Register(req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !strings.HasPrefix(id, req.Path) {
+		t.Fatalf("bad: %s", id)
+	}
+
+	if len(id) <= len(req.Path) {
+		t.Fatalf("bad: %s", id)
+	}
+}
+
+func TestExpiration_RegisterLogin(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := &credential.Request{
+		Path: "auth/user/login",
+	}
+	resp := &credential.Response{
+		Secret: &logical.Secret{
+			Lease: time.Hour,
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	id, err := exp.RegisterLogin(root.ID, req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -404,6 +439,41 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	}
 	if !reflect.DeepEqual(req.Data, le.Data) {
 		t.Fatalf("Bad: %v", req)
+	}
+}
+
+func TestExpiration_revokeEntry_token(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	le := &leaseEntry{
+		VaultID:    "foo/bar/1234",
+		LoginToken: root.ID,
+		Path:       "foo/bar",
+		Data: map[string]interface{}{
+			"testing": true,
+		},
+		Secret: &logical.Secret{
+			Lease: time.Minute,
+		},
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now(),
+	}
+
+	err = exp.revokeEntry(le)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	out, err := exp.tokenStore.Lookup(root.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %v", out)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -300,6 +301,50 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	return le.VaultID, nil
 }
 
+// RegisterLogin is used to take a credential request and response with
+// an associated lease. The secret gets assigned a vaultId and the management of
+// of lease is assumed by the expiration manager. This is distinct from Register
+// as the behavior of renew and revocation differs a bit.
+func (m *ExpirationManager) RegisterLogin(token string, req *credential.Request, resp *credential.Response) (string, error) {
+	// Ignore if there is no leased secret
+	if resp == nil || resp.Secret == nil || resp.Secret.Lease == 0 {
+		return "", nil
+	}
+
+	// Validate the secret
+	if err := resp.Secret.Validate(); err != nil {
+		return "", err
+	}
+
+	// Create a lease entry
+	now := time.Now().UTC()
+	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
+	le := leaseEntry{
+		VaultID:    path.Join(req.Path, generateUUID()),
+		LoginToken: token,
+		Path:       req.Path,
+		Data:       resp.Data,
+		Secret:     resp.Secret,
+		IssueTime:  now,
+		ExpireTime: now.Add(leaseTotal),
+	}
+
+	// Encode the entry
+	if err := m.persistEntry(&le); err != nil {
+		return "", err
+	}
+
+	// Setup revocation timer
+	m.pendingLock.Lock()
+	m.pending[le.VaultID] = time.AfterFunc(leaseTotal, func() {
+		m.expireID(le.VaultID)
+	})
+	m.pendingLock.Unlock()
+
+	// Done
+	return le.VaultID, nil
+}
+
 // expireID is invoked when a given ID is expired
 func (m *ExpirationManager) expireID(vaultID string) {
 	// Clear from the pending expiration
@@ -321,6 +366,16 @@ func (m *ExpirationManager) expireID(vaultID string) {
 
 // revokeEntry is used to attempt revocation of an internal entry
 func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
+	// Revocation of login tokens is special since we can by-pass the
+	// backend and directly interact with the token store
+	if le.LoginToken != "" {
+		if err := m.tokenStore.RevokeTree(le.LoginToken); err != nil {
+			return fmt.Errorf("failed to revoke token: %v", err)
+		}
+		return nil
+	}
+
+	// Handle standard revocation via backends
 	_, err := m.router.Route(logical.RevokeRequest(
 		le.Path, le.Secret, le.Data))
 	if err != nil {
@@ -390,6 +445,7 @@ func (m *ExpirationManager) deleteEntry(vaultID string) error {
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
 	VaultID    string                 `json:"vault_id"`
+	LoginToken string                 `json:"login_token"`
 	Path       string                 `json:"path"`
 	Data       map[string]interface{} `json:"data"`
 	Secret     *logical.Secret        `json:"secret"`
