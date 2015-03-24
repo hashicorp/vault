@@ -67,6 +67,13 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 	// TODO: Cache policy
+
+	// Special case the root policy
+	if name == "root" {
+		p := &Policy{Name: "root"}
+		return p, nil
+	}
+
 	// Load the policy in
 	out, err := ps.view.Get(name)
 	if err != nil {
@@ -93,6 +100,9 @@ func (ps *PolicyStore) ListPolicies() ([]string, error) {
 
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(name string) error {
+	if name == "root" {
+		return fmt.Errorf("cannot delete root policy")
+	}
 	if err := ps.view.Delete(name); err != nil {
 		return fmt.Errorf("failed to delete policy: %v", err)
 	}

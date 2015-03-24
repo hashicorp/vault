@@ -12,6 +12,34 @@ func mockPolicyStore(t *testing.T) *PolicyStore {
 	return p
 }
 
+func TestPolicyStore_Root(t *testing.T) {
+	ps := mockPolicyStore(t)
+
+	// Get should return a special policy
+	p, err := ps.GetPolicy("root")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if p == nil {
+		t.Fatalf("bad: %v", p)
+	}
+	if p.Name != "root" {
+		t.Fatalf("bad: %v", p)
+	}
+
+	// Set should fail
+	err = ps.SetPolicy(p)
+	if err.Error() != "cannot update root policy" {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete should fail
+	err = ps.DeletePolicy("root")
+	if err.Error() != "cannot delete root policy" {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestPolicyStore_CRUD(t *testing.T) {
 	ps := mockPolicyStore(t)
 
