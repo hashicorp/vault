@@ -364,6 +364,89 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	}
 }
 
+func TestCore_HandleRequest_MissingToken(t *testing.T) {
+	c, _, _ := TestCoreUnsealedToken(t)
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+	}
+	resp, err := c.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "missing client token" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestCore_HandleRequest_InvalidToken(t *testing.T) {
+	c, _, _ := TestCoreUnsealedToken(t)
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: "foobarbaz",
+	}
+	resp, err := c.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "invalid client token" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+// TODO: Test a root path is denied if non-root
+//func TestCore_HandleRequest_RootPath(t *testing.T) {
+//    c, _, _ := TestCoreUnsealedToken(t)
+//    req := &logical.Request{
+//        Operation: logical.WriteOperation,
+//        Path:      "secret/test",
+//        Data: map[string]interface{}{
+//            "foo":   "bar",
+//            "lease": "1h",
+//        },
+//        ClientToken: "foobarbaz",
+//    }
+//    resp, err := c.HandleRequest(req)
+//    if err != logical.ErrInvalidRequest {
+//        t.Fatalf("err: %v", err)
+//    }
+//    if resp.Data["error"] != "invalid client token" {
+//        t.Fatalf("bad: %#v", resp)
+//    }
+//}
+
+// TODO: Check that standard permissions work
+//func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
+//    c, _, _ := TestCoreUnsealedToken(t)
+//    req := &logical.Request{
+//        Operation: logical.WriteOperation,
+//        Path:      "secret/test",
+//        Data: map[string]interface{}{
+//            "foo":   "bar",
+//            "lease": "1h",
+//        },
+//        ClientToken: "foobarbaz",
+//    }
+//    resp, err := c.HandleRequest(req)
+//    if err != logical.ErrInvalidRequest {
+//        t.Fatalf("err: %v", err)
+//    }
+//    if resp.Data["error"] != "invalid client token" {
+//        t.Fatalf("bad: %#v", resp)
+//    }
+//}
+
 // Ensure we get a client token
 func TestCore_HandleLogin_Token(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
