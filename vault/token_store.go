@@ -300,6 +300,8 @@ func (ts *TokenStore) HandleRequest(req *logical.Request) (*logical.Response, er
 	switch {
 	case req.Path == "create":
 		return ts.handleCreate(req)
+	case strings.HasPrefix(req.Path, "revoke/"):
+		return ts.handleRevokeTree(req)
 	case strings.HasPrefix(req.Path, "revoke-orphan/"):
 		return ts.handleRevokeOrphan(req)
 	case req.Path == "":
@@ -426,6 +428,32 @@ func (ts *TokenStore) handleCreate(req *logical.Request) (*logical.Response, err
 	return resp, nil
 }
 
+// handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
+// in a way that revokes all child tokens. Normally, using sys/revoke/vaultID will revoke
+// the token and all children anyways, but that is only available when there is a lease.
+func (ts *TokenStore) handleRevokeTree(req *logical.Request) (*logical.Response, error) {
+	// Validate the operation
+	switch req.Operation {
+	case logical.WriteOperation:
+	case logical.HelpOperation:
+		return logical.HelpResponse(tokenRevokeHelp, nil), nil
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	// Parse the id
+	id := strings.TrimPrefix(req.Path, "revoke/")
+	if id == "" {
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+
+	// Revoke the token and its children
+	if err := ts.RevokeTree(id); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
 // in a way that leaves child tokens orphaned. Normally, using sys/revoke/vaultID will revoke
 // the token and all children.
@@ -433,10 +461,22 @@ func (ts *TokenStore) handleRevokeOrphan(req *logical.Request) (*logical.Respons
 	// Validate the operation
 	switch req.Operation {
 	case logical.WriteOperation:
+	case logical.HelpOperation:
+		return logical.HelpResponse(tokenRevokeOrphanHelp, nil), nil
 	default:
 		return nil, logical.ErrUnsupportedOperation
 	}
 
+	// Parse the id
+	id := strings.TrimPrefix(req.Path, "revoke-orphan/")
+	if id == "" {
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+
+	// Revoke and orphan
+	if err := ts.Revoke(id); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 	return nil, nil
 }
 
@@ -445,6 +485,7 @@ const (
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
 as revocation of tokens.`
-
-	tokenCreateHelp = `The token create path is used to create new tokens.`
+	tokenCreateHelp       = `The token create path is used to create new tokens.`
+	tokenRevokeHelp       = `This endpoint will delete the token and all of its child tokens.`
+	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
 )

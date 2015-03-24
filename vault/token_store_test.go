@@ -452,6 +452,96 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_Revoke_MissingToken(t *testing.T) {
+	_, ts, _ := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke/")
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Data["error"] != "missing token ID" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+	testMakeToken(t, ts, root, "child", []string{"root", "foo"})
+	testMakeToken(t, ts, "child", "sub-child", []string{"foo"})
+
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke/child")
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, err := ts.Lookup("child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %v", out)
+	}
+
+	// Sub-child should not exist
+	out, err = ts.Lookup("sub-child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %v", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_RevokeOrphan_MissingToken(t *testing.T) {
+	_, ts, _ := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/")
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Data["error"] != "missing token ID" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+	testMakeToken(t, ts, root, "child", []string{"root", "foo"})
+	testMakeToken(t, ts, "child", "sub-child", []string{"foo"})
+
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/child")
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, err := ts.Lookup("child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %v", out)
+	}
+
+	// Sub-child should exist!
+	out, err = ts.Lookup("sub-child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("bad: %v", out)
+	}
+}
+
 func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root
@@ -462,7 +552,7 @@ func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []s
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] != "client" {
+	if resp.Data[clientTokenKey] != client {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
