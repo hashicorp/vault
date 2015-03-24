@@ -405,26 +405,61 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 	}
 }
 
-// TODO: Test a root path is denied if non-root
-//func TestCore_HandleRequest_RootPath(t *testing.T) {
-//    c, _, _ := TestCoreUnsealedToken(t)
-//    req := &logical.Request{
-//        Operation: logical.WriteOperation,
-//        Path:      "secret/test",
-//        Data: map[string]interface{}{
-//            "foo":   "bar",
-//            "lease": "1h",
-//        },
-//        ClientToken: "foobarbaz",
-//    }
-//    resp, err := c.HandleRequest(req)
-//    if err != logical.ErrInvalidRequest {
-//        t.Fatalf("err: %v", err)
-//    }
-//    if resp.Data["error"] != "invalid client token" {
-//        t.Fatalf("bad: %#v", resp)
-//    }
-//}
+// Test a root path is denied if non-root
+func TestCore_HandleRequest_RootPath(t *testing.T) {
+	c, _, root := TestCoreUnsealedToken(t)
+	testCoreMakeToken(t, c, root, "child", []string{"test"})
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "sys/policy", // root protected!
+		ClientToken: "child",
+	}
+	resp, err := c.HandleRequest(req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+// Test a root path is allowed if non-root but with sudo
+func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
+	c, _, root := TestCoreUnsealedToken(t)
+
+	// Set the 'test' policy object to permit access to sys/policy
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "sys/policy/test", // root protected!
+		Data: map[string]interface{}{
+			"rules": `path "sys/policy" { policy = "sudo" }`,
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Child token (non-root) but with 'test' policy should have access
+	testCoreMakeToken(t, c, root, "child", []string{"test"})
+	req = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "sys/policy", // root protected!
+		ClientToken: "child",
+	}
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
 
 // TODO: Check that standard permissions work
 //func TestCore_HandleRequest_PermissionDenied(t *testing.T) {

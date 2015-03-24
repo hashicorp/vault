@@ -591,3 +591,18 @@ func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []s
 		t.Fatalf("bad: %#v", resp)
 	}
 }
+
+func testCoreMakeToken(t *testing.T, c *Core, root, client string, policy []string) {
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req.ClientToken = root
+	req.Data["id"] = client
+	req.Data["policies"] = policy
+
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Data[clientTokenKey] != client {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
