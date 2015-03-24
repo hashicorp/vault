@@ -542,6 +542,41 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_Lookup_MissingToken(t *testing.T) {
+	_, ts, _ := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "lookup/")
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Data["error"] != "missing token ID" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "lookup/"+root)
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	exp := map[string]interface{}{
+		"id":       root,
+		"policies": []string{"root"},
+		"path":     "sys/root",
+		"meta":     map[string]interface{}(nil),
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
+	}
+}
+
 func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root

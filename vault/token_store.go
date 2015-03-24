@@ -300,6 +300,8 @@ func (ts *TokenStore) HandleRequest(req *logical.Request) (*logical.Response, er
 	switch {
 	case req.Path == "create":
 		return ts.handleCreate(req)
+	case strings.HasPrefix(req.Path, "lookup/"):
+		return ts.handleLookup(req)
 	case strings.HasPrefix(req.Path, "revoke/"):
 		return ts.handleRevokeTree(req)
 	case strings.HasPrefix(req.Path, "revoke-orphan/"):
@@ -480,12 +482,55 @@ func (ts *TokenStore) handleRevokeOrphan(req *logical.Request) (*logical.Respons
 	return nil, nil
 }
 
+// handleLookup handles the auth/token/lookup/id path for querying information about
+// a particular token. This can be used to see which policies are applicable.
+func (ts *TokenStore) handleLookup(req *logical.Request) (*logical.Response, error) {
+	// Validate the operation
+	switch req.Operation {
+	case logical.ReadOperation:
+	case logical.HelpOperation:
+		return logical.HelpResponse(tokenLookupHelp, nil), nil
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	// Parse the id
+	id := strings.TrimPrefix(req.Path, "lookup/")
+	if id == "" {
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+
+	// Lookup the token
+	out, err := ts.Lookup(id)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	// Fast-path the not found case
+	if out == nil {
+		return nil, nil
+	}
+
+	// Generate a response. We purposely omit the parent reference otherwise
+	// you could escalade your privileges.
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"id":       out.ID,
+			"policies": out.Policies,
+			"path":     out.Path,
+			"meta":     out.Meta,
+		},
+	}
+	return resp, nil
+}
+
 const (
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
 as revocation of tokens.`
 	tokenCreateHelp       = `The token create path is used to create new tokens.`
+	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
 	tokenRevokeHelp       = `This endpoint will delete the token and all of its child tokens.`
 	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
 )
