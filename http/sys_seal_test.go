@@ -57,7 +57,7 @@ func TestSysSeal_unsealed(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	key := vault.TestCoreInit(t, core)
+	key, _ := vault.TestCoreInit(t, core)
 	if _, err := core.Unseal(key); err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -76,7 +76,7 @@ func TestSysSeal_unsealed(t *testing.T) {
 
 func TestSysUnseal(t *testing.T) {
 	core := vault.TestCore(t)
-	key := vault.TestCoreInit(t, core)
+	key, _ := vault.TestCoreInit(t, core)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 

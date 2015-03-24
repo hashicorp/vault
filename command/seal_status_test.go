@@ -17,7 +17,7 @@ func TestSealStatus(t *testing.T) {
 	}
 
 	core := vault.TestCore(t)
-	key := vault.TestCoreInit(t, core)
+	key, _ := vault.TestCoreInit(t, core)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
