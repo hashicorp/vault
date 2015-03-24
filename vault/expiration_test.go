@@ -30,7 +30,7 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 	// Create the barrier view
 	view := NewBarrierView(b, "expire/")
 
-	_, ts := mockTokenStore(t)
+	_, ts, _ := mockTokenStore(t)
 
 	router := NewRouter()
 	logger := log.New(os.Stderr, "", log.LstdFlags)

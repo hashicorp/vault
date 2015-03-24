@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
@@ -294,28 +296,155 @@ func (ts *TokenStore) RevokeAll() error {
 
 // HandleRequest is used to handle a request and generate a response.
 // The backends must check the operation type and handle appropriately.
-func (ts *TokenStore) HandleRequest(*logical.Request) (*logical.Response, error) {
-	return nil, logical.ErrUnsupportedOperation
+func (ts *TokenStore) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	switch {
+	case req.Path == "create":
+		return ts.handleCreate(req)
+	case strings.HasPrefix(req.Path, "revoke-orphan/"):
+		return ts.handleRevokeOrphan(req)
+	case req.Path == "":
+		switch req.Operation {
+		case logical.HelpOperation:
+			return logical.HelpResponse(tokenBackendHelp, []string{"auth/token/create"}), nil
+		default:
+			return nil, logical.ErrUnsupportedOperation
+		}
+	}
+	return nil, logical.ErrUnsupportedPath
 }
 
-// RootPaths is a list of paths that require root level privileges.
-// These paths will be enforced by the router so that backends do
-// not need to handle the authorization. Paths are enforced exactly
-// or using a prefix match if they end in '*'
 func (ts *TokenStore) RootPaths() []string {
 	return nil
 }
 
-// LoginPaths is a list of paths that are unauthenticated and used
-// only for logging in. These paths cannot be reached via HandleRequest,
-// and are sent to HandleLogin instead. Paths are enforced exactly
-// or using a prefix match if they end in '*'
 func (ts *TokenStore) LoginPaths() []string {
 	return nil
 }
 
-// HandleLogin is used to handle a login request and generate a response.
-// The backend is allowed to ignore this request if it is not applicable.
 func (ts *TokenStore) HandleLogin(req *credential.Request) (*credential.Response, error) {
+	return nil, logical.ErrUnsupportedOperation
+}
+
+// handleCreate handles the auth/token/create path for creation of new tokens
+func (ts *TokenStore) handleCreate(req *logical.Request) (*logical.Response, error) {
+	// Validate the operation
+	switch req.Operation {
+	case logical.WriteOperation:
+	case logical.HelpOperation:
+		return logical.HelpResponse(tokenCreateHelp, nil), nil
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	// Read the parent policy
+	parent, err := ts.Lookup(req.ClientToken)
+	if err != nil || parent == nil {
+		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+	}
+
+	// Check if the parent policy is root
+	isRoot := strListContains(parent.Policies, "root")
+
+	// Read and parse the fields
+	idRaw, _ := req.Data["id"]
+	policiesRaw, _ := req.Data["policies"]
+	metaRaw, _ := req.Data["meta"]
+	noParentRaw, _ := req.Data["no_parent"]
+	leaseRaw, _ := req.Data["lease"]
+
+	// Setup the token entry
+	te := TokenEntry{
+		Parent: req.ClientToken,
+		Path:   "auth/token/create",
+	}
+
+	// Allow specifying the ID of the token if the client is root
+	if id, ok := idRaw.(string); ok {
+		if !isRoot {
+			return logical.ErrorResponse("root required to specify token id"),
+				logical.ErrInvalidRequest
+		}
+		te.ID = id
+	}
+
+	// Only permit policies to be a subset unless the client is root
+	if policies, ok := policiesRaw.([]string); ok {
+		if !isRoot && !strListSubset(parent.Policies, policies) {
+			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
+		}
+		te.Policies = policies
+	}
+
+	// Ensure is some associated policy
+	if len(te.Policies) == 0 {
+		return logical.ErrorResponse("token must have at least one policy"), logical.ErrInvalidRequest
+	}
+
+	// Only allow an orphan token if the client is root
+	if noParent, _ := noParentRaw.(bool); noParent {
+		if !isRoot {
+			return logical.ErrorResponse("root required to create orphan token"),
+				logical.ErrInvalidRequest
+		}
+		te.Parent = ""
+	}
+
+	// Parse any metadata associated with the token
+	if meta, ok := metaRaw.(map[string]interface{}); ok {
+		te.Meta = meta
+	}
+
+	// Parse the lease if any
+	var secret *logical.Secret
+	if lease, ok := leaseRaw.(string); ok {
+		dur, err := time.ParseDuration(lease)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if dur < 0 {
+			return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
+		}
+		secret = &logical.Secret{
+			Lease:            dur,
+			LeaseGracePeriod: dur / 10, // Provide a 10% grace buffer
+			Renewable:        true,
+		}
+	}
+
+	// Create the token
+	if err := ts.Create(&te); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Secret: secret,
+		Data: map[string]interface{}{
+			clientTokenKey: te.ID,
+		},
+	}
+	return resp, nil
+}
+
+// handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
+// in a way that leaves child tokens orphaned. Normally, using sys/revoke/vaultID will revoke
+// the token and all children.
+func (ts *TokenStore) handleRevokeOrphan(req *logical.Request) (*logical.Response, error) {
+	// Validate the operation
+	switch req.Operation {
+	case logical.WriteOperation:
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+
 	return nil, nil
 }
+
+const (
+	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
+Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
+which are enforced on every request. This backend also allows for generating sub-tokens as well
+as revocation of tokens.`
+
+	tokenCreateHelp = `The token create path is used to create new tokens.`
+)
