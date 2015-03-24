@@ -109,12 +109,18 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	me := raw.(*mountEntry)
 
-	// Adjust the path, attach the barrier view, clear the token
+	// Adjust the path to exclude the routing prefix
 	original := req.Path
-	clientToken := req.ClientToken
 	req.Path = strings.TrimPrefix(req.Path, mount)
+
+	// Attach the storage view for the request
 	req.Storage = me.view
-	req.ClientToken = ""
+
+	// Clear the request token unless this is the token backend
+	clientToken := req.ClientToken
+	if !strings.HasPrefix(original, "auth/token/") {
+		req.ClientToken = ""
+	}
 
 	// Reset the request before returning
 	defer func() {

@@ -358,7 +358,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data["error"] == "child policies must be subset of parent" {
+	if resp.Data["error"] != "child policies must be subset of parent" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
