@@ -14,6 +14,26 @@ func mockTokenStore(t *testing.T) *TokenStore {
 	return ts
 }
 
+func TestTokenStore_RootToken(t *testing.T) {
+	ts := mockTokenStore(t)
+
+	te, err := ts.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if te.ID == "" {
+		t.Fatalf("missing ID")
+	}
+
+	out, err := ts.Lookup(te.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, te) {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestTokenStore_CreateLookup(t *testing.T) {
 	ts := mockTokenStore(t)
 

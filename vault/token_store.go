@@ -89,6 +89,18 @@ func (ts *TokenStore) saltID(id string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// RootToken is used to generate a new token with root privileges and no parent
+func (ts *TokenStore) RootToken() (*TokenEntry, error) {
+	te := &TokenEntry{
+		Policies: []string{"root"},
+		Path:     "sys/root",
+	}
+	if err := ts.Create(te); err != nil {
+		return nil, err
+	}
+	return te, nil
+}
+
 // Create is used to create a new token entry. The entry is assigned
 // a newly generated ID
 func (ts *TokenStore) Create(entry *TokenEntry) error {
