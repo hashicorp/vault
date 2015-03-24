@@ -37,6 +37,10 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 	// Inject each policy
 	for _, policy := range policies {
+		// Ignore a nil policy object
+		if policy == nil {
+			continue
+		}
 		// Check if this is root
 		if policy.Name == "root" {
 			a.root = true
