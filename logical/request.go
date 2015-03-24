@@ -26,6 +26,11 @@ type Request struct {
 	// Secret will be non-nil only for Revoke and Renew operations
 	// to represent the secret that was returned prior.
 	Secret *Secret
+
+	// ClientToken is provided to the core so that the identity
+	// can be verified and ACLs applied. This value is not passed
+	// through to the logical backends.
+	ClientToken string
 }
 
 // Get returns a data field and guards for nil Data

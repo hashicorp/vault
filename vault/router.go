@@ -109,15 +109,18 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	me := raw.(*mountEntry)
 
-	// Adjust the path, attach the barrier view
+	// Adjust the path, attach the barrier view, clear the token
 	original := req.Path
+	clientToken := req.ClientToken
 	req.Path = strings.TrimPrefix(req.Path, mount)
 	req.Storage = me.view
+	req.ClientToken = ""
 
 	// Reset the request before returning
 	defer func() {
 		req.Path = original
 		req.Storage = nil
+		req.ClientToken = clientToken
 	}()
 
 	// Invoke the backend
