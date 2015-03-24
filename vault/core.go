@@ -208,7 +208,39 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 		return nil, ErrSealed
 	}
 
-	// TODO: Enforce ACLs
+	// Ensure there is a client token
+	if req.ClientToken == "" {
+		return logical.ErrorResponse("missing client token"), logical.ErrInvalidRequest
+	}
+
+	// Resolve the token policy
+	te, err := c.tokenStore.Lookup(req.ClientToken)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
+		return nil, ErrInternalError
+	}
+
+	// Ensure the token is valid
+	if te == nil {
+		return logical.ErrorResponse("invalid client token"), logical.ErrInvalidRequest
+	}
+
+	// Construct the corresponding ACL object
+	acl, err := c.policy.ACL(te.Policies...)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
+		return nil, ErrInternalError
+	}
+
+	// Check if this is a root protected path
+	if c.router.RootPath(req.Path) && !acl.RootPrivilege(req.Path) {
+		return nil, logical.ErrPermissionDenied
+	}
+
+	// Check the standard non-root ACLs
+	if !acl.AllowOperation(req.Operation, req.Path) {
+		return nil, logical.ErrPermissionDenied
+	}
 
 	// Route the request
 	resp, err := c.router.Route(req)

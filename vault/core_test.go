@@ -304,6 +304,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 	}
 
 	// Should not error after unseal
+	req.ClientToken = res.RootToken
 	_, err = c.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -323,7 +324,7 @@ func TestCore_SealUnseal(t *testing.T) {
 
 // Ensure we get a VaultID
 func TestCore_HandleRequest_Lease(t *testing.T) {
-	c, _ := TestCoreUnsealed(t)
+	c, _, root := TestCoreUnsealedToken(t)
 
 	req := &logical.Request{
 		Operation: logical.WriteOperation,
@@ -332,6 +333,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 			"foo":   "bar",
 			"lease": "1h",
 		},
+		ClientToken: root,
 	}
 	resp, err := c.HandleRequest(req)
 	if err != nil {
@@ -377,7 +379,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 			},
 		},
 	}
-	c, _ := TestCoreUnsealed(t)
+	c, _, root := TestCoreUnsealedToken(t)
 	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
 		return noop, nil
 	}
@@ -385,6 +387,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	// Enable the credential backend
 	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
+	req.ClientToken = root
 	_, err := c.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

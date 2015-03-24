@@ -149,12 +149,13 @@ func TestSystemBackend_remount_system(t *testing.T) {
 }
 
 func TestSystemBackend_renew(t *testing.T) {
-	core, b := testCoreSystemBackend(t)
+	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
+	req.ClientToken = root
 	resp, err := core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -165,6 +166,7 @@ func TestSystemBackend_renew(t *testing.T) {
 
 	// Read a key with a VaultID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
 	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -204,12 +206,13 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 }
 
 func TestSystemBackend_revoke(t *testing.T) {
-	core, b := testCoreSystemBackend(t)
+	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
+	req.ClientToken = root
 	resp, err := core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -220,6 +223,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 
 	// Read a key with a VaultID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
 	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -264,12 +268,13 @@ func TestSystemBackend_revoke_invalidID(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix(t *testing.T) {
-	core, b := testCoreSystemBackend(t)
+	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
+	req.ClientToken = root
 	resp, err := core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -280,6 +285,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 
 	// Read a key with a VaultID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
 	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -329,7 +335,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 }
 
 func TestSystemBackend_enableAuth(t *testing.T) {
-	c, b := testCoreSystemBackend(t)
+	c, b, _ := testCoreSystemBackend(t)
 	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
 		return &NoopCred{}, nil
 	}
@@ -360,7 +366,7 @@ func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 }
 
 func TestSystemBackend_disableAuth(t *testing.T) {
-	c, b := testCoreSystemBackend(t)
+	c, b, _ := testCoreSystemBackend(t)
 	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
 		return &NoopCred{}, nil
 	}
@@ -494,7 +500,7 @@ func testSystemBackend(t *testing.T) logical.Backend {
 	return NewSystemBackend(c)
 }
 
-func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend) {
-	c, _ := TestCoreUnsealed(t)
-	return c, NewSystemBackend(c)
+func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	c, _, root := TestCoreUnsealedToken(t)
+	return c, NewSystemBackend(c), root
 }
