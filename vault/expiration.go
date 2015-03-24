@@ -119,7 +119,9 @@ func (m *ExpirationManager) Restore() error {
 			m.expireID(le.VaultID)
 		})
 	}
-	m.logger.Printf("[INFO] expire: restored %d leases", len(m.pending))
+	if len(m.pending) > 0 {
+		m.logger.Printf("[INFO] expire: restored %d leases", len(m.pending))
+	}
 	return nil
 }
 
