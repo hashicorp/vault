@@ -34,7 +34,6 @@ const (
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
 type TokenStore struct {
-	core *Core
 	view *BarrierView
 	salt string
 }
@@ -47,7 +46,6 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 	// Initialize the store
 	t := &TokenStore{
-		core: c,
 		view: view,
 	}
 

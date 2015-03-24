@@ -5,17 +5,17 @@ import (
 	"testing"
 )
 
-func mockTokenStore(t *testing.T) *TokenStore {
+func mockTokenStore(t *testing.T) (*Core, *TokenStore) {
 	c, _ := TestCoreUnsealed(t)
 	ts, err := NewTokenStore(c)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	return ts
+	return c, ts
 }
 
 func TestTokenStore_RootToken(t *testing.T) {
-	ts := mockTokenStore(t)
+	_, ts := mockTokenStore(t)
 
 	te, err := ts.RootToken()
 	if err != nil {
@@ -35,7 +35,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 }
 
 func TestTokenStore_CreateLookup(t *testing.T) {
-	ts := mockTokenStore(t)
+	c, ts := mockTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
@@ -54,7 +54,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(ts.core)
+	ts2, err := NewTokenStore(c)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 }
 
 func TestTokenStore_Revoke(t *testing.T) {
-	ts := mockTokenStore(t)
+	_, ts := mockTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
@@ -96,7 +96,7 @@ func TestTokenStore_Revoke(t *testing.T) {
 }
 
 func TestTokenStore_Revoke_Orphan(t *testing.T) {
-	ts := mockTokenStore(t)
+	_, ts := mockTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
@@ -123,7 +123,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 }
 
 func TestTokenStore_RevokeTree(t *testing.T) {
-	ts := mockTokenStore(t)
+	_, ts := mockTokenStore(t)
 
 	ent1 := &TokenEntry{}
 	if err := ts.Create(ent1); err != nil {
@@ -167,7 +167,7 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 }
 
 func TestTokenStore_RevokeAll(t *testing.T) {
-	ts := mockTokenStore(t)
+	_, ts := mockTokenStore(t)
 
 	ent1 := &TokenEntry{}
 	if err := ts.Create(ent1); err != nil {
