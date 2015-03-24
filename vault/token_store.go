@@ -100,11 +100,15 @@ func (ts *TokenStore) RootToken() (*TokenEntry, error) {
 }
 
 // Create is used to create a new token entry. The entry is assigned
-// a newly generated ID
+// a newly generated ID if not provided.
 func (ts *TokenStore) Create(entry *TokenEntry) error {
-	// Marshal the entry
-	entry.ID = generateUUID()
+	// Generate an ID if necessary
+	if entry.ID == "" {
+		entry.ID = generateUUID()
+	}
 	saltedId := ts.saltID(entry.ID)
+
+	// Marshal the entry
 	enc, err := json.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("failed to encode entry: %v", err)

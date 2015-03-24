@@ -69,6 +69,45 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 }
 
+func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
+	c, ts := mockTokenStore(t)
+
+	ent := &TokenEntry{
+		ID:       "foobarbaz",
+		Path:     "test",
+		Policies: []string{"dev", "ops"},
+	}
+	if err := ts.Create(ent); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if ent.ID != "foobarbaz" {
+		t.Fatalf("bad: %#v", ent)
+	}
+
+	out, err := ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, ent) {
+		t.Fatalf("bad: %#v", out)
+	}
+
+	// New store should share the salt
+	ts2, err := NewTokenStore(c)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should still match
+	out, err = ts2.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, ent) {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestTokenStore_Revoke(t *testing.T) {
 	_, ts := mockTokenStore(t)
 
