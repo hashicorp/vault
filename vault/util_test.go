@@ -35,3 +35,18 @@ func TestGenerateUUID(t *testing.T) {
 		}
 	}
 }
+
+func TestStrListContains(t *testing.T) {
+	haystack := []string{
+		"dev",
+		"ops",
+		"prod",
+		"root",
+	}
+	if strListContains(haystack, "tubez") {
+		t.Fatalf("Bad")
+	}
+	if !strListContains(haystack, "root") {
+		t.Fatalf("Bad")
+	}
+}

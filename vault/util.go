@@ -37,3 +37,13 @@ func generateUUID() string {
 		buf[8:10],
 		buf[10:16])
 }
+
+// strListContains looks for a string in a list of strings.
+func strListContains(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+	return false
+}
