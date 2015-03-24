@@ -53,6 +53,9 @@ func TestCore_Init(t *testing.T) {
 	if len(res.SecretShares) != 1 {
 		t.Fatalf("Bad: %v", res)
 	}
+	if res.RootToken == "" {
+		t.Fatalf("Bad: %v", res)
+	}
 
 	_, err = c.Initialize(sealConf)
 	if err != ErrAlreadyInit {
@@ -119,6 +122,9 @@ func TestCore_Init_MultiShare(t *testing.T) {
 	}
 
 	if len(res.SecretShares) != 5 {
+		t.Fatalf("Bad: %v", res)
+	}
+	if res.RootToken == "" {
 		t.Fatalf("Bad: %v", res)
 	}
 

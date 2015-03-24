@@ -81,6 +81,7 @@ func (s *SealConfig) Validate() error {
 // they are generated as part of the initialization.
 type InitResult struct {
 	SecretShares [][]byte
+	RootToken    string
 }
 
 // ErrInvalidKey is returned if there is an error with a
@@ -394,8 +395,41 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		}
 		results.SecretShares = shares
 	}
-
 	c.logger.Printf("[INFO] core: security barrier initialized")
+
+	// Unseal the barrier
+	if err := c.barrier.Unseal(masterKey); err != nil {
+		c.logger.Printf("[ERR] core: failed to unseal barrier: %v", err)
+		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
+	}
+
+	// Ensure the barrier is re-sealed
+	defer func() {
+		if err := c.barrier.Seal(); err != nil {
+			c.logger.Printf("[ERR] core: failed to seal barrier: %v", err)
+		}
+	}()
+
+	// Perform initial setup
+	if err := c.postUnseal(); err != nil {
+		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+		return nil, err
+	}
+
+	// Generate a new root token
+	rootToken, err := c.tokenStore.RootToken()
+	if err != nil {
+		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
+		return nil, err
+	}
+	results.RootToken = rootToken.ID
+	c.logger.Printf("[INFO] core: root token generated")
+
+	// Prepare to re-seal
+	if err := c.preSeal(); err != nil {
+		c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+		return nil, err
+	}
 	return results, nil
 }
 
