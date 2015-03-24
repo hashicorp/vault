@@ -50,3 +50,34 @@ func TestStrListContains(t *testing.T) {
 		t.Fatalf("Bad")
 	}
 }
+
+func TestStrListSubset(t *testing.T) {
+	parent := []string{
+		"dev",
+		"ops",
+		"prod",
+		"root",
+	}
+	child := []string{
+		"prod",
+		"ops",
+	}
+	if !strListSubset(parent, child) {
+		t.Fatalf("Bad")
+	}
+	if !strListSubset(parent, parent) {
+		t.Fatalf("Bad")
+	}
+	if !strListSubset(child, child) {
+		t.Fatalf("Bad")
+	}
+	if !strListSubset(child, nil) {
+		t.Fatalf("Bad")
+	}
+	if strListSubset(child, parent) {
+		t.Fatalf("Bad")
+	}
+	if strListSubset(nil, child) {
+		t.Fatalf("Bad")
+	}
+}

@@ -47,3 +47,14 @@ func strListContains(haystack []string, needle string) bool {
 	}
 	return false
 }
+
+// strListSubset checks if a given list is a subset
+// of another set
+func strListSubset(super, sub []string) bool {
+	for _, item := range sub {
+		if !strListContains(super, item) {
+			return false
+		}
+	}
+	return true
+}
