@@ -461,26 +461,69 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	}
 }
 
-// TODO: Check that standard permissions work
-//func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
-//    c, _, _ := TestCoreUnsealedToken(t)
-//    req := &logical.Request{
-//        Operation: logical.WriteOperation,
-//        Path:      "secret/test",
-//        Data: map[string]interface{}{
-//            "foo":   "bar",
-//            "lease": "1h",
-//        },
-//        ClientToken: "foobarbaz",
-//    }
-//    resp, err := c.HandleRequest(req)
-//    if err != logical.ErrInvalidRequest {
-//        t.Fatalf("err: %v", err)
-//    }
-//    if resp.Data["error"] != "invalid client token" {
-//        t.Fatalf("bad: %#v", resp)
-//    }
-//}
+// Check that standard permissions work
+func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
+	c, _, root := TestCoreUnsealedToken(t)
+	testCoreMakeToken(t, c, root, "child", []string{"test"})
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: "child",
+	}
+	resp, err := c.HandleRequest(req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+// Check that standard permissions work
+func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
+	c, _, root := TestCoreUnsealedToken(t)
+	testCoreMakeToken(t, c, root, "child", []string{"test"})
+
+	// Set the 'test' policy object to permit access to secret/
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "sys/policy/test",
+		Data: map[string]interface{}{
+			"rules": `path "secret/" { policy = "write" }`,
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Write should work now
+	req = &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: "child",
+	}
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
 
 // Ensure we get a client token
 func TestCore_HandleLogin_Token(t *testing.T) {
