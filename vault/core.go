@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -113,6 +114,9 @@ type Core struct {
 	// credentialBackends is the mapping of backends to use for this core
 	credentialBackends map[string]credential.Factory
 
+	// auditBackends is the mapping of backends to use for this core
+	auditBackends map[string]audit.Factory
+
 	// stateLock protects mutable state
 	stateLock sync.RWMutex
 	sealed    bool
@@ -128,6 +132,10 @@ type Core struct {
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
+
+	// audit is loaded after unseal since it is a protected
+	// configuration
+	audit *MountTable
 
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView
@@ -152,6 +160,7 @@ type Core struct {
 type CoreConfig struct {
 	LogicalBackends    map[string]logical.Factory
 	CredentialBackends map[string]credential.Factory
+	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
 	Logger             *log.Logger
 }
@@ -197,6 +206,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return NewTokenStore(c)
 	}
 	c.credentialBackends = credentialBackends
+
+	auditBackends := make(map[string]audit.Factory)
+	for k, f := range conf.AuditBackends {
+		auditBackends[k] = f
+	}
+	c.auditBackends = auditBackends
 	return c, nil
 }
 
