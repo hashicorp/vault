@@ -31,6 +31,7 @@ var (
 
 	// protectedMounts cannot be remounted
 	protectedMounts = []string{
+		"audit/",
 		"auth/",
 		"sys/",
 	}
