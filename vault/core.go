@@ -656,12 +656,21 @@ func (c *Core) postUnseal() error {
 	if err := c.setupExpiration(); err != nil {
 		return err
 	}
+	if err := c.loadAudits(); err != nil {
+		return err
+	}
+	if err := c.setupAudits(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
+	if err := c.teardownAudits(); err != nil {
+		return err
+	}
 	if err := c.stopExpiration(); err != nil {
 		return err
 	}
