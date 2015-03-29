@@ -43,6 +43,8 @@ func (c *InitCommand) Run(args []string) int {
 		c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, key))
 	}
 
+	c.Ui.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
+
 	c.Ui.Output(fmt.Sprintf(
 		"\n"+
 			"Vault initialized with %d keys and a key threshold of %d!\n\n"+

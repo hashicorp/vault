@@ -45,5 +45,6 @@ type InitStatusResponse struct {
 }
 
 type InitResponse struct {
-	Keys []string
+	Keys      []string
+	RootToken string `json:"root_token"`
 }
