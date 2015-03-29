@@ -48,7 +48,7 @@ func (n *NoopCred) HandleLogin(req *credential.Request) (*credential.Response, e
 }
 
 func TestCore_DefaultAuthTable(t *testing.T) {
-	c, key := TestCoreUnsealed(t)
+	c, key, _ := TestCoreUnsealed(t)
 	verifyDefaultAuthTable(t, c.auth)
 
 	// Start a second core with same physical
@@ -72,7 +72,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 }
 
 func TestCore_EnableCredential(t *testing.T) {
-	c, key := TestCoreUnsealed(t)
+	c, key, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
 		return &NoopCred{}, nil
 	}
@@ -111,7 +111,7 @@ func TestCore_EnableCredential(t *testing.T) {
 }
 
 func TestCore_EnableCredential_Token(t *testing.T) {
-	c, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
 		Path: "foo",
 		Type: "token",
@@ -123,7 +123,7 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 }
 
 func TestCore_DisableCredential(t *testing.T) {
-	c, key := TestCoreUnsealed(t)
+	c, key, _ := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
 		return &NoopCred{}, nil
 	}
@@ -172,7 +172,7 @@ func TestCore_DisableCredential(t *testing.T) {
 }
 
 func TestCore_DisableCredential_Protected(t *testing.T) {
-	c, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(t)
 	err := c.disableCredential("token")
 	if err.Error() != "token credential backend cannot be disabled" {
 		t.Fatalf("err: %v", err)

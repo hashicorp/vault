@@ -496,11 +496,11 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 }
 
 func testSystemBackend(t *testing.T) logical.Backend {
-	c, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(t)
 	return NewSystemBackend(c)
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 	return c, NewSystemBackend(c), root
 }

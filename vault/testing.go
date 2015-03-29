@@ -38,13 +38,6 @@ func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t *testing.T) (*Core, []byte, string) {
-	core, key, token := TestCoreUnsealedToken(t)
-	return core, key, token
-}
-
-// TestCoreUnsealedToken returns a pure in-memory core that is already
-// initialized and unsealed along with the root token.
-func TestCoreUnsealedToken(t *testing.T) (*Core, []byte, string) {
 	core := TestCore(t)
 	key, token := TestCoreInit(t, core)
 	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {

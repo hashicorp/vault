@@ -313,7 +313,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 
 // Attempt to unseal after doing a first seal
 func TestCore_SealUnseal(t *testing.T) {
-	c, key := TestCoreUnsealed(t)
+	c, key, _ := TestCoreUnsealed(t)
 	if err := c.Seal(); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -324,7 +324,7 @@ func TestCore_SealUnseal(t *testing.T) {
 
 // Ensure we get a VaultID
 func TestCore_HandleRequest_Lease(t *testing.T) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 
 	req := &logical.Request{
 		Operation: logical.WriteOperation,
@@ -365,7 +365,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 }
 
 func TestCore_HandleRequest_MissingToken(t *testing.T) {
-	c, _, _ := TestCoreUnsealedToken(t)
+	c, _, _ := TestCoreUnsealed(t)
 
 	req := &logical.Request{
 		Operation: logical.WriteOperation,
@@ -385,7 +385,7 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 }
 
 func TestCore_HandleRequest_InvalidToken(t *testing.T) {
-	c, _, _ := TestCoreUnsealedToken(t)
+	c, _, _ := TestCoreUnsealed(t)
 
 	req := &logical.Request{
 		Operation: logical.WriteOperation,
@@ -407,7 +407,7 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 
 // Test a root path is denied if non-root
 func TestCore_HandleRequest_RootPath(t *testing.T) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 	testCoreMakeToken(t, c, root, "child", []string{"test"})
 
 	req := &logical.Request{
@@ -426,7 +426,7 @@ func TestCore_HandleRequest_RootPath(t *testing.T) {
 
 // Test a root path is allowed if non-root but with sudo
 func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 
 	// Set the 'test' policy object to permit access to sys/policy
 	req := &logical.Request{
@@ -463,7 +463,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 	testCoreMakeToken(t, c, root, "child", []string{"test"})
 
 	req := &logical.Request{
@@ -486,7 +486,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 	testCoreMakeToken(t, c, root, "child", []string{"test"})
 
 	// Set the 'test' policy object to permit access to secret/
@@ -540,7 +540,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 			},
 		},
 	}
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
 		return noop, nil
 	}

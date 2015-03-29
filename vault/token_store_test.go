@@ -9,7 +9,7 @@ import (
 )
 
 func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
-	c, _, root := TestCoreUnsealedToken(t)
+	c, _, root := TestCoreUnsealed(t)
 	ts, err := NewTokenStore(c)
 	if err != nil {
 		t.Fatalf("err: %v", err)
