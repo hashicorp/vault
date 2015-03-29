@@ -10,9 +10,10 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
+	http.TestServerAuth(t, addr, token)
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
@@ -46,9 +47,10 @@ func TestWrite(t *testing.T) {
 }
 
 func TestWrite_arbitrary(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
+	http.TestServerAuth(t, addr, token)
 
 	stdinR, stdinW := io.Pipe()
 	ui := new(cli.MockUi)

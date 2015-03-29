@@ -32,6 +32,10 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func testStartConsulServer(t *testing.T) (map[string]interface{}, *os.Process) {
+	if _, err := exec.LookPath("consul"); err != nil {
+		t.Skipf("consul not found: %s", err)
+	}
+
 	td, err := ioutil.TempDir("", "vault")
 	if err != nil {
 		t.Fatalf("err: %s", err)

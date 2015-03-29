@@ -9,9 +9,10 @@ import (
 )
 
 func TestRead(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
+	http.TestServerAuth(t, addr, token)
 
 	ui := new(cli.MockUi)
 	c := &ReadCommand{
