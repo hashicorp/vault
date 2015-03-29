@@ -57,7 +57,8 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondOk(w, &InitResponse{
-		Keys: keys,
+		Keys:      keys,
+		RootToken: result.RootToken,
 	})
 }
 
@@ -67,7 +68,8 @@ type InitRequest struct {
 }
 
 type InitResponse struct {
-	Keys []string `json:"keys"`
+	Keys      []string `json:"keys"`
+	RootToken string   `json:"root_token"`
 }
 
 type InitStatusResponse struct {

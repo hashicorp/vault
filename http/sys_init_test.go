@@ -71,6 +71,10 @@ func TestSysInit_put(t *testing.T) {
 		t.Fatalf("no keys: %#v", actual)
 	}
 
+	if _, ok := actual["root_token"]; !ok {
+		t.Fatal("no root token")
+	}
+
 	for _, key := range keysRaw.([]interface{}) {
 		keySlice, err := hex.DecodeString(key.(string))
 		if err != nil {
