@@ -30,10 +30,10 @@ func handleSysListMounts(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	resp, err := core.HandleRequest(&logical.Request{
+	resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "sys/mounts",
-	})
+	}))
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -85,14 +85,14 @@ func handleSysMount(
 		return
 	}
 
-	_, err := core.HandleRequest(&logical.Request{
+	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
 		Operation: logical.WriteOperation,
 		Path:      "sys/mounts/" + path,
 		Data: map[string]interface{}{
 			"type":        req.Type,
 			"description": req.Description,
 		},
-	})
+	}))
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -106,10 +106,10 @@ func handleSysUnmount(
 	w http.ResponseWriter,
 	r *http.Request,
 	path string) {
-	_, err := core.HandleRequest(&logical.Request{
+	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "sys/mounts/" + path,
-	})
+	}))
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

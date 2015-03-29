@@ -9,9 +9,10 @@ import (
 )
 
 func TestLogical(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+	TestServerAuth(t, addr, token)
 
 	resp := testHttpPut(t, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": "bar",
@@ -40,9 +41,10 @@ func TestLogical(t *testing.T) {
 }
 
 func TestLogical_noExist(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+	TestServerAuth(t, addr, token)
 
 	resp, err := http.Get(addr + "/v1/secret/foo")
 	if err != nil {

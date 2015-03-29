@@ -43,11 +43,11 @@ func handleLogical(core *vault.Core) http.Handler {
 		}
 
 		// Make the internal request
-		resp, err := core.HandleRequest(&logical.Request{
+		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
 			Operation: op,
 			Path:      path,
 			Data:      req,
-		})
+		}))
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return

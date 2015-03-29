@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+// AuthCookieName is the name of the cookie containing the token.
+const AuthCookieName = "token"
 
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
@@ -23,6 +27,16 @@ func Handler(core *vault.Core) http.Handler {
 func parseRequest(r *http.Request, out interface{}) error {
 	dec := json.NewDecoder(r.Body)
 	return dec.Decode(out)
+}
+
+// requestAuth adds the token to the logical.Request if it exists.
+func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
+	cookie, err := r.Cookie(AuthCookieName)
+	if err == nil {
+		req.ClientToken = cookie.Value
+	}
+
+	return req
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {

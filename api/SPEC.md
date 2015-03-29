@@ -114,6 +114,11 @@ the only time the keys will ever be returned in one unit. Care should
 be taken to ensure that the output of this request is never logged,
 and that the keys are properly distributed.
 
+The response also contains the initial root token that can be used
+as authentication in order to initially configure Vault once it is
+unsealed. Just as with the unseal keys, this is the only time Vault is
+every aware of this token.
+
 + Request (application/json)
 
         {
@@ -124,7 +129,8 @@ and that the keys are properly distributed.
 + Response 200 (application/json)
 
         {
-            "keys": ["one", "two", "three"]
+            "keys": ["one", "two", "three"],
+            "root_token": "foo"
         }
 
 # Group Seal/Unseal

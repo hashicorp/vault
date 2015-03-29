@@ -5,8 +5,19 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"testing"
 )
+
+func init() {
+	// Create a new insecure cookie jar so we can set cookies.
+	jar, err := cookiejar.New(&cookiejar.Options{})
+	if err != nil {
+		panic(err)
+	}
+
+	http.DefaultClient.Jar = jar
+}
 
 func testHttpDelete(t *testing.T, addr string) *http.Response {
 	return testHttpData(t, "DELETE", addr, nil)

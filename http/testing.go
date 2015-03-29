@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/vault"
 )
@@ -23,11 +24,35 @@ func TestServer(t *testing.T, core *vault.Core) (net.Listener, string) {
 	}
 	addr := "http://" + ln.Addr().String()
 
+	// Create a muxer to handle our requests so that we can authenticate
+	// for tests.
+	mux := http.NewServeMux()
+	mux.Handle("/_test/auth", http.HandlerFunc(testHandleAuth))
+	mux.Handle("/", Handler(core))
+
 	server := &http.Server{
 		Addr:    ln.Addr().String(),
-		Handler: Handler(core),
+		Handler: mux,
 	}
 	go server.Serve(ln)
 
 	return ln, addr
+}
+
+func TestServerAuth(t *testing.T, addr string, token string) {
+	if _, err := http.Get(addr + "/_test/auth?token=" + token); err != nil {
+		t.Fatalf("error authenticating: %s", err)
+	}
+}
+
+func testHandleAuth(w http.ResponseWriter, req *http.Request) {
+	token := req.URL.Query().Get("token")
+	http.SetCookie(w, &http.Cookie{
+		Name:    AuthCookieName,
+		Value:   token,
+		Path:    "/",
+		Expires: time.Now().UTC().Add(1 * time.Hour),
+	})
+
+	respondOk(w, nil)
 }

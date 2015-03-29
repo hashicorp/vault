@@ -9,9 +9,10 @@ import (
 )
 
 func TestSysMounts(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+	TestServerAuth(t, addr, token)
 
 	resp, err := http.Get(addr + "/v1/sys/mounts")
 	if err != nil {
@@ -37,9 +38,10 @@ func TestSysMounts(t *testing.T) {
 }
 
 func TestSysMount(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+	TestServerAuth(t, addr, token)
 
 	resp := testHttpPost(t, addr+"/v1/sys/mounts/foo", map[string]interface{}{
 		"type":        "generic",
@@ -75,9 +77,10 @@ func TestSysMount(t *testing.T) {
 }
 
 func TestSysUnmount(t *testing.T) {
-	core, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+	TestServerAuth(t, addr, token)
 
 	resp := testHttpPost(t, addr+"/v1/sys/mounts/foo", map[string]interface{}{
 		"type":        "generic",
