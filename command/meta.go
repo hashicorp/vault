@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 )
 
@@ -125,4 +126,20 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 	f.SetOutput(errW)
 
 	return f
+}
+
+// TokenHelper returns the token helper that is configured for Vault.
+func (m *Meta) TokenHelper() (*token.Helper, error) {
+	config, err := m.Config()
+	if err != nil {
+		return nil, err
+	}
+
+	path := config.TokenHelper
+	if path == "" {
+		path = "disk"
+	}
+
+	path = token.HelperPath(path)
+	return &token.Helper{Path: path}, nil
 }

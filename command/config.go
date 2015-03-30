@@ -44,19 +44,21 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("Error expanding config path: %s", err)
 	}
 
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	obj, err := hcl.Parse(string(contents))
-	if err != nil {
-		return nil, err
-	}
-
 	var config Config
-	if err := hcl.DecodeObject(&config, obj); err != nil {
-		return nil, err
+	contents, err := ioutil.ReadFile(path)
+	if !os.IsNotExist(err) {
+		if err != nil {
+			return nil, err
+		}
+
+		obj, err := hcl.Parse(string(contents))
+		if err != nil {
+			return nil, err
+		}
+
+		if err := hcl.DecodeObject(&config, obj); err != nil {
+			return nil, err
+		}
 	}
 
 	return &config, nil
