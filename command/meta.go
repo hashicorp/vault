@@ -37,6 +37,10 @@ type Meta struct {
 	flagCACert   string
 	flagCAPath   string
 	flagInsecure bool
+
+	// These are internal and shouldn't be modified or access by anyone
+	// except Meta.
+	config *Config
 }
 
 // Client returns the API client to a Vault server given the configured
@@ -73,6 +77,22 @@ func (m *Meta) Client() (*api.Client, error) {
 	}
 
 	return api.NewClient(config)
+}
+
+// Config loads the configuration and returns it. If the configuration
+// is already loaded, it is returned.
+func (m *Meta) Config() (*Config, error) {
+	if m.config != nil {
+		return m.config, nil
+	}
+
+	var err error
+	m.config, err = LoadConfig("")
+	if err != nil {
+		return nil, err
+	}
+
+	return m.config, nil
 }
 
 // FlagSet returns a FlagSet with the common flags that every
