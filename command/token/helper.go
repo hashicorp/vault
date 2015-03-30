@@ -4,7 +4,28 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
+
+// HelperPath takes the configured path to a helper and expands it to
+// a full absolute path that can be executed. If the path is relative then
+// a prefix of "vault token-" will be prepended to the path.
+func HelperPath(path string) string {
+	space := strings.Index(path, " ")
+	if space == -1 {
+		space = len(path)
+	}
+
+	// Get the binary name. If it isn't absolute, prepend "vault token-"
+	binary := path[0:space]
+	if !filepath.IsAbs(binary) {
+		binary = "vault token-" + binary
+	}
+
+	// Return the resulting string
+	return fmt.Sprintf("%s%s", binary, path[space:])
+}
 
 // Helper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the

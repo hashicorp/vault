@@ -9,6 +9,22 @@ import (
 	"testing"
 )
 
+func TestHelperPath(t *testing.T) {
+	cases := map[string]string{
+		"/foo": "/foo",
+		"foo":  "vault token-foo",
+	}
+
+	for k, v := range cases {
+		actual := HelperPath(k)
+		if actual != v {
+			t.Fatalf(
+				"input: %s, expected: %s, got: %s",
+				k, v, actual)
+		}
+	}
+}
+
 func TestHelper(t *testing.T) {
 	h := testHelper(t)
 	Test(t, h.Path)
