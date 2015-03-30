@@ -4,13 +4,15 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	vaultHttp "github.com/hashicorp/vault/http"
 )
 
 func TestClientToken(t *testing.T) {
 	tokenValue := "foo"
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		http.SetCookie(w, &http.Cookie{
-			Name:    TokenCookieName,
+			Name:    vaultHttp.AuthCookieName,
 			Value:   tokenValue,
 			Expires: time.Now().Add(time.Hour),
 		})

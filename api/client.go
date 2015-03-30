@@ -5,12 +5,8 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"time"
-)
 
-const (
-	// TokenCookieName is the name of the cookie that contains the
-	// access token after logging in.
-	TokenCookieName = "token"
+	vaultHttp "github.com/hashicorp/vault/http"
 )
 
 // Config is used to configure the creation of the client.
@@ -79,7 +75,7 @@ func NewClient(c Config) (*Client, error) {
 func (c *Client) Token() string {
 	r := c.NewRequest("GET", "/")
 	for _, cookie := range c.config.HttpClient.Jar.Cookies(r.URL) {
-		if cookie.Name == TokenCookieName {
+		if cookie.Name == vaultHttp.AuthCookieName {
 			return cookie.Value
 		}
 	}
@@ -92,7 +88,7 @@ func (c *Client) ClearToken() {
 	r := c.NewRequest("GET", "/")
 	c.config.HttpClient.Jar.SetCookies(r.URL, []*http.Cookie{
 		&http.Cookie{
-			Name:    TokenCookieName,
+			Name:    vaultHttp.AuthCookieName,
 			Value:   "",
 			Expires: time.Now().Add(-1 * time.Hour),
 		},
