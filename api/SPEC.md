@@ -259,7 +259,7 @@ are immediately invalidated.
 
 + Response 204
 
-## Login [/sys/login]
+## Login [/sys/login/{mount}/{path}]
 ### Login [PUT]
 
 Authenticate with Vault, returning an access token to use for
@@ -278,6 +278,12 @@ it is an authentication failure.
 
 The response can be treated like any normal Vault secret:
 renewed, revoked, etc.
+
++ Parameters
+    + mount (required, string) ... The mount point for the
+      credential backend. Example: "token"
+    + path (optional, string) ... The path within the backend
+      that is used for authentication, often just the root.
 
 + Response 200 (application/json)
 
