@@ -13,12 +13,19 @@ import (
 // DefaultPath is the default path where the Vault token is stored.
 const DefaultPath = "~/.vault-token"
 
-type Command struct{}
+type Command struct {
+	Path string
+}
 
 func (c *Command) Run(args []string) int {
 	var path string
+	pathDefault := DefaultPath
+	if c.Path != "" {
+		pathDefault = c.Path
+	}
+
 	f := flag.NewFlagSet("token-disk", flag.ContinueOnError)
-	f.StringVar(&path, "path", DefaultPath, "")
+	f.StringVar(&path, "path", pathDefault, "")
 	f.Usage = func() { fmt.Fprintf(os.Stderr, c.Help()+"\n") }
 	if err := f.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "\n%s\n", err)

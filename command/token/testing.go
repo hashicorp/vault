@@ -44,25 +44,22 @@ func Test(t *testing.T, path string) {
 // helper process. For this to work, the TestHelperProcess function must
 // exist.
 func TestProcess(t *testing.T, s ...string) {
-	// Build the path to the CLI to execute
-	cs := []string{"-test.run=TestHelperProcess", "--"}
+	Test(t, TestProcessPath(t, s...))
+}
+
+// TestProcessPath returns the path to the test process.
+func TestProcessPath(t *testing.T, s ...string) string {
+	cs := []string{"-test.run=TestHelperProcess", "--", "GO_WANT_HELPER_PROCESS"}
 	cs = append(cs, s...)
-	path := fmt.Sprintf(
-		"GO_WANT_HELPER_PROCESS=1 %s %s",
+	return fmt.Sprintf(
+		"%s %s",
 		os.Args[0],
 		strings.Join(cs, " "))
-
-	// Run the tests
-	Test(t, path)
 }
 
 // TestHelperProcessCLI can be called to implement TestHelperProcess
 // for TestProcess that just executes a CLI command.
 func TestHelperProcessCLI(t *testing.T, cmd cli.Command) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return
-	}
-
 	args := os.Args
 	for len(args) > 0 {
 		if args[0] == "--" {
@@ -72,6 +69,10 @@ func TestHelperProcessCLI(t *testing.T, cmd cli.Command) {
 
 		args = args[1:]
 	}
+	if len(args) == 0 || args[0] != "GO_WANT_HELPER_PROCESS" {
+		return
+	}
+	args = args[1:]
 
 	os.Exit(cmd.Run(args))
 }

@@ -1,10 +1,14 @@
 package command
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
+	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
+	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 )
 
@@ -80,5 +84,15 @@ func testAuthInit(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Set the HOME env var so we get that right
 	os.Setenv("HOME", td)
+
+	// Write a .vault config to use our custom token helper
+	config := fmt.Sprintf(
+		"token_helper = \"%s\"\n", token.TestProcessPath(t))
+	ioutil.WriteFile(filepath.Join(td, ".vault"), []byte(config), 0644)
+}
+
+func TestHelperProcess(t *testing.T) {
+	token.TestHelperProcessCLI(t, &tokenDisk.Command{})
 }
