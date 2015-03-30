@@ -27,6 +27,11 @@ type Request struct {
 	// to represent the secret that was returned prior.
 	Secret *Secret
 
+	// Connection will be non-nil only for credential providers to
+	// inspect the connection information and potentially use it for
+	// authentication/protection.
+	Connection *Connection
+
 	// ClientToken is provided to the core so that the identity
 	// can be verified and ACLs applied. This value is not passed
 	// through to the logical backends.

@@ -6,6 +6,11 @@ type Response struct {
 	// Secret, if not nil, denotes that this response represents a secret.
 	Secret *Secret
 
+	// Auth, if not nil, contains the authentication information for
+	// this response. This is only checked and means something for
+	// credential backends.
+	Auth *Auth
+
 	// Response data is an opaque map that must have string keys. For
 	// secrets, this data is sent down to the user as-is. To store internal
 	// data that you don't want the user to see, store it in
