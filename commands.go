@@ -5,13 +5,16 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/consul"
+	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
 	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/cli"
 )
 
-// Commands is the mapping of all the available Consul commands.
+// Commands is the mapping of all the available Vault commands. CommandsInclude
+// are the commands to include for help.
 var Commands map[string]cli.CommandFactory
+var CommandsInclude []string
 
 func init() {
 	ui := &cli.BasicUi{
@@ -96,5 +99,16 @@ func init() {
 				Ui:                ui,
 			}, nil
 		},
+	}
+
+	// Build the commands to include in the help now
+	CommandsInclude = make([]string, 0, len(Commands))
+	for k, _ := range Commands {
+		CommandsInclude = append(CommandsInclude, k)
+	}
+
+	// The commands below are hidden from the help output
+	Commands["token-disk"] = func() (cli.Command, error) {
+		return &tokenDisk.Command{}, nil
 	}
 }

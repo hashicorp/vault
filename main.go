@@ -28,7 +28,8 @@ func realMain() int {
 	cli := &cli.CLI{
 		Args:     args,
 		Commands: Commands,
-		HelpFunc: cli.BasicHelpFunc("vault"),
+		HelpFunc: cli.FilteredHelpFunc(
+			CommandsInclude, cli.BasicHelpFunc("vault")),
 	}
 
 	exitCode, err := cli.Run()

@@ -11,31 +11,7 @@ import (
 
 func TestHelper(t *testing.T) {
 	h := testHelper(t)
-	if err := h.Store("foo"); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	v, err := h.Get()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if v != "foo" {
-		t.Fatalf("bad: %#v", v)
-	}
-
-	if err := h.Erase(); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	v, err = h.Get()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if v != "" {
-		t.Fatalf("bad: %#v", v)
-	}
+	Test(t, h.Path)
 }
 
 func testHelper(t *testing.T) *Helper {

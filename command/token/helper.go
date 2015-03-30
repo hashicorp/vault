@@ -2,6 +2,7 @@ package token
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 )
 
@@ -24,16 +25,23 @@ type Helper struct {
 // Erase deletes the contents from the helper.
 func (h *Helper) Erase() error {
 	cmd := h.cmd("erase")
-	return cmd.Run()
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf(
+			"Error: %s\n\n%s", err, string(output))
+	}
+
+	return nil
 }
 
 // Get gets the token value from the helper.
 func (h *Helper) Get() (string, error) {
-	var buf bytes.Buffer
+	var buf, stderr bytes.Buffer
 	cmd := h.cmd("get")
 	cmd.Stdout = &buf
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", err
+		return "", fmt.Errorf(
+			"Error: %s\n\n%s", err, stderr.String())
 	}
 
 	return buf.String(), nil
@@ -44,7 +52,12 @@ func (h *Helper) Store(v string) error {
 	buf := bytes.NewBufferString(v)
 	cmd := h.cmd("store")
 	cmd.Stdin = buf
-	return cmd.Run()
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf(
+			"Error: %s\n\n%s", err, string(output))
+	}
+
+	return nil
 }
 
 func (h *Helper) cmd(op string) *exec.Cmd {
