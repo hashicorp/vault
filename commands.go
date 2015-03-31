@@ -76,6 +76,12 @@ func init() {
 			}, nil
 		},
 
+		"mount": func() (cli.Command, error) {
+			return &command.MountCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"mounts": func() (cli.Command, error) {
 			return &command.MountsCommand{
 				Meta: meta,
