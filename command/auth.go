@@ -56,6 +56,7 @@ func (c *AuthCommand) Run(args []string) int {
 			// No arguments given, read the token from user input
 			fmt.Printf("Token (will be hidden): ")
 			token, err = password.Read(os.Stdin)
+			fmt.Printf("\n")
 			if err != nil {
 				c.Ui.Error(fmt.Sprintf(
 					"Error attempting to ask for token. The raw error message\n"+
