@@ -16,7 +16,9 @@ func (c *Sys) SealStatus() (*SealStatusResponse, error) {
 func (c *Sys) Seal() error {
 	r := c.c.NewRequest("PUT", "/v1/sys/seal")
 	resp, err := c.c.RawRequest(r)
-	defer resp.Body.Close()
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	return err
 }
 

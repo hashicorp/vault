@@ -9,14 +9,15 @@ import (
 )
 
 func TestSeal(t *testing.T) {
-	core, _, _ := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
 	c := &SealCommand{
 		Meta: Meta{
-			Ui: ui,
+			ClientToken: token,
+			Ui:          ui,
 		},
 	}
 
