@@ -129,45 +129,6 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	return me.backend.HandleRequest(req)
 }
 
-/*
-// RouteLogin is used to route a given login request
-func (r *Router) RouteLogin(req *credential.Request) (*credential.Response, error) {
-	// Ensure this is a login path
-	if !r.LoginPath(req.Path) {
-		return nil, fmt.Errorf("invalid login route '%s'", req.Path)
-	}
-
-	// Find the mount point
-	r.l.RLock()
-	mount, raw, ok := r.root.LongestPrefix(req.Path)
-	r.l.RUnlock()
-	if !ok {
-		return nil, fmt.Errorf("no handler for route '%s'", req.Path)
-	}
-	me := raw.(*mountEntry)
-
-	// Adjust the path, attach the barrier view
-	original := req.Path
-	req.Path = strings.TrimPrefix(req.Path, mount)
-	req.Storage = me.view
-
-	// Reset the request before returning
-	defer func() {
-		req.Path = original
-		req.Storage = nil
-	}()
-
-	// Convert to a credential backend
-	cred, ok := me.backend.(credential.Backend)
-	if !ok {
-		return nil, fmt.Errorf("invalid login route '%s'", req.Path)
-	}
-
-	// Invoke the backend
-	return cred.HandleLogin(req)
-}
-*/
-
 // RootPath checks if the given path requires root privileges
 func (r *Router) RootPath(path string) bool {
 	r.l.RLock()

@@ -524,7 +524,6 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	}
 }
 
-/*
 // Ensure we get a client token
 func TestCore_HandleLogin_Token(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
@@ -558,17 +557,17 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Attempt to login
-	lreq := &credential.Request{
+	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
-	lresp, err := c.HandleLogin(lreq)
+	lresp, err := c.HandleRequest(lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Ensure we got a client token back
-	clientToken, ok := lresp.Data[clientTokenKey].(string)
-	if !ok || clientToken == "" {
+	clientToken := lresp.Auth.ClientToken
+	if clientToken == "" {
 		t.Fatalf("bad: %#v", lresp)
 	}
 
@@ -582,7 +581,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		Parent:   "",
 		Policies: []string{"foo", "bar"},
 		Path:     "auth/foo/login",
-		Meta: map[string]interface{}{
+		Meta: map[string]string{
 			"user": "armon",
 		},
 	}
@@ -594,8 +593,9 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	if lresp.Secret.Lease != time.Hour {
 		t.Fatalf("bad: %#v", lresp.Secret)
 	}
-	if lresp.Secret.VaultID == "" {
-		t.Fatalf("bad: %#v", lresp.Secret)
-	}
+	/*
+		if lresp.Secret.VaultID == "" {
+			t.Fatalf("bad: %#v", lresp.Secret)
+		}
+	*/
 }
-*/

@@ -21,10 +21,6 @@ const (
 	// it even with the Vault sealed. This is required so that we know
 	// how many secret parts must be used to reconstruct the master key.
 	coreSealConfigPath = "core/seal-config"
-
-	// clientTokenKey is the key that we set in the response data for
-	// a login request if a client token is generated.
-	clientTokenKey = "client_token"
 )
 
 var (
@@ -221,6 +217,14 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 		return nil, ErrSealed
 	}
 
+	if c.router.LoginPath(req.Path) {
+		return c.handleLoginRequest(req)
+	} else {
+		return c.handleRequest(req)
+	}
+}
+
+func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	// Ensure there is a client token
 	if req.ClientToken == "" {
 		return logical.ErrorResponse("missing client token"), logical.ErrInvalidRequest
@@ -277,70 +281,45 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	return resp, err
 }
 
-/*
-// HandleLogin is used to handle a login request
-func (c *Core) HandleLogin(req *credential.Request) (*credential.Response, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return nil, ErrSealed
-	}
-
+// handleLoginRequest is used to handle a login request, which is an
+// unauthenticated request to the backend.
+func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, error) {
 	// Route the request
-	resp, err := c.router.RouteLogin(req)
+	resp, err := c.router.Route(req)
 
-	// Generate a token if necessary
-	if resp != nil && resp.Secret != nil {
-		// Extract the policy and token metadata
-		var policy []string
-		meta := make(map[string]interface{})
-		for key, val := range resp.Secret.InternalData {
-			// Handle the policy key
-			if key == credential.PolicyKey {
-				list, ok := val.([]string)
-				if ok {
-					policy = list
-				}
-
-				// Handle any metadata
-			} else if strings.HasPrefix(key, credential.MetadataKey) {
-				clean := strings.TrimPrefix(key, credential.MetadataKey)
-				meta[clean] = val
-			}
-		}
-
+	// If the response generated an authentication, then generate the token
+	if resp != nil && resp.Auth != nil {
 		// Generate a token
 		te := TokenEntry{
 			Path:     req.Path,
-			Policies: policy,
-			Meta:     meta,
+			Policies: resp.Auth.Policies,
+			Meta:     resp.Auth.Metadata,
 		}
 		if err := c.tokenStore.Create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
 			return nil, ErrInternalError
 		}
 
-		// Provide the client token via the response
-		if resp.Data == nil {
-			resp.Data = make(map[string]interface{})
-		}
-		resp.Data[clientTokenKey] = te.ID
+		// Populate the client token
+		resp.Auth.ClientToken = te.ID
 
 		// Register with the expiration manager if there is a lease
-		if resp.Secret.Lease > 0 {
-			vaultID, err := c.expiration.RegisterLogin(te.ID, req, resp)
-			if err != nil {
-				c.logger.Printf(
-					"[ERR] core: failed to register login token lease "+
-						"(request: %#v, response: %#v): %v", req, resp, err)
-				return nil, ErrInternalError
+		/*
+			if resp.Secret != nil && resp.Secret.Lease > 0 {
+				vaultID, err := c.expiration.RegisterLogin(te.ID, req, resp)
+				if err != nil {
+					c.logger.Printf(
+						"[ERR] core: failed to register login token lease "+
+							"(request: %#v, response: %#v): %v", req, resp, err)
+					return nil, ErrInternalError
+				}
+				resp.Secret.VaultID = vaultID
 			}
-			resp.Secret.VaultID = vaultID
-		}
+		*/
 	}
+
 	return resp, err
 }
-*/
 
 // Initialized checks if the Vault is already initialized
 func (c *Core) Initialized() (bool, error) {

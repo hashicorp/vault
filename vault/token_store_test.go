@@ -289,7 +289,7 @@ func TestTokenStore_HandleRequest_CreateToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] == "" {
+	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -306,7 +306,7 @@ func TestTokenStore_HandleRequest_CreateToken_RootID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] != "foobar" {
+	if resp.Auth.ClientToken != "foobar" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -341,7 +341,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] == "" {
+	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -393,11 +393,11 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] == "" {
+	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(resp.Data[clientTokenKey].(string))
+	out, _ := ts.Lookup(resp.Auth.ClientToken)
 	if out.Parent != "" {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -409,7 +409,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
-	meta := map[string]interface{}{
+	meta := map[string]string{
 		"user":   "armon",
 		"source": "github",
 	}
@@ -419,11 +419,11 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] == "" {
+	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(resp.Data[clientTokenKey].(string))
+	out, _ := ts.Lookup(resp.Auth.ClientToken)
 	if !reflect.DeepEqual(out.Meta, meta) {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -441,7 +441,7 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] == "" {
+	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp.Secret.Lease != time.Hour {
@@ -570,7 +570,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"id":       root,
 		"policies": []string{"root"},
 		"path":     "sys/root",
-		"meta":     map[string]interface{}(nil),
+		"meta":     map[string]string(nil),
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
@@ -587,7 +587,7 @@ func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []s
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] != client {
+	if resp.Auth.ClientToken != client {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -602,7 +602,7 @@ func testCoreMakeToken(t *testing.T, c *Core, root, client string, policy []stri
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data[clientTokenKey] != client {
+	if resp.Auth.ClientToken != client {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
