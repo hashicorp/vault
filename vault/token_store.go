@@ -89,7 +89,25 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 			},
 
 			&framework.Path{
-				Pattern: "lookup(/(?P<token>.+))?",
+				Pattern: "lookup/(?P<token>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to lookup",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: t.handleLookup,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
+				HelpDescription: strings.TrimSpace(tokenLookupHelp),
+			},
+
+			&framework.Path{
+				Pattern: "lookup-self$",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{

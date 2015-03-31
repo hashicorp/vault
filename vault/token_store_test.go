@@ -540,7 +540,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	req := logical.TestRequest(t, logical.ReadOperation, "lookup")
+	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
 	req.ClientToken = root
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
