@@ -13,12 +13,12 @@ func TestWrite(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
-	http.TestServerAuth(t, addr, token)
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
 		Meta: Meta{
-			Ui: ui,
+			ClientToken: token,
+			Ui:          ui,
 		},
 	}
 
@@ -50,13 +50,13 @@ func TestWrite_arbitrary(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
-	http.TestServerAuth(t, addr, token)
 
 	stdinR, stdinW := io.Pipe()
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
 		Meta: Meta{
-			Ui: ui,
+			ClientToken: token,
+			Ui:          ui,
 		},
 
 		testStdin: stdinR,

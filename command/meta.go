@@ -31,7 +31,8 @@ const (
 // Meta contains the meta-options and functionality that nearly every
 // Vault command inherits.
 type Meta struct {
-	Ui cli.Ui
+	ClientToken string
+	Ui          cli.Ui
 
 	// These are set by the command line flags.
 	flagAddress  string
@@ -83,15 +84,23 @@ func (m *Meta) Client() (*api.Client, error) {
 		return nil, err
 	}
 
-	// If we have a token, then set that
-	tokenHelper, err := m.TokenHelper()
-	if err != nil {
-		return nil, err
+	// If we have a token directly, then set that
+	token := m.ClientToken
+
+	// If we don't have a token, check the token helper
+	if token == "" {
+		// If we have a token, then set that
+		tokenHelper, err := m.TokenHelper()
+		if err != nil {
+			return nil, err
+		}
+		token, err = tokenHelper.Get()
+		if err != nil {
+			return nil, err
+		}
 	}
-	token, err := tokenHelper.Get()
-	if err != nil {
-		return nil, err
-	}
+
+	// Set the token
 	if token != "" {
 		client.SetToken(token)
 	}
