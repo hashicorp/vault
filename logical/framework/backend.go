@@ -279,6 +279,8 @@ func (t FieldType) Zero() interface{} {
 		return 0
 	case TypeBool:
 		return false
+	case TypeMap:
+		return map[string]interface{}{}
 	default:
 		panic("unknown type: " + t.String())
 	}
