@@ -321,6 +321,17 @@ func TestCore_SealUnseal(t *testing.T) {
 	}
 }
 
+// Attempt to seal bad token
+func TestCore_Seal_BadToken(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	if err := c.Seal("foo"); err == nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed, err := c.Sealed(); err != nil || sealed {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 // Ensure we get a VaultID
 func TestCore_HandleRequest_Lease(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
