@@ -31,6 +31,7 @@ func parseRequest(r *http.Request, out interface{}) error {
 
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
+	// Attach the cookie value as the token if we have it
 	cookie, err := r.Cookie(AuthCookieName)
 	if err == nil {
 		req.ClientToken = cookie.Value

@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -42,11 +43,17 @@ func handleLogical(core *vault.Core) http.Handler {
 			}
 		}
 
-		// Make the internal request
+		// Make the internal request. We attach the connection info
+		// as well in case this is an authentication request that requires
+		// it. Vault core handles stripping this if we need to.
 		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
 			Operation: op,
 			Path:      path,
 			Data:      req,
+			Connection: &logical.Connection{
+				RemoteAddr: r.RemoteAddr,
+				ConnState:  r.TLS,
+			},
 		}))
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
@@ -59,11 +66,34 @@ func handleLogical(core *vault.Core) http.Handler {
 
 		var httpResp interface{}
 		if resp != nil {
+			if resp.Redirect != "" {
+				// If we have a redirect, redirect! We use a 302 code
+				// because we don't actually know if its permanent.
+				http.Redirect(w, r, resp.Redirect, 302)
+				return
+			}
+
 			logicalResp := &LogicalResponse{Data: resp.Data}
 			if resp.Secret != nil {
 				logicalResp.VaultId = resp.Secret.VaultID
 				logicalResp.Renewable = resp.Secret.Renewable
 				logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
+			}
+
+			// If we have authentication information, then set the cookie
+			if resp.Auth != nil {
+				expireDuration := 365 * 24 * time.Hour
+				if logicalResp.LeaseDuration != 0 {
+					expireDuration =
+						time.Duration(logicalResp.LeaseDuration) * time.Second
+				}
+
+				http.SetCookie(w, &http.Cookie{
+					Name:    AuthCookieName,
+					Value:   resp.Auth.ClientToken,
+					Path:    "/",
+					Expires: time.Now().UTC().Add(expireDuration),
+				})
 			}
 
 			httpResp = logicalResp
