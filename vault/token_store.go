@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -319,10 +318,6 @@ func (ts *TokenStore) HandleRequest(req *logical.Request) (*logical.Response, er
 
 func (ts *TokenStore) SpecialPaths() *logical.Paths {
 	return nil
-}
-
-func (ts *TokenStore) HandleLogin(req *credential.Request) (*credential.Response, error) {
-	return nil, logical.ErrUnsupportedOperation
 }
 
 // handleCreate handles the auth/token/create path for creation of new tokens

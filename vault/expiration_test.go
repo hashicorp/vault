@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -127,6 +126,7 @@ func TestExpiration_Register(t *testing.T) {
 	}
 }
 
+/*
 func TestExpiration_RegisterLogin(t *testing.T) {
 	exp := mockExpiration(t)
 	root, err := exp.tokenStore.RootToken()
@@ -160,6 +160,7 @@ func TestExpiration_RegisterLogin(t *testing.T) {
 		t.Fatalf("bad: %s", id)
 	}
 }
+*/
 
 func TestExpiration_Revoke(t *testing.T) {
 	exp := mockExpiration(t)

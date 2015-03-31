@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -301,6 +300,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	return le.VaultID, nil
 }
 
+/*
 // RegisterLogin is used to take a credential request and response with
 // an associated lease. The secret gets assigned a vaultId and the management of
 // of lease is assumed by the expiration manager. This is distinct from Register
@@ -344,6 +344,7 @@ func (m *ExpirationManager) RegisterLogin(token string, req *credential.Request,
 	// Done
 	return le.VaultID, nil
 }
+*/
 
 // expireID is invoked when a given ID is expired
 func (m *ExpirationManager) expireID(vaultID string) {

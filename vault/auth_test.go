@@ -1,50 +1,11 @@
 package vault
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
-
-type NoopCred struct {
-	Root     []string
-	Login    []string
-	Paths    []string
-	Requests []*logical.Request
-	Response *logical.Response
-
-	LPaths        []string
-	LoginRequests []*credential.Request
-	LoginResponse *credential.Response
-}
-
-func (n *NoopCred) HandleRequest(req *logical.Request) (*logical.Response, error) {
-	n.Paths = append(n.Paths, req.Path)
-	n.Requests = append(n.Requests, req)
-	if req.Storage == nil {
-		return nil, fmt.Errorf("missing view")
-	}
-	return n.Response, nil
-}
-
-func (n *NoopCred) SpecialPaths() *logical.Paths {
-	return &logical.Paths{
-		Root:            n.Root,
-		Unauthenticated: n.Login,
-	}
-}
-
-func (n *NoopCred) HandleLogin(req *credential.Request) (*credential.Response, error) {
-	n.LPaths = append(n.LPaths, req.Path)
-	n.LoginRequests = append(n.LoginRequests, req)
-	if req.Storage == nil {
-		return nil, fmt.Errorf("missing view")
-	}
-	return n.LoginResponse, nil
-}
 
 func TestCore_DefaultAuthTable(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
@@ -72,8 +33,8 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 
 func TestCore_EnableCredential(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
-		return &NoopCred{}, nil
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return &NoopBackend{}, nil
 	}
 
 	me := &MountEntry{
@@ -123,8 +84,8 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 
 func TestCore_DisableCredential(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
-		return &NoopCred{}, nil
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return &NoopBackend{}, nil
 	}
 
 	err := c.disableCredential("foo")

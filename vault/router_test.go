@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
 type NoopBackend struct {
 	Root     []string
+	Login    []string
 	Paths    []string
 	Requests []*logical.Request
 	Response *logical.Response
@@ -27,7 +27,8 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 
 func (n *NoopBackend) SpecialPaths() *logical.Paths {
 	return &logical.Paths{
-		Root: n.Root,
+		Root:            n.Root,
+		Unauthenticated: n.Login,
 	}
 }
 
@@ -178,12 +179,13 @@ func TestRouter_RootPath(t *testing.T) {
 	}
 }
 
+/*
 func TestRouter_RouteLogin(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "auth/")
 
-	n := &NoopCred{
+	n := &NoopBackend{
 		Login: []string{"bar"},
 	}
 	err := r.Mount(n, "auth/foo/", view)
@@ -195,7 +197,7 @@ func TestRouter_RouteLogin(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	req := &credential.Request{
+	req := &logical.Request{
 		Path: "auth/foo/bar",
 	}
 	resp, err := r.RouteLogin(req)
@@ -211,13 +213,14 @@ func TestRouter_RouteLogin(t *testing.T) {
 		t.Fatalf("bad: %v", n.Paths)
 	}
 }
+*/
 
 func TestRouter_LoginPath(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "auth/")
 
-	n := &NoopCred{
+	n := &NoopBackend{
 		Login: []string{
 			"login",
 			"oauth/*",

@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -112,7 +110,7 @@ type Core struct {
 	logicalBackends map[string]logical.Factory
 
 	// credentialBackends is the mapping of backends to use for this core
-	credentialBackends map[string]credential.Factory
+	credentialBackends map[string]logical.Factory
 
 	// auditBackends is the mapping of backends to use for this core
 	auditBackends map[string]audit.Factory
@@ -159,7 +157,7 @@ type Core struct {
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
 	LogicalBackends    map[string]logical.Factory
-	CredentialBackends map[string]credential.Factory
+	CredentialBackends map[string]logical.Factory
 	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
 	Logger             *log.Logger
@@ -198,11 +196,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.logicalBackends = logicalBackends
 
-	credentialBackends := make(map[string]credential.Factory)
+	credentialBackends := make(map[string]logical.Factory)
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(map[string]string) (credential.Backend, error) {
+	credentialBackends["token"] = func(map[string]string) (logical.Backend, error) {
 		return NewTokenStore(c)
 	}
 	c.credentialBackends = credentialBackends
@@ -279,6 +277,7 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	return resp, err
 }
 
+/*
 // HandleLogin is used to handle a login request
 func (c *Core) HandleLogin(req *credential.Request) (*credential.Response, error) {
 	c.stateLock.RLock()
@@ -341,6 +340,7 @@ func (c *Core) HandleLogin(req *credential.Request) (*credential.Response, error
 	}
 	return resp, err
 }
+*/
 
 // Initialized checks if the Vault is already initialized
 func (c *Core) Initialized() (bool, error) {

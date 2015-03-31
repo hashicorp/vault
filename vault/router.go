@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -130,6 +129,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	return me.backend.HandleRequest(req)
 }
 
+/*
 // RouteLogin is used to route a given login request
 func (r *Router) RouteLogin(req *credential.Request) (*credential.Response, error) {
 	// Ensure this is a login path
@@ -166,6 +166,7 @@ func (r *Router) RouteLogin(req *credential.Request) (*credential.Response, erro
 	// Invoke the backend
 	return cred.HandleLogin(req)
 }
+*/
 
 // RootPath checks if the given path requires root privileges
 func (r *Router) RootPath(path string) bool {

@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -336,8 +335,8 @@ func TestSystemBackend_authTable(t *testing.T) {
 
 func TestSystemBackend_enableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
-		return &NoopCred{}, nil
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return &NoopBackend{}, nil
 	}
 
 	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
@@ -367,8 +366,8 @@ func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 
 func TestSystemBackend_disableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
-		return &NoopCred{}, nil
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return &NoopBackend{}, nil
 	}
 
 	// Register the backend

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/credential"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -525,23 +524,27 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	}
 }
 
+/*
 // Ensure we get a client token
 func TestCore_HandleLogin_Token(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	noop := &NoopCred{
+	noop := &NoopBackend{
 		Login: []string{"login"},
-		LoginResponse: &credential.Response{
+		Response: &logical.Response{
 			Secret: &logical.Secret{
-				InternalData: map[string]interface{}{
-					credential.PolicyKey:            []string{"foo", "bar"},
-					credential.MetadataKey + "user": "armon",
-				},
 				Lease: time.Hour,
+			},
+
+			Auth: &logical.Auth{
+				Policies: []string{"foo", "bar"},
+				Metadata: map[string]string{
+					"user": "armon",
+				},
 			},
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (credential.Backend, error) {
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -595,3 +598,4 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		t.Fatalf("bad: %#v", lresp.Secret)
 	}
 }
+*/

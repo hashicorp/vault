@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/credential"
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -179,7 +179,7 @@ func (c *Core) persistAuth(table *MountTable) error {
 // setupCredentials is invoked after we've loaded the auth table to
 // initialize the credential backends and setup the router
 func (c *Core) setupCredentials() error {
-	var backend credential.Backend
+	var backend logical.Backend
 	var view *BarrierView
 	var err error
 	for _, entry := range c.auth.Entries {
@@ -220,11 +220,13 @@ func (c *Core) teardownCredentials() error {
 }
 
 // newCredentialBackend is used to create and configure a new credential backend by name
-func (c *Core) newCredentialBackend(t string, conf map[string]string) (credential.Backend, error) {
+func (c *Core) newCredentialBackend(
+	t string, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.credentialBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
+
 	return f(conf)
 }
 
