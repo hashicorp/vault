@@ -16,6 +16,11 @@ type Response struct {
 	// data that you don't want the user to see, store it in
 	// Secret.InternalData.
 	Data map[string]interface{}
+
+	// Redirect is an HTTP URL to redirect to for further authentication.
+	// This is only valid for credential backends. This will be blanked
+	// for any logical backend and ignored.
+	Redirect string
 }
 
 // IsError returns true if this response seems to indicate an error.
