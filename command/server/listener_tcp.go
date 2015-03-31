@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net"
 	"time"
 )
@@ -9,7 +8,7 @@ import (
 func tcpListenerFactory(config map[string]string) (net.Listener, error) {
 	addr, ok := config["address"]
 	if !ok {
-		return nil, fmt.Errorf("'address' must be set")
+		addr = "127.0.0.1:8200"
 	}
 
 	ln, err := net.Listen("tcp", addr)

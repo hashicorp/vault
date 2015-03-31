@@ -18,6 +18,24 @@ type Config struct {
 	Backend   *Backend
 }
 
+// DevConfig is a Config that is used for dev mode of Vault.
+func DevConfig() *Config {
+	return &Config{
+		Backend: &Backend{
+			Type: "inmem",
+		},
+
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]string{
+					"tls_disable": "1",
+				},
+			},
+		},
+	}
+}
+
 // Listener is the listener configuration for the server.
 type Listener struct {
 	Type   string

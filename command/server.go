@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -22,8 +23,10 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
+	var dev bool
 	var configPath []string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
+	flags.BoolVar(&dev, "dev", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -31,7 +34,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Validation
-	if len(configPath) == 0 {
+	if !dev && len(configPath) == 0 {
 		c.Ui.Error("At least one config path must be specified with -config")
 		flags.Usage()
 		return 1
@@ -39,6 +42,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Load the configuration
 	var config *server.Config
+	if dev {
+		config = server.DevConfig()
+	}
 	for _, path := range configPath {
 		current, err := server.LoadConfig(path)
 		if err != nil {
@@ -70,6 +76,29 @@ func (c *ServerCommand) Run(args []string) int {
 		LogicalBackends: c.LogicalBackends,
 	})
 
+	// If we're in dev mode, then initialize the core
+	if dev {
+		init, err := c.enableDev(core)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error initializing dev mode: %s", err))
+			return 1
+		}
+
+		c.Ui.Output(fmt.Sprintf(
+			"WARNING: Dev mode is enabled!\n\n"+
+				"In this mode, Vault is completely in-memory and unsealed.\n"+
+				"Vault is configured to only have a single unseal key. The root\n"+
+				"token has already been authenticated with the CLI, so you can\n"+
+				"immediately begin using the Vault CLI.\n\n"+
+				"The unseal key and root token are reproduced below in case you\n"+
+				"want to seal/unseal the Vault or play with authentication.\n\n"+
+				"Unseal Key: %s\nRoot Token: %s\n\n",
+			hex.EncodeToString(init.SecretShares[0]),
+			init.RootToken,
+		))
+	}
+
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for _, lnConfig := range config.Listeners {
@@ -93,6 +122,41 @@ func (c *ServerCommand) Run(args []string) int {
 
 	<-make(chan struct{})
 	return 0
+}
+
+func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
+	// Initialize it with a basic single key
+	init, err := core.Initialize(&vault.SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Copy the key so that it can be zeroed
+	key := make([]byte, len(init.SecretShares[0]))
+	copy(key, init.SecretShares[0])
+
+	// Unseal the core
+	unsealed, err := core.Unseal(key)
+	if err != nil {
+		return nil, err
+	}
+	if !unsealed {
+		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+	}
+
+	// Set the token
+	tokenHelper, err := c.TokenHelper()
+	if err != nil {
+		return nil, err
+	}
+	if err := tokenHelper.Store(init.RootToken); err != nil {
+		return nil, err
+	}
+
+	return init, nil
 }
 
 func (c *ServerCommand) Synopsis() string {
