@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -10,12 +11,25 @@ type SealCommand struct {
 }
 
 func (c *SealCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("unseal", FlagSetDefault)
+	flags := c.Meta.FlagSet("seal", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 2
+	}
+
+	if err := client.Sys().Seal(); err != nil {
+		c.Ui.Error(fmt.Sprintf("Error sealing: %s", err))
+		return 1
+	}
+
+	c.Ui.Output("Vault is now sealed.")
 	return 0
 }
 
