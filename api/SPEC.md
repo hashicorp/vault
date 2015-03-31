@@ -259,40 +259,6 @@ are immediately invalidated.
 
 + Response 204
 
-## Login [/sys/login/{mount}/{path}]
-### Login [PUT]
-
-Authenticate with Vault, returning an access token to use for
-future requests. This access token should be passed in as a cookie
-for future requests with the key `token`.
-
-The token will also be set using the `Set-Cookie` headers as well,
-so if the HTTP client being used has a well behaved cookie jar
-implementation, the token will automatically be set for future requests.
-
-The request body of this request is arbitrary depending on the
-authentication method being used above. Authentication strategies
-are treated like middleware: each one will be tried in turn, and
-if one succeeds, then the user will be authentiated. Otherwise,
-it is an authentication failure.
-
-The response can be treated like any normal Vault secret:
-renewed, revoked, etc.
-
-+ Parameters
-    + mount (required, string) ... The mount point for the
-      credential backend. Example: "token"
-    + path (optional, string) ... The path within the backend
-      that is used for authentication, often just the root.
-
-+ Response 200 (application/json)
-
-        {
-            "vault_id": "UUID",
-            "lease_duration": 3600,
-            "key": "value"
-        }
-
 # Group ACLs
 
 ACLs are named permission sets that identities returned by

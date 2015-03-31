@@ -83,6 +83,20 @@ func (c *Client) Token() string {
 	return ""
 }
 
+// SetToken sets the token directly. This won't perform any auth
+// verification, it simply sets the cookie properly for future requests.
+func (c *Client) SetToken(v string) {
+	r := c.NewRequest("GET", "/")
+	c.config.HttpClient.Jar.SetCookies(r.URL, []*http.Cookie{
+		&http.Cookie{
+			Name:    vaultHttp.AuthCookieName,
+			Value:   v,
+			Path:    "/",
+			Expires: time.Now().Add(365 * 24 * time.Hour),
+		},
+	})
+}
+
 // ClearToken deletes the token cookie if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
 	r := c.NewRequest("GET", "/")

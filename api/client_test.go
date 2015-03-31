@@ -47,3 +47,50 @@ func TestClientToken(t *testing.T) {
 		t.Fatalf("bad: %s", v)
 	}
 }
+
+func TestClientSetToken(t *testing.T) {
+	var tokenValue string
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		cookie, err := req.Cookie(vaultHttp.AuthCookieName)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		tokenValue = cookie.Value
+	}
+
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Should have no token initially
+	if v := client.Token(); v != "" {
+		t.Fatalf("bad: %s", v)
+	}
+
+	// Set the cookie manually
+	client.SetToken("foo")
+
+	// Do a raw "/" request to get the cookie
+	if _, err := client.RawRequest(client.NewRequest("GET", "/")); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Verify the token is set
+	if v := client.Token(); v != "foo" {
+		t.Fatalf("bad: %s", v)
+	}
+	if v := tokenValue; v != "foo" {
+		t.Fatalf("bad: %s", v)
+	}
+
+	client.ClearToken()
+
+	if v := client.Token(); v != "" {
+		t.Fatalf("bad: %s", v)
+	}
+}
