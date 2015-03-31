@@ -21,12 +21,12 @@ type Backend struct {
 	// paths, including adding or removing, is not allowed once the
 	// backend is in use).
 	//
-	// PathsRoot is the list of path patterns that denote the
-	// paths above that require root-level privileges. These can't be
+	// PathsSpecial is the list of path patterns that denote the
+	// paths above that require special privileges. These can't be
 	// regular expressions, it is either exact match or prefix match.
 	// For prefix match, append '*' as a suffix.
-	Paths     []*Path
-	PathsRoot []string
+	Paths        []*Path
+	PathsSpecial *logical.Paths
 
 	// Secrets is the list of secret types that this backend can
 	// return. It is used to automatically generate proper responses,
@@ -105,8 +105,8 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 }
 
 // logical.Backend impl.
-func (b *Backend) RootPaths() []string {
-	return b.PathsRoot
+func (b *Backend) SpecialPaths() *logical.Paths {
+	return b.PathsSpecial
 }
 
 // Route looks up the path that would be used for a given path string.

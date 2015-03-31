@@ -12,13 +12,15 @@ func NewSystemBackend(core *Core) logical.Backend {
 	b := &SystemBackend{Core: core}
 
 	return &framework.Backend{
-		PathsRoot: []string{
-			"mounts/*",
-			"auth/*",
-			"remount",
-			"revoke-prefix/*",
-			"policy",
-			"policy/*",
+		PathsSpecial: &logical.Paths{
+			Root: []string{
+				"mounts/*",
+				"auth/*",
+				"remount",
+				"revoke-prefix/*",
+				"policy",
+				"policy/*",
+			},
 		},
 
 		Paths: []*framework.Path{

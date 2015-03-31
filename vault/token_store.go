@@ -317,11 +317,7 @@ func (ts *TokenStore) HandleRequest(req *logical.Request) (*logical.Response, er
 	return nil, logical.ErrUnsupportedPath
 }
 
-func (ts *TokenStore) RootPaths() []string {
-	return nil
-}
-
-func (ts *TokenStore) LoginPaths() []string {
+func (ts *TokenStore) SpecialPaths() *logical.Paths {
 	return nil
 }
 

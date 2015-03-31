@@ -19,7 +19,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	}
 
 	b := testSystemBackend(t)
-	actual := b.RootPaths()
+	actual := b.SpecialPaths().Root
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}

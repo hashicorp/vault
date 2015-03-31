@@ -25,8 +25,10 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 	return n.Response, nil
 }
 
-func (n *NoopBackend) RootPaths() []string {
-	return n.Root
+func (n *NoopBackend) SpecialPaths() *logical.Paths {
+	return &logical.Paths{
+		Root: n.Root,
+	}
 }
 
 func TestRouter_Mount(t *testing.T) {

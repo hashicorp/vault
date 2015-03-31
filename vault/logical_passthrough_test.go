@@ -10,8 +10,8 @@ import (
 
 func TestPassthroughBackend_RootPaths(t *testing.T) {
 	b := testPassthroughBackend()
-	root := b.RootPaths()
-	if len(root) != 0 {
+	root := b.SpecialPaths()
+	if root != nil {
 		t.Fatalf("unexpected: %v", root)
 	}
 }

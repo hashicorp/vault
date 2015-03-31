@@ -13,12 +13,23 @@ type Backend interface {
 	// The backends must check the operation type and handle appropriately.
 	HandleRequest(*Request) (*Response, error)
 
-	// RootPaths is a list of paths that require root level privileges.
-	// These paths will be enforced by the router so that backends do
-	// not need to handle the authorization. Paths are enforced exactly
-	// or using a prefix match if they end in '*'
-	RootPaths() []string
+	// SpecialPaths is a list of paths that are special in some way.
+	// See PathType for the types of special paths. The key is the type
+	// of the special path, and the value is a list of paths for this type.
+	// This is not a regular expression but is an exact match. If the path
+	// ends in '*' then it is a prefix-based match. The '*' can only appear
+	// at the end.
+	SpecialPaths() *Paths
 }
 
 // Factory is the factory function to create a logical backend.
 type Factory func(map[string]string) (Backend, error)
+
+// Paths is the structure of special paths that is used for SpecialPaths.
+type Paths struct {
+	// Root are the paths that require a root token to access
+	Root []string
+
+	// Unauthenticated are the paths that can be accessed without any auth.
+	Unauthenticated []string
+}

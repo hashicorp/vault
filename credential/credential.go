@@ -27,12 +27,6 @@ const (
 type Backend interface {
 	logical.Backend
 
-	// LoginPaths is a list of paths that are unauthenticated and used
-	// only for logging in. These paths cannot be reached via HandleRequest,
-	// and are sent to HandleLogin instead. Paths are enforced exactly
-	// or using a prefix match if they end in '*'
-	LoginPaths() []string
-
 	// HandleLogin is used to handle a login request and generate a response.
 	// The backend is allowed to ignore this request if it is not applicable.
 	HandleLogin(req *Request) (*Response, error)

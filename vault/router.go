@@ -42,21 +42,18 @@ func (r *Router) Mount(backend logical.Backend, prefix string, view *BarrierView
 		return fmt.Errorf("cannot mount under existing mount '%s'", existing)
 	}
 
-	// Get the root paths
-	rootPaths := pathsToRadix(backend.RootPaths())
-
-	// Check if this is a credential backend, calculate the login paths
-	var loginPaths *radix.Tree
-	if cred, ok := backend.(credential.Backend); ok {
-		loginPaths = pathsToRadix(cred.LoginPaths())
+	// Build the paths
+	paths := backend.SpecialPaths()
+	if paths == nil {
+		paths = new(logical.Paths)
 	}
 
 	// Create a mount entry
 	me := &mountEntry{
 		backend:    backend,
 		view:       view,
-		rootPaths:  rootPaths,
-		loginPaths: loginPaths,
+		rootPaths:  pathsToRadix(paths.Root),
+		loginPaths: pathsToRadix(paths.Unauthenticated),
 	}
 	r.root.Insert(prefix, me)
 	return nil
@@ -228,8 +225,8 @@ func (r *Router) LoginPath(path string) bool {
 	return match == remain
 }
 
-// pathsToRadix converts a list of paths potentially ending with
-// a wildcard expansion "*" into a radix tree.
+// pathsToRadix converts a the mapping of special paths to a mapping
+// of special paths to radix trees.
 func pathsToRadix(paths []string) *radix.Tree {
 	tree := radix.New()
 	for _, path := range paths {
@@ -238,7 +235,9 @@ func pathsToRadix(paths []string) *radix.Tree {
 		if prefixMatch {
 			path = path[:len(path)-1]
 		}
+
 		tree.Insert(path, prefixMatch)
 	}
+
 	return tree
 }

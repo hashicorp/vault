@@ -30,12 +30,11 @@ func (n *NoopCred) HandleRequest(req *logical.Request) (*logical.Response, error
 	return n.Response, nil
 }
 
-func (n *NoopCred) RootPaths() []string {
-	return n.Root
-}
-
-func (n *NoopCred) LoginPaths() []string {
-	return n.Login
+func (n *NoopCred) SpecialPaths() *logical.Paths {
+	return &logical.Paths{
+		Root:            n.Root,
+		Unauthenticated: n.Login,
+	}
 }
 
 func (n *NoopCred) HandleLogin(req *credential.Request) (*credential.Response, error) {
