@@ -538,6 +538,29 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "lookup")
+	req.ClientToken = root
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	exp := map[string]interface{}{
+		"id":       root,
+		"policies": []string{"root"},
+		"path":     "sys/root",
+		"meta":     map[string]string(nil),
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
+	}
+}
+
 func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root

@@ -89,7 +89,7 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 			},
 
 			&framework.Path{
-				Pattern: "lookup/(?P<token>.+)",
+				Pattern: "lookup(/(?P<token>.+))?",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -501,6 +501,9 @@ func (ts *TokenStore) handleRevokeOrphan(
 func (ts *TokenStore) handleLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
+	if id == "" {
+		id = req.ClientToken
+	}
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
