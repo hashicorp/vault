@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 const (
@@ -35,6 +36,8 @@ const (
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
 type TokenStore struct {
+	*framework.Backend
+
 	view *BarrierView
 	salt string
 }
@@ -69,6 +72,77 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 			return nil, fmt.Errorf("failed to persist salt: %v", err)
 		}
 	}
+
+	// Setup the framework endpoints
+	t.Backend = &framework.Backend{
+		PathsSpecial: nil,
+		Paths: []*framework.Path{
+			&framework.Path{
+				Pattern: "create$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleCreate,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenCreateHelp),
+				HelpDescription: strings.TrimSpace(tokenCreateHelp),
+			},
+
+			&framework.Path{
+				Pattern: "lookup/(?P<token>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to lookup",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: t.handleLookup,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
+				HelpDescription: strings.TrimSpace(tokenLookupHelp),
+			},
+
+			&framework.Path{
+				Pattern: "revoke/(?P<token>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to revoke",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleRevokeTree,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRevokeHelp),
+				HelpDescription: strings.TrimSpace(tokenRevokeHelp),
+			},
+			&framework.Path{
+				Pattern: "revoke-orphan/(?P<token>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to revoke",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleRevokeOrphan,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRevokeOrphanHelp),
+				HelpDescription: strings.TrimSpace(tokenRevokeOrphanHelp),
+			},
+		},
+	}
+
 	return t, nil
 }
 
@@ -293,44 +367,9 @@ func (ts *TokenStore) RevokeAll() error {
 	return nil
 }
 
-// HandleRequest is used to handle a request and generate a response.
-// The backends must check the operation type and handle appropriately.
-func (ts *TokenStore) HandleRequest(req *logical.Request) (*logical.Response, error) {
-	switch {
-	case req.Path == "create":
-		return ts.handleCreate(req)
-	case strings.HasPrefix(req.Path, "lookup/"):
-		return ts.handleLookup(req)
-	case strings.HasPrefix(req.Path, "revoke/"):
-		return ts.handleRevokeTree(req)
-	case strings.HasPrefix(req.Path, "revoke-orphan/"):
-		return ts.handleRevokeOrphan(req)
-	case req.Path == "":
-		switch req.Operation {
-		case logical.HelpOperation:
-			return logical.HelpResponse(tokenBackendHelp, []string{"auth/token/create"}), nil
-		default:
-			return nil, logical.ErrUnsupportedOperation
-		}
-	}
-	return nil, logical.ErrUnsupportedPath
-}
-
-func (ts *TokenStore) SpecialPaths() *logical.Paths {
-	return nil
-}
-
 // handleCreate handles the auth/token/create path for creation of new tokens
-func (ts *TokenStore) handleCreate(req *logical.Request) (*logical.Response, error) {
-	// Validate the operation
-	switch req.Operation {
-	case logical.WriteOperation:
-	case logical.HelpOperation:
-		return logical.HelpResponse(tokenCreateHelp, nil), nil
-	default:
-		return nil, logical.ErrUnsupportedOperation
-	}
-
+func (ts *TokenStore) handleCreate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(req.ClientToken)
 	if err != nil || parent == nil {
@@ -425,18 +464,9 @@ func (ts *TokenStore) handleCreate(req *logical.Request) (*logical.Response, err
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/vaultID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
-func (ts *TokenStore) handleRevokeTree(req *logical.Request) (*logical.Response, error) {
-	// Validate the operation
-	switch req.Operation {
-	case logical.WriteOperation:
-	case logical.HelpOperation:
-		return logical.HelpResponse(tokenRevokeHelp, nil), nil
-	default:
-		return nil, logical.ErrUnsupportedOperation
-	}
-
-	// Parse the id
-	id := strings.TrimPrefix(req.Path, "revoke/")
+func (ts *TokenStore) handleRevokeTree(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
@@ -451,18 +481,10 @@ func (ts *TokenStore) handleRevokeTree(req *logical.Request) (*logical.Response,
 // handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
 // in a way that leaves child tokens orphaned. Normally, using sys/revoke/vaultID will revoke
 // the token and all children.
-func (ts *TokenStore) handleRevokeOrphan(req *logical.Request) (*logical.Response, error) {
-	// Validate the operation
-	switch req.Operation {
-	case logical.WriteOperation:
-	case logical.HelpOperation:
-		return logical.HelpResponse(tokenRevokeOrphanHelp, nil), nil
-	default:
-		return nil, logical.ErrUnsupportedOperation
-	}
-
+func (ts *TokenStore) handleRevokeOrphan(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Parse the id
-	id := strings.TrimPrefix(req.Path, "revoke-orphan/")
+	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
@@ -476,18 +498,9 @@ func (ts *TokenStore) handleRevokeOrphan(req *logical.Request) (*logical.Respons
 
 // handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
-func (ts *TokenStore) handleLookup(req *logical.Request) (*logical.Response, error) {
-	// Validate the operation
-	switch req.Operation {
-	case logical.ReadOperation:
-	case logical.HelpOperation:
-		return logical.HelpResponse(tokenLookupHelp, nil), nil
-	default:
-		return nil, logical.ErrUnsupportedOperation
-	}
-
-	// Parse the id
-	id := strings.TrimPrefix(req.Path, "lookup/")
+func (ts *TokenStore) handleLookup(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}

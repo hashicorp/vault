@@ -452,19 +452,6 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_Revoke_MissingToken(t *testing.T) {
-	_, ts, _ := mockTokenStore(t)
-
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke/")
-	resp, err := ts.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp.Data["error"] != "missing token ID" {
-		t.Fatalf("bad: %#v", resp)
-	}
-}
-
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "child", []string{"root", "foo"})
@@ -497,19 +484,6 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_RevokeOrphan_MissingToken(t *testing.T) {
-	_, ts, _ := mockTokenStore(t)
-
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/")
-	resp, err := ts.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp.Data["error"] != "missing token ID" {
-		t.Fatalf("bad: %#v", resp)
-	}
-}
-
 func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "child", []string{"root", "foo"})
@@ -539,19 +513,6 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 	if out == nil {
 		t.Fatalf("bad: %v", out)
-	}
-}
-
-func TestTokenStore_HandleRequest_Lookup_MissingToken(t *testing.T) {
-	_, ts, _ := mockTokenStore(t)
-
-	req := logical.TestRequest(t, logical.ReadOperation, "lookup/")
-	resp, err := ts.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp.Data["error"] != "missing token ID" {
-		t.Fatalf("bad: %#v", resp)
 	}
 }
 
