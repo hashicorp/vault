@@ -58,19 +58,25 @@ func (t *MountTable) Clone() *MountTable {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
-	Path        string `json:"path"`        // Mount Path
-	Type        string `json:"type"`        // Logical backend Type
-	Description string `json:"description"` // User-provided description
-	UUID        string `json:"uuid"`        // Barrier view UUID
+	Path        string            `json:"path"`        // Mount Path
+	Type        string            `json:"type"`        // Logical backend Type
+	Description string            `json:"description"` // User-provided description
+	UUID        string            `json:"uuid"`        // Barrier view UUID
+	Options     map[string]string `json:"options"`     // Backend configuration
 }
 
 // Returns a deep copy of the mount entry
 func (e *MountEntry) Clone() *MountEntry {
+	optClone := make(map[string]string)
+	for k, v := range e.Options {
+		optClone[k] = v
+	}
 	return &MountEntry{
 		Path:        e.Path,
 		Type:        e.Type,
 		Description: e.Description,
 		UUID:        e.UUID,
+		Options:     optClone,
 	}
 }
 
