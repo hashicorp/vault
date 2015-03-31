@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
@@ -90,6 +91,11 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	sealConfig, err := core.SealConfig()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if sealConfig == nil {
+		respondError(w, http.StatusBadRequest, fmt.Errorf(
+			"server is not yet initialized"))
 		return
 	}
 

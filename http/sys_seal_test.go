@@ -34,6 +34,18 @@ func TestSysSealStatus(t *testing.T) {
 	}
 }
 
+func TestSysSealStatus_uninit(t *testing.T) {
+	core := vault.TestCore(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/v1/sys/seal-status")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 400)
+}
+
 func TestSysSeal(t *testing.T) {
 	core := vault.TestCore(t)
 	vault.TestCoreInit(t, core)
