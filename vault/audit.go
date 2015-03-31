@@ -75,17 +75,23 @@ func (c *Core) persistAudit(table *MountTable) error {
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits() error {
+	var backends []audit.Backend
 	for _, entry := range c.audit.Entries {
 		// Initialize the backend
-		_, err := c.newAuditBackend(entry.Type, nil)
+		audit, err := c.newAuditBackend(entry.Type, entry.Options)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create audit entry %#v: %v",
 				entry, err)
 			return loadAuditFailed
 		}
-		// TODO: Do something with backend
+
+		// Append to the audit entry to the list of backends
+		backends = append(backends, audit)
 	}
+
+	// Setup the audit broker
+	c.auditBroker = NewAuditBroker(backends)
 	return nil
 }
 
@@ -93,6 +99,7 @@ func (c *Core) setupAudits() error {
 // backends to their unloaded state. This is reversed by loadAudits.
 func (c *Core) teardownAudits() error {
 	c.audit = nil
+	c.auditBroker = nil
 	return nil
 }
 
@@ -109,4 +116,18 @@ func (c *Core) newAuditBackend(t string, conf map[string]string) (audit.Backend,
 func defaultAuditTable() *MountTable {
 	table := &MountTable{}
 	return table
+}
+
+// AuditBroker is used to provide a single ingest interface to auditable
+// events given that multiple backends may be configured.
+type AuditBroker struct {
+	backends []audit.Backend
+}
+
+// NewAuditBroker creates a new broker given the list of backends
+func NewAuditBroker(backends []audit.Backend) *AuditBroker {
+	b := &AuditBroker{
+		backends: backends,
+	}
+	return b
 }

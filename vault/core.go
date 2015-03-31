@@ -131,6 +131,10 @@ type Core struct {
 	// configuration
 	audit *MountTable
 
+	// auditBroker is used to ingest the audit events and fan
+	// out into the configured audit backends
+	auditBroker *AuditBroker
+
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView
 
