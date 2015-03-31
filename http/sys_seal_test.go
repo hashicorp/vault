@@ -65,14 +65,10 @@ func TestSysSeal(t *testing.T) {
 }
 
 func TestSysSeal_unsealed(t *testing.T) {
-	core := vault.TestCore(t)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
-
-	key, _ := vault.TestCoreInit(t, core)
-	if _, err := core.Unseal(key); err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	TestServerAuth(t, addr, token)
 
 	resp := testHttpPut(t, addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, resp, 204)

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -17,7 +18,11 @@ func handleSysSeal(core *vault.Core) http.Handler {
 			return
 		}
 
-		if err := core.Seal(); err != nil {
+		// Get the auth for the request so we can access the token directly
+		req := requestAuth(r, &logical.Request{})
+
+		// Seal with the token above
+		if err := core.Seal(req.ClientToken); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
