@@ -38,6 +38,7 @@ func (c *Command) Run(args []string) int {
 		return 1
 	}
 
+	args = f.Args()
 	switch args[0] {
 	case "get":
 		f, err := os.Open(path)
@@ -71,6 +72,9 @@ func (c *Command) Run(args []string) int {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 			return 1
 		}
+	default:
+		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n", args[0])
+		return 1
 	}
 
 	return 0
