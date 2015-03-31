@@ -105,6 +105,9 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	me := raw.(*mountEntry)
 
+	// Determine if this path is an unauthenticated path before we modify it
+	loginPath := r.LoginPath(req.Path)
+
 	// Adjust the path to exclude the routing prefix
 	original := req.Path
 	req.Path = strings.TrimPrefix(req.Path, mount)
@@ -118,9 +121,16 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 		req.ClientToken = ""
 	}
 
+	// If the request is not a login path, then clear the connection
+	originalConn := req.Connection
+	if !loginPath {
+		req.Connection = nil
+	}
+
 	// Reset the request before returning
 	defer func() {
 		req.Path = original
+		req.Connection = originalConn
 		req.Storage = nil
 		req.ClientToken = clientToken
 	}()

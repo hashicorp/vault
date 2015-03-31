@@ -524,6 +524,73 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	}
 }
 
+func TestCore_HandleRequest_NoConnection(t *testing.T) {
+	// Create a badass credential backend that always logs in as armon
+	noop := &NoopBackend{
+		Response: &logical.Response{},
+	}
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.Data["description"] = "foo"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to request with connection data
+	req = &logical.Request{
+		Path:       "foo/login",
+		Connection: &logical.Connection{},
+	}
+	req.ClientToken = root
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if noop.Requests[0].Connection != nil {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+}
+
+func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
+	// Create a badass credential backend that always logs in as armon
+	noop := &NoopBackend{
+		Login:    []string{"login"},
+		Response: &logical.Response{},
+	}
+	c, _, root := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to request with connection data
+	req = &logical.Request{
+		Path:       "auth/foo/login",
+		Connection: &logical.Connection{},
+	}
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if noop.Requests[0].Connection == nil {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+}
+
 // Ensure we get a client token
 func TestCore_HandleLogin_Token(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon

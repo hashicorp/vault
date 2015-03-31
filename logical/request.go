@@ -2,6 +2,7 @@ package logical
 
 import (
 	"errors"
+	"fmt"
 )
 
 // Request is a struct that stores the parameters and context
@@ -51,6 +52,10 @@ func (r *Request) GetString(key string) string {
 	raw := r.Get(key)
 	s, _ := raw.(string)
 	return s
+}
+
+func (r *Request) GoString() string {
+	return fmt.Sprintf("*%#v", *r)
 }
 
 // RenewRequest creates the structure of the renew request.

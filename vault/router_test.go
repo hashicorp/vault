@@ -17,11 +17,13 @@ type NoopBackend struct {
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	requestCopy := *req
 	n.Paths = append(n.Paths, req.Path)
-	n.Requests = append(n.Requests, req)
+	n.Requests = append(n.Requests, &requestCopy)
 	if req.Storage == nil {
 		return nil, fmt.Errorf("missing view")
 	}
+
 	return n.Response, nil
 }
 
