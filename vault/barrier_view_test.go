@@ -18,6 +18,35 @@ func TestBarrierView_spec(t *testing.T) {
 	logical.TestStorage(t, view)
 }
 
+func TestBarrierView_BadKeysKeys(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "foo/")
+
+	_, err := view.List("../")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	_, err = view.Get("../")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	err = view.Delete("../foo")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	le := &logical.StorageEntry{
+		Key:   "../foo",
+		Value: []byte("test"),
+	}
+	err = view.Put(le)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestBarrierView(t *testing.T) {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")

@@ -28,13 +28,27 @@ func NewBarrierView(barrier SecurityBarrier, prefix string) *BarrierView {
 	}
 }
 
+// sanityCheck is used to perform a sanity check on a key
+func (v *BarrierView) sanityCheck(key string) error {
+	if strings.Contains(key, "..") {
+		return fmt.Errorf("key cannot be relative path")
+	}
+	return nil
+}
+
 // logical.Storage impl.
 func (v *BarrierView) List(prefix string) ([]string, error) {
+	if err := v.sanityCheck(prefix); err != nil {
+		return nil, err
+	}
 	return v.barrier.List(v.expandKey(prefix))
 }
 
 // logical.Storage impl.
 func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
+	if err := v.sanityCheck(key); err != nil {
+		return nil, err
+	}
 	entry, err := v.barrier.Get(v.expandKey(key))
 	if err != nil {
 		return nil, err
@@ -54,6 +68,9 @@ func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
 
 // logical.Storage impl.
 func (v *BarrierView) Put(entry *logical.StorageEntry) error {
+	if err := v.sanityCheck(entry.Key); err != nil {
+		return err
+	}
 	nested := &Entry{
 		Key:   v.expandKey(entry.Key),
 		Value: entry.Value,
@@ -63,6 +80,9 @@ func (v *BarrierView) Put(entry *logical.StorageEntry) error {
 
 // logical.Storage impl.
 func (v *BarrierView) Delete(key string) error {
+	if err := v.sanityCheck(key); err != nil {
+		return err
+	}
 	return v.barrier.Delete(v.expandKey(key))
 }
 
