@@ -9,10 +9,16 @@ import (
 
 	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
 func TestAuth_token(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
 	testAuthInit(t)
 
 	ui := new(cli.MockUi)
@@ -23,7 +29,8 @@ func TestAuth_token(t *testing.T) {
 	}
 
 	args := []string{
-		"foo",
+		"-address", addr,
+		token,
 	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
@@ -39,7 +46,7 @@ func TestAuth_token(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if actual != "foo" {
+	if actual != token {
 		t.Fatalf("bad: %s", actual)
 	}
 }

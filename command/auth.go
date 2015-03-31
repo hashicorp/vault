@@ -88,8 +88,37 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Build the client so we can verify that the token is valid
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client to verify the token: %s", err))
+		return 1
+	}
+
+	// Verify the token
+	secret, err := client.Logical().Read("auth/token/lookup-self")
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error validating token: %s", err))
+		return 1
+	}
+
+	// Get the policies we have
+	policiesRaw, ok := secret.Data["policies"]
+	if !ok {
+		policiesRaw = []string{"unknown"}
+	}
+	var policies []string
+	for _, v := range policiesRaw.([]interface{}) {
+		policies = append(policies, v.(string))
+	}
+
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully authenticated!"))
+		"Successfully authenticated! The policies that are associated\n"+
+			"with this token are listed below:\n\n%s",
+		strings.Join(policies, ", "),
+	))
 
 	return 0
 }
