@@ -20,7 +20,6 @@ func NewSystemBackend(core *Core) logical.Backend {
 				"revoke-prefix/*",
 				"policy",
 				"policy/*",
-				"seal",
 			},
 		},
 
@@ -216,17 +215,6 @@ func NewSystemBackend(core *Core) logical.Backend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 			},
-
-			&framework.Path{
-				Pattern: "seal$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleSeal,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["seal"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["seal"][1]),
-			},
 		},
 	}
 }
@@ -236,17 +224,6 @@ func NewSystemBackend(core *Core) logical.Backend {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	Core *Core
-}
-
-// handleSeal is used to mount a new path
-func (b *SystemBackend) handleSeal(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Attempt seal
-	if err := b.Core.Seal(); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	return nil, nil
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table

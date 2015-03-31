@@ -47,10 +47,10 @@ func TestSysSealStatus_uninit(t *testing.T) {
 }
 
 func TestSysSeal(t *testing.T) {
-	core := vault.TestCore(t)
-	vault.TestCoreInit(t, core)
+	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+	TestServerAuth(t, addr, token)
 
 	resp := testHttpPut(t, addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, resp, 204)

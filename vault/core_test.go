@@ -202,13 +202,13 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		t.Fatalf("should not be sealed")
 	}
 
-	err = c.Seal()
+	err = c.Seal(res.RootToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Ignore redundant
-	err = c.Seal()
+	err = c.Seal(res.RootToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -312,8 +312,8 @@ func TestCore_Route_Sealed(t *testing.T) {
 
 // Attempt to unseal after doing a first seal
 func TestCore_SealUnseal(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
-	if err := c.Seal(); err != nil {
+	c, key, root := TestCoreUnsealed(t)
+	if err := c.Seal(root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if unseal, err := c.Unseal(key); err != nil || !unseal {
@@ -416,10 +416,7 @@ func TestCore_HandleRequest_RootPath(t *testing.T) {
 	}
 	resp, err := c.HandleRequest(req)
 	if err != logical.ErrPermissionDenied {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %#v", resp)
+		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 }
 
@@ -476,10 +473,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	}
 	resp, err := c.HandleRequest(req)
 	if err != logical.ErrPermissionDenied {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %#v", resp)
+		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 }
 

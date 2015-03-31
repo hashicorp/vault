@@ -15,7 +15,6 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"revoke-prefix/*",
 		"policy",
 		"policy/*",
-		"seal",
 	}
 
 	b := testSystemBackend(t)
@@ -25,22 +24,6 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_seal(t *testing.T) {
-	core, b, _ := testCoreSystemBackend(t)
-	req := logical.TestRequest(t, logical.WriteOperation, "seal")
-	_, err := b.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !sealed {
-		t.Fatal("should be sealed")
-	}
-}
 func TestSystemBackend_mounts(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "mounts")

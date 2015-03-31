@@ -225,38 +225,21 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 }
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
-	// Ensure there is a client token
-	if req.ClientToken == "" {
-		return logical.ErrorResponse("missing client token"), logical.ErrInvalidRequest
-	}
-
-	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(req.ClientToken)
+	// Validate the token
+	err := c.checkToken(
+		req.Operation, req.Path, req.ClientToken, c.router.RootPath(req.Path))
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
-		return nil, ErrInternalError
-	}
+		// If it is an internal error we return that, otherwise we
+		// return invalid request so that the status codes can be correct
+		errType := logical.ErrInvalidRequest
+		switch err {
+		case ErrInternalError:
+			fallthrough
+		case logical.ErrPermissionDenied:
+			errType = err
+		}
 
-	// Ensure the token is valid
-	if te == nil {
-		return logical.ErrorResponse("invalid client token"), logical.ErrInvalidRequest
-	}
-
-	// Construct the corresponding ACL object
-	acl, err := c.policy.ACL(te.Policies...)
-	if err != nil {
-		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
-		return nil, ErrInternalError
-	}
-
-	// Check if this is a root protected path
-	if c.router.RootPath(req.Path) && !acl.RootPrivilege(req.Path) {
-		return nil, logical.ErrPermissionDenied
-	}
-
-	// Check the standard non-root ACLs
-	if !acl.AllowOperation(req.Operation, req.Path) {
-		return nil, logical.ErrPermissionDenied
+		return logical.ErrorResponse(err.Error()), errType
 	}
 
 	// Route the request
@@ -319,6 +302,45 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 	}
 
 	return resp, err
+}
+
+func (c *Core) checkToken(
+	op logical.Operation, path string, token string, root bool) error {
+	// Ensure there is a client token
+	if token == "" {
+		return fmt.Errorf("missing client token")
+	}
+
+	// Resolve the token policy
+	te, err := c.tokenStore.Lookup(token)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
+		return ErrInternalError
+	}
+
+	// Ensure the token is valid
+	if te == nil {
+		return fmt.Errorf("invalid client token")
+	}
+
+	// Construct the corresponding ACL object
+	acl, err := c.policy.ACL(te.Policies...)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
+		return ErrInternalError
+	}
+
+	// Check if this is a root protected path
+	if root && !acl.RootPrivilege(path) {
+		return logical.ErrPermissionDenied
+	}
+
+	// Check the standard non-root ACLs
+	if !acl.AllowOperation(op, path) {
+		return logical.ErrPermissionDenied
+	}
+
+	return nil
 }
 
 // Initialized checks if the Vault is already initialized
@@ -586,12 +608,23 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 // Seal is used to re-seal the Vault. This requires the Vault to
 // be unsealed again to perform any further operations.
-func (c *Core) Seal() error {
+func (c *Core) Seal(token string) error {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 	if c.sealed {
 		return nil
 	}
+
+	// Validate the token is a root token
+	err := c.checkToken(
+		logical.WriteOperation,
+		"sys/seal",
+		token,
+		true)
+	if err != nil {
+		return err
+	}
+
 	c.sealed = true
 
 	// Do pre-seal teardown
