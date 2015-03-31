@@ -20,6 +20,8 @@ func NewSystemBackend(core *Core) logical.Backend {
 				"revoke-prefix/*",
 				"policy",
 				"policy/*",
+				"audit",
+				"audit/*",
 			},
 		},
 
@@ -215,6 +217,48 @@ func NewSystemBackend(core *Core) logical.Backend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 			},
+
+			&framework.Path{
+				Pattern: "audit$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAuditTable,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audit-table"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audit-table"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "audit/(?P<path>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["audit_path"][0]),
+					},
+					"type": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["audit_type"][0]),
+					},
+					"description": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["audit_desc"][0]),
+					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["audit_opts"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation:  b.handleEnableAudit,
+					logical.DeleteOperation: b.handleDisableAudit,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audit"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audit"][1]),
+			},
 		},
 	}
 }
@@ -375,7 +419,6 @@ func (b *SystemBackend) handleAuthTable(
 		}
 		resp.Data[entry.Path] = info
 	}
-
 	return resp, nil
 }
 
@@ -482,6 +525,72 @@ func (b *SystemBackend) handlePolicyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	if err := b.Core.policy.DeletePolicy(name); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleAuditTable handles the "audit" endpoint to provide the audit table
+func (b *SystemBackend) handleAuditTable(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.audit.Lock()
+	defer b.Core.audit.Unlock()
+
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
+	}
+	for _, entry := range b.Core.audit.Entries {
+		info := map[string]interface{}{
+			"type":        entry.Type,
+			"description": entry.Description,
+			"options":     entry.Options,
+		}
+		resp.Data[entry.Path] = info
+	}
+	return resp, nil
+}
+
+// handleEnableAudit is used to enable a new audit backend
+func (b *SystemBackend) handleEnableAudit(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	path := data.Get("path").(string)
+	backendType := data.Get("type").(string)
+	description := data.Get("description").(string)
+	options := data.Get("options").(map[string]interface{})
+
+	optionMap := make(map[string]string)
+	for k, v := range options {
+		vStr, ok := v.(string)
+		if !ok {
+			return logical.ErrorResponse("options must be string valued"),
+				logical.ErrInvalidRequest
+		}
+		optionMap[k] = vStr
+	}
+
+	// Create the mount entry
+	me := &MountEntry{
+		Path:        path,
+		Type:        backendType,
+		Description: description,
+		Options:     optionMap,
+	}
+
+	// Attempt enabling
+	if err := b.Core.enableAudit(me); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleDisableAudit is used to disable an audit backend
+func (b *SystemBackend) handleDisableAudit(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+
+	// Attempt disable
+	if err := b.Core.disableAudit(path); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -642,5 +751,40 @@ or delete a policy.
 	"policy-rules": {
 		`The rules of the policy. Either given in HCL or JSON format.`,
 		"",
+	},
+
+	"audit-table": {
+		"List the currently enabled audit backends.",
+		`
+List the currently enabled audit backends: the name, the type of the backend,
+a user friendly description of the audit backend, and it's configuration options.
+		`,
+	},
+
+	"audit_path": {
+		`The name of the backend. Cannot be delimited. Example: "mysql"`,
+		"",
+	},
+
+	"audit_type": {
+		`The type of the backend. Example: "mysql"`,
+		"",
+	},
+
+	"audit_desc": {
+		`User-friendly description for this audit backend.`,
+		"",
+	},
+
+	"audit_opts": {
+		`Configuration options for the audit backend.`,
+		"",
+	},
+
+	"audit": {
+		`Enable or disable audit backends.`,
+		`
+Enable a new audit backend or disable an existing backend.
+		`,
 	},
 }

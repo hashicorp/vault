@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -15,6 +16,8 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"revoke-prefix/*",
 		"policy",
 		"policy/*",
+		"audit",
+		"audit/*",
 	}
 
 	b := testSystemBackend(t)
@@ -491,6 +494,109 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_enableAudit(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+		return &NoopAudit{}, nil
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req.Data["type"] = "noop"
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_enableAudit_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req.Data["type"] = "nope"
+	resp, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "unknown backend type: nope" {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_auditTable(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+		return &NoopAudit{}, nil
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req.Data["type"] = "noop"
+	req.Data["description"] = "testing"
+	req.Data["options"] = map[string]interface{}{
+		"foo": "bar",
+	}
+	b.HandleRequest(req)
+
+	req = logical.TestRequest(t, logical.ReadOperation, "audit")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"foo": map[string]interface{}{
+			"type":        "noop",
+			"description": "testing",
+			"options": map[string]string{
+				"foo": "bar",
+			},
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_disableAudit(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+		return &NoopAudit{}, nil
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req.Data["type"] = "noop"
+	req.Data["description"] = "testing"
+	req.Data["options"] = map[string]interface{}{
+		"foo": "bar",
+	}
+	b.HandleRequest(req)
+
+	// Deregister it
+	req = logical.TestRequest(t, logical.DeleteOperation, "audit/foo")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_disableAudit_invalid(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.DeleteOperation, "audit/foo")
+	resp, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "no matching backend" {
+		t.Fatalf("bad: %v", resp)
 	}
 }
 
