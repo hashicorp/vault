@@ -10,6 +10,7 @@ const (
 	TypeString  FieldType = iota
 	TypeInt
 	TypeBool
+	TypeMap
 )
 
 // FieldType has more methods defined on it in backend.go. They aren't

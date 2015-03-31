@@ -68,6 +68,8 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 		fallthrough
 	case TypeInt:
 		fallthrough
+	case TypeMap:
+		fallthrough
 	case TypeString:
 		return d.getPrimitive(k, schema)
 	default:
@@ -100,6 +102,13 @@ func (d *FieldData) getPrimitive(
 		return result, true, nil
 	case TypeString:
 		var result string
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, true, err
+		}
+
+		return result, true, nil
+	case TypeMap:
+		var result map[string]interface{}
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
 		}

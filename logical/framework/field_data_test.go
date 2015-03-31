@@ -76,6 +76,21 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			false,
 		},
+
+		"map type, map value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeMap},
+			},
+			map[string]interface{}{
+				"foo": map[string]interface{}{
+					"child": true,
+				},
+			},
+			"foo",
+			map[string]interface{}{
+				"child": true,
+			},
+		},
 	}
 
 	for name, tc := range cases {
