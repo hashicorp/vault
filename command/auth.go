@@ -87,6 +87,9 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
+	c.Ui.Output(fmt.Sprintf(
+		"Successfully authenticated!"))
+
 	return 0
 }
 

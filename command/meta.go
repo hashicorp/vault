@@ -77,7 +77,26 @@ func (m *Meta) Client() (*api.Client, error) {
 		config.HttpClient = &client
 	}
 
-	return api.NewClient(config)
+	// Build the client
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we have a token, then set that
+	tokenHelper, err := m.TokenHelper()
+	if err != nil {
+		return nil, err
+	}
+	token, err := tokenHelper.Get()
+	if err != nil {
+		return nil, err
+	}
+	if token != "" {
+		client.SetToken(token)
+	}
+
+	return client, nil
 }
 
 // Config loads the configuration and returns it. If the configuration
