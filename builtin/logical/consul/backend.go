@@ -12,9 +12,11 @@ func Factory(map[string]string) (logical.Backend, error) {
 func Backend() *framework.Backend {
 	var b backend
 	b.Backend = &framework.Backend{
-		PathsRoot: []string{
-			"config",
-			"policy/*",
+		PathsSpecial: &logical.Paths{
+			Root: []string{
+				"config",
+				"policy/*",
+			},
 		},
 
 		Paths: []*framework.Path{
