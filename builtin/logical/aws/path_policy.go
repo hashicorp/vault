@@ -2,7 +2,6 @@ package aws
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -21,7 +20,7 @@ func pathPolicy() *framework.Path {
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Policy document, base64 encoded.",
+				Description: "Policy document",
 			},
 		},
 
@@ -33,23 +32,16 @@ func pathPolicy() *framework.Path {
 
 func pathPolicyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Decode and compact the policy. AWS requires a JSON-compacted policy
-	// because it mustn't contain newlines.
-	var policyBuf bytes.Buffer
-	policyRaw, err := base64.StdEncoding.DecodeString(d.Get("policy").(string))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error decoding policy base64: %s", err)), nil
-	}
-	if err := json.Compact(&policyBuf, []byte(policyRaw)); err != nil {
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error compacting policy: %s", err)), nil
 	}
 
 	// Write the policy into storage
-	err = req.Storage.Put(&logical.StorageEntry{
+	err := req.Storage.Put(&logical.StorageEntry{
 		Key:   "policy/" + d.Get("name").(string),
-		Value: policyBuf.Bytes(),
+		Value: buf.Bytes(),
 	})
 	if err != nil {
 		return nil, err

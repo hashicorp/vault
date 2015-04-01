@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"encoding/base64"
 	"log"
 	"os"
 	"testing"
@@ -91,7 +90,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 		Operation: logical.WriteOperation,
 		Path:      "policy/" + name,
 		Data: map[string]interface{}{
-			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
+			"policy": testPolicy,
 		},
 	}
 }
