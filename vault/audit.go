@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -161,7 +163,7 @@ func (c *Core) persistAudit(table *MountTable) error {
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits() error {
-	broker := NewAuditBroker()
+	broker := NewAuditBroker(c.logger)
 	for _, entry := range c.audit.Entries {
 		// Initialize the backend
 		audit, err := c.newAuditBackend(entry.Type, entry.Options)
@@ -215,12 +217,14 @@ type backendEntry struct {
 type AuditBroker struct {
 	l        sync.RWMutex
 	backends map[string]backendEntry
+	logger   *log.Logger
 }
 
 // NewAuditBroker creates a new audit broker
-func NewAuditBroker() *AuditBroker {
+func NewAuditBroker(log *log.Logger) *AuditBroker {
 	b := &AuditBroker{
 		backends: make(map[string]backendEntry),
+		logger:   log,
 	}
 	return b
 }
@@ -248,4 +252,47 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 	defer a.l.RUnlock()
 	_, ok := a.backends[name]
 	return ok
+}
+
+// LogRequest is used to ensure all the audit backends have an opportunity to
+// log the given request and that *at least one* succeeds.
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error {
+	a.l.RLock()
+	defer a.l.RUnlock()
+
+	// Ensure at least one backend logs
+	anyLogged := false
+	for name, be := range a.backends {
+		if err := be.backend.LogRequest(auth, req); err != nil {
+			a.logger.Printf("[ERR] audit: backend '%s' failed to log request: %v", name, err)
+		} else {
+			anyLogged = true
+		}
+	}
+	if !anyLogged && len(a.backends) > 0 {
+		return fmt.Errorf("no audit backend succeeded in logging the request")
+	}
+	return nil
+}
+
+// LogResponse is used to ensure all the audit backends have an opportunity to
+// log the given response and that *at least one* succeeds.
+func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
+	resp *logical.Response, err error) error {
+	a.l.RLock()
+	defer a.l.RUnlock()
+
+	// Ensure at least one backend logs
+	anyLogged := false
+	for name, be := range a.backends {
+		if err := be.backend.LogResponse(auth, req, resp, err); err != nil {
+			a.logger.Printf("[ERR] audit: backend '%s' failed to log response: %v", name, err)
+		} else {
+			anyLogged = true
+		}
+	}
+	if !anyLogged && len(a.backends) > 0 {
+		return fmt.Errorf("no audit backend succeeded in logging the response")
+	}
+	return nil
 }
