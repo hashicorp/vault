@@ -1,0 +1,87 @@
+package command
+
+import (
+	"fmt"
+	"strings"
+)
+
+// RevokeCommand is a Command that mounts a new mount.
+type RevokeCommand struct {
+	Meta
+}
+
+func (c *RevokeCommand) Run(args []string) int {
+	var prefix bool
+	flags := c.Meta.FlagSet("revoke", FlagSetDefault)
+	flags.BoolVar(&prefix, "prefix", false, "")
+	flags.Usage = func() { c.Ui.Error(c.Help()) }
+	if err := flags.Parse(args); err != nil {
+		return 1
+	}
+
+	args = flags.Args()
+	if len(args) != 1 {
+		flags.Usage()
+		c.Ui.Error(fmt.Sprintf(
+			"\nRevoke expects one argument: the ID to revoke"))
+		return 1
+	}
+	vaultId := args[0]
+
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 2
+	}
+
+	if err := client.Sys().Revoke(vaultId); err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Revoke error: %s", err))
+		return 1
+	}
+
+	c.Ui.Output(fmt.Sprintf("Key revoked with ID '%s'.", vaultId))
+	return 0
+}
+
+func (c *RevokeCommand) Synopsis() string {
+	return "Revoke a secret."
+}
+
+func (c *RevokeCommand) Help() string {
+	helpText := `
+Usage: vault revoke [options] id
+
+  Revoke a secret by its Vault ID.
+
+  This command revokes a secret by its Vault ID that was returned
+  with it. Once the key is revoked, it is no longer valid.
+
+  With the -prefix flag, the revoke is done by prefix: any secret prefixed
+  with the given partial ID is revoked. Vault IDs are structured in such
+  a way to make revocation of prefixes useful.
+
+General Options:
+
+  -address=TODO           The address of the Vault server.
+
+  -ca-cert=path           Path to a PEM encoded CA cert file to use to
+                          verify the Vault server SSL certificate.
+
+  -ca-path=path           Path to a directory of PEM encoded CA cert files
+                          to verify the Vault server SSL certificate. If both
+                          -ca-cert and -ca-path are specified, -ca-path is used.
+
+  -insecure               Do not verify TLS certificate. This is highly
+                          not recommended. This is especially not recommended
+                          for unsealing a vault.
+
+Revoke Options:
+
+  -prefix=true            Revoke all secrets with the matching prefix. This
+                          defaults to false: an exact revocation.
+
+`
+	return strings.TrimSpace(helpText)
+}

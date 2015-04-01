@@ -14,6 +14,8 @@ func (c *Sys) Renew(id string) (*Secret, error) {
 func (c *Sys) Revoke(id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/revoke/"+id)
 	resp, err := c.c.RawRequest(r)
-	defer resp.Body.Close()
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	return err
 }

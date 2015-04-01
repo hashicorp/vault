@@ -42,6 +42,12 @@ func init() {
 			}, nil
 		},
 
+		"revoke": func() (cli.Command, error) {
+			return &command.RevokeCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"seal": func() (cli.Command, error) {
 			return &command.SealCommand{
 				Meta: meta,
