@@ -3,6 +3,8 @@ package vault
 import (
 	"testing"
 
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -11,9 +13,16 @@ import (
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t *testing.T) *Core {
+	noopBackends := make(map[string]logical.Factory)
+	noopBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return new(framework.Backend), nil
+	}
+
 	physicalBackend := physical.NewInmem()
 	c, err := NewCore(&CoreConfig{
-		Physical: physicalBackend,
+		Physical:           physicalBackend,
+		LogicalBackends:    noopBackends,
+		CredentialBackends: noopBackends,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)

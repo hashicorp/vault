@@ -214,17 +214,16 @@ shown to the user as documentation.
 
 + Response 200 (application/json)
 
-        [{
-          "id": "token",
-          "type": "token",
-          "help": "base64-encoded human-friendly docs",
-          "keys": ["token"]
-        }, {
-          "id": "password",
-          "type": "password",
-          "help": "base64-encoded human-friendly docs",
-          "keys": ["username", "password"]
-        }]
+        {
+            "token": {
+                "type": "token",
+                "description": "Token authentication"
+            },
+            "oauth": {
+                "type": "oauth",
+                "description": "OAuth authentication"
+            }
+        }
 
 ## Single Auth Method [/sys/auth/{id}]
 
