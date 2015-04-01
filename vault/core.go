@@ -250,10 +250,7 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	resp, err := c.router.Route(req)
 
 	// If there is a secret, we must register it with the expiration manager.
-	//
-	// TODO(mitchellh): what about secrets with a lease of 0, do we still
-	// record them so they're revoked during unmount?
-	if resp != nil && resp.Secret != nil && resp.Secret.Lease > 0 {
+	if resp != nil && resp.Secret != nil {
 		vaultID, err := c.expiration.Register(req, resp)
 		if err != nil {
 			c.logger.Printf(

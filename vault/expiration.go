@@ -110,6 +110,11 @@ func (m *ExpirationManager) Restore() error {
 			continue
 		}
 
+		// If there is no expiry time, don't do anything
+		if le.ExpireTime.IsZero() {
+			continue
+		}
+
 		// Determine the remaining time to expiration
 		expires := le.ExpireTime.Sub(time.Now().UTC())
 		if expires <= 0 {
@@ -239,10 +244,14 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 	resp.Secret.VaultID = vaultID
 
 	// Update the lease entry
+	var expireTime time.Time
 	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
+	if resp.Secret.Lease > 0 {
+		expireTime = time.Now().UTC().Add(leaseTotal)
+	}
 	le.Data = resp.Data
 	le.Secret = resp.Secret
-	le.ExpireTime = time.Now().UTC().Add(leaseTotal)
+	le.ExpireTime = expireTime
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -275,13 +284,17 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	// Create a lease entry
 	now := time.Now().UTC()
 	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
+	var expireTime time.Time
+	if resp.Secret.Lease > 0 {
+		expireTime = now.Add(leaseTotal)
+	}
 	le := leaseEntry{
 		VaultID:    path.Join(req.Path, generateUUID()),
 		Path:       req.Path,
 		Data:       resp.Data,
 		Secret:     resp.Secret,
 		IssueTime:  now,
-		ExpireTime: now.Add(leaseTotal),
+		ExpireTime: expireTime,
 	}
 
 	// Encode the entry
@@ -289,12 +302,14 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		return "", err
 	}
 
-	// Setup revocation timer
-	m.pendingLock.Lock()
-	m.pending[le.VaultID] = time.AfterFunc(leaseTotal, func() {
-		m.expireID(le.VaultID)
-	})
-	m.pendingLock.Unlock()
+	// Setup revocation timer if there is a lease
+	if !expireTime.IsZero() {
+		m.pendingLock.Lock()
+		m.pending[le.VaultID] = time.AfterFunc(leaseTotal, func() {
+			m.expireID(le.VaultID)
+		})
+		m.pendingLock.Unlock()
+	}
 
 	// Done
 	return le.VaultID, nil
