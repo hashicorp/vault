@@ -272,7 +272,7 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 // of lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
 	// Ignore if there is no leased secret
-	if resp == nil || resp.Secret == nil || resp.Secret.Lease == 0 {
+	if resp == nil || resp.Secret == nil {
 		return "", nil
 	}
 
