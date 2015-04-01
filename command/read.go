@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/ryanuber/columnize"
 )
 
 // ReadCommand is a Command that reads data from the Vault.
@@ -13,7 +16,9 @@ type ReadCommand struct {
 }
 
 func (c *ReadCommand) Run(args []string) int {
+	var format string
 	flags := c.Meta.FlagSet("read", FlagSetDefault)
+	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -41,16 +46,55 @@ func (c *ReadCommand) Run(args []string) int {
 		return 1
 	}
 
-	b, err := json.Marshal(secret)
+	switch format {
+	case "json":
+		return c.formatJSON(secret)
+	case "table-whitespace":
+		return c.formatTable(secret, true)
+	case "table":
+		fallthrough
+	default:
+		return c.formatTable(secret, false)
+	}
+
+	return 0
+}
+
+func (c *ReadCommand) formatJSON(s *api.Secret) int {
+	b, err := json.Marshal(s)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
-			"Error reading %s: %s", path, err))
+			"Error formatting secret: %s", err))
 		return 1
 	}
 
 	var out bytes.Buffer
 	json.Indent(&out, b, "", "\t")
 	c.Ui.Output(out.String())
+	return 0
+}
+
+func (c *ReadCommand) formatTable(s *api.Secret, whitespace bool) int {
+	config := columnize.DefaultConfig()
+	config.Delim = "♨"
+	config.Glue = " | "
+	config.Prefix = ""
+	if whitespace {
+		config.Glue = "\t"
+	}
+
+	input := make([]string, 0, 5)
+	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
+
+	if s.VaultId != "" {
+		input = append(input, fmt.Sprintf("vault_id %s %s", config.Delim, s.VaultId))
+	}
+
+	for k, v := range s.Data {
+		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, v))
+	}
+
+	c.Ui.Output(columnize.Format(input, config))
 	return 0
 }
 
@@ -83,6 +127,12 @@ General Options:
   -insecure               Do not verify TLS certificate. This is highly
                           not recommended. This is especially not recommended
                           for unsealing a vault.
+
+Read Options:
+
+  -format=table           The format for output. By default it is a human
+                          friendly table. This can also be table-whitespace,
+                          json.
 
 `
 	return strings.TrimSpace(helpText)
