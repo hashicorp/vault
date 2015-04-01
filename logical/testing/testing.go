@@ -131,6 +131,9 @@ func Test(t TestT, c TestCase) {
 		t.Fatal("error initializing HTTP client: ", err)
 	}
 
+	// Set the token so we're authenticated
+	client.SetToken(init.RootToken)
+
 	// Mount the backend
 	prefix := "mnt"
 	if err := client.Sys().Mount(prefix, "test", "acceptance test"); err != nil {
@@ -147,9 +150,10 @@ func Test(t TestT, c TestCase) {
 
 		// Create the request
 		req := &logical.Request{
-			Operation: s.Operation,
-			Path:      path,
-			Data:      s.Data,
+			Operation:   s.Operation,
+			Path:        path,
+			Data:        s.Data,
+			ClientToken: client.Token(),
 		}
 
 		// Make the request
@@ -179,6 +183,7 @@ func Test(t TestT, c TestCase) {
 	var failedRevokes []*logical.Secret
 	for _, req := range revoke {
 		log.Printf("[WARN] Revoking secret: %#v", req.Secret)
+		req.ClientToken = client.Token()
 		resp, err := core.HandleRequest(req)
 		if err == nil && resp.IsError() {
 			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
@@ -195,6 +200,7 @@ func Test(t TestT, c TestCase) {
 	log.Printf("[WARN] Requesting RollbackOperation")
 	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
+	req.ClientToken = client.Token()
 	resp, err := core.HandleRequest(req)
 	if err == nil && resp.IsError() {
 		err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
