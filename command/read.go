@@ -25,8 +25,8 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) != 1 {
-		c.Ui.Error("read expects one argument")
+	if len(args) < 1 || len(args) > 2 {
+		c.Ui.Error("read expects one or two arguments")
 		flags.Usage()
 		return 1
 	}
@@ -49,12 +49,10 @@ func (c *ReadCommand) Run(args []string) int {
 	switch format {
 	case "json":
 		return c.formatJSON(secret)
-	case "table-whitespace":
-		return c.formatTable(secret, true)
 	case "table":
 		fallthrough
 	default:
-		return c.formatTable(secret, false)
+		return c.formatTable(secret, true)
 	}
 
 	return 0
@@ -77,11 +75,8 @@ func (c *ReadCommand) formatJSON(s *api.Secret) int {
 func (c *ReadCommand) formatTable(s *api.Secret, whitespace bool) int {
 	config := columnize.DefaultConfig()
 	config.Delim = "♨"
-	config.Glue = " | "
+	config.Glue = "\t"
 	config.Prefix = ""
-	if whitespace {
-		config.Glue = "\t"
-	}
 
 	input := make([]string, 0, 5)
 	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
@@ -130,9 +125,8 @@ General Options:
 
 Read Options:
 
-  -format=table           The format for output. By default it is a human
-                          friendly table. This can also be table-whitespace,
-                          json.
+  -format=table           The format for output. By default it is a whitespace-
+                          delimited table. This can also be json.
 
 `
 	return strings.TrimSpace(helpText)
