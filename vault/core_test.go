@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -670,4 +671,65 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 			t.Fatalf("bad: %#v", lresp.Secret)
 		}
 	*/
+}
+
+func TestCore_HandleRequest_AuditTrail(t *testing.T) {
+	// Create a noop audit backend
+	noop := &NoopAudit{}
+	c, _, root := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the audit backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/audit/noop")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Make a request
+	req = &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	req.ClientToken = root
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the audit trail on request and response
+	if len(noop.ReqAuth) != 1 {
+		t.Fatalf("bad: %#v", noop)
+	}
+	auth := noop.ReqAuth[0]
+	if auth.ClientToken != root {
+		t.Fatalf("bad client token: %#v", auth)
+	}
+	if len(auth.Policies) != 1 || auth.Policies[0] != "root" {
+		t.Fatalf("bad: %#v", auth)
+	}
+	if len(noop.Req) != 1 || !reflect.DeepEqual(noop.Req[0], req) {
+		t.Fatalf("Bad: %#v", noop.Req[0])
+	}
+
+	if len(noop.RespAuth) != 2 {
+		t.Fatalf("bad: %#v", noop)
+	}
+	if !reflect.DeepEqual(noop.RespAuth[1], auth) {
+		t.Fatalf("bad: %#v", auth)
+	}
+	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
+		t.Fatalf("Bad: %#v", noop.RespReq[1])
+	}
+	if len(noop.Resp) != 2 || !reflect.DeepEqual(noop.Resp[1], resp) {
+		t.Fatalf("Bad: %#v", noop.Resp[1])
+	}
 }

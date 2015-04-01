@@ -230,7 +230,7 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	// Validate the token
-	err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
 	if err != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
@@ -243,6 +243,13 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 		}
 
 		return logical.ErrorResponse(err.Error()), errType
+	}
+
+	// Create an audit trail of the request
+	if err := c.auditBroker.LogRequest(auth, req); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
+			req, err)
+		return nil, ErrInternalError
 	}
 
 	// Route the request
@@ -258,6 +265,13 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 			return nil, ErrInternalError
 		}
 		resp.Secret.VaultID = vaultID
+	}
+
+	// Create an audit trail of the response
+	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit response (request: %#v, response: %#v): %v",
+			req, resp, err)
+		return nil, ErrInternalError
 	}
 
 	// Return the response and error
@@ -305,42 +319,48 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 }
 
 func (c *Core) checkToken(
-	op logical.Operation, path string, token string) error {
+	op logical.Operation, path string, token string) (*logical.Auth, error) {
 	// Ensure there is a client token
 	if token == "" {
-		return fmt.Errorf("missing client token")
+		return nil, fmt.Errorf("missing client token")
 	}
 
 	// Resolve the token policy
 	te, err := c.tokenStore.Lookup(token)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
-		return ErrInternalError
+		return nil, ErrInternalError
 	}
 
 	// Ensure the token is valid
 	if te == nil {
-		return fmt.Errorf("invalid client token")
+		return nil, fmt.Errorf("invalid client token")
 	}
 
 	// Construct the corresponding ACL object
 	acl, err := c.policy.ACL(te.Policies...)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
-		return ErrInternalError
+		return nil, ErrInternalError
 	}
 
 	// Check if this is a root protected path
 	if c.router.RootPath(path) && !acl.RootPrivilege(path) {
-		return logical.ErrPermissionDenied
+		return nil, logical.ErrPermissionDenied
 	}
 
 	// Check the standard non-root ACLs
 	if !acl.AllowOperation(op, path) {
-		return logical.ErrPermissionDenied
+		return nil, logical.ErrPermissionDenied
 	}
 
-	return nil
+	// Create the auth response
+	auth := &logical.Auth{
+		ClientToken: token,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+	}
+	return auth, nil
 }
 
 // Initialized checks if the Vault is already initialized
@@ -616,7 +636,7 @@ func (c *Core) Seal(token string) error {
 	}
 
 	// Validate the token is a root token
-	err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	_, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
 	if err != nil {
 		return err
 	}
