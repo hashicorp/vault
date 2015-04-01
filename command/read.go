@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// ReadCommand is a Command that gets data from the Vault.
+// ReadCommand is a Command that reads data from the Vault.
 type ReadCommand struct {
 	Meta
 }
@@ -60,7 +60,7 @@ func (c *ReadCommand) Synopsis() string {
 
 func (c *ReadCommand) Help() string {
 	helpText := `
-Usage: vault get [options] path
+Usage: vault read [options] path
 
   Read data from Vault.
 

@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 )
-
-// DefaultDataKey is the key used in the write as a default for data.
-const DefaultDataKey = "value"
 
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {
@@ -27,8 +25,8 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) != 2 {
-		c.Ui.Error("write expects two arguments")
+	if len(args) < 2 {
+		c.Ui.Error("write expects at least two arguments")
 		flags.Usage()
 		return 1
 	}
@@ -37,22 +35,14 @@ func (c *WriteCommand) Run(args []string) int {
 	if path[0] == '/' {
 		path = path[1:]
 	}
-	var data map[string]interface{}
-	if args[1] == "-" {
-		var stdin io.Reader = os.Stdin
-		if c.testStdin != nil {
-			stdin = c.testStdin
-		}
 
-		dec := json.NewDecoder(stdin)
-		if err := dec.Decode(&data); err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error decoding JSON of stdin: %s", err))
-			return 1
-		}
-	} else {
-		data = map[string]interface{}{DefaultDataKey: args[1]}
+	data, err := c.parseData(args[1:])
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error loading data: %s", err))
+		return 1
 	}
+	println(fmt.Sprintf("%#v", data))
 
 	client, err := c.Client()
 	if err != nil {
@@ -71,13 +61,80 @@ func (c *WriteCommand) Run(args []string) int {
 	return 0
 }
 
+func (c *WriteCommand) parseData(args []string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	for i, arg := range args {
+		// If the arg is exactly "-" then we read from stdin and merge
+		// the resulting structure into the result.
+		if arg == "-" {
+			var stdin io.Reader = os.Stdin
+			if c.testStdin != nil {
+				stdin = c.testStdin
+			}
+
+			dec := json.NewDecoder(stdin)
+			if err := dec.Decode(&result); err != nil {
+				return nil, fmt.Errorf(
+					"Error loading data at index %d: %s", i, err)
+			}
+
+			continue
+		}
+
+		// If the arg begins with "@" then we read the file directly.
+		if arg[0] == '@' {
+			f, err := os.Open(arg[1:])
+			if err != nil {
+				return nil, fmt.Errorf(
+					"Error loading data at index %d: %s", i, err)
+			}
+
+			dec := json.NewDecoder(f)
+			err = dec.Decode(&result)
+			f.Close()
+			if err != nil {
+				return nil, fmt.Errorf(
+					"Error loading data at index %d: %s", i, err)
+			}
+
+			continue
+		}
+
+		// Split into key/value
+		parts := strings.SplitN(arg, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf(
+				"Data at index %d is not in key=value format: %s",
+				i, arg)
+		}
+		key, value := parts[0], parts[1]
+
+		if value[0] == '@' {
+			contents, err := ioutil.ReadFile(value[1:])
+			if err != nil {
+				return nil, fmt.Errorf(
+					"Error reading file value for index %d: %s", i, err)
+			}
+
+			value = string(contents)
+		} else if value[0] == '\\' && value[1] == '@' {
+			value = value[1:]
+		}
+
+		result[key] = value
+	}
+
+	return result, nil
+}
+
 func (c *WriteCommand) Synopsis() string {
 	return "Write secrets or configuration into Vault"
 }
 
 func (c *WriteCommand) Help() string {
 	helpText := `
-Usage: vault write [options] path data
+Usage: vault write [options] path [data]
 
   Write data (secrets or configuration) into Vault.
 
@@ -88,11 +145,9 @@ Usage: vault write [options] path data
   into Consul at that key. Check the documentation of the logical backend
   you're using for more information on key structure.
 
-  If data is "-" then the data will be ready from stdin. To write a literal
-  "-", you'll have to pipe that value in from stdin. To write data from a
-  file, pipe the file contents in via stdin and set data to "-".
-
-  If data is a string, it will be sent with the key of "value".
+  Data is sent via additional arguments in "key=value" pairs. If value
+  begins with an "@", then it is loaded from a file. If you want to start
+  the value with a literal "@", then prefix the "@" with a slash: "\@".
 
 General Options:
 
