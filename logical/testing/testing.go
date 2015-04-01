@@ -53,6 +53,9 @@ type TestStep struct {
 	// the step executed successfully. If this is not set, then the next
 	// step will be called
 	Check TestCheckFunc
+
+	// Unauthenticated, if true, will make the request unauthenticated.
+	Unauthenticated bool
 }
 
 // TestCheckFunc is the callback used for Check in TestStep.
@@ -150,10 +153,12 @@ func Test(t TestT, c TestCase) {
 
 		// Create the request
 		req := &logical.Request{
-			Operation:   s.Operation,
-			Path:        path,
-			Data:        s.Data,
-			ClientToken: client.Token(),
+			Operation: s.Operation,
+			Path:      path,
+			Data:      s.Data,
+		}
+		if !s.Unauthenticated {
+			req.ClientToken = client.Token()
 		}
 
 		// Make the request
