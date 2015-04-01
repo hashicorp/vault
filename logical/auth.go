@@ -1,5 +1,9 @@
 package logical
 
+import (
+	"fmt"
+)
+
 // Auth is the resulting authentication information that is part of
 // Response for credential backends.
 type Auth struct {
@@ -16,4 +20,8 @@ type Auth struct {
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.
 	Metadata map[string]string
+}
+
+func (a *Auth) GoString() string {
+	return fmt.Sprintf("*%#v", *a)
 }
