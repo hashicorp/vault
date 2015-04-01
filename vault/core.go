@@ -234,12 +234,12 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	if err != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
-		errType := logical.ErrInvalidRequest
+		var errType error
 		switch err {
-		case ErrInternalError:
-			fallthrough
-		case logical.ErrPermissionDenied:
+		case ErrInternalError, logical.ErrPermissionDenied:
 			errType = err
+		default:
+			errType = logical.ErrInvalidRequest
 		}
 
 		return logical.ErrorResponse(err.Error()), errType
