@@ -32,7 +32,7 @@ type Secret struct {
 }
 
 func (s *Secret) Validate() error {
-	if s.Lease <= 0 {
+	if s.Lease < 0 {
 		return fmt.Errorf("lease duration must not be less than zero")
 	}
 	if s.LeaseGracePeriod < 0 {
