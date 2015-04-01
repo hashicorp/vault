@@ -19,3 +19,12 @@ func (c *Sys) Revoke(id string) error {
 	}
 	return err
 }
+
+func (c *Sys) RevokePrefix(id string) error {
+	r := c.c.NewRequest("PUT", "/v1/sys/revoke-prefix/"+id)
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
