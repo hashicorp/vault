@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -227,6 +228,21 @@ func Test(t TestT, c TestCase) {
 	// Cleanup
 	if c.Teardown != nil {
 		c.Teardown()
+	}
+}
+
+// TestCheckAuth is a helper to check that a request generated an
+// auth token with the proper policies.
+func TestCheckAuth(policies []string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+		if !reflect.DeepEqual(resp.Auth.Policies, policies) {
+			return fmt.Errorf("invalid policies: %#v", resp.Auth.Policies)
+		}
+
+		return nil
 	}
 }
 
