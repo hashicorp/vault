@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/vault/logical"
@@ -54,6 +55,11 @@ func respondError(w http.ResponseWriter, status int, err error) {
 
 	enc := json.NewEncoder(w)
 	enc.Encode(resp)
+}
+
+func respondErrorResponse(w http.ResponseWriter, resp *logical.Response) {
+	err := fmt.Errorf("%s", resp.Data["error"].(string))
+	respondError(w, http.StatusBadRequest, err)
 }
 
 func respondOk(w http.ResponseWriter, body interface{}) {

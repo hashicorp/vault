@@ -63,6 +63,10 @@ func handleLogical(core *vault.Core) http.Handler {
 			respondError(w, http.StatusNotFound, nil)
 			return
 		}
+		if resp.IsError() {
+			respondErrorResponse(w, resp)
+			return
+		}
 
 		var httpResp interface{}
 		if resp != nil {
