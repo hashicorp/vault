@@ -57,9 +57,18 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	enc.Encode(resp)
 }
 
-func respondErrorResponse(w http.ResponseWriter, resp *logical.Response) {
-	err := fmt.Errorf("%s", resp.Data["error"].(string))
-	respondError(w, http.StatusBadRequest, err)
+func respondCommon(w http.ResponseWriter, resp *logical.Response) bool {
+	if resp == nil {
+		return false
+	}
+
+	if resp.IsError() {
+		err := fmt.Errorf("%s", resp.Data["error"].(string))
+		respondError(w, http.StatusBadRequest, err)
+		return true
+	}
+
+	return false
 }
 
 func respondOk(w http.ResponseWriter, body interface{}) {

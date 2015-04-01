@@ -59,12 +59,11 @@ func handleLogical(core *vault.Core) http.Handler {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if op == logical.ReadOperation && resp == nil {
-			respondError(w, http.StatusNotFound, nil)
+		if respondCommon(w, resp) {
 			return
 		}
-		if resp.IsError() {
-			respondErrorResponse(w, resp)
+		if op == logical.ReadOperation && resp == nil {
+			respondError(w, http.StatusNotFound, nil)
 			return
 		}
 

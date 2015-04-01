@@ -26,7 +26,6 @@ func TestLogical(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"vault_id":       "",
 		"renewable":      false,
 		"lease_duration": float64(0),
 		"data": map[string]interface{}{
@@ -35,6 +34,7 @@ func TestLogical(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	delete(actual, "vault_id")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
