@@ -35,7 +35,12 @@ func (c *RevokeCommand) Run(args []string) int {
 		return 2
 	}
 
-	if err := client.Sys().Revoke(vaultId); err != nil {
+	if prefix {
+		err = client.Sys().RevokePrefix(vaultId)
+	} else {
+		err = client.Sys().Revoke(vaultId)
+	}
+	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Revoke error: %s", err))
 		return 1
