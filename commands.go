@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/consul"
 	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
@@ -75,6 +76,9 @@ func init() {
 		"server": func() (cli.Command, error) {
 			return &command.ServerCommand{
 				Meta: meta,
+				CredentialBackends: map[string]logical.Factory{
+					"github": github.Factory,
+				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":    aws.Factory,
 					"consul": consul.Factory,

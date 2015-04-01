@@ -816,6 +816,6 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		t.Fatalf("Bad: %#v", noop.RespReq[1])
 	}
 	if len(noop.Resp) != 2 || !reflect.DeepEqual(noop.Resp[1], lresp) {
-		t.Fatalf("Bad: %#v", noop.Resp[1], lresp)
+		t.Fatalf("Bad: %#v %#v", noop.Resp[1], lresp)
 	}
 }
