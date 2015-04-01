@@ -42,7 +42,6 @@ func (c *WriteCommand) Run(args []string) int {
 			"Error loading data: %s", err))
 		return 1
 	}
-	println(fmt.Sprintf("%#v", data))
 
 	client, err := c.Client()
 	if err != nil {

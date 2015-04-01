@@ -4,9 +4,9 @@ package framework
 
 import "fmt"
 
-const _FieldType_name = "TypeInvalidTypeStringTypeIntTypeBool"
+const _FieldType_name = "TypeInvalidTypeStringTypeIntTypeBoolTypeMap"
 
-var _FieldType_index = [...]uint8{0, 11, 21, 28, 36}
+var _FieldType_index = [...]uint8{0, 11, 21, 28, 36, 43}
 
 func (i FieldType) String() string {
 	if i+1 >= FieldType(len(_FieldType_index)) {
