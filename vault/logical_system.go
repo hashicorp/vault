@@ -22,6 +22,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 				"policy/*",
 				"audit",
 				"audit/*",
+				"seal", // Must be set for Core.Seal() logic
 			},
 		},
 

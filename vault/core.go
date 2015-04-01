@@ -230,8 +230,7 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	// Validate the token
-	err := c.checkToken(
-		req.Operation, req.Path, req.ClientToken, c.router.RootPath(req.Path))
+	err := c.checkToken(req.Operation, req.Path, req.ClientToken)
 	if err != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
@@ -306,7 +305,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 }
 
 func (c *Core) checkToken(
-	op logical.Operation, path string, token string, root bool) error {
+	op logical.Operation, path string, token string) error {
 	// Ensure there is a client token
 	if token == "" {
 		return fmt.Errorf("missing client token")
@@ -332,7 +331,7 @@ func (c *Core) checkToken(
 	}
 
 	// Check if this is a root protected path
-	if root && !acl.RootPrivilege(path) {
+	if c.router.RootPath(path) && !acl.RootPrivilege(path) {
 		return logical.ErrPermissionDenied
 	}
 
@@ -617,11 +616,7 @@ func (c *Core) Seal(token string) error {
 	}
 
 	// Validate the token is a root token
-	err := c.checkToken(
-		logical.WriteOperation,
-		"sys/seal",
-		token,
-		true)
+	err := c.checkToken(logical.WriteOperation, "sys/seal", token)
 	if err != nil {
 		return err
 	}

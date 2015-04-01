@@ -18,6 +18,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"policy/*",
 		"audit",
 		"audit/*",
+		"seal",
 	}
 
 	b := testSystemBackend(t)
