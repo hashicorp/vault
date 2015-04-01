@@ -17,7 +17,8 @@ import (
 
 // ServerCommand is a Command that starts the Vault server.
 type ServerCommand struct {
-	LogicalBackends map[string]logical.Factory
+	CredentialBackends map[string]logical.Factory
+	LogicalBackends    map[string]logical.Factory
 
 	Meta
 }
@@ -72,8 +73,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the core
 	core, err := vault.NewCore(&vault.CoreConfig{
-		Physical:        backend,
-		LogicalBackends: c.LogicalBackends,
+		Physical:           backend,
+		CredentialBackends: c.CredentialBackends,
+		LogicalBackends:    c.LogicalBackends,
 	})
 
 	// If we're in dev mode, then initialize the core
