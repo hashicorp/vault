@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (c *Sys) ListAuth() ([]*AuthResponse, error) {
+func (c *Sys) ListAuth() (map[string]*Auth, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/auth")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
@@ -24,7 +24,7 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 
 	body := map[string]string{
 		"type":        authType,
-		"description": description,
+		"description": desc,
 	}
 
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/auth/%s", path))
