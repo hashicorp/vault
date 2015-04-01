@@ -48,7 +48,9 @@ func (c *Sys) Unmount(path string) error {
 
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
 	resp, err := c.c.RawRequest(r)
-	defer resp.Body.Close()
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	return err
 }
 

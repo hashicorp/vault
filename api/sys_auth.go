@@ -12,19 +12,22 @@ func (c *Sys) ListAuth() ([]*AuthResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var result []*AuthResponse
+	var result map[string]*Auth
 	err = resp.DecodeJSON(&result)
 	return result, err
 }
 
-func (c *Sys) EnableAuth(id string, opts *AuthRequest) error {
-	body := make(map[string]string)
-	for k, v := range opts.Config {
-		body[k] = v
+func (c *Sys) EnableAuth(path, authType, desc string) error {
+	if err := c.checkAuthPath(path); err != nil {
+		return err
 	}
-	body["type"] = opts.Type
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/auth/%s", id))
+	body := map[string]string{
+		"type":        authType,
+		"description": description,
+	}
+
+	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
@@ -38,25 +41,32 @@ func (c *Sys) EnableAuth(id string, opts *AuthRequest) error {
 	return nil
 }
 
-func (c *Sys) DisableAuth(id string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", id))
+func (c *Sys) DisableAuth(path string) error {
+	if err := c.checkAuthPath(path); err != nil {
+		return err
+	}
+
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
 	resp, err := c.c.RawRequest(r)
-	defer resp.Body.Close()
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	return err
+}
+
+func (c *Sys) checkAuthPath(path string) error {
+	if path[0] == '/' {
+		return fmt.Errorf("path must not start with /: %s", path)
+	}
+
+	return nil
 }
 
 // Structures for the requests/resposne are all down here. They aren't
 // individually documentd because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
-type AuthRequest struct {
-	Type   string
-	Config map[string]string
-}
-
-type AuthResponse struct {
-	ID   string
-	Type string
-	Help string
-	Keys []string
+type Auth struct {
+	Type        string
+	Description string
 }
