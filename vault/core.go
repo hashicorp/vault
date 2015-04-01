@@ -281,10 +281,18 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
 func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, error) {
+	// Create an audit trail of the request, auth is not available on login requests
+	if err := c.auditBroker.LogRequest(nil, req); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
+			req, err)
+		return nil, ErrInternalError
+	}
+
 	// Route the request
 	resp, err := c.router.Route(req)
 
 	// If the response generated an authentication, then generate the token
+	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {
 		// Generate a token
 		te := TokenEntry{
@@ -300,6 +308,9 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 		// Populate the client token
 		resp.Auth.ClientToken = te.ID
 
+		// Store the auth object for audit logging
+		auth = resp.Auth
+
 		// Register with the expiration manager if there is a lease
 		/*
 			if resp.Secret != nil && resp.Secret.Lease > 0 {
@@ -313,6 +324,13 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 				resp.Secret.VaultID = vaultID
 			}
 		*/
+	}
+
+	// Create an audit trail of the response
+	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit response (request: %#v, response: %#v): %v",
+			req, resp, err)
+		return nil, ErrInternalError
 	}
 
 	return resp, err

@@ -733,3 +733,89 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 		t.Fatalf("Bad: %#v", noop.Resp[1])
 	}
 }
+
+// Ensure we get a client token
+func TestCore_HandleLogin_AuditTrail(t *testing.T) {
+	// Create a badass credential backend that always logs in as armon
+	noop := &NoopAudit{}
+	noopBack := &NoopBackend{
+		Login: []string{"login"},
+		Response: &logical.Response{
+			Secret: &logical.Secret{
+				Lease: time.Hour,
+			},
+
+			Auth: &logical.Auth{
+				Policies: []string{"foo", "bar"},
+				Metadata: map[string]string{
+					"user": "armon",
+				},
+			},
+		},
+	}
+	c, _, root := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noopBack, nil
+	}
+	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Enable the audit backend
+	req = logical.TestRequest(t, logical.WriteOperation, "sys/audit/noop")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to login
+	lreq := &logical.Request{
+		Path: "auth/foo/login",
+	}
+	lresp, err := c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure we got a client token back
+	clientToken := lresp.Auth.ClientToken
+	if clientToken == "" {
+		t.Fatalf("bad: %#v", lresp)
+	}
+
+	// Check the audit trail on request and response
+	if len(noop.ReqAuth) != 1 {
+		t.Fatalf("bad: %#v", noop)
+	}
+	if len(noop.Req) != 1 || !reflect.DeepEqual(noop.Req[0], lreq) {
+		t.Fatalf("Bad: %#v %#v", noop.Req[0], lreq)
+	}
+
+	if len(noop.RespAuth) != 2 {
+		t.Fatalf("bad: %#v", noop)
+	}
+	auth := noop.RespAuth[1]
+	if auth.ClientToken != clientToken {
+		t.Fatalf("bad client token: %#v", auth)
+	}
+	if len(auth.Policies) != 2 || auth.Policies[0] != "foo" || auth.Policies[1] != "bar" {
+		t.Fatalf("bad: %#v", auth)
+	}
+	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], lreq) {
+		t.Fatalf("Bad: %#v", noop.RespReq[1])
+	}
+	if len(noop.Resp) != 2 || !reflect.DeepEqual(noop.Resp[1], lresp) {
+		t.Fatalf("Bad: %#v", noop.Resp[1], lresp)
+	}
+}
