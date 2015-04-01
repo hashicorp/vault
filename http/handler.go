@@ -21,6 +21,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 	mux.Handle("/v1/sys/mounts/", handleSysMounts(core))
 	mux.Handle("/v1/sys/revoke/", handleSysRevoke(core))
+	mux.Handle("/v1/sys/revoke-prefix/", handleSysRevokePrefix(core))
 	mux.Handle("/v1/", handleLogical(core))
 	return mux
 }
