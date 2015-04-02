@@ -37,6 +37,12 @@ func init() {
 			}, nil
 		},
 
+		"auth-disable": func() (cli.Command, error) {
+			return &command.AuthDisableCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"read": func() (cli.Command, error) {
 			return &command.ReadCommand{
 				Meta: meta,
