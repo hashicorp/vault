@@ -295,9 +295,9 @@ func (c *Core) setupMounts() error {
 	var err error
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
-		barrierPrefix := backendBarrierPrefix
+		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		if entry.Type == "system" {
-			barrierPrefix = systemBarrierPrefix
+			barrierPath = systemBarrierPrefix
 		}
 
 		backend, err = c.newLogicalBackend(entry.Type, nil)
@@ -309,7 +309,7 @@ func (c *Core) setupMounts() error {
 		}
 
 		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, barrierPrefix+entry.UUID+"/")
+		view = NewBarrierView(c.barrier, barrierPath)
 
 		if entry.Type == "system" {
 			c.systemView = view
