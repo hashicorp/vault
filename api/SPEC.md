@@ -287,7 +287,8 @@ Create or update a policy with the given ID.
 + Request (application/json)
 
         {
-            "policy": "HCL"
+            "name": "root",
+            "rules": "HCL"
         }
 
 + Response 204
