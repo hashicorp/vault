@@ -1,11 +1,11 @@
 package command
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ryanuber/columnize"
 )
 
 // MountsCommand is a Command that lists the mounts.
@@ -40,22 +40,15 @@ func (c *MountsCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
+	columns := []string{"Path | Type | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 
-		var desc bytes.Buffer
-		s := bufio.NewScanner(strings.NewReader(mount.Description))
-		for s.Scan() {
-			desc.WriteString("  " + s.Text())
-		}
-
-		c.Ui.Output(fmt.Sprintf(
-			"%s (type: %s)\n%s\n",
-			path,
-			mount.Type,
-			desc.String()))
+		columns = append(columns, fmt.Sprintf(
+			"%s | %s | %s", path, mount.Type, mount.Description))
 	}
 
+	c.Ui.Output(columnize.SimpleFormat(columns))
 	return 0
 }
 

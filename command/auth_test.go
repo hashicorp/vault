@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
@@ -13,6 +14,35 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
+
+func TestAuth_methods(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	testAuthInit(t)
+
+	ui := new(cli.MockUi)
+	c := &AuthCommand{
+		Meta: Meta{
+			ClientToken: token,
+			Ui:          ui,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"-methods",
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	output := ui.OutputWriter.String()
+	if !strings.Contains(output, "token") {
+		t.Fatalf("bad: %#v", output)
+	}
+}
 
 func TestAuth_token(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)

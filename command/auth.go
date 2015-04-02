@@ -3,9 +3,11 @@ package command
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/password"
+	"github.com/ryanuber/columnize"
 )
 
 // AuthCommand is a Command that handles authentication.
@@ -15,11 +17,17 @@ type AuthCommand struct {
 
 func (c *AuthCommand) Run(args []string) int {
 	var method string
+	var methods bool
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
+	flags.BoolVar(&methods, "methods", false, "")
 	flags.StringVar(&method, "method", "", "method")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
+	}
+
+	if methods {
+		return c.listMethods()
 	}
 
 	args = flags.Args()
@@ -123,6 +131,38 @@ func (c *AuthCommand) Run(args []string) int {
 	return 0
 }
 
+func (c *AuthCommand) listMethods() int {
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 1
+	}
+
+	auth, err := client.Sys().ListAuth()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error reading auth table: %s", err))
+		return 1
+	}
+
+	paths := make([]string, 0, len(auth))
+	for path, _ := range auth {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	columns := []string{"Path | Type | Description"}
+	for _, k := range paths {
+		a := auth[k]
+		columns = append(columns, fmt.Sprintf(
+			"%s | %s | %s", k, a.Type, a.Description))
+	}
+
+	c.Ui.Output(columnize.SimpleFormat(columns))
+	return 0
+}
+
 func (c *AuthCommand) Synopsis() string {
 	return "Prints information about how to authenticate with Vault"
 }
@@ -161,6 +201,9 @@ Auth Options:
   -method=name    Outputs help for the authentication method with the given
                   name for the remote server. If this authentication method
                   is not available, exit with code 1.
+
+  -methods        List the available auth methods.
+
 `
 	return strings.TrimSpace(helpText)
 }
