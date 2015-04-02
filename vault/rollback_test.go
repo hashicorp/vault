@@ -3,6 +3,7 @@ package vault
 import (
 	"log"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -23,12 +24,9 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	}
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
-	return &RollbackManager{
-		Logger: logger,
-		Mounts: mounts,
-		Router: router,
-		Period: 10 * time.Millisecond,
-	}, backend
+	rb := NewRollbackManager(logger, mounts, router)
+	rb.period = 10 * time.Millisecond
+	return rb, backend
 }
 
 func TestRollbackManager(t *testing.T) {
@@ -37,8 +35,8 @@ func TestRollbackManager(t *testing.T) {
 		t.Fatalf("bad: %#v", backend)
 	}
 
-	go m.Start()
-	time.Sleep(100 * time.Millisecond)
+	m.Start()
+	time.Sleep(50 * time.Millisecond)
 	m.Stop()
 
 	count := len(backend.Paths)
@@ -49,9 +47,47 @@ func TestRollbackManager(t *testing.T) {
 		t.Fatalf("bad: %#v", backend)
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
 	if count != len(backend.Paths) {
 		t.Fatalf("should stop requests: %#v", backend)
 	}
+}
+
+func TestRollbackManager_Join(t *testing.T) {
+	m, backend := mockRollback(t)
+	if len(backend.Paths) > 0 {
+		t.Fatalf("bad: %#v", backend)
+	}
+
+	m.Start()
+	defer m.Stop()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		err := m.Rollback("foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		err := m.Rollback("foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		err := m.Rollback("foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}()
+	wg.Wait()
 }
