@@ -97,6 +97,17 @@ func (r *Router) Taint(path string) error {
 	return nil
 }
 
+// Untaint is used to unmark a path as tainted.
+func (r *Router) Untaint(path string) error {
+	r.l.Lock()
+	defer r.l.Unlock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	if ok {
+		raw.(*mountEntry).tainted = false
+	}
+	return nil
+}
+
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
