@@ -19,6 +19,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"audit",
 		"audit/*",
 		"seal",
+		"raw/*",
 	}
 
 	b := testSystemBackend(t)
@@ -598,6 +599,75 @@ func TestSystemBackend_disableAudit_invalid(t *testing.T) {
 	}
 	if resp.Data["error"] != "no matching backend" {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawRead(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "raw/"+coreMountConfigPath)
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["value"].(string)[0] != '{' {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawWrite(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "raw/sys/policy/test")
+	req.Data["value"] = `path "secret/" { policy = "read" }`
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Read the policy!
+	p, err := c.policy.GetPolicy("test")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if p == nil || len(p.Paths) == 0 {
+		t.Fatalf("missing policy %#v", p)
+	}
+	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != PathPolicyRead {
+		t.Fatalf("Bad: %#v", p)
+	}
+}
+
+func TestSystemBackend_rawDelete(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+
+	// set the policy!
+	p := &Policy{Name: "test"}
+	err := c.policy.SetPolicy(p)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete the policy
+	req := logical.TestRequest(t, logical.DeleteOperation, "raw/sys/policy/test")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Policy should be gone
+	out, err := c.policy.GetPolicy("test")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("policy should be gone")
 	}
 }
 

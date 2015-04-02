@@ -23,6 +23,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 				"audit",
 				"audit/*",
 				"seal", // Must be set for Core.Seal() logic
+				"raw/*",
 			},
 		},
 
@@ -259,6 +260,25 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audit"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audit"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "raw/(?P<path>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"value": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleRawRead,
+					logical.WriteOperation:  b.handleRawWrite,
+					logical.DeleteOperation: b.handleRawDelete,
+				},
 			},
 		},
 	}
@@ -592,6 +612,50 @@ func (b *SystemBackend) handleDisableAudit(
 
 	// Attempt disable
 	if err := b.Core.disableAudit(path); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleRawRead is used to read directly from the barrier
+func (b *SystemBackend) handleRawRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	entry, err := b.Core.barrier.Get(path)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"value": string(entry.Value),
+		},
+	}
+	return resp, nil
+}
+
+// handleRawWrite is used to write directly to the barrier
+func (b *SystemBackend) handleRawWrite(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	value := data.Get("value").(string)
+	entry := &Entry{
+		Key:   path,
+		Value: []byte(value),
+	}
+	if err := b.Core.barrier.Put(entry); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleRawDelete is used to delete directly from the barrier
+func (b *SystemBackend) handleRawDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if err := b.Core.barrier.Delete(path); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
