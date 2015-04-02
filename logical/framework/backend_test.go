@@ -363,13 +363,31 @@ func TestBackendRoute(t *testing.T) {
 		"exact": {
 			[]string{"foo"},
 			"foo",
-			"foo",
+			"^foo$",
 		},
 
 		"regexp": {
 			[]string{"fo+"},
 			"foo",
-			"fo+",
+			"^fo+$",
+		},
+
+		"anchor-start": {
+			[]string{"bar"},
+			"foobar",
+			"",
+		},
+
+		"anchor-end": {
+			[]string{"bar"},
+			"barfoo",
+			"",
+		},
+
+		"anchor-ambiguous": {
+			[]string{"mounts", "sys/mounts"},
+			"sys/mounts",
+			"^sys/mounts$",
 		},
 	}
 

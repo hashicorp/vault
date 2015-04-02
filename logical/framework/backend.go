@@ -129,6 +129,13 @@ func (b *Backend) Secret(k string) *Secret {
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
+		// Automatically anchor the pattern
+		if len(p.Pattern) > 0 && p.Pattern[0] != '^' {
+			p.Pattern = "^" + p.Pattern
+		}
+		if p.Pattern[len(p.Pattern)-1] != '$' {
+			p.Pattern = p.Pattern + "$"
+		}
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
 	}
 }
