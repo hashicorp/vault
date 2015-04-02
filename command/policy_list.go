@@ -18,13 +18,19 @@ func (c *PolicyListCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) != 0 {
+	if len(args) == 1 {
+		return c.read(args[0])
+	} else if len(args) == 0 {
+		return c.list()
+	} else {
 		flags.Usage()
 		c.Ui.Error(fmt.Sprintf(
-			"\npolicy-list expects zero arguments"))
+			"\npolicies expects zero or one arguments"))
 		return 1
 	}
+}
 
+func (c *PolicyListCommand) list() int {
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -46,17 +52,37 @@ func (c *PolicyListCommand) Run(args []string) int {
 	return 0
 }
 
+func (c *PolicyListCommand) read(n string) int {
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 2
+	}
+
+	rules, err := client.Sys().GetPolicy(n)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error: %s", err))
+		return 1
+	}
+
+	c.Ui.Output(rules)
+	return 0
+}
+
 func (c *PolicyListCommand) Synopsis() string {
 	return "List the policies on the server"
 }
 
 func (c *PolicyListCommand) Help() string {
 	helpText := `
-Usage: vault policy-list [options]
+Usage: vault policies [options] [name]
 
-  List the policies that are available.
+  List the policies that are available or read a single policy.
 
   This command lists the policies that are written to the Vault server.
+  If a name of a policy is specified, that policy is outputted.
 
 General Options:
 
