@@ -340,11 +340,6 @@ func (b *SystemBackend) handleMount(
 }
 
 // handleUnmount is used to unmount a path
-//
-// TODO: Run a rollback operation
-// TODO: Return an error if things go bad.
-// TODO: Think through error scenario: umount should clean up everything
-//   and should fail if it can't. Perhaps add a "force" flag to YOLO it.
 func (b *SystemBackend) handleUnmount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	suffix := strings.TrimPrefix(req.Path, "mounts/")

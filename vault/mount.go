@@ -130,8 +130,6 @@ func (c *Core) mount(me *MountEntry) error {
 }
 
 // Unmount is used to unmount a path.
-//
-// TODO: document what happens to all secrets currently out for this path.
 func (c *Core) unmount(path string) error {
 	c.mounts.Lock()
 	defer c.mounts.Unlock()
@@ -159,18 +157,21 @@ func (c *Core) unmount(path string) error {
 		return err
 	}
 
-	// Remove the mount table entry
-	if err := c.removeMountEntry(path); err != nil {
-		return err
-	}
-
 	// Unmount the backend
 	if err := c.router.Unmount(path); err != nil {
 		return err
 	}
 
-	// TODO: Delete data in view?
-	// TODO: Handle revocation?
+	// TODO: Invoke the rollback manager a final time
+
+	// TODO: Revoke all the dynamic keys
+
+	// TODO: Clear the data in the view
+
+	// Remove the mount table entry
+	if err := c.removeMountEntry(path); err != nil {
+		return err
+	}
 	c.logger.Printf("[INFO] core: unmounted '%s'", path)
 	return nil
 }
