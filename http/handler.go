@@ -26,6 +26,8 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/revoke/", handleSysRevoke(core))
 	mux.Handle("/v1/sys/revoke-prefix/", handleSysRevokePrefix(core))
 	mux.Handle("/v1/sys/auth/", handleSysAuth(core))
+	mux.Handle("/v1/sys/audit", handleSysListAudit(core))
+	mux.Handle("/v1/sys/audit/", handleSysAudit(core))
 	mux.Handle("/v1/", handleLogical(core))
 	return mux
 }

@@ -3,6 +3,7 @@ package vault
 import (
 	"testing"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
@@ -13,6 +14,11 @@ import (
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t *testing.T) *Core {
+	noopAudits := map[string]audit.Factory{
+		"noop": func(map[string]string) (audit.Backend, error) {
+			return new(noopAudit), nil
+		},
+	}
 	noopBackends := make(map[string]logical.Factory)
 	noopBackends["noop"] = func(map[string]string) (logical.Backend, error) {
 		return new(framework.Backend), nil
@@ -21,6 +27,7 @@ func TestCore(t *testing.T) *Core {
 	physicalBackend := physical.NewInmem()
 	c, err := NewCore(&CoreConfig{
 		Physical:           physicalBackend,
+		AuditBackends:      noopAudits,
 		LogicalBackends:    noopBackends,
 		CredentialBackends: noopBackends,
 	})
@@ -70,4 +77,14 @@ func TestKeyCopy(key []byte) []byte {
 	result := make([]byte, len(key))
 	copy(result, key)
 	return result
+}
+
+type noopAudit struct{}
+
+func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request) error {
+	return nil
+}
+
+func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical.Response, err error) error {
+	return nil
 }
