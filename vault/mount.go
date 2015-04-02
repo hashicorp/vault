@@ -265,17 +265,35 @@ func (c *Core) remount(src, dst string) error {
 		return fmt.Errorf("existing mount at '%s'", match)
 	}
 
+	// Mark the entry as tainted
+	if err := c.taintMountEntry(src); err != nil {
+		return err
+	}
+
+	// Taint the router path to prevent routing
+	if err := c.router.Taint(src); err != nil {
+		return err
+	}
+
+	// Invoke the rollback manager a final time
+	if err := c.rollback.Rollback(src); err != nil {
+		return err
+	}
+
+	// Revoke all the dynamic keys
+	if err := c.expiration.RevokePrefix(src); err != nil {
+		return err
+	}
+
 	// Update the entry in the mount table
 	newTable := c.mounts.Clone()
 	for _, ent := range newTable.Entries {
 		if ent.Path == src {
 			ent.Path = dst
+			ent.Tainted = false
 			break
 		}
 	}
-
-	// TODO: Invoke rollback manager a final time
-	// TODO: Revoke all the dynamic keys
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
@@ -287,6 +305,12 @@ func (c *Core) remount(src, dst string) error {
 	if err := c.router.Remount(src, dst); err != nil {
 		return err
 	}
+
+	// Un-taint the path
+	if err := c.router.Untaint(dst); err != nil {
+		return err
+	}
+
 	c.logger.Printf("[INFO] core: remounted '%s' to '%s'", src, dst)
 	return nil
 }
