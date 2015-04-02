@@ -58,11 +58,12 @@ func (t *MountTable) Clone() *MountTable {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
-	Path        string            `json:"path"`        // Mount Path
-	Type        string            `json:"type"`        // Logical backend Type
-	Description string            `json:"description"` // User-provided description
-	UUID        string            `json:"uuid"`        // Barrier view UUID
-	Options     map[string]string `json:"options"`     // Backend configuration
+	Path        string            `json:"path"`              // Mount Path
+	Type        string            `json:"type"`              // Logical backend Type
+	Description string            `json:"description"`       // User-provided description
+	UUID        string            `json:"uuid"`              // Barrier view UUID
+	Options     map[string]string `json:"options"`           // Backend configuration
+	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
 }
 
 // Returns a deep copy of the mount entry
@@ -153,6 +154,29 @@ func (c *Core) unmount(path string) error {
 		return fmt.Errorf("no matching mount")
 	}
 
+	// Mark the entry as tainted
+	if err := c.taintMountEntry(path); err != nil {
+		return err
+	}
+
+	// Remove the mount table entry
+	if err := c.removeMountEntry(path); err != nil {
+		return err
+	}
+
+	// Unmount the backend
+	if err := c.router.Unmount(path); err != nil {
+		return err
+	}
+
+	// TODO: Delete data in view?
+	// TODO: Handle revocation?
+	c.logger.Printf("[INFO] core: unmounted '%s'", path)
+	return nil
+}
+
+// removeMountEntry is used to remove an entry from the mount table
+func (c *Core) removeMountEntry(path string) error {
 	// Remove the entry from the mount table
 	newTable := c.mounts.Clone()
 	n := len(newTable.Entries)
@@ -169,15 +193,26 @@ func (c *Core) unmount(path string) error {
 		return errors.New("failed to update mount table")
 	}
 	c.mounts = newTable
+	return nil
+}
 
-	// Unmount the backend
-	if err := c.router.Unmount(path); err != nil {
-		return err
+// taintMountEntry is used to mark an entry in the mount table as tainted
+func (c *Core) taintMountEntry(path string) error {
+	// Remove the entry from the mount table
+	newTable := c.mounts.Clone()
+	n := len(newTable.Entries)
+	for i := 0; i < n; i++ {
+		if newTable.Entries[i].Path == path {
+			newTable.Entries[i].Tainted = true
+			break
+		}
 	}
 
-	// TODO: Delete data in view?
-	// TODO: Handle revocation?
-	c.logger.Printf("[INFO] core: unmounted '%s'", path)
+	// Update the mount table
+	if err := c.persistMounts(newTable); err != nil {
+		return errors.New("failed to update mount table")
+	}
+	c.mounts = newTable
 	return nil
 }
 
