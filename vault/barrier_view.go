@@ -143,3 +143,20 @@ func CollectKeys(view *BarrierView) ([]string, error) {
 	}
 	return existing, nil
 }
+
+// ClearView is used to delete all the keys in a view
+func ClearView(view *BarrierView) error {
+	// Collect all the keys
+	keys, err := CollectKeys(view)
+	if err != nil {
+		return err
+	}
+
+	// Delete all the keys
+	for _, key := range keys {
+		if err := view.Delete(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
