@@ -25,6 +25,7 @@ func NewRouter() *Router {
 
 // mountEntry is used to represent a mount point
 type mountEntry struct {
+	tainted    bool
 	backend    logical.Backend
 	view       *BarrierView
 	rootPaths  *radix.Tree
@@ -49,6 +50,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, view *BarrierView
 
 	// Create a mount entry
 	me := &mountEntry{
+		tainted:    false,
 		backend:    backend,
 		view:       view,
 		rootPaths:  pathsToRadix(paths.Root),
@@ -80,6 +82,18 @@ func (r *Router) Remount(src, dst string) error {
 	// Update the mount point
 	r.root.Delete(src)
 	r.root.Insert(dst, raw)
+	return nil
+}
+
+// Taint is used to mark a path as tainted. This means only RollbackOperation
+// RenewOperation requests are allowed to proceed
+func (r *Router) Taint(path string) error {
+	r.l.Lock()
+	defer r.l.Unlock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	if ok {
+		raw.(*mountEntry).tainted = true
+	}
 	return nil
 }
 
@@ -115,6 +129,16 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 		return nil, fmt.Errorf("no handler for route '%s'", req.Path)
 	}
 	me := raw.(*mountEntry)
+
+	// If the path is tainted, we reject any operation except for
+	// Rollback and Revoke
+	if me.tainted {
+		switch req.Operation {
+		case logical.RevokeOperation, logical.RollbackOperation:
+		default:
+			return nil, fmt.Errorf("no handler for route '%s'", req.Path)
+		}
+	}
 
 	// Determine if this path is an unauthenticated path before we modify it
 	loginPath := r.LoginPath(req.Path)

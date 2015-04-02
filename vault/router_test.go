@@ -261,6 +261,45 @@ func TestRouter_LoginPath(t *testing.T) {
 	}
 }
 
+func TestRouter_Taint(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+
+	n := &NoopBackend{}
+	err := r.Mount(n, "prod/aws/", view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	err = r.Taint("prod/aws/")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "prod/aws/foo",
+	}
+	_, err = r.Route(req)
+	if err.Error() != "no handler for route 'prod/aws/foo'" {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Rollback and Revoke should work
+	req.Operation = logical.RollbackOperation
+	_, err = r.Route(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req.Operation = logical.RevokeOperation
+	_, err = r.Route(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestPathsToRadix(t *testing.T) {
 	// Provide real paths
 	paths := []string{
