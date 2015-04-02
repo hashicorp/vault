@@ -4,14 +4,38 @@
 package password
 
 import (
+	"errors"
 	"io"
 	"os"
+	"os/signal"
 )
 
+var ErrInterrupted = errors.New("interrupted")
+
 // Read reads the password from the given os.File. The password
-// will not be echoed back to the user.
+// will not be echoed back to the user. Ctrl-C will automatically return
+// from this function with a blank string and an ErrInterrupted.
 func Read(f *os.File) (string, error) {
-	return read(f)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	defer signal.Stop(ch)
+
+	// Run the actual read in a go-routine so that we can still detect signals
+	var result string
+	var resultErr error
+	doneCh := make(chan struct{})
+	go func() {
+		defer close(doneCh)
+		result, resultErr = read(f)
+	}()
+
+	// Wait on either the read to finish or the signal to come through
+	select {
+	case <-ch:
+		return "", ErrInterrupted
+	case <-doneCh:
+		return result, resultErr
+	}
 }
 
 func readline(f *os.File) (string, error) {
