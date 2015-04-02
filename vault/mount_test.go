@@ -3,6 +3,9 @@ package vault
 import (
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 func TestCore_DefaultMountTable(t *testing.T) {
@@ -92,6 +95,87 @@ func TestCore_Unmount(t *testing.T) {
 	// Verify matching mount tables
 	if !reflect.DeepEqual(c.mounts, c2.mounts) {
 		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
+	}
+}
+
+func TestCore_Unmount_Cleanup(t *testing.T) {
+	noop := &NoopBackend{}
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Mount the noop backend
+	me := &MountEntry{
+		Path: "test/",
+		Type: "noop",
+	}
+	if err := c.mount(me); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Store the view
+	view := c.router.MatchingView("test/")
+
+	// Inject data
+	se := &logical.StorageEntry{
+		Key:   "plstodelete",
+		Value: []byte("test"),
+	}
+	if err := view.Put(se); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Setup response
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			Lease: time.Hour,
+		},
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+	}
+	noop.Response = resp
+
+	// Generate leased secret
+	r := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "test/foo",
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(r)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Secret.VaultID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Unmount, this should cleanup
+	if err := c.unmount("test/"); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Rollback should be invoked
+	if noop.Requests[1].Operation != logical.RollbackOperation {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+
+	// Revoke should be invoked
+	if noop.Requests[2].Operation != logical.RevokeOperation {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+	if noop.Requests[2].Path != "foo" {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+
+	// View should be empty
+	out, err := CollectKeys(view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("bad: %#v", out)
 	}
 }
 
