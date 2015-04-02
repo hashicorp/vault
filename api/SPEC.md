@@ -362,6 +362,56 @@ Move an already-mounted backend to a new path.
 
 + Response 204
 
+# Group Audit Backends
+
+Audit backends are responsible for shuttling the audit logs that
+Vault generates to a durable system for future querying. By default,
+audit logs are not stored anywhere.
+
+## Audit Backends [/sys/audit]
+### List Enabled Audit Backends [GET]
+
+List all the enabled audit backends
+
++ Response 200 (application/json)
+
+        {
+            "file": {
+                "type": "file",
+                "description": "Send audit logs to a file",
+                "options": {}
+            }
+        }
+
+## Single Audit Backend [/sys/audit/{path}]
+
++ Parameters
+    + path (required, string) ... The path where the audit backend is mounted
+
+### Enable [PUT]
+
+Enable an audit backend.
+
++ Request (application/json)
+
+        {
+            "type": "file",
+            "description": "send to a file",
+            "options": {
+                "path": "/var/log/vault.audit.log"
+            }
+        }
+
++ Response 204
+
+### Disable [DELETE]
+
+Disable an audit backend.
+
++ Request (application/json)
+
++ Response 204
+
 # Group Secrets
 
 ## Generic [/{mount}/{path}]
