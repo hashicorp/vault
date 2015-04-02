@@ -258,45 +258,44 @@ are immediately invalidated.
 
 + Response 204
 
-# Group ACLs
+# Group Policies
 
-ACLs are named permission sets that identities returned by
-credential stores are bound to. This separates _authetication_
+Policies are named permission sets that identities returned by
+credential stores are bound to. This separates _authentication_
 from _authorization_.
 
-## ACLs [/sys/acls]
-### List all ACLs [GET]
+## Policies [/sys/policy]
+### List all Policies [GET]
 
-List all the ACLs.
+List all the policies.
 
 + Response 200 (application/json)
 
-        [{
-            "id": "root",
-            "acl": "base64-encoded HCL describing ACL"
-        }]
+        {
+            "policies": ["root"]
+        }
 
-## Single ACL [/sys/acls/{id}]
+## Single Policy [/sys/policy/{id}]
 
 + Parameters
-    + id (required, string) ... The ID of the ACL
+    + id (required, string) ... The name of the policy
 
 ### Upsert [PUT]
 
-Create or update an ACL with the given ID.
+Create or update a policy with the given ID.
 
 + Request (application/json)
 
         {
-            "acl": "base64-encoded HCL"
+            "policy": "HCL"
         }
 
 + Response 204
 
 ### Delete [DELETE]
 
-Delete an ACL with the given ID. Any identities bound to this
-ACL will immediately become "deny all" despite already being
+Delete a policy with the given ID. Any identities bound to this
+policy will immediately become "deny all" despite already being
 authenticated.
 
 + Response 204
