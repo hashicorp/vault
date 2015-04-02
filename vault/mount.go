@@ -152,21 +152,38 @@ func (c *Core) unmount(path string) error {
 		return fmt.Errorf("no matching mount")
 	}
 
+	// Store the view for this backend
+	view := c.router.MatchingView(path)
+
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(path); err != nil {
 		return err
 	}
 
-	// Unmount the backend
+	// Taint the router path to prevent routing
+	if err := c.router.Taint(path); err != nil {
+		return err
+	}
+
+	// Invoke the rollback manager a final time
+	if err := c.rollback.Rollback(path); err != nil {
+		return err
+	}
+
+	// Revoke all the dynamic keys
+	if err := c.expiration.RevokePrefix(path); err != nil {
+		return err
+	}
+
+	// Unmount the backend entirely
 	if err := c.router.Unmount(path); err != nil {
 		return err
 	}
 
-	// TODO: Invoke the rollback manager a final time
-
-	// TODO: Revoke all the dynamic keys
-
-	// TODO: Clear the data in the view
+	// Clear the data in the view
+	if err := ClearView(view); err != nil {
+		return err
+	}
 
 	// Remove the mount table entry
 	if err := c.removeMountEntry(path); err != nil {
@@ -256,6 +273,9 @@ func (c *Core) remount(src, dst string) error {
 			break
 		}
 	}
+
+	// TODO: Invoke rollback manager a final time
+	// TODO: Revoke all the dynamic keys
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
@@ -356,6 +376,11 @@ func (c *Core) setupMounts() error {
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
 			return loadMountsFailed
+		}
+
+		// Ensure the path is tainted if set in the mount table
+		if entry.Tainted {
+			c.router.Taint(entry.Path)
 		}
 	}
 	return nil
