@@ -27,7 +27,7 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 		"description": desc,
 	}
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/auth/%s", path))
+	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
