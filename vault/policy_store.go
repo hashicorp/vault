@@ -88,6 +88,7 @@ func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse policy: %v", err)
 	}
+	p.Name = name
 	return p, nil
 }
 
