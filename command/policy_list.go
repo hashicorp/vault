@@ -25,7 +25,7 @@ func (c *PolicyListCommand) Run(args []string) int {
 	} else {
 		flags.Usage()
 		c.Ui.Error(fmt.Sprintf(
-			"\npolicy expects zero or one arguments"))
+			"\npolicies expects zero or one arguments"))
 		return 1
 	}
 }
@@ -77,7 +77,7 @@ func (c *PolicyListCommand) Synopsis() string {
 
 func (c *PolicyListCommand) Help() string {
 	helpText := `
-Usage: vault policy [options] [name]
+Usage: vault policies [options] [name]
 
   List the policies that are available or read a single policy.
 
