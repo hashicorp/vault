@@ -83,7 +83,7 @@ func (r *Router) Remount(src, dst string) error {
 	return nil
 }
 
-// MatchingMOunt returns the mount prefix that would be used for a path
+// MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
 	mount, _, ok := r.root.LongestPrefix(path)
@@ -92,6 +92,17 @@ func (r *Router) MatchingMount(path string) string {
 		return ""
 	}
 	return mount
+}
+
+// MatchingView returns the view used for a path
+func (r *Router) MatchingView(path string) *BarrierView {
+	r.l.RLock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return nil
+	}
+	return raw.(*mountEntry).view
 }
 
 // Route is used to route a given request
