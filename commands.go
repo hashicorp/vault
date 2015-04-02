@@ -43,6 +43,12 @@ func init() {
 			}, nil
 		},
 
+		"policy-list": func() (cli.Command, error) {
+			return &command.PolicyListCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"read": func() (cli.Command, error) {
 			return &command.ReadCommand{
 				Meta: meta,
