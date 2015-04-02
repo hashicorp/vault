@@ -49,6 +49,12 @@ func init() {
 			}, nil
 		},
 
+		"policy-write": func() (cli.Command, error) {
+			return &command.PolicyWriteCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"read": func() (cli.Command, error) {
 			return &command.ReadCommand{
 				Meta: meta,

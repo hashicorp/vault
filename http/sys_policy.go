@@ -39,6 +39,8 @@ func handleSysPolicy(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "GET":
 			handleSysReadPolicy(core, w, r)
+		case "PUT":
+			fallthrough
 		case "POST":
 			handleSysWritePolicy(core, w, r)
 		case "DELETE":
