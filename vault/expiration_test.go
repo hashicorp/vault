@@ -33,7 +33,9 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 
 	router := NewRouter()
 	logger := log.New(os.Stderr, "", log.LstdFlags)
-	return NewExpirationManager(router, view, ts, logger)
+	exp := NewExpirationManager(router, view, ts, logger)
+	ts.SetExpirationManager(exp)
+	return exp
 }
 
 func TestExpiration_Restore(t *testing.T) {

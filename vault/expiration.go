@@ -74,6 +74,9 @@ func (c *Core) setupExpiration() error {
 	mgr := NewExpirationManager(c.router, view, c.tokenStore, c.logger)
 	c.expiration = mgr
 
+	// Link the token store to this
+	c.tokenStore.SetExpirationManager(mgr)
+
 	// Restore the existing state
 	if err := c.expiration.Restore(); err != nil {
 		return fmt.Errorf("expiration state restore failed: %v", err)
