@@ -139,6 +139,79 @@ func TestCore_DisableCredential_Protected(t *testing.T) {
 	}
 }
 
+func TestCore_DisableCredential_Cleanup(t *testing.T) {
+	noop := &NoopBackend{
+		Login: []string{"login"},
+	}
+	c, _, _ := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	me := &MountEntry{
+		Path: "foo",
+		Type: "noop",
+	}
+	err := c.enableCredential(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Store the view
+	view := c.router.MatchingView("auth/foo/")
+
+	// Inject data
+	se := &logical.StorageEntry{
+		Key:   "plstodelete",
+		Value: []byte("test"),
+	}
+	if err := view.Put(se); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Generate a new token auth
+	noop.Response = &logical.Response{
+		Auth: &logical.Auth{
+			Policies: []string{"foo"},
+		},
+	}
+	r := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "auth/foo/login",
+	}
+	resp, err := c.HandleRequest(r)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Disable should cleanup
+	err = c.disableCredential("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Token should be revoked
+	te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if te != nil {
+		t.Fatalf("bad: %#v", te)
+	}
+
+	// View should be empty
+	out, err := CollectKeys(view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestDefaultAuthTable(t *testing.T) {
 	table := defaultAuthTable()
 	verifyDefaultAuthTable(t, table)
