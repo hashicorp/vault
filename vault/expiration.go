@@ -26,6 +26,12 @@ const (
 
 	// minRevokeDelay is used to prevent an instant revoke on restore
 	minRevokeDelay = 5 * time.Second
+
+	// maxLeaseDuration is the maximum lease duration
+	maxLeaseDuration = 30 * 24 * time.Hour
+
+	// defaultLeaseDuration is the lease duration used when no lease is specified
+	defaultLeaseDuration = maxLeaseDuration
 )
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -315,38 +321,24 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	return le.VaultID, nil
 }
 
-/*
-// RegisterLogin is used to take a credential request and response with
-// an associated lease. The secret gets assigned a vaultId and the management of
-// of lease is assumed by the expiration manager. This is distinct from Register
-// as the behavior of renew and revocation differs a bit.
-func (m *ExpirationManager) RegisterLogin(token string, req *credential.Request, resp *credential.Response) (string, error) {
-	// Ignore if there is no leased secret
-	if resp == nil || resp.Secret == nil || resp.Secret.Lease == 0 {
-		return "", nil
-	}
-
-	// Validate the secret
-	if err := resp.Secret.Validate(); err != nil {
-		return "", err
-	}
-
+// RegisterAuth is used to take an Auth response with an associated lease.
+// The token does not get a VaultID, but the lease management is handled by
+// the expiration manager.
+func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
 	// Create a lease entry
 	now := time.Now().UTC()
-	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
+	leaseTotal := auth.Lease + auth.LeaseGracePeriod
 	le := leaseEntry{
-		VaultID:    path.Join(req.Path, generateUUID()),
-		LoginToken: token,
-		Path:       req.Path,
-		Data:       resp.Data,
-		Secret:     resp.Secret,
+		VaultID:    path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
+		LoginToken: auth.ClientToken,
+		Path:       source,
 		IssueTime:  now,
 		ExpireTime: now.Add(leaseTotal),
 	}
 
 	// Encode the entry
 	if err := m.persistEntry(&le); err != nil {
-		return "", err
+		return err
 	}
 
 	// Setup revocation timer
@@ -355,11 +347,8 @@ func (m *ExpirationManager) RegisterLogin(token string, req *credential.Request,
 		m.expireID(le.VaultID)
 	})
 	m.pendingLock.Unlock()
-
-	// Done
-	return le.VaultID, nil
+	return nil
 }
-*/
 
 // expireID is invoked when a given ID is expired
 func (m *ExpirationManager) expireID(vaultID string) {

@@ -126,41 +126,23 @@ func TestExpiration_Register(t *testing.T) {
 	}
 }
 
-/*
-func TestExpiration_RegisterLogin(t *testing.T) {
+func TestExpiration_RegisterAuth(t *testing.T) {
 	exp := mockExpiration(t)
 	root, err := exp.tokenStore.RootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := &credential.Request{
-		Path: "auth/user/login",
-	}
-	resp := &credential.Response{
-		Secret: &logical.Secret{
-			Lease: time.Hour,
-		},
-		Data: map[string]interface{}{
-			"access_key": "xyz",
-			"secret_key": "abcd",
-		},
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		Lease:       time.Hour,
 	}
 
-	id, err := exp.RegisterLogin(root.ID, req, resp)
+	err = exp.RegisterAuth("auth/github/login", auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-
-	if !strings.HasPrefix(id, req.Path) {
-		t.Fatalf("bad: %s", id)
-	}
-
-	if len(id) <= len(req.Path) {
-		t.Fatalf("bad: %s", id)
-	}
 }
-*/
 
 func TestExpiration_Revoke(t *testing.T) {
 	exp := mockExpiration(t)
