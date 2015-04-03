@@ -280,6 +280,30 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	}
 }
 
+func TestExpiration_RenewToken(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		Lease:       time.Hour,
+	}
+	err = exp.RegisterAuth("auth/github/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Renew the token
+	err = exp.RenewToken("auth/github/login", root.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestExpiration_Renew(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
@@ -435,15 +459,12 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	}
 
 	le := &leaseEntry{
-		VaultID:    "foo/bar/1234",
-		LoginToken: root.ID,
+		VaultID: "foo/bar/1234",
+		Auth: &logical.Auth{
+			ClientToken: root.ID,
+			Lease:       time.Minute,
+		},
 		Path:       "foo/bar",
-		Data: map[string]interface{}{
-			"testing": true,
-		},
-		Secret: &logical.Secret{
-			Lease: time.Minute,
-		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
 	}
