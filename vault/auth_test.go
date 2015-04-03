@@ -151,7 +151,7 @@ func verifyDefaultAuthTable(t *testing.T, table *MountTable) {
 	for idx, entry := range table.Entries {
 		switch idx {
 		case 0:
-			if entry.Path != "token" {
+			if entry.Path != "token/" {
 				t.Fatalf("bad: %v", entry)
 			}
 			if entry.Type != "token" {

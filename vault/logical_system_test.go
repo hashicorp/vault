@@ -328,7 +328,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"token": map[string]string{
+		"token/": map[string]string{
 			"type":        "token",
 			"description": "token based credentials",
 		},

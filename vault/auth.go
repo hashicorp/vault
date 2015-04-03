@@ -33,17 +33,24 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 
-	// Ensure there is a name
-	if entry.Path == "" {
-		return fmt.Errorf("backend path must be specified")
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(entry.Path, "/") {
+		entry.Path += "/"
 	}
-	if strings.Contains(entry.Path, "/") {
-		return fmt.Errorf("backend path cannot have a forward slash")
+
+	// Ensure there is a name
+	if entry.Path == "/" {
+		return fmt.Errorf("backend path must be specified")
 	}
 
 	// Look for matching name
 	for _, ent := range c.auth.Entries {
-		if ent.Path == entry.Path {
+		switch {
+		// Existing is oauth/github/ new is oauth/ or
+		// existing is oauth/ and new is oauth/github/
+		case strings.HasPrefix(ent.Path, entry.Path):
+			fallthrough
+		case strings.HasPrefix(entry.Path, ent.Path):
 			return fmt.Errorf("path already in use")
 		}
 	}
@@ -72,7 +79,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	c.auth = newTable
 
 	// Mount the backend
-	path := credentialRoutePrefix + entry.Path + "/"
+	path := credentialRoutePrefix + entry.Path
 	if err := c.router.Mount(backend, path, view); err != nil {
 		return err
 	}
@@ -86,8 +93,13 @@ func (c *Core) disableCredential(path string) error {
 	c.auth.Lock()
 	defer c.auth.Unlock()
 
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
 	// Ensure the token backend is not affected
-	if path == "token" {
+	if path == "token/" {
 		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
@@ -116,7 +128,7 @@ func (c *Core) disableCredential(path string) error {
 	c.auth = newTable
 
 	// Unmount the backend
-	fullPath := credentialRoutePrefix + path + "/"
+	fullPath := credentialRoutePrefix + path
 	if err := c.router.Unmount(fullPath); err != nil {
 		return err
 	}
@@ -196,7 +208,7 @@ func (c *Core) setupCredentials() error {
 		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 		// Mount the backend
-		path := credentialRoutePrefix + entry.Path + "/"
+		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
@@ -234,7 +246,7 @@ func (c *Core) newCredentialBackend(
 func defaultAuthTable() *MountTable {
 	table := &MountTable{}
 	tokenAuth := &MountEntry{
-		Path:        "token",
+		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
 		UUID:        generateUUID(),
