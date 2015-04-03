@@ -68,14 +68,15 @@ func (t *MountTable) Find(path string) *MountEntry {
 }
 
 // SetTaint is used to set the taint on given entry
-func (t *MountTable) SetTaint(path string, value bool) {
+func (t *MountTable) SetTaint(path string, value bool) bool {
 	n := len(t.Entries)
 	for i := 0; i < n; i++ {
 		if t.Entries[i].Path == path {
 			t.Entries[i].Tainted = value
-			return
+			return true
 		}
 	}
+	return false
 }
 
 // Remove is used to remove a given path entry

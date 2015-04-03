@@ -103,18 +103,64 @@ func (c *Core) disableCredential(path string) error {
 		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
-	// Remove the entry from the mount table
-	found := false
-	newTable := c.auth.Clone()
-	n := len(newTable.Entries)
-	for i := 0; i < n; i++ {
-		if newTable.Entries[i].Path == path {
-			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
-			newTable.Entries = newTable.Entries[:n-1]
-			found = true
-			break
+	// Store the view for this backend
+	fullPath := credentialRoutePrefix + path
+	view := c.router.MatchingView(path)
+
+	// Mark the entry as tainted
+	if err := c.taintCredEntry(path); err != nil {
+		return err
+	}
+
+	// Taint the router path to prevent routing
+	if err := c.router.Taint(fullPath); err != nil {
+		return err
+	}
+
+	// Revoke credentials from this path
+	if err := c.expiration.RevokePrefix(fullPath); err != nil {
+		return err
+	}
+
+	// Unmount the backend
+	if err := c.router.Unmount(fullPath); err != nil {
+		return err
+	}
+
+	// Clear the data in the view
+	if view != nil {
+		if err := ClearView(view); err != nil {
+			return err
 		}
 	}
+
+	// Remove the mount table entry
+	if err := c.removeCredEntry(path); err != nil {
+		return err
+	}
+	c.logger.Printf("[INFO] core: disabled credential backend '%s'", path)
+	return nil
+}
+
+// removeCredEntry is used to remove an entry in the auth table
+func (c *Core) removeCredEntry(path string) error {
+	// Taint the entry from the auth table
+	newTable := c.auth.Clone()
+	newTable.Remove(path)
+
+	// Update the auth table
+	if err := c.persistAuth(newTable); err != nil {
+		return errors.New("failed to update auth table")
+	}
+	c.auth = newTable
+	return nil
+}
+
+// taintCredEntry is used to mark an entry in the auth table as tainted
+func (c *Core) taintCredEntry(path string) error {
+	// Taint the entry from the auth table
+	newTable := c.auth.Clone()
+	found := newTable.SetTaint(path, true)
 
 	// Ensure there was a match
 	if !found {
@@ -126,13 +172,6 @@ func (c *Core) disableCredential(path string) error {
 		return errors.New("failed to update auth table")
 	}
 	c.auth = newTable
-
-	// Unmount the backend
-	fullPath := credentialRoutePrefix + path
-	if err := c.router.Unmount(fullPath); err != nil {
-		return err
-	}
-	c.logger.Printf("[INFO] core: disabled credential backend '%s'", path)
 	return nil
 }
 
@@ -213,6 +252,11 @@ func (c *Core) setupCredentials() error {
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
 			return loadAuthFailed
+		}
+
+		// Ensure the path is tainted if set in the mount table
+		if entry.Tainted {
+			c.router.Taint(path)
 		}
 
 		// Check if this is the token store
