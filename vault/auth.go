@@ -105,7 +105,10 @@ func (c *Core) disableCredential(path string) error {
 
 	// Store the view for this backend
 	fullPath := credentialRoutePrefix + path
-	view := c.router.MatchingView(path)
+	view := c.router.MatchingView(fullPath)
+	if view == nil {
+		return fmt.Errorf("no matching backend")
+	}
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
