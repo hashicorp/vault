@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
@@ -265,6 +266,29 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 			return nil, ErrInternalError
 		}
 		resp.Secret.VaultID = vaultID
+	}
+
+	// Only the token store is allowed to return an auth block, for any
+	// other request this is an internal error
+	if resp != nil && resp.Auth != nil {
+		if !strings.HasPrefix(req.Path, "auth/token/") {
+			c.logger.Printf(
+				"[ERR] core: unexpected Auth response for non-token backend "+
+					"(request: %#v, response: %#v)", req, resp)
+			return nil, ErrInternalError
+		}
+
+		// Set the default lease if non-provided, root tokens are exempt
+		if resp.Auth.Lease == 0 && !strListContains(resp.Auth.Policies, "root") {
+			resp.Auth.Lease = defaultLeaseDuration
+		}
+
+		// Register with the expiration manager
+		if err := c.expiration.RegisterAuth(req.Path, resp.Auth); err != nil {
+			c.logger.Printf("[ERR] core: failed to register token lease "+
+				"(request: %#v, response: %#v): %v", req, resp, err)
+			return nil, ErrInternalError
+		}
 	}
 
 	// Create an audit trail of the response

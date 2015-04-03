@@ -810,3 +810,43 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		t.Fatalf("Bad: %#v %#v", noop.Resp[1], lresp)
 	}
 }
+
+// Check that we register a lease for new tokens
+func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Create a new credential
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"foo"}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure we got a new client token back
+	clientToken := resp.Auth.ClientToken
+	if clientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Check the policy and metadata
+	te, err := c.tokenStore.Lookup(clientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	expect := &TokenEntry{
+		ID:       clientToken,
+		Parent:   root,
+		Policies: []string{"foo"},
+		Path:     "auth/token/create",
+	}
+	if !reflect.DeepEqual(te, expect) {
+		t.Fatalf("Bad: %#v expect: %#v", te, expect)
+	}
+
+	// Check that we have a lease with default duration
+	if resp.Auth.Lease != defaultLeaseDuration {
+		t.Fatalf("bad: %#v", resp.Auth)
+	}
+}
