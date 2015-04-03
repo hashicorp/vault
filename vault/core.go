@@ -258,6 +258,17 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 
 	// If there is a secret, we must register it with the expiration manager.
 	if resp != nil && resp.Secret != nil {
+		// Apply the default lease if none given
+		if resp.Secret.Lease == 0 {
+			resp.Secret.Lease = defaultLeaseDuration
+		}
+
+		// Limit the lease duration
+		if resp.Secret.Lease > maxLeaseDuration {
+			resp.Secret.Lease = maxLeaseDuration
+		}
+
+		// Register the lease
 		vaultID, err := c.expiration.Register(req, resp)
 		if err != nil {
 			c.logger.Printf(
@@ -281,6 +292,11 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 		// Set the default lease if non-provided, root tokens are exempt
 		if resp.Auth.Lease == 0 && !strListContains(resp.Auth.Policies, "root") {
 			resp.Auth.Lease = defaultLeaseDuration
+		}
+
+		// Limit the lease duration
+		if resp.Auth.Lease > maxLeaseDuration {
+			resp.Auth.Lease = maxLeaseDuration
 		}
 
 		// Register with the expiration manager
@@ -337,6 +353,11 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 		// Set the default lease if non-provided, root tokens are exempt
 		if auth.Lease == 0 && !strListContains(auth.Policies, "root") {
 			auth.Lease = defaultLeaseDuration
+		}
+
+		// Limit the lease duration
+		if resp.Auth.Lease > maxLeaseDuration {
+			resp.Auth.Lease = maxLeaseDuration
 		}
 
 		// Register with the expiration manager

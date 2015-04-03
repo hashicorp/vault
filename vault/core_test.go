@@ -375,6 +375,88 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	}
 }
 
+func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1000h",
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.Lease != maxLeaseDuration {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.VaultID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
+func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "0h",
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.Lease != defaultLeaseDuration {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.VaultID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
 func TestCore_HandleRequest_MissingToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
