@@ -173,8 +173,8 @@ type TokenEntry struct {
 	Meta     map[string]string // Used for auditing. This could include things like "source", "user", "ip"
 }
 
-// saltID is used to apply a salt and hash to an ID to make sure its not reversable
-func (ts *TokenStore) saltID(id string) string {
+// SaltID is used to apply a salt and hash to an ID to make sure its not reversable
+func (ts *TokenStore) SaltID(id string) string {
 	comb := ts.salt + id
 	hash := sha1.Sum([]byte(comb))
 	return hex.EncodeToString(hash[:])
@@ -199,7 +199,7 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 	if entry.ID == "" {
 		entry.ID = generateUUID()
 	}
-	saltedId := ts.saltID(entry.ID)
+	saltedId := ts.SaltID(entry.ID)
 
 	// Marshal the entry
 	enc, err := json.Marshal(entry)
@@ -222,7 +222,7 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 		}
 
 		// Create the index entry
-		path := parentPrefix + ts.saltID(entry.Parent) + "/" + saltedId
+		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
 		le := &logical.StorageEntry{Key: path}
 		if err := ts.view.Put(le); err != nil {
 			return fmt.Errorf("failed to persist entry: %v", err)
@@ -243,7 +243,7 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
-	return ts.lookupSalted(ts.saltID(id))
+	return ts.lookupSalted(ts.SaltID(id))
 }
 
 // lookupSlated is used to find a token given its salted ID
@@ -274,7 +274,7 @@ func (ts *TokenStore) Revoke(id string) error {
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
 	}
-	return ts.revokeSalted(ts.saltID(id))
+	return ts.revokeSalted(ts.SaltID(id))
 }
 
 // revokeSalted is used to invalidate a given salted token,
@@ -294,7 +294,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 
 	// Clear the secondary index if any
 	if entry != nil && entry.Parent != "" {
-		path := parentPrefix + ts.saltID(entry.Parent) + "/" + saltedId
+		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
 		if ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -311,7 +311,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	}
 
 	// Get the salted ID
-	saltedId := ts.saltID(id)
+	saltedId := ts.SaltID(id)
 
 	// Lookup the token first
 	entry, err := ts.lookupSalted(saltedId)
@@ -326,7 +326,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 
 	// Clear the secondary index if any
 	if entry != nil && entry.Parent != "" {
-		path := parentPrefix + ts.saltID(entry.Parent) + "/" + saltedId
+		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
 		if ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
