@@ -294,11 +294,13 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 	// If the response generated an authentication, then generate the token
 	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {
+		auth = resp.Auth
+
 		// Generate a token
 		te := TokenEntry{
 			Path:     req.Path,
-			Policies: resp.Auth.Policies,
-			Meta:     resp.Auth.Metadata,
+			Policies: auth.Policies,
+			Meta:     auth.Metadata,
 		}
 		if err := c.tokenStore.Create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
@@ -308,22 +310,17 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 		// Populate the client token
 		resp.Auth.ClientToken = te.ID
 
-		// Store the auth object for audit logging
-		auth = resp.Auth
+		// Set the default lease if non-provided, root tokens are exempt
+		if auth.Lease == 0 && !strListContains(auth.Policies, "root") {
+			auth.Lease = defaultLeaseDuration
+		}
 
-		// Register with the expiration manager if there is a lease
-		/*
-			if resp.Secret != nil && resp.Secret.Lease > 0 {
-				vaultID, err := c.expiration.RegisterLogin(te.ID, req, resp)
-				if err != nil {
-					c.logger.Printf(
-						"[ERR] core: failed to register login token lease "+
-							"(request: %#v, response: %#v): %v", req, resp, err)
-					return nil, ErrInternalError
-				}
-				resp.Secret.VaultID = vaultID
-			}
-		*/
+		// Register with the expiration manager
+		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
+			c.logger.Printf("[ERR] core: failed to register token lease "+
+				"(request: %#v, response: %#v): %v", req, resp, err)
+			return nil, ErrInternalError
+		}
 	}
 
 	// Create an audit trail of the response

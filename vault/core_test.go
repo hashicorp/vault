@@ -603,10 +603,6 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	noop := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
-			Secret: &logical.Secret{
-				Lease: time.Hour,
-			},
-
 			Auth: &logical.Auth{
 				Policies: []string{"foo", "bar"},
 				Metadata: map[string]string{
@@ -662,15 +658,10 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
 	}
 
-	// Check that we have a lease with a VaultID
-	if lresp.Secret.Lease != time.Hour {
-		t.Fatalf("bad: %#v", lresp.Secret)
+	// Check that we have a lease with default duration
+	if lresp.Auth.Lease != defaultLeaseDuration {
+		t.Fatalf("bad: %#v", lresp.Auth)
 	}
-	/*
-		if lresp.Secret.VaultID == "" {
-			t.Fatalf("bad: %#v", lresp.Secret)
-		}
-	*/
 }
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
