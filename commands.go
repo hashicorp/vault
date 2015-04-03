@@ -25,6 +25,12 @@ func init() {
 	meta := command.Meta{Ui: ui}
 
 	Commands = map[string]cli.CommandFactory{
+		"help": func() (cli.Command, error) {
+			return &command.HelpCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"auth": func() (cli.Command, error) {
 			return &command.AuthCommand{
 				Meta: meta,

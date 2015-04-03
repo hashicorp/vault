@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 	"text/template"
 
 	"github.com/hashicorp/vault/logical"
@@ -96,7 +97,7 @@ func (p *Path) helpCallback(
 		return nil, fmt.Errorf("error executing template: %s", err)
 	}
 
-	return logical.HelpResponse(buf.String(), nil), nil
+	return logical.HelpResponse(strings.TrimSpace(buf.String()), nil), nil
 }
 
 type pathTemplateData struct {
@@ -121,12 +122,10 @@ Matching Route: {{.RoutePattern}}
 {{.Synopsis}}
 
 ## Parameters
-
 {{range .Fields}}
 ### {{.Key}} (type: {{.Type}})
 
 {{.Description}}
-
 {{end}}
 ## Description
 
