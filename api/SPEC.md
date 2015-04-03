@@ -56,6 +56,17 @@ that can be enabled (see
 Authentication is done with the login endpoint. The login endpoint
 returns an access token that is set as the `token` cookie.
 
+## Help
+
+To retrieve the help for any API within Vault, including mounted
+backends, credential providers, etc. then append `?help=1` to any
+URL. If you have valid permission to access the path, then the help text
+will be returned with the following structure:
+
+        {
+            "help": "help text"
+        }
+
 ## Error Response
 
 A common JSON structure is always returned to return errors:

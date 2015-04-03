@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -15,6 +16,7 @@ const AuthCookieName = "token"
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func Handler(core *vault.Core) http.Handler {
+	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
@@ -29,7 +31,26 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/audit", handleSysListAudit(core))
 	mux.Handle("/v1/sys/audit/", handleSysAudit(core))
 	mux.Handle("/v1/", handleLogical(core))
-	return mux
+
+	// Wrap the handler in another handler to trigger all help paths.
+	handler := handleHelpHandler(mux, core)
+
+	return handler
+}
+
+// stripPrefix is a helper to strip a prefix from the path. It will
+// return false from the second return value if it the prefix doesn't exist.
+func stripPrefix(prefix, path string) (string, bool) {
+	if !strings.HasPrefix(path, prefix) {
+		return "", false
+	}
+
+	path = path[len(prefix):]
+	if path == "" {
+		return "", false
+	}
+
+	return path, true
 }
 
 func parseRequest(r *http.Request, out interface{}) error {
