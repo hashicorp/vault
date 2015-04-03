@@ -531,7 +531,6 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 }
 
 func TestCore_HandleRequest_NoConnection(t *testing.T) {
-	// Create a badass credential backend that always logs in as armon
 	noop := &NoopBackend{
 		Response: &logical.Response{},
 	}
@@ -540,7 +539,7 @@ func TestCore_HandleRequest_NoConnection(t *testing.T) {
 		return noop, nil
 	}
 
-	// Enable the credential backend
+	// Enable the logical backend
 	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.Data["description"] = "foo"
@@ -564,8 +563,41 @@ func TestCore_HandleRequest_NoConnection(t *testing.T) {
 	}
 }
 
+func TestCore_HandleRequest_NoClientToken(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{},
+	}
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the logical backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.Data["description"] = "foo"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to request with connection data
+	req = &logical.Request{
+		Path: "foo/login",
+	}
+	req.ClientToken = root
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ct := noop.Requests[0].ClientToken
+	if ct == "" || ct == root {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+}
+
 func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
-	// Create a badass credential backend that always logs in as armon
 	noop := &NoopBackend{
 		Login:    []string{"login"},
 		Response: &logical.Response{},
@@ -599,7 +631,6 @@ func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 
 // Ensure we get a client token
 func TestCore_HandleLogin_Token(t *testing.T) {
-	// Create a badass credential backend that always logs in as armon
 	noop := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
