@@ -40,12 +40,12 @@ func TestRouter_Mount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "prod/aws/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = r.Mount(n, "prod/aws/", view)
+	err = r.Mount(n, "prod/aws/", generateUUID(), view)
 	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
 		t.Fatalf("err: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestRouter_Unmount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "prod/aws/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestRouter_Remount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "prod/aws/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestRouter_RootPath(t *testing.T) {
 			"policy/*",
 		},
 	}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "prod/aws/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -189,42 +189,6 @@ func TestRouter_RootPath(t *testing.T) {
 	}
 }
 
-/*
-func TestRouter_RouteLogin(t *testing.T) {
-	r := NewRouter()
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "auth/")
-
-	n := &NoopBackend{
-		Login: []string{"bar"},
-	}
-	err := r.Mount(n, "auth/foo/", view)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if path := r.MatchingMount("auth/foo/bar"); path != "auth/foo/" {
-		t.Fatalf("bad: %s", path)
-	}
-
-	req := &logical.Request{
-		Path: "auth/foo/bar",
-	}
-	resp, err := r.RouteLogin(req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
-
-	// Verify the path
-	if len(n.LPaths) != 1 || n.LPaths[0] != "bar" {
-		t.Fatalf("bad: %v", n.Paths)
-	}
-}
-*/
-
 func TestRouter_LoginPath(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)
@@ -236,7 +200,7 @@ func TestRouter_LoginPath(t *testing.T) {
 			"oauth/*",
 		},
 	}
-	err := r.Mount(n, "auth/foo/", view)
+	err := r.Mount(n, "auth/foo/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -267,7 +231,7 @@ func TestRouter_Taint(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "prod/aws/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -306,7 +270,7 @@ func TestRouter_Untaint(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", view)
+	err := r.Mount(n, "prod/aws/", generateUUID(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

@@ -19,7 +19,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 			Path: "foo",
 		},
 	}
-	if err := router.Mount(backend, "foo", nil); err != nil {
+	if err := router.Mount(backend, "foo", generateUUID(), nil); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 

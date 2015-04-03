@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -26,14 +28,23 @@ func NewRouter() *Router {
 // mountEntry is used to represent a mount point
 type mountEntry struct {
 	tainted    bool
+	salt       string
 	backend    logical.Backend
 	view       *BarrierView
 	rootPaths  *radix.Tree
 	loginPaths *radix.Tree
 }
 
-// Mount is used to expose a logical backend at a given prefix
-func (r *Router) Mount(backend logical.Backend, prefix string, view *BarrierView) error {
+// SaltID is used to apply a salt and hash to an ID to make sure its not reversable
+func (me *mountEntry) SaltID(id string) string {
+	comb := me.salt + id
+	hash := sha1.Sum([]byte(comb))
+	return hex.EncodeToString(hash[:])
+}
+
+// Mount is used to expose a logical backend at a given prefix, using a unique salt,
+// and the barrier view for that path.
+func (r *Router) Mount(backend logical.Backend, prefix, salt string, view *BarrierView) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -161,10 +172,10 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	// Attach the storage view for the request
 	req.Storage = me.view
 
-	// Clear the request token unless this is the token backend
+	// Hash the request token unless this is the token backend
 	clientToken := req.ClientToken
 	if !strings.HasPrefix(original, "auth/token/") {
-		req.ClientToken = ""
+		req.ClientToken = me.SaltID(req.ClientToken)
 	}
 
 	// If the request is not a login path, then clear the connection

@@ -80,7 +80,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 	// Mount the backend
 	path := credentialRoutePrefix + entry.Path
-	if err := c.router.Mount(backend, path, view); err != nil {
+	if err := c.router.Mount(backend, path, entry.UUID, view); err != nil {
 		return err
 	}
 	c.logger.Printf("[INFO] core: enabled credential backend '%s' type: %s",
@@ -209,7 +209,7 @@ func (c *Core) setupCredentials() error {
 
 		// Mount the backend
 		path := credentialRoutePrefix + entry.Path
-		err = c.router.Mount(backend, path, view)
+		err = c.router.Mount(backend, path, entry.UUID, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
 			return loadAuthFailed
