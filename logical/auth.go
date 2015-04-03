@@ -2,6 +2,7 @@ package logical
 
 import (
 	"fmt"
+	"time"
 )
 
 // Auth is the resulting authentication information that is part of
@@ -20,6 +21,11 @@ type Auth struct {
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.
 	Metadata map[string]string
+
+	// Lease is the duration that this token is valid for. Vault
+	// will automatically revoke it after the duration + grace period.
+	Lease            time.Duration
+	LeaseGracePeriod time.Duration
 }
 
 func (a *Auth) GoString() string {
