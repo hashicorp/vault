@@ -551,7 +551,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"foo": map[string]interface{}{
+		"foo/": map[string]interface{}{
 			"type":        "noop",
 			"description": "testing",
 			"options": map[string]string{

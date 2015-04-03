@@ -53,7 +53,7 @@ func TestCore_EnableAudit(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if !c.auditBroker.IsRegistered("foo") {
+	if !c.auditBroker.IsRegistered("foo/") {
 		t.Fatalf("missing audit backend")
 	}
 
@@ -82,7 +82,7 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 
 	// Check for registration
-	if !c2.auditBroker.IsRegistered("foo") {
+	if !c2.auditBroker.IsRegistered("foo/") {
 		t.Fatalf("missing audit backend")
 	}
 }

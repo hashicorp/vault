@@ -33,17 +33,24 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	c.audit.Lock()
 	defer c.audit.Unlock()
 
-	// Ensure there is a name
-	if entry.Path == "" {
-		return fmt.Errorf("backend path must be specified")
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(entry.Path, "/") {
+		entry.Path += "/"
 	}
-	if strings.Contains(entry.Path, "/") {
-		return fmt.Errorf("backend path cannot have a forward slash")
+
+	// Ensure there is a name
+	if entry.Path == "/" {
+		return fmt.Errorf("backend path must be specified")
 	}
 
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
-		if ent.Path == entry.Path {
+		switch {
+		// Existing is sql/mysql/ new is sql/ or
+		// existing is sql/ and new is sql/mysql/
+		case strings.HasPrefix(ent.Path, entry.Path):
+			fallthrough
+		case strings.HasPrefix(entry.Path, ent.Path):
 			return fmt.Errorf("path already in use")
 		}
 	}
@@ -77,6 +84,11 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 func (c *Core) disableAudit(path string) error {
 	c.audit.Lock()
 	defer c.audit.Unlock()
+
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
 
 	// Remove the entry from the mount table
 	found := false
