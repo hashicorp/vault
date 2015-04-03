@@ -56,6 +56,40 @@ func (t *MountTable) Clone() *MountTable {
 	return mt
 }
 
+// Find is used to lookup an entry
+func (t *MountTable) Find(path string) *MountEntry {
+	n := len(t.Entries)
+	for i := 0; i < n; i++ {
+		if t.Entries[i].Path == path {
+			return t.Entries[i]
+		}
+	}
+	return nil
+}
+
+// SetTaint is used to set the taint on given entry
+func (t *MountTable) SetTaint(path string, value bool) {
+	n := len(t.Entries)
+	for i := 0; i < n; i++ {
+		if t.Entries[i].Path == path {
+			t.Entries[i].Tainted = value
+			return
+		}
+	}
+}
+
+// Remove is used to remove a given path entry
+func (t *MountTable) Remove(path string) {
+	n := len(t.Entries)
+	for i := 0; i < n; i++ {
+		if t.Entries[i].Path == path {
+			t.Entries[i], t.Entries[n-1] = t.Entries[n-1], nil
+			t.Entries = t.Entries[:n-1]
+			return
+		}
+	}
+}
+
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
 	Path        string            `json:"path"`              // Mount Path
@@ -197,14 +231,7 @@ func (c *Core) unmount(path string) error {
 func (c *Core) removeMountEntry(path string) error {
 	// Remove the entry from the mount table
 	newTable := c.mounts.Clone()
-	n := len(newTable.Entries)
-	for i := 0; i < n; i++ {
-		if newTable.Entries[i].Path == path {
-			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
-			newTable.Entries = newTable.Entries[:n-1]
-			break
-		}
-	}
+	newTable.Remove(path)
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
@@ -218,13 +245,7 @@ func (c *Core) removeMountEntry(path string) error {
 func (c *Core) taintMountEntry(path string) error {
 	// Remove the entry from the mount table
 	newTable := c.mounts.Clone()
-	n := len(newTable.Entries)
-	for i := 0; i < n; i++ {
-		if newTable.Entries[i].Path == path {
-			newTable.Entries[i].Tainted = true
-			break
-		}
-	}
+	newTable.SetTaint(path, true)
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
