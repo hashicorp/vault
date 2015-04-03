@@ -91,17 +91,8 @@ func (c *Core) disableAudit(path string) error {
 	}
 
 	// Remove the entry from the mount table
-	found := false
 	newTable := c.audit.Clone()
-	n := len(newTable.Entries)
-	for i := 0; i < n; i++ {
-		if newTable.Entries[i].Path == path {
-			newTable.Entries[i], newTable.Entries[n-1] = newTable.Entries[n-1], nil
-			newTable.Entries = newTable.Entries[:n-1]
-			found = true
-			break
-		}
-	}
+	found := newTable.Remove(path)
 
 	// Ensure there was a match
 	if !found {
