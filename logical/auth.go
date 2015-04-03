@@ -26,6 +26,9 @@ type Auth struct {
 	// will automatically revoke it after the duration + grace period.
 	Lease            time.Duration
 	LeaseGracePeriod time.Duration
+
+	// Renewable, if true, means that this token can be renewed.
+	Renewable bool
 }
 
 func (a *Auth) GoString() string {

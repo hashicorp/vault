@@ -444,10 +444,10 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Secret.Lease != time.Hour {
+	if resp.Auth.Lease != time.Hour {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if !resp.Secret.Renewable {
+	if !resp.Auth.Renewable {
 		t.Fatalf("bad: %#v", resp)
 	}
 }

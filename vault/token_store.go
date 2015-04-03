@@ -498,7 +498,7 @@ func (ts *TokenStore) handleCreate(
 	}
 
 	// Parse the lease if any
-	var secret *logical.Secret
+	var leaseDuration time.Duration
 	if lease, ok := leaseRaw.(string); ok {
 		dur, err := time.ParseDuration(lease)
 		if err != nil {
@@ -507,11 +507,7 @@ func (ts *TokenStore) handleCreate(
 		if dur < 0 {
 			return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
 		}
-		secret = &logical.Secret{
-			Lease:            dur,
-			LeaseGracePeriod: dur / 10, // Provide a 10% grace buffer
-			Renewable:        true,
-		}
+		leaseDuration = dur
 	}
 
 	// Create the token
@@ -521,9 +517,11 @@ func (ts *TokenStore) handleCreate(
 
 	// Generate the response
 	resp := &logical.Response{
-		Secret: secret,
 		Auth: &logical.Auth{
-			ClientToken: te.ID,
+			ClientToken:      te.ID,
+			Lease:            leaseDuration,
+			LeaseGracePeriod: leaseDuration / 10,
+			Renewable:        leaseDuration > 0,
 		},
 	}
 
