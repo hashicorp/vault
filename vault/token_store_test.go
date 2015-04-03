@@ -599,6 +599,36 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_Renew(t *testing.T) {
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	// Create new token
+	root, err := ts.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create a new token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		Lease:       time.Hour,
+	}
+	err = exp.RegisterAuth("sys/root", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "renew/"+root.ID)
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
 func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root

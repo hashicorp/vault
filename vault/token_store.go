@@ -148,6 +148,7 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeHelp),
 				HelpDescription: strings.TrimSpace(tokenRevokeHelp),
 			},
+
 			&framework.Path{
 				Pattern: "revoke-orphan/(?P<token>.+)",
 
@@ -182,6 +183,24 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokePrefixHelp),
 				HelpDescription: strings.TrimSpace(tokenRevokePrefixHelp),
+			},
+
+			&framework.Path{
+				Pattern: "renew/(?P<token>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to renew",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleRenew,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
+				HelpDescription: strings.TrimSpace(tokenRenewHelp),
 			},
 		},
 	}
@@ -599,6 +618,33 @@ func (ts *TokenStore) handleLookup(
 	return resp, nil
 }
 
+// handleRenew handles the auth/token/renew/id path for renewal of tokens.
+// This is used to prevent token expiration and revocation.
+func (ts *TokenStore) handleRenew(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	id := data.Get("token").(string)
+	if id == "" {
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+
+	// Lookup the token
+	out, err := ts.Lookup(id)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	// Verify the token exists
+	if out == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
+	// Revoke the token and its children
+	if err := ts.expiration.RenewToken(out.Path, out.ID); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 const (
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
@@ -609,4 +655,5 @@ as revocation of tokens.`
 	tokenRevokeHelp       = `This endpoint will delete the token and all of its child tokens.`
 	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
+	tokenRenewHelp        = `This endpoint will renew the token and prevent expiration.`
 )
