@@ -28,6 +28,9 @@ func pathRoot() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: pathRootWrite,
 		},
+
+		HelpSynopsis:    pathRootHelpSyn,
+		HelpDescription: pathRootHelpDesc,
 	}
 }
 
@@ -54,3 +57,14 @@ type rootConfig struct {
 	SecretKey string `json:"secret_key"`
 	Region    string `json:"region"`
 }
+
+const pathRootHelpSyn = `
+Configure the root credentials that are used to manage IAM.
+`
+
+const pathRootHelpDesc = `
+Before doing anything, the AWS backend needs credentials that are able
+to manage IAM policies, users, access keys, etc. This endpoint is used
+to configure those credentials. They don't necessarilly need to be root
+keys as long as they have permission to manage IAM.
+`

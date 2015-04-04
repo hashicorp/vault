@@ -23,6 +23,9 @@ func pathUser(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathUserRead,
 		},
+
+		HelpSynopsis:    pathUserHelpSyn,
+		HelpDescription: pathUserHelpDesc,
 	}
 }
 
@@ -133,3 +136,17 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 type walUser struct {
 	UserName string
 }
+
+const pathUserHelpSyn = `
+Generate an access key pair for a specific policy.
+`
+
+const pathUserHelpDesc = `
+This path will generate a new, never before used key pair for
+accessing AWS. The IAM policy used to back this key pair will be
+the "name" parameter. For example, if this backend is mounted at "aws",
+then "aws/deploy" would generate access keys for the "deploy" policy.
+
+The access keys will have a lease associated with them. The access keys
+can be revoked by using the Vault ID.
+`

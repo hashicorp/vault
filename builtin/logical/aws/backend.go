@@ -49,4 +49,8 @@ const backendHelp = `
 The AWS backend dynamically generates AWS access keys for a set of
 IAM policies. The AWS access keys have a configurable lease set and
 are automatically revoked at the end of the lease.
+
+After mounting this backend, credentials to generate IAM keys must
+be configured with the "root" path and policies must be written using
+the "policy/" endpoints before any access keys can be generated.
 `

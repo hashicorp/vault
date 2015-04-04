@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -201,12 +202,12 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		p := pathsMap[route]
 		pathData = append(pathData, rootHelpTemplatePath{
 			Path: route,
-			Help: p.HelpSynopsis,
+			Help: strings.TrimSpace(p.HelpSynopsis),
 		})
 	}
 
 	help, err := executeTemplate(rootHelpTemplate, &rootHelpTemplateData{
-		Help:  b.Help,
+		Help:  strings.TrimSpace(b.Help),
 		Paths: pathData,
 	})
 	if err != nil {

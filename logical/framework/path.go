@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/go-wordwrap"
 )
 
 // Path is a single path that the backend responds to.
@@ -59,8 +58,8 @@ func (p *Path) helpCallback(
 	var tplData pathTemplateData
 	tplData.Request = req.Path
 	tplData.RoutePattern = p.Pattern
-	tplData.Synopsis = wordwrap.WrapString(p.HelpSynopsis, 80)
-	tplData.Description = wordwrap.WrapString(p.HelpDescription, 80)
+	tplData.Synopsis = strings.TrimSpace(p.HelpSynopsis)
+	tplData.Description = strings.TrimSpace(p.HelpDescription)
 
 	// Alphabetize the fields
 	fieldKeys := make([]string, 0, len(p.Fields))
@@ -73,7 +72,7 @@ func (p *Path) helpCallback(
 	tplData.Fields = make([]pathTemplateFieldData, len(fieldKeys))
 	for i, k := range fieldKeys {
 		schema := p.Fields[k]
-		description := wordwrap.WrapString(schema.Description, 60)
+		description := strings.TrimSpace(schema.Description)
 		if description == "" {
 			description = "<no description>"
 		}

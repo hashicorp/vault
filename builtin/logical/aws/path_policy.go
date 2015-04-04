@@ -27,6 +27,9 @@ func pathPolicy() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: pathPolicyWrite,
 		},
+
+		HelpSynopsis:    pathPolicyHelpSyn,
+		HelpDescription: pathPolicyHelpDesc,
 	}
 }
 
@@ -49,3 +52,19 @@ func pathPolicyWrite(
 
 	return nil, nil
 }
+
+const pathPolicyHelpSyn = `
+Read and write IAM policies that access keys can be made for.
+`
+
+const pathPolicyHelpDesc = `
+This path allows you to read and write policies that are used to
+create access keys. These policies map directly to the route to read the
+access keys. For example, if the backend is mounted at "aws" and you
+wrote a policy to "aws/policy/deploy" then a user could request access
+credentials at "aws/deploy".
+
+The policies written are normal IAM policies. Vault will not attempt to
+parse these except to validate that they're basic JSON. To validate the
+keys, attempt to read an access key after writing the policy.
+`
