@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,6 +55,16 @@ func (t *MountTable) Clone() *MountTable {
 		mt.Entries[i] = e.Clone()
 	}
 	return mt
+}
+
+// Hash is used to generate a hash value for the mount table
+func (t *MountTable) Hash() ([]byte, error) {
+	buf, err := json.Marshal(t)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha1.Sum(buf)
+	return hash[:], nil
 }
 
 // Find is used to lookup an entry
