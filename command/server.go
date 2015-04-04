@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/hashicorp/vault/helper/gated-writer"
@@ -30,8 +31,10 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev bool
 	var configPath []string
+	var logLevel string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
+	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -68,7 +71,12 @@ func (c *ServerCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	logGate := &gatedwriter.Writer{Writer: os.Stderr}
-	logger := log.New(logGate, "", log.LstdFlags)
+	logger := log.New(&logutils.LevelFilter{
+		Levels: []logutils.LogLevel{
+			"TRACE", "DEBUG", "INFO", "WARN", "ERR"},
+		MinLevel: logutils.LogLevel(strings.ToUpper(logLevel)),
+		Writer:   logGate,
+	}, "", log.LstdFlags)
 
 	// Initialize the backend
 	backend, err := physical.NewBackend(
@@ -115,7 +123,8 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["backend"] = config.Backend.Type
-	infoKeys = append(infoKeys, "backend")
+	info["log level"] = logLevel
+	infoKeys = append(infoKeys, "log level", "backend")
 
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
@@ -232,6 +241,9 @@ General Options:
   -config=<path>      Path to the configuration file or directory. This can be
                       specified multiple times. If it is a directory, all
                       files with a ".hcl" or ".json" suffix will be loaded.
+
+  -log-level=info     Log verbosity. Defaults to "info", will be outputted
+                      to stderr.
 
 `
 	return strings.TrimSpace(helpText)
