@@ -137,6 +137,23 @@ func TestBackendHandleRequest_help(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_helpRoot(t *testing.T) {
+	b := &Backend{
+		Help: "42",
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.HelpOperation,
+		Path:      "",
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data["help"] == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
 func TestBackendHandleRequest_renew(t *testing.T) {
 	var called uint32
 	callback := func(*logical.Request, *FieldData) (*logical.Response, error) {

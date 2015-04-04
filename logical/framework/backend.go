@@ -16,6 +16,11 @@ import (
 //
 // This is recommended over implementing logical.Backend directly.
 type Backend struct {
+	// Help is the help text that is shown when a help request is made
+	// on the root of this resource. The root help is special since we
+	// show all the paths that can be requested.
+	Help string
+
 	// Paths are the various routes that the backend responds to.
 	// This cannot be modified after construction (i.e. dynamically changing
 	// paths, including adding or removing, is not allowed once the
@@ -54,6 +59,8 @@ type RollbackFunc func(*logical.Request, string, interface{}) error
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	b.once.Do(b.init)
+
 	// Check for special cased global operations. These don't route
 	// to a specific Path.
 	switch req.Operation {
@@ -63,6 +70,11 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		return b.handleRevokeRenew(req)
 	case logical.RollbackOperation:
 		return b.handleRollback(req)
+	}
+
+	// If the path is empty and it is a help operation, handle that.
+	if req.Path == "" && req.Operation == logical.HelpOperation {
+		return b.handleRootHelp()
 	}
 
 	// Find the matching route
@@ -169,6 +181,23 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	}
 
 	return nil, nil
+}
+
+func (b *Backend) handleRootHelp() (*logical.Response, error) {
+	paths := make([]string, 0, len(b.Paths))
+	for _, p := range b.pathsRe {
+		paths = append(paths, p.String())
+	}
+
+	help, err := executeTemplate(rootHelpTemplate, &rootHelpTemplateData{
+		Help:  b.Help,
+		Paths: paths,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.HelpResponse(help, nil), nil
 }
 
 func (b *Backend) handleRevokeRenew(
@@ -295,3 +324,24 @@ func (t FieldType) Zero() interface{} {
 		panic("unknown type: " + t.String())
 	}
 }
+
+type rootHelpTemplateData struct {
+	Help  string
+	Paths []string
+}
+
+const rootHelpTemplate = `
+## DESCRIPTION
+
+{{.Help}}
+
+## PATHS
+
+The following paths are supported by this backend. To view help for
+any of the paths below, use the help command with any route matching
+the path pattern.
+
+{{range .Paths}}    {{.}}
+{{end}}
+
+`

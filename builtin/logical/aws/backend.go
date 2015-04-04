@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -14,6 +15,8 @@ func Factory(map[string]string) (logical.Backend, error) {
 func Backend() *framework.Backend {
 	var b backend
 	b.Backend = &framework.Backend{
+		Help: strings.TrimSpace(backendHelp),
+
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"root",
@@ -41,3 +44,9 @@ func Backend() *framework.Backend {
 type backend struct {
 	*framework.Backend
 }
+
+const backendHelp = `
+The AWS backend dynamically generates AWS access keys for a set of
+IAM policies. The AWS access keys have a configurable lease set and
+are automatically revoked at the end of the lease.
+`
