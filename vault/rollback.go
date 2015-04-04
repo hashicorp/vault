@@ -134,7 +134,6 @@ func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err e
 	}()
 
 	// Invoke a RollbackOperation
-	m.logger.Printf("[DEBUG] rollback: starting rollback for %s", path)
 	req := &logical.Request{
 		Operation: logical.RollbackOperation,
 		Path:      path,
