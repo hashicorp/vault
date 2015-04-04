@@ -1,7 +1,5 @@
 package framework
 
-//go:generate stringer -type=FieldType field_type.go
-
 // FieldType is the enum of types that a field can be.
 type FieldType uint
 
@@ -13,5 +11,17 @@ const (
 	TypeMap
 )
 
-// FieldType has more methods defined on it in backend.go. They aren't
-// in this file since stringer doesn't like that.
+func (t FieldType) String() string {
+	switch t {
+	case TypeString:
+		return "string"
+	case TypeInt:
+		return "int"
+	case TypeBool:
+		return "bool"
+	case TypeMap:
+		return "map"
+	default:
+		return "unknown type"
+	}
+}

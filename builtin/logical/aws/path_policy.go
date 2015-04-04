@@ -20,7 +20,7 @@ func pathPolicy() *framework.Path {
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Policy document",
+				Description: "IAM policy document",
 			},
 		},
 

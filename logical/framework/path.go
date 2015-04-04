@@ -1,11 +1,9 @@
 package framework
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 	"strings"
-	"text/template"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -84,19 +82,12 @@ func (p *Path) helpCallback(
 		}
 	}
 
-	// Parse the help template
-	tpl, err := template.New("root").Parse(pathHelpTemplate)
+	help, err := executeTemplate(pathHelpTemplate, &tplData)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing template: %s", err)
-	}
-
-	// Execute the template and store the output
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, &tplData); err != nil {
 		return nil, fmt.Errorf("error executing template: %s", err)
 	}
 
-	return logical.HelpResponse(strings.TrimSpace(buf.String()), nil), nil
+	return logical.HelpResponse(help, nil), nil
 }
 
 type pathTemplateData struct {
@@ -120,13 +111,12 @@ Matching Route: {{.RoutePattern}}
 
 {{.Synopsis}}
 
-## Parameters
+## PARAMETERS
 {{range .Fields}}
-### {{.Key}} (type: {{.Type}})
-
-{{.Description}}
+{{indent 4 .Key}} ({{.Type}})
+{{indent 8 .Description}}
 {{end}}
-## Description
+## DESCRIPTION
 
 {{.Description}}
 `
