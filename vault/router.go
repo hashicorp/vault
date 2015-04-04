@@ -146,14 +146,13 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	// If the path doesn't contain any slashes and doesn't end in a slash,
 	// then append the slash. This lets "foo" mean "foo/" at the root level
 	// which is almost always what we want.
-	prefixPath := req.Path
 	if !strings.Contains(req.Path, "/") {
-		prefixPath += "/"
+		req.Path += "/"
 	}
 
 	// Find the mount point
 	r.l.RLock()
-	mount, raw, ok := r.root.LongestPrefix(prefixPath)
+	mount, raw, ok := r.root.LongestPrefix(req.Path)
 	r.l.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("no handler for route '%s'", req.Path)
@@ -176,6 +175,9 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	// Adjust the path to exclude the routing prefix
 	original := req.Path
 	req.Path = strings.TrimPrefix(req.Path, mount)
+	if req.Path == "/" {
+		req.Path = ""
+	}
 
 	// Attach the storage view for the request
 	req.Storage = me.view
