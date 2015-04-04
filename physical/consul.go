@@ -22,11 +22,16 @@ type ConsulBackend struct {
 func newConsulBackend(conf map[string]string) (Backend, error) {
 	// Get the path in Consul
 	path, ok := conf["path"]
-	if !ok || path == "" || path == "/" {
-		return nil, fmt.Errorf("'path' must be set")
+	if !ok {
+		path = "vault/"
 	}
+
+	// Ensure path is suffixed but not prefixed
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
+	}
+	if strings.HasPrefix(path, "/") {
+		path = strings.TrimPrefix(path, "/")
 	}
 
 	// Configure the client
