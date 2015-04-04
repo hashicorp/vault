@@ -3,12 +3,16 @@ package command
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
+	"os"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
+	"github.com/hashicorp/vault/helper/gated-writer"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -61,6 +65,11 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Create a logger. We wrap it in a gated writer so that it doesn't
+	// start logging too early.
+	logGate := &gatedwriter.Writer{Writer: os.Stderr}
+	logger := log.New(logGate, "", log.LstdFlags)
+
 	// Initialize the backend
 	backend, err := physical.NewBackend(
 		config.Backend.Type, config.Backend.Config)
@@ -76,6 +85,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Physical:           backend,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
+		Logger:             logger,
 	})
 
 	// If we're in dev mode, then initialize the core
@@ -95,22 +105,40 @@ func (c *ServerCommand) Run(args []string) int {
 				"immediately begin using the Vault CLI.\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
-				"Unseal Key: %s\nRoot Token: %s\n\n",
+				"Unseal Key: %s\nRoot Token: %s\n",
 			hex.EncodeToString(init.SecretShares[0]),
 			init.RootToken,
 		))
 	}
 
+	// Compile server information for output later
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+	info["backend"] = config.Backend.Type
+	infoKeys = append(infoKeys, "backend")
+
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
-	for _, lnConfig := range config.Listeners {
-		ln, err := server.NewListener(lnConfig.Type, lnConfig.Config)
+	for i, lnConfig := range config.Listeners {
+		ln, props, err := server.NewListener(lnConfig.Type, lnConfig.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
 				lnConfig.Type, err))
 			return 1
 		}
+
+		// Store the listener props for output later
+		key := fmt.Sprintf("listener %d", i+1)
+		propsList := make([]string, 0, len(props))
+		for k, v := range props {
+			propsList = append(propsList, fmt.Sprintf(
+				"%s: %q", k, v))
+		}
+		sort.Strings(propsList)
+		infoKeys = append(infoKeys, key)
+		info[key] = fmt.Sprintf(
+			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 		lns = append(lns, ln)
 	}
@@ -121,6 +149,24 @@ func (c *ServerCommand) Run(args []string) int {
 	for _, ln := range lns {
 		go server.Serve(ln)
 	}
+
+	// Server configuration output
+	padding := 18
+	c.Ui.Output("==> Vault server configuration:\n")
+	for _, k := range infoKeys {
+		c.Ui.Output(fmt.Sprintf(
+			"%s%s: %s",
+			strings.Repeat(" ", padding-len(k)),
+			strings.Title(k),
+			info[k]))
+	}
+	c.Ui.Output("")
+
+	// Output the header that the server has started
+	c.Ui.Output("==> Vault server started! Log data will stream in below:\n")
+
+	// Release the log gate.
+	logGate.Flush()
 
 	<-make(chan struct{})
 	return 0
