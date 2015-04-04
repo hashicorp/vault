@@ -47,6 +47,8 @@ func (p *PathMap) Paths() []*Path {
 				logical.ListOperation: p.pathList,
 				logical.ReadOperation: p.pathList,
 			},
+
+			HelpSynopsis: fmt.Sprintf("Read mappings for %s", p.Name),
 		},
 
 		&Path{
@@ -68,6 +70,8 @@ func (p *PathMap) Paths() []*Path {
 				logical.WriteOperation: p.pathSingleWrite,
 				logical.ReadOperation:  p.pathSingleRead,
 			},
+
+			HelpSynopsis: fmt.Sprintf("Read/write a single %s mapping", p.Name),
 		},
 	}
 }

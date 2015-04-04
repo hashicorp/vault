@@ -20,6 +20,8 @@ func Backend() *framework.Backend {
 		DefaultKey: "default",
 	}
 	b.Backend = &framework.Backend{
+		Help: backendHelp,
+
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"config",
@@ -64,3 +66,15 @@ type tokenSource struct {
 func (t *tokenSource) Token() (*oauth2.Token, error) {
 	return &oauth2.Token{AccessToken: t.Value}, nil
 }
+
+const backendHelp = `
+The GitHub credential provider allows authentication via GitHub.
+
+Users provide a personal access token to log in, and the credential
+provider verifies they're part of the correct organization and then
+maps the user to a set of Vault policies according to the teams they're
+part of.
+
+After enabling the credential provider, use the "config" route to
+configure it.
+`
