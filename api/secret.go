@@ -7,10 +7,21 @@ import (
 
 // Secret is the structure returned for every secret within Vault.
 type Secret struct {
-	VaultId       string `json:"vault_id"`
-	Renewable     bool
+	VaultId       string                 `json:"vault_id"`
+	Renewable     bool                   `json":renewable"`
 	LeaseDuration int                    `json:"lease_duration"`
 	Data          map[string]interface{} `json:"data"`
+	Auth          *SecretAuth            `json:"auth,omitempty"`
+}
+
+// Auth is the structure containing auth information if we have it.
+type SecretAuth struct {
+	ClientToken string            `json:"client_Token"`
+	Policies    []string          `json:"policies"`
+	Metadata    map[string]string `json:"metadata"`
+
+	LeaseDuration int  `json:"lease_duration"`
+	Renewable     bool `json:"renewable"`
 }
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.

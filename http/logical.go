@@ -84,6 +84,7 @@ func handleLogical(core *vault.Core) http.Handler {
 			}
 
 			// If we have authentication information, then set the cookie
+			// and setup the result structure.
 			if resp.Auth != nil {
 				expireDuration := 365 * 24 * time.Hour
 				if logicalResp.LeaseDuration != 0 {
@@ -97,6 +98,14 @@ func handleLogical(core *vault.Core) http.Handler {
 					Path:    "/",
 					Expires: time.Now().UTC().Add(expireDuration),
 				})
+
+				logicalResp.Auth = &Auth{
+					ClientToken:   resp.Auth.ClientToken,
+					Policies:      resp.Auth.Policies,
+					Metadata:      resp.Auth.Metadata,
+					LeaseDuration: int(resp.Auth.Lease.Seconds()),
+					Renewable:     resp.Auth.Renewable,
+				}
 			}
 
 			httpResp = logicalResp
@@ -112,4 +121,13 @@ type LogicalResponse struct {
 	Renewable     bool                   `json:"renewable"`
 	LeaseDuration int                    `json:"lease_duration"`
 	Data          map[string]interface{} `json:"data"`
+	Auth          *Auth                  `json:"auth"`
+}
+
+type Auth struct {
+	ClientToken   string            `json:"client_Token"`
+	Policies      []string          `json:"policies"`
+	Metadata      map[string]string `json:"metadata"`
+	LeaseDuration int               `json:"lease_duration"`
+	Renewable     bool              `json:"renewable"`
 }
