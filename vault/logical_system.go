@@ -12,6 +12,8 @@ func NewSystemBackend(core *Core) logical.Backend {
 	b := &SystemBackend{Core: core}
 
 	return &framework.Backend{
+		Help: strings.TrimSpace(sysHelpRoot),
+
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"mounts/*",
@@ -655,6 +657,12 @@ func (b *SystemBackend) handleRawDelete(
 	}
 	return nil, nil
 }
+
+const sysHelpRoot = `
+The system backend is built-in to Vault and cannot be remounted or
+unmounted. It contains the paths that are used to configure Vault itself
+as well as perform core operations.
+`
 
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{

@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"sync"
 	"time"
 
@@ -184,14 +185,29 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 }
 
 func (b *Backend) handleRootHelp() (*logical.Response, error) {
+	// Build a mapping of the paths and get the paths alphabetized to
+	// make the output prettier.
+	pathsMap := make(map[string]*Path)
 	paths := make([]string, 0, len(b.Paths))
-	for _, p := range b.pathsRe {
+	for i, p := range b.pathsRe {
 		paths = append(paths, p.String())
+		pathsMap[p.String()] = b.Paths[i]
+	}
+	sort.Strings(paths)
+
+	// Build the path data
+	pathData := make([]rootHelpTemplatePath, 0, len(paths))
+	for _, route := range paths {
+		p := pathsMap[route]
+		pathData = append(pathData, rootHelpTemplatePath{
+			Path: route,
+			Help: p.HelpSynopsis,
+		})
 	}
 
 	help, err := executeTemplate(rootHelpTemplate, &rootHelpTemplateData{
 		Help:  b.Help,
-		Paths: paths,
+		Paths: pathData,
 	})
 	if err != nil {
 		return nil, err
@@ -327,7 +343,12 @@ func (t FieldType) Zero() interface{} {
 
 type rootHelpTemplateData struct {
 	Help  string
-	Paths []string
+	Paths []rootHelpTemplatePath
+}
+
+type rootHelpTemplatePath struct {
+	Path string
+	Help string
 }
 
 const rootHelpTemplate = `
@@ -339,9 +360,12 @@ const rootHelpTemplate = `
 
 The following paths are supported by this backend. To view help for
 any of the paths below, use the help command with any route matching
-the path pattern.
+the path pattern. Note that depending on the policy of your auth token,
+you may or may not be able to access certain paths.
 
-{{range .Paths}}    {{.}}
+{{range .Paths}}{{indent 4 .Path}}
+{{indent 8 .Help}}
+
 {{end}}
 
 `
