@@ -14,6 +14,8 @@ import (
 func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.Backend = &framework.Backend{
+		Help: strings.TrimSpace(passthroughHelp),
+
 		Paths: []*framework.Path{
 			&framework.Path{
 				Pattern: ".*",
@@ -145,6 +147,17 @@ func (b *PassthroughBackend) handleList(
 	// Generate the response
 	return logical.ListResponse(keys), nil
 }
+
+const passthroughHelp = `
+The generic backend reads and writes arbitrary secrets to the backend.
+The secrets are encrypted/decrypted by Vault: they are never stored
+unencrypted in the backend and the backend never has an opportunity to
+see the unencrypted value.
+
+Leases can be set on a per-secret basis. These leases will be sent down
+when that secret is read, and it is assumed that some outside process will
+revoke and/or replace the secret at that path.
+`
 
 const passthroughHelpSynopsis = `
 Pass-through secret storage to the physical backend, allowing you to

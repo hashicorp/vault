@@ -498,6 +498,24 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 	}
 }
 
+// Check that standard permissions work
+func TestCore_HandleRequest_NoSlash(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	req := &logical.Request{
+		Operation:   logical.HelpOperation,
+		Path:        "secret",
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+	if _, ok := resp.Data["help"]; !ok {
+		t.Fatalf("resp: %v", resp)
+	}
+}
+
 // Test a root path is denied if non-root
 func TestCore_HandleRequest_RootPath(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
