@@ -2,6 +2,8 @@ package framework
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -49,6 +51,7 @@ type Backend struct {
 	Rollback       RollbackFunc
 	RollbackMinAge time.Duration
 
+	logger  *log.Logger
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
@@ -121,6 +124,21 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 // logical.Backend impl.
 func (b *Backend) SpecialPaths() *logical.Paths {
 	return b.PathsSpecial
+}
+
+// logical.Backend impl.
+func (b *Backend) SetLogger(logger *log.Logger) {
+	b.logger = logger
+}
+
+// Logger can be used to get the logger. If no logger has been set,
+// the logs will be discarded.
+func (b *Backend) Logger() *log.Logger {
+	if b.logger != nil {
+		return b.logger
+	}
+
+	return log.New(ioutil.Discard, "", 0)
 }
 
 // Route looks up the path that would be used for a given path string.

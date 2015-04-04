@@ -460,7 +460,13 @@ func (c *Core) newLogicalBackend(t string, conf map[string]string) (logical.Back
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
 
-	return f(conf)
+	b, err := f(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	b.SetLogger(c.logger)
+	return b, nil
 }
 
 // defaultMountTable creates a default mount table
