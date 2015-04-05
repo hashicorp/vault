@@ -8,7 +8,7 @@ import (
 // Secret is the structure returned for every secret within Vault.
 type Secret struct {
 	VaultId       string                 `json:"vault_id"`
-	Renewable     bool                   `json":renewable"`
+	Renewable     bool                   `json:"renewable"`
 	LeaseDuration int                    `json:"lease_duration"`
 	Data          map[string]interface{} `json:"data"`
 	Auth          *SecretAuth            `json:"auth,omitempty"`

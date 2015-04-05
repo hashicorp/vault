@@ -26,7 +26,7 @@ func TestSysAudit(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"noop": map[string]interface{}{
+		"noop/": map[string]interface{}{
 			"type":        "noop",
 			"description": "",
 			"options":     map[string]interface{}{},

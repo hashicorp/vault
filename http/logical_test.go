@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/vault"
 )
@@ -27,16 +28,17 @@ func TestLogical(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"renewable":      false,
-		"lease_duration": float64(0),
+		"lease_duration": float64((30 * 24 * time.Hour) / time.Second),
 		"data": map[string]interface{}{
 			"data": "bar",
 		},
+		"auth": nil,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual, "vault_id")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: %#v %#v", actual, expected)
 	}
 }
 

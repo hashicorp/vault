@@ -21,7 +21,7 @@ func TestSysAuth(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"token": map[string]interface{}{
+		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
 		},
@@ -52,11 +52,11 @@ func TestSysEnableAuth(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"foo": map[string]interface{}{
+		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "noop",
 		},
-		"token": map[string]interface{}{
+		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
 		},
@@ -90,7 +90,7 @@ func TestSysDisableAuth(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"token": map[string]interface{}{
+		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
 		},
