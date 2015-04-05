@@ -3,9 +3,14 @@ package main
 import (
 	"os"
 
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+
 	"github.com/hashicorp/vault/builtin/credential/github"
+
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/consul"
+
+	"github.com/hashicorp/vault/audit"
 	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
 	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/logical"
@@ -106,6 +111,9 @@ func init() {
 		"server": func() (cli.Command, error) {
 			return &command.ServerCommand{
 				Meta: meta,
+				AuditBackends: map[string]audit.Factory{
+					"file": auditFile.Factory,
+				},
 				CredentialBackends: map[string]logical.Factory{
 					"github": github.Factory,
 				},

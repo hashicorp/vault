@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/logutils"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/hashicorp/vault/helper/gated-writer"
@@ -22,6 +23,7 @@ import (
 
 // ServerCommand is a Command that starts the Vault server.
 type ServerCommand struct {
+	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 
@@ -91,6 +93,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the core
 	core, err := vault.NewCore(&vault.CoreConfig{
 		Physical:           backend,
+		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             logger,
