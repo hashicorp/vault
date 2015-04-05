@@ -5,7 +5,8 @@ import (
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 
-	"github.com/hashicorp/vault/builtin/credential/github"
+	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
+	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/consul"
@@ -115,7 +116,8 @@ func init() {
 					"file": auditFile.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
-					"github": github.Factory,
+					"app-id": credAppId.Factory,
+					"github": credGitHub.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":    aws.Factory,

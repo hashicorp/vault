@@ -55,6 +55,9 @@ type TestStep struct {
 	// step will be called
 	Check TestCheckFunc
 
+	// ErrorOk, if true, will let erroneous responses through to the check
+	ErrorOk bool
+
 	// Unauthenticated, if true, will make the request unauthenticated.
 	Unauthenticated bool
 }
@@ -172,7 +175,7 @@ func Test(t TestT, c TestCase) {
 				resp.Data,
 			))
 		}
-		if err == nil && resp.IsError() {
+		if err == nil && resp.IsError() && !s.ErrorOk {
 			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
 		}
 		if err == nil && s.Check != nil {
@@ -240,6 +243,17 @@ func TestCheckAuth(policies []string) TestCheckFunc {
 		}
 		if !reflect.DeepEqual(resp.Auth.Policies, policies) {
 			return fmt.Errorf("invalid policies: %#v", resp.Auth.Policies)
+		}
+
+		return nil
+	}
+}
+
+// TestCheckError is a helper to check that a response is an error.
+func TestCheckError() TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if !resp.IsError() {
+			return fmt.Errorf("response should be error")
 		}
 
 		return nil

@@ -8,6 +8,17 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+// PathAppend is a helper for appending lists of paths into a single
+// list.
+func PathAppend(paths ...[]*Path) []*Path {
+	result := make([]*Path, 0, 10)
+	for _, ps := range paths {
+		result = append(result, ps...)
+	}
+
+	return result
+}
+
 // Path is a single path that the backend responds to.
 type Path struct {
 	// Pattern is the pattern of the URL that matches this path.
