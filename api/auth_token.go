@@ -6,7 +6,7 @@ type TokenAuth struct {
 }
 
 // TokenAuth is used to return the client for logical-backend API calls.
-func (a *Auth) TokenAuth() *TokenAuth {
+func (a *Auth) Token() *TokenAuth {
 	return &TokenAuth{c: a.c}
 }
 
