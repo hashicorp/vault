@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (c *Sys) ListAuth() (map[string]*Auth, error) {
+func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/auth")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
@@ -12,7 +12,7 @@ func (c *Sys) ListAuth() (map[string]*Auth, error) {
 	}
 	defer resp.Body.Close()
 
-	var result map[string]*Auth
+	var result map[string]*AuthMount
 	err = resp.DecodeJSON(&result)
 	return result, err
 }
@@ -66,7 +66,7 @@ func (c *Sys) checkAuthPath(path string) error {
 // individually documentd because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
-type Auth struct {
+type AuthMount struct {
 	Type        string
 	Description string
 }
