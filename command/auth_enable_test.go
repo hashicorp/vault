@@ -39,7 +39,7 @@ func TestAuthEnable(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	mount, ok := mounts["noop"]
+	mount, ok := mounts["noop/"]
 	if !ok {
 		t.Fatal("should have noop mount")
 	}
