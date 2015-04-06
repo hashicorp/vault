@@ -114,6 +114,9 @@ func (c *ServerCommand) Run(args []string) int {
 				"Vault is configured to only have a single unseal key. The root\n"+
 				"token has already been authenticated with the CLI, so you can\n"+
 				"immediately begin using the Vault CLI.\n\n"+
+				"The only step you need to take is to set the following\n"+
+				"environment variable since Vault will be taking without TLS:\n\n"+
+				"    export VAULT_ADDR='http://127.0.0.1:8200'\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
 				"Unseal Key: %s\nRoot Token: %s\n",
