@@ -40,6 +40,9 @@ func init() {
 		"auth": func() (cli.Command, error) {
 			return &command.AuthCommand{
 				Meta: meta,
+				Handlers: map[string]command.AuthHandler{
+					"github": &credGitHub.CLIHandler{},
+				},
 			}, nil
 		},
 

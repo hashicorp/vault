@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/http"
@@ -177,7 +178,7 @@ func TestHelperProcess(t *testing.T) {
 
 type testAuthHandler struct{}
 
-func (h *testAuthHandler) Auth(m map[string]string) (string, error) {
+func (h *testAuthHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	return m["foo"], nil
 }
 

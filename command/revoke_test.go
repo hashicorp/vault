@@ -22,7 +22,7 @@ func TestRevoke(t *testing.T) {
 	}
 
 	client := testClient(t, addr, token)
-	err := client.Logical().Write("secret/foo", map[string]interface{}{
+	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
 		"key":   "value",
 		"lease": "1m",
 	})

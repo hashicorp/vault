@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/flag-kv"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/ryanuber/columnize"
@@ -14,7 +15,7 @@ import (
 // AuthHandler is the interface that any auth handlers must implement
 // to enable auth via the CLI.
 type AuthHandler interface {
-	Auth(map[string]string) (string, error)
+	Auth(*api.Client, map[string]string) (string, error)
 	Help() string
 }
 
@@ -101,7 +102,16 @@ func (c *AuthCommand) Run(args []string) int {
 		return 0
 	}
 
-	token, err := handler.Auth(vars)
+	// Build the client so we can auth
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client to auth: %s", err))
+		return 1
+	}
+
+	// Authenticate
+	token, err := handler.Auth(client, vars)
 	if err != nil {
 		c.Ui.Error(err.Error())
 		return 1
@@ -117,8 +127,8 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Build the client so we can verify that the token is valid
-	client, err := c.Client()
+	// Build the client again so it can read the token we just wrote
+	client, err = c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing client to verify the token: %s", err))
@@ -239,7 +249,7 @@ type tokenAuthHandler struct {
 	Token string
 }
 
-func (h *tokenAuthHandler) Auth(map[string]string) (string, error) {
+func (h *tokenAuthHandler) Auth(*api.Client, map[string]string) (string, error) {
 	token := h.Token
 	if token == "" {
 		var err error

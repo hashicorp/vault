@@ -21,17 +21,21 @@ func (c *Logical) Read(path string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Write(path string, data map[string]interface{}) error {
+func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	return nil
+	if resp.StatusCode == 200 {
+		return ParseSecret(resp.Body)
+	}
+
+	return nil, nil
 }

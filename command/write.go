@@ -50,7 +50,7 @@ func (c *WriteCommand) Run(args []string) int {
 		return 2
 	}
 
-	if err := client.Logical().Write(path, data); err != nil {
+	if _, err := client.Logical().Write(path, data); err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error writing data to %s: %s", path, err))
 		return 1
