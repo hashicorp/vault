@@ -637,10 +637,16 @@ func (ts *TokenStore) handleRenew(
 	}
 
 	// Revoke the token and its children
-	if err := ts.expiration.RenewToken(out.Path, out.ID); err != nil {
+	auth, err := ts.expiration.RenewToken(out.Path, out.ID)
+	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	return nil, nil
+
+	// Generate the response
+	resp := &logical.Response{
+		Auth: auth,
+	}
+	return resp, nil
 }
 
 const (

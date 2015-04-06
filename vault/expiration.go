@@ -278,24 +278,24 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
-func (m *ExpirationManager) RenewToken(source string, token string) error {
+func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Auth, error) {
 	// Compute the Vault ID
 	vaultID := path.Join(source, m.tokenStore.SaltID(token))
 
 	// Load the entry
 	le, err := m.loadEntry(vaultID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// If there is no entry, cannot review
 	if le == nil {
-		return fmt.Errorf("lease not found")
+		return nil, fmt.Errorf("lease not found")
 	}
 
 	// Determine if the lease is expired
 	if le.ExpireTime.Before(time.Now().UTC()) {
-		return fmt.Errorf("lease expired")
+		return nil, fmt.Errorf("lease expired")
 	}
 
 	// Update the lease entry
@@ -306,7 +306,7 @@ func (m *ExpirationManager) RenewToken(source string, token string) error {
 	}
 	le.ExpireTime = expireTime
 	if err := m.persistEntry(le); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Update the expiration time
@@ -315,7 +315,7 @@ func (m *ExpirationManager) RenewToken(source string, token string) error {
 		timer.Reset(leaseTotal)
 	}
 	m.pendingLock.Unlock()
-	return nil
+	return le.Auth, nil
 }
 
 // Register is used to take a request and response with an associated

@@ -298,9 +298,12 @@ func TestExpiration_RenewToken(t *testing.T) {
 	}
 
 	// Renew the token
-	err = exp.RenewToken("auth/github/login", root.ID)
+	out, err := exp.RenewToken("auth/github/login", root.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(auth, out) {
+		t.Fatalf("Bad: %#v", out)
 	}
 }
 

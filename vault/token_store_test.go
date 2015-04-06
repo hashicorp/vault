@@ -624,7 +624,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp != nil {
+	if !reflect.DeepEqual(resp.Auth, auth) {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
