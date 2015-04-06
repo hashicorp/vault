@@ -6,21 +6,33 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/flag-kv"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/ryanuber/columnize"
 )
 
+// AuthHandler is the interface that any auth handlers must implement
+// to enable auth via the CLI.
+type AuthHandler interface {
+	Auth(map[string]string) (string, error)
+	Help() string
+}
+
 // AuthCommand is a Command that handles authentication.
 type AuthCommand struct {
 	Meta
+
+	Handlers map[string]AuthHandler
 }
 
 func (c *AuthCommand) Run(args []string) int {
 	var method string
 	var methods bool
+	var vars map[string]string
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
 	flags.StringVar(&method, "method", "", "method")
+	flags.Var((*kvFlag.Flag)(&vars), "var", "variables")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -54,36 +66,39 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	// token is where the final token will go
-	var token string
+	handler := c.Handlers[method]
 	if method == "" {
+		token := ""
 		if len(args) > 0 {
 			token = args[0]
-
-			// TODO(mitchellh): stdin
-		} else {
-			// No arguments given, read the token from user input
-			fmt.Printf("Token (will be hidden): ")
-			token, err = password.Read(os.Stdin)
-			fmt.Printf("\n")
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error attempting to ask for token. The raw error message\n"+
-						"is shown below, but the most common reason for this error is\n"+
-						"that you attempted to pipe a value into auth. If you want to\n"+
-						"pipe the token, please pass '-' as the token argument.\n\n"+
-						"Raw error: %s", err))
-				return 1
-			}
 		}
 
-		if token == "" {
-			c.Ui.Error(fmt.Sprintf(
-				"A token must be passed to auth. Please view the help\n" +
-					"for more information."))
-			return 1
+		handler = &tokenAuthHandler{Token: token}
+	}
+
+	if handler == nil {
+		methods := make([]string, 0, len(c.Handlers))
+		for k, _ := range c.Handlers {
+			methods = append(methods, k)
 		}
-	} else {
-		// TODO(mitchellh): other auth methods
+		sort.Strings(methods)
+
+		c.Ui.Error(fmt.Sprintf(
+			"Unknown authentication method: %s\n\n"+
+				"Please use a supported authentication method. The list of supported\n"+
+				"authentication methods is shown below. Note that this list may not\n"+
+				"be exhaustive: Vault may support other auth methods. For auth methods\n"+
+				"unsupported by the CLI, please use the HTTP API.\n\n"+
+				"%s",
+			method,
+			strings.Join(methods, ", ")))
+		return 1
+	}
+
+	token, err := handler.Auth(vars)
+	if err != nil {
+		c.Ui.Error(err.Error())
+		return 1
 	}
 
 	// Store the token!
@@ -198,12 +213,52 @@ General Options:
 
 Auth Options:
 
-  -method=name    Outputs help for the authentication method with the given
-                  name for the remote server. If this authentication method
-                  is not available, exit with code 1.
+  -method=name      Outputs help for the authentication method with the given
+                    name for the remote server. If this authentication method
+                    is not available, exit with code 1.
 
-  -methods        List the available auth methods.
+  -methods          List the available auth methods.
+
+  -var="key=value"  Vars for the authentication method. These are determined
+                    on a per-method basis.
 
 `
 	return strings.TrimSpace(helpText)
+}
+
+// tokenAuthHandler handles retrieving the token from the command-line.
+type tokenAuthHandler struct {
+	Token string
+}
+
+func (h *tokenAuthHandler) Auth(map[string]string) (string, error) {
+	token := h.Token
+	if token == "" {
+		var err error
+
+		// No arguments given, read the token from user input
+		fmt.Printf("Token (will be hidden): ")
+		token, err = password.Read(os.Stdin)
+		fmt.Printf("\n")
+		if err != nil {
+			return "", fmt.Errorf(
+				"Error attempting to ask for token. The raw error message\n"+
+					"is shown below, but the most common reason for this error is\n"+
+					"that you attempted to pipe a value into auth. If you want to\n"+
+					"pipe the token, please pass '-' as the token argument.\n\n"+
+					"Raw error: %s", err)
+		}
+	}
+
+	if token == "" {
+		return "", fmt.Errorf(
+			"A token must be passed to auth. Please view the help\n" +
+				"for more information.")
+	}
+
+	return token, nil
+}
+
+func (h *tokenAuthHandler) Help() string {
+	return ""
 }
