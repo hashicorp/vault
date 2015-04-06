@@ -81,6 +81,47 @@ func TestAuth_token(t *testing.T) {
 	}
 }
 
+func TestAuth_method(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	testAuthInit(t)
+
+	ui := new(cli.MockUi)
+	c := &AuthCommand{
+		Handlers: map[string]AuthHandler{
+			"test": &testAuthHandler{},
+		},
+		Meta: Meta{
+			Ui: ui,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"-method=test",
+		"-var", "foo=" + token,
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	helper, err := c.TokenHelper()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	actual, err := helper.Get()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if actual != token {
+		t.Fatalf("bad: %s", actual)
+	}
+}
+
 func TestAuth_argsWithMethod(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
@@ -133,3 +174,11 @@ func testAuthInit(t *testing.T) {
 func TestHelperProcess(t *testing.T) {
 	token.TestHelperProcessCLI(t, &tokenDisk.Command{})
 }
+
+type testAuthHandler struct{}
+
+func (h *testAuthHandler) Auth(m map[string]string) (string, error) {
+	return m["foo"], nil
+}
+
+func (h *testAuthHandler) Help() string { return "" }
