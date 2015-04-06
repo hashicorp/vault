@@ -662,6 +662,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	}
 
 	// Policy should be gone
+	c.policy.lru.Purge()
 	out, err := c.policy.GetPolicy("test")
 	if err != nil {
 		t.Fatalf("err: %v", err)

@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -10,19 +11,25 @@ const (
 	// policySubPath is the sub-path used for the policy store
 	// view. This is nested under the system view.
 	policySubPath = "policy/"
+
+	// policyCacheSize is the number of policies that are kept cached
+	policyCacheSize = 1024
 )
 
 // PolicyStore is used to provide durable storage of policy, and to
 // manage ACLs associated with them.
 type PolicyStore struct {
 	view *BarrierView
+	lru  *lru.Cache
 }
 
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
 func NewPolicyStore(view *BarrierView) *PolicyStore {
+	cache, _ := lru.New(policyCacheSize)
 	p := &PolicyStore{
 		view: view,
+		lru:  cache,
 	}
 	return p
 }
@@ -61,12 +68,18 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 	if err := ps.view.Put(entry); err != nil {
 		return fmt.Errorf("failed to persist policy: %v", err)
 	}
+
+	// Update the LRU cache
+	ps.lru.Add(p.Name, p)
 	return nil
 }
 
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
-	// TODO: Cache policy
+	// Check for cached policy
+	if raw, ok := ps.lru.Get(name); ok {
+		return raw.(*Policy), nil
+	}
 
 	// Special case the root policy
 	if name == "root" {
@@ -107,13 +120,15 @@ func (ps *PolicyStore) DeletePolicy(name string) error {
 	if err := ps.view.Delete(name); err != nil {
 		return fmt.Errorf("failed to delete policy: %v", err)
 	}
+
+	// Clear the cache
+	ps.lru.Remove(name)
 	return nil
 }
 
 // ACL is used to return an ACL which is built using the
 // named policies.
 func (ps *PolicyStore) ACL(names ...string) (*ACL, error) {
-	// TODO: Cache ACLs
 	// Fetch the policies
 	var policy []*Policy
 	for _, name := range names {
