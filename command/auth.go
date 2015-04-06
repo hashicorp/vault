@@ -27,10 +27,11 @@ type AuthCommand struct {
 
 func (c *AuthCommand) Run(args []string) int {
 	var method string
-	var methods bool
+	var methods, methodHelp bool
 	var vars map[string]string
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
+	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.StringVar(&method, "method", "", "method")
 	flags.Var((*kvFlag.Flag)(&vars), "var", "variables")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -93,6 +94,11 @@ func (c *AuthCommand) Run(args []string) int {
 			method,
 			strings.Join(methods, ", ")))
 		return 1
+	}
+
+	if methodHelp {
+		c.Ui.Output(handler.Help())
+		return 0
 	}
 
 	token, err := handler.Auth(vars)
@@ -217,6 +223,8 @@ Auth Options:
                     name for the remote server. If this authentication method
                     is not available, exit with code 1.
 
+  -method-help      If set, the help for the selected method will be shown.
+
   -methods          List the available auth methods.
 
   -var="key=value"  Vars for the authentication method. These are determined
@@ -260,5 +268,18 @@ func (h *tokenAuthHandler) Auth(map[string]string) (string, error) {
 }
 
 func (h *tokenAuthHandler) Help() string {
-	return ""
+	help := `
+No method selected with the "-method" flag, so the "auth" command assumes
+you'll be using raw token authentication. For this, specify the token to
+authenticate as as the parameter to "vault auth". Example:
+
+    vault auth 123456
+
+The token used to authenticate must come from some other source. A root
+token is created when Vault is first initialized. After that, subsequent
+tokens are created via the API or command line interface (with the
+"token"-prefixed commands).
+`
+
+	return strings.TrimSpace(help)
 }
