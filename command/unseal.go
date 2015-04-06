@@ -37,6 +37,7 @@ func (c *UnsealCommand) Run(args []string) int {
 	if value == "" {
 		fmt.Printf("Key (will be hidden): ")
 		value, err = password.Read(os.Stdin)
+		fmt.Printf("\n")
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error attempting to ask for password. The raw error message\n"+
