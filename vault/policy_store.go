@@ -84,6 +84,7 @@ func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 	// Special case the root policy
 	if name == "root" {
 		p := &Policy{Name: "root"}
+		ps.lru.Add(p.Name, p)
 		return p, nil
 	}
 
@@ -102,6 +103,9 @@ func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 		return nil, fmt.Errorf("failed to parse policy: %v", err)
 	}
 	p.Name = name
+
+	// Update the LRU cache
+	ps.lru.Add(p.Name, p)
 	return p, nil
 }
 
