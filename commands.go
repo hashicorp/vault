@@ -31,6 +31,29 @@ func init() {
 	meta := command.Meta{Ui: ui}
 
 	Commands = map[string]cli.CommandFactory{
+		"init": func() (cli.Command, error) {
+			return &command.InitCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"server": func() (cli.Command, error) {
+			return &command.ServerCommand{
+				Meta: meta,
+				AuditBackends: map[string]audit.Factory{
+					"file": auditFile.Factory,
+				},
+				CredentialBackends: map[string]logical.Factory{
+					"app-id": credAppId.Factory,
+					"github": credGitHub.Factory,
+				},
+				LogicalBackends: map[string]logical.Factory{
+					"aws":    aws.Factory,
+					"consul": consul.Factory,
+				},
+			}, nil
+		},
+
 		"help": func() (cli.Command, error) {
 			return &command.HelpCommand{
 				Meta: meta,
@@ -109,29 +132,6 @@ func init() {
 		"unseal": func() (cli.Command, error) {
 			return &command.UnsealCommand{
 				Meta: meta,
-			}, nil
-		},
-
-		"init": func() (cli.Command, error) {
-			return &command.InitCommand{
-				Meta: meta,
-			}, nil
-		},
-
-		"server": func() (cli.Command, error) {
-			return &command.ServerCommand{
-				Meta: meta,
-				AuditBackends: map[string]audit.Factory{
-					"file": auditFile.Factory,
-				},
-				CredentialBackends: map[string]logical.Factory{
-					"app-id": credAppId.Factory,
-					"github": credGitHub.Factory,
-				},
-				LogicalBackends: map[string]logical.Factory{
-					"aws":    aws.Factory,
-					"consul": consul.Factory,
-				},
 			}, nil
 		},
 
