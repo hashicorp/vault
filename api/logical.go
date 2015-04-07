@@ -39,3 +39,14 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 
 	return nil, nil
 }
+
+func (c *Logical) Delete(path string) (*Secret, error) {
+	r := c.c.NewRequest("DELETE", "/v1/"+path)
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
