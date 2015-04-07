@@ -59,11 +59,11 @@ func handleLogical(core *vault.Core) http.Handler {
 				ConnState:  r.TLS,
 			},
 		}))
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
+		if respondCommon(w, resp) {
 			return
 		}
-		if respondCommon(w, resp) {
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 		if op == logical.ReadOperation && resp == nil {

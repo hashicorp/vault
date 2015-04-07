@@ -159,6 +159,12 @@ func init() {
 			}, nil
 		},
 
+		"token-create": func() (cli.Command, error) {
+			return &command.TokenCreateCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			ver := Version
 			rel := VersionPrerelease
