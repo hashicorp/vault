@@ -453,8 +453,8 @@ func (ts *TokenStore) handleCreate(
 	var data struct {
 		ID       string
 		Policies []string
-		Metadata map[string]string
-		NoParent bool `mapstructure:"no_parent"`
+		Metadata map[string]string `mapstructure:"meta"`
+		NoParent bool              `mapstructure:"no_parent"`
 		Lease    string
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
