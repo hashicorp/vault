@@ -1,6 +1,7 @@
 package http
 
 import (
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -41,7 +42,12 @@ func handleLogical(core *vault.Core) http.Handler {
 		// Parse the request if we can
 		var req map[string]interface{}
 		if op == logical.WriteOperation {
-			if err := parseRequest(r, &req); err != nil {
+			err := parseRequest(r, &req)
+			if err == io.EOF {
+				req = nil
+				err = nil
+			}
+			if err != nil {
 				respondError(w, http.StatusBadRequest, err)
 				return
 			}

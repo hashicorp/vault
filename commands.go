@@ -165,6 +165,12 @@ func init() {
 			}, nil
 		},
 
+		"token-revoke": func() (cli.Command, error) {
+			return &command.TokenRevokeCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			ver := Version
 			rel := VersionPrerelease
