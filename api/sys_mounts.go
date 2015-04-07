@@ -73,7 +73,9 @@ func (c *Sys) Remount(from, to string) error {
 	}
 
 	resp, err := c.c.RawRequest(r)
-	defer resp.Body.Close()
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	return err
 }
 

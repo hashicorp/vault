@@ -141,6 +141,12 @@ func init() {
 			}, nil
 		},
 
+		"remount": func() (cli.Command, error) {
+			return &command.RemountCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"unmount": func() (cli.Command, error) {
 			return &command.UnmountCommand{
 				Meta: meta,
