@@ -19,49 +19,46 @@ guide for all available features as well as internals.
 
 ## What is Vault?
 
-Vault is a tool for building, changing, and versioning infrastructure
-safely and efficiently. Vault can manage existing and popular service
-providers as well as custom in-house solutions.
+Vault is a tool for securely accessing _secrets_. A secret is anything
+that you want to tightly control access to, such as API keys, passwords,
+certificates, and more. Vault provides a unified interface to any
+secret, while providing tight access control and recording a detailed
+audit log.
 
-Configuration files describe to Vault the components needed to
-run a single application or your entire datacenter.
-Vault generates an execution plan describing
-what it will do to reach the desired state, and then executes it to build the
-described infrastructure. As the configuration changes, Vault is able
-to determine what changed and create incremental execution plans which
-can be applied.
-
-The infrastructure Vault can manage includes
-low-level components such as
-compute instances, storage, and networking, as well as high-level
-components such as DNS entries, SaaS features, etc.
+A modern system requires access to a multitude of secrets: database
+credentials, API keys for external services, credentials for
+service-oriented architecture communication, etc. Understanding who is
+accessing what secrets is already very difficult and platform-specific.
+Adding on key rolling, secure storage, and detailed audit logs is almost
+impossible without a custom solution. This is where Vault steps in.
 
 Examples work best to showcase Vault. Please see the
 [use cases](/intro/use-cases.html).
 
 The key features of Vault are:
 
-* **Infrastructure as Code**: Infrastructure is described using a high-level
-  configuration syntax. This allows a blueprint of your datacenter to be
-  versioned and treated as you would any other code. Additionally,
-  infrastructure can be shared and re-used.
+* **Secure Secret Storage**: Arbitrary key/value secrets can be stored
+  in Vault. Vault encrypts these secrets prior to writing them to persistent
+  storage, so gaining access to the raw storage isn't enough to access
+  your secrets. Vault can write to disk, [Consul](http://www.consul.io),
+  and more.
 
-* **Execution Plans**: Vault has a "planning" step where it generates
-  an _execution plan_. The execution plan shows what Vault will do when
-  you call apply. This lets you avoid any surprises when Vault
-  manipulates infrastructure.
+* **Dynamic Secrets**: Vault can generate secrets on-demand for some
+  systems, such as AWS or SQL databases. For example, when an application
+  needs to access an S3 bucket, it asks Vault for credentials, and Vault
+  will generate an AWS keypair with valid permissions on demand. After
+  creating these dynamic secrets, Vault will also automatically revoke them
+  after the lease is up.
 
-* **Resource Graph**: Vault builds a graph of all your resources,
-  and parallelizes the creation and modification of any non-dependent
-  resources. Because of this, Vault builds infrastructure as efficiently
-  as possible, and operators get insight into dependencies in their
-  infrastructure.
+* **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
+  with it. At the end of the lease, Vault will automatically revoke that
+  secret. Clients are able to renew leases via built-in renew APIs.
 
-* **Change Automation**: Complex changesets can be applied to
-  your infrastructure with minimal human interaction.
-  With the previously mentioned execution
-  plan and resource graph, you know exactly what Vault will change
-  and in what order, avoiding many possible human errors.
+* **Revocation**: Vault has built-in support for secret revocation. Vault
+  can revoke not only single secrets, but a tree of secrets, for example
+  all secrets read by a specific user, or all secrets of a particular type.
+  Revocation assists in key rolling as well as locking down systems in the
+  case of an intrusion.
 
 ## Next Steps
 
@@ -70,4 +67,4 @@ multiple ways Vault can be used. Then see
 [how Vault compares to other software](/intro/vs/index.html)
 to see how it fits into your existing infrastructure. Finally, continue onwards with
 the [getting started guide](/intro/getting-started/install.html) to use
-Vault to manage real infrastructure and to see how it works.
+Vault to read, write, and create real secrets and see how it works in practice.

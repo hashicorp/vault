@@ -18,12 +18,13 @@
 						<span></span>
 					</div>
 				</div>
-				<h2 id="tag-line">A tool for storing and retrieving secrets.</h2>
+				<h2 id="tag-line">A tool for managing secrets.</h2>
 				<div>
 					<a class="v-btn blue lrg" href="/intro">Get Started</a>
 				</div>
 				<div id="diagram"></div>
-				<p><span class="strong">Vault</span> secures, stores and tightly controls access to tokens, passwords, certificates and other secrets in modern computing. Vault presents a unified access in front of multiple backends, with logical support for HSMs, IAM, Postgres and more.</p>
+				<p><span class="strong">Vault</span> secures, stores, and tightly controls access to tokens, passwords, certificates, API keys, and other secrets in modern computing. Vault handles leasing, key revocation, key rolling, and auditing. Vault presents a unified API to access multiple backends: HSMs, AWS IAM, SQL databases, raw key/value, and more.
+				</p>
 			</div>
 		</div>
 	</div>
@@ -39,9 +40,9 @@
 
 				<div id="crud" class="feature">
 					<div class="graphic"></div>
-					<h3 class="">CRUD</h2>
+					<h3 class="">Secret Storage</h3>
 					<p>
-						Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas et purus at orci cursus mattis. Maecenas ullamcorper dictum elit. Vivamus sit amet nisi eu lacus lacinia iaculis. Nulla non massa ultricies, placerat lectus vel, mattis mauris. Nullam urna risus, volutpat quis viverra in, convallis at magna.
+					Vault encrypts and provides access to any secrets. Leases can be associated with secrets, and Vault will automatically revoke secrets after the lease period ends. Access control policies provide strict control over who can access what secrets.
 					</p>
 					<div class="feature-footer">
 						<a class="v-btn black sml" href="/intro">Learn more</a>
@@ -50,9 +51,9 @@
 
 				<div id="key" class="feature">
 					<div class="graphic"></div>
-					<h3 class="">Key Rolling</h2>
+					<h3 class="">Key Rolling</h3>
 					<p>
-						Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas et purus at orci cursus mattis. Maecenas ullamcorper dictum elit. Vivamus sit amet nisi eu lacus lacinia iaculis. Nulla non massa ultricies, placerat lectus vel, mattis mauris. Nullam urna risus, volutpat quis viverra in, convallis at magna.
+						Every secret in Vault is associated with a lease. Clients must renew their secret within the lease period, or request a new secret. Key rolling is as simple as storing a new secret and revoking existing secrets or waiting for the lease period to expire.
 						<div class="feature-footer">
 							<a class="v-btn black sml" href="/intro">Learn more</a>
 							<a class="v-btn black sml terminal" href="/#/demo/crud">Launch Interactive Terminal</a>
@@ -62,9 +63,9 @@
 
 				<div id="audit" class="feature">
 					<div class="graphic"></div>
-					<h3 class="">Audit Logs</h2>
+					<h3 class="">Audit Logs</h3>
 					<p>
-						Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas et purus at orci cursus mattis. Maecenas ullamcorper dictum elit. Vivamus sit amet nisi eu lacus lacinia iaculis. Nulla non massa ultricies, placerat lectus vel, mattis mauris. Nullam urna risus, volutpat quis viverra in, convallis at magna.
+					Vault stores a detailed audit log of every interaction: authentication, token creation, secret access, secret revocation, and more. Audit logs can be sent to multiple backends to ensure redundant copies. Paired with Vault's strict leasing policies, operators can easily trace back to the source of any secret.
 						<div class="feature-footer">
 							<a class="v-btn black sml" href="/intro">Learn more</a>
 						</div>
@@ -77,9 +78,9 @@
 		<div class="row">
 			<div class="col-sm-offset-1 col-sm-10 col-xs-12">
 				<div id="cta">
-					<a class="v-btn black sml" href="/intro/index.html">Try Vault Free</a>
-					<p class="cta-black">Maecenas ullamcorper dictum elit.</p>
-					<p class="cta-gray">Vivamus venenatis augue.</p>
+					<a class="v-btn black sml" href="/intro/index.html">Get Started with Vault</a>
+					<p class="cta-black">Completely free and open source.</p>
+					<!--<p class="cta-gray">Vivamus venenatis augue.</p>-->
 				</div><!-- #cta -->
 			</div> <!-- .col -->
 		</div> <!-- .row -->

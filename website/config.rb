@@ -2,7 +2,7 @@
 # Configure Middleman
 #-------------------------------------------------------------------------
 
-set :base_url, "https://www.vault.io/"
+set :base_url, "https://www.vaultproject.io/"
 
 activate :hashicorp do |h|
   h.version      = ENV['VAULT_VERSION']
