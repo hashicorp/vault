@@ -82,6 +82,12 @@ func init() {
 			}, nil
 		},
 
+		"delete": func() (cli.Command, error) {
+			return &command.DeleteCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"revoke": func() (cli.Command, error) {
 			return &command.RevokeCommand{
 				Meta: meta,
