@@ -15,11 +15,13 @@ func TestLogical(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
+	// WRITE
 	resp := testHttpPut(t, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": "bar",
 	})
 	testResponseStatus(t, resp, 204)
 
+	// READ
 	resp, err := http.Get(addr + "/v1/secret/foo")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -40,6 +42,16 @@ func TestLogical(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v %#v", actual, expected)
 	}
+
+	// DELETE
+	resp = testHttpDelete(t, addr+"/v1/secret/foo")
+	testResponseStatus(t, resp, 204)
+
+	resp, err = http.Get(addr + "/v1/secret/foo")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 404)
 }
 
 func TestLogical_noExist(t *testing.T) {

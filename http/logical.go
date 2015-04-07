@@ -25,6 +25,8 @@ func handleLogical(core *vault.Core) http.Handler {
 		// Determine the operation
 		var op logical.Operation
 		switch r.Method {
+		case "DELETE":
+			op = logical.DeleteOperation
 		case "GET":
 			op = logical.ReadOperation
 		case "PUT":
