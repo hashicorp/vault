@@ -255,11 +255,22 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	req.ClientToken = root
 
 	resp, err := ts.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
+	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data["error"] != "token must have at least one policy" {
-		t.Fatalf("bad: %#v", resp)
+
+	expected := &TokenEntry{
+		ID:       resp.Auth.ClientToken,
+		Parent:   root,
+		Policies: []string{"root"},
+		Path:     "auth/token/create",
+	}
+	out, err := ts.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("bad: %#v", out)
 	}
 }
 

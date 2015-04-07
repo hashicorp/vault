@@ -453,8 +453,8 @@ func (ts *TokenStore) handleCreate(
 	var data struct {
 		ID       string
 		Policies []string
-		Metadata map[string]string `mapstructure:"meta"`
-		NoParent bool              `mapstructure:"no_parent"`
+		Metadata map[string]string
+		NoParent bool `mapstructure:"no_parent"`
 		Lease    string
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
@@ -479,17 +479,13 @@ func (ts *TokenStore) handleCreate(
 	}
 
 	// Only permit policies to be a subset unless the client is root
-	if len(data.Policies) > 0 {
-		if !isRoot && !strListSubset(parent.Policies, data.Policies) {
-			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
-		}
-		te.Policies = data.Policies
+	if len(data.Policies) == 0 {
+		data.Policies = parent.Policies
 	}
-
-	// Ensure is some associated policy
-	if len(te.Policies) == 0 {
-		return logical.ErrorResponse("token must have at least one policy"), logical.ErrInvalidRequest
+	if !isRoot && !strListSubset(parent.Policies, data.Policies) {
+		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
+	te.Policies = data.Policies
 
 	// Only allow an orphan token if the client is root
 	if data.NoParent {
