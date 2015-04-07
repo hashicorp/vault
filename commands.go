@@ -141,6 +141,12 @@ func init() {
 			}, nil
 		},
 
+		"unmount": func() (cli.Command, error) {
+			return &command.UnmountCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			ver := Version
 			rel := VersionPrerelease
