@@ -26,6 +26,14 @@ func handleSysMounts(core *vault.Core) http.Handler {
 
 func handleSysRemount(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "POST":
+		case "PUT":
+		default:
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
 		// Parse the request if we can
 		var req RemountRequest
 		if err := parseRequest(r, &req); err != nil {
