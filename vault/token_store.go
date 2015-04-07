@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -438,7 +439,7 @@ func (ts *TokenStore) RevokeAll() error {
 
 // handleCreate handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(req.ClientToken)
 	if err != nil || parent == nil {
@@ -449,33 +450,40 @@ func (ts *TokenStore) handleCreate(
 	isRoot := strListContains(parent.Policies, "root")
 
 	// Read and parse the fields
-	idRaw, _ := req.Data["id"]
-	policiesRaw, _ := req.Data["policies"]
-	metaRaw, _ := req.Data["meta"]
-	noParentRaw, _ := req.Data["no_parent"]
-	leaseRaw, _ := req.Data["lease"]
+	var data struct {
+		ID       string
+		Policies []string
+		Metadata map[string]string `mapstructure:"meta"`
+		NoParent bool              `mapstructure:"no_parent"`
+		Lease    string
+	}
+	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Error decoding request: %s", err)), logical.ErrInvalidRequest
+	}
 
 	// Setup the token entry
 	te := TokenEntry{
 		Parent: req.ClientToken,
 		Path:   "auth/token/create",
+		Meta:   data.Metadata,
 	}
 
 	// Allow specifying the ID of the token if the client is root
-	if id, ok := idRaw.(string); ok {
+	if data.ID != "" {
 		if !isRoot {
 			return logical.ErrorResponse("root required to specify token id"),
 				logical.ErrInvalidRequest
 		}
-		te.ID = id
+		te.ID = data.ID
 	}
 
 	// Only permit policies to be a subset unless the client is root
-	if policies, ok := policiesRaw.([]string); ok {
-		if !isRoot && !strListSubset(parent.Policies, policies) {
+	if len(data.Policies) > 0 {
+		if !isRoot && !strListSubset(parent.Policies, data.Policies) {
 			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 		}
-		te.Policies = policies
+		te.Policies = data.Policies
 	}
 
 	// Ensure is some associated policy
@@ -484,23 +492,19 @@ func (ts *TokenStore) handleCreate(
 	}
 
 	// Only allow an orphan token if the client is root
-	if noParent, _ := noParentRaw.(bool); noParent {
+	if data.NoParent {
 		if !isRoot {
 			return logical.ErrorResponse("root required to create orphan token"),
 				logical.ErrInvalidRequest
 		}
-		te.Parent = ""
-	}
 
-	// Parse any metadata associated with the token
-	if meta, ok := metaRaw.(map[string]string); ok {
-		te.Meta = meta
+		te.Parent = ""
 	}
 
 	// Parse the lease if any
 	var leaseDuration time.Duration
-	if lease, ok := leaseRaw.(string); ok {
-		dur, err := time.ParseDuration(lease)
+	if data.Lease != "" {
+		dur, err := time.ParseDuration(data.Lease)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
