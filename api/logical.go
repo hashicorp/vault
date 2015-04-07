@@ -13,6 +13,9 @@ func (c *Client) Logical() *Logical {
 func (c *Logical) Read(path string) (*Secret, error) {
 	r := c.c.NewRequest("GET", "/v1/"+path)
 	resp, err := c.c.RawRequest(r)
+	if resp != nil && resp.StatusCode == 404 {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -48,5 +51,9 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	if resp.StatusCode == 200 {
+		return ParseSecret(resp.Body)
+	}
+
+	return nil, nil
 }

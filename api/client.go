@@ -133,14 +133,17 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 		return nil, err
 	}
 
+	var result *Response
 	resp, err := c.config.HttpClient.Do(req)
+	if resp != nil {
+		result = &Response{Response: resp}
+	}
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
-	result := &Response{Response: resp}
 	if err := result.Error(); err != nil {
-		return nil, err
+		return result, err
 	}
 
 	return result, nil
