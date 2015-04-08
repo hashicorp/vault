@@ -289,7 +289,7 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 	}
 
 	// If there is no entry, cannot review
-	if le == nil {
+	if le == nil || le.ExpireTime.IsZero() {
 		return nil, fmt.Errorf("lease not found")
 	}
 
@@ -310,11 +310,13 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 	}
 
 	// Update the expiration time
-	m.pendingLock.Lock()
-	if timer, ok := m.pending[leaseID]; ok {
-		timer.Reset(leaseTotal)
+	if !expireTime.IsZero() {
+		m.pendingLock.Lock()
+		if timer, ok := m.pending[leaseID]; ok {
+			timer.Reset(leaseTotal)
+		}
+		m.pendingLock.Unlock()
 	}
-	m.pendingLock.Unlock()
 	return le.Auth, nil
 }
 
@@ -373,12 +375,16 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	// Create a lease entry
 	now := time.Now().UTC()
 	leaseTotal := auth.Lease + auth.LeaseGracePeriod
+	var expireTime time.Time
+	if auth.Lease > 0 {
+		expireTime = now.Add(leaseTotal)
+	}
 	le := leaseEntry{
 		LeaseID:    path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
 		Auth:       auth,
 		Path:       source,
 		IssueTime:  now,
-		ExpireTime: now.Add(leaseTotal),
+		ExpireTime: expireTime,
 	}
 
 	// Encode the entry
@@ -387,11 +393,13 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	}
 
 	// Setup revocation timer
-	m.pendingLock.Lock()
-	m.pending[le.LeaseID] = time.AfterFunc(leaseTotal, func() {
-		m.expireID(le.LeaseID)
-	})
-	m.pendingLock.Unlock()
+	if !expireTime.IsZero() {
+		m.pendingLock.Lock()
+		m.pending[le.LeaseID] = time.AfterFunc(leaseTotal, func() {
+			m.expireID(le.LeaseID)
+		})
+		m.pendingLock.Unlock()
+	}
 	return nil
 }
 

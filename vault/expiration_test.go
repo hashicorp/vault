@@ -146,6 +146,41 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 	}
 }
 
+func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+	}
+
+	err = exp.RegisterAuth("auth/github/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should not be able to renew, no expiration
+	_, err = exp.RenewToken("auth/github/login", root.ID)
+	if err.Error() != "lease not found" {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait and check token is not invalidated
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify token does not get revoked
+	out, err := exp.tokenStore.Lookup(root.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("missing token")
+	}
+}
+
 func TestExpiration_Revoke(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
