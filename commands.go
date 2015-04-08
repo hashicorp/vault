@@ -93,6 +93,12 @@ func init() {
 			}, nil
 		},
 
+		"audit-enable": func() (cli.Command, error) {
+			return &command.AuditEnableCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"policies": func() (cli.Command, error) {
 			return &command.PolicyListCommand{
 				Meta: meta,
