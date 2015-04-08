@@ -1,12 +1,12 @@
 package command
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/hashicorp/vault/helper/kv-builder"
 )
 
 // WriteCommand is a Command that puts data into the Vault.
@@ -61,70 +61,17 @@ func (c *WriteCommand) Run(args []string) int {
 }
 
 func (c *WriteCommand) parseData(args []string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-
-	for i, arg := range args {
-		// If the arg is exactly "-" then we read from stdin and merge
-		// the resulting structure into the result.
-		if arg == "-" {
-			var stdin io.Reader = os.Stdin
-			if c.testStdin != nil {
-				stdin = c.testStdin
-			}
-
-			dec := json.NewDecoder(stdin)
-			if err := dec.Decode(&result); err != nil {
-				return nil, fmt.Errorf(
-					"Error loading data at index %d: %s", i, err)
-			}
-
-			continue
-		}
-
-		// If the arg begins with "@" then we read the file directly.
-		if arg[0] == '@' {
-			f, err := os.Open(arg[1:])
-			if err != nil {
-				return nil, fmt.Errorf(
-					"Error loading data at index %d: %s", i, err)
-			}
-
-			dec := json.NewDecoder(f)
-			err = dec.Decode(&result)
-			f.Close()
-			if err != nil {
-				return nil, fmt.Errorf(
-					"Error loading data at index %d: %s", i, err)
-			}
-
-			continue
-		}
-
-		// Split into key/value
-		parts := strings.SplitN(arg, "=", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf(
-				"Data at index %d is not in key=value format: %s",
-				i, arg)
-		}
-		key, value := parts[0], parts[1]
-
-		if value[0] == '@' {
-			contents, err := ioutil.ReadFile(value[1:])
-			if err != nil {
-				return nil, fmt.Errorf(
-					"Error reading file value for index %d: %s", i, err)
-			}
-
-			value = string(contents)
-		} else if value[0] == '\\' && value[1] == '@' {
-			value = value[1:]
-		}
-
-		result[key] = value
+	var stdin io.Reader = os.Stdin
+	if c.testStdin != nil {
+		stdin = c.testStdin
 	}
 
-	return result, nil
+	builder := &kvbuilder.Builder{Stdin: stdin}
+	if err := builder.Add(args...); err != nil {
+		return nil, err
+	}
+
+	return builder.Map(), nil
 }
 
 func (c *WriteCommand) Synopsis() string {
