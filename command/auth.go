@@ -7,8 +7,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/flag-kv"
+	"github.com/hashicorp/vault/helper/kv-builder"
 	"github.com/hashicorp/vault/helper/password"
+	"github.com/mitchellh/mapstructure"
 	"github.com/ryanuber/columnize"
 )
 
@@ -29,12 +30,10 @@ type AuthCommand struct {
 func (c *AuthCommand) Run(args []string) int {
 	var method string
 	var methods, methodHelp bool
-	var vars map[string]string
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
 	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.StringVar(&method, "method", "", "method")
-	flags.Var((*kvFlag.Flag)(&vars), "var", "variables")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -45,14 +44,9 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) > 1 {
+	if len(args) < 1 {
 		flags.Usage()
-		c.Ui.Error("\nError: auth expects at most one argument")
-		return 1
-	}
-	if method != "" && len(args) > 0 {
-		flags.Usage()
-		c.Ui.Error("\nError: auth expects no arguments if -method is specified")
+		c.Ui.Error("\nError: auth expects at least one argument")
 		return 1
 	}
 
@@ -76,6 +70,7 @@ func (c *AuthCommand) Run(args []string) int {
 		}
 
 		handler = &tokenAuthHandler{Token: token}
+		args = nil
 	}
 
 	if handler == nil {
@@ -100,6 +95,20 @@ func (c *AuthCommand) Run(args []string) int {
 	if methodHelp {
 		c.Ui.Output(handler.Help())
 		return 0
+	}
+
+	var vars map[string]string
+	if len(args) > 0 {
+		builder := kvbuilder.Builder{Stdin: os.Stdin}
+		if err := builder.Add(args...); err != nil {
+			c.Ui.Error(err.Error())
+			return 1
+		}
+
+		if err := mapstructure.Decode(builder.Map(), &vars); err != nil {
+			c.Ui.Error(fmt.Sprintf("Error parsing options: %s", err))
+			return 1
+		}
 	}
 
 	// Build the client so we can auth
@@ -200,7 +209,7 @@ func (c *AuthCommand) Synopsis() string {
 
 func (c *AuthCommand) Help() string {
 	helpText := `
-Usage: vault auth [options] [token]
+Usage: vault auth [options] [token or config...]
 
   Authenticate with Vault with the given token or via any supported
   authentication backend.
@@ -210,8 +219,9 @@ Usage: vault auth [options] [token]
   token is "-", it will be read from stdin.
 
   By specifying -method, alternate authentication methods can be used
-  such as OAuth or TLS certificates. For these, additional -var flags
-  may be required. It is an error to specify a token with -method.
+  such as OAuth or TLS certificates. For these, additional values for
+  configuration can be specified with "key=value" pairs just like
+  "vault write".
 
 General Options:
 
@@ -236,9 +246,6 @@ Auth Options:
   -method-help      If set, the help for the selected method will be shown.
 
   -methods          List the available auth methods.
-
-  -var="key=value"  Vars for the authentication method. These are determined
-                    on a per-method basis.
 
 `
 	return strings.TrimSpace(helpText)
