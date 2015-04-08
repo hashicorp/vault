@@ -44,7 +44,7 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) < 1 {
+	if method == "" && len(args) < 1 {
 		flags.Usage()
 		c.Ui.Error("\nError: auth expects at least one argument")
 		return 1
