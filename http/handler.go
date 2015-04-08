@@ -59,6 +59,21 @@ func parseRequest(r *http.Request, out interface{}) error {
 	return dec.Decode(out)
 }
 
+// request is a helper to perform a request and properly exit in the
+// case of an error.
+func request(core *vault.Core, w http.ResponseWriter, r *logical.Request) (*logical.Response, bool) {
+	resp, err := core.HandleRequest(r)
+	if respondCommon(w, resp) {
+		return resp, false
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return resp, false
+	}
+
+	return resp, true
+}
+
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	// Attach the cookie value as the token if we have it

@@ -15,12 +15,11 @@ func handleSysListPolicies(core *vault.Core) http.Handler {
 			return
 		}
 
-		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
+		resp, ok := request(core, w, requestAuth(r, &logical.Request{
 			Operation: logical.ReadOperation,
 			Path:      "sys/policy",
 		}))
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
+		if !ok {
 			return
 		}
 
@@ -65,12 +64,11 @@ func handleSysDeletePolicy(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
+	_, ok := request(core, w, requestAuth(r, &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "sys/policy/" + path,
 	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	if !ok {
 		return
 	}
 
@@ -90,12 +88,11 @@ func handleSysReadPolicy(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
+	resp, ok := request(core, w, requestAuth(r, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "sys/policy/" + path,
 	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	if !ok {
 		return
 	}
 
@@ -122,15 +119,14 @@ func handleSysWritePolicy(core *vault.Core, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
+	_, ok := request(core, w, requestAuth(r, &logical.Request{
 		Operation: logical.WriteOperation,
 		Path:      "sys/policy/" + path,
 		Data: map[string]interface{}{
 			"rules": req.Rules,
 		},
 	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	if !ok {
 		return
 	}
 
