@@ -1,0 +1,82 @@
+package command
+
+import (
+	"fmt"
+	"strings"
+)
+
+// AuditDisableCommand is a Command that mounts a new mount.
+type AuditDisableCommand struct {
+	Meta
+}
+
+func (c *AuditDisableCommand) Run(args []string) int {
+	flags := c.Meta.FlagSet("mount", FlagSetDefault)
+	flags.Usage = func() { c.Ui.Error(c.Help()) }
+	if err := flags.Parse(args); err != nil {
+		return 1
+	}
+
+	args = flags.Args()
+	if len(args) != 1 {
+		flags.Usage()
+		c.Ui.Error(fmt.Sprintf(
+			"\naudit-disable expects one argument: the id to disable"))
+		return 1
+	}
+
+	id := args[0]
+
+	client, err := c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client: %s", err))
+		return 2
+	}
+
+	if err := client.Sys().DisableAudit(id); err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error disabling audit backend: %s", err))
+		return 2
+	}
+
+	c.Ui.Output(fmt.Sprintf(
+		"Successfully disabled audit backend '%s'!", id))
+	return 0
+}
+
+func (c *AuditDisableCommand) Synopsis() string {
+	return "Disable an audit backend"
+}
+
+func (c *AuditDisableCommand) Help() string {
+	helpText := `
+Usage: vault audit-disable [options] id
+
+  Disable an audit backend.
+
+  Once the audit backend is disabled, no more audit logs will be sent to
+  it. The data associated with the audit backend isn't affected.
+
+  The "id" parameter should map to the id used with "audit-enable". If
+  no specific ID was specified, then it is the name of the backend (the
+  type of the backend).
+
+General Options:
+
+  -address=TODO           The address of the Vault server.
+
+  -ca-cert=path           Path to a PEM encoded CA cert file to use to
+                          verify the Vault server SSL certificate.
+
+  -ca-path=path           Path to a directory of PEM encoded CA cert files
+                          to verify the Vault server SSL certificate. If both
+                          -ca-cert and -ca-path are specified, -ca-path is used.
+
+  -insecure               Do not verify TLS certificate. This is highly
+                          not recommended. This is especially not recommended
+                          for unsealing a vault.
+
+`
+	return strings.TrimSpace(helpText)
+}
