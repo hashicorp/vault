@@ -7,7 +7,9 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 )
@@ -260,6 +262,7 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
 func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error {
+	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.l.RLock()
 	defer a.l.RUnlock()
 
@@ -282,6 +285,7 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error
 // log the given response and that *at least one* succeeds.
 func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 	resp *logical.Response, err error) error {
+	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.l.RLock()
 	defer a.l.RUnlock()
 

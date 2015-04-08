@@ -2,9 +2,11 @@ package vault
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -124,6 +126,7 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err error) {
+	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
 	defer func() {
 		rs.lastError = err
 		rs.Done()

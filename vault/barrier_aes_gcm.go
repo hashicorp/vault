@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -203,6 +205,7 @@ func (b *AESGCMBarrier) Seal() error {
 
 // Put is used to insert or update an entry
 func (b *AESGCMBarrier) Put(entry *Entry) error {
+	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -220,6 +223,7 @@ func (b *AESGCMBarrier) Put(entry *Entry) error {
 
 // Get is used to fetch an entry
 func (b *AESGCMBarrier) Get(key string) (*Entry, error) {
+	defer metrics.MeasureSince([]string{"barrier", "get"}, time.Now())
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -252,6 +256,7 @@ func (b *AESGCMBarrier) Get(key string) (*Entry, error) {
 
 // Delete is used to permanently delete an entry
 func (b *AESGCMBarrier) Delete(key string) error {
+	defer metrics.MeasureSince([]string{"barrier", "delete"}, time.Now())
 	b.l.RLock()
 	defer b.l.RUnlock()
 	if b.sealed {
@@ -264,6 +269,7 @@ func (b *AESGCMBarrier) Delete(key string) error {
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
 func (b *AESGCMBarrier) List(prefix string) ([]string, error) {
+	defer metrics.MeasureSince([]string{"barrier", "list"}, time.Now())
 	b.l.RLock()
 	defer b.l.RUnlock()
 	if b.sealed {

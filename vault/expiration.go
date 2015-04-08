@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -156,6 +157,7 @@ func (m *ExpirationManager) Stop() error {
 
 // Revoke is used to revoke a secret named by the given LeaseID
 func (m *ExpirationManager) Revoke(leaseID string) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -191,6 +193,7 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
 	// Ensure there is a trailing slash
 	if !strings.HasSuffix(prefix, "/") {
 		prefix = prefix + "/"
@@ -217,6 +220,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 // Renew is used to renew a secret using the given leaseID
 // and a renew interval. The increment may be ignored.
 func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"expire", "renew"}, time.Now())
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -279,6 +283,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Auth, error) {
+	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 	// Compute the Lease ID
 	leaseID := path.Join(source, m.tokenStore.SaltID(token))
 
@@ -324,6 +329,7 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 // lease. The secret gets assigned a LeaseID and the management of
 // of lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
+	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 	// Ignore if there is no leased secret
 	if resp == nil || resp.Secret == nil {
 		return "", nil
@@ -372,6 +378,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 // The token does not get a LeaseID, but the lease management is handled by
 // the expiration manager.
 func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
+	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 	// Create a lease entry
 	now := time.Now().UTC()
 	leaseTotal := auth.Lease + auth.LeaseGracePeriod
@@ -497,6 +504,14 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 		return fmt.Errorf("failed to delete lease entry: %v", err)
 	}
 	return nil
+}
+
+// emitMetrics is invoked periodically to emit statistics
+func (m *ExpirationManager) emitMetrics() {
+	m.pendingLock.Lock()
+	num := len(m.pending)
+	m.pendingLock.Unlock()
+	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
 }
 
 // leaseEntry is used to structure the values the expiration

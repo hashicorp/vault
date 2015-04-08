@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -247,6 +248,7 @@ func (ts *TokenStore) RootToken() (*TokenEntry, error) {
 // Create is used to create a new token entry. The entry is assigned
 // a newly generated ID if not provided.
 func (ts *TokenStore) Create(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
 		entry.ID = generateUUID()
@@ -292,6 +294,7 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 
 // Lookup is used to find a token given its ID
 func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
@@ -323,6 +326,7 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 // Revoke is used to invalidate a given token, any child tokens
 // will be orphaned.
 func (ts *TokenStore) Revoke(id string) error {
+	defer metrics.MeasureSince([]string{"token", "revoke"}, time.Now())
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
 	}
@@ -357,6 +361,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 // RevokeTree is used to invalide a given token and all
 // child tokens.
 func (ts *TokenStore) RevokeTree(id string) error {
+	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
@@ -419,6 +424,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 
 // RevokeAll is used to invalidate all generated tokens.
 func (ts *TokenStore) RevokeAll() error {
+	defer metrics.MeasureSince([]string{"token", "revoke-all"}, time.Now())
 	// Collect all the tokens
 	sub := ts.view.SubView(lookupPrefix)
 	tokens, err := CollectKeys(sub)

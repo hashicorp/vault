@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
 )
@@ -157,6 +159,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	if !ok {
 		return nil, fmt.Errorf("no handler for route '%s'", req.Path)
 	}
+	defer metrics.MeasureSince([]string{"route", strings.Replace(mount, "/", "-", -1)}, time.Now())
 	me := raw.(*mountEntry)
 
 	// If the path is tainted, we reject any operation except for

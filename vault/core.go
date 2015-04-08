@@ -9,7 +9,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -152,6 +154,9 @@ type Core struct {
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
 
+	// metricsCh is used to stop the metrics streaming
+	metricsCh chan struct{}
+
 	logger *log.Logger
 }
 
@@ -230,6 +235,7 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 }
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 	// Validate the token
 	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
 	if err != nil {
@@ -321,6 +327,8 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
 func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
+
 	// Create an audit trail of the request, auth is not available on login requests
 	if err := c.auditBroker.LogRequest(nil, req); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
@@ -380,6 +388,8 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 
 func (c *Core) checkToken(
 	op logical.Operation, path string, token string) (*logical.Auth, error) {
+	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
+
 	// Ensure there is a client token
 	if token == "" {
 		return nil, fmt.Errorf("missing client token")
@@ -605,6 +615,8 @@ func (c *Core) SecretProgress() int {
 // this method is done with it. If you want to keep the key around, a copy
 // should be made.
 func (c *Core) Unseal(key []byte) (bool, error) {
+	defer metrics.MeasureSince([]string{"core", "unseal"}, time.Now())
+
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
@@ -689,6 +701,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 // Seal is used to re-seal the Vault. This requires the Vault to
 // be unsealed again to perform any further operations.
 func (c *Core) Seal(token string) error {
+	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 	if c.sealed {
@@ -723,6 +736,7 @@ func (c *Core) Seal(token string) error {
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
 func (c *Core) postUnseal() error {
+	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 	if err := c.loadMounts(); err != nil {
 		return err
 	}
@@ -750,12 +764,19 @@ func (c *Core) postUnseal() error {
 	if err := c.setupAudits(); err != nil {
 		return err
 	}
+	c.metricsCh = make(chan struct{})
+	go c.emitMetrics(c.metricsCh)
 	return nil
 }
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
+	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
+	if c.metricsCh != nil {
+		close(c.metricsCh)
+		c.metricsCh = nil
+	}
 	if err := c.teardownAudits(); err != nil {
 		return err
 	}
@@ -775,4 +796,16 @@ func (c *Core) preSeal() error {
 		return err
 	}
 	return nil
+}
+
+// emitMetrics is used to periodically expose metrics while runnig
+func (c *Core) emitMetrics(stopCh chan struct{}) {
+	for {
+		select {
+		case <-time.After(time.Second):
+			c.expiration.emitMetrics()
+		case <-stopCh:
+			return
+		}
+	}
 }

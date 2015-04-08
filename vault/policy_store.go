@@ -2,7 +2,9 @@ package vault
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
 )
@@ -54,6 +56,7 @@ func (c *Core) teardownPolicyStore() error {
 
 // SetPolicy is used to create or update the given policy
 func (ps *PolicyStore) SetPolicy(p *Policy) error {
+	defer metrics.MeasureSince([]string{"policy", "set_policy"}, time.Now())
 	if p.Name == "root" {
 		return fmt.Errorf("cannot update root policy")
 	}
@@ -76,6 +79,7 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
+	defer metrics.MeasureSince([]string{"policy", "get_policy"}, time.Now())
 	// Check for cached policy
 	if raw, ok := ps.lru.Get(name); ok {
 		return raw.(*Policy), nil
@@ -111,6 +115,7 @@ func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 
 // ListPolicies is used to list the available policies
 func (ps *PolicyStore) ListPolicies() ([]string, error) {
+	defer metrics.MeasureSince([]string{"policy", "list_policies"}, time.Now())
 	// Scan the view, since the policy names are the same as the
 	// key names.
 	return CollectKeys(ps.view)
@@ -118,6 +123,7 @@ func (ps *PolicyStore) ListPolicies() ([]string, error) {
 
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(name string) error {
+	defer metrics.MeasureSince([]string{"policy", "delete_policy"}, time.Now())
 	if name == "root" {
 		return fmt.Errorf("cannot delete root policy")
 	}
