@@ -69,7 +69,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 	}
 
 	resp.Secret.InternalData = nil
-	resp.Secret.VaultID = ""
+	resp.Secret.LeaseID = ""
 	if !reflect.DeepEqual(resp, expected) {
 		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
 	}

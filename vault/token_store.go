@@ -529,7 +529,7 @@ func (ts *TokenStore) handleCreate(
 }
 
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
-// in a way that revokes all child tokens. Normally, using sys/revoke/vaultID will revoke
+// in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeTree(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -546,7 +546,7 @@ func (ts *TokenStore) handleRevokeTree(
 }
 
 // handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
-// in a way that leaves child tokens orphaned. Normally, using sys/revoke/vaultID will revoke
+// in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
 // the token and all children.
 func (ts *TokenStore) handleRevokeOrphan(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

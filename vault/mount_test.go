@@ -147,7 +147,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Secret.VaultID == "" {
+	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -259,7 +259,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Secret.VaultID == "" {
+	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 

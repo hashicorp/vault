@@ -92,12 +92,12 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 
 			&framework.Path{
-				Pattern: "renew/(?P<vault_id>.+)",
+				Pattern: "renew/(?P<lease_id>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
-					"vault_id": &framework.FieldSchema{
+					"lease_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: strings.TrimSpace(sysHelp["vault_id"][0]),
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeInt,
@@ -114,12 +114,12 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 
 			&framework.Path{
-				Pattern: "revoke/(?P<vault_id>.+)",
+				Pattern: "revoke/(?P<lease_id>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
-					"vault_id": &framework.FieldSchema{
+					"lease_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: strings.TrimSpace(sysHelp["vault_id"][0]),
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
 				},
 
@@ -377,38 +377,38 @@ func (b *SystemBackend) handleRemount(
 	return nil, nil
 }
 
-// handleRenew is used to renew a lease with a given VaultID
+// handleRenew is used to renew a lease with a given LeaseID
 func (b *SystemBackend) handleRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
-	vaultID := data.Get("vault_id").(string)
+	leaseID := data.Get("lease_id").(string)
 	incrementRaw := data.Get("increment").(int)
 
 	// Convert the increment
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Invoke the expiration manager directly
-	resp, err := b.Core.expiration.Renew(vaultID, increment)
+	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return resp, err
 }
 
-// handleRevoke is used to revoke a given VaultID
+// handleRevoke is used to revoke a given LeaseID
 func (b *SystemBackend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
-	vaultID := data.Get("vault_id").(string)
+	leaseID := data.Get("lease_id").(string)
 
 	// Invoke the expiration manager directly
-	if err := b.Core.expiration.Revoke(vaultID); err != nil {
+	if err := b.Core.expiration.Revoke(leaseID); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
 }
 
-// handleRevokePrefix is used to revoke a prefix with many VaultIDs
+// handleRevokePrefix is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefix(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
@@ -726,8 +726,8 @@ lease and to prevent an automatic revocation.
 		`,
 	},
 
-	"vault_id": {
-		"The vault identifier to renew. This is included with a lease.",
+	"lease_id": {
+		"The lease identifier to renew. This is included with a lease.",
 		"",
 	},
 
@@ -742,7 +742,7 @@ lease and to prevent an automatic revocation.
 When a secret is generated with a lease, it is automatically revoked
 at the end of the lease period if not renewed. However, in some cases
 you may want to force an immediate revocation. This endpoint can be
-used to revoke the secret with the given Vault ID.
+used to revoke the secret with the given Lease ID.
 		`,
 	},
 
@@ -753,7 +753,7 @@ Revokes all the secrets generated under a given mount prefix. As
 an example, "prod/aws/" might be the AWS logical backend, and due to
 a change in the "ops" policy, we may want to invalidate all the secrets
 generated. We can do a revoke prefix at "prod/aws/ops" to revoke all
-the ops secrets. This does a prefix match on the Vault IDs and revokes
+the ops secrets. This does a prefix match on the Lease IDs and revokes
 all matching leases.
 		`,
 	},

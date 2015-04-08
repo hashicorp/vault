@@ -9,7 +9,7 @@ import (
 func TestParseSecret(t *testing.T) {
 	raw := strings.TrimSpace(`
 {
-	"vault_id": "foo",
+	"lease_id": "foo",
 	"renewable": true,
 	"lease_duration": 10,
 	"data": {
@@ -23,7 +23,7 @@ func TestParseSecret(t *testing.T) {
 	}
 
 	expected := &Secret{
-		VaultId:       "foo",
+		LeaseID:       "foo",
 		Renewable:     true,
 		LeaseDuration: 10,
 		Data: map[string]interface{}{

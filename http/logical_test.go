@@ -38,7 +38,7 @@ func TestLogical(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	delete(actual, "vault_id")
+	delete(actual, "lease_id")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v %#v", actual, expected)
 	}

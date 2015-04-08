@@ -37,7 +37,7 @@ func TestRevoke(t *testing.T) {
 
 	args := []string{
 		"-address", addr,
-		secret.VaultId,
+		secret.LeaseID,
 	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())

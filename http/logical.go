@@ -84,7 +84,7 @@ func handleLogical(core *vault.Core) http.Handler {
 
 			logicalResp := &LogicalResponse{Data: resp.Data}
 			if resp.Secret != nil {
-				logicalResp.VaultId = resp.Secret.VaultID
+				logicalResp.LeaseID = resp.Secret.LeaseID
 				logicalResp.Renewable = resp.Secret.Renewable
 				logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
 			}
@@ -123,7 +123,7 @@ func handleLogical(core *vault.Core) http.Handler {
 }
 
 type LogicalResponse struct {
-	VaultId       string                 `json:"vault_id"`
+	LeaseID       string                 `json:"lease_id"`
 	Renewable     bool                   `json:"renewable"`
 	LeaseDuration int                    `json:"lease_duration"`
 	Data          map[string]interface{} `json:"data"`

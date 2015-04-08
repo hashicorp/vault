@@ -139,7 +139,7 @@ type Core struct {
 	// systemView is the barrier view for the system backend
 	systemView *BarrierView
 
-	// expiration manager is used for managing vaultIDs,
+	// expiration manager is used for managing LeaseIDs,
 	// renewal, expiration and revocation
 	expiration *ExpirationManager
 
@@ -269,14 +269,14 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 		}
 
 		// Register the lease
-		vaultID, err := c.expiration.Register(req, resp)
+		leaseID, err := c.expiration.Register(req, resp)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to register lease "+
 					"(request: %#v, response: %#v): %v", req, resp, err)
 			return nil, ErrInternalError
 		}
-		resp.Secret.VaultID = vaultID
+		resp.Secret.LeaseID = leaseID
 	}
 
 	// Only the token store is allowed to return an auth block, for any

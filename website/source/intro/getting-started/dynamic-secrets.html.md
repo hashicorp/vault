@@ -120,7 +120,7 @@ special path `aws/<NAME>` where `NAME` is the policy name:
 ```
 $ vault read aws/deploy
 Key       	Value
-vault_id  	aws/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
+lease_id    aws/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
 access_key	AKIAJFN42DVCQWDHQYHQ
 secret_key	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
 ```
@@ -129,8 +129,8 @@ Success! The access and secret key can now be used to perform any EC2
 operations within AWS. You can verify they work, if you want. Also notice
 that these keys are new, they're not the keys you entered earlier.
 
-The `vault_id` above is a special ID used for Vault for renewal,
-revocation, etc. Copy and save your Vault ID now.
+The `lease_id` above is a special ID used for Vault for renewal,
+revocation, etc. Copy and save your Lease ID now.
 
 ## Revoking the Secret
 

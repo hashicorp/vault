@@ -333,7 +333,7 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	}
 }
 
-// Ensure we get a VaultID
+// Ensure we get a LeaseID
 func TestCore_HandleRequest_Lease(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
@@ -367,7 +367,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	if resp.Secret.Lease != time.Hour {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
-	if resp.Secret.VaultID == "" {
+	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Data["foo"] != "bar" {
@@ -408,7 +408,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	if resp.Secret.Lease != maxLeaseDuration {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
-	if resp.Secret.VaultID == "" {
+	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Data["foo"] != "bar" {
@@ -449,7 +449,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	if resp.Secret.Lease != defaultLeaseDuration {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
-	if resp.Secret.VaultID == "" {
+	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Data["foo"] != "bar" {

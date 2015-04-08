@@ -456,7 +456,7 @@ If the return value is a secret, then the return structure
 is a mixture of arbitrary key/value along with the following
 fields which are guaranteed to exist:
 
-- `vault_id` (string) - A unique ID used for renewal and
+- `lease_id` (string) - A unique ID used for renewal and
   revocation.
 
 - `renewable` (bool) - If true, then this key can be renewed.
@@ -478,7 +478,7 @@ is an arbitrary JSON object.
 + Response 200 (application/json)
 
         {
-            "vault_id": "UUID",
+            "lease_id": "UUID",
             "lease_duration": 3600,
             "key": "value"
         }
@@ -503,7 +503,7 @@ the logical backend.
 ## Renew Key [/sys/renew/{id}]
 
 + Parameters
-    + id (required, string) ... The `vault_id` of the secret
+    + id (required, string) ... The `lease_id` of the secret
       to renew.
 
 ### Renew [PUT]
@@ -511,7 +511,7 @@ the logical backend.
 + Response 200 (application/json)
 
         {
-            "vault_id": "...",
+            "lease_id": "...",
             "lease_duration": 3600,
             "access_key": "foo",
             "secret_key": "bar"
@@ -520,7 +520,7 @@ the logical backend.
 ## Revoke Key [/sys/revoke/{id}]
 
 + Parameters
-    + id (required, string) ... The `vault_id` of the secret
+    + id (required, string) ... The `lease_id` of the secret
       to revoke.
 
 ### Revoke [PUT]
@@ -605,7 +605,7 @@ This generates a new keypair for the given policy.
 + Response 200 (application/json)
 
         {
-            "vault_id": "...",
+            "lease_id": "...",
             "lease_duration": 3600,
             "access_key": "foo",
             "secret_key": "bar"

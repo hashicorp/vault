@@ -425,7 +425,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	exp.router.Mount(noop, "", generateUUID(), view)
 
 	le := &leaseEntry{
-		VaultID: "foo/bar/1234",
+		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
 		Data: map[string]interface{}{
 			"testing": true,
@@ -462,7 +462,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	}
 
 	le := &leaseEntry{
-		VaultID: "foo/bar/1234",
+		LeaseID: "foo/bar/1234",
 		Auth: &logical.Auth{
 			ClientToken: root.ID,
 			Lease:       time.Minute,
@@ -505,7 +505,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	exp.router.Mount(noop, "", generateUUID(), view)
 
 	le := &leaseEntry{
-		VaultID: "foo/bar/1234",
+		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
 		Data: map[string]interface{}{
 			"testing": true,
@@ -544,7 +544,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 func TestExpiration_PersistLoadDelete(t *testing.T) {
 	exp := mockExpiration(t)
 	le := &leaseEntry{
-		VaultID: "foo/bar/1234",
+		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
 		Data: map[string]interface{}{
 			"testing": true,
@@ -583,7 +583,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 
 func TestLeaseEntry(t *testing.T) {
 	le := &leaseEntry{
-		VaultID: "foo/bar/1234",
+		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
 		Data: map[string]interface{}{
 			"testing": true,

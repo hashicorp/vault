@@ -107,9 +107,9 @@ func (m *ExpirationManager) Restore() error {
 	}
 
 	// Restore each key
-	for _, vaultID := range existing {
+	for _, leaseID := range existing {
 		// Load the entry
-		le, err := m.loadEntry(vaultID)
+		le, err := m.loadEntry(leaseID)
 		if err != nil {
 			return err
 		}
@@ -131,8 +131,8 @@ func (m *ExpirationManager) Restore() error {
 		}
 
 		// Setup revocation timer
-		m.pending[le.VaultID] = time.AfterFunc(expires, func() {
-			m.expireID(le.VaultID)
+		m.pending[le.LeaseID] = time.AfterFunc(expires, func() {
+			m.expireID(le.LeaseID)
 		})
 	}
 	if len(m.pending) > 0 {
@@ -154,10 +154,10 @@ func (m *ExpirationManager) Stop() error {
 	return nil
 }
 
-// Revoke is used to revoke a secret named by the given vaultID
-func (m *ExpirationManager) Revoke(vaultID string) error {
+// Revoke is used to revoke a secret named by the given LeaseID
+func (m *ExpirationManager) Revoke(leaseID string) error {
 	// Load the entry
-	le, err := m.loadEntry(vaultID)
+	le, err := m.loadEntry(leaseID)
 	if err != nil {
 		return err
 	}
@@ -173,15 +173,15 @@ func (m *ExpirationManager) Revoke(vaultID string) error {
 	}
 
 	// Delete the entry
-	if err := m.deleteEntry(vaultID); err != nil {
+	if err := m.deleteEntry(leaseID); err != nil {
 		return err
 	}
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	if timer, ok := m.pending[vaultID]; ok {
+	if timer, ok := m.pending[leaseID]; ok {
 		timer.Stop()
-		delete(m.pending, vaultID)
+		delete(m.pending, leaseID)
 	}
 	m.pendingLock.Unlock()
 	return nil
@@ -205,20 +205,20 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 
 	// Revoke all the keys
 	for idx, suffix := range existing {
-		vaultID := prefix + suffix
-		if err := m.Revoke(vaultID); err != nil {
+		leaseID := prefix + suffix
+		if err := m.Revoke(leaseID); err != nil {
 			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
-				vaultID, idx+1, len(existing), err)
+				leaseID, idx+1, len(existing), err)
 		}
 	}
 	return nil
 }
 
-// Renew is used to renew a secret using the given vaultID
+// Renew is used to renew a secret using the given leaseID
 // and a renew interval. The increment may be ignored.
-func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*logical.Response, error) {
 	// Load the entry
-	le, err := m.loadEntry(vaultID)
+	le, err := m.loadEntry(leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -249,8 +249,8 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 		return nil, err
 	}
 
-	// Attach the VaultID
-	resp.Secret.VaultID = vaultID
+	// Attach the LeaseID
+	resp.Secret.LeaseID = leaseID
 
 	// Update the lease entry
 	var expireTime time.Time
@@ -267,7 +267,7 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 
 	// Update the expiration time
 	m.pendingLock.Lock()
-	if timer, ok := m.pending[vaultID]; ok {
+	if timer, ok := m.pending[leaseID]; ok {
 		timer.Reset(leaseTotal)
 	}
 	m.pendingLock.Unlock()
@@ -279,11 +279,11 @@ func (m *ExpirationManager) Renew(vaultID string, increment time.Duration) (*log
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Auth, error) {
-	// Compute the Vault ID
-	vaultID := path.Join(source, m.tokenStore.SaltID(token))
+	// Compute the Lease ID
+	leaseID := path.Join(source, m.tokenStore.SaltID(token))
 
 	// Load the entry
-	le, err := m.loadEntry(vaultID)
+	le, err := m.loadEntry(leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +311,7 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 
 	// Update the expiration time
 	m.pendingLock.Lock()
-	if timer, ok := m.pending[vaultID]; ok {
+	if timer, ok := m.pending[leaseID]; ok {
 		timer.Reset(leaseTotal)
 	}
 	m.pendingLock.Unlock()
@@ -319,7 +319,7 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 }
 
 // Register is used to take a request and response with an associated
-// lease. The secret gets assigned a vaultId and the management of
+// lease. The secret gets assigned a LeaseID and the management of
 // of lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
 	// Ignore if there is no leased secret
@@ -340,7 +340,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		expireTime = now.Add(leaseTotal)
 	}
 	le := leaseEntry{
-		VaultID:    path.Join(req.Path, generateUUID()),
+		LeaseID:    path.Join(req.Path, generateUUID()),
 		Path:       req.Path,
 		Data:       resp.Data,
 		Secret:     resp.Secret,
@@ -356,25 +356,25 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	// Setup revocation timer if there is a lease
 	if !expireTime.IsZero() {
 		m.pendingLock.Lock()
-		m.pending[le.VaultID] = time.AfterFunc(leaseTotal, func() {
-			m.expireID(le.VaultID)
+		m.pending[le.LeaseID] = time.AfterFunc(leaseTotal, func() {
+			m.expireID(le.LeaseID)
 		})
 		m.pendingLock.Unlock()
 	}
 
 	// Done
-	return le.VaultID, nil
+	return le.LeaseID, nil
 }
 
 // RegisterAuth is used to take an Auth response with an associated lease.
-// The token does not get a VaultID, but the lease management is handled by
+// The token does not get a LeaseID, but the lease management is handled by
 // the expiration manager.
 func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
 	// Create a lease entry
 	now := time.Now().UTC()
 	leaseTotal := auth.Lease + auth.LeaseGracePeriod
 	le := leaseEntry{
-		VaultID:    path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
+		LeaseID:    path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
 		Auth:       auth,
 		Path:       source,
 		IssueTime:  now,
@@ -388,30 +388,30 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 
 	// Setup revocation timer
 	m.pendingLock.Lock()
-	m.pending[le.VaultID] = time.AfterFunc(leaseTotal, func() {
-		m.expireID(le.VaultID)
+	m.pending[le.LeaseID] = time.AfterFunc(leaseTotal, func() {
+		m.expireID(le.LeaseID)
 	})
 	m.pendingLock.Unlock()
 	return nil
 }
 
 // expireID is invoked when a given ID is expired
-func (m *ExpirationManager) expireID(vaultID string) {
+func (m *ExpirationManager) expireID(leaseID string) {
 	// Clear from the pending expiration
 	m.pendingLock.Lock()
-	delete(m.pending, vaultID)
+	delete(m.pending, leaseID)
 	m.pendingLock.Unlock()
 
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
-		err := m.Revoke(vaultID)
+		err := m.Revoke(leaseID)
 		if err == nil {
-			m.logger.Printf("[INFO] expire: revoked '%s'", vaultID)
+			m.logger.Printf("[INFO] expire: revoked '%s'", leaseID)
 			return
 		}
-		m.logger.Printf("[ERR] expire: failed to revoke '%s': %v", vaultID, err)
+		m.logger.Printf("[ERR] expire: failed to revoke '%s': %v", leaseID, err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-	m.logger.Printf("[ERR] expire: maximum revoke attempts for '%s' reached", vaultID)
+	m.logger.Printf("[ERR] expire: maximum revoke attempts for '%s' reached", leaseID)
 }
 
 // revokeEntry is used to attempt revocation of an internal entry
@@ -438,7 +438,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	secret := *le.Secret
 	secret.LeaseIncrement = increment
-	secret.VaultID = ""
+	secret.LeaseID = ""
 
 	resp, err := m.router.Route(logical.RenewRequest(
 		le.Path, &secret, le.Data))
@@ -449,8 +449,8 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 }
 
 // loadEntry is used to read a lease entry
-func (m *ExpirationManager) loadEntry(vaultID string) (*leaseEntry, error) {
-	out, err := m.view.Get(vaultID)
+func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
+	out, err := m.view.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
 	}
@@ -474,7 +474,7 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 
 	// Write out to the view
 	ent := logical.StorageEntry{
-		Key:   le.VaultID,
+		Key:   le.LeaseID,
 		Value: buf,
 	}
 	if err := m.view.Put(&ent); err != nil {
@@ -484,8 +484,8 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 }
 
 // deleteEntry is used to delete a lease entry
-func (m *ExpirationManager) deleteEntry(vaultID string) error {
-	if err := m.view.Delete(vaultID); err != nil {
+func (m *ExpirationManager) deleteEntry(leaseID string) error {
+	if err := m.view.Delete(leaseID); err != nil {
 		return fmt.Errorf("failed to delete lease entry: %v", err)
 	}
 	return nil
@@ -494,7 +494,7 @@ func (m *ExpirationManager) deleteEntry(vaultID string) error {
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
-	VaultID    string                 `json:"vault_id"`
+	LeaseID    string                 `json:"lease_id"`
 	Path       string                 `json:"path"`
 	Data       map[string]interface{} `json:"data"`
 	Secret     *logical.Secret        `json:"secret"`
