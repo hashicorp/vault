@@ -269,7 +269,10 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
-		if err := be.backend.LogRequest(auth, req); err != nil {
+		start := time.Now()
+		err := be.backend.LogRequest(auth, req)
+		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
+		if err != nil {
 			a.logger.Printf("[ERR] audit: backend '%s' failed to log request: %v", name, err)
 		} else {
 			anyLogged = true
@@ -292,7 +295,10 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
-		if err := be.backend.LogResponse(auth, req, resp, err); err != nil {
+		start := time.Now()
+		err := be.backend.LogResponse(auth, req, resp, err)
+		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
+		if err != nil {
 			a.logger.Printf("[ERR] audit: backend '%s' failed to log response: %v", name, err)
 		} else {
 			anyLogged = true
