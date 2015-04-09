@@ -462,6 +462,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 // renewEntry is used to attempt renew of an internal entry
 func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	secret := *le.Secret
+	secret.LeaseIssue = le.IssueTime
 	secret.LeaseIncrement = increment
 	secret.LeaseID = ""
 

@@ -639,6 +639,9 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if req.Secret.LeaseIncrement != time.Second {
 		t.Fatalf("Bad: %v", req)
 	}
+	if req.Secret.LeaseIssue.IsZero() {
+		t.Fatalf("Bad: %v", req)
+	}
 }
 
 func TestExpiration_PersistLoadDelete(t *testing.T) {
