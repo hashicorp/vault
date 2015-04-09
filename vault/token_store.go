@@ -199,6 +199,10 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 						Type:        framework.TypeString,
 						Description: "Token to renew",
 					},
+					"increment": &framework.FieldSchema{
+						Type:        framework.TypeInt,
+						Description: "The desired increment in seconds to the token expiration",
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -241,7 +245,7 @@ func (ts *TokenStore) SaltID(id string) string {
 func (ts *TokenStore) RootToken() (*TokenEntry, error) {
 	te := &TokenEntry{
 		Policies: []string{"root"},
-		Path:     "sys/root",
+		Path:     "auth/token/root",
 	}
 	if err := ts.Create(te); err != nil {
 		return nil, err
@@ -636,6 +640,10 @@ func (ts *TokenStore) handleRenew(
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
+	incrementRaw := data.Get("increment").(int)
+
+	// Convert the increment
+	increment := time.Duration(incrementRaw) * time.Second
 
 	// Lookup the token
 	out, err := ts.Lookup(id)
@@ -649,7 +657,7 @@ func (ts *TokenStore) handleRenew(
 	}
 
 	// Revoke the token and its children
-	auth, err := ts.expiration.RenewToken(out.Path, out.ID)
+	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

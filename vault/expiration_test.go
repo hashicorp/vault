@@ -32,6 +32,8 @@ func mockExpiration(t *testing.T) *ExpirationManager {
 	_, ts, _ := mockTokenStore(t)
 
 	router := NewRouter()
+	router.Mount(ts, "auth/token/", "", ts.view)
+
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	exp := NewExpirationManager(router, view, ts, logger)
 	ts.SetExpirationManager(exp)
@@ -169,7 +171,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	}
 
 	// Should not be able to renew, no expiration
-	_, err = exp.RenewToken("auth/github/login", root.ID)
+	_, err = exp.RenewToken("auth/github/login", root.ID, 0)
 	if err.Error() != "lease not found" {
 		t.Fatalf("err: %v", err)
 	}
@@ -342,13 +344,13 @@ func TestExpiration_RenewToken(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth("auth/github/login", auth)
+	err = exp.RegisterAuth("auth/token/login", auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Renew the token
-	out, err := exp.RenewToken("auth/github/login", root.ID)
+	out, err := exp.RenewToken("auth/token/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -378,7 +380,7 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	}
 
 	// Attempt to renew the token
-	_, err = exp.RenewToken("auth/github/login", root.ID)
+	_, err = exp.RenewToken("auth/github/login", root.ID, 0)
 	if err.Error() != "lease is not renewable" {
 		t.Fatalf("err: %v", err)
 	}

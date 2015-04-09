@@ -541,7 +541,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	exp := map[string]interface{}{
 		"id":       root,
 		"policies": []string{"root"},
-		"path":     "sys/root",
+		"path":     "auth/token/root",
 		"meta":     map[string]string(nil),
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -604,7 +604,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	exp := map[string]interface{}{
 		"id":       root,
 		"policies": []string{"root"},
-		"path":     "sys/root",
+		"path":     "auth/token/root",
 		"meta":     map[string]string(nil),
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -630,7 +630,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth("sys/root", auth)
+	err = exp.RegisterAuth("auth/token/root", auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

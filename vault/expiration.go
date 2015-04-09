@@ -227,19 +227,9 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, err
 	}
 
-	// If there is no entry, cannot review
-	if le == nil {
-		return nil, fmt.Errorf("lease not found")
-	}
-
-	// Determine if the lease is expired
-	if le.ExpireTime.Before(time.Now().UTC()) {
-		return nil, fmt.Errorf("lease expired")
-	}
-
-	// Determine if the lease is renewable
-	if !le.Secret.Renewable {
-		return nil, fmt.Errorf("lease is not renewable")
+	// Check if the lease is renewable
+	if err := le.renewable(); err != nil {
+		return nil, err
 	}
 
 	// Attempt to renew the entry
@@ -278,7 +268,8 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
-func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Auth, error) {
+func (m *ExpirationManager) RenewToken(source string, token string,
+	increment time.Duration) (*logical.Auth, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 	// Compute the Lease ID
 	leaseID := path.Join(source, m.tokenStore.SaltID(token))
@@ -289,30 +280,40 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 		return nil, err
 	}
 
-	// If there is no entry, cannot review
-	if le == nil || le.ExpireTime.IsZero() {
-		return nil, fmt.Errorf("lease not found")
+	// Check if the lease is renewable
+	if err := le.renewable(); err != nil {
+		return nil, err
 	}
 
-	// Determine if the lease is expired
-	if le.ExpireTime.Before(time.Now().UTC()) {
-		return nil, fmt.Errorf("lease expired")
+	// Attempt to renew the auth entry
+	resp, err := m.renewAuthEntry(le, increment)
+	if err != nil {
+		return nil, err
 	}
 
-	// Determine if the lease is renewable
-	if !le.Auth.Renewable {
-		return nil, fmt.Errorf("lease is not renewable")
+	// Fast-path if there is no renewal
+	if resp == nil {
+		return nil, nil
 	}
+	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
+		return resp.Auth, nil
+	}
+
+	// Attach the ClientToken
+	resp.Auth.ClientToken = token
+	resp.Auth.LeaseIncrement = 0
+	resp.Auth.LeaseIssue = time.Time{}
 
 	// Update the lease entry
-	le.ExpireTime = le.Auth.ExpirationTime()
+	le.Auth = resp.Auth
+	le.ExpireTime = resp.Auth.ExpirationTime()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
 
 	// Update the expiration time
-	m.updatePending(le, le.Auth.LeaseTotal())
-	return le.Auth, nil
+	m.updatePending(le, resp.Auth.LeaseTotal())
+	return resp.Auth, nil
 }
 
 // Register is used to take a request and response with an associated
@@ -452,8 +453,25 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	secret.LeaseIncrement = increment
 	secret.LeaseID = ""
 
-	resp, err := m.router.Route(logical.RenewRequest(
-		le.Path, &secret, le.Data))
+	req := logical.RenewRequest(le.Path, &secret, le.Data)
+	resp, err := m.router.Route(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to renew entry: %v", err)
+	}
+	return resp, nil
+}
+
+// renewAuthEntry is used to attempt renew of an auth entry
+func (m *ExpirationManager) renewAuthEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+	auth := *le.Auth
+	auth.LeaseIssue = le.IssueTime
+	auth.LeaseIncrement = increment
+	auth.ClientToken = ""
+
+	req := logical.RenewRequest(le.Path, nil, nil)
+	req.Auth = &auth
+
+	resp, err := m.router.Route(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}
@@ -526,6 +544,27 @@ type leaseEntry struct {
 // encode is used to JSON encode the lease entry
 func (l *leaseEntry) encode() ([]byte, error) {
 	return json.Marshal(l)
+}
+
+func (le *leaseEntry) renewable() error {
+	// If there is no entry, cannot review
+	if le == nil || le.ExpireTime.IsZero() {
+		return fmt.Errorf("lease not found")
+	}
+
+	// Determine if the lease is expired
+	if le.ExpireTime.Before(time.Now().UTC()) {
+		return fmt.Errorf("lease expired")
+	}
+
+	// Determine if the lease is renewable
+	if le.Secret != nil && !le.Secret.Renewable {
+		return fmt.Errorf("lease is not renewable")
+	}
+	if le.Auth != nil && !le.Auth.Renewable {
+		return fmt.Errorf("lease is not renewable")
+	}
+	return nil
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry
