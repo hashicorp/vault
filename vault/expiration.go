@@ -237,6 +237,11 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, fmt.Errorf("lease expired")
 	}
 
+	// Determine if the lease is renewable
+	if !le.Secret.Renewable {
+		return nil, fmt.Errorf("lease is not renewable")
+	}
+
 	// Attempt to renew the entry
 	resp, err := m.renewEntry(le, increment)
 	if err != nil {
@@ -301,6 +306,11 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 	// Determine if the lease is expired
 	if le.ExpireTime.Before(time.Now().UTC()) {
 		return nil, fmt.Errorf("lease expired")
+	}
+
+	// Determine if the lease is renewable
+	if !le.Auth.Renewable {
+		return nil, fmt.Errorf("lease is not renewable")
 	}
 
 	// Update the lease entry

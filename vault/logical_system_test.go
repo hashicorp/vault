@@ -183,14 +183,12 @@ func TestSystemBackend_renew(t *testing.T) {
 	req2 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.LeaseID)
 	req2.Data["increment"] = 100
 	resp2, err := b.HandleRequest(req2)
-	if err != nil {
+	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
 
-	if resp2.Secret.LeaseID != resp.Secret.LeaseID {
-		t.Fatalf("bad: %#v", resp)
-	}
-	if resp2.Data["foo"] != "bar" {
+	// Should get error about non-renewability
+	if resp2.Data["error"] != "lease is not renewable" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }

@@ -624,6 +624,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		Lease:       time.Hour,
+		Renewable:   true,
 	}
 	err = exp.RegisterAuth("sys/root", auth)
 	if err != nil {

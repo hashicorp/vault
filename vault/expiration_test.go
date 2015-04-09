@@ -326,6 +326,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		Lease:       time.Hour,
+		Renewable:   true,
 	}
 	err = exp.RegisterAuth("auth/github/login", auth)
 	if err != nil {
@@ -342,6 +343,31 @@ func TestExpiration_RenewToken(t *testing.T) {
 	}
 }
 
+func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		Lease:       time.Hour,
+		Renewable:   false,
+	}
+	err = exp.RegisterAuth("auth/github/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to renew the token
+	_, err = exp.RenewToken("auth/github/login", root.ID)
+	if err.Error() != "lease is not renewable" {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestExpiration_Renew(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
@@ -355,7 +381,8 @@ func TestExpiration_Renew(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: 20 * time.Millisecond,
+			Lease:     20 * time.Millisecond,
+			Renewable: true,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -396,6 +423,43 @@ func TestExpiration_Renew(t *testing.T) {
 	}
 }
 
+func TestExpiration_Renew_NotRenewable(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "prod/aws/foo",
+	}
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			Lease:     20 * time.Millisecond,
+			Renewable: false,
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	id, err := exp.Register(req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	_, err = exp.Renew(id, 0)
+	if err.Error() != "lease is not renewable" {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(noop.Requests) != 0 {
+		t.Fatalf("Bad: %#v", noop.Requests)
+	}
+}
+
 func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	exp := mockExpiration(t)
 	noop := &NoopBackend{}
@@ -409,7 +473,8 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: 20 * time.Millisecond,
+			Lease:     20 * time.Millisecond,
+			Renewable: true,
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
