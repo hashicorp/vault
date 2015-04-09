@@ -249,7 +249,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	}
 
 	// Fast-path if there is no lease
-	if resp == nil || resp.Secret == nil || resp.Secret.Lease == 0 {
+	if resp == nil || resp.Secret == nil || !resp.Secret.LeaseEnabled() {
 		return resp, nil
 	}
 
@@ -262,14 +262,9 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	resp.Secret.LeaseID = leaseID
 
 	// Update the lease entry
-	var expireTime time.Time
-	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
-	if resp.Secret.Lease > 0 {
-		expireTime = time.Now().UTC().Add(leaseTotal)
-	}
 	le.Data = resp.Data
 	le.Secret = resp.Secret
-	le.ExpireTime = expireTime
+	le.ExpireTime = resp.Secret.ExpirationTime()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -277,7 +272,12 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	// Update the expiration time
 	m.pendingLock.Lock()
 	if timer, ok := m.pending[leaseID]; ok {
-		timer.Reset(leaseTotal)
+		if le.ExpireTime.IsZero() {
+			timer.Stop()
+			delete(m.pending, leaseID)
+		} else {
+			timer.Reset(resp.Secret.LeaseTotal())
+		}
 	}
 	m.pendingLock.Unlock()
 
@@ -314,24 +314,22 @@ func (m *ExpirationManager) RenewToken(source string, token string) (*logical.Au
 	}
 
 	// Update the lease entry
-	var expireTime time.Time
-	leaseTotal := le.Auth.Lease + le.Auth.LeaseGracePeriod
-	if le.Auth.Lease > 0 {
-		expireTime = time.Now().UTC().Add(leaseTotal)
-	}
-	le.ExpireTime = expireTime
+	le.ExpireTime = le.Auth.ExpirationTime()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
 
 	// Update the expiration time
-	if !expireTime.IsZero() {
-		m.pendingLock.Lock()
-		if timer, ok := m.pending[leaseID]; ok {
-			timer.Reset(leaseTotal)
+	m.pendingLock.Lock()
+	if timer, ok := m.pending[leaseID]; ok {
+		if le.ExpireTime.IsZero() {
+			timer.Stop()
+			delete(m.pending, leaseID)
+		} else {
+			timer.Reset(le.Auth.LeaseTotal())
 		}
-		m.pendingLock.Unlock()
 	}
+	m.pendingLock.Unlock()
 	return le.Auth, nil
 }
 
@@ -351,19 +349,13 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Create a lease entry
-	now := time.Now().UTC()
-	leaseTotal := resp.Secret.Lease + resp.Secret.LeaseGracePeriod
-	var expireTime time.Time
-	if resp.Secret.Lease > 0 {
-		expireTime = now.Add(leaseTotal)
-	}
 	le := leaseEntry{
 		LeaseID:    path.Join(req.Path, generateUUID()),
 		Path:       req.Path,
 		Data:       resp.Data,
 		Secret:     resp.Secret,
-		IssueTime:  now,
-		ExpireTime: expireTime,
+		IssueTime:  time.Now().UTC(),
+		ExpireTime: resp.Secret.ExpirationTime(),
 	}
 
 	// Encode the entry
@@ -372,9 +364,9 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Setup revocation timer if there is a lease
-	if !expireTime.IsZero() {
+	if !le.ExpireTime.IsZero() {
 		m.pendingLock.Lock()
-		m.pending[le.LeaseID] = time.AfterFunc(leaseTotal, func() {
+		m.pending[le.LeaseID] = time.AfterFunc(resp.Secret.LeaseTotal(), func() {
 			m.expireID(le.LeaseID)
 		})
 		m.pendingLock.Unlock()
@@ -390,18 +382,12 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 	// Create a lease entry
-	now := time.Now().UTC()
-	leaseTotal := auth.Lease + auth.LeaseGracePeriod
-	var expireTime time.Time
-	if auth.Lease > 0 {
-		expireTime = now.Add(leaseTotal)
-	}
 	le := leaseEntry{
 		LeaseID:    path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
 		Auth:       auth,
 		Path:       source,
-		IssueTime:  now,
-		ExpireTime: expireTime,
+		IssueTime:  time.Now().UTC(),
+		ExpireTime: auth.ExpirationTime(),
 	}
 
 	// Encode the entry
@@ -410,9 +396,9 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	}
 
 	// Setup revocation timer
-	if !expireTime.IsZero() {
+	if !le.ExpireTime.IsZero() {
 		m.pendingLock.Lock()
-		m.pending[le.LeaseID] = time.AfterFunc(leaseTotal, func() {
+		m.pending[le.LeaseID] = time.AfterFunc(auth.LeaseTotal(), func() {
 			m.expireID(le.LeaseID)
 		})
 		m.pendingLock.Unlock()

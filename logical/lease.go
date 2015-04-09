@@ -24,3 +24,26 @@ type LeaseOptions struct {
 	// a logical backend.
 	LeaseIssue time.Time `json:"-"`
 }
+
+// LeaseEnabled checks if leasing is enabled
+func (l *LeaseOptions) LeaseEnabled() bool {
+	return l.Lease > 0
+}
+
+// LeaseTotal is the total lease time including the grace period
+func (l *LeaseOptions) LeaseTotal() time.Duration {
+	if l.Lease == 0 {
+		return 0
+	}
+	return l.Lease + l.LeaseGracePeriod
+}
+
+// ExpirationTime computes the time until expiration including the grace period
+func (l *LeaseOptions) ExpirationTime() time.Time {
+	var expireTime time.Time
+	if l.Lease > 0 {
+		leaseTotal := l.Lease + l.LeaseGracePeriod
+		expireTime = time.Now().UTC().Add(leaseTotal)
+	}
+	return expireTime
+}
