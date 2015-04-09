@@ -28,6 +28,10 @@ type Request struct {
 	// to represent the secret that was returned prior.
 	Secret *Secret
 
+	// Auth will be non-nil only for Renew operations
+	// to represent the auth that was returned prior.
+	Auth *Auth
+
 	// Connection will be non-nil only for credential providers to
 	// inspect the connection information and potentially use it for
 	// authentication/protection.

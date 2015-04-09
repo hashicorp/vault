@@ -237,6 +237,11 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 
 func (b *Backend) handleRevokeRenew(
 	req *logical.Request) (*logical.Response, error) {
+	// Special case renewal of authentication for credential backends
+	if req.Operation == logical.RenewOperation && req.Auth != nil {
+		return b.handleAuthRenew(req)
+	}
+
 	if req.Secret == nil {
 		return nil, fmt.Errorf("request has no secret")
 	}
@@ -264,6 +269,14 @@ func (b *Backend) handleRevokeRenew(
 		return nil, fmt.Errorf(
 			"invalid operation for revoke/renew: %s", req.Operation)
 	}
+}
+
+func (b *Backend) handleAuthRenew(req *logical.Request) (*logical.Response, error) {
+	// TODO: Allow override behavior
+	resp := &logical.Response{
+		Auth: req.Auth,
+	}
+	return resp, nil
 }
 
 func (b *Backend) handleRollback(
