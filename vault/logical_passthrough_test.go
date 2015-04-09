@@ -59,8 +59,10 @@ func TestPassthroughBackend_Read(t *testing.T) {
 
 	expected := &logical.Response{
 		Secret: &logical.Secret{
-			Renewable: false,
-			Lease:     time.Hour,
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: false,
+				Lease:     time.Hour,
+			},
 		},
 		Data: map[string]interface{}{
 			"raw":   "test",

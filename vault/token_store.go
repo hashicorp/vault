@@ -528,10 +528,12 @@ func (ts *TokenStore) handleCreate(
 	// Generate the response
 	resp := &logical.Response{
 		Auth: &logical.Auth{
-			ClientToken:      te.ID,
-			Lease:            leaseDuration,
-			LeaseGracePeriod: leaseDuration / 10,
-			Renewable:        leaseDuration > 0,
+			LeaseOptions: logical.LeaseOptions{
+				Lease:            leaseDuration,
+				LeaseGracePeriod: leaseDuration / 10,
+				Renewable:        leaseDuration > 0,
+			},
+			ClientToken: te.ID,
 		},
 	}
 

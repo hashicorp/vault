@@ -57,7 +57,9 @@ func TestExpiration_Restore(t *testing.T) {
 		}
 		resp := &logical.Response{
 			Secret: &logical.Secret{
-				Lease: 20 * time.Millisecond,
+				LeaseOptions: logical.LeaseOptions{
+					Lease: 20 * time.Millisecond,
+				},
 			},
 			Data: map[string]interface{}{
 				"access_key": "xyz",
@@ -106,7 +108,9 @@ func TestExpiration_Register(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: time.Hour,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Hour,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -137,7 +141,9 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 
 	auth := &logical.Auth{
 		ClientToken: root.ID,
-		Lease:       time.Hour,
+		LeaseOptions: logical.LeaseOptions{
+			Lease: time.Hour,
+		},
 	}
 
 	err = exp.RegisterAuth("auth/github/login", auth)
@@ -194,7 +200,9 @@ func TestExpiration_Revoke(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: time.Hour,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Hour,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -230,7 +238,9 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: 20 * time.Millisecond,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: 20 * time.Millisecond,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -276,7 +286,9 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 		}
 		resp := &logical.Response{
 			Secret: &logical.Secret{
-				Lease: 20 * time.Millisecond,
+				LeaseOptions: logical.LeaseOptions{
+					Lease: 20 * time.Millisecond,
+				},
 			},
 			Data: map[string]interface{}{
 				"access_key": "xyz",
@@ -325,8 +337,10 @@ func TestExpiration_RenewToken(t *testing.T) {
 	// Register a token
 	auth := &logical.Auth{
 		ClientToken: root.ID,
-		Lease:       time.Hour,
-		Renewable:   true,
+		LeaseOptions: logical.LeaseOptions{
+			Lease:     time.Hour,
+			Renewable: true,
+		},
 	}
 	err = exp.RegisterAuth("auth/github/login", auth)
 	if err != nil {
@@ -353,8 +367,10 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	// Register a token
 	auth := &logical.Auth{
 		ClientToken: root.ID,
-		Lease:       time.Hour,
-		Renewable:   false,
+		LeaseOptions: logical.LeaseOptions{
+			Lease:     time.Hour,
+			Renewable: false,
+		},
 	}
 	err = exp.RegisterAuth("auth/github/login", auth)
 	if err != nil {
@@ -381,8 +397,10 @@ func TestExpiration_Renew(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease:     20 * time.Millisecond,
-			Renewable: true,
+			LeaseOptions: logical.LeaseOptions{
+				Lease:     20 * time.Millisecond,
+				Renewable: true,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -397,7 +415,9 @@ func TestExpiration_Renew(t *testing.T) {
 
 	noop.Response = &logical.Response{
 		Secret: &logical.Secret{
-			Lease: 20 * time.Millisecond,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: 20 * time.Millisecond,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "123",
@@ -436,8 +456,10 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease:     20 * time.Millisecond,
-			Renewable: false,
+			LeaseOptions: logical.LeaseOptions{
+				Lease:     20 * time.Millisecond,
+				Renewable: false,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -473,8 +495,10 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease:     20 * time.Millisecond,
-			Renewable: true,
+			LeaseOptions: logical.LeaseOptions{
+				Lease:     20 * time.Millisecond,
+				Renewable: true,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "xyz",
@@ -489,7 +513,9 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 
 	noop.Response = &logical.Response{
 		Secret: &logical.Secret{
-			Lease: 20 * time.Millisecond,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: 20 * time.Millisecond,
+			},
 		},
 		Data: map[string]interface{}{
 			"access_key": "123",
@@ -531,7 +557,9 @@ func TestExpiration_revokeEntry(t *testing.T) {
 			"testing": true,
 		},
 		Secret: &logical.Secret{
-			Lease: time.Minute,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Minute,
+			},
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
@@ -565,7 +593,9 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		LeaseID: "foo/bar/1234",
 		Auth: &logical.Auth{
 			ClientToken: root.ID,
-			Lease:       time.Minute,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Minute,
+			},
 		},
 		Path:       "foo/bar",
 		IssueTime:  time.Now(),
@@ -592,8 +622,10 @@ func TestExpiration_renewEntry(t *testing.T) {
 	noop := &NoopBackend{
 		Response: &logical.Response{
 			Secret: &logical.Secret{
-				Renewable: true,
-				Lease:     time.Hour,
+				LeaseOptions: logical.LeaseOptions{
+					Renewable: true,
+					Lease:     time.Hour,
+				},
 			},
 			Data: map[string]interface{}{
 				"testing": false,
@@ -611,7 +643,9 @@ func TestExpiration_renewEntry(t *testing.T) {
 			"testing": true,
 		},
 		Secret: &logical.Secret{
-			Lease: time.Minute,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Minute,
+			},
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
@@ -653,7 +687,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 			"testing": true,
 		},
 		Secret: &logical.Secret{
-			Lease: time.Minute,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Minute,
+			},
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
@@ -692,7 +728,9 @@ func TestLeaseEntry(t *testing.T) {
 			"testing": true,
 		},
 		Secret: &logical.Secret{
-			Lease: time.Minute,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Minute,
+			},
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),

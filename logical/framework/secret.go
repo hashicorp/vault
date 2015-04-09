@@ -55,10 +55,12 @@ func (s *Secret) Response(
 
 	return &logical.Response{
 		Secret: &logical.Secret{
-			Renewable:        s.Renewable(),
-			Lease:            s.DefaultDuration,
-			LeaseGracePeriod: s.DefaultGracePeriod,
-			InternalData:     internalData,
+			LeaseOptions: logical.LeaseOptions{
+				Lease:            s.DefaultDuration,
+				LeaseGracePeriod: s.DefaultGracePeriod,
+				Renewable:        s.Renewable(),
+			},
+			InternalData: internalData,
 		},
 
 		Data: data,

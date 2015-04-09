@@ -129,7 +129,9 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	// Setup response
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: time.Hour,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Hour,
+			},
 		},
 		Data: map[string]interface{}{
 			"foo": "bar",
@@ -241,7 +243,9 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	// Setup response
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: time.Hour,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: time.Hour,
+			},
 		},
 		Data: map[string]interface{}{
 			"foo": "bar",

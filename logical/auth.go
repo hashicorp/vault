@@ -1,17 +1,11 @@
 package logical
 
-import (
-	"fmt"
-	"time"
-)
+import "fmt"
 
 // Auth is the resulting authentication information that is part of
 // Response for credential backends.
 type Auth struct {
-	// ClientToken is the token that is generated for the authentication.
-	// This will be filled in by Vault core when an auth structure is
-	// returned. Setting this manually will have no effect.
-	ClientToken string
+	LeaseOptions
 
 	// Policies is the list of policies that the authenticated user
 	// is associated with.
@@ -22,13 +16,10 @@ type Auth struct {
 	// audit log.
 	Metadata map[string]string
 
-	// Lease is the duration that this token is valid for. Vault
-	// will automatically revoke it after the duration + grace period.
-	Lease            time.Duration
-	LeaseGracePeriod time.Duration
-
-	// Renewable, if true, means that this token can be renewed.
-	Renewable bool
+	// ClientToken is the token that is generated for the authentication.
+	// This will be filled in by Vault core when an auth structure is
+	// returned. Setting this manually will have no effect.
+	ClientToken string
 }
 
 func (a *Auth) GoString() string {

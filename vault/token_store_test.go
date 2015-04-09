@@ -562,7 +562,9 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 	// Create a new token
 	auth := &logical.Auth{
 		ClientToken: root.ID,
-		Lease:       time.Hour,
+		LeaseOptions: logical.LeaseOptions{
+			Lease: time.Hour,
+		},
 	}
 	err = exp.RegisterAuth("auth/github/login", auth)
 	if err != nil {
@@ -623,8 +625,10 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	// Create a new token
 	auth := &logical.Auth{
 		ClientToken: root.ID,
-		Lease:       time.Hour,
-		Renewable:   true,
+		LeaseOptions: logical.LeaseOptions{
+			Lease:     time.Hour,
+			Renewable: true,
+		},
 	}
 	err = exp.RegisterAuth("sys/root", auth)
 	if err != nil {

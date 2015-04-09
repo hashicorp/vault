@@ -864,7 +864,9 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		Login: []string{"login"},
 		Response: &logical.Response{
 			Secret: &logical.Secret{
-				Lease: time.Hour,
+				LeaseOptions: logical.LeaseOptions{
+					Lease: time.Hour,
+				},
 			},
 
 			Auth: &logical.Auth{

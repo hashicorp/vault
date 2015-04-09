@@ -246,7 +246,9 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
-			Lease: 1 * time.Hour,
+			LeaseOptions: logical.LeaseOptions{
+				Lease: 1 * time.Hour,
+			},
 		},
 		Data: map[string]interface{}{
 			"user":     "root",
