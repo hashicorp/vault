@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Architecture"
 sidebar_current: "docs-internals-architecture"
 description: |-
-  Vault builds a dependency graph from the Vault configurations, and walks this graph to generate plans, refresh state, and more. This page documents the details of what are contained in this graph, what types of nodes there are, and how the edges of the graph are determined.
+  Learn about the internal architecture of Vault.
 ---
 
 # Architecture
