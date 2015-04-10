@@ -15,13 +15,13 @@ import (
 // BarrierView implements logical.Storage so it can be passed in as the
 // durable storage mechanism for logical views.
 type BarrierView struct {
-	barrier SecurityBarrier
+	barrier BarrierStorage
 	prefix  string
 }
 
 // NewBarrierView takes an underlying security barrier and returns
 // a view of it that can only operate with the given prefix.
-func NewBarrierView(barrier SecurityBarrier, prefix string) *BarrierView {
+func NewBarrierView(barrier BarrierStorage, prefix string) *BarrierView {
 	return &BarrierView{
 		barrier: barrier,
 		prefix:  prefix,

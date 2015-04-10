@@ -61,6 +61,12 @@ type SecurityBarrier interface {
 	// be unsealed again to perform any further operations.
 	Seal() error
 
+	// SecurityBarrier must provide the storage APIs
+	BarrierStorage
+}
+
+// BarrierStorage is the storage only interface required for a Barrier.
+type BarrierStorage interface {
 	// Put is used to insert or update an entry
 	Put(entry *Entry) error
 
