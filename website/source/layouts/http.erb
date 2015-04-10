@@ -1,0 +1,103 @@
+<% wrap_layout :inner do %>
+	<% content_for :sidebar do %>
+		<div class="docs-sidebar hidden-print affix-top" role="complementary">
+			<ul class="nav docs-sidenav">
+				<li<%= sidebar_current("docs-home") %>>
+					<a href="/docs/index.html">Documentation Home</a>
+				</li>
+
+				<hr>
+
+				<li<%= sidebar_current("docs-http") %>>
+					<a href="/docs/http/index.html">Overview</a>
+				</li>
+
+				<li<%= sidebar_current("docs-http-sys-init") %>>
+					<a href="#">Initialization</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-sys-init") %>>
+							<a href="/docs/http/sys-init.html">/sys/init</a>
+						</li>
+					</ul>
+				</li>
+
+				<li<%= sidebar_current("docs-http-seal") %>>
+					<a href="#">Seal/Unseal</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-seal-status") %>>
+							<a href="/docs/http/sys-seal-status.html">/sys/seal-status</a>
+						</li>
+
+						<li<%= sidebar_current("docs-http-seal-seal") %>>
+							<a href="/docs/http/sys-seal">/sys/seal</a>
+						</li>
+
+						<li<%= sidebar_current("docs-http-seal-unseal") %>>
+							<a href="/docs/http/sys-unseal.html">/sys/unseal</a>
+						</li>
+					</ul>
+				</li>
+
+				<li<%= sidebar_current("docs-http-mounts") %>>
+					<a href="#">Secret Mounts</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-mounts-mounts") %>>
+							<a href="/docs/http/sys-mounts.html">/sys/mounts</a>
+						</li>
+
+						<li<%= sidebar_current("docs-http-mounts-remount") %>>
+							<a href="/docs/http/sys-remount.html">/sys/remount</a>
+						</li>
+					</ul>
+				</li>
+
+				<li<%= sidebar_current("docs-http-auth") %>>
+					<a href="#">Auth & ACLs</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-auth-auth") %>>
+							<a href="/docs/http/sys-auth.html">/sys/auth</a>
+						</li>
+
+						<li<%= sidebar_current("docs-http-auth-policy") %>>
+							<a href="/docs/http/sys-policy.html">/sys/policy</a>
+						</li>
+					</ul>
+				</li>
+
+				<li<%= sidebar_current("docs-http-audits") %>>
+					<a href="#">Audit Backends</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-audits-audits") %>>
+							<a href="/docs/http/sys-audit.html">/sys/audit</a>
+						</li>
+					</ul>
+				</li>
+
+				<li<%= sidebar_current("docs-http-lease") %>>
+					<a href="#">Leases</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-lease-renew") %>>
+							<a href="/docs/http/sys-renew.html">/sys/renew</a>
+						</li>
+
+						<li<%= sidebar_current("docs-http-lease-revoke") %>>
+							<a href="/docs/http/sys-revoke.html">/sys/revoke</a>
+						</li>
+					</ul>
+				</li>
+
+				<hr>
+
+				<li<%= sidebar_current("docs-http-secret") %>>
+					<a href="#">Secret Backends</a>
+				</li>
+
+				<li<%= sidebar_current("docs-http-authbackends") %>>
+					<a href="#">Auth Backends</a>
+				</li>
+			</ul>
+		</div>
+	<% end %>
+
+	<%= yield %>
+<% end %>
