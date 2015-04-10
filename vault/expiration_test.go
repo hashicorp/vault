@@ -680,6 +680,60 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 }
 
+func TestExpiration_renewAuthEntry(t *testing.T) {
+	exp := mockExpiration(t)
+
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					Renewable: true,
+					Lease:     time.Hour,
+				},
+			},
+		},
+	}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "auth/foo/")
+	exp.router.Mount(noop, "auth/foo/", generateUUID(), view)
+
+	le := &leaseEntry{
+		LeaseID: "auth/foo/1234",
+		Path:    "auth/foo/login",
+		Auth: &logical.Auth{
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+				Lease:     time.Minute,
+			},
+		},
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now().Add(time.Minute),
+	}
+
+	resp, err := exp.renewAuthEntry(le, time.Second)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(resp, noop.Response) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req := noop.Requests[0]
+	if req.Operation != logical.RenewOperation {
+		t.Fatalf("Bad: %v", req)
+	}
+	if req.Path != "login" {
+		t.Fatalf("Bad: %v", req)
+	}
+	if req.Auth.LeaseIncrement != time.Second {
+		t.Fatalf("Bad: %v", req)
+	}
+	if req.Auth.LeaseIssue.IsZero() {
+		t.Fatalf("Bad: %v", req)
+	}
+}
+
 func TestExpiration_PersistLoadDelete(t *testing.T) {
 	exp := mockExpiration(t)
 	le := &leaseEntry{
