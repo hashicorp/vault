@@ -77,5 +77,61 @@ back to a root user later.
 $ vault token-create -policy="secret"
 d97ef000-48cf-45d9-1907-3ea6ce298a29
 
-$ vault auth
+$ vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
+Successfully authenticated! The policies that are associated
+with this token are listed below:
+
+secret
 ```
+
+You can now verify that you can write data to `secret/`, but only
+read from `secret/foo`:
+
+```
+$ vault write secret/bar value=yes
+Success! Data written to: secret/bar
+
+$ vault write secret/foo value=yes
+Error writing data to secret/foo: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/secret/foo
+Code: 400. Errors:
+
+* permission denied
+```
+
+You also don't have access to `sys` according to the policy, so commands
+such as `vault mounts` will not work either.
+
+## Mapping Policies to Auth Backends
+
+Vault is the single policy authority, unlike auth where you can mount
+multiple backends. Any mounted auth backend must map identities to these
+core policies.
+
+Use the `vault help` system with your auth backend to determine how the
+mapping is done, since it is specific to each backend. For example,
+with GitHub, it is done by team using the `map/teams/<team>` path:
+
+```
+$ vault write auth/github/map/teams/default value=secret
+Success! Data written to: auth/github/map/teams/default
+```
+
+For GitHub, the "default" team is the default policy set that everyone
+is assigned to no matter what team they're on.
+
+Other auth backends use alternate, but likely similar mechanism for
+mapping policies to identity.
+
+## Next
+
+Policies are an important part of Vault. While using the root token
+is easiest to get up and running, you'll want to restrict access to
+Vault very quickly, and the policy system is the way to do this.
+
+The syntax and function of policies is easy to understand and work
+with, and because auth backends all must map to the central policy system,
+you only have to learn this policy system.
+
+Next, we'll cover how to [deploy Vault](/intro/getting-started/deploy.html).
