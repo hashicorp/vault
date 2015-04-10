@@ -1,2 +1,3 @@
-# vault
-Bits go in, bits go out. Can't explain that.
+# Vault
+
+**Closed beta information:** https://gist.github.com/mitchellh/316c46870dabd1f5529c
