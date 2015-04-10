@@ -13,4 +13,5 @@ details of how Vault functions, it's architecture and security properties.
 
 -> **Note:** Knowledge of Vault internals is not
 required to use Vault. If you aren't interested in the internals
-of Vault, you may safely skip this section.
+of Vault, you may safely skip this section. If you're operating Vault,
+we recommend understanding the internals.
