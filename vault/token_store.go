@@ -363,6 +363,13 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
+
+	// Revoke all secrets under this token
+	if entry != nil {
+		if err := ts.expiration.RevokeByToken(entry.ID); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -148,6 +148,56 @@ func TestTokenStore_Revoke(t *testing.T) {
 	}
 }
 
+func TestTokenStore_Revoke_Leases(t *testing.T) {
+	_, ts, _ := mockTokenStore(t)
+
+	// Mount a noop backend
+	noop := &NoopBackend{}
+	ts.expiration.router.Mount(noop, "", "", nil)
+
+	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
+	if err := ts.Create(ent); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a lease
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "secret/foo",
+		ClientToken: ent.ID,
+	}
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				Lease: 20 * time.Millisecond,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+	leaseID, err := ts.expiration.Register(req, resp)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Revoke the token
+	err = ts.Revoke(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the lease is gone
+	out, err := ts.expiration.loadEntry(leaseID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
