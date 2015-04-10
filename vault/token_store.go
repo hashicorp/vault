@@ -378,23 +378,9 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	// Get the salted ID
 	saltedId := ts.SaltID(id)
 
-	// Lookup the token first
-	entry, err := ts.lookupSalted(saltedId)
-	if err != nil {
-		return err
-	}
-
-	// Nuke the child entries recursively
+	// Nuke the entire tree recursively
 	if err := ts.revokeTreeSalted(saltedId); err != nil {
 		return err
-	}
-
-	// Clear the secondary index if any
-	if entry != nil && entry.Parent != "" {
-		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		if ts.view.Delete(path); err != nil {
-			return fmt.Errorf("failed to delete entry: %v", err)
-		}
 	}
 	return nil
 }
@@ -414,18 +400,13 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	// value. Turns out, this is good enough!
 	for _, child := range children {
 		if err := ts.revokeTreeSalted(child); err != nil {
-			return fmt.Errorf("failed to revoke child: %v", err)
-		}
-		childIndex := path + child
-		if err := ts.view.Delete(childIndex); err != nil {
-			return fmt.Errorf("failed to delete child index: %v", err)
+			return err
 		}
 	}
 
-	// Nuke the primary key
-	path = lookupPrefix + saltedId
-	if ts.view.Delete(path); err != nil {
-		return fmt.Errorf("failed to delete entry: %v", err)
+	// Revoke this entry
+	if err := ts.revokeSalted(saltedId); err != nil {
+		return fmt.Errorf("failed to revoke entry: %v", err)
 	}
 	return nil
 }
