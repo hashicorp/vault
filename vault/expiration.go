@@ -19,6 +19,12 @@ const (
 	// view. This is nested under the system view.
 	expirationSubPath = "expire/"
 
+	// leaseViewPrefix is the prefix used for the ID based lookup of leases.
+	leaseViewPrefix = "id/"
+
+	// tokenViewPrefix is the prefix used for the token based lookup of leases.
+	tokenViewPrefix = "token/"
+
 	// maxRevokeAttempts limits how many revoke attempts are made
 	maxRevokeAttempts = 6
 
@@ -41,7 +47,8 @@ const (
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
 	router     *Router
-	view       *BarrierView
+	idView     *BarrierView
+	tokenView  *BarrierView
 	tokenStore *TokenStore
 	logger     *log.Logger
 
@@ -57,7 +64,8 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 	}
 	exp := &ExpirationManager{
 		router:     router,
-		view:       view,
+		idView:     view.SubView(leaseViewPrefix),
+		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: ts,
 		logger:     logger,
 		pending:    make(map[string]*time.Timer),
@@ -102,7 +110,7 @@ func (m *ExpirationManager) Restore() error {
 	defer m.pendingLock.Unlock()
 
 	// Accumulate existing leases
-	existing, err := CollectKeys(m.view)
+	existing, err := CollectKeys(m.idView)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
@@ -200,7 +208,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	}
 
 	// Accumulate existing leases
-	sub := m.view.SubView(prefix)
+	sub := m.idView.SubView(prefix)
 	existing, err := CollectKeys(sub)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
@@ -480,7 +488,7 @@ func (m *ExpirationManager) renewAuthEntry(le *leaseEntry, increment time.Durati
 
 // loadEntry is used to read a lease entry
 func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
-	out, err := m.view.Get(leaseID)
+	out, err := m.idView.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
 	}
@@ -507,7 +515,7 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 		Key:   le.LeaseID,
 		Value: buf,
 	}
-	if err := m.view.Put(&ent); err != nil {
+	if err := m.idView.Put(&ent); err != nil {
 		return fmt.Errorf("failed to persist lease entry: %v", err)
 	}
 	return nil
@@ -515,7 +523,7 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 
 // deleteEntry is used to delete a lease entry
 func (m *ExpirationManager) deleteEntry(leaseID string) error {
-	if err := m.view.Delete(leaseID); err != nil {
+	if err := m.idView.Delete(leaseID); err != nil {
 		return fmt.Errorf("failed to delete lease entry: %v", err)
 	}
 	return nil
