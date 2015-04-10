@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -9,11 +11,20 @@ import (
 )
 
 func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+
 	c, _, root := TestCoreUnsealed(t)
 	ts, err := NewTokenStore(c)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	router := NewRouter()
+	router.Mount(ts, "auth/token/", "", ts.view)
+
+	view := c.systemView.SubView(expirationSubPath)
+	exp := NewExpirationManager(router, view, ts, logger)
+	ts.SetExpirationManager(exp)
 	return c, ts, root
 }
 
@@ -192,46 +203,6 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	err = ts.RevokeTree(ent1.ID)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
-	for _, id := range lookup {
-		out, err := ts.Lookup(id)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if out != nil {
-			t.Fatalf("bad: %#v", out)
-		}
-	}
-}
-
-func TestTokenStore_RevokeAll(t *testing.T) {
-	_, ts, _ := mockTokenStore(t)
-
-	ent1 := &TokenEntry{}
-	if err := ts.Create(ent1); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	ent2 := &TokenEntry{Parent: ent1.ID}
-	if err := ts.Create(ent2); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	ent3 := &TokenEntry{}
-	if err := ts.Create(ent3); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	ent4 := &TokenEntry{Parent: ent3.ID}
-	if err := ts.Create(ent4); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	err := ts.RevokeAll()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

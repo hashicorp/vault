@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"log"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -10,34 +8,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
 )
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t *testing.T) *ExpirationManager {
-	inm := physical.NewInmem()
-	b, err := NewAESGCMBarrier(inm)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	b.Unseal(key)
-
-	// Create the barrier view
-	view := NewBarrierView(b, "expire/")
-
 	_, ts, _ := mockTokenStore(t)
-
-	router := NewRouter()
-	router.Mount(ts, "auth/token/", "", ts.view)
-
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	exp := NewExpirationManager(router, view, ts, logger)
-	ts.SetExpirationManager(exp)
-	return exp
+	return ts.expiration
 }
 
 func TestExpiration_Restore(t *testing.T) {

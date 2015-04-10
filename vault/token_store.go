@@ -430,27 +430,6 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	return nil
 }
 
-// RevokeAll is used to invalidate all generated tokens.
-func (ts *TokenStore) RevokeAll() error {
-	defer metrics.MeasureSince([]string{"token", "revoke-all"}, time.Now())
-	// Collect all the tokens
-	sub := ts.view.SubView(lookupPrefix)
-	tokens, err := CollectKeys(sub)
-	if err != nil {
-		return fmt.Errorf("failed to scan tokens: %v", err)
-	}
-
-	// Invalidate them all, note that the keys we get back from the
-	// sub-view are all salted
-	for idx, token := range tokens {
-		if err := ts.revokeSalted(token); err != nil {
-			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
-				token, idx+1, len(tokens), err)
-		}
-	}
-	return nil
-}
-
 // handleCreate handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreate(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
