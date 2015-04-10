@@ -329,6 +329,67 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	}
 }
 
+func TestExpiration_RevokeByToken(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+
+	paths := []string{
+		"prod/aws/foo",
+		"prod/aws/sub/bar",
+		"prod/aws/zip",
+	}
+	for _, path := range paths {
+		req := &logical.Request{
+			Operation:   logical.ReadOperation,
+			Path:        path,
+			ClientToken: "foobarbaz",
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					Lease: 20 * time.Millisecond,
+				},
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	// Should nuke all the keys
+	if err := exp.RevokeByToken("foobarbaz"); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(noop.Requests) != 3 {
+		t.Fatalf("Bad: %v", noop.Requests)
+	}
+	for _, req := range noop.Requests {
+		if req.Operation != logical.RevokeOperation {
+			t.Fatalf("Bad: %v", req)
+		}
+	}
+
+	expect := []string{
+		"foo",
+		"sub/bar",
+		"zip",
+	}
+	sort.Strings(noop.Paths)
+	sort.Strings(expect)
+	if !reflect.DeepEqual(noop.Paths, expect) {
+		t.Fatalf("bad: %v", noop.Paths)
+	}
+}
+
 func TestExpiration_RenewToken(t *testing.T) {
 	exp := mockExpiration(t)
 	root, err := exp.tokenStore.RootToken()

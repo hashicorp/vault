@@ -187,6 +187,11 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 		return err
 	}
 
+	// Delete the secondary index
+	if err := m.indexByToken(le.ClientToken, le.LeaseID); err != nil {
+		return err
+	}
+
 	// Clear the expiration handler
 	m.pendingLock.Lock()
 	if timer, ok := m.pending[leaseID]; ok {
@@ -217,6 +222,26 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
+		if err := m.Revoke(leaseID); err != nil {
+			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
+				leaseID, idx+1, len(existing), err)
+		}
+	}
+	return nil
+}
+
+// RevokeByToken is used to revoke all the secrets issued with
+// a given token. This is done by using the secondary index.
+func (m *ExpirationManager) RevokeByToken(token string) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
+	// Lookup the leases
+	existing, err := m.lookupByToken(token)
+	if err != nil {
+		return fmt.Errorf("failed to scan for leases: %v", err)
+	}
+
+	// Revoke all the keys
+	for idx, leaseID := range existing {
 		if err := m.Revoke(leaseID); err != nil {
 			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
 				leaseID, idx+1, len(existing), err)
@@ -341,16 +366,22 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 
 	// Create a lease entry
 	le := leaseEntry{
-		LeaseID:    path.Join(req.Path, generateUUID()),
-		Path:       req.Path,
-		Data:       resp.Data,
-		Secret:     resp.Secret,
-		IssueTime:  time.Now().UTC(),
-		ExpireTime: resp.Secret.ExpirationTime(),
+		LeaseID:     path.Join(req.Path, generateUUID()),
+		ClientToken: req.ClientToken,
+		Path:        req.Path,
+		Data:        resp.Data,
+		Secret:      resp.Secret,
+		IssueTime:   time.Now().UTC(),
+		ExpireTime:  resp.Secret.ExpirationTime(),
 	}
 
 	// Encode the entry
 	if err := m.persistEntry(&le); err != nil {
+		return "", err
+	}
+
+	// Maintain secondary index by token
+	if err := m.indexByToken(le.ClientToken, le.LeaseID); err != nil {
 		return "", err
 	}
 
@@ -368,11 +399,12 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 	// Create a lease entry
 	le := leaseEntry{
-		LeaseID:    path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
-		Auth:       auth,
-		Path:       source,
-		IssueTime:  time.Now().UTC(),
-		ExpireTime: auth.ExpirationTime(),
+		LeaseID:     path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
+		ClientToken: auth.ClientToken,
+		Auth:        auth,
+		Path:        source,
+		IssueTime:   time.Now().UTC(),
+		ExpireTime:  auth.ExpirationTime(),
 	}
 
 	// Encode the entry
@@ -529,6 +561,51 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 	return nil
 }
 
+// indexByToken creates a secondary index from the token to a lease entry
+func (m *ExpirationManager) indexByToken(token, leaseID string) error {
+	ent := logical.StorageEntry{
+		Key:   m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID),
+		Value: []byte(leaseID),
+	}
+	if err := m.tokenView.Put(&ent); err != nil {
+		return fmt.Errorf("failed to persist lease index entry: %v", err)
+	}
+	return nil
+}
+
+// removeIndexByToken removes the secondary index from the token to a lease entry
+func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
+	key := m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID)
+	if err := m.tokenView.Delete(key); err != nil {
+		return fmt.Errorf("failed to delete lease index entry: %v", err)
+	}
+	return nil
+}
+
+// lookupByToken is used to lookup all the leaseID's via the
+func (m *ExpirationManager) lookupByToken(token string) ([]string, error) {
+	// Scan via the index for sub-leases
+	prefix := m.tokenStore.SaltID(token) + "/"
+	subKeys, err := m.tokenView.List(prefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list leases: %v", err)
+	}
+
+	// Read each index entry
+	leaseIDs := make([]string, 0, len(subKeys))
+	for _, sub := range subKeys {
+		out, err := m.tokenView.Get(prefix + sub)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read lease index: %v", err)
+		}
+		if out == nil {
+			continue
+		}
+		leaseIDs = append(leaseIDs, string(out.Value))
+	}
+	return leaseIDs, nil
+}
+
 // emitMetrics is invoked periodically to emit statistics
 func (m *ExpirationManager) emitMetrics() {
 	m.pendingLock.Lock()
@@ -540,13 +617,14 @@ func (m *ExpirationManager) emitMetrics() {
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
-	LeaseID    string                 `json:"lease_id"`
-	Path       string                 `json:"path"`
-	Data       map[string]interface{} `json:"data"`
-	Secret     *logical.Secret        `json:"secret"`
-	Auth       *logical.Auth          `json:"auth"`
-	IssueTime  time.Time              `json:"issue_time"`
-	ExpireTime time.Time              `json:"expire_time"`
+	LeaseID     string                 `json:"lease_id"`
+	ClientToken string                 `json:"client_token"`
+	Path        string                 `json:"path"`
+	Data        map[string]interface{} `json:"data"`
+	Secret      *logical.Secret        `json:"secret"`
+	Auth        *logical.Auth          `json:"auth"`
+	IssueTime   time.Time              `json:"issue_time"`
+	ExpireTime  time.Time              `json:"expire_time"`
 }
 
 // encode is used to JSON encode the lease entry
