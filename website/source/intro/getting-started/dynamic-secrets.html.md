@@ -138,7 +138,7 @@ Let's complete the loop and revoke this secret now, purging it from
 existence. Once the secret is revoked, the access keys will no longer
 work.
 
-To revoke the secret, use `vault revoke` with the vault ID that was
+To revoke the secret, use `vault revoke` with the lease ID that was
 outputted from `vault read` when you ran it:
 
 ```

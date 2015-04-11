@@ -148,5 +148,5 @@ the "name" parameter. For example, if this backend is mounted at "aws",
 then "aws/deploy" would generate access keys for the "deploy" policy.
 
 The access keys will have a lease associated with them. The access keys
-can be revoked by using the Vault ID.
+can be revoked by using the lease ID.
 `

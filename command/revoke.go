@@ -58,13 +58,13 @@ func (c *RevokeCommand) Help() string {
 	helpText := `
 Usage: vault revoke [options] id
 
-  Revoke a secret by its Vault ID.
+  Revoke a secret by its lease ID.
 
-  This command revokes a secret by its Vault ID that was returned
+  This command revokes a secret by its lease ID that was returned
   with it. Once the key is revoked, it is no longer valid.
 
   With the -prefix flag, the revoke is done by prefix: any secret prefixed
-  with the given partial ID is revoked. Vault IDs are structured in such
+  with the given partial ID is revoked. Lease IDs are structured in such
   a way to make revocation of prefixes useful.
 
 General Options:
