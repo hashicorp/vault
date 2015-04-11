@@ -3,38 +3,26 @@ layout: "intro"
 page_title: "Vault vs. Custom Solutions"
 sidebar_current: "vs-other-custom"
 description: |-
-  Most organizations start by manually managing infrastructure through simple scripts or web-based interfaces. As the infrastructure grows, any manual approach to management becomes both error-prone and tedious, and many organizations begin to home-roll tooling to help automate the mechanical processes involved.
+  Comparison between Vault and writing a custom solution.
 ---
 
 # Vault vs. Custom Solutions
 
-Most organizations start by manually managing infrastructure through
-simple scripts or web-based interfaces. As the infrastructure grows,
-any manual approach to management becomes both error-prone and tedious,
-and many organizations begin to home-roll tooling to help
-automate the mechanical processes involved.
+Many organizations resort to custom solutions for storing secrets,
+whether that be Dropbox, encrypted disk images, encrypted SQL columns,
+etc.
 
-These tools require time and resources to build and maintain.
-As tools of necessity, they represent the minimum viable
-features needed by an organization, being built to handle only
-the immediate needs. As a result, they are often hard
-to extend and difficult to maintain. Because the tooling must be
-updated in lockstep with any new features or infrastructure,
-it becomes the limiting factor for how quickly the infrastructure
-can evolve.
+These systems require time and resources to build and maintain.
+Storing secrets is also an incredibly important piece of infrastructure
+that must be done correctly. This increases the pressure to maintain
+the internal systems.
 
-Vault is designed to tackle these challenges. It provides a simple,
-unified syntax, allowing almost any resource to be managed without
-learning new tooling. By capturing all the resources required, the
-dependencies between them can be resolved automatically so that operators
-do not need to remember and reason about them. Removing the burden
-of building the tool allows operators to focus on their infrastructure
-and not the tooling.
+Vault is designed for secret storage. It provides a simple interface
+on top of a strong security model to meet your secret storage needs.
 
-Furthermore, Vault is an open source tool. In addition to
-HashiCorp, the community around Vault helps to extend its features,
-fix bugs and document new use cases. Vault helps solve a problem
-that exists in every organization and provides a standard that can
-be adopted to avoid reinventing the wheel between and within organizations.
-Its open source nature ensures it will be around in the long term.
-
+Furthermore, Vault is an open source tool. This means that the tool is
+as good as the entire community working together to improve it. This
+isn't just features and bug fixes, but finding potential security holes.
+Additionally, since it is an open source, your own security teams can
+review and contribute to Vault and verify it meets your standards
+for security.
