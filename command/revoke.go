@@ -26,7 +26,7 @@ func (c *RevokeCommand) Run(args []string) int {
 			"\nRevoke expects one argument: the ID to revoke"))
 		return 1
 	}
-	vaultId := args[0]
+	leaseId := args[0]
 
 	client, err := c.Client()
 	if err != nil {
@@ -36,9 +36,9 @@ func (c *RevokeCommand) Run(args []string) int {
 	}
 
 	if prefix {
-		err = client.Sys().RevokePrefix(vaultId)
+		err = client.Sys().RevokePrefix(leaseId)
 	} else {
-		err = client.Sys().Revoke(vaultId)
+		err = client.Sys().Revoke(leaseId)
 	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -46,7 +46,7 @@ func (c *RevokeCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Key revoked with ID '%s'.", vaultId))
+	c.Ui.Output(fmt.Sprintf("Key revoked with ID '%s'.", leaseId))
 	return 0
 }
 
