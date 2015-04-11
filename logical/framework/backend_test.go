@@ -154,6 +154,39 @@ func TestBackendHandleRequest_helpRoot(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_renewAuth(t *testing.T) {
+	b := &Backend{}
+
+	resp, err := b.HandleRequest(logical.RenewAuthRequest(
+		"/foo", &logical.Auth{}, nil))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
+	var called uint32
+	callback := func(*logical.Request, *FieldData) (*logical.Response, error) {
+		atomic.AddUint32(&called, 1)
+		return nil, nil
+	}
+
+	b := &Backend{
+		AuthRenew: callback,
+	}
+
+	_, err := b.HandleRequest(logical.RenewAuthRequest(
+		"/foo", &logical.Auth{}, nil))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if v := atomic.LoadUint32(&called); v != 1 {
+		t.Fatalf("bad: %#v", v)
+	}
+}
 func TestBackendHandleRequest_renew(t *testing.T) {
 	var called uint32
 	callback := func(*logical.Request, *FieldData) (*logical.Response, error) {

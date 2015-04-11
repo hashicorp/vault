@@ -51,6 +51,11 @@ type Backend struct {
 	Rollback       RollbackFunc
 	RollbackMinAge time.Duration
 
+	// AuthRenew is the callback to call when a RenewRequest for an
+	// authentication comes in. By default, renewal won't be allowed.
+	// See the built-in AuthRenew helpers in lease.go for common callbacks.
+	AuthRenew OperationFunc
+
 	logger  *log.Logger
 	once    sync.Once
 	pathsRe []*regexp.Regexp
@@ -272,12 +277,11 @@ func (b *Backend) handleRevokeRenew(
 }
 
 func (b *Backend) handleAuthRenew(req *logical.Request) (*logical.Response, error) {
-	// TODO: make this customizable
+	if b.AuthRenew == nil {
+		return logical.ErrorResponse("this auth type doesn't support renew"), nil
+	}
 
-	// Set the lease to the requested increment
-	req.Auth.Lease = req.Auth.IncrementedLease(req.Auth.LeaseIncrement)
-	resp := &logical.Response{Auth: req.Auth}
-	return resp, nil
+	return b.AuthRenew(req, nil)
 }
 
 func (b *Backend) handleRollback(

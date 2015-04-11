@@ -73,6 +73,17 @@ func RenewRequest(
 	}
 }
 
+// RenewAuthRequest creates the structure of the renew request for an auth.
+func RenewAuthRequest(
+	path string, auth *Auth, data map[string]interface{}) *Request {
+	return &Request{
+		Operation: RenewOperation,
+		Path:      path,
+		Data:      data,
+		Auth:      auth,
+	}
+}
+
 // RevokeRequest creates the structure of the revoke request.
 func RevokeRequest(
 	path string, secret *Secret, data map[string]interface{}) *Request {

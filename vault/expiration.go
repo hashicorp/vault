@@ -515,9 +515,7 @@ func (m *ExpirationManager) renewAuthEntry(le *leaseEntry, increment time.Durati
 	auth.LeaseIncrement = increment
 	auth.ClientToken = ""
 
-	req := logical.RenewRequest(le.Path, nil, nil)
-	req.Auth = &auth
-
+	req := logical.RenewAuthRequest(le.Path, &auth, nil)
 	resp, err := m.router.Route(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
