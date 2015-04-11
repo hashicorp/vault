@@ -669,7 +669,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	// Get the new expire time
 	newExpire := resp.Auth.ExpirationTime()
 	expireDiff := newExpire.Sub(originalExpire)
-	if expireDiff < 30*time.Minute {
+	if expireDiff < 30*time.Minute || expireDiff > 3*time.Hour {
 		t.Fatalf("bad: %#v", expireDiff)
 	}
 }
