@@ -21,7 +21,7 @@ type LeaseOptions struct {
 	// LeaseIssue is the time of issue for the original lease. This is
 	// only available on a Renew operation and has no effect when returning
 	// a response. It can be used to enforce maximum lease periods by
-	// a logical backend.
+	// a logical backend. This time will always be in UTC.
 	LeaseIssue time.Time `json:"-"`
 }
 
