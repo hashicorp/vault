@@ -32,14 +32,16 @@ func LeaseExtend(max time.Duration) OperationFunc {
 		// Determine the requested lease
 		newLease := lease.IncrementedLease(lease.LeaseIncrement)
 
-		// Determine if the requested lease is too long
-		now := time.Now().UTC()
-		maxExpiration := now.Add(max)
-		newExpiration := now.Add(newLease)
-		if newExpiration.Sub(maxExpiration) > 0 {
-			// The new expiration is past the max expiration. In this
-			// case, admit the longest lease we can.
-			newLease = maxExpiration.Sub(lease.ExpirationTime())
+		if max > 0 {
+			// Determine if the requested lease is too long
+			now := time.Now().UTC()
+			maxExpiration := now.Add(max)
+			newExpiration := now.Add(newLease)
+			if newExpiration.Sub(maxExpiration) > 0 {
+				// The new expiration is past the max expiration. In this
+				// case, admit the longest lease we can.
+				newLease = maxExpiration.Sub(lease.ExpirationTime())
+			}
 		}
 
 		// Set the lease

@@ -22,6 +22,12 @@ func TestLeaseExtend(t *testing.T) {
 			Result:  1 * time.Hour,
 		},
 
+		"valid request, zero max": {
+			Max:     0,
+			Request: 1 * time.Hour,
+			Result:  1 * time.Hour,
+		},
+
 		"request is zero": {
 			Max:     30 * time.Hour,
 			Request: 0,

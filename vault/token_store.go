@@ -79,6 +79,8 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
+		AuthRenew: framework.LeaseExtend(0),
+
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"revoke-prefix/*",
