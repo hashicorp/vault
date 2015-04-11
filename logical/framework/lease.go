@@ -18,6 +18,17 @@ func LeaseExtend(max time.Duration) OperationFunc {
 			return nil, fmt.Errorf("no lease options for request")
 		}
 
+		// Protect against negative leases
+		if lease.LeaseIncrement < 0 {
+			return logical.ErrorResponse(
+				"increment must be greater than 0"), logical.ErrInvalidRequest
+		}
+
+		// If the lease is zero, then assume max
+		if lease.LeaseIncrement == 0 {
+			lease.LeaseIncrement = max
+		}
+
 		// Determine the requested lease
 		newLease := lease.IncrementedLease(lease.LeaseIncrement)
 

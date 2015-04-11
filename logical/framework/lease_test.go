@@ -14,6 +14,7 @@ func TestLeaseExtend(t *testing.T) {
 		Max     time.Duration
 		Request time.Duration
 		Result  time.Duration
+		Error   bool
 	}{
 		"valid request, good bounds": {
 			Max:     30 * time.Hour,
@@ -21,10 +22,24 @@ func TestLeaseExtend(t *testing.T) {
 			Result:  1 * time.Hour,
 		},
 
+		"request is zero": {
+			Max:     30 * time.Hour,
+			Request: 0,
+			Result:  30 * time.Hour,
+		},
+
 		"request is too long": {
 			Max:     3 * time.Hour,
 			Request: 7 * time.Hour,
 			Result:  3 * time.Hour,
+		},
+
+		// Don't think core will allow this, but let's protect against
+		// it at multiple layers anyways.
+		"request is negative": {
+			Max:     3 * time.Hour,
+			Request: -7 * time.Hour,
+			Error:   true,
 		},
 	}
 
@@ -41,8 +56,11 @@ func TestLeaseExtend(t *testing.T) {
 
 		callback := LeaseExtend(tc.Max)
 		resp, err := callback(req, nil)
-		if err != nil {
+		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
+		}
+		if tc.Error {
+			continue
 		}
 
 		// Round it to the nearest hour
