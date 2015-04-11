@@ -32,18 +32,22 @@ func (l *LeaseOptions) LeaseEnabled() bool {
 
 // LeaseTotal is the total lease time including the grace period
 func (l *LeaseOptions) LeaseTotal() time.Duration {
-	if l.Lease == 0 {
+	if l.Lease <= 0 {
 		return 0
 	}
+
+	if l.LeaseGracePeriod < 0 {
+		return l.Lease
+	}
+
 	return l.Lease + l.LeaseGracePeriod
 }
 
 // ExpirationTime computes the time until expiration including the grace period
 func (l *LeaseOptions) ExpirationTime() time.Time {
 	var expireTime time.Time
-	if l.Lease > 0 {
-		leaseTotal := l.Lease + l.LeaseGracePeriod
-		expireTime = l.LeaseIssue.UTC().Add(leaseTotal)
+	if !l.LeaseIssue.IsZero() && l.Lease > 0 {
+		expireTime = l.LeaseIssue.UTC().Add(l.LeaseTotal())
 	}
 
 	return expireTime
