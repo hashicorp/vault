@@ -11,10 +11,11 @@ func TestLeaseExtend(t *testing.T) {
 	now := time.Now().UTC().Round(time.Hour)
 
 	cases := map[string]struct {
-		Max     time.Duration
-		Request time.Duration
-		Result  time.Duration
-		Error   bool
+		Max        time.Duration
+		MaxSession time.Duration
+		Request    time.Duration
+		Result     time.Duration
+		Error      bool
 	}{
 		"valid request, good bounds": {
 			Max:     30 * time.Hour,
@@ -40,6 +41,20 @@ func TestLeaseExtend(t *testing.T) {
 			Result:  3 * time.Hour,
 		},
 
+		"request would go past max session": {
+			Max:        9 * time.Hour,
+			MaxSession: 5 * time.Hour,
+			Request:    7 * time.Hour,
+			Result:     5 * time.Hour,
+		},
+
+		"request within max session": {
+			Max:        9 * time.Hour,
+			MaxSession: 5 * time.Hour,
+			Request:    4 * time.Hour,
+			Result:     4 * time.Hour,
+		},
+
 		// Don't think core will allow this, but let's protect against
 		// it at multiple layers anyways.
 		"request is negative": {
@@ -60,7 +75,7 @@ func TestLeaseExtend(t *testing.T) {
 			},
 		}
 
-		callback := LeaseExtend(tc.Max)
+		callback := LeaseExtend(tc.Max, tc.MaxSession)
 		resp, err := callback(req, nil)
 		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)

@@ -11,11 +11,27 @@ import (
 // the lease of the auth/secret for the duration that was requested. Max
 // is the max time past the _current_ time that a lease can be extended. i.e.
 // setting it to 2 hours forces a renewal within the next 2 hours again.
-func LeaseExtend(max time.Duration) OperationFunc {
+//
+// maxSession is the maximum session length allowed since the original
+// issue time. If this is zero, it is ignored,.
+func LeaseExtend(max, maxSession time.Duration) OperationFunc {
 	return func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		lease := detectLease(req)
 		if lease == nil {
 			return nil, fmt.Errorf("no lease options for request")
+		}
+
+		now := time.Now().UTC()
+
+		// Check if we're passed the issue limit
+		var maxSessionTime time.Time
+		if maxSession > 0 {
+			maxSessionTime = lease.LeaseIssue.Add(maxSession)
+			if maxSessionTime.Sub(now) <= 0 {
+				return logical.ErrorResponse(fmt.Sprintf(
+					"lease can only be renewed up to %s past original issue",
+					maxSession)), logical.ErrInvalidRequest
+			}
 		}
 
 		// Protect against negative leases
@@ -29,12 +45,20 @@ func LeaseExtend(max time.Duration) OperationFunc {
 			lease.LeaseIncrement = max
 		}
 
+		// If the increment is greater than the amount of time we have left
+		// on our session, set it to that.
+		if !maxSessionTime.IsZero() {
+			diff := maxSessionTime.Sub(lease.ExpirationTime())
+			if diff < lease.LeaseIncrement {
+				lease.LeaseIncrement = diff
+			}
+		}
+
 		// Determine the requested lease
 		newLease := lease.IncrementedLease(lease.LeaseIncrement)
 
 		if max > 0 {
 			// Determine if the requested lease is too long
-			now := time.Now().UTC()
 			maxExpiration := now.Add(max)
 			newExpiration := now.Add(newLease)
 			if newExpiration.Sub(maxExpiration) > 0 {
