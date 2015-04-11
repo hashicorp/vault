@@ -19,12 +19,6 @@ to access data or modify policy. All interactions must be auditable and traced
 uniquely back to the origin entity. The system must be robust against intentional
 attempts to bypass any of its access controls.
 
-~> **Advanced Topic!** This page covers the technical details
-of the security model of Vault. You don't need to understand these details to
-effectively use Vault. The details are documented here for
-those who wish to learn about them without having to go
-spelunking through the source code.
-
 # Threat Model
 
 The following are the various parts of the Vault threat model:
