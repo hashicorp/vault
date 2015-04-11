@@ -274,12 +274,8 @@ func (b *Backend) handleRevokeRenew(
 func (b *Backend) handleAuthRenew(req *logical.Request) (*logical.Response, error) {
 	// TODO: make this customizable
 
-	// Determine the expiration time that was requested (the amount to
-	// increase the lease by). Subtract that from our current time, and
-	// use that to determine the lease.
-	requestedExpire := req.Auth.ExpirationTime().Add(req.Auth.LeaseIncrement)
-	req.Auth.Lease = requestedExpire.Sub(time.Now().UTC())
-
+	// Set the lease to the requested increment
+	req.Auth.Lease = req.Auth.IncrementedLease(req.Auth.LeaseIncrement)
 	resp := &logical.Response{Auth: req.Auth}
 	return resp, nil
 }

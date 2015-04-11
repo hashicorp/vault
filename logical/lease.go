@@ -52,3 +52,16 @@ func (l *LeaseOptions) ExpirationTime() time.Time {
 
 	return expireTime
 }
+
+// IncrementedLease returns the lease duration that would need to set
+// in order to increment the _current_ lease by the given duration
+// if the auth were re-issued right now.
+func (l *LeaseOptions) IncrementedLease(inc time.Duration) time.Duration {
+	var result time.Duration
+	expireTime := l.ExpirationTime()
+	if expireTime.IsZero() {
+		return result
+	}
+
+	return expireTime.Add(inc).Sub(time.Now().UTC())
+}

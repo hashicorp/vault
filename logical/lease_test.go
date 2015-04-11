@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+func TestLeaseOptionsIncrementedLease(t *testing.T) {
+	var l LeaseOptions
+	l.Lease = 1 * time.Second
+	l.LeaseIssue = time.Now().UTC()
+
+	actual := l.IncrementedLease(1 * time.Second)
+	if actual > 3*time.Second || actual < 1*time.Second {
+		t.Fatalf("bad: %s", actual)
+	}
+}
+
 func TestLeaseOptionsLeaseTotal(t *testing.T) {
 	var l LeaseOptions
 	l.Lease = 1 * time.Hour
