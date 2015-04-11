@@ -391,7 +391,8 @@ func TestExpiration_RenewToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(auth, out) {
+
+	if auth.ClientToken != out.ClientToken {
 		t.Fatalf("Bad: %#v", out)
 	}
 }

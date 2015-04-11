@@ -656,13 +656,21 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Get the original expire time to compare
+	originalExpire := auth.ExpirationTime()
+
 	req := logical.TestRequest(t, logical.WriteOperation, "renew/"+root.ID)
+	req.Data["increment"] = "3600"
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if !reflect.DeepEqual(resp.Auth, auth) {
-		t.Fatalf("bad: %#v", resp)
+
+	// Get the new expire time
+	newExpire := resp.Auth.ExpirationTime()
+	expireDiff := newExpire.Sub(originalExpire)
+	if expireDiff < 30*time.Minute {
+		t.Fatalf("bad: %#v", expireDiff)
 	}
 }
 

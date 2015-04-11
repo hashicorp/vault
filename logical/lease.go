@@ -43,7 +43,8 @@ func (l *LeaseOptions) ExpirationTime() time.Time {
 	var expireTime time.Time
 	if l.Lease > 0 {
 		leaseTotal := l.Lease + l.LeaseGracePeriod
-		expireTime = time.Now().UTC().Add(leaseTotal)
+		expireTime = l.LeaseIssue.UTC().Add(leaseTotal)
 	}
+
 	return expireTime
 }
