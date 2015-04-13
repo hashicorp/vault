@@ -26,23 +26,16 @@ type Secret struct {
 	DefaultGracePeriod time.Duration
 
 	// Renew is the callback called to renew this secret. If Renew is
-	// not specified and RenewExtend is false, then Renewable is set to
-	// false in the secret.
-	//
-	// RenewExtend, if true, will automatically extend the lease of this
-	// secret type. You can specify RenewExtendMax to specify the max
-	// duration it can be extended, otherwise it will be extended potentially
-	// indefinitely.
-	Renew          OperationFunc
-	RenewExtend    bool
-	RenewExtendMax time.Duration
+	// not specified then renewable is set to false in the secret.
+	// See lease.go for helpers for this value.
+	Renew OperationFunc
 
 	// Revoke is the callback called to revoke this secret. This is required.
 	Revoke OperationFunc
 }
 
 func (s *Secret) Renewable() bool {
-	return s.Renew != nil || s.RenewExtend
+	return s.Renew != nil
 }
 
 func (s *Secret) Response(
@@ -78,32 +71,7 @@ func (s *Secret) HandleRenew(req *logical.Request) (*logical.Response, error) {
 		Schema: s.Fields,
 	}
 
-	// If we have a callback, we just call that and that does all the logic.
-	if s.Renew != nil {
-		return s.Renew(req, data)
-	}
-
-	// If we're using RenewExtend, then just automaticaly extend.
-	if s.RenewExtend {
-		return s.HandleRenewExtend(req, data)
-	}
-
-	return nil, logical.ErrUnsupportedOperation
-}
-
-// HandleRenewExtend is the OperationFunc that just extends the lease
-// of the secret.
-func (s *Secret) HandleRenewExtend(
-	req *logical.Request, data *FieldData) (*logical.Response, error) {
-	// First copy the original secret/data
-	var resp logical.Response
-	resp.Secret = req.Secret
-	resp.Data = req.Data
-
-	// Now extend the lease by the amount specified.
-	resp.Secret.Lease = req.Secret.LeaseIncrement
-
-	return &resp, nil
+	return s.Renew(req, data)
 }
 
 // HandleRevoke is the request handler for renewing this secret.

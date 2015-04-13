@@ -215,14 +215,15 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 func TestBackendHandleRequest_renewExtend(t *testing.T) {
 	secret := &Secret{
 		Type:            "foo",
-		RenewExtend:     true,
-		DefaultDuration: 5 * time.Second,
+		Renew:           LeaseExtend(0, 0),
+		DefaultDuration: 5 * time.Minute,
 	}
 	b := &Backend{
 		Secrets: []*Secret{secret},
 	}
 
 	req := logical.RenewRequest("/foo", secret.Response(nil, nil).Secret, nil)
+	req.Secret.LeaseIssue = time.Now().UTC()
 	req.Secret.LeaseIncrement = 1 * time.Hour
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -231,8 +232,9 @@ func TestBackendHandleRequest_renewExtend(t *testing.T) {
 	if resp == nil || resp.Secret == nil {
 		t.Fatal("should have secret")
 	}
-	if resp.Secret.Lease != 1*time.Hour {
-		t.Fatalf("bad: %#v", resp.Secret)
+
+	if resp.Secret.Lease < 60*time.Minute || resp.Secret.Lease > 70*time.Minute {
+		t.Fatalf("bad: %s", resp.Secret.Lease)
 	}
 }
 
