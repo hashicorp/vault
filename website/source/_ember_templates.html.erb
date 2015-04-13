@@ -23,13 +23,10 @@
     </div>
 {{/if}}
 
-<div class="log">
-{{#each line in currentLog}}
-{{logPrefix}}{{line}}
-{{/each}}
+<div class="log">{{logs}}
 </div>
 
 <form {{action "submitText" on="submit"}}>
-    {{logPrefix}} {{input value=currentText class="shell" spellcheck="false"}}
+    $ {{input value=currentText class="shell" spellcheck="false"}}
 </form>
 </script>

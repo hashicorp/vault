@@ -63,15 +63,20 @@ Demo.DemoView = Ember.View.extend({
     $('body').unbind('DOMMouseScroll mousewheel');
   },
 
-  click: function() {
-    var element  = this.$();
-    // Focus
-    element.find('input.shell')[0].focus();
-  },
+  // click: function() {
+  //   var element  = this.$();
+
+  //   // Record scoll position
+  //   var x = element.scrollX, y = element.scrollY;
+  //   // Focus
+  //   element.find('input.shell')[0].focus();
+  //   // Scroll back to where you were
+  //   element.scrollTo(x, y);
+  // },
 
   keyDown: function(ev) {
     var cursor = this.get('controller.cursor'),
-        currentLength = this.get('controller.currentLog.length');
+        currentLength = this.get('controller.commandLog.length');
 
     switch(ev.keyCode) {
       // Down arrow
@@ -95,7 +100,7 @@ Demo.DemoView = Ember.View.extend({
       // command + k
       case 75:
         if (ev.metaKey) {
-          this.set('controller.currentLog', []);
+          this.set('controller.logs', '');
           this.set('controller.notCleared', false);
         }
         break;
@@ -117,8 +122,15 @@ Demo.DemoView = Ember.View.extend({
 
   }.observes('controller.isLoading'),
 
+  focus: function() {
+    var element = this.$().find('input.shell');
+    element.focus()
+  }.observes('controller.cursor'),
+
   submitted: function() {
     var element  = this.$();
+
+    console.log("submitted");
 
     // Focus the input
     element.find('input.shell')[0].focus();
@@ -126,5 +138,5 @@ Demo.DemoView = Ember.View.extend({
     // Scroll to the bottom of the element
     element.scrollTop(element[0].scrollHeight);
 
-  }.observes('controller.currentLog')
+  }.observes('controller.logs.length')
 });
