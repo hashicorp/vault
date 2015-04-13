@@ -47,9 +47,11 @@ func (c *UnsealCommand) Run(args []string) int {
 			c.Ui.Error(fmt.Sprintf(
 				"Error attempting to ask for password. The raw error message\n"+
 					"is shown below, but the most common reason for this error is\n"+
-					"that you attempted to pipe a value into unseal. This is not\n"+
-					"allowed. The value must be typed directly into the command\n"+
-					"after it is executed.\n\n"+
+					"that you attempted to pipe a value into unseal or you're\n"+
+					"executing `vault unseal` from outside of a terminal.\n\n"+
+					"You should use `vault unseal` from a terminal for maximum\n"+
+					"security. If this isn't an option, the unseal key can be passed\n"+
+					"in using the first parameter.\n\n"+
 					"Raw error: %s", err))
 			return 1
 		}
