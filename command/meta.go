@@ -67,6 +67,7 @@ func (m *Meta) Client() (*api.Client, error) {
 	if m.flagCACert != "" || m.flagCAPath != "" || m.flagInsecure {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: m.flagInsecure,
+			MinVersion:         tls.VersionTLS12,
 		}
 
 		// TODO: Root CAs
