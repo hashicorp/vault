@@ -31,9 +31,12 @@ const (
 // Meta contains the meta-options and functionality that nearly every
 // Vault command inherits.
 type Meta struct {
-	Address     string // Address to force for API clients
 	ClientToken string
 	Ui          cli.Ui
+
+	// The things below can be set, but aren't common
+	ForceAddress string  // Address to force for API clients
+	ForceConfig  *Config // Force a config, don't load from disk
 
 	// These are set by the command line flags.
 	flagAddress  string
@@ -56,8 +59,8 @@ func (m *Meta) Client() (*api.Client, error) {
 	if m.flagAddress != "" {
 		config.Address = m.flagAddress
 	}
-	if m.Address != "" {
-		config.Address = m.Address
+	if m.ForceAddress != "" {
+		config.Address = m.ForceAddress
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -117,6 +120,9 @@ func (m *Meta) Client() (*api.Client, error) {
 func (m *Meta) Config() (*Config, error) {
 	if m.config != nil {
 		return m.config, nil
+	}
+	if m.ForceConfig != nil {
+		return m.ForceConfig, nil
 	}
 
 	var err error
