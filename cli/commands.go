@@ -18,19 +18,22 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-// Commands is the mapping of all the available Vault commands. CommandsInclude
-// are the commands to include for help.
-var Commands map[string]cli.CommandFactory
-var CommandsInclude []string
-
-func init() {
-	ui := &cli.BasicUi{
-		Writer:      os.Stdout,
-		ErrorWriter: os.Stderr,
+// Commands returns the mapping of CLI commands for Vault. The meta
+// parameter lets you set meta options for all commands.
+func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
+	if metaPtr == nil {
+		metaPtr = new(command.Meta)
 	}
-	meta := command.Meta{Ui: ui}
 
-	Commands = map[string]cli.CommandFactory{
+	meta := *metaPtr
+	if meta.Ui == nil {
+		meta.Ui = &cli.BasicUi{
+			Writer:      os.Stdout,
+			ErrorWriter: os.Stderr,
+		}
+	}
+
+	return map[string]cli.CommandFactory{
 		"init": func() (cli.Command, error) {
 			return &command.InitCommand{
 				Meta: meta,
@@ -203,19 +206,13 @@ func init() {
 				Revision:          GitCommit,
 				Version:           ver,
 				VersionPrerelease: rel,
-				Ui:                ui,
+				Ui:                meta.Ui,
 			}, nil
 		},
-	}
 
-	// Build the commands to include in the help now
-	CommandsInclude = make([]string, 0, len(Commands))
-	for k, _ := range Commands {
-		CommandsInclude = append(CommandsInclude, k)
-	}
-
-	// The commands below are hidden from the help output
-	Commands["token-disk"] = func() (cli.Command, error) {
-		return &tokenDisk.Command{}, nil
+		// The commands below are hidden from the help output
+		"token-disk": func() (cli.Command, error) {
+			return &tokenDisk.Command{}, nil
+		},
 	}
 }

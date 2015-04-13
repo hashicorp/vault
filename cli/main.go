@@ -8,6 +8,10 @@ import (
 )
 
 func Run(args []string) int {
+	return RunCustom(args, Commands(nil))
+}
+
+func RunCustom(args []string, commands map[string]cli.CommandFactory) int {
 	// Get the command line args. We shortcut "--version" and "-v" to
 	// just show the version.
 	for _, arg := range args {
@@ -20,11 +24,22 @@ func Run(args []string) int {
 		}
 	}
 
+	// Build the commands to include in the help now. This is pretty...
+	// tedious, but we don't have a better way at the moment.
+	commandsInclude := make([]string, 0, len(commands))
+	for k, _ := range commands {
+		switch k {
+		case "token-disk":
+		default:
+			commandsInclude = append(commandsInclude, k)
+		}
+	}
+
 	cli := &cli.CLI{
 		Args:     args,
-		Commands: Commands,
+		Commands: commands,
 		HelpFunc: cli.FilteredHelpFunc(
-			CommandsInclude, cli.BasicHelpFunc("vault")),
+			commandsInclude, cli.BasicHelpFunc("vault")),
 	}
 
 	exitCode, err := cli.Run()
