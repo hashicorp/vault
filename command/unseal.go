@@ -33,7 +33,12 @@ func (c *UnsealCommand) Run(args []string) int {
 		return 2
 	}
 
+	args = flags.Args()
+
 	value := c.Key
+	if len(args) > 0 {
+		value = args[0]
+	}
 	if value == "" {
 		fmt.Printf("Key (will be hidden): ")
 		value, err = password.Read(os.Stdin)
@@ -77,7 +82,7 @@ func (c *UnsealCommand) Synopsis() string {
 
 func (c *UnsealCommand) Help() string {
 	helpText := `
-Usage: vault unseal [options]
+Usage: vault unseal [options] [key]
 
   Unseal the vault by entering a portion of the master key. Once all
   portions are entered, the Vault will be unsealed.
@@ -86,6 +91,10 @@ Usage: vault unseal [options]
   operation except unsealing until it is sealed. Secrets cannot be accessed
   in any way until the vault is unsealed. This command allows you to enter
   a portion of the master key to unseal the vault.
+
+  The unseal key can be specified via the command line, but this is
+  not recommended. The key may then live in your terminal history. This
+  only exists to assist in scripting.
 
 General Options:
 
