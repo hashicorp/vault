@@ -60,7 +60,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 	expected := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				Renewable: false,
+				Renewable: true,
 				Lease:     time.Hour,
 			},
 		},

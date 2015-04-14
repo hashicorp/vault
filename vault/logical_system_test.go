@@ -158,7 +158,6 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
 	req.Data["foo"] = "bar"
-	req.Data["lease"] = "1h"
 	req.ClientToken = root
 	resp, err := core.HandleRequest(req)
 	if err != nil {
