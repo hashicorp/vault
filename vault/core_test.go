@@ -987,7 +987,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 func TestCore_Standby(t *testing.T) {
 	// Create the first core and initialize it
 	inm := physical.NewInmemHA()
-	core, err := NewCore(&CoreConfig{Physical: inm})
+	core, err := NewCore(&CoreConfig{Physical: inm, AdvertiseAddr: "foo"})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1036,7 +1036,7 @@ func TestCore_Standby(t *testing.T) {
 	}
 
 	// Create a second core, attached to same in-memory store
-	core2, err := NewCore(&CoreConfig{Physical: inm})
+	core2, err := NewCore(&CoreConfig{Physical: inm, AdvertiseAddr: "bar"})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
