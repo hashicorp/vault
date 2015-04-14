@@ -3,6 +3,7 @@ package physical
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func testNewBackend(t *testing.T) {
@@ -157,5 +158,79 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 	}
 	if keys[0] != "baz" {
 		t.Fatalf("bad: %v", keys)
+	}
+}
+
+func testHABackend(t *testing.T, b HABackend, b2 HABackend) {
+	// Get the lock
+	lock, err := b.LockWith("foo", "bar")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to lock
+	leaderCh, err := lock.Lock(nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh == nil {
+		t.Fatalf("failed to get leader ch")
+	}
+
+	// Check the value
+	held, val, err := lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "bar" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// Second acquisition should fail
+	lock2, err := b2.LockWith("foo", "baz")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Cancel attempt in 50 msec
+	stopCh := make(chan struct{})
+	time.AfterFunc(50*time.Millisecond, func() {
+		close(stopCh)
+	})
+
+	// Attempt to lock
+	leaderCh2, err := lock2.Lock(stopCh)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh2 != nil {
+		t.Fatalf("should not get leader ch")
+	}
+
+	// Release the first lock
+	lock.Unlock()
+
+	// Attempt to lock should work
+	leaderCh2, err = lock2.Lock(nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh2 == nil {
+		t.Fatalf("should get leader ch")
+	}
+
+	// Check the value
+	held, val, err = lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "baz" {
+		t.Fatalf("bad value: %v", err)
 	}
 }

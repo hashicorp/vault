@@ -23,6 +23,29 @@ type Backend interface {
 	List(prefix string) ([]string, error)
 }
 
+// HABackend is an extentions to the standard physical
+// backend to support high-availability. Vault only expects to
+// use mutual exclusion to allow multiple instances to act as a
+// hot standby for a leader that services all requests.
+type HABackend interface {
+	// LockWith is used for mutual exclusion based on the given key.
+	LockWith(key, value string) (Lock, error)
+}
+
+type Lock interface {
+	// Lock is used to acquire the given lock
+	// The stopCh is optional and if closed should interrupt the lock
+	// acquisition attempt. The return struct should be closed when
+	// leadership is lost.
+	Lock(stopCh <-chan struct{}) (<-chan struct{}, error)
+
+	// Unlock is used to release the lock
+	Unlock() error
+
+	// Returns the value of the lock and if it is held
+	Value() (bool, string, error)
+}
+
 // Entry is used to represent data stored by the physical backend
 type Entry struct {
 	Key   string

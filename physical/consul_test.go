@@ -37,4 +37,10 @@ func TestConsulBackend(t *testing.T) {
 
 	testBackend(t, b)
 	testBackend_ListPrefix(t, b)
+
+	ha, ok := b.(HABackend)
+	if !ok {
+		t.Fatalf("consul does not implement HABackend")
+	}
+	testHABackend(t, ha, ha)
 }

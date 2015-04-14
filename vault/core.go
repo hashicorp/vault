@@ -24,12 +24,28 @@ const (
 	// it even with the Vault sealed. This is required so that we know
 	// how many secret parts must be used to reconstruct the master key.
 	coreSealConfigPath = "core/seal-config"
+
+	// coreLockPath is the path used to acquire a coordinating lock
+	// for a highly-available deploy.
+	coreLockPath = "core/lock"
+
+	// coreLeaderPrefix is the prefix used for the UUID that contains
+	// the currently elected leader.
+	coreLeaderPrefix = "core/leader/"
+
+	// lockRetryInterval is the interval we re-attempt to acquire the
+	// HA lock if an error is encountered
+	lockRetryInterval = 10 * time.Second
 )
 
 var (
 	// ErrSealed is returned if an operation is performed on
 	// a sealed barrier. No operation is expected to succeed before unsealing
 	ErrSealed = errors.New("Vault is sealed")
+
+	// ErrStandby is returned if an operation is performed on
+	// a standby Vault. No operation is expected to succeed until active.
+	ErrStandby = errors.New("Vault is in standby mode")
 
 	// ErrAlreadyInit is returned if the core is already
 	// initialized. This prevents a re-initialization.
@@ -42,6 +58,10 @@ var (
 	// ErrInternalError is returned when we don't want to leak
 	// any information about an internal error
 	ErrInternalError = errors.New("internal error")
+
+	// ErrHANotEnabled is returned if the operation only makes sense
+	// in an HA setting
+	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
 )
 
 // SealConfig is used to describe the seal configuration
@@ -96,6 +116,12 @@ func (e *ErrInvalidKey) Error() string {
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
 type Core struct {
+	// HABackend may be available depending on the physical backend
+	ha physical.HABackend
+
+	// AdvertiseAddr is the address we advertise as leader if held
+	advertiseAddr string
+
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
@@ -117,6 +143,10 @@ type Core struct {
 	// stateLock protects mutable state
 	stateLock sync.RWMutex
 	sealed    bool
+
+	standby       bool
+	standbyDoneCh chan struct{}
+	standbyStopCh chan struct{}
 
 	// unlockParts has the keys provided to Unseal until
 	// the threshold number of parts is available.
@@ -167,12 +197,22 @@ type CoreConfig struct {
 	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
 	Logger             *log.Logger
-	DisableCache       bool // Disables the LRU cache on the physical backend
-	CacheSize          int  // Custom cache size of zero for default
+	DisableCache       bool   // Disables the LRU cache on the physical backend
+	CacheSize          int    // Custom cache size of zero for default
+	AdvertiseAddr      string // Set as the leader address for HA
 }
 
 // NewCore isk used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
+	// Check if this backend supports an HA configuraiton
+	var haBackend physical.HABackend
+	if ha, ok := conf.Physical.(physical.HABackend); ok {
+		haBackend = ha
+	}
+	if haBackend != nil && conf.AdvertiseAddr == "" {
+		return nil, fmt.Errorf("missing advertisement address")
+	}
+
 	// Wrap the backend in a cache unless disabled
 	if !conf.DisableCache {
 		_, isCache := conf.Physical.(*physical.Cache)
@@ -196,11 +236,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		physical: conf.Physical,
-		barrier:  barrier,
-		router:   NewRouter(),
-		sealed:   true,
-		logger:   conf.Logger,
+		ha:            haBackend,
+		advertiseAddr: conf.AdvertiseAddr,
+		physical:      conf.Physical,
+		barrier:       barrier,
+		router:        NewRouter(),
+		sealed:        true,
+		standby:       true,
+		logger:        conf.Logger,
 	}
 
 	// Setup the backends
@@ -237,6 +280,9 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	defer c.stateLock.RUnlock()
 	if c.sealed {
 		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
 	}
 
 	if c.router.LoginPath(req.Path) {
@@ -582,6 +628,61 @@ func (c *Core) Sealed() (bool, error) {
 	return c.sealed, nil
 }
 
+// Standby checks if the Vault is in standby mode
+func (c *Core) Standby() (bool, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.standby, nil
+}
+
+// Leader is used to get the current active leader
+func (c *Core) Leader() (bool, string, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	// Check if sealed
+	if c.sealed {
+		return false, "", ErrSealed
+	}
+
+	// Check if HA enabled
+	if c.ha == nil {
+		return false, "", ErrHANotEnabled
+	}
+
+	// Check if we are the leader
+	if !c.standby {
+		return true, c.advertiseAddr, nil
+	}
+
+	// Initialize a lock
+	lock, err := c.ha.LockWith(coreLockPath, "read")
+	if err != nil {
+		return false, "", err
+	}
+
+	// Read the value
+	held, value, err := lock.Value()
+	if err != nil {
+		return false, "", err
+	}
+	if !held {
+		return false, "", nil
+	}
+
+	// Value is the UUID of the leader, fetch the key
+	key := coreLeaderPrefix + value
+	entry, err := c.barrier.Get(key)
+	if err != nil {
+		return false, "", err
+	}
+	if entry == nil {
+		return false, "", nil
+	}
+
+	// Leader address is in the entry
+	return false, string(entry.Value), nil
+}
+
 // SealConfiguration is used to return information
 // about the configuration of the Vault and it's current
 // status.
@@ -695,15 +796,21 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 	c.logger.Printf("[INFO] core: vault is unsealed")
 
-	// Do post-unseal setup
-	c.logger.Printf("[INFO] core: post-unseal setup starting")
-	if err := c.postUnseal(); err != nil {
-		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
-		c.barrier.Seal()
-		c.logger.Printf("[WARN] core: vault is sealed")
-		return false, err
+	// Do post-unseal setup if HA is not enabled
+	if c.ha == nil {
+		c.standby = false
+		if err := c.postUnseal(); err != nil {
+			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+			c.barrier.Seal()
+			c.logger.Printf("[WARN] core: vault is sealed")
+			return false, err
+		}
+	} else {
+		// Go to standby mode, wait until we are active to unseal
+		c.standbyDoneCh = make(chan struct{})
+		c.standbyStopCh = make(chan struct{})
+		go c.runStandby(c.standbyDoneCh, c.standbyStopCh)
 	}
-	c.logger.Printf("[INFO] core: post-unseal setup complete")
 
 	// Success!
 	c.sealed = false
@@ -726,15 +833,24 @@ func (c *Core) Seal(token string) error {
 		return err
 	}
 
+	// Enable that we are sealed to prevent furthur transactions
 	c.sealed = true
 
-	// Do pre-seal teardown
-	c.logger.Printf("[INFO] core: pre-seal teardown starting")
-	if err := c.preSeal(); err != nil {
-		c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
-		return fmt.Errorf("internal error")
+	// Do pre-seal teardown if HA is not enabled
+	if c.ha == nil {
+		if err := c.preSeal(); err != nil {
+			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+			return fmt.Errorf("internal error")
+		}
+	} else {
+		// Signal the standby goroutine to shutdown, wait for completion
+		close(c.standbyStopCh)
+
+		// Release the lock while we wait to avoid deadlocking
+		c.stateLock.Unlock()
+		<-c.standbyDoneCh
+		c.stateLock.Lock()
 	}
-	c.logger.Printf("[INFO] core: pre-seal teardown complete")
 
 	if err := c.barrier.Seal(); err != nil {
 		return err
@@ -749,6 +865,7 @@ func (c *Core) Seal(token string) error {
 // credential stores, etc.
 func (c *Core) postUnseal() error {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+	c.logger.Printf("[INFO] core: post-unseal setup starting")
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
@@ -781,6 +898,7 @@ func (c *Core) postUnseal() error {
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
+	c.logger.Printf("[INFO] core: post-unseal setup complete")
 	return nil
 }
 
@@ -788,6 +906,7 @@ func (c *Core) postUnseal() error {
 // for any state teardown required.
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
+	c.logger.Printf("[INFO] core: pre-seal teardown starting")
 	if c.metricsCh != nil {
 		close(c.metricsCh)
 		c.metricsCh = nil
@@ -813,7 +932,125 @@ func (c *Core) preSeal() error {
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
+	c.logger.Printf("[INFO] core: pre-seal teardown complete")
 	return nil
+}
+
+// runStandby is a long running routine that is used when an HA backend
+// is enabled. It waits until we are leader and switches this Vault to
+// active.
+func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	c.logger.Printf("[INFO] core: entering standby mode")
+	for {
+		// Check for a shutdown
+		select {
+		case <-stopCh:
+			return
+		default:
+		}
+
+		// Create a lock
+		uuid := generateUUID()
+		lock, err := c.ha.LockWith(coreLockPath, uuid)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to create lock: %v", err)
+			return
+		}
+
+		// Attempt the acquisition
+		leaderCh := c.acquireLock(lock, stopCh)
+
+		// Bail if we are being shutdown
+		if leaderCh == nil {
+			return
+		}
+		c.logger.Printf("[INFO] core: acquired lock, enabling active operation")
+
+		// Advertise ourself as leader
+		if err := c.advertiseLeader(uuid); err != nil {
+			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
+			lock.Unlock()
+			continue
+		}
+
+		// Attempt the post-unseal process
+		c.stateLock.Lock()
+		err = c.postUnseal()
+		if err == nil {
+			c.standby = false
+		}
+		c.stateLock.Unlock()
+
+		// Handle a failure to unseal
+		if err != nil {
+			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+			lock.Unlock()
+			continue
+		}
+
+		// Monitor a loss of leadership
+		select {
+		case <-leaderCh:
+			c.logger.Printf("[WARN] core: leadership lost, stopping active operation")
+		case <-stopCh:
+			c.logger.Printf("[WARN] core: stopping active operation")
+		}
+
+		// Clear ourself as leader
+		if err := c.clearLeader(uuid); err != nil {
+			c.logger.Printf("[ERR] core: clearing leader advertisement failed: %v", err)
+		}
+
+		// Attempt the pre-seal process
+		c.stateLock.Lock()
+		c.standby = true
+		err = c.preSeal()
+		c.stateLock.Unlock()
+
+		// Give up leadership
+		lock.Unlock()
+
+		// Check for a failure to prepare to seal
+		if err := c.preSeal(); err != nil {
+			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+			continue
+		}
+	}
+}
+
+// acquireLock blocks until the lock is acquired, returning the leaderCh
+func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan struct{} {
+	for {
+		// Attempt lock acquisition
+		leaderCh, err := lock.Lock(stopCh)
+		if err == nil {
+			return leaderCh
+		}
+
+		// Retry the acquisition
+		c.logger.Printf("[ERR] core: failed to acquire lock: %v", err)
+		select {
+		case <-time.After(lockRetryInterval):
+		case <-stopCh:
+			return nil
+		}
+	}
+}
+
+// advertiseLeader is used to advertise the current node as leader
+func (c *Core) advertiseLeader(uuid string) error {
+	ent := &Entry{
+		Key:   coreLeaderPrefix + uuid,
+		Value: []byte(c.advertiseAddr),
+	}
+	return c.barrier.Put(ent)
+}
+
+// clearLeader is used to clear our leadership entry
+func (c *Core) clearLeader(uuid string) error {
+	key := coreLeaderPrefix + uuid
+	return c.barrier.Delete(key)
 }
 
 // emitMetrics is used to periodically expose metrics while runnig
