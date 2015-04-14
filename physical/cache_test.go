@@ -4,14 +4,14 @@ import "testing"
 
 func TestCache(t *testing.T) {
 	inm := NewInmem()
-	cache := NewPhysicalCache(inm, 0)
+	cache := NewCache(inm, 0)
 	testBackend(t, cache)
 	testBackend_ListPrefix(t, cache)
 }
 
 func TestCache_Purge(t *testing.T) {
 	inm := NewInmem()
-	cache := NewPhysicalCache(inm, 0)
+	cache := NewCache(inm, 0)
 
 	ent := &Entry{
 		Key:   "foo",

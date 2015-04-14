@@ -3,28 +3,27 @@ package physical
 import "github.com/hashicorp/golang-lru"
 
 const (
-	// DefaultCacheSize is used if no cache size is specified
-	// for NewPhysicalCache
+	// DefaultCacheSize is used if no cache size is specified for NewCache
 	DefaultCacheSize = 32 * 1024
 )
 
-// PhysicalCache is used to wrap an underlying physical backend
+// Cache is used to wrap an underlying physical backend
 // and provide an LRU cache layer on top. Most of the reads done by
 // Vault are for policy objects so there is a large read reduction
 // by using a simple write-through cache.
-type PhysicalCache struct {
+type Cache struct {
 	backend Backend
 	lru     *lru.Cache
 }
 
-// NewPhysicalCache returns a physical cache of the given size.
+// NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
-func NewPhysicalCache(b Backend, size int) *PhysicalCache {
+func NewCache(b Backend, size int) *Cache {
 	if size <= 0 {
 		size = DefaultCacheSize
 	}
 	cache, _ := lru.New(size)
-	c := &PhysicalCache{
+	c := &Cache{
 		backend: b,
 		lru:     cache,
 	}
@@ -32,17 +31,17 @@ func NewPhysicalCache(b Backend, size int) *PhysicalCache {
 }
 
 // Purge is used to clear the cache
-func (c *PhysicalCache) Purge() {
+func (c *Cache) Purge() {
 	c.lru.Purge()
 }
 
-func (c *PhysicalCache) Put(entry *Entry) error {
+func (c *Cache) Put(entry *Entry) error {
 	err := c.backend.Put(entry)
 	c.lru.Add(entry.Key, entry)
 	return err
 }
 
-func (c *PhysicalCache) Get(key string) (*Entry, error) {
+func (c *Cache) Get(key string) (*Entry, error) {
 	// Check the LRU first
 	if raw, ok := c.lru.Get(key); ok {
 		if raw == nil {
@@ -63,13 +62,13 @@ func (c *PhysicalCache) Get(key string) (*Entry, error) {
 	return ent, err
 }
 
-func (c *PhysicalCache) Delete(key string) error {
+func (c *Cache) Delete(key string) error {
 	err := c.backend.Delete(key)
 	c.lru.Remove(key)
 	return err
 }
 
-func (c *PhysicalCache) List(prefix string) ([]string, error) {
+func (c *Cache) List(prefix string) ([]string, error) {
 	// Always pass-through as this would be difficult to cache.
 	return c.backend.List(prefix)
 }
