@@ -167,10 +167,22 @@ type CoreConfig struct {
 	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
 	Logger             *log.Logger
+	DisableCache       bool // Disables the LRU cache on the physical backend
+	CacheSize          int  // Custom cache size of zero for default
 }
 
 // NewCore isk used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
+	// Wrap the backend in a cache unless disabled
+	if !conf.DisableCache {
+		_, isCache := conf.Physical.(*physical.Cache)
+		_, isInmem := conf.Physical.(*physical.InmemBackend)
+		if !isCache && !isInmem {
+			cache := physical.NewCache(conf.Physical, conf.CacheSize)
+			conf.Physical = cache
+		}
+	}
+
 	// Construct a new AES-GCM barrier
 	barrier, err := NewAESGCMBarrier(conf.Physical)
 	if err != nil {
@@ -737,6 +749,9 @@ func (c *Core) Seal(token string) error {
 // credential stores, etc.
 func (c *Core) postUnseal() error {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+	if cache, ok := c.physical.(*physical.Cache); ok {
+		cache.Purge()
+	}
 	if err := c.loadMounts(); err != nil {
 		return err
 	}
@@ -794,6 +809,9 @@ func (c *Core) preSeal() error {
 	}
 	if err := c.unloadMounts(); err != nil {
 		return err
+	}
+	if cache, ok := c.physical.(*physical.Cache); ok {
+		cache.Purge()
 	}
 	return nil
 }
