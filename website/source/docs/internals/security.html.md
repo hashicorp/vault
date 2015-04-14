@@ -72,20 +72,20 @@ there is the storage backend, which the server is utilizing to read and write da
 There is no mutual trust between the Vault client and server. Clients use
 [TLS](http://en.wikipedia.org/wiki/Transport_Layer_Security) to verify the identity
 of the server and to establish a secure communication channel. Servers require that
-a client provides a Client Token for every request which is used to identify the client.
+a client provides a client token for every request which is used to identify the client.
 A client that does not provide their token is only permitted to make login requests.
 
 The storage backends used by Vault are also untrusted by design. Vault uses a security
-barrier for all requests made to the backend. The security barrier is automatically encrypts
+barrier for all requests made to the backend. The security barrier automatically encrypts
 all data leaving Vault using the [Advanced Encryption Standard (AES)](http://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
 cipher in the [Galois Counter Mode (GCM)](http://en.wikipedia.org/wiki/Galois/Counter_Mode).
 The nonce is randomly generated for every encrypted object. When data is read from the
 security barrier the GCM authentication tag is verified prior to decryption to detect
 any tampering.
 
-Depending on the backend used, Vault may also communicate with the backend over TLS
+Depending on the backend used, Vault may communicate with the backend over TLS
 to provide an added layer of security. In some cases, such as a file backend this
-may not be applicable. However, because the backend is untrusted, an eavesdropped would
+is not applicable. Because storage backends are untrusted, an eavesdropper would
 only gain access to encrypted data even if communication with the backend was intercepted.
 
 # Internal Threat Overview
@@ -99,8 +99,8 @@ When a client first authenticates with Vault, a credential backend is used to
 verify the identity of the client and to return a list of associated ACL policies.
 This association is configured by operators of Vault ahead of time. For example,
 GitHub users in the "engineering" team may be mapped to the "engineering" and "ops"
-Vault policies. Vault then generates a Client Token which is a randomly generated
-UUID and maps it to the policy list. This Client Token is then returned to the client.
+Vault policies. Vault then generates a client token which is a randomly generated
+UUID and maps it to the policy list. This client token is then returned to the client.
 
 On each request a client provides this token. Vault then uses it to check that the token
 is valid and has not been revoked or expired, and generates an ACL based on the associated
@@ -110,8 +110,8 @@ a level of access granted to a path in Vault. When the policies are merged (if m
 policies are associated with a client), the highest access level permitted is used.
 For example, if the "engineering" policy permits read/write access to the "eng/" path,
 and the "ops" policy permits read access to the "ops/" path, then the user gets the
-union of those. Policy is matched using a longest-prefix match, or the most specific
-policy found.
+union of those. Policy is matched using a longest-prefix match, which is the most
+specific definied policy.
 
 Certain operations are only permitted by "root" users, which is a distinguished
 policy built into Vault. This is similar to the concept of a root user on a Unix system
@@ -124,20 +124,20 @@ root access to Vault.
 Lastly, Vault supports using a [Two-man rule](http://en.wikipedia.org/wiki/Two-man_rule) for
 unsealing using [Shamir's Secret Sharing technique](http://en.wikipedia.org/wiki/Shamir's_Secret_Sharing).
 When Vault is started, it starts in an _sealed_ state. This means that the encryption key
-needed to read and write from the storage backend is not yet provided. The process of unsealing
-requires providing the master key so that the encryption key can be retrieved. The risk of having
-a single master key is that a single malicious actor with access to it can decrypt the entire
+needed to read and write from the storage backend is not yet known. The process of unsealing
+requires providing the master key so that the encryption key can be retrieved. The risk of distributing
+the master key is that a single malicious actor with access to it can decrypt the entire
 Vault. Instead, Shamir's technique allows us to split the master key into multiple shares or parts.
 The number of shares and the threshold needed is configurable, but by default Vault generates
 5 shares, any 3 of which must be provided to reconstruct the master key.
 
 By using a secret sharing technique, we avoid the need to place absolute trust in the holder
-of the master key, and infact avoid storing the master key at all. The master key is only
+of the master key, and avoid storing the master key at all. The master key is only
 retrievable by reconstructing the shares. The shares are not useful for making any requests
 to Vault, and can only be used for unsealing. Once unsealed the standard ACL mechanisms
 are used for all requests.
 
-To make an analogy, a bank will typically put security deposit boxes inside of a vault.
+To make an analogy, a bank puts security deposit boxes inside of a vault.
 Each security deposit box has a key, while the vault door has both a combination and a key.
 The vault is encased in steel and concrete so that the door is the only practical entrance.
 The analogy to Vault, is that the cryptosystem is the steel and concrete protecting the data.
