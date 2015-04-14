@@ -46,6 +46,10 @@ func (c *ReadCommand) Run(args []string) int {
 		return 1
 	}
 
+	return c.output(format, secret)
+}
+
+func (c *ReadCommand) output(format string, secret *api.Secret) int {
 	switch format {
 	case "json":
 		return c.formatJSON(secret)
@@ -54,8 +58,6 @@ func (c *ReadCommand) Run(args []string) int {
 	default:
 		return c.formatTable(secret, true)
 	}
-
-	return 0
 }
 
 func (c *ReadCommand) formatJSON(s *api.Secret) int {

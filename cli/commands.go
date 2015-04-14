@@ -132,6 +132,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"renew": func() (cli.Command, error) {
+			return &command.RenewCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"revoke": func() (cli.Command, error) {
 			return &command.RevokeCommand{
 				Meta: meta,
