@@ -73,53 +73,58 @@ func handleLogical(core *vault.Core) http.Handler {
 			return
 		}
 
-		var httpResp interface{}
-		if resp != nil {
-			if resp.Redirect != "" {
-				// If we have a redirect, redirect! We use a 302 code
-				// because we don't actually know if its permanent.
-				http.Redirect(w, r, resp.Redirect, 302)
-				return
-			}
+		// Build the proper response
+		respondLogical(w, r, resp)
+	})
+}
 
-			logicalResp := &LogicalResponse{Data: resp.Data}
-			if resp.Secret != nil {
-				logicalResp.LeaseID = resp.Secret.LeaseID
-				logicalResp.Renewable = resp.Secret.Renewable
-				logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
-			}
-
-			// If we have authentication information, then set the cookie
-			// and setup the result structure.
-			if resp.Auth != nil {
-				expireDuration := 365 * 24 * time.Hour
-				if logicalResp.LeaseDuration != 0 {
-					expireDuration =
-						time.Duration(logicalResp.LeaseDuration) * time.Second
-				}
-
-				http.SetCookie(w, &http.Cookie{
-					Name:    AuthCookieName,
-					Value:   resp.Auth.ClientToken,
-					Path:    "/",
-					Expires: time.Now().UTC().Add(expireDuration),
-				})
-
-				logicalResp.Auth = &Auth{
-					ClientToken:   resp.Auth.ClientToken,
-					Policies:      resp.Auth.Policies,
-					Metadata:      resp.Auth.Metadata,
-					LeaseDuration: int(resp.Auth.Lease.Seconds()),
-					Renewable:     resp.Auth.Renewable,
-				}
-			}
-
-			httpResp = logicalResp
+func respondLogical(w http.ResponseWriter, r *http.Request, resp *logical.Response) {
+	var httpResp interface{}
+	if resp != nil {
+		if resp.Redirect != "" {
+			// If we have a redirect, redirect! We use a 302 code
+			// because we don't actually know if its permanent.
+			http.Redirect(w, r, resp.Redirect, 302)
+			return
 		}
 
-		// Respond
-		respondOk(w, httpResp)
-	})
+		logicalResp := &LogicalResponse{Data: resp.Data}
+		if resp.Secret != nil {
+			logicalResp.LeaseID = resp.Secret.LeaseID
+			logicalResp.Renewable = resp.Secret.Renewable
+			logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
+		}
+
+		// If we have authentication information, then set the cookie
+		// and setup the result structure.
+		if resp.Auth != nil {
+			expireDuration := 365 * 24 * time.Hour
+			if logicalResp.LeaseDuration != 0 {
+				expireDuration =
+					time.Duration(logicalResp.LeaseDuration) * time.Second
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:    AuthCookieName,
+				Value:   resp.Auth.ClientToken,
+				Path:    "/",
+				Expires: time.Now().UTC().Add(expireDuration),
+			})
+
+			logicalResp.Auth = &Auth{
+				ClientToken:   resp.Auth.ClientToken,
+				Policies:      resp.Auth.Policies,
+				Metadata:      resp.Auth.Metadata,
+				LeaseDuration: int(resp.Auth.Lease.Seconds()),
+				Renewable:     resp.Auth.Renewable,
+			}
+		}
+
+		httpResp = logicalResp
+	}
+
+	// Respond
+	respondOk(w, httpResp)
 }
 
 type LogicalResponse struct {

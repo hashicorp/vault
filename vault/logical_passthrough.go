@@ -93,7 +93,7 @@ func (b *PassthroughBackend) handleRead(
 	if ok {
 		leaseDuration, err := time.ParseDuration(leaseVal)
 		if err == nil {
-			resp.Secret.Renewable = false
+			resp.Secret.Renewable = true
 			resp.Secret.Lease = leaseDuration
 		}
 	}

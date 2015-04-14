@@ -1,12 +1,56 @@
 package http
 
 import (
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func handleSysRenew(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PUT" {
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
+		// Determine the path...
+		prefix := "/v1/sys/renew/"
+		if !strings.HasPrefix(r.URL.Path, prefix) {
+			respondError(w, http.StatusNotFound, nil)
+			return
+		}
+		path := r.URL.Path[len(prefix):]
+		if path == "" {
+			respondError(w, http.StatusNotFound, nil)
+			return
+		}
+
+		// Parse the request if we can
+		var req RenewRequest
+		if err := parseRequest(r, &req); err != nil {
+			if err != io.EOF {
+				respondError(w, http.StatusBadRequest, err)
+				return
+			}
+		}
+
+		resp, ok := request(core, w, requestAuth(r, &logical.Request{
+			Operation: logical.WriteOperation,
+			Path:      "sys/renew/" + path,
+			Data: map[string]interface{}{
+				"increment": req.Increment,
+			},
+		}))
+		if !ok {
+			return
+		}
+
+		respondLogical(w, r, resp)
+	})
+}
 
 func handleSysRevoke(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,4 +114,8 @@ func handleSysRevokePrefix(core *vault.Core) http.Handler {
 
 		respondOk(w, nil)
 	})
+}
+
+type RenewRequest struct {
+	Increment int `json:"increment"`
 }
