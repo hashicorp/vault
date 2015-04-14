@@ -96,10 +96,12 @@ func (c *Core) setupExpiration() error {
 // stopExpiration is used to stop the expiration manager before
 // sealing the Vault.
 func (c *Core) stopExpiration() error {
-	if err := c.expiration.Stop(); err != nil {
-		return err
+	if c.expiration != nil {
+		if err := c.expiration.Stop(); err != nil {
+			return err
+		}
+		c.expiration = nil
 	}
-	c.expiration = nil
 	return nil
 }
 
