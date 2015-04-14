@@ -111,3 +111,17 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 	sort.Strings(out)
 	return out, err
 }
+
+// Lock is used for mutual exclusion based on the given key.
+func (c *ConsulBackend) LockWith(key string) (Lock, error) {
+	// Create the lock
+	opts := &api.LockOptions{
+		Key:         key,
+		SessionName: "Vault Lock",
+	}
+	lock, err := c.client.LockOpts(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create lock: %v", err)
+	}
+	return lock, nil
+}
