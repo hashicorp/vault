@@ -58,6 +58,10 @@ var (
 	// ErrInternalError is returned when we don't want to leak
 	// any information about an internal error
 	ErrInternalError = errors.New("internal error")
+
+	// ErrHANotEnabled is returned if the operation only makes sense
+	// in an HA setting
+	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
 )
 
 // SealConfig is used to describe the seal configuration
@@ -629,6 +633,54 @@ func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	return c.standby, nil
+}
+
+// Leader is used to get the current active leader
+func (c *Core) Leader() (bool, string, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	// Check if sealed
+	if c.sealed {
+		return false, "", ErrSealed
+	}
+
+	// Check if HA enabled
+	if c.ha == nil {
+		return false, "", ErrHANotEnabled
+	}
+
+	// Check if we are the leader
+	if !c.standby {
+		return true, c.advertiseAddr, nil
+	}
+
+	// Initialize a lock
+	lock, err := c.ha.LockWith(coreLockPath, "read")
+	if err != nil {
+		return false, "", err
+	}
+
+	// Read the value
+	held, value, err := lock.Value()
+	if err != nil {
+		return false, "", err
+	}
+	if !held {
+		return false, "", nil
+	}
+
+	// Value is the UUID of the leader, fetch the key
+	key := coreLeaderPrefix + value
+	entry, err := c.barrier.Get(key)
+	if err != nil {
+		return false, "", err
+	}
+	if entry == nil {
+		return false, "", nil
+	}
+
+	// Leader address is in the entry
+	return false, string(entry.Value), nil
 }
 
 // SealConfiguration is used to return information

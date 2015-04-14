@@ -1035,6 +1035,18 @@ func TestCore_Standby(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Check the leader is local
+	isLeader, advertise, err := core.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isLeader {
+		t.Fatalf("should be leader")
+	}
+	if advertise != "foo" {
+		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
 	// Create a second core, attached to same in-memory store
 	core2, err := NewCore(&CoreConfig{Physical: inm, AdvertiseAddr: "bar"})
 	if err != nil {
@@ -1066,6 +1078,18 @@ func TestCore_Standby(t *testing.T) {
 	_, err = core2.HandleRequest(req)
 	if err != ErrStandby {
 		t.Fatalf("err: %v", err)
+	}
+
+	// Check the leader is not local
+	isLeader, advertise, err = core2.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if isLeader {
+		t.Fatalf("should not be leader")
+	}
+	if advertise != "foo" {
+		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
 	// Seal the first core, should step down
@@ -1112,5 +1136,17 @@ func TestCore_Standby(t *testing.T) {
 	// Verify the response
 	if resp.Data["foo"] != "bar" {
 		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Check the leader is local
+	isLeader, advertise, err = core2.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isLeader {
+		t.Fatalf("should be leader")
+	}
+	if advertise != "bar" {
+		t.Fatalf("Bad advertise: %v", advertise)
 	}
 }
