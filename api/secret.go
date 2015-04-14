@@ -7,11 +7,17 @@ import (
 
 // Secret is the structure returned for every secret within Vault.
 type Secret struct {
-	LeaseID       string                 `json:"lease_id"`
-	Renewable     bool                   `json:"renewable"`
-	LeaseDuration int                    `json:"lease_duration"`
-	Data          map[string]interface{} `json:"data"`
-	Auth          *SecretAuth            `json:"auth,omitempty"`
+	LeaseID       string `json:"lease_id"`
+	LeaseDuration int    `json:"lease_duration"`
+	Renewable     bool   `json:"renewable"`
+
+	// Data is the actual contents of the secret. The format of the data
+	// is arbitrary and up to the secret backend.
+	Data map[string]interface{} `json:"data"`
+
+	// Auth, if non-nil, means that there was authentication information
+	// attached to this response.
+	Auth *SecretAuth `json:"auth,omitempty"`
 }
 
 // Auth is the structure containing auth information if we have it.
