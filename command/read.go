@@ -83,8 +83,10 @@ func (c *ReadCommand) formatTable(s *api.Secret, whitespace bool) int {
 	input := make([]string, 0, 5)
 	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
 
-	if s.LeaseID != "" {
+	if s.LeaseID != "" && s.LeaseDuration > 0 {
 		input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
+		input = append(input, fmt.Sprintf(
+			"lease_duration %s %d", config.Delim, s.LeaseDuration))
 	}
 
 	for k, v := range s.Data {
