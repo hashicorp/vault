@@ -1062,6 +1062,12 @@ func TestCore_Standby(t *testing.T) {
 		t.Fatalf("should be standby")
 	}
 
+	// Request should fail in standby mode
+	_, err = core2.HandleRequest(req)
+	if err != ErrStandby {
+		t.Fatalf("err: %v", err)
+	}
+
 	// Seal the first core, should step down
 	err = core.Seal(root)
 	if err != nil {
