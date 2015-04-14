@@ -113,15 +113,50 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 }
 
 // Lock is used for mutual exclusion based on the given key.
-func (c *ConsulBackend) LockWith(key string) (Lock, error) {
+func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	// Create the lock
 	opts := &api.LockOptions{
 		Key:         key,
+		Value:       []byte(value),
 		SessionName: "Vault Lock",
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create lock: %v", err)
 	}
-	return lock, nil
+	cl := &ConsulLock{
+		client: c.client,
+		key:    key,
+		lock:   lock,
+	}
+	return cl, nil
+}
+
+// ConsulLock is used to provide the Lock interface backed by Consul
+type ConsulLock struct {
+	client *api.Client
+	key    string
+	lock   *api.Lock
+}
+
+func (c *ConsulLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	return c.lock.Lock(stopCh)
+}
+
+func (c *ConsulLock) Unlock() error {
+	return c.lock.Unlock()
+}
+
+func (c *ConsulLock) Value() (bool, string, error) {
+	kv := c.client.KV()
+	pair, _, err := kv.Get(c.key, nil)
+	if err != nil {
+		return false, "", err
+	}
+	if pair == nil {
+		return false, "", nil
+	}
+	held := pair.Session != ""
+	value := string(pair.Value)
+	return held, value, nil
 }

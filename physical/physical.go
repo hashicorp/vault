@@ -29,7 +29,7 @@ type Backend interface {
 // hot standby for a leader that services all requests.
 type HABackend interface {
 	// LockWith is used for mutual exclusion based on the given key.
-	LockWith(key string) (Lock, error)
+	LockWith(key, value string) (Lock, error)
 }
 
 type Lock interface {
@@ -41,6 +41,9 @@ type Lock interface {
 
 	// Unlock is used to release the lock
 	Unlock() error
+
+	// Returns the value of the lock and if it is held
+	Value() (bool, string, error)
 }
 
 // Entry is used to represent data stored by the physical backend

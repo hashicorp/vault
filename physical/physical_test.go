@@ -163,7 +163,7 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 
 func testHABackend(t *testing.T, b HABackend, b2 HABackend) {
 	// Get the lock
-	lock, err := b.LockWith("foo")
+	lock, err := b.LockWith("foo", "bar")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -177,8 +177,20 @@ func testHABackend(t *testing.T, b HABackend, b2 HABackend) {
 		t.Fatalf("failed to get leader ch")
 	}
 
+	// Check the value
+	held, val, err := lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "bar" {
+		t.Fatalf("bad value: %v", err)
+	}
+
 	// Second acquisition should fail
-	lock2, err := b2.LockWith("foo")
+	lock2, err := b2.LockWith("foo", "baz")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -208,5 +220,17 @@ func testHABackend(t *testing.T, b HABackend, b2 HABackend) {
 	}
 	if leaderCh2 == nil {
 		t.Fatalf("should get leader ch")
+	}
+
+	// Check the value
+	held, val, err = lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "baz" {
+		t.Fatalf("bad value: %v", err)
 	}
 }

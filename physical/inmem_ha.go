@@ -7,38 +7,36 @@ import (
 
 type InmemHABackend struct {
 	InmemBackend
-	locks map[string]*sync.Mutex
+	locks map[string]string
 	l     sync.Mutex
+	cond  *sync.Cond
 }
 
 // NewInmemHA constructs a new in-memory HA backend. This is only for testing.
 func NewInmemHA() *InmemHABackend {
 	in := &InmemHABackend{
 		InmemBackend: *NewInmem(),
-		locks:        make(map[string]*sync.Mutex),
+		locks:        make(map[string]string),
 	}
+	in.cond = sync.NewCond(&in.l)
 	return in
 }
 
 // LockWith is used for mutual exclusion based on the given key.
-func (i *InmemHABackend) LockWith(key string) (Lock, error) {
-	i.l.Lock()
-	defer i.l.Unlock()
-
-	mutex, ok := i.locks[key]
-	if !ok {
-		mutex = new(sync.Mutex)
-		i.locks[key] = mutex
+func (i *InmemHABackend) LockWith(key, value string) (Lock, error) {
+	l := &InmemLock{
+		in:    i,
+		key:   key,
+		value: value,
 	}
-
-	return &InmemLock{mutex: mutex}, nil
+	return l, nil
 }
 
 // InmemLock is an in-memory Lock implementation for the HABackend
 type InmemLock struct {
-	// mutex is the underlying mutex, may be shared between
-	// instances of InmemLock
-	mutex *sync.Mutex
+	in    *InmemHABackend
+	key   string
+	value string
 
 	held     bool
 	leaderCh chan struct{}
@@ -56,13 +54,26 @@ func (i *InmemLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	didLock := make(chan struct{})
 	releaseCh := make(chan bool, 1)
 	go func() {
-		i.mutex.Lock()
+		// Wait to acquire the lock
+		i.in.l.Lock()
+		_, ok := i.in.locks[i.key]
+		for ok {
+			i.in.cond.Wait()
+			_, ok = i.in.locks[i.key]
+		}
+		i.in.locks[i.key] = i.value
+		i.in.l.Unlock()
+
+		// Signal that lock is held
 		close(didLock)
 
 		// Handle an early abort
 		release := <-releaseCh
 		if release {
-			i.mutex.Unlock()
+			i.in.l.Lock()
+			delete(i.in.locks, i.key)
+			i.in.l.Unlock()
+			i.in.cond.Broadcast()
 		}
 	}()
 
@@ -92,6 +103,17 @@ func (i *InmemLock) Unlock() error {
 	close(i.leaderCh)
 	i.leaderCh = nil
 	i.held = false
-	i.mutex.Unlock()
+
+	i.in.l.Lock()
+	delete(i.in.locks, i.key)
+	i.in.l.Unlock()
+	i.in.cond.Broadcast()
 	return nil
+}
+
+func (i *InmemLock) Value() (bool, string, error) {
+	i.in.l.Lock()
+	val, ok := i.in.locks[i.key]
+	i.in.l.Unlock()
+	return ok, val, nil
 }
