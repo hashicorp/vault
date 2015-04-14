@@ -983,3 +983,128 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		t.Fatalf("bad: %#v", resp.Auth)
 	}
 }
+
+func TestCore_Standby(t *testing.T) {
+	// Create the first core and initialize it
+	inm := physical.NewInmemHA()
+	core, err := NewCore(&CoreConfig{Physical: inm})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	key, root := TestCoreInit(t, core)
+	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err := core.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	// Wait for core to become active
+	start := time.Now()
+	var standby bool
+	for time.Now().Sub(start) < time.Second {
+		standby, err = core.Standby()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !standby {
+			break
+		}
+	}
+	if standby {
+		t.Fatalf("should not be in standby mode")
+	}
+
+	// Put a secret
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/foo",
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+		ClientToken: root,
+	}
+	_, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create a second core, attached to same in-memory store
+	core2, err := NewCore(&CoreConfig{Physical: inm})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err = core2.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	// Core2 should be in standby
+	standby, err = core2.Standby()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !standby {
+		t.Fatalf("should be standby")
+	}
+
+	// Seal the first core, should step down
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Core should be in standby
+	standby, err = core.Standby()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !standby {
+		t.Fatalf("should be standby")
+	}
+
+	// Wait for core2 to become active
+	start = time.Now()
+	for time.Now().Sub(start) < time.Second {
+		standby, err = core2.Standby()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !standby {
+			break
+		}
+	}
+	if standby {
+		t.Fatalf("should not be in standby mode")
+	}
+
+	// Read the secret
+	req = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "secret/foo",
+		ClientToken: root,
+	}
+	resp, err := core2.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the response
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}

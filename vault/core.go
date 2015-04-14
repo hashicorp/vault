@@ -743,7 +743,6 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		}
 	} else {
 		// Go to standby mode, wait until we are active to unseal
-		c.logger.Printf("[INFO] core: HA backend configured, enabling standby")
 		c.standbyDoneCh = make(chan struct{})
 		c.standbyStopCh = make(chan struct{})
 		go c.standby(c.standbyDoneCh, c.standbyStopCh)
@@ -878,6 +877,7 @@ func (c *Core) preSeal() error {
 // active.
 func (c *Core) standby(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
+	c.logger.Printf("[INFO] core: entering standby mode")
 	for {
 		// Check for a shutdown
 		select {
