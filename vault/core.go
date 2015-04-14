@@ -133,7 +133,7 @@ type Core struct {
 	stateLock sync.RWMutex
 	sealed    bool
 
-	active        bool
+	standby       bool
 	standbyDoneCh chan struct{}
 	standbyStopCh chan struct{}
 
@@ -226,7 +226,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		barrier:  barrier,
 		router:   NewRouter(),
 		sealed:   true,
-		active:   false,
+		standby:  true,
 		logger:   conf.Logger,
 	}
 
@@ -265,7 +265,7 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	if c.sealed {
 		return nil, ErrSealed
 	}
-	if !c.active {
+	if c.standby {
 		return nil, ErrStandby
 	}
 
@@ -616,7 +616,7 @@ func (c *Core) Sealed() (bool, error) {
 func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	return !c.active, nil
+	return c.standby, nil
 }
 
 // SealConfiguration is used to return information
@@ -734,7 +734,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
-		c.active = true
+		c.standby = false
 		if err := c.postUnseal(); err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			c.barrier.Seal()
@@ -745,7 +745,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.standbyStopCh = make(chan struct{})
-		go c.standby(c.standbyDoneCh, c.standbyStopCh)
+		go c.runStandby(c.standbyDoneCh, c.standbyStopCh)
 	}
 
 	// Success!
@@ -872,10 +872,10 @@ func (c *Core) preSeal() error {
 	return nil
 }
 
-// Standby is a long running routine that is used when an HA backend
+// runStandby is a long running routine that is used when an HA backend
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
-func (c *Core) standby(doneCh, stopCh chan struct{}) {
+func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	c.logger.Printf("[INFO] core: entering standby mode")
 	for {
@@ -906,7 +906,7 @@ func (c *Core) standby(doneCh, stopCh chan struct{}) {
 		c.stateLock.Lock()
 		err = c.postUnseal()
 		if err == nil {
-			c.active = true
+			c.standby = false
 		}
 		c.stateLock.Unlock()
 
@@ -927,7 +927,7 @@ func (c *Core) standby(doneCh, stopCh chan struct{}) {
 
 		// Attempt the pre-seal process
 		c.stateLock.Lock()
-		c.active = false
+		c.standby = true
 		err = c.preSeal()
 		c.stateLock.Unlock()
 
