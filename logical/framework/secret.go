@@ -22,6 +22,8 @@ type Secret struct {
 	// DefaultDuration and DefaultGracePeriod are the default values for
 	// the duration of the lease for this secret and its grace period. These
 	// can be manually overwritten with the result of Response().
+	//
+	// If these aren't set, Vault core will set a default lease period.
 	DefaultDuration    time.Duration
 	DefaultGracePeriod time.Duration
 
