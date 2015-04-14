@@ -39,6 +39,10 @@ var (
 	// a sealed barrier. No operation is expected to succeed before unsealing
 	ErrSealed = errors.New("Vault is sealed")
 
+	// ErrStandby is returned if an operation is performed on
+	// a standby Vault. No operation is expected to succeed until active.
+	ErrStandby = errors.New("Vault is in standby mode")
+
 	// ErrAlreadyInit is returned if the core is already
 	// initialized. This prevents a re-initialization.
 	ErrAlreadyInit = errors.New("Vault is already initialized")
@@ -260,6 +264,9 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	defer c.stateLock.RUnlock()
 	if c.sealed {
 		return nil, ErrSealed
+	}
+	if !c.active {
+		return nil, ErrStandby
 	}
 
 	if c.router.LoginPath(req.Path) {
@@ -603,6 +610,13 @@ func (c *Core) Sealed() (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	return c.sealed, nil
+}
+
+// Standby checks if the Vault is in standby mode
+func (c *Core) Standby() (bool, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return !c.active, nil
 }
 
 // SealConfiguration is used to return information
