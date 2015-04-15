@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -32,6 +33,11 @@ const (
 	// tokenSubPath is the sub-path used for the token store
 	// view. This is nested under the system view.
 	tokenSubPath = "token/"
+)
+
+var (
+	// displayNameSanitize is used to sanitize a display name given to a token.
+	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -247,8 +253,9 @@ func (ts *TokenStore) SaltID(id string) string {
 // RootToken is used to generate a new token with root privileges and no parent
 func (ts *TokenStore) RootToken() (*TokenEntry, error) {
 	te := &TokenEntry{
-		Policies: []string{"root"},
-		Path:     "auth/token/root",
+		Policies:    []string{"root"},
+		Path:        "auth/token/root",
+		DisplayName: "root",
 	}
 	if err := ts.Create(te); err != nil {
 		return nil, err
@@ -435,11 +442,12 @@ func (ts *TokenStore) handleCreate(
 
 	// Read and parse the fields
 	var data struct {
-		ID       string
-		Policies []string
-		Metadata map[string]string `mapstructure:"meta"`
-		NoParent bool              `mapstructure:"no_parent"`
-		Lease    string
+		ID          string
+		Policies    []string
+		Metadata    map[string]string `mapstructure:"meta"`
+		NoParent    bool              `mapstructure:"no_parent"`
+		Lease       string
+		DisplayName string `mapstructure:"display_name"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -448,9 +456,18 @@ func (ts *TokenStore) handleCreate(
 
 	// Setup the token entry
 	te := TokenEntry{
-		Parent: req.ClientToken,
-		Path:   "auth/token/create",
-		Meta:   data.Metadata,
+		Parent:      req.ClientToken,
+		Path:        "auth/token/create",
+		Meta:        data.Metadata,
+		DisplayName: "token",
+	}
+
+	// Attach the given display name if any
+	if data.DisplayName != "" {
+		full := "token-" + data.DisplayName
+		full = displayNameSanitize.ReplaceAllString(full, "-")
+		full = strings.TrimSuffix(full, "-")
+		te.DisplayName = full
 	}
 
 	// Allow specifying the ID of the token if the client is root
@@ -593,10 +610,11 @@ func (ts *TokenStore) handleLookup(
 	// you could escalade your privileges.
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":       out.ID,
-			"policies": out.Policies,
-			"path":     out.Path,
-			"meta":     out.Meta,
+			"id":           out.ID,
+			"policies":     out.Policies,
+			"path":         out.Path,
+			"meta":         out.Meta,
+			"display_name": out.DisplayName,
 		},
 	}
 	return resp, nil

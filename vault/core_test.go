@@ -971,10 +971,11 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &TokenEntry{
-		ID:       clientToken,
-		Parent:   root,
-		Policies: []string{"foo"},
-		Path:     "auth/token/create",
+		ID:          clientToken,
+		Parent:      root,
+		Policies:    []string{"foo"},
+		Path:        "auth/token/create",
+		DisplayName: "token",
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
