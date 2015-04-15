@@ -2,7 +2,6 @@ package consul
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -31,7 +30,7 @@ func (b *backend) pathTokenRead(
 	policyName := d.Get("name").(string)
 
 	// Generate a random name for the token
-	name := fmt.Sprintf("vault-%d-%d", time.Now().Unix(), rand.Int31n(10000))
+	name := fmt.Sprintf("Vault %s %d", req.DisplayName, time.Now().Unix())
 
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)
