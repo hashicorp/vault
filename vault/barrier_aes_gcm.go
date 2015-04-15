@@ -26,9 +26,10 @@ type barrierInit struct {
 	Key     []byte // Key is the primary encryption key
 }
 
-// AESGCMBarrier is a SecurityBarrier implementation that
-// uses a 128bit AES encryption cipher with the Galois Counter Mode.
-// AES-GCM is high performance, and provides both confidentiality
+// AESGCMBarrier is a SecurityBarrier implementation that uses the AES
+// cipher core and the Galois Counter Mode block mode. It defaults to
+// the golang NONCE default value of 12 and a key size of 256
+// bit. AES-GCM is high performance, and provides both confidentiality
 // and integrity.
 type AESGCMBarrier struct {
 	backend physical.Backend
@@ -70,7 +71,7 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 	// Verify the key size
 	min, max := b.KeyLength()
 	if len(key) < min || len(key) > max {
-		return fmt.Errorf("Key size must be between [%d, %d]", min, max)
+		return fmt.Errorf("Key size must be %d or %d", min, max)
 	}
 
 	// Check if already initialized
