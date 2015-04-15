@@ -34,10 +34,39 @@ contains instructions for setting the PATH on Windows.
 
 After installing Vault, verify the installation worked by opening a new
 terminal session and checking that `vault` is available. By executing
-`vault`, you should see help output similar to that below:
+`vault`, you should see help output similar to the following:
 
 ```
-TODO
+$ vault
+usage: vault [--version] [--help] <command> [<args>]
+
+Available commands are:
+audit-disable    Disable an audit backend
+audit-enable     Enable an audit backend
+audit-list       Lists enabled audit backends in Vault
+auth             Prints information about how to authenticate with Vault
+auth-disable     Disable an auth provider
+auth-enable      Enable a new auth provider
+delete           Delete operation on secrets in Vault
+help             Look up the help for a path
+init             Initialize a new Vault server
+mount            Mount a logical backend
+mounts           Lists mounted backends in Vault
+policies         List the policies on the server
+policy-write     Write a policy to the server
+read             Read data or secrets from Vault
+remount          Remount a secret backend to a new path
+renew            Renew the lease of a secret
+revoke           Revoke a secret.
+seal             Seals the vault server
+seal-status      Outputs status of whether Vault is sealed
+server           Start a Vault server
+token-create     Create a new auth token
+token-revoke     Revoke one or more auth tokens
+unmount          Unmount a secret backend
+unseal           Unseals the vault server
+version          Prints the Vault version
+write            Write secrets or configuration into Vault
 ```
 
 If you get an error that Vault could not be found, then your PATH environment
