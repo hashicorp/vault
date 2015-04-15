@@ -68,8 +68,9 @@ func (b *AESGCMBarrier) Initialized() (bool, error) {
 // and makes use of the given master key.
 func (b *AESGCMBarrier) Initialize(key []byte) error {
 	// Verify the key size
-	if len(key) != aes.BlockSize {
-		return fmt.Errorf("Key size must be %d", aes.BlockSize)
+	min, max := b.KeyLength()
+	if len(key) < min || len(key) > max {
+		return fmt.Errorf("Key size must be between [%d, %d]", min, max)
 	}
 
 	// Check if already initialized
@@ -126,7 +127,7 @@ func (b *AESGCMBarrier) GenerateKey() ([]byte, error) {
 
 // KeyLength is used to sanity check a key
 func (b *AESGCMBarrier) KeyLength() (int, int) {
-	return aes.BlockSize, aes.BlockSize
+	return aes.BlockSize, 2 * aes.BlockSize
 }
 
 // Sealed checks if the barrier has been unlocked yet. The Barrier
