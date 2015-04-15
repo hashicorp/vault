@@ -120,7 +120,8 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 
 // GenerateKey is used to generate a new key
 func (b *AESGCMBarrier) GenerateKey() ([]byte, error) {
-	buf := make([]byte, aes.BlockSize)
+	// Generate a 256bit key
+	buf := make([]byte, 2*aes.BlockSize)
 	_, err := rand.Read(buf)
 	return buf, err
 }
