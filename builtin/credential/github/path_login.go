@@ -90,6 +90,7 @@ func (b *backend) pathLogin(
 				"username": *user.Login,
 				"org":      *org.Login,
 			},
+			DisplayName: *user.Login,
 		},
 	}, nil
 }
