@@ -38,9 +38,15 @@ type Request struct {
 	Connection *Connection
 
 	// ClientToken is provided to the core so that the identity
-	// can be verified and ACLs applied. This value is not passed
-	// through to the logical backends.
+	// can be verified and ACLs applied. This value is passed
+	// through to the logical backends but after being salted and
+	// hashed.
 	ClientToken string
+
+	// DisplayName is provided to the logical backend to help associate
+	// dynamic secrets with the source entity. This is not a sensitive
+	// name, but is useful for operators.
+	DisplayName string
 }
 
 // Get returns a data field and guards for nil Data

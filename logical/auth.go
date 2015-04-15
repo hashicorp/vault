@@ -7,6 +7,14 @@ import "fmt"
 type Auth struct {
 	LeaseOptions
 
+	// DisplayName is a non-security sensitive identifier that is
+	// applicable to this Auth. It is used for logging and prefixing
+	// of dynamic secrets. For example, DisplayName may be "armon" for
+	// the github credential backend. If the client token is used to
+	// generate a SQL credential, the user may be "github-armon-uuid".
+	// This is to help identify the source without using audit tables.
+	DisplayName string
+
 	// Policies is the list of policies that the authenticated user
 	// is associated with.
 	Policies []string
