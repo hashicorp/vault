@@ -310,6 +310,9 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 		return logical.ErrorResponse(err.Error()), errType
 	}
 
+	// Attach the display name
+	req.DisplayName = auth.DisplayName
+
 	// Create an audit trail of the request
 	if err := c.auditBroker.LogRequest(auth, req); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
@@ -402,11 +405,20 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 	if resp != nil && resp.Auth != nil {
 		auth = resp.Auth
 
+		// Determine the source of the login
+		source := c.router.MatchingMount(req.Path)
+		source = strings.TrimPrefix(source, "auth/")
+		source = strings.Replace(source, "/", "-", -1)
+
+		// Prepend the source to the display name
+		auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
+
 		// Generate a token
 		te := TokenEntry{
-			Path:     req.Path,
-			Policies: auth.Policies,
-			Meta:     auth.Metadata,
+			Path:        req.Path,
+			Policies:    auth.Policies,
+			Meta:        auth.Metadata,
+			DisplayName: auth.DisplayName,
 		}
 		if err := c.tokenStore.Create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
@@ -432,6 +444,9 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 				"(request: %#v, response: %#v): %v", req, resp, err)
 			return nil, ErrInternalError
 		}
+
+		// Attach the display name, might be used by audit backends
+		req.DisplayName = auth.DisplayName
 	}
 
 	// Create an audit trail of the response
@@ -487,6 +502,7 @@ func (c *Core) checkToken(
 		ClientToken: token,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
 	}
 	return auth, nil
 }

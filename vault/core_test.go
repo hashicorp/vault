@@ -739,6 +739,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 				Metadata: map[string]string{
 					"user": "armon",
 				},
+				DisplayName: "armon",
 			},
 		},
 	}
@@ -784,6 +785,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		Meta: map[string]string{
 			"user": "armon",
 		},
+		DisplayName: "foo-armon",
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
@@ -969,10 +971,11 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &TokenEntry{
-		ID:       clientToken,
-		Parent:   root,
-		Policies: []string{"foo"},
-		Path:     "auth/token/create",
+		ID:          clientToken,
+		Parent:      root,
+		Policies:    []string{"foo"},
+		Path:        "auth/token/create",
+		DisplayName: "token",
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)

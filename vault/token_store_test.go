@@ -269,6 +269,34 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["display_name"] = "foo_bar.baz!"
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	expected := &TokenEntry{
+		ID:          resp.Auth.ClientToken,
+		Parent:      root,
+		Policies:    []string{"root"},
+		Path:        "auth/token/create",
+		DisplayName: "token-foo-bar-baz",
+	}
+	out, err := ts.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
@@ -281,10 +309,11 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	}
 
 	expected := &TokenEntry{
-		ID:       resp.Auth.ClientToken,
-		Parent:   root,
-		Policies: []string{"root"},
-		Path:     "auth/token/create",
+		ID:          resp.Auth.ClientToken,
+		Parent:      root,
+		Policies:    []string{"root"},
+		Path:        "auth/token/create",
+		DisplayName: "token",
 	}
 	out, err := ts.Lookup(resp.Auth.ClientToken)
 	if err != nil {
@@ -560,10 +589,11 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":       root,
-		"policies": []string{"root"},
-		"path":     "auth/token/root",
-		"meta":     map[string]string(nil),
+		"id":           root,
+		"policies":     []string{"root"},
+		"path":         "auth/token/root",
+		"meta":         map[string]string(nil),
+		"display_name": "root",
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
@@ -623,10 +653,11 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":       root,
-		"policies": []string{"root"},
-		"path":     "auth/token/root",
-		"meta":     map[string]string(nil),
+		"id":           root,
+		"policies":     []string{"root"},
+		"path":         "auth/token/root",
+		"meta":         map[string]string(nil),
+		"display_name": "root",
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
