@@ -739,6 +739,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 				Metadata: map[string]string{
 					"user": "armon",
 				},
+				DisplayName: "armon",
 			},
 		},
 	}
@@ -784,6 +785,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		Meta: map[string]string{
 			"user": "armon",
 		},
+		DisplayName: "foo-armon",
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)

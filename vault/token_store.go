@@ -222,11 +222,12 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	ID       string            // ID of this entry, generally a random UUID
-	Parent   string            // Parent token, used for revocation trees
-	Policies []string          // Which named policies should be used
-	Path     string            // Used for audit trails, this is something like "auth/user/login"
-	Meta     map[string]string // Used for auditing. This could include things like "source", "user", "ip"
+	ID          string            // ID of this entry, generally a random UUID
+	Parent      string            // Parent token, used for revocation trees
+	Policies    []string          // Which named policies should be used
+	Path        string            // Used for audit trails, this is something like "auth/user/login"
+	Meta        map[string]string // Used for auditing. This could include things like "source", "user", "ip"
+	DisplayName string            // Used for operators to be able to associate with the source
 }
 
 // SetExpirationManager is used to provide the token store with
