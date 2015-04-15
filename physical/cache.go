@@ -1,6 +1,10 @@
 package physical
 
-import "github.com/hashicorp/golang-lru"
+import (
+	"strings"
+
+	"github.com/hashicorp/golang-lru"
+)
 
 const (
 	// DefaultCacheSize is used if no cache size is specified for NewCache
@@ -57,8 +61,14 @@ func (c *Cache) Get(key string) (*Entry, error) {
 		return nil, err
 	}
 
-	// Cache the result
-	c.lru.Add(key, ent)
+	// Cache the result. We do NOT cache negative results
+	// for keys in the 'core/' prefix otherwise we risk certain
+	// race conditions upstream. The primary issue is with the HA mode,
+	// we could potentially negatively cache the leader entry and cause
+	// leader discovery to fail.
+	if ent != nil || !strings.HasPrefix(key, "core/") {
+		c.lru.Add(key, ent)
+	}
 	return ent, err
 }
 
