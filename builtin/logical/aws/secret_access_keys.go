@@ -34,7 +34,7 @@ func secretAccessKeys() *framework.Secret {
 
 func (b *backend) secretAccessKeysCreate(
 	s logical.Storage,
-	policyName string, policy string) (*logical.Response, error) {
+	displayName, policyName string, policy string) (*logical.Response, error) {
 	client, err := clientIAM(s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -42,7 +42,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Generate a random username. We don't put the policy names in the
 	// username because the AWS console makes it pretty easy to see that.
-	username := fmt.Sprintf("vault-%d-%d", time.Now().Unix(), rand.Int31n(10000))
+	username := fmt.Sprintf("vault-%s-%d-%d", displayName, time.Now().Unix(), rand.Int31n(10000))
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put

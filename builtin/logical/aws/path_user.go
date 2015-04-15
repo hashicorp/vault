@@ -45,7 +45,7 @@ func (b *backend) pathUserRead(
 
 	// Use the helper to create the secret
 	return b.secretAccessKeysCreate(
-		req.Storage, policyName, string(policy.Value))
+		req.Storage, req.DisplayName, policyName, string(policy.Value))
 }
 
 func pathUserRollback(req *logical.Request, _kind string, data interface{}) error {
