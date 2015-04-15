@@ -14,8 +14,10 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	Listeners []*Listener
-	Backend   *Backend
+	Listeners    []*Listener
+	Backend      *Backend
+	StatsiteAddr string // TODO: Parse this
+	StatsdAddr   string // TODO: Parse this
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -69,6 +71,13 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.Backend = c.Backend
 	if c2.Backend != nil {
 		result.Backend = c2.Backend
+	}
+
+	if c2.StatsiteAddr != "" {
+		result.StatsiteAddr = c2.StatsiteAddr
+	}
+	if c2.StatsdAddr != "" {
+		result.StatsdAddr = c2.StatsdAddr
 	}
 
 	return result

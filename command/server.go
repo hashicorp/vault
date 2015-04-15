@@ -9,7 +9,9 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -132,6 +134,12 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevel
 	infoKeys = append(infoKeys, "log level", "backend")
 
+	// Initialize the telemetry
+	if err := c.setupTelementry(config); err != nil {
+		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
+		return 1
+	}
+
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
@@ -220,6 +228,46 @@ func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
 	}
 
 	return init, nil
+}
+
+// setupTelementry is used ot setup the telemetry sub-systems
+func (c *ServerCommand) setupTelementry(config *server.Config) error {
+	/* Setup telemetry
+	Aggregate on 10 second intervals for 1 minute. Expose the
+	metrics over stderr when there is a SIGUSR1 received.
+	*/
+	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
+	metrics.DefaultInmemSignal(inm)
+	metricsConf := metrics.DefaultConfig("vault")
+
+	// Configure the statsite sink
+	var fanout metrics.FanoutSink
+	if config.StatsiteAddr != "" {
+		sink, err := metrics.NewStatsiteSink(config.StatsiteAddr)
+		if err != nil {
+			return err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	// Configure the statsd sink
+	if config.StatsdAddr != "" {
+		sink, err := metrics.NewStatsdSink(config.StatsdAddr)
+		if err != nil {
+			return err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	// Initialize the global sink
+	if len(fanout) > 0 {
+		fanout = append(fanout, inm)
+		metrics.NewGlobal(metricsConf, fanout)
+	} else {
+		metricsConf.EnableHostname = false
+		metrics.NewGlobal(metricsConf, inm)
+	}
+	return nil
 }
 
 func (c *ServerCommand) Synopsis() string {
