@@ -407,7 +407,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 
 		// Determine the source of the login
 		source := c.router.MatchingMount(req.Path)
-		source = strings.TrimPrefix(source, "auth/")
+		source = strings.TrimPrefix(source, credentialRoutePrefix)
 		source = strings.Replace(source, "/", "-", -1)
 
 		// Prepend the source to the display name
