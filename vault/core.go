@@ -477,7 +477,13 @@ func (c *Core) checkToken(
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, fmt.Errorf("invalid client token")
+		return nil, logical.ErrPermissionDenied
+	}
+
+	// Attempt to use the token
+	if err := c.tokenStore.UseToken(te); err != nil {
+		c.logger.Printf("[ERR] core: failed to use token: %v", err)
+		return nil, ErrInternalError
 	}
 
 	// Construct the corresponding ACL object
