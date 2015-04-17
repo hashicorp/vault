@@ -311,6 +311,43 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 	return nil
 }
 
+// UseToken is used to manage restricted use tokens and decrement
+// their available uses.
+func (ts *TokenStore) UseToken(te *TokenEntry) error {
+	// If the token is not restricted, there is nothing to do
+	if te.NumUses == 0 {
+		return nil
+	}
+
+	// Decrement the count
+	te.NumUses -= 1
+
+	// Revoke the token if there are no remaining uses.
+	// XXX: There is a race condition here with parallel
+	// requests using the same token. This would require
+	// some global coordination to avoid, as we must ensure
+	// no requests using the same restricted token are handled
+	// in parallel.
+	if te.NumUses == 0 {
+		return ts.Revoke(te.ID)
+	}
+
+	// Marshal the entry
+	enc, err := json.Marshal(te)
+	if err != nil {
+		return fmt.Errorf("failed to encode entry: %v", err)
+	}
+
+	// Write under the primary ID
+	saltedId := ts.SaltID(te.ID)
+	path := lookupPrefix + saltedId
+	le := &logical.StorageEntry{Key: path, Value: enc}
+	if err := ts.view.Put(le); err != nil {
+		return fmt.Errorf("failed to persist entry: %v", err)
+	}
+	return nil
+}
+
 // Lookup is used to find a token given its ID
 func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())

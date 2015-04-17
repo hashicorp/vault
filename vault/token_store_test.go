@@ -122,6 +122,72 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 }
 
+func TestTokenStore_UseToken(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	// Lookup the root token
+	ent, err := ts.Lookup(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Root is an unlimited use token, should be a no-op
+	err = ts.UseToken(ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lookup the root token again
+	ent2, err := ts.Lookup(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(ent, ent2) {
+		t.Fatalf("bad: %#v %#v", ent, ent2)
+	}
+
+	// Create a retstricted token
+	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
+	if err := ts.Create(ent); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Use the token
+	err = ts.UseToken(ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lookup the token
+	ent2, err = ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should be reduced
+	if ent2.NumUses != 1 {
+		t.Fatalf("bad: %#v", ent2)
+	}
+
+	// Use the token
+	err = ts.UseToken(ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lookup the token
+	ent2, err = ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should be revoked
+	if ent2 != nil {
+		t.Fatalf("bad: %#v", ent2)
+	}
+}
+
 func TestTokenStore_Revoke(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
