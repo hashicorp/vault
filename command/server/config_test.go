@@ -27,6 +27,9 @@ func TestLoadConfigFile(t *testing.T) {
 				"foo": "bar",
 			},
 		},
+
+		StatsiteAddr: "foo",
+		StatsdAddr:   "bar",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)

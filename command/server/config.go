@@ -14,10 +14,10 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	Listeners    []*Listener
-	Backend      *Backend
-	StatsiteAddr string // TODO: Parse this
-	StatsdAddr   string // TODO: Parse this
+	Listeners    []*Listener `hcl:"-"`
+	Backend      *Backend    `hcl:"-"`
+	StatsiteAddr string      `hcl:"statsite_addr"`
+	StatsdAddr   string      `hcl:"statsd_addr"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -114,6 +114,10 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	// Start building the result
 	var result Config
+	if err := hcl.DecodeObject(&result, obj); err != nil {
+		return nil, err
+	}
+
 	if objs := obj.Get("listener", false); objs != nil {
 		result.Listeners, err = loadListeners(objs)
 		if err != nil {
