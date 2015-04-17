@@ -15,6 +15,14 @@ import (
 )
 
 const (
+	// keyEpoch is the hard coded key epoch. Eventually, when
+	// a key ring is supported for online key rotation, the epoch
+	// will be incremented and represents the encryption key to use.
+	keyEpoch = 1
+
+	// epochSize is the number of bytes used for the key epoch.
+	epochSize = 4
+
 	// aesgcmVersionByte is prefixed to a message to allow for
 	// future versioning of barrier implementations.
 	aesgcmVersionByte = 0x1
@@ -300,17 +308,20 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 
 // encrypt is used to encrypt a value
 func (b *AESGCMBarrier) encrypt(gcm cipher.AEAD, plain []byte) []byte {
-	// Allocate the output buffer with room for version byte,
+	// Allocate the output buffer with room for epoch, version byte,
 	// nonce, GCM tag and the plaintext
-	capacity := 1 + gcm.NonceSize() + gcm.Overhead() + len(plain)
-	size := 1 + gcm.NonceSize()
+	capacity := epochSize + 1 + gcm.NonceSize() + gcm.Overhead() + len(plain)
+	size := epochSize + 1 + gcm.NonceSize()
 	out := make([]byte, size, capacity)
 
+	// Set the epoch to 1
+	out[3] = keyEpoch
+
 	// Set the version byte
-	out[0] = aesgcmVersionByte
+	out[4] = aesgcmVersionByte
 
 	// Generate a random nonce
-	nonce := out[1 : 1+gcm.NonceSize()]
+	nonce := out[5 : 5+gcm.NonceSize()]
 	rand.Read(nonce)
 
 	// Seal the output
@@ -320,14 +331,19 @@ func (b *AESGCMBarrier) encrypt(gcm cipher.AEAD, plain []byte) []byte {
 
 // decrypt is used to decrypt a value
 func (b *AESGCMBarrier) decrypt(gcm cipher.AEAD, cipher []byte) ([]byte, error) {
+	// Verify the epoch
+	if cipher[0] != 0 || cipher[1] != 0 || cipher[2] != 0 || cipher[3] != keyEpoch {
+		return nil, fmt.Errorf("epoch mis-match")
+	}
+
 	// Verify the version byte
-	if cipher[0] != aesgcmVersionByte {
+	if cipher[4] != aesgcmVersionByte {
 		return nil, fmt.Errorf("version bytes mis-match")
 	}
 
 	// Capture the parts
-	nonce := cipher[1 : 1+gcm.NonceSize()]
-	raw := cipher[1+gcm.NonceSize():]
+	nonce := cipher[5 : 5+gcm.NonceSize()]
+	raw := cipher[5+gcm.NonceSize():]
 	out := make([]byte, 0, len(raw)-gcm.NonceSize())
 
 	// Attempt to open
