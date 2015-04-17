@@ -1,0 +1,56 @@
+package framework
+
+import (
+	"testing"
+
+	"github.com/hashicorp/vault/logical"
+)
+
+func TestPathStruct(t *testing.T) {
+	p := &PathStruct{
+		Name: "foo",
+		Path: "bar",
+		Schema: map[string]*FieldSchema{
+			"value": &FieldSchema{Type: TypeString},
+		},
+		Read: true,
+	}
+
+	storage := new(logical.InmemStorage)
+	var b logical.Backend = &Backend{Paths: p.Paths()}
+
+	// Write via HTTP
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "bar",
+		Data: map[string]interface{}{
+			"value": "baz",
+		},
+		Storage: storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+
+	// Read via HTTP
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "bar",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if resp.Data["value"] != "baz" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read via API
+	v, err := p.Get(storage)
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if v["value"] != "baz" {
+		t.Fatalf("bad: %#v", v)
+	}
+}
