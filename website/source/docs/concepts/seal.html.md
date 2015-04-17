@@ -57,9 +57,9 @@ Once a Vault is unsealed, it remains unsealed until one of two things happens:
 -> **Note:** Unsealing makes the process of automating a Vault install
 difficult. Automated tools can easily install, configure, and start Vault,
 but unsealing it is a very manual process. We have plans in the future to
-address this, but for now it is a design decision: you want the unsealing
-shards to be in the hands of operators, and you want each unseal to be
-a careful event. For HA, please use multiple Vault servers.
+make it easier. For the time being, the best method is to manually unseal
+multiple Vault servers in [HA mode](/docs/concepts/ha.html). Use a tool such
+as Consul to make sure you only query Vault servers that are unsealed.
 
 ## Sealing
 

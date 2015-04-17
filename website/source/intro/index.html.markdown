@@ -50,6 +50,11 @@ The key features of Vault are:
   creating these dynamic secrets, Vault will also automatically revoke them
   after the lease is up.
 
+* **Data Encryption**: Vault can encrypt and decrypt data without storing
+  it. This allows security teams to define encryption parameters and
+  developers to store encrypted data in a location such as SQL without
+  having to design their own encryption methods.
+
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
   with it. At the end of the lease, Vault will automatically revoke that
   secret. Clients are able to renew leases via built-in renew APIs.

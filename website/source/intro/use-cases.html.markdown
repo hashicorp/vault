@@ -41,3 +41,15 @@ creation of the keys are completely logged.
 
 This is an improvement over using something like Amazon IAM but still
 effectively hardcoding limited-access access tokens in various places.
+
+#### Data Encryption
+
+In addition to being able to store secrets, Vault can be used to
+encrypt/decrypt data that is stored elsewhere. The primary use of this is
+to allow applications to encrypt their data while still storing it in the
+primary data store.
+
+The benefit of this is that developers do not need to worry about how to
+properly encrypt data. The responsibility of encryption is on Vault
+and the security team managing it, and developers just encrypt/decrypt
+data as needed.
