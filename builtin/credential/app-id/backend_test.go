@@ -19,6 +19,19 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_cidr(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepMapAppIdDisplayName(t),
+			testAccStepMapUserIdCidr(t, "192.168.1.0/16"),
+			testAccLoginCidr(t, "192.168.1.5", false),
+			testAccLoginCidr(t, "10.0.1.5", true),
+			testAccLoginCidr(t, "", true),
+		},
+	})
+}
+
 func TestBackend_displayName(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: Backend(),
@@ -62,6 +75,17 @@ func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	}
 }
 
+func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "map/user-id/42",
+		Data: map[string]interface{}{
+			"value":      "foo",
+			"cidr_block": cidr,
+		},
+	}
+}
+
 func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -76,6 +100,27 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 			logicaltest.TestCheckAuth([]string{"bar", "foo"}),
 			logicaltest.TestCheckAuthDisplayName(display),
 		),
+	}
+}
+
+func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
+	check := logicaltest.TestCheckError()
+	if !err {
+		check = logicaltest.TestCheckAuth([]string{"bar", "foo"})
+	}
+
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "login",
+		Data: map[string]interface{}{
+			"app_id":  "foo",
+			"user_id": "42",
+		},
+		ErrorOk:         err,
+		Unauthenticated: true,
+		RemoteAddr:      ip,
+
+		Check: check,
 	}
 }
 

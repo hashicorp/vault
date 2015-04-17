@@ -31,6 +31,17 @@ func Backend() *framework.Backend {
 
 	b.MapUserId = &framework.PathMap{
 		Name: "user-id",
+		Schema: map[string]*framework.FieldSchema{
+			"cidr_block": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "If not blank, restricts auth by this CIDR block",
+			},
+
+			"value": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Policies for the app ID.",
+			},
+		},
 	}
 
 	b.Backend = &framework.Backend{

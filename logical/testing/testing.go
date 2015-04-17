@@ -60,6 +60,9 @@ type TestStep struct {
 
 	// Unauthenticated, if true, will make the request unauthenticated.
 	Unauthenticated bool
+
+	// RemoteAddr, if set, will set the remote addr on the request.
+	RemoteAddr string
 }
 
 // TestCheckFunc is the callback used for Check in TestStep.
@@ -163,6 +166,9 @@ func Test(t TestT, c TestCase) {
 		}
 		if !s.Unauthenticated {
 			req.ClientToken = client.Token()
+		}
+		if s.RemoteAddr != "" {
+			req.Connection = &logical.Connection{RemoteAddr: s.RemoteAddr}
 		}
 
 		// Make the request

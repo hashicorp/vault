@@ -2,6 +2,7 @@ package appId
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -38,6 +39,22 @@ func (b *backend) pathLogin(
 	appsMap, err := b.MapUserId.Get(req.Storage, userId)
 	if err != nil {
 		return nil, err
+	}
+
+	// If there is a CIDR block restriction, check that
+	if raw, ok := appsMap["cidr_block"]; ok {
+		_, cidr, err := net.ParseCIDR(raw.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid restriction cidr: %s", err)
+		}
+
+		var addr string
+		if req.Connection != nil {
+			addr = req.Connection.RemoteAddr
+		}
+		if addr == "" || !cidr.Contains(net.ParseIP(addr)) {
+			return logical.ErrorResponse("unauthorized source address"), nil
+		}
 	}
 
 	appsRaw, ok := appsMap["value"]
