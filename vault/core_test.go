@@ -490,10 +490,10 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 		ClientToken: "foobarbaz",
 	}
 	resp, err := c.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
+	if err != logical.ErrPermissionDenied {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "invalid client token" {
+	if resp.Data["error"] != "permission denied" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -984,6 +984,39 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	// Check that we have a lease with default duration
 	if resp.Auth.Lease != defaultLeaseDuration {
 		t.Fatalf("bad: %#v", resp.Auth)
+	}
+}
+
+func TestCore_LimitedUseToken(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Create a new credential
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "1"
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Put a secret
+	req = &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/foo",
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+		ClientToken: resp.Auth.ClientToken,
+	}
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Second operation should fail
+	_, err = c.HandleRequest(req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatalf("err: %v", err)
 	}
 }
 

@@ -234,6 +234,7 @@ type TokenEntry struct {
 	Path        string            // Used for audit trails, this is something like "auth/user/login"
 	Meta        map[string]string // Used for auditing. This could include things like "source", "user", "ip"
 	DisplayName string            // Used for operators to be able to associate with the source
+	NumUses     int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -302,6 +303,43 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 	}
 
 	// Write the primary ID
+	path := lookupPrefix + saltedId
+	le := &logical.StorageEntry{Key: path, Value: enc}
+	if err := ts.view.Put(le); err != nil {
+		return fmt.Errorf("failed to persist entry: %v", err)
+	}
+	return nil
+}
+
+// UseToken is used to manage restricted use tokens and decrement
+// their available uses.
+func (ts *TokenStore) UseToken(te *TokenEntry) error {
+	// If the token is not restricted, there is nothing to do
+	if te.NumUses == 0 {
+		return nil
+	}
+
+	// Decrement the count
+	te.NumUses -= 1
+
+	// Revoke the token if there are no remaining uses.
+	// XXX: There is a race condition here with parallel
+	// requests using the same token. This would require
+	// some global coordination to avoid, as we must ensure
+	// no requests using the same restricted token are handled
+	// in parallel.
+	if te.NumUses == 0 {
+		return ts.Revoke(te.ID)
+	}
+
+	// Marshal the entry
+	enc, err := json.Marshal(te)
+	if err != nil {
+		return fmt.Errorf("failed to encode entry: %v", err)
+	}
+
+	// Write under the primary ID
+	saltedId := ts.SaltID(te.ID)
 	path := lookupPrefix + saltedId
 	le := &logical.StorageEntry{Key: path, Value: enc}
 	if err := ts.view.Put(le); err != nil {
@@ -437,6 +475,13 @@ func (ts *TokenStore) handleCreate(
 		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
 	}
 
+	// A token with a restricted number of uses cannot create a new token
+	// otherwise it could escape the restriction count.
+	if parent.NumUses > 0 {
+		return logical.ErrorResponse("restricted use token cannot generate child tokens"),
+			logical.ErrInvalidRequest
+	}
+
 	// Check if the parent policy is root
 	isRoot := strListContains(parent.Policies, "root")
 
@@ -448,10 +493,17 @@ func (ts *TokenStore) handleCreate(
 		NoParent    bool              `mapstructure:"no_parent"`
 		Lease       string
 		DisplayName string `mapstructure:"display_name"`
+		NumUses     int    `mapstructure:"num_uses"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error decoding request: %s", err)), logical.ErrInvalidRequest
+	}
+
+	// Verify the number of uses is positive
+	if data.NumUses < 0 {
+		return logical.ErrorResponse("number of uses cannot be negative"),
+			logical.ErrInvalidRequest
 	}
 
 	// Setup the token entry
@@ -460,6 +512,7 @@ func (ts *TokenStore) handleCreate(
 		Path:        "auth/token/create",
 		Meta:        data.Metadata,
 		DisplayName: "token",
+		NumUses:     data.NumUses,
 	}
 
 	// Attach the given display name if any
@@ -615,6 +668,7 @@ func (ts *TokenStore) handleLookup(
 			"path":         out.Path,
 			"meta":         out.Meta,
 			"display_name": out.DisplayName,
+			"num_uses":     out.NumUses,
 		},
 	}
 	return resp, nil

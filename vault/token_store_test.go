@@ -122,6 +122,72 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 }
 
+func TestTokenStore_UseToken(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	// Lookup the root token
+	ent, err := ts.Lookup(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Root is an unlimited use token, should be a no-op
+	err = ts.UseToken(ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lookup the root token again
+	ent2, err := ts.Lookup(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(ent, ent2) {
+		t.Fatalf("bad: %#v %#v", ent, ent2)
+	}
+
+	// Create a retstricted token
+	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
+	if err := ts.Create(ent); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Use the token
+	err = ts.UseToken(ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lookup the token
+	ent2, err = ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should be reduced
+	if ent2.NumUses != 1 {
+		t.Fatalf("bad: %#v", ent2)
+	}
+
+	// Use the token
+	err = ts.UseToken(ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lookup the token
+	ent2, err = ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should be revoked
+	if ent2 != nil {
+		t.Fatalf("bad: %#v", ent2)
+	}
+}
+
 func TestTokenStore_Revoke(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
@@ -294,6 +360,68 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: %#v", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "1"
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	expected := &TokenEntry{
+		ID:          resp.Auth.ClientToken,
+		Parent:      root,
+		Policies:    []string{"root"},
+		Path:        "auth/token/create",
+		DisplayName: "token",
+		NumUses:     1,
+	}
+	out, err := ts.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "-1"
+
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "1"
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	// We should NOT be able to use the restricted token to create a new token
+	req.ClientToken = resp.Auth.ClientToken
+	_, err = ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
 	}
 }
 
@@ -594,6 +722,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
 		"display_name": "root",
+		"num_uses":     0,
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
@@ -658,6 +787,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
 		"display_name": "root",
+		"num_uses":     0,
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
