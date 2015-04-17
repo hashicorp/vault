@@ -8,11 +8,12 @@ import (
 )
 
 func TestPolicyMap(t *testing.T) {
-	p := &PolicyMap{PathMap: &PathMap{Name: "foo"}}
+	p := &PolicyMap{}
+	p.PathMap.Name = "foo"
 	s := new(logical.InmemStorage)
 
-	p.Put(s, "foo", "bar")
-	p.Put(s, "bar", "foo,baz ")
+	p.Put(s, "foo", map[string]interface{}{"value": "bar"})
+	p.Put(s, "bar", map[string]interface{}{"value": "foo,baz "})
 
 	// Read via API
 	actual, err := p.Policies(s, "foo", "bar")

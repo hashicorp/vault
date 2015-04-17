@@ -11,12 +11,18 @@ import (
 // be lists of policies. This assists in querying and loading policies
 // from the PathMap.
 type PolicyMap struct {
-	*PathMap
+	PathMap
 
 	DefaultKey string
+	PolicyKey  string
 }
 
 func (p *PolicyMap) Policies(s logical.Storage, names ...string) ([]string, error) {
+	policyKey := "value"
+	if p.PolicyKey != "" {
+		policyKey = p.PolicyKey
+	}
+
 	if p.DefaultKey != "" {
 		newNames := make([]string, len(names)+1)
 		newNames[0] = p.DefaultKey
@@ -31,7 +37,17 @@ func (p *PolicyMap) Policies(s logical.Storage, names ...string) ([]string, erro
 			return nil, err
 		}
 
-		for _, p := range strings.Split(v, ",") {
+		valuesRaw, ok := v[policyKey]
+		if !ok {
+			continue
+		}
+
+		values, ok := valuesRaw.(string)
+		if !ok {
+			continue
+		}
+
+		for _, p := range strings.Split(values, ",") {
 			if p = strings.TrimSpace(p); p != "" {
 				set[p] = struct{}{}
 			}

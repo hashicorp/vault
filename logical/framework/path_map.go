@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -13,35 +14,65 @@ import (
 // The primary use case for this is for credential providers to do their
 // mapping to policies.
 type PathMap struct {
-	Name string
+	Prefix string
+	Name   string
+	Schema map[string]*FieldSchema
+
+	once sync.Once
+}
+
+func (p *PathMap) init() {
+	if p.Prefix == "" {
+		p.Prefix = "map"
+	}
+
+	if p.Schema == nil {
+		p.Schema = map[string]*FieldSchema{
+			"value": &FieldSchema{
+				Type:        TypeString,
+				Description: fmt.Sprintf("Value for %s mapping", p.Name),
+			},
+		}
+	}
+}
+
+// pathStruct returns the pathStruct for this mapping
+func (p *PathMap) pathStruct(k string) *PathStruct {
+	p.once.Do(p.init)
+
+	return &PathStruct{
+		Name:   fmt.Sprintf("map/%s/%s", p.Name, k),
+		Schema: p.Schema,
+	}
 }
 
 // Get reads a value out of the mapping
-func (p *PathMap) Get(s logical.Storage, k string) (string, error) {
-	entry, err := s.Get(fmt.Sprintf("map/%s/%s", p.Name, k))
-	if err != nil {
-		return "", err
-	}
-	if entry == nil {
-		return "", nil
-	}
-
-	return string(entry.Value), nil
+func (p *PathMap) Get(s logical.Storage, k string) (map[string]interface{}, error) {
+	return p.pathStruct(k).Get(s)
 }
 
 // Put writes a value into the mapping
-func (p *PathMap) Put(s logical.Storage, k string, v string) error {
-	return s.Put(&logical.StorageEntry{
-		Key:   fmt.Sprintf("map/%s/%s", p.Name, k),
-		Value: []byte(v),
-	})
+func (p *PathMap) Put(s logical.Storage, k string, v map[string]interface{}) error {
+	return p.pathStruct(k).Put(s, v)
 }
 
 // Paths are the paths to append to the Backend paths.
 func (p *PathMap) Paths() []*Path {
+	p.once.Do(p.init)
+
+	// Build the schema by simply adding the "key"
+	schema := make(map[string]*FieldSchema)
+	for k, v := range p.Schema {
+		schema[k] = v
+	}
+	schema["key"] = &FieldSchema{
+		Type:        TypeString,
+		Description: fmt.Sprintf("Key for the %s mapping", p.Name),
+	}
+
 	return []*Path{
 		&Path{
-			Pattern: fmt.Sprintf("map/%s$", p.Name),
+			Pattern: fmt.Sprintf("%s/%s$", p.Prefix, p.Name),
 
 			Callbacks: map[logical.Operation]OperationFunc{
 				logical.ListOperation: p.pathList,
@@ -52,19 +83,9 @@ func (p *PathMap) Paths() []*Path {
 		},
 
 		&Path{
-			Pattern: fmt.Sprintf("map/%s/(?P<key>\\w+)", p.Name),
+			Pattern: fmt.Sprintf("%s/%s/(?P<key>\\w+)", p.Prefix, p.Name),
 
-			Fields: map[string]*FieldSchema{
-				"key": &FieldSchema{
-					Type:        TypeString,
-					Description: "Key for the mapping",
-				},
-
-				"value": &FieldSchema{
-					Type:        TypeString,
-					Description: "Value for the mapping",
-				},
-			},
+			Fields: schema,
 
 			Callbacks: map[logical.Operation]OperationFunc{
 				logical.WriteOperation: p.pathSingleWrite,
@@ -94,16 +115,12 @@ func (p *PathMap) pathSingleRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"value": v,
-		},
+		Data: v,
 	}, nil
 }
 
 func (p *PathMap) pathSingleWrite(
 	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Put(
-		req.Storage,
-		d.Get("key").(string), d.Get("value").(string))
+	err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
 	return nil, err
 }

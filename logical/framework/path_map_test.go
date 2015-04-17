@@ -42,7 +42,7 @@ func TestPathMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
-	if v != "bar" {
+	if v["value"] != "bar" {
 		t.Fatalf("bad: %#v", v)
 	}
 }
@@ -55,7 +55,7 @@ func TestPathMap_getInvalid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
-	if v != "" {
+	if v != nil {
 		t.Fatalf("bad: %#v", v)
 	}
 }
