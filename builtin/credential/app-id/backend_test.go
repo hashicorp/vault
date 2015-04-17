@@ -13,7 +13,19 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepMapAppId(t),
 			testAccStepMapUserId(t),
-			testAccLogin(t),
+			testAccLogin(t, ""),
+			testAccLoginInvalid(t),
+		},
+	})
+}
+
+func TestBackend_displayName(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepMapAppIdDisplayName(t),
+			testAccStepMapUserId(t),
+			testAccLogin(t, "tubbin"),
 			testAccLoginInvalid(t),
 		},
 	})
@@ -29,6 +41,17 @@ func testAccStepMapAppId(t *testing.T) logicaltest.TestStep {
 	}
 }
 
+func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "map/app-id/foo",
+		Data: map[string]interface{}{
+			"display_name": "tubbin",
+			"value":        "foo,bar",
+		},
+	}
+}
+
 func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -39,7 +62,7 @@ func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testAccLogin(t *testing.T) logicaltest.TestStep {
+func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "login",
@@ -49,7 +72,10 @@ func testAccLogin(t *testing.T) logicaltest.TestStep {
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"bar", "foo"}),
+		Check: logicaltest.TestCheckMulti(
+			logicaltest.TestCheckAuth([]string{"bar", "foo"}),
+			logicaltest.TestCheckAuthDisplayName(display),
+		),
 	}
 }
 

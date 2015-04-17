@@ -67,9 +67,22 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 
+	// Get the raw data associated with the app
+	appRaw, err := b.MapAppId.Get(req.Storage, appId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if we have a display name
+	var displayName string
+	if raw, ok := appRaw["display_name"]; ok {
+		displayName = raw.(string)
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
-			Policies: policies,
+			DisplayName: displayName,
+			Policies:    policies,
 		},
 	}, nil
 }

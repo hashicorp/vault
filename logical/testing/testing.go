@@ -234,6 +234,19 @@ func Test(t TestT, c TestCase) {
 	}
 }
 
+// TestCheckMulti is a helper to have multiple checks.
+func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		for _, f := range fs {
+			if err := f(resp); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
 // TestCheckAuth is a helper to check that a request generated an
 // auth token with the proper policies.
 func TestCheckAuth(policies []string) TestCheckFunc {
@@ -243,6 +256,21 @@ func TestCheckAuth(policies []string) TestCheckFunc {
 		}
 		if !reflect.DeepEqual(resp.Auth.Policies, policies) {
 			return fmt.Errorf("invalid policies: %#v", resp.Auth.Policies)
+		}
+
+		return nil
+	}
+}
+
+// TestCheckAuthDisplayName is a helper to check that a request generated a
+// valid display name.
+func TestCheckAuthDisplayName(n string) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp.Auth == nil {
+			return fmt.Errorf("no auth in response")
+		}
+		if n != "" && resp.Auth.DisplayName != "mnt-"+n {
+			return fmt.Errorf("invalid display name: %#v", resp.Auth.DisplayName)
 		}
 
 		return nil
