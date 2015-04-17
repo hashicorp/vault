@@ -234,6 +234,7 @@ type TokenEntry struct {
 	Path        string            // Used for audit trails, this is something like "auth/user/login"
 	Meta        map[string]string // Used for auditing. This could include things like "source", "user", "ip"
 	DisplayName string            // Used for operators to be able to associate with the source
+	NumUses     int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -437,6 +438,13 @@ func (ts *TokenStore) handleCreate(
 		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
 	}
 
+	// A token with a restricted number of uses cannot create a new token
+	// otherwise it could escape the restriction count.
+	if parent.NumUses > 0 {
+		return logical.ErrorResponse("restricted use token cannot generate child tokens"),
+			logical.ErrInvalidRequest
+	}
+
 	// Check if the parent policy is root
 	isRoot := strListContains(parent.Policies, "root")
 
@@ -448,10 +456,17 @@ func (ts *TokenStore) handleCreate(
 		NoParent    bool              `mapstructure:"no_parent"`
 		Lease       string
 		DisplayName string `mapstructure:"display_name"`
+		NumUses     int    `mapstructure:"num_uses"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error decoding request: %s", err)), logical.ErrInvalidRequest
+	}
+
+	// Verify the number of uses is positive
+	if data.NumUses < 0 {
+		return logical.ErrorResponse("number of uses cannot be negative"),
+			logical.ErrInvalidRequest
 	}
 
 	// Setup the token entry
@@ -460,6 +475,7 @@ func (ts *TokenStore) handleCreate(
 		Path:        "auth/token/create",
 		Meta:        data.Metadata,
 		DisplayName: "token",
+		NumUses:     data.NumUses,
 	}
 
 	// Attach the given display name if any
@@ -615,6 +631,7 @@ func (ts *TokenStore) handleLookup(
 			"path":         out.Path,
 			"meta":         out.Meta,
 			"display_name": out.DisplayName,
+			"num_uses":     out.NumUses,
 		},
 	}
 	return resp, nil

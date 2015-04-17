@@ -297,6 +297,68 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "1"
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	expected := &TokenEntry{
+		ID:          resp.Auth.ClientToken,
+		Parent:      root,
+		Policies:    []string{"root"},
+		Path:        "auth/token/create",
+		DisplayName: "token",
+		NumUses:     1,
+	}
+	out, err := ts.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, expected) {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "-1"
+
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["num_uses"] = "1"
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	// We should NOT be able to use the restricted token to create a new token
+	req.ClientToken = resp.Auth.ClientToken
+	_, err = ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
@@ -594,6 +656,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
 		"display_name": "root",
+		"num_uses":     0,
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
@@ -658,6 +721,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
 		"display_name": "root",
+		"num_uses":     0,
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
