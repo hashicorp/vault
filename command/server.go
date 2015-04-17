@@ -134,6 +134,11 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevel
 	infoKeys = append(infoKeys, "log level", "backend")
 
+	// If the backend supports HA, then note it
+	if _, ok := backend.(physical.HABackend); ok {
+		info["backend"] += " (HA available)"
+	}
+
 	// Initialize the telemetry
 	if err := c.setupTelementry(config); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
