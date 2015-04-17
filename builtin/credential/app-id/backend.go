@@ -12,7 +12,7 @@ func Factory(map[string]string) (logical.Backend, error) {
 func Backend() *framework.Backend {
 	var b backend
 	b.MapAppId = &framework.PolicyMap{
-		PathMap:    &framework.PathMap{"app-id"},
+		PathMap:    framework.PathMap{Name: "app-id"},
 		DefaultKey: "default",
 	}
 	b.MapUserId = &framework.PathMap{

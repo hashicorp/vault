@@ -16,7 +16,7 @@ func Factory(map[string]string) (logical.Backend, error) {
 func Backend() *framework.Backend {
 	var b backend
 	b.Map = &framework.PolicyMap{
-		PathMap:    &framework.PathMap{"teams"},
+		PathMap:    framework.PathMap{Name: "teams"},
 		DefaultKey: "default",
 	}
 	b.Backend = &framework.Backend{

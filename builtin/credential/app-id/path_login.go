@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -34,9 +35,19 @@ func (b *backend) pathLogin(
 	userId := data.Get("user_id").(string)
 
 	// Look up the apps that this user is allowed to access
-	apps, err := b.MapUserId.Get(req.Storage, userId)
+	appsMap, err := b.MapUserId.Get(req.Storage, userId)
 	if err != nil {
 		return nil, err
+	}
+
+	appsRaw, ok := appsMap["value"]
+	if !ok {
+		appsRaw = ""
+	}
+
+	apps, ok := appsRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("internal error: mapping is not a string")
 	}
 
 	// Verify that the app is in the list
