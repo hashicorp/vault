@@ -94,6 +94,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the core
 	core, err := vault.NewCore(&vault.CoreConfig{
+		AdvertiseAddr:      config.Backend.AdvertiseAddr,
 		Physical:           backend,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,

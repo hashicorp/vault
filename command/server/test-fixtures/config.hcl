@@ -7,4 +7,5 @@ listener "tcp" {
 
 backend "consul" {
     foo = "bar"
+    advertise_addr = "foo"
 }
