@@ -76,7 +76,7 @@ body.layout-intro{
 		$parent-active-state: -14px;
 		$parent-default-state: -10px;
 		$child-active-state: -4px;
-		$child-default-state: 0px;	
+		$child-default-state: 0px;
 
 		//first teir li
 		> li {
@@ -89,13 +89,13 @@ body.layout-intro{
 					&:hover{
 						&:before{
 							left: $parent-default-state;
-						}					
+						}
 					}
 
 					&:before{
 						background: url(../images/triangle-sprite.png) 0 0 no-repeat;
 						@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 7px, 25px);
-					}									
+					}
 				}
 
 				.nav {
@@ -109,7 +109,7 @@ body.layout-intro{
 				&:hover{
 					&:before{
 						left: $parent-active-state;
-					}					
+					}
 				}
 
 				&:before{
@@ -124,7 +124,7 @@ body.layout-intro{
 					@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 7px, 25px);
 				}
 			}
-		}		
+		}
 
 		//nested ul.nav
 		.nav {
@@ -141,7 +141,7 @@ body.layout-intro{
 						&:hover{
 							&:before{
 								left: $child-default-state;
-							}					
+							}
 						}
 
 						&:before{
@@ -149,7 +149,7 @@ body.layout-intro{
 							@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 5px, 19px);
 						}
 					}
-				}				
+				}
 
 				> a{
           			-webkit-font-smoothing: antialiased;
@@ -158,7 +158,7 @@ body.layout-intro{
 					&:hover{
 						&:before{
 							left: $child-active-state;
-						}					
+						}
 					}
 
 					&:before{
@@ -172,7 +172,7 @@ body.layout-intro{
 						overflow: hidden;
 						background: url(../images/triangle-sprite.png) 0 -13px no-repeat;
 						@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 5px, 19px);
-					}				
+					}
 				}
 			}
 		}
@@ -197,7 +197,7 @@ body.layout-intro{
 		margin-bottom: 48px;
 	}
 
-	p, li, .alert {
+	p, .alert {
 		font-size: 20px;
 		font-family: $font-family-open-sans;
 		font-weight: $font-weight-open;
@@ -259,7 +259,7 @@ body.layout-intro{
 }
 
 
-			
+
 
 @media (max-width: 480px) {
 	.bs-docs-section{

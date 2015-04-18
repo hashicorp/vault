@@ -1,7 +1,7 @@
 ---
 layout: "http"
 page_title: "HTTP API"
-sidebar_current: "docs-http"
+sidebar_current: "docs-http-overview"
 description: |-
   Vault has an HTTP API that can be used to control every aspect of Vault.
 ---
