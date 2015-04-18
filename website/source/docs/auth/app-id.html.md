@@ -1,80 +1,18 @@
-package appId
+---
+layout: "docs"
+page_title: "Auth Backend: App ID"
+sidebar_current: "docs-auth-appid"
+description: |-
+  The App ID auth backend is a mechanism for machines to authenticate with Vault.
+---
 
-import (
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-)
+# Auth Backend: App ID
 
-func Factory(map[string]string) (logical.Backend, error) {
-	return Backend(), nil
-}
+Name: `app-id`
 
-func Backend() *framework.Backend {
-	var b backend
-	b.MapAppId = &framework.PolicyMap{
-		PathMap: framework.PathMap{
-			Name: "app-id",
-			Schema: map[string]*framework.FieldSchema{
-				"display_name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "A name to map to this app ID for logs.",
-				},
-
-				"value": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "Policies for the app ID.",
-				},
-			},
-		},
-		DefaultKey: "default",
-	}
-
-	b.MapUserId = &framework.PathMap{
-		Name: "user-id",
-		Schema: map[string]*framework.FieldSchema{
-			"cidr_block": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "If not blank, restricts auth by this CIDR block",
-			},
-
-			"value": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "App IDs that this user associates with.",
-			},
-		},
-	}
-
-	b.Backend = &framework.Backend{
-		Help: backendHelp,
-
-		PathsSpecial: &logical.Paths{
-			Unauthenticated: []string{
-				"login",
-			},
-		},
-
-		Paths: framework.PathAppend([]*framework.Path{
-			pathLogin(&b),
-		},
-			b.MapAppId.Paths(),
-			b.MapUserId.Paths(),
-		),
-	}
-
-	return b.Backend
-}
-
-type backend struct {
-	*framework.Backend
-
-	MapAppId  *framework.PolicyMap
-	MapUserId *framework.PathMap
-}
-
-const backendHelp = `
-The App ID credential provider is used to perform authentication from
-within applications or machine by pairing together two hard-to-guess
-unique pieces of information: a unique app ID, and a unique user ID.
+The App ID auth backend is a mechanism for machines to authenticate with
+Vault. It works by requiring two hard-to-guess unique pieces of information:
+a unique app ID, and a unique user ID.
 
 The goal of this credential provider is to allow elastic users
 (dynamic machines, containers, etc.) to authenticate with Vault without
@@ -119,4 +57,38 @@ app ID policies.
 The user ID can be any value (just like the app ID), however it is
 generally a value unique to a machine, such as a MAC address or instance ID,
 or a value hashed from these unique values.
-`
+
+
+## Authentication
+
+#### Via the CLI
+
+App ID authentication is not allowed via the CLI.
+
+#### Via the API
+
+The endpoint for the App ID login is `/login`.
+
+## Configuration
+
+To use the App ID auth backend, an operator must configure it with
+the set of App IDs, user IDs, and the mapping between them. An
+example is shown below, use `vault help` for more details.
+
+```
+$ vault write auth/app-id/map/app-id/foo value=root display_name=foo
+...
+
+$ vault write auth/app-id/map/user-id/bar value=foo
+...
+```
+
+The above creates an App ID "foo" that associates with the policy "root".
+The `display_name` sets the display name for audit logs and secrets.
+Next, we configure the user ID "bar" and say that the user ID bar
+can be paired with "foo".
+
+This means that if a client authenticates and provide both "foo" and "bar",
+then the app ID will authenticate that client with the policy "root".
+
+In practice, both the user and app ID are likely hard-to-guess UUID-like values.

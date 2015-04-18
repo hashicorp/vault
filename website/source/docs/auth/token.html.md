@@ -21,7 +21,7 @@ The token store can also be used to bypass any other auth backend:
 you can create tokens directly, as well as perform a variety of other
 operations on tokens such as renewal and revocation.
 
-Please see the [token concepts](/docs/concepts/token.html) page dedicated
+Please see the [token concepts](/docs/concepts/tokens.html) page dedicated
 to tokens.
 
 ## Authentication
