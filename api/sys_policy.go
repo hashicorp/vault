@@ -20,6 +20,9 @@ func (c *Sys) ListPolicies() ([]string, error) {
 func (c *Sys) GetPolicy(name string) (string, error) {
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policy/%s", name))
 	resp, err := c.c.RawRequest(r)
+	if resp.StatusCode == 404 {
+		return "", nil
+	}
 	if err != nil {
 		return "", err
 	}

@@ -115,6 +115,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"policy-delete": func() (cli.Command, error) {
+			return &command.PolicyDeleteCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"policy-write": func() (cli.Command, error) {
 			return &command.PolicyWriteCommand{
 				Meta: meta,

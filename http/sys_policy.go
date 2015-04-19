@@ -95,6 +95,10 @@ func handleSysReadPolicy(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
+	if resp == nil {
+		respondError(w, http.StatusNotFound, nil)
+		return
+	}
 
 	respondOk(w, resp.Data)
 }
