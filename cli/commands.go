@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/consul"
+	"github.com/hashicorp/vault/builtin/logical/postgresql"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
 	"github.com/hashicorp/vault/audit"
@@ -52,9 +53,10 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"github": credGitHub.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
-					"aws":     aws.Factory,
-					"consul":  consul.Factory,
-					"transit": transit.Factory,
+					"aws":        aws.Factory,
+					"consul":     consul.Factory,
+					"postgresql": postgresql.Factory,
+					"transit":    transit.Factory,
 				},
 			}, nil
 		},
