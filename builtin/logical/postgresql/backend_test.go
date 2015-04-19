@@ -14,6 +14,7 @@ func TestBackend_basic(t *testing.T) {
 		Backend:  Backend(),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
+			testAccStepRole(t),
 		},
 	})
 }
@@ -33,3 +34,20 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		},
 	}
 }
+
+func testAccStepRole(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "roles/web",
+		Data: map[string]interface{}{
+			"sql": testRole,
+		},
+	}
+}
+
+const testRole = `
+CREATE ROLE {{name}} WITH
+  LOGIN
+  PASSWORD '{{password}}'
+  VALID UNTIL '{{expiration}}';
+`

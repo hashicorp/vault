@@ -9,7 +9,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func pathConfigConnection() *framework.Path {
+func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
@@ -20,7 +20,7 @@ func pathConfigConnection() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathConnectionWrite,
+			logical.WriteOperation: b.pathConnectionWrite,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -28,7 +28,7 @@ func pathConfigConnection() *framework.Path {
 	}
 }
 
-func pathConnectionWrite(
+func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connString := data.Get("value").(string)
 
@@ -52,6 +52,9 @@ func pathConnectionWrite(
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
+
+	// Reset the DB connection
+	b.ResetDB()
 
 	return nil, nil
 }
