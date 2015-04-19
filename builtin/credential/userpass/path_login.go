@@ -25,6 +25,9 @@ func pathLogin(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathLogin,
 		},
+
+		HelpSynopsis:    pathLoginSyn,
+		HelpDescription: pathLoginDesc,
 	}
 }
 
@@ -51,3 +54,11 @@ func (b *backend) pathLogin(
 		},
 	}, nil
 }
+
+const pathLoginSyn = `
+Log in with a username and password.
+`
+
+const pathLoginDesc = `
+This endpoint authenticates using a username and password.
+`
