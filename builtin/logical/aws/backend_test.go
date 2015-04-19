@@ -1,6 +1,9 @@
 package aws
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -21,6 +24,24 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
 			testAccStepReadUser(t, "test"),
+		},
+	})
+}
+
+func TestBackend_policyCrud(t *testing.T) {
+	var compacted bytes.Buffer
+	if err := json.Compact(&compacted, []byte(testPolicy)); err != nil {
+		t.Fatalf("bad: %s", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWritePolicy(t, "test", testPolicy),
+			testAccStepReadPolicy(t, "test", compacted.String()),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadPolicy(t, "test", ""),
 		},
 	})
 }
@@ -91,6 +112,42 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 		Path:      "policy/" + name,
 		Data: map[string]interface{}{
 			"policy": testPolicy,
+		},
+	}
+}
+
+func testAccStepDeletePolicy(t *testing.T, n string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "policy/" + n,
+	}
+}
+
+func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "policy/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if value == "" {
+					return nil
+				}
+
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			var d struct {
+				Policy string `mapstructure:"policy"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.Policy != value {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			return nil
 		},
 	}
 }

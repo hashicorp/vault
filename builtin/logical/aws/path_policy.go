@@ -25,12 +25,41 @@ func pathPolicy() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathPolicyWrite,
+			logical.DeleteOperation: pathPolicyDelete,
+			logical.ReadOperation:   pathPolicyRead,
+			logical.WriteOperation:  pathPolicyWrite,
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,
 		HelpDescription: pathPolicyHelpDesc,
 	}
+}
+
+func pathPolicyDelete(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete("policy/" + d.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func pathPolicyRead(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get("policy/" + d.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"policy": string(entry.Value),
+		},
+	}, nil
 }
 
 func pathPolicyWrite(
