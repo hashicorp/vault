@@ -39,7 +39,7 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
-	entry, err := s.Get("user/" + n)
+	entry, err := s.Get("user/" + strings.ToLower(n))
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
 
 func (b *backend) pathUserDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("user/" + d.Get("name").(string))
+	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (b *backend) pathUserDelete(
 
 func (b *backend) pathUserRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.User(req.Storage, d.Get("name").(string))
+	user, err := b.User(req.Storage, strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (b *backend) pathUserRead(
 
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
+	name := strings.ToLower(d.Get("name").(string))
 	policies := strings.Split(d.Get("policies").(string), ",")
 	for i, p := range policies {
 		policies[i] = strings.TrimSpace(p)
@@ -117,4 +117,9 @@ Manage users allowed to authenticate.
 const pathUserHelpDesc = `
 This endpoint allows you to create, read, update, and delete users
 that are allowed to authenticate.
+
+Deleting a user will not revoke auth for prior authenticated users
+with that name. To do this, do a revoke on "login/<username>" for
+the username you want revoked. If you don't need to revoke login immediately,
+then the next renew will cause the lease to expire.
 `

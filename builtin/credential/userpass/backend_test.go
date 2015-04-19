@@ -9,6 +9,18 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func TestBackend_basic(t *testing.T) {
+	b := Backend()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepUser(t, "web", "password", "foo"),
+			testAccStepLogin(t, "web", "password"),
+		},
+	})
+}
+
 func TestBackend_userCrud(t *testing.T) {
 	b := Backend()
 
@@ -21,6 +33,19 @@ func TestBackend_userCrud(t *testing.T) {
 			testAccStepReadUser(t, "web", ""),
 		},
 	})
+}
+
+func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		Check: logicaltest.TestCheckAuth([]string{"foo"}),
+	}
 }
 
 func testAccStepUser(

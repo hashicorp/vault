@@ -20,11 +20,12 @@ func Backend() *framework.Backend {
 			},
 
 			Unauthenticated: []string{
-				"login",
+				"login/*",
 			},
 		},
 
 		Paths: append([]*framework.Path{
+			pathLogin(&b),
 			pathUsers(&b),
 		}),
 	}

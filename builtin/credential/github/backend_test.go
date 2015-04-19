@@ -49,6 +49,7 @@ func testAccMap(t *testing.T) logicaltest.TestStep {
 		},
 	}
 }
+
 func testAccLogin(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
