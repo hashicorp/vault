@@ -26,12 +26,13 @@ func Backend() *framework.Backend {
 
 		Paths: []*framework.Path{
 			pathConfigRoot(),
+			pathConfigLease(&b),
 			pathPolicy(),
 			pathUser(&b),
 		},
 
 		Secrets: []*framework.Secret{
-			secretAccessKeys(),
+			secretAccessKeys(&b),
 		},
 
 		Rollback:       rollback,

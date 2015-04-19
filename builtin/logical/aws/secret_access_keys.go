@@ -13,7 +13,7 @@ import (
 
 const SecretAccessKeyType = "access_keys"
 
-func secretAccessKeys() *framework.Secret {
+func secretAccessKeys(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretAccessKeyType,
 		Fields: map[string]*framework.FieldSchema{
@@ -28,6 +28,10 @@ func secretAccessKeys() *framework.Secret {
 			},
 		},
 
+		DefaultDuration:    1 * time.Hour,
+		DefaultGracePeriod: 10 * time.Minute,
+
+		Renew:  b.secretAccessKeysRenew,
 		Revoke: secretAccessKeysRevoke,
 	}
 }
@@ -99,6 +103,20 @@ func (b *backend) secretAccessKeysCreate(
 		"username": username,
 		"policy":   policy,
 	}), nil
+}
+
+func (b *backend) secretAccessKeysRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	lease, err := b.Lease(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if lease == nil {
+		lease = &configLease{Lease: 1 * time.Hour}
+	}
+
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax)
+	return f(req, d)
 }
 
 func secretAccessKeysRevoke(
