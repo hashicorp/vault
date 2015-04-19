@@ -45,6 +45,11 @@ func (c *ReadCommand) Run(args []string) int {
 			"Error reading %s: %s", path, err))
 		return 1
 	}
+	if secret == nil {
+		c.Ui.Error(fmt.Sprintf(
+			"No value found at %s", path))
+		return 1
+	}
 
 	return c.output(format, secret)
 }
