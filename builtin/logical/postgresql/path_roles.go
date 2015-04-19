@@ -24,12 +24,58 @@ func pathRoles(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathRoleCreate,
+			logical.ReadOperation:   b.pathRoleRead,
+			logical.WriteOperation:  b.pathRoleCreate,
+			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,
 		HelpDescription: pathRoleHelpDesc,
 	}
+}
+
+func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get("role/" + n)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result roleEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (b *backend) pathRoleDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete("role/" + data.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *backend) pathRoleRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	role, err := b.Role(req.Storage, data.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"sql": role.SQL,
+		},
+	}, nil
 }
 
 func (b *backend) pathRoleCreate(
@@ -56,8 +102,8 @@ func (b *backend) pathRoleCreate(
 	stmt.Close()
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("role/"+name, map[string]interface{}{
-		"sql": sql,
+	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
+		SQL: sql,
 	})
 	if err != nil {
 		return nil, err
@@ -67,6 +113,10 @@ func (b *backend) pathRoleCreate(
 	}
 
 	return nil, nil
+}
+
+type roleEntry struct {
+	SQL string `json:"sql"`
 }
 
 const pathRoleHelpSyn = `

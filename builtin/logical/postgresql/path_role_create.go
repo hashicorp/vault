@@ -12,7 +12,7 @@ import (
 
 func pathRoleCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `(?P<name>\w+)`,
+		Pattern: `creds/(?P<name>\w+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -34,18 +34,12 @@ func (b *backend) pathRoleCreateRead(
 	name := data.Get("name").(string)
 
 	// Get the role
-	entry, err := req.Storage.Get("role/" + name)
+	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
-	}
-	var role struct {
-		SQL string `json:"sql"`
-	}
-	if err := entry.DecodeJSON(&role); err != nil {
-		return nil, err
 	}
 
 	// Determine if we have a lease

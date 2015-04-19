@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -20,6 +21,22 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepConfig(t),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, "web"),
+		},
+	})
+}
+
+func TestBackend_roleCrud(t *testing.T) {
+	b := Backend()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepRole(t),
+			testAccStepReadRole(t, "web", testRole),
+			testAccStepDeleteRole(t, "web"),
+			testAccStepReadRole(t, "web", ""),
 		},
 	})
 }
@@ -50,10 +67,17 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	}
 }
 
+func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "roles/" + n,
+	}
+}
+
 func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      name,
+		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
 			var d struct {
 				Username string `mapstructure:"username"`
@@ -63,6 +87,35 @@ func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 				return err
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
+
+			return nil
+		},
+	}
+}
+
+func testAccStepReadRole(t *testing.T, name string, sql string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if sql == "" {
+					return nil
+				}
+
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			var d struct {
+				SQL string `mapstructure:"sql"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.SQL != sql {
+				return fmt.Errorf("bad: %#v", resp)
+			}
 
 			return nil
 		},
