@@ -37,7 +37,7 @@ func handleSysRenew(core *vault.Core) http.Handler {
 			}
 		}
 
-		resp, ok := request(core, w, requestAuth(r, &logical.Request{
+		resp, ok := request(core, w, r.URL, requestAuth(r, &logical.Request{
 			Operation: logical.WriteOperation,
 			Path:      "sys/renew/" + path,
 			Data: map[string]interface{}{

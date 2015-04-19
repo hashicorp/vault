@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -62,8 +63,12 @@ func parseRequest(r *http.Request, out interface{}) error {
 
 // request is a helper to perform a request and properly exit in the
 // case of an error.
-func request(core *vault.Core, w http.ResponseWriter, r *logical.Request) (*logical.Response, bool) {
+func request(core *vault.Core, w http.ResponseWriter, reqURL *url.URL, r *logical.Request) (*logical.Response, bool) {
 	resp, err := core.HandleRequest(r)
+	if err == vault.ErrStandby {
+		respondStandby(core, w, reqURL)
+		return resp, false
+	}
 	if respondCommon(w, resp) {
 		return resp, false
 	}
@@ -73,6 +78,49 @@ func request(core *vault.Core, w http.ResponseWriter, r *logical.Request) (*logi
 	}
 
 	return resp, true
+}
+
+// respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
+func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
+	// Request the leader address
+	_, advertise, err := core.Leader()
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// If there is no leader, generate a 503 error
+	if advertise == "" {
+		err = fmt.Errorf("no active Vault instance found")
+		respondError(w, http.StatusServiceUnavailable, err)
+		return
+	}
+
+	// Parse the advertise location
+	advertiseURL, err := url.Parse(advertise)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Generate a redirect URL
+	redirectURL := url.URL{
+		Scheme:   advertiseURL.Scheme,
+		Host:     advertiseURL.Host,
+		Path:     reqURL.Path,
+		RawQuery: reqURL.RawQuery,
+	}
+
+	// Ensure there is a scheme, default to https
+	if redirectURL.Scheme == "" {
+		redirectURL.Scheme = "https"
+	}
+
+	// If we have an address, redirect! We use a 307 code
+	// because we don't actually know if its permanent and
+	// the request method should be preserved.
+	w.Header().Set("Location", redirectURL.String())
+	w.WriteHeader(307)
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
