@@ -27,6 +27,7 @@ func Backend() *framework.Backend {
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
+			pathConfigLease(&b),
 			pathRoles(&b),
 			pathRoleCreate(&b),
 		},
@@ -93,6 +94,24 @@ func (b *backend) ResetDB() {
 	}
 
 	b.db = nil
+}
+
+// Lease returns the lease information
+func (b *backend) Lease(s logical.Storage) (*configLease, error) {
+	entry, err := s.Get("config/lease")
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result configLease
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 const backendHelp = `

@@ -48,6 +48,15 @@ func (b *backend) pathRoleCreateRead(
 		return nil, err
 	}
 
+	// Determine if we have a lease
+	lease, err := b.Lease(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if lease == nil {
+		lease = &configLease{Lease: 1 * time.Hour}
+	}
+
 	// Get our connection
 	db, err := b.DB(req.Storage)
 	if err != nil {
@@ -59,10 +68,13 @@ func (b *backend) pathRoleCreateRead(
 		"vault-%s-%d-%d",
 		req.DisplayName, time.Now().Unix(), rand.Int31n(10000))
 	password := generateUUID()
+	expiration := time.Now().UTC().
+		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
+		Format("2006-01-02 15:04:05")
 	query := Query(role.SQL, map[string]string{
 		"name":       username,
 		"password":   password,
-		"expiration": "",
+		"expiration": expiration,
 	})
 
 	// Prepare the statement and execute it
@@ -76,12 +88,14 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Return the secret
-	return b.Secret(SecretCredsType).Response(map[string]interface{}{
+	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,
 	}, map[string]interface{}{
 		"username": username,
-	}), nil
+	})
+	resp.Secret.Lease = lease.Lease
+	return resp, nil
 }
 
 const pathRoleCreateReadHelpSyn = `

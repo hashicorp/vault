@@ -11,9 +11,11 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
+	b := Backend()
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  Backend(),
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepRole(t),
@@ -70,5 +72,6 @@ func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 const testRole = `
 CREATE ROLE "{{name}}" WITH
   LOGIN
-  PASSWORD '{{password}}';
+  PASSWORD '{{password}}'
+  VALID UNTIL '{{expiration}}';
 `
