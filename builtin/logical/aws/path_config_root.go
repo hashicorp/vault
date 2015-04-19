@@ -7,7 +7,7 @@ import (
 
 func pathRoot() *framework.Path {
 	return &framework.Path{
-		Pattern: "root",
+		Pattern: "config/root",
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -36,10 +36,15 @@ func pathRoot() *framework.Path {
 
 func pathRootWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := logical.StorageEntryJSON("root", rootConfig{
+	region := data.Get("region").(string)
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
 		AccessKey: data.Get("access_key").(string),
 		SecretKey: data.Get("secret_key").(string),
-		Region:    data.Get("region").(string),
+		Region:    region,
 	})
 	if err != nil {
 		return nil, err

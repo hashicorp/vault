@@ -64,7 +64,7 @@ func testAccPreCheck(t *testing.T) {
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "root",
+		Path:      "config/root",
 		Data: map[string]interface{}{
 			"access_key": os.Getenv("AWS_ACCESS_KEY_ID"),
 			"secret_key": os.Getenv("AWS_SECRET_ACCESS_KEY"),

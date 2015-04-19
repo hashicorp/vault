@@ -9,14 +9,14 @@ import (
 )
 
 func clientIAM(s logical.Storage) (*iam.IAM, error) {
-	entry, err := s.Get("root")
+	entry, err := s.Get("config/root")
 	if err != nil {
 		return nil, err
 	}
 	if entry == nil {
 		return nil, fmt.Errorf(
 			"root credentials haven't been configured. Please configure\n" +
-				"them at the '/root' endpoint")
+				"them at the 'config/root' endpoint")
 	}
 
 	var config rootConfig

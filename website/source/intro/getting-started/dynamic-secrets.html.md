@@ -50,13 +50,13 @@ the AWS credentials that will be used to create the other credentials.
 For now, use the root keys for your AWS account.
 
 To configure the backend, we use `vault write` to a special path
-`aws/root`:
+`aws/config/root`:
 
 ```
-$ vault write aws/root \
+$ vault write aws/config/root \
     access_key=AKIAI4SGLQPBX6CSENIQ \
     secret_key=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
-Success! Data written to: aws/root
+Success! Data written to: aws/config/root
 ```
 
 Remember that secret backends can behave anyway they want when
@@ -64,7 +64,7 @@ reading/writing a path, so this path stores this configuration for
 later. Notice you can't read it back:
 
 ```
-$ vault read aws/root
+$ vault read aws/config/root
 TODO
 ```
 
