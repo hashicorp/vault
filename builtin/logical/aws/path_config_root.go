@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathRoot() *framework.Path {
+func pathConfigRoot() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/root",
 		Fields: map[string]*framework.FieldSchema{
@@ -26,15 +26,15 @@ func pathRoot() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathRootWrite,
+			logical.WriteOperation: pathConfigRootWrite,
 		},
 
-		HelpSynopsis:    pathRootHelpSyn,
-		HelpDescription: pathRootHelpDesc,
+		HelpSynopsis:    pathConfigRootHelpSyn,
+		HelpDescription: pathConfigRootHelpDesc,
 	}
 }
 
-func pathRootWrite(
+func pathConfigRootWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
 	if region == "" {
@@ -63,11 +63,11 @@ type rootConfig struct {
 	Region    string `json:"region"`
 }
 
-const pathRootHelpSyn = `
+const pathConfigRootHelpSyn = `
 Configure the root credentials that are used to manage IAM.
 `
 
-const pathRootHelpDesc = `
+const pathConfigRootHelpDesc = `
 Before doing anything, the AWS backend needs credentials that are able
 to manage IAM policies, users, access keys, etc. This endpoint is used
 to configure those credentials. They don't necessarilly need to be root
