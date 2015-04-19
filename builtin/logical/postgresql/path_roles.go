@@ -89,7 +89,7 @@ by "{{" and "}}" to be replaced.
 
 Example of a decent SQL query to use:
 
-  CREATE ROLE {{name}} WITH
+  CREATE ROLE "{{name}}" WITH
     LOGIN
     PASSWORD '{{password}}'
     VALID UNTIL '{{expiration}}';
