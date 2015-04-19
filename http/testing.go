@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestServer(t *testing.T, core *vault.Core) (net.Listener, string) {
+func TestListener(t *testing.T) (net.Listener, string) {
 	fail := func(format string, args ...interface{}) {
 		panic(fmt.Sprintf(format, args...))
 	}
@@ -24,7 +24,10 @@ func TestServer(t *testing.T, core *vault.Core) (net.Listener, string) {
 		fail("err: %s", err)
 	}
 	addr := "http://" + ln.Addr().String()
+	return ln, addr
+}
 
+func TestServerWithListener(t *testing.T, ln net.Listener, addr string, core *vault.Core) {
 	// Create a muxer to handle our requests so that we can authenticate
 	// for tests.
 	mux := http.NewServeMux()
@@ -36,7 +39,11 @@ func TestServer(t *testing.T, core *vault.Core) (net.Listener, string) {
 		Handler: mux,
 	}
 	go server.Serve(ln)
+}
 
+func TestServer(t *testing.T, core *vault.Core) (net.Listener, string) {
+	ln, addr := TestListener(t)
+	TestServerWithListener(t, ln, addr, core)
 	return ln, addr
 }
 
