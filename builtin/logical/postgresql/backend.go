@@ -28,6 +28,11 @@ func Backend() *framework.Backend {
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
 			pathRoles(&b),
+			pathRoleCreate(&b),
+		},
+
+		Secrets: []*framework.Secret{
+			secretCreds(&b),
 		},
 	}
 

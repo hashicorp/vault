@@ -1,11 +1,13 @@
 package postgresql
 
 import (
+	"log"
 	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestBackend_basic(t *testing.T) {
@@ -15,6 +17,7 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepRole(t),
+			testAccStepReadCreds(t, "web"),
 		},
 	})
 }
@@ -45,9 +48,27 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	}
 }
 
+func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      name,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Username string `mapstructure:"username"`
+				Password string `mapstructure:"password"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			log.Printf("[WARN] Generated credentials: %v", d)
+
+			return nil
+		},
+	}
+}
+
 const testRole = `
-CREATE ROLE {{name}} WITH
+CREATE ROLE "{{name}}" WITH
   LOGIN
-  PASSWORD '{{password}}'
-  VALID UNTIL '{{expiration}}';
+  PASSWORD '{{password}}';
 `
