@@ -2,6 +2,7 @@ package userpass
 
 import (
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -53,6 +54,21 @@ func (b *backend) pathLogin(
 			DisplayName: username,
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Get the user and validate auth
+	user, err := b.User(req.Storage, req.Auth.Metadata["username"])
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		// User no longer exists, do not renew
+		return nil, nil
+	}
+
+	return framework.LeaseExtend(1*time.Hour, 0)(req, d)
 }
 
 const pathLoginSyn = `
