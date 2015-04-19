@@ -223,6 +223,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
+	// Ensure our memory usage is locked into physical RAM
+	if err := LockMemory(); err != nil {
+		return nil, fmt.Errorf("failed to lock memory: %v", err)
+	}
+
 	// Construct a new AES-GCM barrier
 	barrier, err := NewAESGCMBarrier(conf.Physical)
 	if err != nil {
