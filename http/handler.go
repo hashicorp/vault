@@ -63,10 +63,10 @@ func parseRequest(r *http.Request, out interface{}) error {
 
 // request is a helper to perform a request and properly exit in the
 // case of an error.
-func request(core *vault.Core, w http.ResponseWriter, reqURL *url.URL, r *logical.Request) (*logical.Response, bool) {
+func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
 	resp, err := core.HandleRequest(r)
 	if err == vault.ErrStandby {
-		respondStandby(core, w, reqURL)
+		respondStandby(core, w, rawReq.URL)
 		return resp, false
 	}
 	if respondCommon(w, resp) {

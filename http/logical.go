@@ -56,7 +56,7 @@ func handleLogical(core *vault.Core) http.Handler {
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
-		resp, ok := request(core, w, r.URL, requestAuth(r, &logical.Request{
+		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
 			Operation: op,
 			Path:      path,
 			Data:      req,
