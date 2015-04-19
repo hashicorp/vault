@@ -1,6 +1,8 @@
 package consul
 
 import (
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -17,6 +19,10 @@ func secretToken() *framework.Secret {
 			},
 		},
 
+		DefaultDuration:    1 * time.Hour,
+		DefaultGracePeriod: 10 * time.Minute,
+
+		Renew:  framework.LeaseExtend(1*time.Hour, 0),
 		Revoke: secretTokenRevoke,
 	}
 }
