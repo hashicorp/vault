@@ -84,7 +84,7 @@ func testAccStepConfig(
 	t *testing.T, config map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "config",
+		Path:      "config/access",
 		Data:      config,
 	}
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func client(s logical.Storage) (*api.Client, error) {
-	entry, err := s.Get("config")
+	entry, err := s.Get("config/access")
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,7 @@ func client(s logical.Storage) (*api.Client, error) {
 				"them at the '/root' endpoint")
 	}
 
-	var conf config
+	var conf accessConfig
 	if err := entry.DecodeJSON(&conf); err != nil {
 		return nil, fmt.Errorf("error reading root configuration: %s", err)
 	}

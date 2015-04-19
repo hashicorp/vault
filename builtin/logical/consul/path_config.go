@@ -5,9 +5,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfig() *framework.Path {
+func pathConfigAccess() *framework.Path {
 	return &framework.Path{
-		Pattern: "config",
+		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
 			"address": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -31,14 +31,14 @@ func pathConfig() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathConfigWrite,
+			logical.WriteOperation: pathConfigAccessWrite,
 		},
 	}
 }
 
-func pathConfigWrite(
+func pathConfigAccessWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := logical.StorageEntryJSON("config", config{
+	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
 		Address: data.Get("address").(string),
 		Scheme:  data.Get("scheme").(string),
 		Token:   data.Get("token").(string),
@@ -54,7 +54,7 @@ func pathConfigWrite(
 	return nil, nil
 }
 
-type config struct {
+type accessConfig struct {
 	Address string `json:"address"`
 	Scheme  string `json:"scheme"`
 	Token   string `json:"token"`

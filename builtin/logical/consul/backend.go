@@ -14,13 +14,13 @@ func Backend() *framework.Backend {
 	b.Backend = &framework.Backend{
 		PathsSpecial: &logical.Paths{
 			Root: []string{
-				"config",
+				"config/*",
 				"policy/*",
 			},
 		},
 
 		Paths: []*framework.Path{
-			pathConfig(),
+			pathConfigAccess(),
 			pathPolicy(),
 			pathToken(&b),
 		},
