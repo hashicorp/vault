@@ -36,6 +36,20 @@ func secretCreds(b *backend) *framework.Secret {
 
 func (b *backend) secretCredsRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Get the username from the internal data
+	usernameRaw, ok := req.Secret.InternalData["username"]
+	if !ok {
+		return nil, fmt.Errorf("secret is missing username internal data")
+	}
+	username, ok := usernameRaw.(string)
+
+	// Get our connection
+	db, err := b.DB(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the lease information
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
 		return nil, err
@@ -45,7 +59,31 @@ func (b *backend) secretCredsRenew(
 	}
 
 	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax)
-	return f(req, d)
+	resp, err := f(req, d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make sure we increase the VALID UNTIL endpoint for this user.
+	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+		expiration := expireTime.Add(10 * time.Minute).
+			Format("2006-01-02 15:04:05")
+
+		query := fmt.Sprintf(
+			"ALTER ROLE %s VALID UNTIL '%s';",
+			pq.QuoteIdentifier(username),
+			expiration)
+		stmt, err := db.Prepare(query)
+		if err != nil {
+			return nil, err
+		}
+		defer stmt.Close()
+		if _, err := stmt.Exec(); err != nil {
+			return nil, err
+		}
+	}
+
+	return resp, nil
 }
 
 func (b *backend) secretCredsRevoke(
