@@ -29,7 +29,7 @@ func secretCreds(b *backend) *framework.Secret {
 		DefaultDuration:    1 * time.Hour,
 		DefaultGracePeriod: 10 * time.Minute,
 
-		Renew:  framework.LeaseExtend(1*time.Hour, 24*time.Hour),
+		Renew:  framework.LeaseExtend(1*time.Hour, 0),
 		Revoke: b.secretCredsRevoke,
 	}
 }
