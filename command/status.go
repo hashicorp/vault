@@ -3,6 +3,8 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
 )
 
 // StatusCommand is a Command that outputs the status of whether
@@ -31,42 +33,47 @@ func (c *StatusCommand) Run(args []string) int {
 			"Error checking seal status: %s", err))
 		return 2
 	}
+	c.Ui.Output(fmt.Sprintf(
+		"Sealed: %v\n"+
+			"\tKey Shares: %d\n"+
+			"\tKey Threshold: %d\n"+
+			"\tUnseal Progress: %d",
+		sealStatus.Sealed,
+		sealStatus.N,
+		sealStatus.T,
+		sealStatus.Progress))
 
+	// Mask the 'Vault is sealed' error, since this means HA is enabled,
+	// but that we cannot query for the leader since we are sealed.
 	leaderStatus, err := client.Sys().Leader()
+	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
+		leaderStatus = &api.LeaderResponse{HAEnabled: true}
+		err = nil
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error checking leader status: %s", err))
 		return 2
 	}
 
-	var isLeader, leaderAddress string
-	if sealStatus.Sealed {
-		isLeader = "unknown while sealed"
-		leaderAddress = "unknown while sealed"
-	} else if !leaderStatus.HAEnabled {
-		isLeader = "n/a"
-		leaderAddress = "n/a"
-	} else {
-		isLeader = fmt.Sprintf("%v", leaderStatus.IsSelf)
-		leaderAddress = leaderStatus.LeaderAddress
-	}
+	// Output if HA is enabled
+	c.Ui.Output(fmt.Sprintf("High-Availability Enabled: %v", leaderStatus.HAEnabled))
+	if leaderStatus.HAEnabled {
+		if sealStatus.Sealed {
+			c.Ui.Output("\tMode: sealed")
+		} else {
+			mode := "standby"
+			if leaderStatus.IsSelf {
+				mode = "active"
+			}
+			c.Ui.Output(fmt.Sprintf("\tMode: %s", mode))
 
-	c.Ui.Output(fmt.Sprintf(
-		"Sealed: %v\n"+
-			"\tKey Shares: %d\n"+
-			"\tKey Threshold: %d\n"+
-			"\tUnseal Progress: %d\n"+
-			"HA Enabled: %v\n"+
-			"\tIs Leader: %s\n"+
-			"\tLeader Address: %s",
-		sealStatus.Sealed,
-		sealStatus.N,
-		sealStatus.T,
-		sealStatus.Progress,
-		leaderStatus.HAEnabled,
-		isLeader,
-		leaderAddress,
-	))
+			if leaderStatus.LeaderAddress == "" {
+				leaderStatus.LeaderAddress = "<none>"
+			}
+			c.Ui.Output(fmt.Sprintf("\tLeader: %s", leaderStatus.LeaderAddress))
+		}
+	}
 
 	if sealStatus.Sealed {
 		return 1
