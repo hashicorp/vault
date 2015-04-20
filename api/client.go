@@ -1,12 +1,18 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"time"
 
 	vaultHttp "github.com/hashicorp/vault/http"
+)
+
+var (
+	errRedirect = errors.New("redirect")
 )
 
 // Config is used to configure the creation of the client.
@@ -30,7 +36,7 @@ type Config struct {
 func DefaultConfig() Config {
 	config := Config{
 		Address:    "https://127.0.0.1:8200",
-		HttpClient: http.DefaultClient,
+		HttpClient: &http.Client{},
 	}
 
 	return config
@@ -62,6 +68,11 @@ func NewClient(c Config) (*Client, error) {
 		}
 
 		c.HttpClient.Jar = jar
+	}
+
+	// Ensure redirects are not automatically followed
+	c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return errRedirect
 	}
 
 	return &Client{
@@ -128,6 +139,8 @@ func (c *Client) NewRequest(method, path string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
+	redirectCount := 0
+START:
 	req, err := r.ToHTTP()
 	if err != nil {
 		return nil, err
@@ -139,7 +152,43 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 		result = &Response{Response: resp}
 	}
 	if err != nil {
+		urlErr, ok := err.(*url.Error)
+		if ok && urlErr.Err == errRedirect {
+			err = nil
+		}
+	}
+	if err != nil {
 		return result, err
+	}
+
+	// Check for a redirect, only allowing for a single redirect
+	if (resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 {
+		// Parse the updated location
+		respLoc, err := resp.Location()
+		if err != nil {
+			return result, err
+		}
+
+		// Ensure a protocol downgrade doesn't happen
+		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
+			return result, fmt.Errorf("redirect would cause protocol downgrade")
+		}
+
+		// Copy the cookies so that our client auth transfers
+		cookies := c.config.HttpClient.Jar.Cookies(r.URL)
+		c.config.HttpClient.Jar.SetCookies(respLoc, cookies)
+
+		// Update the request
+		r.URL = respLoc
+
+		// Reset the request body if any
+		if err := r.ResetJSONBody(); err != nil {
+			return result, err
+		}
+
+		// Retry the request
+		redirectCount++
+		goto START
 	}
 
 	if err := result.Error(); err != nil {

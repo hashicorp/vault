@@ -14,6 +14,7 @@ type Request struct {
 	Method   string
 	URL      *url.URL
 	Params   url.Values
+	Obj      interface{}
 	Body     io.Reader
 	BodySize int64
 }
@@ -26,9 +27,18 @@ func (r *Request) SetJSONBody(val interface{}) error {
 		return err
 	}
 
+	r.Obj = val
 	r.Body = buf
 	r.BodySize = int64(buf.Len())
 	return nil
+}
+
+// ResetJSONBody is used to reset the body for a redirect
+func (r *Request) ResetJSONBody() error {
+	if r.Body == nil {
+		return nil
+	}
+	return r.SetJSONBody(r.Obj)
 }
 
 // ToHTTP turns this request into a valid *http.Request for use with the
