@@ -43,6 +43,9 @@ func (c *StatusCommand) Run(args []string) int {
 	if sealStatus.Sealed {
 		isLeader = "unknown while sealed"
 		leaderAddress = "unknown while sealed"
+	} else if !leaderStatus.HAEnabled {
+		isLeader = "n/a"
+		leaderAddress = "n/a"
 	} else {
 		isLeader = fmt.Sprintf("%v", leaderStatus.IsSelf)
 		leaderAddress = leaderStatus.LeaderAddress
@@ -50,12 +53,12 @@ func (c *StatusCommand) Run(args []string) int {
 
 	c.Ui.Output(fmt.Sprintf(
 		"Sealed: %v\n"+
-			"Key Shares: %d\n"+
-			"Key Threshold: %d\n"+
-			"Unseal Progress: %d\n"+
+			"\tKey Shares: %d\n"+
+			"\tKey Threshold: %d\n"+
+			"\tUnseal Progress: %d\n"+
 			"HA Enabled: %v\n"+
-			"Is Leader: %s\n"+
-			"Leader Address: %s",
+			"\tIs Leader: %s\n"+
+			"\tLeader Address: %s",
 		sealStatus.Sealed,
 		sealStatus.N,
 		sealStatus.T,
