@@ -15,13 +15,16 @@ type TokenCreateCommand struct {
 }
 
 func (c *TokenCreateCommand) Run(args []string) int {
-	var lease string
+	var displayName, lease string
 	var orphan bool
 	var metadata map[string]string
+	var numUses int
 	var policies []string
 	flags := c.Meta.FlagSet("mount", FlagSetDefault)
+	flags.StringVar(&displayName, "display-name", "", "")
 	flags.StringVar(&lease, "lease", "", "")
 	flags.BoolVar(&orphan, "orphan", false, "")
+	flags.IntVar(&numUses, "use-limit", 0, "")
 	flags.Var((*kvFlag.Flag)(&metadata), "metadata", "")
 	flags.Var((*sliceflag.StringFlag)(&policies), "policy", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -45,10 +48,12 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	}
 
 	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: policies,
-		Metadata: metadata,
-		Lease:    lease,
-		NoParent: orphan,
+		Policies:    policies,
+		Metadata:    metadata,
+		Lease:       lease,
+		NoParent:    orphan,
+		DisplayName: displayName,
+		NumUses:     numUses,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -97,6 +102,10 @@ General Options:
 
 Token Options:
 
+  -display-name="name"    A display name to associate with this token. This
+                          is a non-security sensitive value used to help
+                          identify created secrets, i.e. prefixes.
+
   -lease="1h"             Lease to associate with the token.
 
   -metadata="key=value"   Metadata to associate with the token. This shows
@@ -110,6 +119,8 @@ Token Options:
   -policy="name"          Policy to associate with this token. This can be
                           specified multiple times.
 
+  -use-limit=5            The number of times this token can be used until
+                          it is automatically revoked.
 `
 	return strings.TrimSpace(helpText)
 }
