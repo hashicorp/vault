@@ -22,6 +22,8 @@ func (f *FormatJSON) FormatRequest(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
+		Type: "request",
+
 		Auth: JSONAuth{
 			Policies: auth.Policies,
 			Metadata: auth.Metadata,
@@ -68,6 +70,8 @@ func (f *FormatJSON) FormatResponse(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
+		Type: "response",
+
 		Auth: JSONAuth{
 			Policies: auth.Policies,
 			Metadata: auth.Metadata,
@@ -90,16 +94,18 @@ func (f *FormatJSON) FormatResponse(
 
 // JSONRequest is the structure of a request audit log entry in JSON.
 type JSONRequestEntry struct {
+	Type    string      `json:"type"`
 	Auth    JSONAuth    `json:"auth"`
 	Request JSONRequest `json:"request"`
 }
 
 // JSONResponseEntry is the structure of a response audit log entry in JSON.
 type JSONResponseEntry struct {
+	Type     string       `json:"type"`
 	Error    string       `json:"error"`
 	Auth     JSONAuth     `json:"auth"`
 	Request  JSONRequest  `json:"request"`
-	Response JSONResponse `json:"request"`
+	Response JSONResponse `json:"response"`
 }
 
 type JSONRequest struct {
