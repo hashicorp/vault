@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -92,5 +94,51 @@ func TestClientSetToken(t *testing.T) {
 
 	if v := client.Token(); v != "" {
 		t.Fatalf("bad: %s", v)
+	}
+}
+
+func TestClientRedirect(t *testing.T) {
+	primary := func(w http.ResponseWriter, req *http.Request) {
+		cookie, err := req.Cookie(vaultHttp.AuthCookieName)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if cookie.Value != "foo" {
+			t.Fatalf("Bad: %#v", cookie)
+		}
+
+		w.Write([]byte("test"))
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(primary))
+	defer ln.Close()
+
+	standby := func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Location", config.Address)
+		w.WriteHeader(307)
+	}
+	config2, ln2 := testHTTPServer(t, http.HandlerFunc(standby))
+	defer ln2.Close()
+
+	client, err := NewClient(config2)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Set the cookie manually
+	client.SetToken("foo")
+
+	// Do a raw "/" request
+	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Copy the response
+	var buf bytes.Buffer
+	io.Copy(&buf, resp.Body)
+
+	// Verify we got the response from the primary
+	if buf.String() != "test" {
+		t.Fatalf("Bad: %s", buf.String())
 	}
 }
