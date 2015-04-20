@@ -2,6 +2,7 @@
 // API
 // --------------------------------------------------
 
+.bs-api-section{
 dl {
     margin-top: 30px;
     line-height: 20px;
@@ -35,6 +36,7 @@ dl {
             padding-bottom: 20px;
             font-size: 15px;
             font-family: "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-weight: 500;
 
             span.param {
                 font-weight: bold;
@@ -47,4 +49,5 @@ dl {
             }
         }
     }
+}
 }
