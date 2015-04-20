@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-// SealStatusCommand is a Command that outputs the status of whether
-// Vault is sealed or not.
-type SealStatusCommand struct {
+// StatusCommand is a Command that outputs the status of whether
+// Vault is sealed or not as well as HA information.
+type StatusCommand struct {
 	Meta
 }
 
-func (c *SealStatusCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("seal-status", FlagSetDefault)
+func (c *StatusCommand) Run(args []string) int {
+	flags := c.Meta.FlagSet("status", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -63,15 +63,15 @@ func (c *SealStatusCommand) Run(args []string) int {
 	}
 }
 
-func (c *SealStatusCommand) Synopsis() string {
-	return "Outputs status of whether Vault is sealed"
+func (c *StatusCommand) Synopsis() string {
+	return "Outputs status of whether Vault is sealed and if HA mode is enabled"
 }
 
-func (c *SealStatusCommand) Help() string {
+func (c *StatusCommand) Help() string {
 	helpText := `
-Usage: vault seal-status [options]
+Usage: vault status [options]
 
-  Outputs the state of the Vault, sealed or unsealed.
+  Outputs the state of the Vault, sealed or unsealed and if HA is enabled.
 
   This command outputs whether or not the Vault is sealed. The exit
   code also reflects the seal status (0 unsealed, 1 sealed, 2+ error).

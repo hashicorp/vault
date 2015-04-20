@@ -8,9 +8,9 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func TestSealStatus(t *testing.T) {
+func TestStatus(t *testing.T) {
 	ui := new(cli.MockUi)
-	c := &SealStatusCommand{
+	c := &StatusCommand{
 		Meta: Meta{
 			Ui: ui,
 		},
