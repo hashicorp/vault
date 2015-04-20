@@ -25,10 +25,17 @@ func (c *SealStatusCommand) Run(args []string) int {
 		return 2
 	}
 
-	status, err := client.Sys().SealStatus()
+	sealStatus, err := client.Sys().SealStatus()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error checking seal status: %s", err))
+		return 2
+	}
+
+	leaderStatus, err := client.Sys().Leader()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error checking leader status: %s", err))
 		return 2
 	}
 
@@ -36,14 +43,20 @@ func (c *SealStatusCommand) Run(args []string) int {
 		"Sealed: %v\n"+
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
-			"Unseal Progress: %d",
-		status.Sealed,
-		status.N,
-		status.T,
-		status.Progress,
+			"Unseal Progress: %d\n"+
+			"HA Enabled: %v\n"+
+			"Is Leader: %v\n"+
+			"Leader Address: %s",
+		sealStatus.Sealed,
+		sealStatus.N,
+		sealStatus.T,
+		sealStatus.Progress,
+		leaderStatus.HAEnabled,
+		leaderStatus.IsSelf,
+		leaderStatus.LeaderAddress,
 	))
 
-	if status.Sealed {
+	if sealStatus.Sealed {
 		return 1
 	} else {
 		return 0
