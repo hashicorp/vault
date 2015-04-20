@@ -80,11 +80,24 @@
 							<a href="/docs/http/sys-renew.html">/sys/renew</a>
 						</li>
 
-						<li<%= sidebar_current("docs-http-lease-revoke") %>>
+						<li<%= sidebar_current("docs-http-lease-revoke-single") %>>
 							<a href="/docs/http/sys-revoke.html">/sys/revoke</a>
+                        </li>
+
+						<li<%= sidebar_current("docs-http-lease-revoke-prefix") %>>
+							<a href="/docs/http/sys-revoke-prefix.html">/sys/revoke-prefix</a>
 						</li>
 					</ul>
-				</li>
+                </li>
+
+                <li<%= sidebar_current("docs-http-debug") %>>
+					<a href="#">Debug</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-http-debug/raw") %>>
+							<a href="/docs/http/sys-raw.html">/sys/raw</a>
+						</li>
+					</ul>
+                </li>
 
 				<hr>
 

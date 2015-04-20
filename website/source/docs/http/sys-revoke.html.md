@@ -1,7 +1,7 @@
 ---
 layout: "http"
 page_title: "HTTP API: /sys/revoke"
-sidebar_current: "docs-http-lease-revoke"
+sidebar_current: "docs-http-lease-revoke-single"
 description: |-
   The `/sys/revoke` endpoint is used to revoke secrets.
 ---
