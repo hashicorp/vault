@@ -163,8 +163,8 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
-		"seal-status": func() (cli.Command, error) {
-			return &command.SealStatusCommand{
+		"status": func() (cli.Command, error) {
+			return &command.StatusCommand{
 				Meta: meta,
 			}, nil
 		},

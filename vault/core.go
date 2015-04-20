@@ -666,14 +666,14 @@ func (c *Core) Standby() (bool, error) {
 func (c *Core) Leader() (bool, string, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	// Check if sealed
-	if c.sealed {
-		return false, "", ErrSealed
-	}
-
 	// Check if HA enabled
 	if c.ha == nil {
 		return false, "", ErrHANotEnabled
+	}
+
+	// Check if sealed
+	if c.sealed {
+		return false, "", ErrSealed
 	}
 
 	// Check if we are the leader
