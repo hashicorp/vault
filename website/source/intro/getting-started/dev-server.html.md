@@ -80,7 +80,7 @@ else:
 
 ## Verify the Server is Running
 
-Verify the server is running by running `vault seal-status`. This should
+Verify the server is running by running `vault status`. This should
 succeed and exit with exit code 0. If you see an error about opening
 a connection, make sure you copied and executed the `export VAULT_ADDR...`
 command from above properly.
@@ -88,7 +88,7 @@ command from above properly.
 If it ran successful, the output should look like below:
 
 ```
-$ vault seal-status
+$ vault status
 Sealed: false
 Key Shares: 1
 Key Threshold: 1
