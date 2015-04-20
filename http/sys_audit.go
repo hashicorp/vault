@@ -15,12 +15,11 @@ func handleSysListAudit(core *vault.Core) http.Handler {
 			return
 		}
 
-		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
+		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
 			Operation: logical.ReadOperation,
 			Path:      "sys/audit",
 		}))
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
+		if !ok {
 			return
 		}
 
@@ -57,12 +56,11 @@ func handleSysDisableAudit(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
+	_, ok := request(core, w, r, requestAuth(r, &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "sys/audit/" + path,
 	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	if !ok {
 		return
 	}
 
@@ -89,7 +87,7 @@ func handleSysEnableAudit(core *vault.Core, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
+	_, ok := request(core, w, r, requestAuth(r, &logical.Request{
 		Operation: logical.WriteOperation,
 		Path:      "sys/audit/" + path,
 		Data: map[string]interface{}{
@@ -98,8 +96,7 @@ func handleSysEnableAudit(core *vault.Core, w http.ResponseWriter, r *http.Reque
 			"options":     req.Options,
 		},
 	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	if !ok {
 		return
 	}
 
