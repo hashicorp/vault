@@ -73,7 +73,7 @@ description: |-
 	</dd>
 
 	<dt>Returns</dt>
-	<dd>`204` respons code.
+	<dd>`204` response code.
 	</dd>
 </dl>
 
@@ -96,6 +96,6 @@ description: |-
 	</dd>
 
 	<dt>Returns</dt>
-	<dd>`204` respons code.
+	<dd>`204` response code.
 	</dd>
 </dl>
