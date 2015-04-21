@@ -91,3 +91,7 @@ $ vault write secret/password value=@data.txt
 
 Unlike stdin, you can specify multiple files, repeat files, etc. all
 on the command line. Reading from files is very useful for complex data.
+
+## Reading Data
+
+TODO
