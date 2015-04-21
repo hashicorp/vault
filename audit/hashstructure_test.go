@@ -43,3 +43,14 @@ func TestHashWalker(t *testing.T) {
 		}
 	}
 }
+
+func TestHashSHA1(t *testing.T) {
+	fn := HashSHA1("")
+	result, err := fn("foo")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if result != "sha1:0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33" {
+		t.Fatalf("bad: %#v", result)
+	}
+}
