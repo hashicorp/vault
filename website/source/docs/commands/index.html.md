@@ -20,3 +20,7 @@ as you'd most likely expect.
 To view a list of the available commands at any time, just run Vault
 with no arguments. To get help for any specific subcommand, run the subcommand
 with the `-h` argument.
+
+The help output is very comprehensive, so we defer you to that for documentation.
+We've included some guides to the left of common interactions with the
+CLI.
