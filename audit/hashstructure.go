@@ -1,6 +1,8 @@
 package audit
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
@@ -11,6 +13,8 @@ import (
 
 // HashStructures takes an interface and hashes all the values within
 // the structure. Only _values_ are hashed: keys of objects are not.
+//
+// For the HashCallback, see the built-in HashCallbacks below.
 func HashStructure(s interface{}, cb HashCallback) (interface{}, error) {
 	s, err := copystructure.Copy(s)
 	if err != nil {
@@ -28,6 +32,15 @@ func HashStructure(s interface{}, cb HashCallback) (interface{}, error) {
 // HashCallback is the callback called for HashStructure to hash
 // a value.
 type HashCallback func(string) (string, error)
+
+// HashSHA1 returns a HashCallback that hashes data with SHA1 and
+// with an optional salt. If salt is a blank string, no salt is used.
+func HashSHA1(salt string) HashCallback {
+	return func(v string) (string, error) {
+		hashed := sha1.Sum([]byte(v + salt))
+		return "sha1:" + hex.EncodeToString(hashed[:]), nil
+	}
+}
 
 // hashWalker implements interfaces for the reflectwalk package
 // (github.com/mitchellh/reflectwalk) that can be used to automatically
