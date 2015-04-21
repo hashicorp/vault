@@ -2,6 +2,7 @@ package audit
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/hashicorp/vault/logical"
@@ -19,6 +20,16 @@ func (f *FormatJSON) FormatRequest(
 		auth = new(logical.Auth)
 	}
 
+	// Hash the data
+	dataRaw, err := HashStructure(req.Data, f.hashFunc())
+	if err != nil {
+		return err
+	}
+	data, ok := dataRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("data came back as not map")
+	}
+
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
@@ -32,7 +43,7 @@ func (f *FormatJSON) FormatRequest(
 		Request: JSONRequest{
 			Operation: req.Operation,
 			Path:      req.Path,
-			Data:      req.Data,
+			Data:      data,
 		},
 	})
 }
@@ -43,6 +54,8 @@ func (f *FormatJSON) FormatResponse(
 	req *logical.Request,
 	resp *logical.Response,
 	err error) error {
+	hashFunc := f.hashFunc()
+
 	// If things are nil, make empty to avoid panics
 	if auth == nil {
 		auth = new(logical.Auth)
@@ -53,8 +66,13 @@ func (f *FormatJSON) FormatResponse(
 
 	var respAuth JSONAuth
 	if resp.Auth != nil {
+		token, err := hashFunc(resp.Auth.ClientToken)
+		if err != nil {
+			return err
+		}
+
 		respAuth = JSONAuth{
-			ClientToken: resp.Auth.ClientToken,
+			ClientToken: token,
 			Policies:    resp.Auth.Policies,
 			Metadata:    resp.Auth.Metadata,
 		}
@@ -65,6 +83,25 @@ func (f *FormatJSON) FormatResponse(
 		respSecret = JSONSecret{
 			LeaseID: resp.Secret.LeaseID,
 		}
+	}
+
+	// Hash the data
+	dataRaw, err := HashStructure(req.Data, f.hashFunc())
+	if err != nil {
+		return err
+	}
+	reqData, ok := dataRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("data came back as not map")
+	}
+
+	dataRaw, err = HashStructure(resp.Data, f.hashFunc())
+	if err != nil {
+		return err
+	}
+	respData, ok := dataRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("data came back as not map")
 	}
 
 	// Encode!
@@ -80,16 +117,20 @@ func (f *FormatJSON) FormatResponse(
 		Request: JSONRequest{
 			Operation: req.Operation,
 			Path:      req.Path,
-			Data:      req.Data,
+			Data:      reqData,
 		},
 
 		Response: JSONResponse{
 			Auth:     respAuth,
 			Secret:   respSecret,
-			Data:     resp.Data,
+			Data:     respData,
 			Redirect: resp.Redirect,
 		},
 	})
+}
+
+func (f *FormatJSON) hashFunc() HashCallback {
+	return HashSHA1("")
 }
 
 // JSONRequest is the structure of a request audit log entry in JSON.
