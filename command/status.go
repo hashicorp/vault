@@ -35,9 +35,9 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 	c.Ui.Output(fmt.Sprintf(
 		"Sealed: %v\n"+
-			"\tKey Shares: %d\n"+
-			"\tKey Threshold: %d\n"+
-			"\tUnseal Progress: %d",
+			"Key Shares: %d\n"+
+			"Key Threshold: %d\n"+
+			"Unseal Progress: %d",
 		sealStatus.Sealed,
 		sealStatus.N,
 		sealStatus.T,
@@ -57,6 +57,7 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	// Output if HA is enabled
+	c.Ui.Output("")
 	c.Ui.Output(fmt.Sprintf("High-Availability Enabled: %v", leaderStatus.HAEnabled))
 	if leaderStatus.HAEnabled {
 		if sealStatus.Sealed {
