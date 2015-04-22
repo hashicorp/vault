@@ -49,7 +49,7 @@ func (c *InitCommand) Run(args []string) int {
 		"\n"+
 			"Vault initialized with %d keys and a key threshold of %d!\n\n"+
 			"Please securely distribute the above keys. Whenever a Vault server\n"+
-			"is started, it must be unsealed with %d (the threshold)\n of the"+
+			"is started, it must be unsealed with %d (the threshold) of the\n"+
 			"keys above (any of the keys, as long as the total number equals\n"+
 			"the threshold).\n\n"+
 			"Vault does not store the original master key. If you lose the keys\n"+
