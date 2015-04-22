@@ -11,8 +11,6 @@ import (
 func handleSysAuth(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case "GET":
-			handleSysListAuth(core, w, r)
 		case "POST":
 			fallthrough
 		case "DELETE":
@@ -24,22 +22,24 @@ func handleSysAuth(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysListAuth(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		respondError(w, http.StatusMethodNotAllowed, nil)
-		return
-	}
+func handleSysListAuth(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
 
-	resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "sys/auth",
-	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
-		return
-	}
+		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "sys/auth",
+		}))
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
 
-	respondOk(w, resp.Data)
+		respondOk(w, resp.Data)
+	})
 }
 
 func handleSysEnableDisableAuth(core *vault.Core, w http.ResponseWriter, r *http.Request) {

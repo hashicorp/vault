@@ -12,7 +12,7 @@ func handleSysMounts(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			handleSysListMounts(core, w, r)
+			handleSysListMounts(core).ServeHTTP(w, r)
 		case "POST":
 			fallthrough
 		case "DELETE":
@@ -58,22 +58,24 @@ func handleSysRemount(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysListMounts(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		respondError(w, http.StatusMethodNotAllowed, nil)
-		return
-	}
+func handleSysListMounts(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
 
-	resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "sys/mounts",
-	}))
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
-		return
-	}
+		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "sys/mounts",
+		}))
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
 
-	respondOk(w, resp.Data)
+		respondOk(w, resp.Data)
+	})
 }
 
 func handleSysMountUnmount(core *vault.Core, w http.ResponseWriter, r *http.Request) {
