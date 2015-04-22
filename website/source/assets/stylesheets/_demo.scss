@@ -42,8 +42,22 @@
         }
     }
 
-    .welcome {
-        padding-top: 20px;
+    ul {
+        padding-left: 15px;
+    }
+
+    li {
+        list-style-type: none;
+    }
+
+    .instruction {
+        margin-top: 20px;
+        padding: 1px;
+        background-color: darken($blue, 25%);
+
+        p:last-child {
+            margin-bottom: 0px;
+        }
     }
 
     .log {
