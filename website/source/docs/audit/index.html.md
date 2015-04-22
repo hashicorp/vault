@@ -21,22 +21,13 @@ but also a second copy in case the first is tampered with.
 ## Sensitive Information
 
 The audit logs contain the full request and response objects for every
-interaction with Vault. The request contains all the parameters sent to
-Vault and the response contains all the data in the response. This data
-(both on the request and response) will often contain _secrets_ and other
-sensitive information.
+interaction with Vault. The data in the request and the data in the
+response (including secrets and authentication tokens) will be hashed
+without a salt using SHA1.
 
-Therefore, extreme care should be taken to secure the audit logs that
-are being kept. This level of detail is important for determining
-the effect of an intrusion.
-
-In the world of Vault, the effect of these secrets being in logs can
-be effectively limited by making heavy use of dynamic keys, and the
-ease of key rolling with Vault's leasing system.
-
-~> **WARNING:** This section is incredibly important. If you are using
-audit backends, then make sure you read the above section on sensitive
-information within the logs.
+The purpose of the hash is so that secrets aren't in plaintext within
+your audit logs. However, you're still able to check the value of
+secrets by SHA-ing it yourself.
 
 ## Enabling/Disabling Audit Backends
 
