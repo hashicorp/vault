@@ -47,4 +47,3 @@ then one of the standbys will take over and become the active instance.
 It is important to note that only _unsealed_ servers act as a standby.
 If a server is still in the sealed state, then it cannot act as a standby
 as it would be unable to serve any requests should the active server fail.
-

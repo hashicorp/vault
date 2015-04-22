@@ -98,10 +98,10 @@ Data can be read using `vault read`. This command is very simple:
 
 ```
 $ vault read secret/password
-Key           	Value
-lease_id      	secret/password/76c844fb-aeba-a766-0a50-2b907072233a
-lease_duration	2592000
-value         	itsasecret
+Key             Value
+lease_id        secret/password/76c844fb-aeba-a766-0a50-2b907072233a
+lease_duration  2592000
+value           itsasecret
 ```
 
 You can use the `-format` flag to get various different formats out

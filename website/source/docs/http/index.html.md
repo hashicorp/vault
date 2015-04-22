@@ -57,20 +57,24 @@ backends, credential providers, etc. then append `?help=1` to any
 URL. If you have valid permission to access the path, then the help text
 will be returned with the following structure:
 
-        {
-            "help": "help text"
-        }
+```javascript
+{
+  "help": "help text"
+}
+```
 
 ## Error Response
 
 A common JSON structure is always returned to return errors:
 
-        {
-            "errors": [
-                "message",
-                "another message"
-            ]
-        }
+```javascript
+{
+  "errors": [
+    "message",
+    "another message"
+  ]
+}
+```
 
 This structure will be sent down for any HTTP status greater than
 or equal to 400.
@@ -94,5 +98,3 @@ The following HTTP status codes are used throughout the API.
    try again later. If the error persists, report a bug.
 - `503` - Vault is down for maintenance or is currently sealed.
    Try again later.
-
-

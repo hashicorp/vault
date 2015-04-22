@@ -36,7 +36,7 @@ An example, real world process for using this provider:
      system tells security operators a unique ID for this machine. This
      process can be scripted, but the key is that it is out-of-band and
      out of reach of configuration management.
-	 (Path: map/user-id/<user-id>)
+   (Path: map/user-id/<user-id>)
 
   4. A new server is provisioned. Configuration management configures the
      app ID, the server itself detects its user ID. With both of these

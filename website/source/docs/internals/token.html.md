@@ -51,4 +51,3 @@ a use count of one makes a _one time token_. This means the token can be used
 for a single request before being automatically revoked. This can be generalized
 to any number of uses. Limited use tokens cannot be used to create sub-tokens,
 but they can be a powerful way to allow extremely limited access to Vault.
-

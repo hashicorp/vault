@@ -9,21 +9,21 @@ description: |-
 # /sys/revoke-prefix
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Revoke all secrets generated under a given prefix immediately.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Revoke all secrets generated under a given prefix immediately.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>PUT</dd>
+  <dt>Method</dt>
+  <dd>PUT</dd>
 
-	<dt>URL</dt>
-	<dd>`/sys/revoke-prefix/<path prefix>`</dd>
+  <dt>URL</dt>
+  <dd>`/sys/revoke-prefix/<path prefix>`</dd>
 
-	<dt>Parameters</dt>
-	<dd>None</dd>
+  <dt>Parameters</dt>
+  <dd>None</dd>
 
-	<dt>Returns</dt>
-	<dd>A `204` response code.
-	</dd>
+  <dt>Returns</dt>
+  <dd>A `204` response code.
+  </dd>
 </dl>

@@ -40,9 +40,9 @@ for example.
 
 An example is shown below:
 
-```
+```javascript
 module "consul" {
-	source = "./consul"
+  source = "./consul"
 }
 ```
 
@@ -56,17 +56,17 @@ automatically instantly available.
 Vault will automatically recognize GitHub URLs and turn them into
 the proper Git repository. The syntax is simple:
 
-```
+```javascript
 module "consul" {
-	source = "github.com/hashicorp/example"
+  source = "github.com/hashicorp/example"
 }
 ```
 
 Subdirectories within the repository can also be referenced:
 
-```
+```javascript
 module "consul" {
-	source = "github.com/hashicorp/example//subdir"
+  source = "github.com/hashicorp/example//subdir"
 }
 ```
 
@@ -86,17 +86,17 @@ Git repositories for more information.
 Vault will automatically recognize BitBucket URLs and turn them into
 the proper Git or Mercurial repository. An example:
 
-```
+```javascript
 module "consul" {
-	source = "bitbucket.org/hashicorp/example"
+  source = "bitbucket.org/hashicorp/example"
 }
 ```
 
 Subdirectories within the repository can also be referenced:
 
-```
+```javascript
 module "consul" {
-	source = "bitbucket.org/hashicorp/example//subdir"
+  source = "bitbucket.org/hashicorp/example//subdir"
 }
 ```
 
@@ -113,9 +113,9 @@ Generic Git repositories are also supported. The value of `source` in this
 case should be a complete Git-compatible URL. Using Git requires that
 Git is installed on your system. Example:
 
-```
+```javascript
 module "consul" {
-	source = "git://hashicorp.com/module.git"
+  source = "git://hashicorp.com/module.git"
 }
 ```
 
@@ -123,9 +123,9 @@ You can also use protocols such as HTTP or SSH, but you'll have to hint
 to Vault (using the forced source type syntax documented below) to use
 Git:
 
-```
+```javascript
 module "consul" {
-	source = "git::https://hashicorp.com/module.git"
+  source = "git::https://hashicorp.com/module.git"
 }
 ```
 
@@ -136,9 +136,9 @@ parameters:
 
 An example of using these parameters is shown below:
 
-```
+```javascript
 module "consul" {
-	source = "git::https://hashicorp.com/module.git?ref=master"
+  source = "git::https://hashicorp.com/module.git?ref=master"
 }
 ```
 
@@ -148,9 +148,9 @@ Generic Mercurial repositories are supported. The value of `source` in this
 case should be a complete Mercurial-compatible URL. Using Mercurial requires that
 Mercurial is installed on your system. Example:
 
-```
+```javascript
 module "consul" {
-	source = "hg::http://hashicorp.com/module.hg"
+  source = "hg::http://hashicorp.com/module.hg"
 }
 ```
 
@@ -191,9 +191,9 @@ one way or the other.
 
 Example:
 
-```
+```javascript
 module "consul" {
-	source = "git::http://hashicorp.com/foo.git"
+  source = "git::http://hashicorp.com/foo.git"
 }
 ```
 

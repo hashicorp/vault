@@ -14,21 +14,21 @@ supports `ssh` type [connections](/docs/provisioners/connection.html).
 
 ## Example usage
 
-```
+```javascript
 resource "aws_instance" "web" {
-    ...
+  ...
 
-    # Copies the myapp.conf file to /etc/myapp.conf
-    provisioner "file" {
-        source = "conf/myapp.conf"
-        destination = "/etc/myapp.conf"
-    }
+  # Copies the myapp.conf file to /etc/myapp.conf
+  provisioner "file" {
+    source = "conf/myapp.conf"
+    destination = "/etc/myapp.conf"
+  }
 
-    # Copies the configs.d folder to /etc/configs.d
-    provisioner "file" {
-        source = "conf/configs.d"
-        destination = "/etc"
-    }
+  # Copies the configs.d folder to /etc/configs.d
+  provisioner "file" {
+    source = "conf/configs.d"
+    destination = "/etc"
+  }
 }
 ```
 
@@ -63,4 +63,3 @@ If the source, however, is `/foo/` (a trailing slash is present), and the destin
 
 This behavior was adopted from the standard behavior of rsync. Note that under the covers,
 rsync may or may not be used.
-

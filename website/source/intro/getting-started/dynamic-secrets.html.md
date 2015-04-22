@@ -81,21 +81,21 @@ The AWS backend requires an IAM policy to associate created credentials
 with. For this example, we'll write just one policy, but you can associate
 many policies with the backend. Save a file named "policy.json" with the following contents:
 
-```
+```javascript
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "Stmt1426528957000",
-            "Effect": "Allow",
-            "Action": [
-                "ec2:*"
-            ],
-            "Resource": [
-                "*"
-            ]
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1426528957000",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
 }
 ```
 
@@ -119,10 +119,10 @@ special path `aws/<NAME>` where `NAME` is the policy name:
 
 ```
 $ vault read aws/deploy
-Key       	Value
+Key         Value
 lease_id    aws/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
-access_key	AKIAJFN42DVCQWDHQYHQ
-secret_key	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
+access_key  AKIAJFN42DVCQWDHQYHQ
+secret_key  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
 ```
 
 Success! The access and secret key can now be used to perform any EC2

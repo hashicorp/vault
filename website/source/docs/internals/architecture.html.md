@@ -155,4 +155,3 @@ This has been a brief high-level overview of the architecture of Vault. There
 are more details available for each of the sub-systems.
 
 For other details, either consult the code, ask in IRC or reach out to the mailing list.
-

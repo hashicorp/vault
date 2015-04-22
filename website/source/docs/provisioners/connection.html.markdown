@@ -20,15 +20,15 @@ subsequent provisioners connect as a user with more limited permissions.
 
 ## Example usage
 
-```
+```javascript
 # Copies the file as the root user using a password
 provisioner "file" {
-    source = "conf/myapp.conf"
-    destination = "/etc/myapp.conf"
-    connection {
-        user = "root"
-        password = "${var.root_password}"
-    }
+  source = "conf/myapp.conf"
+  destination = "/etc/myapp.conf"
+  connection {
+    user = "root"
+    password = "${var.root_password}"
+  }
 }
 ```
 
@@ -52,4 +52,3 @@ The following arguments are supported:
 
 * `timeout` - The timeout to wait for the connection to become available. This defaults
    to 5 minutes. Should be provided as a string like "30s" or "5m".
-

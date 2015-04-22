@@ -28,9 +28,9 @@ Within a folder containing Vault configurations, create a subfolder
 the root folder containing the "child" folder, add this to one of the
 Vault files:
 
-```
+```javascript
 module "child" {
-	source = "./child"
+  source = "./child"
 }
 ```
 
@@ -54,11 +54,11 @@ variables or outputs.
 
 In the "child" module we created above, add the following:
 
-```
+```javascript
 variable "memory" {}
 
 output "received" {
-	value = "${var.memory}"
+  value = "${var.memory}"
 }
 ```
 
@@ -67,15 +67,15 @@ that will simply be the value of the memory variable.
 
 You can then configure the module and use the output like so:
 
-```
+```javascript
 module "child" {
-	source = "./child"
+  source = "./child"
 
-	memory = "1G"
+  memory = "1G"
 }
 
 output "child_memory" {
-	value = "${module.child.received}"
+  value = "${module.child.received}"
 }
 ```
 
@@ -98,13 +98,13 @@ the [path interpolated variables](/docs/configuration/interpolation.html).
 
 An example is shown below:
 
-```
+```javascript
 resource "aws_instance" "server" {
-	...
+  ...
 
-	provisioner "remote-exec" {
-		script = "${path.module}/script.sh"
-	}
+  provisioner "remote-exec" {
+    script = "${path.module}/script.sh"
+  }
 }
 ```
 
