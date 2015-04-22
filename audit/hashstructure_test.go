@@ -41,6 +41,10 @@ func TestHash(t *testing.T) {
 				},
 			},
 		},
+		{
+			"foo",
+			"foo",
+		},
 	}
 
 	for _, tc := range cases {
