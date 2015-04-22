@@ -4,7 +4,7 @@ import "fmt"
 
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
-// datd outside of Vault. As such, it is completely untrusted,
+// data outside of Vault. As such, it is completely untrusted,
 // and is only accessed via a security barrier. The backends
 // must represent keys in a hierarchical manner. All methods
 // are expected to be thread safe.
