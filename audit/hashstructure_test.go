@@ -1,9 +1,58 @@
 package audit
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/logical"
 )
+
+func TestHash(t *testing.T) {
+	cases := []struct {
+		Input  interface{}
+		Output interface{}
+	}{
+		{
+			&logical.Auth{ClientToken: "foo"},
+			&logical.Auth{ClientToken: "sha1:0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"},
+		},
+		{
+			&logical.Request{
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			&logical.Request{
+				Data: map[string]interface{}{
+					"foo": "sha1:62cdb7020ff920e5aa642c3d4066950dd1f01f4d",
+				},
+			},
+		},
+		{
+			&logical.Response{
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			&logical.Response{
+				Data: map[string]interface{}{
+					"foo": "sha1:62cdb7020ff920e5aa642c3d4066950dd1f01f4d",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		input := fmt.Sprintf("%#v", tc.Input)
+		if err := Hash(tc.Input); err != nil {
+			t.Fatalf("err: %s\n\n%s", err, input)
+		}
+		if !reflect.DeepEqual(tc.Input, tc.Output) {
+			t.Fatalf("bad:\n\n%s\n\n%#v\n\n%#v", input, tc.Input, tc.Output)
+		}
+	}
+}
 
 func TestHashWalker(t *testing.T) {
 	replaceText := "foo"

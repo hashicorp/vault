@@ -7,11 +7,61 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/reflectwalk"
 )
 
-// HashStructures takes an interface and hashes all the values within
+// Hash will hash the given type. This has built-in support for auth,
+// requests, and responses. If it is a type that isn't recognized, then
+// it will be passed through.
+//
+// The structure is modified in-place.
+func Hash(raw interface{}) error {
+	fn := HashSHA1("")
+
+	switch s := raw.(type) {
+	case *logical.Auth:
+		if s.ClientToken != "" {
+			token, err := fn(s.ClientToken)
+			if err != nil {
+				return err
+			}
+
+			s.ClientToken = token
+		}
+	case *logical.Request:
+		if s.Auth != nil {
+			if err := Hash(s.Auth); err != nil {
+				return err
+			}
+		}
+
+		data, err := HashStructure(s.Data, fn)
+		if err != nil {
+			return err
+		}
+
+		s.Data = data.(map[string]interface{})
+	case *logical.Response:
+		if s.Auth != nil {
+			if err := Hash(s.Auth); err != nil {
+				return err
+			}
+		}
+
+		data, err := HashStructure(s.Data, fn)
+		if err != nil {
+			return err
+		}
+
+		s.Data = data.(map[string]interface{})
+	}
+
+	return nil
+}
+
+// HashStructure takes an interface and hashes all the values within
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.

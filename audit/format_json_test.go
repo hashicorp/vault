@@ -38,5 +38,5 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}
 }
 
-const testFormatJSONReqBasicStr = `{"type":"request","auth":{"policies":["root"],"metadata":null},"request":{"operation":"write","path":"/foo","data":{}}}
+const testFormatJSONReqBasicStr = `{"type":"request","auth":{"policies":["root"],"metadata":null},"request":{"operation":"write","path":"/foo","data":null}}
 `
