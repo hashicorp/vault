@@ -11,6 +11,8 @@ import (
 func handleSysAuth(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
+		case "GET":
+			handleSysListAuth(core).ServeHTTP(w, r)
 		case "POST":
 			fallthrough
 		case "DELETE":
