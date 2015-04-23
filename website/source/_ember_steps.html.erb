@@ -24,7 +24,6 @@
     <ul>
         <li>- Initializing and unsealing your Vault</li>
         <li>- Authorizing your requests to Vault</li>
-        <li>- Mounting a backend</li>
         <li>- Reading and writing secrets</li>
         <li>- Sealing your Vault</li>
     </ul>
@@ -93,28 +92,10 @@
     </p>
 </script>
 
-<script type="text/x-handlebars" data-template-name="mounts">
-    <p>
-        Vault supports a number of secret backends. This behaves
-        a lot like a virtual filesystem. The read/write/delete
-        operations are forwarded to the backend, and the backend can
-        choose to react to these operations however it wishes.
-    </p>
-    <p>
-        Backends can be very powerful, dynamically interacting with
-        services like AWS IAM, but for now we'll mount a simple
-        generic backend that simply passes data through to
-        the storage backend (after encrypting it).
-    </p>
-    <p>
-        <code>vault mount generic</code>
-    </p>
-</script>
-
 <script type="text/x-handlebars" data-template-name="secrets">
     <p>
         Now that Vault has been set-up, we can start reading and writing secrets
-        with the previously mounted generic backend. Secrets written to Vault
+        with the default mounted secret backend. Secrets written to Vault
         are encrypted and then written to the backend storage.
         The backend storage mechanism never sees the unencrypted
         value and doesn't have the means necessary to decrypt

@@ -8,6 +8,7 @@ Demo.DemoStepController = Ember.ObjectController.extend({
   commandLog: [],
   cursor: 0,
   notCleared: true,
+  fullscreen: false,
 
   renderedLogs: function() {
     return this.get('logs');
@@ -67,6 +68,7 @@ Demo.DemoStepController = Ember.ObjectController.extend({
           break;
         case "previous":
         case "back":
+        case "prev":
           this.set('notCleared', true);
           this.send('previous');
           break;
@@ -78,10 +80,14 @@ Demo.DemoStepController = Ember.ObjectController.extend({
           this.set('logs', "");
           this.set('notCleared', false);
           break;
+        case "fu":
+        case "fullscreen":
+          this.set('fullscreen', true);
+          break;
         case "help":
           this.get('controllers.demo').appendLog('You can use `vault help <command>` ' +
             'to learn more about specific Vault commands, or `next` ' +
-            'and `previous` to navigate.', false);
+            'and `previous` to navigate. Or, `fu` to go fullscreen.', false);
           break;
         default:
           this.set('isLoading', true);

@@ -86,10 +86,13 @@
     width: 100%;
     top: 225px;
     bottom: 0;
-
     display: block;
     overflow: scroll;
     position: absolute;
+
+    &.fullscreen {
+        top: 0;
+    }
 
     .log {
         white-space: pre;
