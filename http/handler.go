@@ -36,6 +36,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/audit", handleSysListAudit(core))
 	mux.Handle("/v1/sys/audit/", handleSysAudit(core))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
+	mux.Handle("/v1/sys/health", handleSysHealth(core))
 	mux.Handle("/v1/", handleLogical(core))
 
 	// Wrap the handler in another handler to trigger all help paths.
