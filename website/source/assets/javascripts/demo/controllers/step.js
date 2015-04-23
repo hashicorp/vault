@@ -70,6 +70,10 @@ Demo.DemoStepController = Ember.ObjectController.extend({
           this.set('notCleared', true);
           this.send('previous');
           break;
+        case "quit":
+        case "exit":
+          this.send('close');
+          break;
         case "clear":
           this.set('logs', "");
           this.set('notCleared', false);

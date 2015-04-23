@@ -7,15 +7,13 @@ Demo.DemoController = Ember.ObjectController.extend({
 
     if (prefix) {
       data = '$ ' + data;
-    }
-
-    if (this.get('logs.length') === 0) {
-      newline = '';
     } else {
-      newline = '\n';
+      newline = '';
     }
 
-    this.set('logs', this.get('logs')+newline+data);
+    newline = '\n';
+
+    this.set('logs', this.get('logs')+data+newline);
 
     Ember.run.later(function() {
       var element = $('.demo-terminal');

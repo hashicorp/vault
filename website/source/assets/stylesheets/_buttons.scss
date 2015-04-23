@@ -39,6 +39,10 @@
 	   	@include img-retina("../images/icon-terminal.png", "../images/icon-terminal@2x.png", 26px, 25px);
 	}
 
+	&.started{
+		margin-bottom: 12px;
+	}
+
 	&:hover{
 		text-decoration: none;
 		@include transition(color .3s ease-in-out);
