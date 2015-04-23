@@ -1,4 +1,4 @@
-// +build linux darwin freebsd openbsd solaris
+// +build linux
 
 package vault
 
