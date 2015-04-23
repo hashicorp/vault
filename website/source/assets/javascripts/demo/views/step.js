@@ -60,8 +60,10 @@ Demo.DemoStepView = Ember.View.extend({
     // Focus the input
     element.find('input.shell')[0].focus();
 
-    // Scroll to the bottom of the element
-    element.scrollTop(element[0].scrollHeight);
+    // guarantees that the log is scrolled when updated
+    Ember.run.scheduleOnce('afterRender', this, function() {
+      window.scrollTo(0, document.body.scrollHeight);
+    });
 
   }.observes('controller.logs.length')
 });
