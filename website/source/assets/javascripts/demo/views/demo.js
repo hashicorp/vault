@@ -24,6 +24,8 @@ Demo.DemoView = Ember.View.extend({
         overlay    = $('.sidebar-overlay'),
         element    = this.$();
 
+    $('body').addClass('demo-active');
+
     overlay.addClass('active');
 
     overlay.on('click', function() {
@@ -35,27 +37,6 @@ Demo.DemoView = Ember.View.extend({
 
     // Focus
     element.find('input.shell')[0].focus();
-
-    // Hijack scrolling to only work within terminal
-    //
-    element.on('DOMMouseScroll mousewheel', function(e) {
-        e.preventDefault();
-    });
-
-    $('.demo-terminal').on('DOMMouseScroll mousewheel', function(e) {
-      var scrollTo = null;
-
-      if (e.type == 'mousewheel') {
-        scrollTo = (e.originalEvent.wheelDelta * -1);
-      } else if (e.type == 'DOMMouseScroll') {
-        scrollTo = 40 * e.originalEvent.detail;
-      }
-
-      if (scrollTo) {
-        e.preventDefault();
-        $(this).scrollTop(scrollTo + $(this).scrollTop());
-      }
-    });
   },
 
   willDestroyElement: function() {
@@ -66,8 +47,10 @@ Demo.DemoView = Ember.View.extend({
 
     element.fadeOut(400);
 
-    // Allow scrolling
-    $('body').unbind('DOMMouseScroll mousewheel');
+    $('body').removeClass('demo-active');
+
+    // reset scroll to top after closing demo
+    window.scrollTo(0, 0);
   },
 
 });
