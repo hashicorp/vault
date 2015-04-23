@@ -1,20 +1,55 @@
 Demo.DemoController = Ember.ObjectController.extend({
-  currentText: "vault help",
-  currentLog: [],
-  logPrefix: "$ ",
-  cursor: 0,
-  notCleared: true,
   isLoading: false,
+  logs: "",
 
-  setFromHistory: function() {
-    var index = this.get('currentLog.length') + this.get('cursor');
+  init: function() {
+    this._super.apply(this, arguments);
 
-    this.set('currentText', this.get('currentLog')[index]);
-  }.observes('cursor'),
+    // connect to the websocket once we enter the application route
+    // var socket = window.io.connect('http://localhost:8080');
+    var socket = new WebSocket("ws://vault-demo-server.herokuapp.com/socket");
 
-  actions: {
-    close: function() {
-      this.transitionTo('index');
-    },
-  }
+    // Set socket on application controller
+    this.set('socket', socket);
+
+    socket.onmessage = function(message) {
+      var data = JSON.parse(message.data),
+          controller = this;
+
+      // Add the item
+      if (data.stdout !== "") {
+        console.log("stdout:", data.stout);
+        controller.appendLog(data.stdout, false);
+      }
+
+      if (data.stderr !== "") {
+        console.log("stderr:", data.stderr);
+        controller.appendLog(data.stderr, false);
+      }
+
+      controller.set('isLoading', false);
+    }.bind(this);
+  },
+
+  appendLog: function(data, prefix) {
+    var newline;
+
+    if (prefix) {
+      data = '$ ' + data;
+    } else {
+      newline = '';
+    }
+
+    newline = '\n';
+
+    this.set('logs', this.get('logs')+data+newline);
+
+    Ember.run.later(function() {
+      var element = $('.demo-terminal');
+      // Scroll to the bottom of the element
+      element.scrollTop(element[0].scrollHeight);
+
+      element.find('input.shell')[0].focus();
+    }, 5);
+  },
 });

@@ -1,5 +1,5 @@
 Demo.Router.map(function() {
-  this.route('demo', { path: '/demo' }, function() {
-    this.route('crud', { path: '/crud' });
+  this.route('demo', function() {
+    this.route('step', { path: '/:id' });
   });
 });
