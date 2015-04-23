@@ -36,14 +36,14 @@ type Config struct {
 // safe to modify the return value of this function.
 //
 // The default Address is https://127.0.0.1:8200, but this can be overridden by
-// setting the `VAULT_HTTP_ADDR` environment variable.
+// setting the `VAULT_ADDR` environment variable.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: &http.Client{},
 	}
 
-	if addr := os.Getenv("VAULT_HTTP_ADDR"); addr != "" {
+	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
 		config.Address = addr
 	}
 

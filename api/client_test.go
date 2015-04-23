@@ -13,13 +13,13 @@ import (
 
 func init() {
 	// Ensure our special envvars are not present
-	os.Setenv("VAULT_HTTP_ADDR", "")
+	os.Setenv("VAULT_ADDR", "")
 	os.Setenv("VAULT_TOKEN", "")
 }
 
 func TestDefaultConfig_envvar(t *testing.T) {
-	os.Setenv("VAULT_HTTP_ADDR", "https://vault.mycompany.com")
-	defer os.Setenv("VAULT_HTTP_ADDR", "")
+	os.Setenv("VAULT_ADDR", "https://vault.mycompany.com")
+	defer os.Setenv("VAULT_ADDR", "")
 
 	config := DefaultConfig()
 	if config.Address != "https://vault.mycompany.com" {
