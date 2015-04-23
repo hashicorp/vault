@@ -4,11 +4,40 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	vaultHttp "github.com/hashicorp/vault/http"
 )
+
+func init() {
+	// Ensure our special envvars are not present
+	os.Setenv("VAULT_HTTP_ADDR", "")
+	os.Setenv("VAULT_TOKEN", "")
+}
+
+func TestDefaultConfig_envvar(t *testing.T) {
+	os.Setenv("VAULT_HTTP_ADDR", "https://vault.mycompany.com")
+	defer os.Setenv("VAULT_HTTP_ADDR", "")
+
+	config := DefaultConfig()
+	if config.Address != "https://vault.mycompany.com" {
+		t.Fatalf("bad: %s", config.Address)
+	}
+
+	os.Setenv("VAULT_TOKEN", "testing")
+	defer os.Setenv("VAULT_TOKEN", "")
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if token := client.Token(); token != "testing" {
+		t.Fatalf("bad: %s", token)
+	}
+}
 
 func TestClientToken(t *testing.T) {
 	tokenValue := "foo"

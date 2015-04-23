@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"time"
 
 	vaultHttp "github.com/hashicorp/vault/http"
@@ -37,6 +38,10 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: &http.Client{},
+	}
+
+	if addr := os.Getenv("VAULT_HTTP_ADDR"); addr != "" {
+		config.Address = addr
 	}
 
 	return config
@@ -75,10 +80,16 @@ func NewClient(c *Config) (*Client, error) {
 		return errRedirect
 	}
 
-	return &Client{
+	client := &Client{
 		addr:   u,
 		config: c,
-	}, nil
+	}
+
+	if token := os.Getenv("VAULT_TOKEN"); token != "" {
+		client.SetToken(token)
+	}
+
+	return client, nil
 }
 
 // Token returns the access token being used by this client. It will
