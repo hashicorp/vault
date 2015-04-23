@@ -25,7 +25,8 @@
 .instruction {
     overflow: scroll;
     padding: 10px;
-    width: 800px;
+    max-width: 800px;
+    min-width: 400px;
     margin: 0 auto;
     background-color: darken($blue, 28%);
 
