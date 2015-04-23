@@ -33,8 +33,8 @@ type Config struct {
 
 // DefaultConfig returns a default configuration for the client. It is
 // safe to modify the return value of this function.
-func DefaultConfig() Config {
-	config := Config{
+func DefaultConfig() *Config {
+	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: &http.Client{},
 	}
@@ -46,11 +46,11 @@ func DefaultConfig() Config {
 // NewClient.
 type Client struct {
 	addr   *url.URL
-	config Config
+	config *Config
 }
 
 // NewClient returns a new client for the given configuration.
-func NewClient(c Config) (*Client, error) {
+func NewClient(c *Config) (*Client, error) {
 	u, err := url.Parse(c.Address)
 	if err != nil {
 		return nil, err
