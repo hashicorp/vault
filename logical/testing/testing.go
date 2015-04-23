@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
@@ -63,6 +64,9 @@ type TestStep struct {
 
 	// RemoteAddr, if set, will set the remote addr on the request.
 	RemoteAddr string
+
+	// ConnState, if set, will set the tls conneciton state
+	ConnState *tls.ConnectionState
 }
 
 // TestCheckFunc is the callback used for Check in TestStep.
@@ -170,6 +174,9 @@ func Test(t TestT, c TestCase) {
 		if s.RemoteAddr != "" {
 			req.Connection = &logical.Connection{RemoteAddr: s.RemoteAddr}
 		}
+		if s.ConnState != nil {
+			req.Connection = &logical.Connection{ConnState: s.ConnState}
+		}
 
 		// Make the request
 		resp, err := core.HandleRequest(req)
@@ -257,7 +264,7 @@ func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 // auth token with the proper policies.
 func TestCheckAuth(policies []string) TestCheckFunc {
 	return func(resp *logical.Response) error {
-		if resp.Auth == nil {
+		if resp == nil || resp.Auth == nil {
 			return fmt.Errorf("no auth in response")
 		}
 		if !reflect.DeepEqual(resp.Auth.Policies, policies) {
