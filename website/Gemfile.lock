@@ -1,6 +1,6 @@
 GIT
-  remote: https://github.com/hashicorp/middleman-hashicorp
-  revision: 0e21734c64afcf0c6d35b40b26840254227c1949
+  remote: git://github.com/hashicorp/middleman-hashicorp.git
+  revision: 5d1edbfa4ceec20b33b501f0162e2f881afadfa9
   specs:
     middleman-hashicorp (0.1.0)
       bootstrap-sass (~> 3.3)
@@ -26,7 +26,7 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
-    autoprefixer-rails (5.1.8.1)
+    autoprefixer-rails (5.1.11)
       execjs
       json
     bootstrap-sass (3.3.4.1)
@@ -39,7 +39,7 @@ GEM
     coffee-script (2.4.1)
       coffee-script-source
       execjs
-    coffee-script-source (1.9.1)
+    coffee-script-source (1.9.1.1)
     commonjs (0.2.7)
     compass (1.0.3)
       chunky_png (~> 1.2)
@@ -117,7 +117,7 @@ GEM
     middleman-syntax (2.0.0)
       middleman-core (~> 3.2)
       rouge (~> 1.0)
-    minitest (5.5.1)
+    minitest (5.6.0)
     multi_json (1.11.0)
     padrino-helpers (0.12.5)
       i18n (~> 0.6, >= 0.6.7)

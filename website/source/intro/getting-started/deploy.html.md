@@ -22,15 +22,15 @@ Vault is configured using [HCL](https://github.com/hashicorp/hcl) files.
 As a reminder, these files are also JSON-compatible. The configuration
 file for Vault is relatively simple. An example is shown below:
 
-```
+```javascript
 backend "consul" {
-    address = "demo.consul.io:80"
-    path = "vault"
+  address = "demo.consul.io:80"
+  path = "vault"
 }
 
 listener "tcp" {
-   address = "127.0.0.1:8200"
-   tls_disable = 1
+ address = "127.0.0.1:8200"
+ tls_disable = 1
 }
 ```
 

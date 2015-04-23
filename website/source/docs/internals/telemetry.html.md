@@ -46,4 +46,3 @@ Below is sample output of a telemetry dump:
 [2015-04-20 12:24:30 -0700 PDT][S] 'vault.core.handle_request': Count: 2 Min: 0.097 Mean: 0.228 Max: 0.359 Stddev: 0.186 Sum: 0.457
 [2015-04-20 12:24:30 -0700 PDT][S] 'vault.expire.register': Count: 1 Sum: 0.18
 ```
-

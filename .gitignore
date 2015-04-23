@@ -30,3 +30,7 @@ pkg/
 # Vault-specific
 example.hcl
 example.vault.d
+
+# Ruby
+website/vendor/ruby
+website/.bundle

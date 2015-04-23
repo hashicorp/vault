@@ -9,29 +9,31 @@ description: |-
 # /sys/seal-status
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Returns the seal status of the Vault.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Returns the seal status of the Vault.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>GET</dd>
+  <dt>Method</dt>
+  <dd>GET</dd>
 
-	<dt>Parameters</dt>
-	<dd>
-		None
-	</dd>
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
 
-	<dt>Returns</dt>
-	<dd>The "t" parameter is the threshold, and "n" is the number of shares.
+  <dt>Returns</dt>
+  <dd>
+    The "t" parameter is the threshold, and "n" is the number of shares.
 
-```
-{
-	"sealed": true,
-	"t": 3,
-	"n": 5,
-	"progress": 2
-}
-```
-	</dd>
+    ```javascript
+    {
+      "sealed": true,
+      "t": 3,
+      "n": 5,
+      "progress": 2
+    }
+    ```
+
+  </dd>
 </dl>

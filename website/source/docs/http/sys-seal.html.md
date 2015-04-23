@@ -9,20 +9,20 @@ description: |-
 # /sys/seal
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Seals the Vault.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Seals the Vault.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>PUT</dd>
+  <dt>Method</dt>
+  <dd>PUT</dd>
 
-	<dt>Parameters</dt>
-	<dd>
-		None
-	</dd>
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
 
-	<dt>Returns</dt>
-	<dd>A `204` response code.
-	</dd>
+  <dt>Returns</dt>
+  <dd>A `204` response code.
+  </dd>
 </dl>

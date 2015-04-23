@@ -17,17 +17,17 @@ Policies are [HCL](https://github.com/hashicorp/hcl) or JSON documents
 that describe what parts of Vault a user is allowed to access. An example
 of a policy is shown below:
 
-```
+```javascript
 path "sys" {
-    policy = "deny"
+  policy = "deny"
 }
 
 path "secret" {
-    policy = "write"
+  policy = "write"
 }
 
 path "secret/foo" {
-    policy = "read"
+  policy = "read"
 }
 ```
 

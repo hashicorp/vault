@@ -29,17 +29,17 @@ Policies in Vault are formatted with
 format that is also JSON-compatible, so you can use JSON as well. An example
 policy is shown below:
 
-```
+```javascript
 path "sys" {
-	policy = "deny"
+  policy = "deny"
 }
 
 path "secret" {
-	policy = "write"
+  policy = "write"
 }
 
 path "secret/foo" {
-	policy = "read"
+  policy = "read"
 }
 ```
 

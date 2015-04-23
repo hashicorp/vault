@@ -146,5 +146,3 @@ prohibitively time consuming. Opening the bank vault requires two-factors: the k
 Similarly, Vault requires multiple shares be provided to reconstruct the master key.
 Once unsealed, each security deposit boxes still requires the owner provide a key, and similarly
 the Vault ACL system protects all the secrets stored.
-
-

@@ -57,9 +57,9 @@ As you might expect, secrets can be read with `vault read`:
 
 ```
 $ vault read secret/hello
-Key     	Value
-excited 	yes
-value   	world
+Key       Value
+excited   yes
+value     world
 ```
 
 As you can see, the values we wrote are given back to us. Vault read
@@ -73,12 +73,12 @@ a tool like `jq`, you can output the data in JSON format:
 ```
 $ vault read -format=json secret/hello
 {
-	"renewable": false,
-	"lease_duration": 2592000,
-	"data": {
-		"excited": "yes",
-		"value": "world"
-	}
+  "renewable": false,
+  "lease_duration": 2592000,
+  "data": {
+    "excited": "yes",
+    "value": "world"
+  }
 }
 ```
 

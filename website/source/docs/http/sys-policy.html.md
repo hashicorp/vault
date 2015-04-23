@@ -11,81 +11,82 @@ description: |-
 ## GET
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Lists all the available policies.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Lists all the available policies.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>GET</dd>
+  <dt>Method</dt>
+  <dd>GET</dd>
 
-	<dt>Parameters</dt>
-	<dd>
-		None
-	</dd>
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
 
-	<dt>Returns</dt>
-	<dd>
+  <dt>Returns</dt>
+  <dd>
 
-```
-{
-	"policies": ["root", "deploy"]
-}
-```
-	</dd>
+    ```javascript
+    {
+      "policies": ["root", "deploy"]
+    }
+    ```
+
+  </dd>
 </dl>
 
 ## PUT
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Add or update a policy. Once a policy is updated, it takes effect
-		immediately to all associated users.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Add or update a policy. Once a policy is updated, it takes effect
+    immediately to all associated users.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>PUT</dd>
+  <dt>Method</dt>
+  <dd>PUT</dd>
 
-	<dt>URL</dt>
-	<dd>`/sys/policy/<name>`</dd>
+  <dt>URL</dt>
+  <dd>`/sys/policy/<name>`</dd>
 
-	<dt>Parameters</dt>
-	<dd>
-		<ul>
-			<li>
-				<span class="param">rules</span>
-				<span class="param-flags">required</span>
-				The policy document.
-			</li>
-		</ul>
-	</dd>
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">rules</span>
+        <span class="param-flags">required</span>
+        The policy document.
+      </li>
+    </ul>
+  </dd>
 
-	<dt>Returns</dt>
-	<dd>`204` respons code.
-	</dd>
+  <dt>Returns</dt>
+  <dd>`204` respons code.
+  </dd>
 </dl>
 
 ## DELETE
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Delete the policy with the given name. This will immediately
-		affect all associated users.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Delete the policy with the given name. This will immediately
+    affect all associated users.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>DELETE</dd>
+  <dt>Method</dt>
+  <dd>DELETE</dd>
 
-	<dt>URL</dt>
-	<dd>`/sys/policy/<name>`</dd>
+  <dt>URL</dt>
+  <dd>`/sys/policy/<name>`</dd>
 
-	<dt>Parameters</dt>
-	<dd>None
-	</dd>
+  <dt>Parameters</dt>
+  <dd>None
+  </dd>
 
-	<dt>Returns</dt>
-	<dd>`204` respons code.
-	</dd>
+  <dt>Returns</dt>
+  <dd>`204` respons code.
+  </dd>
 </dl>

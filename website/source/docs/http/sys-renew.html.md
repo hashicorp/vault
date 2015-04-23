@@ -9,30 +9,30 @@ description: |-
 # /sys/renew
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Renew a secret, requesting to extend the lease.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Renew a secret, requesting to extend the lease.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>PUT</dd>
+  <dt>Method</dt>
+  <dd>PUT</dd>
 
-	<dt>URL</dt>
-	<dd>`/sys/renew/<lease id>`</dd>
+  <dt>URL</dt>
+  <dd>`/sys/renew/<lease id>`</dd>
 
-	<dt>Parameters</dt>
-	<dd>
-		<ul>
-			<li>
-				<span class="param">increment</span>
-				<span class="param-flags">optional</span>
-				A requested amount of time in seconds to extend the lease.
-				This is advisory.
-			</li>
-		</ul>
-	</dd>
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">increment</span>
+        <span class="param-flags">optional</span>
+        A requested amount of time in seconds to extend the lease.
+        This is advisory.
+      </li>
+    </ul>
+  </dd>
 
-	<dt>Returns</dt>
-	<dd>A secret structure.
-	</dd>
+  <dt>Returns</dt>
+  <dd>A secret structure.
+  </dd>
 </dl>

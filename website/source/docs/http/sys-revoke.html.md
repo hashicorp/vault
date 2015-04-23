@@ -9,21 +9,21 @@ description: |-
 # /sys/revoke
 
 <dl>
-	<dt>Description</dt>
-	<dd>
-		Revoke a secret immediately.
-	</dd>
+  <dt>Description</dt>
+  <dd>
+    Revoke a secret immediately.
+  </dd>
 
-	<dt>Method</dt>
-	<dd>PUT</dd>
+  <dt>Method</dt>
+  <dd>PUT</dd>
 
-	<dt>URL</dt>
-	<dd>`/sys/revoke/<lease id>`</dd>
+  <dt>URL</dt>
+  <dd>`/sys/revoke/<lease id>`</dd>
 
-	<dt>Parameters</dt>
-	<dd>None</dd>
+  <dt>Parameters</dt>
+  <dd>None</dd>
 
-	<dt>Returns</dt>
-	<dd>A `204` response code.
-	</dd>
+  <dt>Returns</dt>
+  <dd>A `204` response code.
+  </dd>
 </dl>

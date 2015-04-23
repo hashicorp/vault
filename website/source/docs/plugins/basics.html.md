@@ -50,9 +50,9 @@ are defined is `~/.vaultrc` for Unix-like systems and
 
 An example that configures a new provider is shown below:
 
-```
+```javascript
 providers {
-	privatecloud = "/path/to/privatecloud"
+  privatecloud = "/path/to/privatecloud"
 }
 ```
 
@@ -83,15 +83,15 @@ the road.
 With the directory made, create a `main.go` file. This project will
 be a binary so the package is "main":
 
-```
+```go
 package main
 
 import (
-	"github.com/hashicorp/vault/plugin"
+  "github.com/hashicorp/vault/plugin"
 )
 
 func main() {
-	plugin.Serve(new(MyPlugin))
+  plugin.Serve(new(MyPlugin))
 }
 ```
 
