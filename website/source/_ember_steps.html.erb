@@ -1,14 +1,15 @@
 <script type="text/x-handlebars" data-template-name="welcome">
     <p>
-        As soon as you opened this terminal, you connected to a real in-memory Vault server.
-        Any commands you enter will work as with Vault normally, but leaving this page
+        This tutorial is great for getting familiar with the command line
+         interface to Vault. As soon as you opened this terminal, you connected to a real in-memory Vault server.
+        Any commands you enter will work as they would with Vault normally, but leaving this page
         will end the session.
     </p>
     <p>
      Please note that this is running in a shared environment, so avoid setting any real secrets.
     </p>
     <p>
-        <strong>Use the command "next" to move foward</strong>.
+        <strong>Use the command "next" to move forward</strong>.
     </p>
     <p>This will work throughout
         the tutorial, along with "previous" to go back a step.
@@ -28,7 +29,7 @@
         <li>- Sealing your Vault</li>
     </ul>
     <p>
-        <strong>Again, use "next" to start and initialize your Vault</strong>.
+        <strong>Again, use "next" to move to the first step – initializing your Vault</strong>.
     </p>
 </script>
 
@@ -42,7 +43,7 @@
         of Vault.
         </p>
     <p>
-        Initialize a Vault now, with 1 unseal key, using the command:
+        Initialize Vault now, with 1 unseal key, using the command:
     </p>
     <p>
         <code>vault init -key-shares=1 -key-threshold=1</code>

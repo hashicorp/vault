@@ -6,7 +6,7 @@ Ember.Application.initializer({
     var store = container.lookup('store:main');
     var steps = {
       "steps": [
-        { id: 0, name: 'welcome', humanName: "Welcome to the Vault Interactive Demo!"},
+        { id: 0, name: 'welcome', humanName: "Welcome to the Vault Interactive Tutorial!"},
         { id: 1, name: 'steps', humanName: "Step 1: Overview"},
         { id: 2, name: 'init', humanName: "Step 2: Initialize your Vault"},
         { id: 3, name: 'unseal', humanName: "Step 3: Unsealing your Vault"},

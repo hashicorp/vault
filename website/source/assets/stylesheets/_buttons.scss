@@ -18,7 +18,7 @@
 	&.sml{
 		font-size: 15px;
 		padding: 8px 40px;
-	}	
+	}
 
 	&.blue{
 		color: $blue;
@@ -33,6 +33,8 @@
 
 	&.terminal{
 		padding-left: 52px;
+		padding-right: 30px;
+		margin-left: 12px;
 	    background: image-url('../images/icon-terminal.png') 16px center no-repeat;
 	   	@include img-retina("../images/icon-terminal.png", "../images/icon-terminal@2x.png", 26px, 25px);
 	}

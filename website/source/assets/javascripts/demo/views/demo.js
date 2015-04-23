@@ -30,8 +30,6 @@ Demo.DemoView = Ember.View.extend({
       controller.transitionTo('index');
     });
 
-    element.hide().fadeIn(300);
-
     // Scroll to the bottom of the element
     element.scrollTop(element[0].scrollHeight);
 
