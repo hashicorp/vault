@@ -1,10 +1,11 @@
 Demo.DemoView = Ember.View.extend({
   classNames: ['demo-overlay'],
 
-  click: function(ev) {
-    if ($(ev.target).hasClass('log')) {
-      // Ignore clicks on the log text
-      console.log("Ignore");
+  mouseUp: function(ev) {
+    var selection = window.getSelection().toString();
+
+    if (selection.length > 0) {
+      // Ignore clicks when they are trying to select something
       return;
     }
 

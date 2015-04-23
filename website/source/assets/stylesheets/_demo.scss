@@ -1,6 +1,8 @@
 .demo-overlay {
     z-index: 1000;
+    background: black;
     bottom: 0;
+    top: 0;
     left: 0;
     width: 100%;
     height: 100%;
@@ -15,12 +17,24 @@
     @include box-shadow(0px -2px 30px 0px rgba(0, 0, 0, 0.40));
 }
 
+.instruction-wrapper {
+    width: 100%;
+    padding: 20px;
+}
+
 .instruction {
     overflow: scroll;
-    margin: 20px;
-    width: 100%;
-    padding: 4px;
+    padding: 8px;
+    width: 800px;
+    margin: 0 auto;
     background-color: darken($blue, 28%);
+
+    code {
+        background: none;
+        color: inherit;
+        font-weight: 700;
+        padding-left: 10px;
+    }
 
     p:last-child {
         margin-bottom: 0px;
@@ -36,39 +50,40 @@
 
 }
 
+.close-terminal{
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    color: #8B8A8F;
+    text-align: center;
+    line-height: 60px;
+    font-size: 30px;
+    @include lato-light();
+    transition: all 250ms ease-in;
+    cursor: pointer;
+
+    &:hover{
+        text-decoration: none;
+        color: $white;
+        transition: all 250ms ease-in;
+    }
+}
+
+
 .demo-terminal {
     background-color: black;
     padding: 25px 65px 0 25px;
     padding-bottom: 50px;
     width: 100%;
-    top: 250px;
+    top: 220px;
     bottom: 0;
 
     display: block;
     overflow: scroll;
     position: absolute;
-
-    .close-terminal{
-        display: inline-block;
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 60px;
-        height: 60px;
-        color: #8B8A8F;
-        text-align: center;
-        line-height: 60px;
-        font-size: 30px;
-        @include lato-light();
-        transition: all 250ms ease-in;
-        cursor: pointer;
-
-        &:hover{
-            text-decoration: none;
-            color: $white;
-            transition: all 250ms ease-in;
-        }
-    }
 
     .log {
         white-space: pre;

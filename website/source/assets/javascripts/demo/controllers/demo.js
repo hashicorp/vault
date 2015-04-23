@@ -18,7 +18,7 @@ Demo.DemoController = Ember.ObjectController.extend({
     this.set('logs', this.get('logs')+newline+data);
 
     Ember.run.later(function() {
-      var element = $('.demo-overlay');
+      var element = $('.demo-terminal');
       // Scroll to the bottom of the element
       element.scrollTop(element[0].scrollHeight);
 
