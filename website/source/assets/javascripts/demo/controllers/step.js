@@ -1,6 +1,6 @@
 Demo.DemoStepController = Ember.ObjectController.extend({
-  needs: ['application', 'demo'],
-  socket: Ember.computed.alias('controllers.application.socket'),
+  needs: ['demo'],
+  socket: Ember.computed.alias('controllers.demo.socket'),
   logs: Ember.computed.alias('controllers.demo.logs'),
   isLoading: Ember.computed.alias('controllers.demo.isLoading'),
 
