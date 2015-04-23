@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"os"
 	"time"
-
-	vaultHttp "github.com/hashicorp/vault/http"
 )
+
+const AuthCookieName = "token"
 
 var (
 	errRedirect = errors.New("redirect")
@@ -104,7 +104,7 @@ func NewClient(c *Config) (*Client, error) {
 func (c *Client) Token() string {
 	r := c.NewRequest("GET", "/")
 	for _, cookie := range c.config.HttpClient.Jar.Cookies(r.URL) {
-		if cookie.Name == vaultHttp.AuthCookieName {
+		if cookie.Name == AuthCookieName {
 			return cookie.Value
 		}
 	}
@@ -118,7 +118,7 @@ func (c *Client) SetToken(v string) {
 	r := c.NewRequest("GET", "/")
 	c.config.HttpClient.Jar.SetCookies(r.URL, []*http.Cookie{
 		&http.Cookie{
-			Name:    vaultHttp.AuthCookieName,
+			Name:    AuthCookieName,
 			Value:   v,
 			Path:    "/",
 			Expires: time.Now().Add(365 * 24 * time.Hour),
@@ -131,7 +131,7 @@ func (c *Client) ClearToken() {
 	r := c.NewRequest("GET", "/")
 	c.config.HttpClient.Jar.SetCookies(r.URL, []*http.Cookie{
 		&http.Cookie{
-			Name:    vaultHttp.AuthCookieName,
+			Name:    AuthCookieName,
 			Value:   "",
 			Expires: time.Now().Add(-1 * time.Hour),
 		},
