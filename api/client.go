@@ -34,6 +34,9 @@ type Config struct {
 
 // DefaultConfig returns a default configuration for the client. It is
 // safe to modify the return value of this function.
+//
+// The default Address is https://127.0.0.1:8200, but this can be overridden by
+// setting the `VAULT_HTTP_ADDR` environment variable.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
@@ -55,6 +58,10 @@ type Client struct {
 }
 
 // NewClient returns a new client for the given configuration.
+//
+// If the environment variable `VAULT_TOKEN` is present, the token will be
+// automatically added to the client. Otherwise, you must manually call
+// `SetToken()`.
 func NewClient(c *Config) (*Client, error) {
 	u, err := url.Parse(c.Address)
 	if err != nil {
