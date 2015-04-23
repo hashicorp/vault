@@ -1,6 +1,24 @@
 Demo.DemoView = Ember.View.extend({
   classNames: ['demo-overlay'],
 
+  mouseUp: function(ev) {
+    var selection = window.getSelection().toString();
+
+    if (selection.length > 0) {
+      // Ignore clicks when they are trying to select something
+      return;
+    }
+
+    var element = this.$();
+
+    // Record scoll position
+    var x = element.scrollX, y = element.scrollY;
+    // Focus
+    element.find('input.shell')[0].focus();
+    // Scroll back  to where you were
+    element.scrollTop(x, y);
+  },
+
   didInsertElement: function() {
     var controller = this.get('controller'),
         overlay    = $('.sidebar-overlay'),
@@ -12,8 +30,6 @@ Demo.DemoView = Ember.View.extend({
       controller.transitionTo('index');
     });
 
-    element.hide().fadeIn(300);
-
     // Scroll to the bottom of the element
     element.scrollTop(element[0].scrollHeight);
 
@@ -22,31 +38,22 @@ Demo.DemoView = Ember.View.extend({
 
     // Hijack scrolling to only work within terminal
     //
-    $(element).on('DOMMouseScroll mousewheel', function(ev) {
-      var scrolledEl = $(this),
-          scrollTop = this.scrollTop,
-          scrollHeight = this.scrollHeight,
-          height = scrolledEl.height(),
-          delta = (ev.type == 'DOMMouseScroll' ?
-              ev.originalEvent.detail * -40 :
-              ev.originalEvent.wheelDelta),
-          up = delta > 0;
+    element.on('DOMMouseScroll mousewheel', function(e) {
+        e.preventDefault();
+    });
 
-      var prevent = function() {
-          ev.stopPropagation();
-          ev.preventDefault();
-          ev.returnValue = false;
-          return false;
-      };
+    $('.demo-terminal').on('DOMMouseScroll mousewheel', function(e) {
+      var scrollTo = null;
 
-      if (!up && -delta > scrollHeight - height - scrollTop) {
-          // Scrolling down, but this will take us past the bottom.
-          scrolledEl.scrollTop(scrollHeight);
-          return prevent();
-      } else if (up && delta > scrollTop) {
-          // Scrolling up, but this will take us past the top.
-          scrolledEl.scrollTop(0);
-          return prevent();
+      if (e.type == 'mousewheel') {
+        scrollTo = (e.originalEvent.wheelDelta * -1);
+      } else if (e.type == 'DOMMouseScroll') {
+        scrollTo = 40 * e.originalEvent.detail;
+      }
+
+      if (scrollTo) {
+        e.preventDefault();
+        $(this).scrollTop(scrollTo + $(this).scrollTop());
       }
     });
   },
@@ -63,68 +70,4 @@ Demo.DemoView = Ember.View.extend({
     $('body').unbind('DOMMouseScroll mousewheel');
   },
 
-  click: function() {
-    var element  = this.$();
-    // Focus
-    element.find('input.shell')[0].focus();
-  },
-
-  keyDown: function(ev) {
-    var cursor = this.get('controller.cursor'),
-        currentLength = this.get('controller.currentLog.length');
-
-    switch(ev.keyCode) {
-      // Down arrow
-      case 40:
-        if (cursor === 0) {
-            return;
-        }
-
-        this.incrementProperty('controller.cursor');
-        break;
-
-      // Up arrow
-      case 38:
-        if ((currentLength + cursor) === 0) {
-            return;
-        }
-
-        this.decrementProperty('controller.cursor');
-        break;
-
-      // command + k
-      case 75:
-        if (ev.metaKey) {
-          this.set('controller.currentLog', []);
-          this.set('controller.notCleared', false);
-        }
-        break;
-
-      // escape
-      case 27:
-        this.get('controller').transitionTo('index');
-        break;
-    }
-  },
-
-  deFocus: function() {
-    var element = this.$().find('input.shell');
-
-    // defocus while loading
-    if (this.get('controller.isLoading')) {
-      element.blur()
-    }
-
-  }.observes('controller.isLoading'),
-
-  submitted: function() {
-    var element  = this.$();
-
-    // Focus the input
-    element.find('input.shell')[0].focus();
-
-    // Scroll to the bottom of the element
-    element.scrollTop(element[0].scrollHeight);
-
-  }.observes('controller.currentLog')
 });
