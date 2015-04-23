@@ -39,12 +39,12 @@ Demo.DemoStepController = Ember.ObjectController.extend({
     },
 
     next: function() {
-      var nextStepNumber = parseInt(this.get('model.id')) + 1;
+      var nextStepNumber = parseInt(this.get('model.id'), 10) + 1;
       this.transitionTo('demo.step', nextStepNumber);
     },
 
     previous: function() {
-      var prevStepNumber = parseInt(this.get('model.id')) - 1;
+      var prevStepNumber = parseInt(this.get('model.id'), 10) - 1;
       this.transitionTo('demo.step', prevStepNumber);
     },
   },
@@ -79,7 +79,9 @@ Demo.DemoStepController = Ember.ObjectController.extend({
           this.set('notCleared', false);
           break;
         case "help":
-          this.set('notCleared', true);
+          this.get('controllers.demo').appendLog('You can use `vault help <command>` ' +
+            'to learn more about specific Vault commands, or `next` ' +
+            'and `previous` to navigate.', false);
           break;
         default:
           this.set('isLoading', true);
