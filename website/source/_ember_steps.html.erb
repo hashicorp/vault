@@ -7,33 +7,50 @@
     </p>
     <ul>
         <li>- Unsealing your Vault</li>
-        <li>- Authorizing your requests</li>
+        <li>- Authorizing your requests to Vault</li>
         <li>- Mounting a backend</li>
         <li>- Reading, writing and deleting secrets</li>
-        <li>- Sealing your vault</li>
+        <li>- Sealing your Vault</li>
     </ul>
     <p>
-    Upon opening this terminal, a real in-memory Vault server was
-    initialized remotely. Any commands you send across will work, but closing this page
-    will end the session.
-    </p>
-    <p>
-    Please note that this is running in a shared
-    environment, so avoid setting any real secrets.
-    </p>
-    <p>
     <strong>Use the command "next" to move foward</strong>. This will work throughout
-    the tutorial.
+    the tutorial, along with "previous".
     </p>
 </script>
 
-<script type="text/x-handlebars" data-template-name="unseal">
+<script type="text/x-handlebars" data-template-name="init">
     <p>
-    <strong>{{model.humanName}}</strong>
+    Upon opening this terminal, you connected to a real in-memory Vault server.
+    Any commands you send across will work as with Vault normally, but closing this page
+    will end the session.
     </p>
     <p>
-        First, we need to unseal the Vault that has been initialized
-        for you below.
+    Please note that this is running in a shared environment, so avoid setting any real secrets.
+    </p>
+</script>
+
+
+
+<script type="text/x-handlebars" data-template-name="unseal">
+    <p>
+        <strong>{{model.humanName}}</strong>
+    </p>
+    <p>
+        Now we need to unseal the Vault that you have just initialized.
+    </p>
+    <p>
+        When a Vault server is started, it starts in a sealed state.
+         In this state, Vault is configured to know where and how to access the
+         physical storage, but doesn't know how to decrypt any of it.
+    </p>
+    <p>
+        Vault encrypts data with an encryption key. This key is also encrypted (but
+        not stored) and is called the "master key".
+    </p>
+    <p>
+        Decryting the master key requires a threshold of shards. In this example,
+        we use one shard to decrypt this master key, but you can use any number and
+        disribute shards to any number of operators.
     </p>
     <p>
         Send the unseal key to Vault with "vault unseal &lt;key&gt;".

@@ -1,28 +1,27 @@
 <!-- TODO Precompile ember templates -->
 
 <script type="text/x-handlebars" data-template-name="demo">
-    <div class="terminal">
-        <span class="close-terminal" {{action "close"}}>X</span>
-
-        {{outlet}}
-
-        {{#if isLoading}}
-        <div class="loading-bar"></div>
-        {{/if}}
-    </div>
+{{outlet}}
 </script>
 
 <script type="text/x-handlebars" data-template-name="demo/step">
-{{#if notCleared}}
+<div class="instruction-wrapper">
     <div class="instruction">
         {{partial model.instructionTemplate}}
     </div>
-{{/if}}
-
-<div class="log">{{logs}}
 </div>
 
-<form {{action "submitText" on="submit"}}>
-    $ {{input value=currentText class="shell" spellcheck="false"}}
-</form>
+<div class="demo-terminal">
+    <span class="close-terminal" {{action "close"}}>X</span>
+
+    <div class="log">{{renderedLogs}}</div>
+
+    <form {{action "submitText" on="submit"}}>
+        {{#unless isLoading}}${{/unless}} {{input value=currentText class="shell" spellcheck="false"}}
+    </form>
+
+    {{#if isLoading}}
+    <div class="loading-bar"></div>
+    {{/if}}
+</div>
 </script>

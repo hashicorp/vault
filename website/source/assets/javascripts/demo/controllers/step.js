@@ -1,13 +1,17 @@
 Demo.DemoStepController = Ember.ObjectController.extend({
-  needs: ['application'],
+  needs: ['application', 'demo'],
   socket: Ember.computed.alias('controllers.application.socket'),
+  logs: Ember.computed.alias('controllers.demo.logs'),
+  isLoading: Ember.computed.alias('controllers.demo.isLoading'),
 
   currentText: "",
   commandLog: [],
-  logs: "",
   cursor: 0,
   notCleared: true,
-  isLoading: false,
+
+  renderedLogs: function() {
+    return this.get('logs');
+  }.property('logs.length'),
 
   setFromHistory: function() {
     var index = this.get('commandLog.length') + this.get('cursor');
@@ -15,20 +19,6 @@ Demo.DemoStepController = Ember.ObjectController.extend({
 
     this.set('currentText', previousMessage);
   }.observes('cursor'),
-
-  appendLog: function(data, prefix) {
-    if (prefix) {
-      data = '$ ' + data;
-    }
-
-    this.set('logs', this.get('logs')+'\n'+data);
-
-    Ember.run.later(function() {
-      var element = $('.demo-overlay');
-      // Scroll to the bottom of the element
-      element.scrollTop(element[0].scrollHeight);
-    }, 5);
-  },
 
   logCommand: function(command) {
     var commandLog = this.get('commandLog');
@@ -42,24 +32,50 @@ Demo.DemoStepController = Ember.ObjectController.extend({
     submitText: function() {
       // Send the actual request (fake for now)
       this.sendCommand();
-    }
+    },
+
+    close: function() {
+      this.transitionTo('index');
+    },
+
+    next: function() {
+      var nextStepNumber = parseInt(this.get('model.id')) + 1;
+      this.transitionTo('demo.step', nextStepNumber);
+    },
+
+    previous: function() {
+      var prevStepNumber = parseInt(this.get('model.id')) - 1;
+      this.transitionTo('demo.step', prevStepNumber);
+    },
   },
 
   sendCommand: function() {
-      var demoController = this.get('controllers.demo');
       var command = this.getWithDefault('currentText', '');
       var log = this.get('log');
 
       this.set('currentText', '');
-      demoController.logCommand(command);
-      demoController.appendLog(command, true);
+      this.logCommand(command);
+      this.get('controllers.demo').appendLog(command, true);
 
       switch(command) {
         case "":
           break;
+        case "next":
+        case "forward":
+          this.set('notCleared', true);
+          this.send('next');
+          break;
+        case "previous":
+        case "back":
+          this.set('notCleared', true);
+          this.send('previous');
+          break;
         case "clear":
           this.set('logs', "");
           this.set('notCleared', false);
+          break;
+        case "help":
+          this.set('notCleared', true);
           break;
         default:
           this.set('isLoading', true);

@@ -1,4 +1,6 @@
 Demo.ApplicationController = Ember.ObjectController.extend({
+  needs: ['demo'],
+
   init: function() {
     this._super.apply(this, arguments);
 
@@ -10,17 +12,17 @@ Demo.ApplicationController = Ember.ObjectController.extend({
 
     socket.onmessage = function(message) {
       var data = JSON.parse(message.data),
-          controller = this.controllerFor('demo');
+          controller = this.get('controllers.demo');
 
       // Add the item
       if (data.stdout !== "") {
-        console.log("stdout", data.stout);
-        controller.appendLog(data.stdout);
+        console.log("stdout:", data.stout);
+        controller.appendLog(data.stdout, false);
       }
 
       if (data.stderr !== "") {
-        console.log("stderr", data.stderr);
-        controller.appendLog(data.stderr);
+        console.log("stderr:", data.stderr);
+        controller.appendLog(data.stderr, false);
       }
 
       controller.set('isLoading', false);
