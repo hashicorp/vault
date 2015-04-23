@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"time"
 
 	vaultHttp "github.com/hashicorp/vault/http"
@@ -33,10 +34,17 @@ type Config struct {
 
 // DefaultConfig returns a default configuration for the client. It is
 // safe to modify the return value of this function.
+//
+// The default Address is https://127.0.0.1:8200, but this can be overridden by
+// setting the `VAULT_ADDR` environment variable.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: &http.Client{},
+	}
+
+	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
+		config.Address = addr
 	}
 
 	return config
@@ -50,6 +58,10 @@ type Client struct {
 }
 
 // NewClient returns a new client for the given configuration.
+//
+// If the environment variable `VAULT_TOKEN` is present, the token will be
+// automatically added to the client. Otherwise, you must manually call
+// `SetToken()`.
 func NewClient(c *Config) (*Client, error) {
 	u, err := url.Parse(c.Address)
 	if err != nil {
@@ -75,10 +87,16 @@ func NewClient(c *Config) (*Client, error) {
 		return errRedirect
 	}
 
-	return &Client{
+	client := &Client{
 		addr:   u,
 		config: c,
-	}, nil
+	}
+
+	if token := os.Getenv("VAULT_TOKEN"); token != "" {
+		client.SetToken(token)
+	}
+
+	return client, nil
 }
 
 // Token returns the access token being used by this client. It will
