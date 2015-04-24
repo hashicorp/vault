@@ -85,10 +85,10 @@ func testAccStepCert(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "map/ca/" + name,
+		Path:      "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
-			"value":        policies,
+			"policies":     policies,
 			"display_name": name,
 		},
 	}

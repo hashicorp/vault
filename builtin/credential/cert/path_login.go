@@ -5,18 +5,16 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-// TrustedCertificate is a certificate that has been configured as trusted
-type TrustedCertificate struct {
+// ParsedCert is a certificate that has been configured as trusted
+type ParsedCert struct {
+	Entry        *CertEntry
 	Certificates []*x509.Certificate
-	Policies     []string
-	DisplayName  string
 }
 
 func pathLogin(b *backend) *framework.Path {
@@ -60,8 +58,8 @@ func (b *backend) pathLogin(
 	// Generate a response
 	resp := &logical.Response{
 		Auth: &logical.Auth{
-			Policies:    matched.Policies,
-			DisplayName: matched.DisplayName,
+			Policies:    matched.Entry.Policies,
+			DisplayName: matched.Entry.DisplayName,
 		},
 	}
 	return resp, nil
@@ -69,7 +67,7 @@ func (b *backend) pathLogin(
 
 // matchPolicy is used to match the associated policy with the certificate that
 // was used to establish the client identity.
-func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*TrustedCertificate) *TrustedCertificate {
+func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCert) *ParsedCert {
 	// There is probably a better way to do this...
 	for _, chain := range chains {
 		for _, trust := range trusted {
@@ -86,30 +84,20 @@ func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*TrustedCe
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*TrustedCertificate) {
+func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert) {
 	pool = x509.NewCertPool()
-	names, err := b.MapCertId.List(store, "")
+	names, err := store.List("cert/")
 	if err != nil {
 		b.Logger().Printf("[ERR] cert: failed to list trusted certs: %v", err)
 		return
 	}
 	for _, name := range names {
-		data, err := b.MapCertId.Get(store, name)
+		entry, err := b.Cert(store, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
 			b.Logger().Printf("[ERR] cert: failed to load trusted certs '%s': %v", name, err)
 			continue
 		}
-		certRaw, ok := data["certificate"]
-		if !ok {
-			b.Logger().Printf("[ERR] cert: no certificate for '%s'", name)
-			continue
-		}
-		cert, ok := certRaw.(string)
-		if !ok {
-			b.Logger().Printf("[ERR] cert: certificate for '%s' is not a string", name)
-			continue
-		}
-		parsed := parsePEM([]byte(cert))
+		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
 			b.Logger().Printf("[ERR] cert: failed to parse certificate for '%s'", name)
 			continue
@@ -118,52 +106,13 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 			pool.AddCert(p)
 		}
 
-		// Extract the relevant policy
-		var policyString string
-		raw, ok := data["value"]
-		if ok {
-			rawS, ok := raw.(string)
-			if ok {
-				policyString = rawS
-			}
-		}
-
-		// Extract the display name if any
-		var displayName string
-		raw, ok = data["display_name"]
-		if ok {
-			rawS, ok := raw.(string)
-			if ok {
-				displayName = rawS
-			}
-		}
-
-		// Create a TrustedCertificate entry
-		trusted = append(trusted, &TrustedCertificate{
+		// Create a ParsedCert entry
+		trusted = append(trusted, &ParsedCert{
+			Entry:        entry,
 			Certificates: parsed,
-			Policies:     policyStringToList(policyString),
-			DisplayName:  displayName,
 		})
 	}
 	return
-}
-
-// policyStringToList turns a string with comma seperated
-// policies into a sorted, de-duplicated list of policies.
-func policyStringToList(s string) []string {
-	set := make(map[string]struct{})
-	for _, p := range strings.Split(s, ",") {
-		if p = strings.TrimSpace(p); p != "" {
-			set[p] = struct{}{}
-		}
-	}
-
-	list := make([]string, 0, len(set))
-	for k, _ := range set {
-		list = append(list, k)
-	}
-	sort.Strings(list)
-	return list
 }
 
 // parsePEM parses a PEM encoded x509 certificate
