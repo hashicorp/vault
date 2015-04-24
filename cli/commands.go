@@ -6,6 +6,7 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
+	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
@@ -50,6 +51,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"file": auditFile.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
+					"cert":     credCert.Factory,
 					"app-id":   credAppId.Factory,
 					"github":   credGitHub.Factory,
 					"userpass": credUserpass.Factory,
