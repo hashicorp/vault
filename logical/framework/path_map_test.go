@@ -45,6 +45,15 @@ func TestPathMap(t *testing.T) {
 	if v["value"] != "bar" {
 		t.Fatalf("bad: %#v", v)
 	}
+
+	// Verify List
+	keys, err := p.List(storage, "")
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if len(keys) != 1 || keys[0] != "a" {
+		t.Fatalf("bad: %#v", keys)
+	}
 }
 
 func TestPathMap_getInvalid(t *testing.T) {

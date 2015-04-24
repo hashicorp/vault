@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/logical"
@@ -54,6 +55,21 @@ func (p *PathMap) Get(s logical.Storage, k string) (map[string]interface{}, erro
 // Put writes a value into the mapping
 func (p *PathMap) Put(s logical.Storage, k string, v map[string]interface{}) error {
 	return p.pathStruct(k).Put(s, v)
+}
+
+// List reads the keys under a given path
+func (p *PathMap) List(s logical.Storage, prefix string) ([]string, error) {
+	stripPrefix := fmt.Sprintf("struct/map/%s/", p.Name)
+	fullPrefix := fmt.Sprintf("%s%s", stripPrefix, prefix)
+	out, err := s.List(fullPrefix)
+	if err != nil {
+		return nil, err
+	}
+	stripped := make([]string, len(out))
+	for idx, k := range out {
+		stripped[idx] = strings.TrimPrefix(k, stripPrefix)
+	}
+	return stripped, nil
 }
 
 // Paths are the paths to append to the Backend paths.
