@@ -7,8 +7,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	vaultHttp "github.com/hashicorp/vault/http"
 )
 
 func init() {
@@ -43,7 +41,7 @@ func TestClientToken(t *testing.T) {
 	tokenValue := "foo"
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		http.SetCookie(w, &http.Cookie{
-			Name:    vaultHttp.AuthCookieName,
+			Name:    AuthCookieName,
 			Value:   tokenValue,
 			Expires: time.Now().Add(time.Hour),
 		})
@@ -82,7 +80,7 @@ func TestClientToken(t *testing.T) {
 func TestClientSetToken(t *testing.T) {
 	var tokenValue string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		cookie, err := req.Cookie(vaultHttp.AuthCookieName)
+		cookie, err := req.Cookie(AuthCookieName)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -128,7 +126,7 @@ func TestClientSetToken(t *testing.T) {
 
 func TestClientRedirect(t *testing.T) {
 	primary := func(w http.ResponseWriter, req *http.Request) {
-		cookie, err := req.Cookie(vaultHttp.AuthCookieName)
+		cookie, err := req.Cookie(AuthCookieName)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
