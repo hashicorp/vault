@@ -97,6 +97,11 @@ func (b *backend) pathCertWrite(
 		policies[i] = strings.TrimSpace(p)
 	}
 
+	// Default the display name to the certificate name if not given
+	if displayName == "" {
+		displayName = name
+	}
+
 	if len(policies) == 0 {
 		return logical.ErrorResponse("policies required"), nil
 	}
