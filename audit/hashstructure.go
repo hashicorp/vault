@@ -22,6 +22,9 @@ func Hash(raw interface{}) error {
 
 	switch s := raw.(type) {
 	case *logical.Auth:
+		if s == nil {
+			return nil
+		}
 		if s.ClientToken != "" {
 			token, err := fn(s.ClientToken)
 			if err != nil {
@@ -31,6 +34,9 @@ func Hash(raw interface{}) error {
 			s.ClientToken = token
 		}
 	case *logical.Request:
+		if s == nil {
+			return nil
+		}
 		if s.Auth != nil {
 			if err := Hash(s.Auth); err != nil {
 				return err
@@ -44,6 +50,9 @@ func Hash(raw interface{}) error {
 
 		s.Data = data.(map[string]interface{})
 	case *logical.Response:
+		if s == nil {
+			return nil
+		}
 		if s.Auth != nil {
 			if err := Hash(s.Auth); err != nil {
 				return err
