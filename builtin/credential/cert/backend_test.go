@@ -73,11 +73,12 @@ func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logica
 		Unauthenticated: true,
 		ConnState:       &connState,
 		Check: func(resp *logical.Response) error {
-			if resp != nil {
-				return fmt.Errorf("should not be authorized")
+			if resp.Auth != nil {
+				return fmt.Errorf("should not be authorized: %#v", resp)
 			}
 			return nil
 		},
+		ErrorOk: true,
 	}
 }
 

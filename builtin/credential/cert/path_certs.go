@@ -97,6 +97,14 @@ func (b *backend) pathCertWrite(
 		policies[i] = strings.TrimSpace(p)
 	}
 
+	if len(policies) == 0 {
+		return logical.ErrorResponse("policies required"), nil
+	}
+	parsed := parsePEM([]byte(certificate))
+	if len(parsed) == 0 {
+		return logical.ErrorResponse("failed to parse certificate"), nil
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("cert/"+name, &CertEntry{
 		Name:        name,
