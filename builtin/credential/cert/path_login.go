@@ -31,7 +31,7 @@ func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get the connection state
 	if req.Connection == nil || req.Connection.ConnState == nil {
-		return nil, nil
+		return logical.ErrorResponse("tls connection required"), nil
 	}
 	connState := req.Connection.ConnState
 
@@ -46,7 +46,7 @@ func (b *backend) pathLogin(
 
 	// If no trusted chain was found, client is not authenticated
 	if len(trustedChains) == 0 {
-		return nil, nil
+		return logical.ErrorResponse("invalid certificate"), nil
 	}
 
 	// Match the trusted chain with the policy
