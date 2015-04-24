@@ -30,11 +30,12 @@ trusted certificates that are allowed to authenticate. An example is shown below
 Use `vault help` for more details.
 
 ```
-$ vault write auth/cert/certs/web display_name=web policies=web,prod certificate=@web-cert.pem
+$ vault write auth/cert/certs/web display_name=web policies=web,prod certificate=@web-cert.pem lease=3600
 ...
 ```
 
 The above creates a new trusted certificate "web" with same display name
 and the "web" and "prod" policies. The certificate (public key) used to verify
-clients is given by the "web-cert.pem" file.
+clients is given by the "web-cert.pem" file. Lastly, an optional lease value
+can be provided in seconds to limit the lease period.
 

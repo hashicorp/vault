@@ -60,6 +60,13 @@ func (b *backend) pathLogin(
 		Auth: &logical.Auth{
 			Policies:    matched.Entry.Policies,
 			DisplayName: matched.Entry.DisplayName,
+			Metadata: map[string]string{
+				"cert_name": matched.Entry.Name,
+			},
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+				Lease:     matched.Entry.Lease,
+			},
 		},
 	}
 	return resp, nil
@@ -160,4 +167,19 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		return nil, errors.New("failed to verify client's certificate: " + err.Error())
 	}
 	return chains, nil
+}
+
+func (b *backend) pathLoginRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Get the cert and validate auth
+	cert, err := b.Cert(req.Storage, req.Auth.Metadata["cert_name"])
+	if err != nil {
+		return nil, err
+	}
+	if cert == nil {
+		// User no longer exists, do not renew
+		return nil, nil
+	}
+
+	return framework.LeaseExtend(cert.Lease, 0)(req, d)
 }

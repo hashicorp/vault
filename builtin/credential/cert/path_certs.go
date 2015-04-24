@@ -2,6 +2,7 @@ package cert
 
 import (
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -29,6 +30,11 @@ func pathCerts(b *backend) *framework.Path {
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Comma-seperated list of policies.",
+			},
+
+			"lease": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "lease time in seconds. Defaults to 1 hour.",
 			},
 		},
 
@@ -110,12 +116,20 @@ func (b *backend) pathCertWrite(
 		return logical.ErrorResponse("failed to parse certificate"), nil
 	}
 
+	// Parse the lease duration or default to 1h
+	leaseDur := time.Hour
+	leaseSec := d.Get("lease").(int)
+	if leaseSec > 0 {
+		leaseDur = time.Duration(leaseSec) * time.Second
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("cert/"+name, &CertEntry{
 		Name:        name,
 		Certificate: certificate,
 		DisplayName: displayName,
 		Policies:    policies,
+		Lease:       leaseDur,
 	})
 	if err != nil {
 		return nil, err
@@ -131,6 +145,7 @@ type CertEntry struct {
 	Certificate string
 	DisplayName string
 	Policies    []string
+	Lease       time.Duration
 }
 
 const pathCertHelpSyn = `

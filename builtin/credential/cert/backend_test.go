@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -62,7 +63,14 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 		Path:            "login",
 		Unauthenticated: true,
 		ConnState:       &connState,
-		Check:           logicaltest.TestCheckAuth([]string{"foo"}),
+		Check: func(resp *logical.Response) error {
+			if resp.Auth.Lease != 1000*time.Second {
+				t.Fatalf("bad lease length: %#v", resp.Auth)
+			}
+
+			fn := logicaltest.TestCheckAuth([]string{"foo"})
+			return fn(resp)
+		},
 	}
 }
 
@@ -91,6 +99,7 @@ func testAccStepCert(
 			"certificate":  string(cert),
 			"policies":     policies,
 			"display_name": name,
+			"lease":        1000,
 		},
 	}
 }
