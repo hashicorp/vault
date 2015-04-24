@@ -22,7 +22,7 @@ type Secret struct {
 
 // Auth is the structure containing auth information if we have it.
 type SecretAuth struct {
-	ClientToken string            `json:"client_Token"`
+	ClientToken string            `json:"client_token"`
 	Policies    []string          `json:"policies"`
 	Metadata    map[string]string `json:"metadata"`
 

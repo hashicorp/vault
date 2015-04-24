@@ -136,7 +136,7 @@ type LogicalResponse struct {
 }
 
 type Auth struct {
-	ClientToken   string            `json:"client_Token"`
+	ClientToken   string            `json:"client_token"`
 	Policies      []string          `json:"policies"`
 	Metadata      map[string]string `json:"metadata"`
 	LeaseDuration int               `json:"lease_duration"`
