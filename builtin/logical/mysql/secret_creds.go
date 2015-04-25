@@ -74,21 +74,15 @@ func (b *backend) secretCredsRevoke(
 	// drop, because MySQL explicitly documents that open user connections
 	// will not be closed. By revoking all grants, at least we ensure
 	// that the open connection is useless.
-	stmt, err := tx.Prepare("REVOKE ALL PRIVILEGES, GRANT OPTION FROM ?")
+	_, err = tx.Exec("REVOKE ALL PRIVILEGES, GRANT OPTION FROM '" + username + "'@'%'")
 	if err != nil {
-		return nil, err
-	}
-	if _, err := stmt.Exec(username); err != nil {
 		return nil, err
 	}
 
 	// Drop this user. This only affects the next connection, which is
 	// why we do the revoke initially.
-	stmt, err = db.Prepare("DROP USER ?")
+	_, err = tx.Exec("DROP USER '" + username + "'@'%'")
 	if err != nil {
-		return nil, err
-	}
-	if _, err := stmt.Exec(username); err != nil {
 		return nil, err
 	}
 

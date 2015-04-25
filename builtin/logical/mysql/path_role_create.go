@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -51,10 +50,15 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	// Generate our username and password
-	username := fmt.Sprintf(
-		"vault-%s-%d-%d",
-		req.DisplayName, time.Now().Unix(), rand.Int31n(10000))
+	// Generate our username and password. MySQL limits user to 16 characters
+	displayName := req.DisplayName
+	if len(displayName) > 10 {
+		displayName = displayName[:10]
+	}
+	username := fmt.Sprintf("%s-%s", displayName, generateUUID())
+	if len(username) > 16 {
+		username = username[:16]
+	}
 	password := generateUUID()
 
 	// Get our connection
