@@ -137,7 +137,8 @@ The names of the variables must be surrounded by "{{" and "}}" to be replaced.
 
 Example of a decent SQL query to use:
 
-  CREATE USER "{{name}}" IDENTIFIED BY "{{password}}"; GRANT ALL ON db1.* TO "{{name}}";
+  CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+  GRANT ALL ON db1.* TO '{{name}}'@'%';
 
 Note the above user would be able to access anything in db1. Please see the MySQL
 manual on the GRANT command to learn how to do more fine grained access.
