@@ -34,3 +34,11 @@ example.vault.d
 # Ruby
 website/vendor/ruby
 website/.bundle
+
+# Vagrant
+.vagrant/
+Vagrantfile
+
+# Configs
+*.hcl
+
