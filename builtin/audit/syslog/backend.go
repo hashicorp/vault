@@ -24,8 +24,7 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 	}
 
 	// Check if raw logging is enabled
-	// TODO: Default this to false once copystructure/hashing is fixed
-	logRaw := true
+	logRaw := false
 	if raw, ok := conf["log_raw"]; ok {
 		b, err := strconv.ParseBool(raw)
 		if err != nil {
