@@ -572,6 +572,9 @@ func (ts *TokenStore) handleCreate(
 	// Generate the response
 	resp := &logical.Response{
 		Auth: &logical.Auth{
+			DisplayName: te.DisplayName,
+			Policies:    te.Policies,
+			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
 				Lease:            leaseDuration,
 				LeaseGracePeriod: leaseDuration / 10,
