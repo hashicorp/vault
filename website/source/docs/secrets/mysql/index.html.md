@@ -101,12 +101,12 @@ that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
 
-# API
-<div class="bs-api-section">
-## /mysql/config/connection
-### POST
+## API
 
-<dl>
+### /mysql/config/connection
+#### POST
+
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Configures the connection DSN used to communicate with MySQL.
@@ -136,10 +136,10 @@ allowed to read.
   </dd>
 </dl>
 
-## /mysql/config/lease
-### POST
+### /mysql/config/lease
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Configures the lease settings for generated credentials.
@@ -177,10 +177,10 @@ allowed to read.
   </dd>
 </dl>
 
-## /mysql/roles/
-### POST
+### /mysql/roles/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Creates or updates the role definition.
@@ -211,9 +211,9 @@ allowed to read.
   </dd>
 </dl>
 
-### GET
+#### GET
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Queries the role definition.
@@ -245,9 +245,9 @@ allowed to read.
 </dl>
 
 
-### DELETE
+#### DELETE
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Deletes the role definition.
@@ -270,10 +270,10 @@ allowed to read.
   </dd>
 </dl>
 
-## /mysql/creds/
-### GET
+### /mysql/creds/
+#### GET
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Generates a new set of dynamic credentials based on the named role.
@@ -304,7 +304,4 @@ allowed to read.
 
   </dd>
 </dl>
-
-</div>
-
 
