@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
@@ -55,6 +56,9 @@ func (b *Backend) LogResponse(
 func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(b.Path), 0600); err != nil {
+		return err
 	}
 
 	var err error
