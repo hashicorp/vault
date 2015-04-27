@@ -198,6 +198,7 @@ type CoreConfig struct {
 	Physical           physical.Backend
 	Logger             *log.Logger
 	DisableCache       bool   // Disables the LRU cache on the physical backend
+	DisableMlock       bool   // Disables mlock syscall
 	CacheSize          int    // Custom cache size of zero for default
 	AdvertiseAddr      string // Set as the leader address for HA
 }
@@ -223,9 +224,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
-	// Ensure our memory usage is locked into physical RAM
-	if err := LockMemory(); err != nil {
-		return nil, fmt.Errorf("failed to lock memory: %v", err)
+	if !conf.DisableMlock {
+		// Ensure our memory usage is locked into physical RAM
+		if err := LockMemory(); err != nil {
+			return nil, fmt.Errorf("failed to lock memory: %v", err)
+		}
 	}
 
 	// Construct a new AES-GCM barrier
