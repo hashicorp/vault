@@ -29,4 +29,244 @@ on every path, use `vault help` after mounting the backend.
 
 ## Quick Start
 
-TODO
+The first step to using the transit backend is to mount it. Unlike the `generic`
+backend, the `transit` backend is not mounted by default.
+
+```
+$ vault mount transit
+Successfully mounted 'transit' at 'transit'!
+```
+
+The next step is to create a named encryption key. A named key is used so that
+many different applications can use the transit backend with independent keys.
+This is done by doing a write against the backend:
+
+```
+$ vault write transit/policy/foo test=1
+Success! Data written to: transit/policy/foo
+```
+
+This will create the "foo" named key in the transit backend. We can inspect
+the settings of the "foo" key by reading it:
+
+```
+$ vault read transit/policy/foo
+Key        	Value
+name       	foo
+cipher_mode	aes-gcm
+key        	PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8=
+````
+
+Here we can see that the randomly generated encryption key being used, as
+well as the AES-GCM cipher mode. We don't need to know any of this to use
+the key however.
+
+Now, if we wanted to encrypt a piece of plain text, we use the encrypt
+endpoint using our named key:
+
+```
+$ echo "the quick brown fox" | base64 | vault write transit/encrypt/foo plaintext=-
+Success! Data written to: transit/encrypt/foo
+```
+TODO: Should return the cipher text
+
+The encryption endpoint expects the plaintext to be provided as a base64 encoded
+strings, so we must first convert it. Vault does not store the plaintext or the
+ciphertext, but only handles it _in transit_ for processing. The application
+is free to store the ciphertext in a database or file at rest.
+
+To decrypt, we simply use the decrypt endpoint using the same named key:
+
+```
+$ vault write transit/decrypt/foo ciphertext=foo
+$ echo "dGhlIHF1aWNrIGJyb3duIGZveAo=" | base64 -D
+the quick brown fox
+```
+TODO: Should return the plaintext
+
+Using ACLs, it is possible to restrict using the transit backend such
+that trusted operators can manage the named keys, and applications can
+only encrypt or decrypt using the named keys they need access to.
+
+## API
+
+<div class="bs-api-section">
+## /transit/policy/
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Creates a new named encryption key. This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+          "name":        "foo",
+          "cipher_mode": "aes-gcm",
+          "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
+### GET
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Returns information about a named encryption key.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+          "name":        "foo",
+          "cipher_mode": "aes-gcm",
+          "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
+### DELETE
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Deletes a named encryption key. This is a root protected endpoint.
+    All data encrypted with the named key will no longer be decryptable.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+## /transit/encrypt/
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Encrypts the provided plaintext using the named key.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/encrypt/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">plaintext</span>
+        <span class="param-flags">required</span>
+        The plaintext to encrypt, provided as base64 encoded.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "ciphertext": "vault:v0:abcdefgh"
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+## /transit/decrypt/
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Dencrypts the provided ciphertext using the named key.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/decrypt/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">ciphertext</span>
+        <span class="param-flags">required</span>
+        The ciphertext to decrypt, provided as returned by encrypt.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo="
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+</div>
