@@ -75,3 +75,49 @@ $ curl -X PUT -d 'test' 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-6
 Permission denied
 ```
 
+# API
+<div class="bs-api-section">
+## /consul/config/access
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Configures the access information for Consul.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/consul/config/access`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">address</span>
+        <span class="param-flags">required</span>
+        The address of the Consul instance, provided as host:port
+      </li>
+      <li>
+        <span class="param">scheme</span>
+        <span class="param-flags">optional</span>
+        The URL scheme to use. Defaults to HTTP, as Consul does not expose HTTPS by default.
+      </li>
+      <li>
+        <span class="param">token</span>
+        <span class="param-flags">required</span>
+        The Consul ACL token to use. Must be a management type token.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+</div>
