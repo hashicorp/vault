@@ -141,11 +141,11 @@ by "{{" and "}}" to be replaced.
 
 Example of a decent SQL query to use:
 
-  CREATE ROLE '{{name}}' WITH
-    LOGIN
-    PASSWORD '{{password}}'
-    VALID UNTIL '{{expiration}}';
-  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA db1 TO '{{name}}';
+	CREATE ROLE "{{name}}" WITH
+	  LOGIN
+	  PASSWORD '{{password}}'
+	  VALID UNTIL '{{expiration}}';
+	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 
 Note the above user would be able to access everything. In schema dc1.
 For more complex GRANT clauses, see the PostgreSQL manuel.

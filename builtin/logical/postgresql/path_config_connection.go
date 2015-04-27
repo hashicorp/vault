@@ -68,5 +68,8 @@ This path configures the connection string used to connect to PostgreSQL.
 The value of the string can be a URL, or a PG style string in the
 format of "user=foo host=bar" etc.
 
+The URL looks like:
+"postgresql://user:pass@host:port/dbname"
+
 When configuring the connection string, the backend will verify its validity.
 `
