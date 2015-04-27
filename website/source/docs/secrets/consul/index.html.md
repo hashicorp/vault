@@ -19,4 +19,59 @@ on every path, use `vault help` after mounting the backend.
 
 ## Quick Start
 
-TODO
+The first step to using the mysql backend is to mount it.
+Unlike the `generic` backend, the `consul` backend is not mounted by default.
+
+```
+$ vault mount consul
+Successfully mounted 'consul' at 'consul'!
+```
+
+Next, we must configure Vault to know how to contact Consul.
+This is done by writing the access information:
+
+```
+$ vault write consul/config/access address=127.0.0.1:8500 token=root
+Success! Data written to: consul/config/access
+```
+
+In this case, we've configured Vault to connect to Consul
+on the default port with the loopback address. We've also provided
+an ACL token to use with the `token` parameter. Vault must have a management
+type token so that it can create and revoke ACL tokens.
+
+The next step is to configure a role. A role is a logical name that maps
+to a policy used to generated those credentials. For example, lets create
+a "readonly" role:
+
+```
+POLICY='key "" { policy = "read" }'
+$ echo $POLICY | base64 | vault write consul/policy/readonly policy=-
+Success! Data written to: consul/policy/readonly
+```
+
+The backend expects the policy to be base64 encoded, so we need to encode
+it properly before writing. The policy language is documented by Consul,
+but we've definited a root read-only policy.
+
+To generate a new set Consul ACL token, we simply read from that role:
+
+```
+$ vault read consul/readonly
+Key           	Value
+lease_id      	consul/readonly/c7a3bd77-e9af-cfc4-9cba-377f0ef10e6c
+lease_duration	3600
+token         	973a31ea-1ec4-c2de-0f63-623f477c2510
+```
+
+Here we can see that Vault has generated a new Consul ACL token for us.
+We can test this token out, and verify that it is read-only:
+
+```
+$ curl 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c25100
+[{"CreateIndex":12,"ModifyIndex":53,"LockIndex":4,"Key":"foo","Flags":3304740253564472344,"Value":"YmF6"}]
+
+$ curl -X PUT -d 'test' 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c2510
+Permission denied
+```
+
