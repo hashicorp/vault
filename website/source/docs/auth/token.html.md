@@ -307,7 +307,8 @@ of the cookie should be "token" and the value should be the token.
 
   <dt>Returns</dt>
   <dd>
-      ```javascript
+
+    ```javascript
     {
       "auth": {
           "client_token": "ABCD",
@@ -320,4 +321,4 @@ of the cookie should be "token" and the value should be the token.
     ```
   </dd>
 </dl>
-
+</div>
