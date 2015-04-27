@@ -28,6 +28,9 @@ func pathEncrypt() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: pathEncryptWrite,
 		},
+
+		HelpSynopsis:    pathEncryptHelpSyn,
+		HelpDescription: pathEncryptHelpDesc,
 	}
 }
 
@@ -102,3 +105,10 @@ func pathEncryptWrite(
 	}
 	return resp, nil
 }
+
+const pathEncryptHelpSyn = `Encrypt a plaintext value using a named key`
+
+const pathEncryptHelpDesc = `
+This path uses the named key from the request path to encrypt a user
+provided plaintext. The plaintext must be base64 encoded.
+`

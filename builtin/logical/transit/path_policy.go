@@ -60,6 +60,9 @@ func pathPolicy() *framework.Path {
 			logical.DeleteOperation: pathPolicyDelete,
 			logical.ReadOperation:   pathPolicyRead,
 		},
+
+		HelpSynopsis:    pathPolicyHelpSyn,
+		HelpDescription: pathPolicyHelpDesc,
 	}
 }
 
@@ -138,3 +141,11 @@ func pathPolicyDelete(
 	}
 	return nil, nil
 }
+
+const pathPolicyHelpSyn = `Managed named encrption keys`
+
+const pathPolicyHelpDesc = `
+This path is used to manage the named keys that are available.
+Doing a write with no value against a new named key will create
+it using a randomly generated key.
+`

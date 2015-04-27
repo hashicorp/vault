@@ -28,6 +28,9 @@ func pathDecrypt() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: pathDecryptWrite,
 		},
+
+		HelpSynopsis:    pathDecryptHelpSyn,
+		HelpDescription: pathDecryptHelpDesc,
 	}
 }
 
@@ -98,3 +101,10 @@ func pathDecryptWrite(
 	}
 	return resp, nil
 }
+
+const pathDecryptHelpSyn = `Decrypt a ciphertext value using a named key`
+
+const pathDecryptHelpDesc = `
+This path uses the named key from the request path to decrypt a user
+provided ciphertext. The plaintext is returned base64 encoded.
+`
