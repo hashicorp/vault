@@ -24,9 +24,34 @@ func pathPolicy() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathPolicyWrite,
+			logical.ReadOperation:   pathPolicyRead,
+			logical.WriteOperation:  pathPolicyWrite,
+			logical.DeleteOperation: pathPolicyDelete,
 		},
 	}
+}
+
+func pathPolicyRead(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	// Read the policy
+	policy, err := req.Storage.Get("policy/" + name)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving policy: %s", err)
+	}
+	if policy == nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Policy '%s' not found", name)), nil
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"policy": base64.StdEncoding.EncodeToString(policy.Value),
+		},
+	}
+	return resp, nil
 }
 
 func pathPolicyWrite(
@@ -46,5 +71,14 @@ func pathPolicyWrite(
 		return nil, err
 	}
 
+	return nil, nil
+}
+
+func pathPolicyDelete(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if err := req.Storage.Delete("policy/" + name); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
