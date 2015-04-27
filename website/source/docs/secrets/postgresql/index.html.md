@@ -189,7 +189,7 @@ subpath for interactive help output.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates or updates the role definition.
+    Creates or updates the role definition. This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -222,7 +222,7 @@ subpath for interactive help output.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Queries the role definition.
+    Queries the role definition. This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -256,7 +256,7 @@ subpath for interactive help output.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the role definition.
+    Deletes the role definition. This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
