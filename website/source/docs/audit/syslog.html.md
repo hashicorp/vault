@@ -32,3 +32,6 @@ what type of object it is. Currently, only two types exist: "request" and
 
 The line contains all of the information for any given request and response.
 
+If `log_raw` if false, as is default, all sensitive information is first hashed
+before logging. If explicitly enabled, all values are logged raw without hashing.
+
