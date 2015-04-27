@@ -66,9 +66,9 @@ endpoint using our named key:
 
 ```
 $ echo "the quick brown fox" | base64 | vault write transit/encrypt/foo plaintext=-
-Success! Data written to: transit/encrypt/foo
+Key       	Value
+ciphertext	vault:v0:czEwyKqGZY/limnuzDCUUe5AK0tbBObWqeZgFqxCuIqq7A84SeiOq3sKD0Y/KUvv
 ```
-TODO: Should return the cipher text
 
 The encryption endpoint expects the plaintext to be provided as a base64 encoded
 strings, so we must first convert it. Vault does not store the plaintext or the
@@ -78,11 +78,13 @@ is free to store the ciphertext in a database or file at rest.
 To decrypt, we simply use the decrypt endpoint using the same named key:
 
 ```
-$ vault write transit/decrypt/foo ciphertext=foo
+$ vault write transit/decrypt/foo ciphertext=vault:v0:czEwyKqGZY/limnuzDCUUe5AK0tbBObWqeZgFqxCuIqq7A84SeiOq3sKD0Y/KUvv
+Key      	Value
+plaintext	dGhlIHF1aWNrIGJyb3duIGZveAo=
+
 $ echo "dGhlIHF1aWNrIGJyb3duIGZveAo=" | base64 -D
 the quick brown fox
 ```
-TODO: Should return the plaintext
 
 Using ACLs, it is possible to restrict using the transit backend such
 that trusted operators can manage the named keys, and applications can
