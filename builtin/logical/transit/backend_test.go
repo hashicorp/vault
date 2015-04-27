@@ -32,21 +32,21 @@ func TestBackend_basic(t *testing.T) {
 func testAccStepWritePolicy(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "policy/" + name,
+		Path:      "keys/" + name,
 	}
 }
 
 func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
-		Path:      "policy/" + name,
+		Path:      "keys/" + name,
 	}
 }
 
 func testAccStepReadPolicy(t *testing.T, name string, expectNone bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "policy/" + name,
+		Path:      "keys/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && !expectNone {
 				return fmt.Errorf("missing response")

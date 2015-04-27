@@ -42,15 +42,15 @@ many different applications can use the transit backend with independent keys.
 This is done by doing a write against the backend:
 
 ```
-$ vault write transit/policy/foo test=1
-Success! Data written to: transit/policy/foo
+$ vault write transit/keys/foo test=1
+Success! Data written to: transit/keys/foo
 ```
 
 This will create the "foo" named key in the transit backend. We can inspect
 the settings of the "foo" key by reading it:
 
 ```
-$ vault read transit/policy/foo
+$ vault read transit/keys/foo
 Key        	Value
 name       	foo
 cipher_mode	aes-gcm
@@ -90,7 +90,7 @@ only encrypt or decrypt using the named keys they need access to.
 
 ## API
 
-### /transit/policy/
+### /transit/keys/
 #### POST
 
 <dl class="api">
@@ -103,7 +103,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/transit/policy/<name>`</dd>
+  <dd>`/transit/keys/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -139,7 +139,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/transit/policy/<name>`</dd>
+  <dd>`/transit/keys/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -175,7 +175,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/transit/policy/<name>`</dd>
+  <dd>`/transit/keys/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>

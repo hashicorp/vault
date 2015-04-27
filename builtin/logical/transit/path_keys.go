@@ -45,13 +45,13 @@ func getPolicy(req *logical.Request, name string) (*Policy, error) {
 	return p, nil
 }
 
-func pathPolicy() *framework.Path {
+func pathKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: `policy/(?P<name>\w+)`,
+		Pattern: `keys/(?P<name>\w+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 		},
 
