@@ -21,6 +21,7 @@ When enabling this backend, the following options are accepted:
 
   * `path` (required) - The path to where the file will be written. If
       this path exists, the audit backend will append to it.
+  * `log_raw` (optional) Should security sensitive information be logged raw. Defaults to "false".
 
 ## Format
 
@@ -29,4 +30,7 @@ what type of object it is. Currently, only two types exist: "request" and
 "response".
 
 The line contains all of the information for any given request and response.
+
+If `log_raw` if false, as is default, all sensitive information is first hashed
+before logging. If explicitly enabled, all values are logged raw without hashing.
 

@@ -1,21 +1,26 @@
 package file
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"bytes"
 	"strconv"
-	"sync"
 
+	"github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
 
 func Factory(conf map[string]string) (audit.Backend, error) {
-	path, ok := conf["path"]
+	// Get facility or default to AUTH
+	facility, ok := conf["facility"]
 	if !ok {
-		return nil, fmt.Errorf("path is required")
+		facility = "AUTH"
+	}
+
+	// Get tag or default to 'vault'
+	tag, ok := conf["tag"]
+	if !ok {
+		tag = "vault"
 	}
 
 	// Check if raw logging is enabled
@@ -28,31 +33,27 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 		logRaw = b
 	}
 
+	// Get the logger
+	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &Backend{
-		Path:   path,
-		LogRaw: logRaw,
+		logger: logger,
+		logRaw: logRaw,
 	}
 	return b, nil
 }
 
-// Backend is the audit backend for the file-based audit store.
-//
-// NOTE: This audit backend is currently very simple: it appends to a file.
-// It doesn't do anything more at the moment to assist with rotation
-// or reset the write cursor, this should be done in the future.
+// Backend is the audit backend for the syslog-based audit store.
 type Backend struct {
-	Path   string
-	LogRaw bool
-
-	once sync.Once
-	f    *os.File
+	logger gsyslog.Syslogger
+	logRaw bool
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
-	if err := b.open(); err != nil {
-		return err
-	}
-	if !b.LogRaw {
+	if !b.logRaw {
 		// Copy the structures
 		cp, err := copystructure.Copy(auth)
 		if err != nil {
@@ -75,19 +76,21 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
 		}
 	}
 
+	// Encode the entry as JSON
+	var buf bytes.Buffer
 	var format audit.FormatJSON
-	return format.FormatRequest(b.f, auth, req)
-}
-
-func (b *Backend) LogResponse(
-	auth *logical.Auth,
-	req *logical.Request,
-	resp *logical.Response,
-	err error) error {
-	if err := b.open(); err != nil {
+	if err := format.FormatRequest(&buf, auth, req); err != nil {
 		return err
 	}
-	if !b.LogRaw {
+
+	// Write out to syslog
+	_, err := b.logger.Write(buf.Bytes())
+	return err
+}
+
+func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
+	resp *logical.Response, err error) error {
+	if !b.logRaw {
 		// Copy the structure
 		cp, err := copystructure.Copy(auth)
 		if err != nil {
@@ -119,23 +122,14 @@ func (b *Backend) LogResponse(
 		}
 	}
 
+	// Encode the entry as JSON
+	var buf bytes.Buffer
 	var format audit.FormatJSON
-	return format.FormatResponse(b.f, auth, req, resp, err)
-}
-
-func (b *Backend) open() error {
-	if b.f != nil {
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(b.Path), 0600); err != nil {
+	if err := format.FormatResponse(&buf, auth, req, resp, err); err != nil {
 		return err
 	}
 
-	var err error
-	b.f, err = os.OpenFile(b.Path, os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// Write otu to syslog
+	_, err = b.logger.Write(buf.Bytes())
+	return err
 }
