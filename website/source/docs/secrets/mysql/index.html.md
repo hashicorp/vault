@@ -77,8 +77,8 @@ default, the `{{name}}` and `{{password}}` fields will be populated by
 Vault with dynamically generated values. This SQL statement is creating
 the named user, and then granting it `SELECT` or read-only privileges
 to tables in the database. More complex `GRANT` queries can be used to
-customize the privileges of the role. See the MySQL manual for more
-information.
+customize the privileges of the role. See the [MySQL manual](https://dev.mysql.com/doc/refman/5.7/en/grant.html)
+for more information.
 
 To generate a new set of credentials, we simply read from that role:
 
