@@ -55,10 +55,7 @@ func (c *RenewCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Use the ReadCommand in order to format our output
-	var read ReadCommand
-	read.Meta = c.Meta
-	return read.output(format, secret)
+	return OutputSecret(c.Ui, format, secret)
 }
 
 func (c *RenewCommand) Synopsis() string {
