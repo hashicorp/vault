@@ -90,16 +90,18 @@ func (b *backend) pathRoleCreate(
 	}
 
 	// Test the query by trying to prepare it
-	stmt, err := db.Prepare(Query(sql, map[string]string{
-		"name":       "foo",
-		"password":   "bar",
-		"expiration": "",
-	}))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error testing query: %s", err)), nil
+	for _, query := range SplitSQL(sql) {
+		stmt, err := db.Prepare(Query(query, map[string]string{
+			"name":       "foo",
+			"password":   "bar",
+			"expiration": "",
+		}))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error testing query: %s", err)), nil
+		}
+		stmt.Close()
 	}
-	stmt.Close()
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
@@ -127,7 +129,7 @@ const pathRoleHelpDesc = `
 This path lets you manage the roles that can be created with this backend.
 
 The "sql" parameter customizes the SQL string used to create the role.
-This can only be a single SQL query. Some substitution will be done to the
+This can be a sequence of SQL queries. Some substitution will be done to the
 SQL string for certain keys. The names of the variables must be surrounded
 by "{{" and "}}" to be replaced.
 
@@ -139,12 +141,12 @@ by "{{" and "}}" to be replaced.
 
 Example of a decent SQL query to use:
 
-  CREATE ROLE "{{name}}" WITH
+  CREATE ROLE '{{name}}' WITH
     LOGIN
     PASSWORD '{{password}}'
     VALID UNTIL '{{expiration}}';
+  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA db1 TO '{{name}}';
 
-Note the above user wouldn't be able to access anything. To give a user access
-to resources, create roles manually in PostgreSQL, then use the "IN ROLE"
-clause for CREATE ROLE to add the user to more roles.
+Note the above user would be able to access everything. In schema dc1.
+For more complex GRANT clauses, see the PostgreSQL manuel.
 `

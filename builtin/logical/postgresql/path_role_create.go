@@ -51,13 +51,7 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	// Get our connection
-	db, err := b.DB(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// Generate our query
+	// Generate the username, password and expiration
 	username := fmt.Sprintf(
 		"vault-%s-%d-%d",
 		req.DisplayName, time.Now().Unix(), rand.Int31n(10000))
@@ -65,19 +59,37 @@ func (b *backend) pathRoleCreateRead(
 	expiration := time.Now().UTC().
 		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
 		Format("2006-01-02 15:04:05")
-	query := Query(role.SQL, map[string]string{
-		"name":       username,
-		"password":   password,
-		"expiration": expiration,
-	})
 
-	// Prepare the statement and execute it
-	stmt, err := db.Prepare(query)
+	// Get our connection
+	db, err := b.DB(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
+
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Execute each query
+	for _, query := range SplitSQL(role.SQL) {
+		stmt, err := db.Prepare(Query(query, map[string]string{
+			"name":       username,
+			"password":   password,
+			"expiration": expiration,
+		}))
+		if err != nil {
+			return nil, err
+		}
+		if _, err := stmt.Exec(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
