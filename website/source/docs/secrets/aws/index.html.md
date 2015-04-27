@@ -97,3 +97,217 @@ secret_key      vS61xxXgwwX/V4qZMUv8O8wd2RLqngXz6WmN04uW
 
 If you get stuck at any time, simply run `vault help aws` or with a subpath for
 interactive help output.
+
+## API
+
+### /aws/config/root
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configures the root IAM credentials used.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/config/root`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">access_key</span>
+        <span class="param-flags">required</span>
+        The AWS Access Key
+      </li>
+      <li>
+        <span class="param">secret_key</span>
+        <span class="param-flags">required</span>
+        The AWS Secret Key
+      </li>
+      <li>
+        <span class="param">region</span>
+        <span class="param-flags">required</span>
+        The AWS region for API calls
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+### /aws/config/lease
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configures the lease settings for generated credentials.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/config/lease`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">lease</span>
+        <span class="param-flags">required</span>
+        The lease value provided as a string duration
+        with time suffix. Hour is the largest suffix.
+      </li>
+      <li>
+        <span class="param">lease_max</span>
+        <span class="param-flags">required</span>
+        The maximum lease value provided as a string duration
+        with time suffix. Hour is the largest suffix.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+### /aws/policy/
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Creates or updates a named policy.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">policy</span>
+        <span class="param-flags">required</span>
+        The IAM policy in JSON format.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Queries a named policy.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "policy": "..."
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes a named policy.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+
+### /aws/
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Generates a dynamic IAM credential based on the named policy.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "access_key": "...",
+            "secret_key": "..."
+        }
+    }
+    ```
+
+  </dd>
+</dl>
