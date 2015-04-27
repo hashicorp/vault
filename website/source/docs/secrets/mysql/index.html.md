@@ -28,4 +28,283 @@ on every path, use `vault help` after mounting the backend.
 
 ## Quick Start
 
-TODO
+The first step to using the mysql backend is to mount it.
+Unlike the `generic` backend, the `mysql` backend is not mounted by default.
+
+```
+$ vault mount mysql
+Successfully mounted 'mysql' at 'mysql'!
+```
+
+Next, we must configure Vault to know how to connect to the MySQL
+instance. This is done by providing a DSN (Data Source Name):
+
+```
+$ vault write mysql/config/connection value="root:root@tcp(192.168.33.10:3306)/"
+Success! Data written to: mysql/config/connection
+```
+
+In this case, we've configured Vault with the user "root" and password "root,
+connecting to an instance at "192.168.33.10" on port 3306. It is not necessary
+that Vault has the root user, but the user must have privileges to create
+other users, namely the `GRANT OPTION` privilege.
+
+Optionally, we can configure the lease settings for credentials generated
+by Vault. This is done by writing to the `config/lease` key:
+
+```
+$ vault write mysql/config/lease lease=1h lease_max=24h
+Success! Data written to: mysql/config/lease
+```
+
+This restricts each credential to being valid or leased for 1 hour
+at a time, with a maximum use period of 24 hours. This forces an
+application to renew their credentials at least hourly, and to recycle
+them once per day.
+
+The next step is to configure a role. A role is a logical name that maps
+to a policy used to generated those credentials. For example, lets create
+a "readonly" role:
+
+```
+$ vault write mysql/roles/readonly sql="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';"
+Success! Data written to: mysql/roles/readonly
+```
+
+By writing to the `roles/readonly` path we are defining the `readonly` role.
+This role will be created by evaluating the given `sql` statements. By
+default, the `{{name}}` and `{{password}}` fields will be populated by
+Vault with dynamically generated values. This SQL statement is creating
+the named user, and then granting it `SELECT` or read-only privileges
+to tables in the database. More complex `GRANT` queries can be used to
+customize the privileges of the role. See the MySQL manual for more
+information.
+
+To generate a new set of credentials, we simply read from that role:
+
+```
+$ vault read mysql/creds/readonly
+Key           	Value
+lease_id      	mysql/creds/readonly/bd404e98-0f35-b378-269a-b7770ef01897
+lease_duration	3600
+password      	132ae3ef-5a64-7499-351e-bfe59f3a2a21
+username      	root-aefa635a-18
+```
+
+By reading from the `creds/readonly` path, Vault has generated a new
+set of credentials using the `readonly` role configuration. Here we
+see the dynamically generated username and password, along with a one
+hour lease.
+
+Using ACLs, it is possible to restrict using the mysql backend such
+that trusted operators can manage the role definitions, and both
+users and applications are restricted in the credentials they are
+allowed to read.
+
+# API
+<div class="bs-api-section">
+## /mysql/config/connection
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Configures the connection DSN used to communicate with MySQL.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/mysql/config/connection`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">value</span>
+        <span class="param-flags">required</span>
+        The MySQL DSN
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+## /mysql/config/lease
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Configures the lease settings for generated credentials.
+    If not configured, leases default to 1 hour. This is a root
+    protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/mysql/config/lease`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">lease</span>
+        <span class="param-flags">required</span>
+        The lease value provided as a string duration
+        with time suffix. Hour is the largest suffix.
+      </li>
+      <li>
+        <span class="param">lease_max</span>
+        <span class="param-flags">required</span>
+        The maximum lease value provided as a string duration
+        with time suffix. Hour is the largest suffix.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+## /mysql/roles/
+### POST
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Creates or updates the role definition.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/mysql/roles/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">sql</span>
+        <span class="param-flags">required</span>
+        The SQL statements executed to create and configure the role.
+        Must be semi-colon seperated. The '{{name}}' and '{{password}}'
+        values will be substituted.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+### GET
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Queries the role definition.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/mysql/roles/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "sql": "CREATE USER..."
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+
+### DELETE
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Deletes the role definition.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/mysql/roles/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+## /mysql/creds/
+### GET
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Generates a new set of dynamic credentials based on the named role.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/mysql/creds/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "username": "root-aefa635a-18",
+            "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+</div>
+
+
