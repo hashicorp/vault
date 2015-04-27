@@ -14,8 +14,7 @@ dev: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	TF_ACC= go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
-	@$(MAKE) vet
+	TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
@@ -23,22 +22,11 @@ testacc: generate
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
+	TF_ACC=1 godep go test $(TEST) -v $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
 testrace: generate
-	TF_ACC= go test -race $(TEST) $(TESTARGS)
-
-# updatedeps installs all the dependencies that Vault needs to run
-# and build.
-updatedeps:
-	go get -u github.com/mitchellh/gox
-	go get -u golang.org/x/tools/cmd/stringer
-	go list ./... \
-		| xargs go list -f '{{join .Deps "\n"}}' \
-		| grep -v github.com/hashicorp/vault \
-		| sort -u \
-		| xargs go get -f -u -v
+	TF_ACC= godep go test -race $(TEST) $(TESTARGS)
 
 cover:
 	@go tool cover 2>/dev/null; if [ $$? -eq 3 ]; then \
@@ -66,4 +54,4 @@ vet:
 generate:
 	go generate ./...
 
-.PHONY: bin default generate test updatedeps vet
+.PHONY: bin default generate test vet
