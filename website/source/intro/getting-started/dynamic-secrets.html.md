@@ -71,7 +71,7 @@ TODO
 To help keep the credentials secure, the AWS backend doesn't let you
 read them back even if you're using a root credential.
 
-## Writing a Policy
+## Creating a Role
 
 The next step is to configure the AWS backend with an IAM policy.
 IAM is the system AWS uses for creating new credentials with limited
@@ -100,27 +100,27 @@ many policies with the backend. Save a file named "policy.json" with the followi
 ```
 
 This is a basic IAM policy that lets the user perform any action within
-Amazon EC2. With the policy saved, write it to Vault:
+Amazon EC2. With the policy saved, write it to Vault and create a new role:
 
 ```
-$ vault write aws/policy/deploy policy=@policy.json
-Success! Data written to: aws/policy/deploy
+$ vault write aws/roles/deploy policy=@policy.json
+Success! Data written to: aws/roles/deploy
 ```
 
-Again, we're using a special path here `aws/policy/<NAME>` to write
+Again, we're using a special path here `aws/roles/<NAME>` to write
 an IAM policy to Vault. We also used the special syntax `@filename` with
 `vault write` to write the contents of a file.
 
 ## Generating the Secret
 
-Now that we've configured the AWS backend and wrote a policy, we can now
-request an access key pair for that policy. To do so, just read the
-special path `aws/<NAME>` where `NAME` is the policy name:
+Now that we've configured the AWS backend and created a role, we can now
+request an access key pair for that role. To do so, just read the
+special path `aws/creds/<NAME>` where `NAME` is the role name:
 
 ```
-$ vault read aws/deploy
+$ vault read aws/creds/deploy
 Key         Value
-lease_id    aws/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
+lease_id    aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
 access_key  AKIAJFN42DVCQWDHQYHQ
 secret_key  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
 ```
@@ -142,8 +142,8 @@ To revoke the secret, use `vault revoke` with the lease ID that was
 outputted from `vault read` when you ran it:
 
 ```
-$ vault revoke aws/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
-Key revoked with ID 'aws/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5'.
+$ vault revoke aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
+Key revoked with ID 'aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5'.
 ```
 
 Done! If you look at your AWS account, you'll notice that no IAM users

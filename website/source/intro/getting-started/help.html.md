@@ -40,7 +40,7 @@ are automatically revoked at the end of the lease.
 
 After mounting this backend, credentials to generate IAM keys must
 be configured with the "root" path and policies must be written using
-the "policy/" endpoints before any access keys can be generated.
+the "roles/" endpoints before any access keys can be generated.
 
 ## PATHS
 
@@ -49,14 +49,17 @@ any of the paths below, use the help command with any route matching
 the path pattern. Note that depending on the policy of your auth token,
 you may or may not be able to access certain paths.
 
-    ^(?P<name>\w+)$
-        Generate an access key pair for a specific policy.
+    ^config/lease$
+        Configure the default lease information for generated credentials.
 
-    ^policy/(?P<name>\w+)$
-        Read and write IAM policies that access keys can be made for.
-
-    ^root$
+    ^config/root$
         Configure the root credentials that are used to manage IAM.
+
+    ^creds/(?P<name>\w+)$
+        Generate an access key pair for a specific role.
+
+    ^roles/(?P<name>\w+)$
+        Read and write IAM policies that access keys can be made for.
 ```
 
 The `vault help` command takes a path. By specifying the root path for
@@ -71,27 +74,27 @@ After seeing the overview, we can continue to dive deeper by getting
 help for an individual path. For this, just use `vault help` with a path
 that would match the regular expression for that path. Note that the path
 doesn't need to actually _work_. For example, we'll get the help below
-for accessing `aws/operator`, even though we never wrote the `operator`
-policy:
+for accessing `aws/creds/operator`, even though we never created the `operator`
+rolek:
 
 ```
-$ vault help aws/operator
-Request:        operator
-Matching Route: ^(?P<name>\w+)$
+$ vault help aws/creds/operator
+Request:        creds/operator
+Matching Route: ^creds/(?P<name>\w+)$
 
-Generate an access key pair for a specific policy.
+Generate an access key pair for a specific role.
 
 ## PARAMETERS
 
     name (string)
-        Name of the policy
+        Name of the role
 
 ## DESCRIPTION
 
 This path will generate a new, never before used key pair for
 accessing AWS. The IAM policy used to back this key pair will be
 the "name" parameter. For example, if this backend is mounted at "aws",
-then "aws/deploy" would generate access keys for the "deploy" policy.
+then "aws/creds/deploy" would generate access keys for the "deploy" role.
 
 The access keys will have a lease associated with them. The access keys
 can be revoked by using the lease ID.
