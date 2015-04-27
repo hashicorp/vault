@@ -18,7 +18,9 @@ type WriteCommand struct {
 }
 
 func (c *WriteCommand) Run(args []string) int {
+	var format string
 	flags := c.Meta.FlagSet("write", FlagSetDefault)
+	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -50,14 +52,19 @@ func (c *WriteCommand) Run(args []string) int {
 		return 2
 	}
 
-	if _, err := client.Logical().Write(path, data); err != nil {
+	secret, err := client.Logical().Write(path, data)
+	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error writing data to %s: %s", path, err))
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Success! Data written to: %s", path))
-	return 0
+	if secret == nil {
+		c.Ui.Output(fmt.Sprintf("Success! Data written to: %s", path))
+		return 0
+	}
+
+	return OutputSecret(c.Ui, format, secret)
 }
 
 func (c *WriteCommand) parseData(args []string) (map[string]interface{}, error) {
