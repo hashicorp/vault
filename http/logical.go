@@ -74,11 +74,11 @@ func handleLogical(core *vault.Core) http.Handler {
 		}
 
 		// Build the proper response
-		respondLogical(w, r, resp)
+		respondLogical(w, r, path, resp)
 	})
 }
 
-func respondLogical(w http.ResponseWriter, r *http.Request, resp *logical.Response) {
+func respondLogical(w http.ResponseWriter, r *http.Request, path string, resp *logical.Response) {
 	var httpResp interface{}
 	if resp != nil {
 		if resp.Redirect != "" {
@@ -104,12 +104,17 @@ func respondLogical(w http.ResponseWriter, r *http.Request, resp *logical.Respon
 					time.Duration(logicalResp.LeaseDuration) * time.Second
 			}
 
-			http.SetCookie(w, &http.Cookie{
-				Name:    AuthCookieName,
-				Value:   resp.Auth.ClientToken,
-				Path:    "/",
-				Expires: time.Now().UTC().Add(expireDuration),
-			})
+			// Do not set the token as the auth cookie if the endpoint
+			// is the token store. Otherwise, attempting to create a token
+			// will cause the client to be authenticated as that token.
+			if !strings.HasPrefix(path, "auth/token/") {
+				http.SetCookie(w, &http.Cookie{
+					Name:    AuthCookieName,
+					Value:   resp.Auth.ClientToken,
+					Path:    "/",
+					Expires: time.Now().UTC().Add(expireDuration),
+				})
+			}
 
 			logicalResp.Auth = &Auth{
 				ClientToken:   resp.Auth.ClientToken,

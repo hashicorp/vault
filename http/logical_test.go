@@ -137,3 +137,40 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	resp = testHttpDelete(t, addr2+"/v1/secret/foo")
 	testResponseStatus(t, resp, 307)
 }
+
+func TestLogical_CreateToken(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// WRITE
+	resp := testHttpPut(t, addr+"/v1/auth/token/create", map[string]interface{}{
+		"data": "bar",
+	})
+
+	var actual map[string]interface{}
+	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": float64(0),
+		"data":           nil,
+		"auth": map[string]interface{}{
+			"policies":       []interface{}{"root"},
+			"metadata":       nil,
+			"lease_duration": float64(0),
+			"renewable":      false,
+		},
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	delete(actual["auth"].(map[string]interface{}), "client_token")
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v %#v", actual, expected)
+	}
+
+	// Should not get auth cookie
+	if cookies := resp.Cookies(); len(cookies) != 0 {
+		t.Fatalf("should not get cookies: %#v", cookies)
+	}
+}
