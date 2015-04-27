@@ -4,9 +4,80 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/copystructure"
 )
+
+func TestCopy_auth(t *testing.T) {
+	// Make a non-pointer one so that it can't be modified directly
+	expected := logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			Lease:      1 * time.Hour,
+			LeaseIssue: time.Now().UTC(),
+		},
+
+		ClientToken: "foo",
+	}
+	auth := expected
+
+	// Copy it
+	dup, err := copystructure.Copy(&auth)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Check equality
+	auth2 := dup.(*logical.Auth)
+	if !reflect.DeepEqual(*auth2, expected) {
+		t.Fatalf("bad:\n\n%#v\n\n%#v", *auth2, expected)
+	}
+}
+
+func TestCopy_request(t *testing.T) {
+	// Make a non-pointer one so that it can't be modified directly
+	expected := logical.Request{
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+	}
+	arg := expected
+
+	// Copy it
+	dup, err := copystructure.Copy(&arg)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Check equality
+	arg2 := dup.(*logical.Request)
+	if !reflect.DeepEqual(*arg2, expected) {
+		t.Fatalf("bad:\n\n%#v\n\n%#v", *arg2, expected)
+	}
+}
+
+func TestCopy_response(t *testing.T) {
+	// Make a non-pointer one so that it can't be modified directly
+	expected := logical.Response{
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+	}
+	arg := expected
+
+	// Copy it
+	dup, err := copystructure.Copy(&arg)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Check equality
+	arg2 := dup.(*logical.Response)
+	if !reflect.DeepEqual(*arg2, expected) {
+		t.Fatalf("bad:\n\n%#v\n\n%#v", *arg2, expected)
+	}
+}
 
 func TestHash(t *testing.T) {
 	cases := []struct {
