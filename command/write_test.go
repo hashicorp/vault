@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/http"
@@ -217,5 +218,31 @@ func TestWrite_fileValue(t *testing.T) {
 
 	if resp.Data["value"] != "foo" {
 		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestWrite_Output(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	ui := new(cli.MockUi)
+	c := &WriteCommand{
+		Meta: Meta{
+			ClientToken: token,
+			Ui:          ui,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"auth/token/create",
+		"display_name=foo",
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+	if !strings.Contains(string(ui.OutputWriter.Bytes()), "Key") {
+		t.Fatalf("bad: %s", string(ui.OutputWriter.Bytes()))
 	}
 }
