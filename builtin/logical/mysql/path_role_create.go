@@ -75,7 +75,6 @@ func (b *backend) pathRoleCreateRead(
 	defer tx.Rollback()
 
 	// Execute each query
-	// Test the query by trying to prepare it
 	for _, query := range SplitSQL(role.SQL) {
 		stmt, err := db.Prepare(Query(query, map[string]string{
 			"name":     username,
