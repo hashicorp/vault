@@ -90,11 +90,10 @@ only encrypt or decrypt using the named keys they need access to.
 
 ## API
 
-<div class="bs-api-section">
-## /transit/policy/
-### POST
+### /transit/policy/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Creates a new named encryption key. This is a root protected endpoint.
@@ -127,9 +126,9 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
-### GET
+#### GET
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Returns information about a named encryption key.
@@ -163,9 +162,9 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
-### DELETE
+#### DELETE
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Deletes a named encryption key. This is a root protected endpoint.
@@ -189,10 +188,10 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
-## /transit/encrypt/
-### POST
+### /transit/encrypt/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Encrypts the provided plaintext using the named key.
@@ -229,10 +228,10 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
-## /transit/decrypt/
-### POST
+### /transit/decrypt/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Dencrypts the provided ciphertext using the named key.
@@ -268,5 +267,3 @@ only encrypt or decrypt using the named keys they need access to.
 
   </dd>
 </dl>
-
-</div>
