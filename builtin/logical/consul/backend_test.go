@@ -109,7 +109,7 @@ func testAccStepReadToken(
 	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      name,
+		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
 			var d struct {
 				Token string `mapstructure:"token"`
@@ -145,7 +145,7 @@ func testAccStepReadToken(
 func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "policy/" + name,
+		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
 		},
@@ -155,7 +155,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 func testAccStepReadPolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "policy/" + name,
+		Path:      "roles/" + name,
 		Check: func(resp *logical.Response) error {
 			policyRaw := resp.Data["policy"].(string)
 			out, err := base64.StdEncoding.DecodeString(policyRaw)
@@ -173,7 +173,7 @@ func testAccStepReadPolicy(t *testing.T, name string, policy string) logicaltest
 func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
-		Path:      "policy/" + name,
+		Path:      "roles/" + name,
 	}
 }
 

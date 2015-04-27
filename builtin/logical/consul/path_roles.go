@@ -8,13 +8,13 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathPolicy() *framework.Path {
+func pathRoles() *framework.Path {
 	return &framework.Path{
-		Pattern: `policy/(?P<name>\w+)`,
+		Pattern: `roles/(?P<name>\w+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 			},
 
 			"policy": &framework.FieldSchema{
@@ -24,25 +24,25 @@ func pathPolicy() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathPolicyRead,
-			logical.WriteOperation:  pathPolicyWrite,
-			logical.DeleteOperation: pathPolicyDelete,
+			logical.ReadOperation:   pathRolesRead,
+			logical.WriteOperation:  pathRolesWrite,
+			logical.DeleteOperation: pathRolesDelete,
 		},
 	}
 }
 
-func pathPolicyRead(
+func pathRolesRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + name)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving policy: %s", err)
+		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
 	if policy == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Policy '%s' not found", name)), nil
+			"Role '%s' not found", name)), nil
 	}
 
 	// Generate the response
@@ -54,7 +54,7 @@ func pathPolicyRead(
 	return resp, nil
 }
 
-func pathPolicyWrite(
+func pathRolesWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyRaw, err := base64.StdEncoding.DecodeString(d.Get("policy").(string))
 	if err != nil {
@@ -74,7 +74,7 @@ func pathPolicyWrite(
 	return nil, nil
 }
 
-func pathPolicyDelete(
+func pathRolesDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if err := req.Storage.Delete("policy/" + name); err != nil {

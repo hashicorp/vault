@@ -41,25 +41,25 @@ an ACL token to use with the `token` parameter. Vault must have a management
 type token so that it can create and revoke ACL tokens.
 
 The next step is to configure a role. A role is a logical name that maps
-to a policy used to generated those credentials. For example, lets create
+to a role used to generated those credentials. For example, lets create
 a "readonly" role:
 
 ```
 POLICY='key "" { policy = "read" }'
-$ echo $POLICY | base64 | vault write consul/policy/readonly policy=-
-Success! Data written to: consul/policy/readonly
+$ echo $POLICY | base64 | vault write consul/roles/readonly policy=-
+Success! Data written to: consul/roles/readonly
 ```
 
 The backend expects the policy to be base64 encoded, so we need to encode
-it properly before writing. The policy language is documented by Consul,
-but we've definited a root read-only policy.
+it properly before writing. The policy language is
+[documented by Consul](https://consul.io/docs/internals/acl.html), but we've definited a read-only policy.
 
 To generate a new set Consul ACL token, we simply read from that role:
 
 ```
-$ vault read consul/readonly
+$ vault read consul/creds/readonly
 Key           	Value
-lease_id      	consul/readonly/c7a3bd77-e9af-cfc4-9cba-377f0ef10e6c
+lease_id      	consul/creds/readonly/c7a3bd77-e9af-cfc4-9cba-377f0ef10e6c
 lease_duration	3600
 token         	973a31ea-1ec4-c2de-0f63-623f477c2510
 ```
@@ -120,13 +120,13 @@ Permission denied
   </dd>
 </dl>
 
-### /consul/policy/
+### /consul/roles/
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates or updates the Consul policy definition.
+    Creates or updates the Consul role definition.
     This is a root protected endpoint.
   </dd>
 
@@ -134,7 +134,7 @@ Permission denied
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/consul/policy/<name>`</dd>
+  <dd>`/consul/roles/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -158,14 +158,14 @@ Permission denied
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Queries a Consul policy definition. This is a root protected endpoint.
+    Queries a Consul role definition. This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/consul/policy/<name>`</dd>
+  <dd>`/consul/roles/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -191,14 +191,14 @@ Permission denied
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes a Consul policy definition. This is a root protected endpoint.
+    Deletes a Consul role definition. This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/consul/policy/<name>`</dd>
+  <dd>`/consul/roles/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -211,20 +211,20 @@ Permission denied
   </dd>
 </dl>
 
-### /consul/
+### /consul/creds/
 #### GET
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Generates a dynamic Consul token based on the policy definition.
+    Generates a dynamic Consul token based on the role definition.
   </dd>
 
   <dt>Method</dt>
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/consul/<name>`</dd>
+  <dd>`/consul/creds/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>

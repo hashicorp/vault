@@ -11,11 +11,11 @@ import (
 
 func pathToken(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `(?P<name>\w+)`,
+		Pattern: `creds/(?P<name>\w+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 			},
 		},
 
@@ -35,11 +35,11 @@ func (b *backend) pathTokenRead(
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving policy: %s", err)
+		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
 	if policy == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Policy '%s' not found", policyName)), nil
+			"Role '%s' not found", policyName)), nil
 	}
 
 	// Get the consul client
