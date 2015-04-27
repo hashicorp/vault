@@ -40,10 +40,10 @@ of the cookie should be "token" and the value should be the token.
 
 ## API
 
-## /auth/token/create
-### POST
+### /auth/token/create
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Creates a new token. Certain options are only available to
@@ -107,6 +107,7 @@ of the cookie should be "token" and the value should be the token.
 
   <dt>Returns</dt>
   <dd>
+
       ```javascript
     {
       "auth": {
@@ -118,13 +119,14 @@ of the cookie should be "token" and the value should be the token.
       }
     }
     ```
+
   </dd>
 </dl>
 
-## /auth/token/lookup-self
-### GET
+### /auth/token/lookup-self
+#### GET
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Returns information about the current client token.
@@ -156,10 +158,10 @@ of the cookie should be "token" and the value should be the token.
   </dd>
 </dl>
 
-## /auth/token/lookup/
-### GET
+### /auth/token/lookup/
+#### GET
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Returns information about the current client token.
@@ -195,10 +197,10 @@ of the cookie should be "token" and the value should be the token.
 </dl>
 
 
-## /auth/token/revoke/
-### POST
+### /auth/token/revoke/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Revokes a token and all child tokens. When the token is revoked,
@@ -221,10 +223,10 @@ of the cookie should be "token" and the value should be the token.
   </dd>
 </dl>
 
-## /auth/token/revoke-orphan/
-### POST
+### /auth/token/revoke-orphan/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Revokes a token but not its child tokens. When the token is revoked,
@@ -248,10 +250,10 @@ of the cookie should be "token" and the value should be the token.
   </dd>
 </dl>
 
-## /auth/token/revoke-prefix/
-### POST
+### /auth/token/revoke-prefix/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Revokes all tokens generated at a given prefix, along with child tokens,
@@ -275,10 +277,10 @@ of the cookie should be "token" and the value should be the token.
   </dd>
 </dl>
 
-## /auth/token/renew/
-### POST
+### /auth/token/renew/
+#### POST
 
-<dl>
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Renews a lease associated with a token. This is used to prevent

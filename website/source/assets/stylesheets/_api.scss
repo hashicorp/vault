@@ -2,8 +2,7 @@
 // API
 // --------------------------------------------------
 
-.bs-api-section{
-dl {
+.bs-api-section dl, dl.api {
     margin-top: 30px;
     line-height: 20px;
 
@@ -49,5 +48,4 @@ dl {
             }
         }
     }
-}
 }
