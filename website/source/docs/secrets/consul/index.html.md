@@ -127,7 +127,6 @@ Permission denied
   <dt>Description</dt>
   <dd>
     Creates or updates the Consul role definition.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -158,7 +157,7 @@ Permission denied
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Queries a Consul role definition. This is a root protected endpoint.
+    Queries a Consul role definition.
   </dd>
 
   <dt>Method</dt>
@@ -191,7 +190,7 @@ Permission denied
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes a Consul role definition. This is a root protected endpoint.
+    Deletes a Consul role definition.
   </dd>
 
   <dt>Method</dt>

@@ -183,7 +183,7 @@ allowed to read.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates or updates the role definition. This is a root protected endpoint.
+    Creates or updates the role definition.
   </dd>
 
   <dt>Method</dt>
@@ -216,7 +216,7 @@ allowed to read.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Queries the role definition. This is a root protected endpoint.
+    Queries the role definition.
   </dd>
 
   <dt>Method</dt>
@@ -250,7 +250,7 @@ allowed to read.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the role definition. This is a root protected endpoint.
+    Deletes the role definition.
   </dd>
 
   <dt>Method</dt>

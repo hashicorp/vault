@@ -20,7 +20,6 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"config/*",
-				"policy/*",
 			},
 		},
 

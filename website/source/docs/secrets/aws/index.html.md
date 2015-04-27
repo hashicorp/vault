@@ -190,7 +190,6 @@ interactive help output.
   <dt>Description</dt>
   <dd>
     Creates or updates a named policy.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -222,7 +221,6 @@ interactive help output.
   <dt>Description</dt>
   <dd>
     Queries a named policy.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -256,7 +254,6 @@ interactive help output.
   <dt>Description</dt>
   <dd>
     Deletes a named policy.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
