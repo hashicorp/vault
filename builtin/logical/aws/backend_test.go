@@ -76,7 +76,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      name,
+		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
@@ -109,7 +109,7 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "policy/" + name,
+		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy": testPolicy,
 		},
@@ -119,14 +119,14 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 func testAccStepDeletePolicy(t *testing.T, n string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
-		Path:      "policy/" + n,
+		Path:      "roles/" + n,
 	}
 }
 
 func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "policy/" + name,
+		Path:      "roles/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				if value == "" {

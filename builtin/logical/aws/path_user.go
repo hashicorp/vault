@@ -12,11 +12,11 @@ import (
 
 func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `(?P<name>\w+)`,
+		Pattern: `creds/(?P<name>\w+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 			},
 		},
 
@@ -36,11 +36,11 @@ func (b *backend) pathUserRead(
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving policy: %s", err)
+		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
 	if policy == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Policy '%s' not found", policyName)), nil
+			"Role '%s' not found", policyName)), nil
 	}
 
 	// Use the helper to create the secret
@@ -138,14 +138,14 @@ type walUser struct {
 }
 
 const pathUserHelpSyn = `
-Generate an access key pair for a specific policy.
+Generate an access key pair for a specific role.
 `
 
 const pathUserHelpDesc = `
 This path will generate a new, never before used key pair for
 accessing AWS. The IAM policy used to back this key pair will be
 the "name" parameter. For example, if this backend is mounted at "aws",
-then "aws/deploy" would generate access keys for the "deploy" policy.
+then "aws/creds/deploy" would generate access keys for the "deploy" role.
 
 The access keys will have a lease associated with them. The access keys
 can be revoked by using the lease ID.
