@@ -75,12 +75,12 @@ $ curl -X PUT -d 'test' 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-6
 Permission denied
 ```
 
-# API
-<div class="bs-api-section">
-## /consul/config/access
-### POST
+## API
 
-<dl>
+### /consul/config/access
+#### POST
+
+<dl class="api">
   <dt>Description</dt>
   <dd>
     Configures the access information for Consul.
@@ -120,4 +120,129 @@ Permission denied
   </dd>
 </dl>
 
-</div>
+### /consul/policy/
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Creates or updates the Consul policy definition.
+    This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/consul/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">policy</span>
+        <span class="param-flags">required</span>
+        The base64 encoded Consul ACL policy. This is documented in [more detail here](https://consul.io/docs/internals/acl.html).
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Queries a Consul policy definition. This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/consul/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "policy": "abcdef="
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+#### Delete
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes a Consul policy definition. This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/consul/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+### /consul/
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Generates a dynamic Consul token based on the policy definition.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/consul/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "data": {
+            "token": "973a31ea-1ec4-c2de-0f63-623f477c2510"
+        }
+    }
+    ```
+
+  </dd>
+</dl>
+
+
