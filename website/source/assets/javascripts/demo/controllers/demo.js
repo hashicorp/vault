@@ -7,7 +7,7 @@ Demo.DemoController = Ember.ObjectController.extend({
 
     // connect to the websocket once we enter the application route
     // var socket = window.io.connect('http://localhost:8080');
-    var socket = new WebSocket("ws://demo-server.vaultproject.io/socket");
+    var socket = new WebSocket("wss://vault-demo-server.herokuapp.com/socket");
 
     // Set socket on application controller
     this.set('socket', socket);
