@@ -59,7 +59,7 @@ Only root or "sudo" privilege users are allowed to do this.
 
 ## Root Policy
 
-The "root" policy is special policy that can'be modified or removed.
+The "root" policy is a special policy that can be modified or removed.
 Any user associated with the "root" policy becomes a root user. A root
 user can do _anything_ within Vault.
 
@@ -79,7 +79,7 @@ with these commands for more information. They are very easy to use.
 To associate a policy with a user, you must consult the documentation for
 the authentication backend you're using.
 
-For tokens, they are assocated at creation time with `vault token-create`
+For tokens, they are associated at creation time with `vault token-create`
 and the `-policy` flags. Child tokens can be associated with a subset of
 a parent's policies. Root users can assign any policies.
 

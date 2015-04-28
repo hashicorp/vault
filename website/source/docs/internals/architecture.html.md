@@ -47,7 +47,7 @@ clarify what is being discussed:
 
 * **Credential Backend** - A credential backend is used to authenticate users or applications which
   are connecting to Vault. Once authenticated, the backend returns the list of applicable policies
-  which shoud be applied. Vault takes an authenticated user and returns a client token that can
+  which should be applied. Vault takes an authenticated user and returns a client token that can
   be used for future requests. As an example, the `user-password` backend uses a username and password
   to authenticate the user. Alternatively, the `github` backend allows users to authenticate
   via GitHub.
@@ -78,7 +78,7 @@ A very high level overview of Vault looks like this:
 
 ![Architecture Overview](/assets/images/layers.png)
 
-Lets begin to break down this picture. There is a clear seperation of components
+Lets begin to break down this picture. There is a clear separation of components
 that are inside or outside of the security barrier. Only the storage backend and
 the HTTP API are outside, all other components are inside the barrier.
 
@@ -104,7 +104,7 @@ and enters the _unsealed_ state. Once unsealed, Vault loads all of the configure
 audit, credential and secret backends.
 
 The configuration of those backends must be stored in Vault since they are security
-sensitive. Only users with the correct permisisons should be able to modify them,
+sensitive. Only users with the correct permissions should be able to modify them,
 meaning they cannot be specified outside of the barrier. By storing them in Vault,
 any changes to them are protected by the ACL system and tracked by audit logs.
 
@@ -145,7 +145,7 @@ lease to expire, the expiration manager automatically revokes the secret.
 The core handles logging of requests and responses to the audit broker, which fans the
 request out to all the configured audit backends. Outside of the request flow, the core
 performs certain background activity. Lease management is critical, as it allows
-expired client tokens or secrets to be revoked automatically. Addiitonally, Vault handles
+expired client tokens or secrets to be revoked automatically. Additionally, Vault handles
 certain partial failure cases by using write ahead logging with a rollback manager.
 This is managed transparently within the core and is not user visible.
 

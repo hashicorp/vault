@@ -67,6 +67,6 @@ There is also an API to seal the Vault. This will throw away the encryption
 key and require another unseal process to restore it. Sealing only requires
 a single operator with root privileges.
 
-This way, if there is a detected intrustion, the Vault data can be locked
+This way, if there is a detected intrusion, the Vault data can be locked
 quickly to try to minimize damages. It can't be accessed again without
 access to the master key shards.

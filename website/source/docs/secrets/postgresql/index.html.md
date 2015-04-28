@@ -46,7 +46,7 @@ $ vault write postgresql/config/connection \
 ```
 
 In this case, we've configured Vault with the user "root" and password "vaulttest",
-connecting to a PostgreSQL instance in AWS RDS. The "postgres" databse name is being used.
+connecting to a PostgreSQL instance in AWS RDS. The "postgres" database name is being used.
 It is important that the Vault user have the `GRANT OPTION` privilege to manage users.
 
 Optionally, we can configure the lease settings for credentials generated
@@ -205,7 +205,7 @@ subpath for interactive help output.
         <span class="param">sql</span>
         <span class="param-flags">required</span>
         The SQL statements executed to create and configure the role.
-        Must be semi-colon seperated. The '{{name}}', '{{password}}' and
+        Must be semi-colon separated. The '{{name}}', '{{password}}' and
         '{{expiration}}' values will be substituted.
       </li>
     </ul>

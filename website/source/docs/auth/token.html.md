@@ -231,7 +231,7 @@ of the cookie should be "token" and the value should be the token.
   <dd>
     Revokes a token but not its child tokens. When the token is revoked,
     all secrets generated with it are also revoked. All child tokens
-    are orpahaned, but can be revoked sub-sequently using `/auth/token/revoke/`.
+    are orphaned, but can be revoked sub-sequently using `/auth/token/revoke/`.
   </dd>
 
   <dt>Method</dt>

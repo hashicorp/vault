@@ -39,7 +39,7 @@ The properties of the dev server:
     via the API, you'll need to authenticate using the token printed out.
 
   * **Single unseal key** - The server is initialized with a single unseal
-    key. The Vault is already unsealed, but if you want to experiement with
+    key. The Vault is already unsealed, but if you want to experiment with
     seal/unseal, then only the single outputted key is required.
 
 ## Use Case
