@@ -13,6 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -226,7 +227,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
-		if err := LockMemory(); err != nil {
+		if err := mlock.LockMemory(); err != nil {
 			return nil, fmt.Errorf("failed to lock memory: %v", err)
 		}
 	}
