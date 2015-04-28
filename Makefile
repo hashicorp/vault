@@ -32,8 +32,8 @@ cover:
 	@go tool cover 2>/dev/null; if [ $$? -eq 3 ]; then \
 		go get -u golang.org/x/tools/cmd/cover; \
 	fi
-	go test $(TEST) -coverprofile=coverage.out
-	go tool cover -html=coverage.out
+	godep go test $(TEST) -coverprofile=coverage.out
+	godep go tool cover -html=coverage.out
 	rm coverage.out
 
 # vet runs the Go source code static analysis tool `vet` to find
