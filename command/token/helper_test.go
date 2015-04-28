@@ -12,7 +12,7 @@ import (
 func TestHelperPath(t *testing.T) {
 	cases := map[string]string{
 		"/foo": "/foo",
-		"foo":  "vault token-foo",
+		"foo":  exePath + " token-foo",
 	}
 
 	for k, v := range cases {

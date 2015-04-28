@@ -6,7 +6,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/kardianos/osext"
 )
+
+var exePath string
+
+func init() {
+	var err error
+	exePath, err = osext.Executable()
+	if err != nil {
+		panic("failed to detect self path: " + err.Error())
+	}
+}
 
 // HelperPath takes the configured path to a helper and expands it to
 // a full absolute path that can be executed. If the path is relative then
@@ -20,7 +32,7 @@ func HelperPath(path string) string {
 	// Get the binary name. If it isn't absolute, prepend "vault token-"
 	binary := path[0:space]
 	if !filepath.IsAbs(binary) {
-		binary = "vault token-" + binary
+		binary = exePath + " token-" + binary
 	}
 
 	// Return the resulting string
