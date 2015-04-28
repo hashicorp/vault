@@ -9,7 +9,7 @@ import (
 
 var (
 	kernel32           = syscall.MustLoadDLL("kernel32.dll")
-	setConsoleModeProc = kernel.MustFindProc("SetConsoleMod")
+	setConsoleModeProc = kernel32.MustFindProc("SetConsoleMod")
 )
 
 // Magic constant from MSDN to control whether charactesr read are
@@ -30,7 +30,7 @@ func read(f *os.File) (string, error) {
 	defer setConsoleMode(handle, oldMode)
 
 	// The new mode is the old mode WITHOUT the echo input flag set.
-	var newMode uint32 = oldMode & ^ENABLE_ECHO_INPUT
+	var newMode uint32 = uint32(int(oldMode) & ^ENABLE_ECHO_INPUT)
 	if err := setConsoleMode(handle, newMode); err != nil {
 		return "", err
 	}
@@ -39,7 +39,7 @@ func read(f *os.File) (string, error) {
 }
 
 func setConsoleMode(console syscall.Handle, mode uint32) error {
-	r, _, err := stConsoleModeProc.Call(uintptr(console), uintptr(mode))
+	r, _, err := setConsoleModeProc.Call(uintptr(console), uintptr(mode))
 	if r == 0 {
 		return err
 	}
