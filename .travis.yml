@@ -8,5 +8,8 @@ branches:
   only:
     - master
 
+install:
+  - go get github.com/tools/godep
+
 script:
   - make test testrace
