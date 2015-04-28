@@ -1,9 +1,9 @@
 Vault
 =========
 
--	Website: http://www.vaultproject.io
+-	Website: https://www.vaultproject.io
 -	IRC: `#vault-tool` on Freenode
--	Mailing list: [Google Groups](http://groups.google.com/group/vault-tool)
+-	Mailing list: [Google Groups](https://groups.google.com/group/vault-tool)
 
 ![Vault](https://raw.githubusercontent.com/hashicorp/vault/master/website/source/assets/images/logo-big.png?token=AAAFE8XmW6YF5TNuk3cosDGBK-sUGPEjks5VSAa2wA%3D%3D)
 
@@ -16,7 +16,7 @@ The key features of Vault are:
 * **Secure Secret Storage**: Arbitrary key/value secrets can be stored
   in Vault. Vault encrypts these secrets prior to writing them to persistent
   storage, so gaining access to the raw storage isn't enough to access
-  your secrets. Vault can write to disk, [Consul](http://www.consul.io),
+  your secrets. Vault can write to disk, [Consul](https://www.consul.io),
   and more.
 
 * **Dynamic Secrets**: Vault can generate secrets on-demand for some
@@ -41,25 +41,25 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
-For more information, see the [introduction section](http://www.vaultproject.io/intro)
+For more information, see the [introduction section](https://www.vaultproject.io/intro)
 of the Vault website.
 
 Getting Started & Documentation
 -------------------------------
 
-All documentation is available on the [Vault website](http://www.vaultproject.io).
+All documentation is available on the [Vault website](https://www.vaultproject.io).
 
 Developing Vault
 --------------------
 
 If you wish to work on Vault itself or any of its built-in systems,
-you'll first need [Go](http://www.golang.org) installed on your
+you'll first need [Go](https://www.golang.org) installed on your
 machine (version 1.4+ is *required*). Alternatively, you can use the
 Vagrantfile in the root of this repo to stand up a virtual machine with
 the appropriate dev tooling already set up for you.
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](http://golang.org/doc/code.html#GOPATH). After setting up Go,
+[GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go,
 install Godeps, a tool we use for vendoring dependencies:
 
 ```sh
@@ -97,7 +97,7 @@ $ make test TEST=./vault
 
 ### Acceptance Tests
 
-Vault has comprehensive [acceptance tests](http://en.wikipedia.org/wiki/Acceptance_testing)
+Vault has comprehensive [acceptance tests](https://en.wikipedia.org/wiki/Acceptance_testing)
 covering most of the features of the secret and auth backends.
 
 If you're working on a feature of a secret or auth backend and want to
