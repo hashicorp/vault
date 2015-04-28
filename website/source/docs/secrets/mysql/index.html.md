@@ -199,7 +199,7 @@ allowed to read.
         <span class="param">sql</span>
         <span class="param-flags">required</span>
         The SQL statements executed to create and configure the role.
-        Must be semi-colon seperated. The '{{name}}' and '{{password}}'
+        Must be semi-colon separated. The '{{name}}' and '{{password}}'
         values will be substituted.
       </li>
     </ul>

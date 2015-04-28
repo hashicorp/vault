@@ -87,7 +87,7 @@ There is no way to modify the policies associated with an active
 identity. The identity must be revoked and reauthenticated to receive
 the new policy list.
 
-If an _existing_ policy is modified, the modifications propogate
+If an _existing_ policy is modified, the modifications propagate
 to all associated users instantly. The above paragraph is more specifically
 stating that you can't add new or remove policies associated with an
 active identity.
