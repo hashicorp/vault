@@ -37,6 +37,10 @@ to specify where the configuration is.
   "tcp" is currently the only option available. A full reference for the
    inner syntax is below.
 
+* `disable_mlock` (optional) - A boolean. If true, this will disable the
+  server from executing the `mlock` syscall to prevent memory from being
+  swapped to disk. This is not recommended.
+
 * `statsite_addr` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
   instances for metrics. This is highly recommended for production usage.
 
