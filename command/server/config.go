@@ -25,6 +25,8 @@ type Config struct {
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig() *Config {
 	return &Config{
+		DisableMlock: true,
+
 		Backend: &Backend{
 			Type: "inmem",
 		},
