@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/mlock"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -72,6 +73,14 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// If mlock isn't supported, show a warning
+	if !mlock.Supported() {
+		c.Ui.Output("==> WARNING: mlock not supported on this system!\n")
+		c.Ui.Output("  The `mlock` syscall to prevent memory from being swapped to")
+		c.Ui.Output("  disk is not supported on this system. Enabling mlock or")
+		c.Ui.Output("  running Vault on a system with mlock is much more secure.\n")
+	}
+
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	logGate := &gatedwriter.Writer{Writer: os.Stderr}
@@ -116,7 +125,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		c.Ui.Output(fmt.Sprintf(
-			"WARNING: Dev mode is enabled!\n\n"+
+			"==> WARNING: Dev mode is enabled!\n\n"+
 				"In this mode, Vault is completely in-memory and unsealed.\n"+
 				"Vault is configured to only have a single unseal key. The root\n"+
 				"token has already been authenticated with the CLI, so you can\n"+
