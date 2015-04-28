@@ -17,6 +17,7 @@ type Config struct {
 	Listeners []*Listener `hcl:"-"`
 	Backend   *Backend    `hcl:"-"`
 
+	DisableMlock bool   `hcl:"disable_mlock"`
 	StatsiteAddr string `hcl:"statsite_addr"`
 	StatsdAddr   string `hcl:"statsd_addr"`
 }

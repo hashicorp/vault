@@ -1,3 +1,4 @@
+disable_mlock = true
 statsd_addr = "bar"
 statsite_addr = "foo"
 

@@ -109,6 +109,7 @@ func (c *ServerCommand) Run(args []string) int {
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             logger,
+		DisableMlock:       config.DisableMlock,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))

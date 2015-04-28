@@ -29,6 +29,7 @@ func TestLoadConfigFile(t *testing.T) {
 			},
 		},
 
+		DisableMlock: true,
 		StatsiteAddr: "foo",
 		StatsdAddr:   "bar",
 	}
