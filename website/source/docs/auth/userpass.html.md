@@ -35,7 +35,7 @@ The endpoint for the login is `/login/USERNAME`.
 ## Configuration
 
 To use the "userpass" auth backend, an operator must configure it with
-userse that are allowed to authenticate. An example is shown below.
+users that are allowed to authenticate. An example is shown below.
 Use `vault help` for more details.
 
 ```

@@ -29,7 +29,7 @@ audit logs. In fact, you'd have multiple audit logs: requests to Vault
 as well as to the HSM.
 
 Vault can also do many things that HSMs cannot currently do, such
-as generating _dynamic secrets_. Insetad of storing AWS access keys directly
+as generating _dynamic secrets_. Instead of storing AWS access keys directly
 within Vault, Vault can generate access keys according to a specific
 policy on the fly. Vault has the potential of doing this for any
 system through its mountable secret backend system.

@@ -47,7 +47,7 @@ clarify what is being discussed:
 
 * **Credential Backend** - A credential backend is used to authenticate users or applications which
   are connecting to Vault. Once authenticated, the backend returns the list of applicable policies
-  which shoud be applied. Vault takes an authenticated user and returns a client token that can
+  which should be applied. Vault takes an authenticated user and returns a client token that can
   be used for future requests. As an example, the `user-password` backend uses a username and password
   to authenticate the user. Alternatively, the `github` backend allows users to authenticate
   via GitHub.
@@ -78,7 +78,7 @@ A very high level overview of Vault looks like this:
 
 ![Architecture Overview](/assets/images/layers.png)
 
-Let's begin to break down this picture. There is a clear seperation of components
+Let's begin to break down this picture. There is a clear separation of components
 that are inside or outside of the security barrier. Only the storage backend and
 the HTTP API are outside, all other components are inside the barrier.
 

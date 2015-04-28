@@ -14,7 +14,7 @@ description: |-
   <dt>Description</dt>
   <dd>
       Reads the value of the key at the given path. This is the raw path in the
-        storage packend and not the logical path that is exposed via the mount system.
+        storage backend and not the logical path that is exposed via the mount system.
   </dd>
 
   <dt>Method</dt>

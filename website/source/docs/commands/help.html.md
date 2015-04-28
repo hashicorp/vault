@@ -27,7 +27,7 @@ Before using `help`, it is important to understand "paths" within Vault.
 Paths are the parameters used for `vault read`, `vault write`, etc. An
 example path is `secret/foo`, or `aws/config/root`. The paths available
 depend on the mounted secret backends. Because of this, the interactive
-help is an indispensible tool to finding what paths are supported.
+help is an indispensable tool to finding what paths are supported.
 
 To discover what paths are supported, use `vault help <mount point>`.
 For example, if you mounted the AWS secret backend, you can use

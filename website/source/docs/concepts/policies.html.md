@@ -79,7 +79,7 @@ with these commands for more information. They are very easy to use.
 To associate a policy with a user, you must consult the documentation for
 the authentication backend you're using.
 
-For tokens, they are assocated at creation time with `vault token-create`
+For tokens, they are associated at creation time with `vault token-create`
 and the `-policy` flags. Child tokens can be associated with a subset of
 a parent's policies. Root users can assign any policies.
 
@@ -87,7 +87,7 @@ There is no way to modify the policies associated with an active
 identity. The identity must be revoked and reauthenticated to receive
 the new policy list.
 
-If an _existing_ policy is modified, the modifications propogate
+If an _existing_ policy is modified, the modifications propagate
 to all associated users instantly. The above paragraph is more specifically
 stating that you can't add new or remove policies associated with an
 active identity.

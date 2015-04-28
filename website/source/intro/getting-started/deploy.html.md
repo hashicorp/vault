@@ -153,7 +153,7 @@ Unseal Progress: 1
 
 After pasting in a valid key and confirming, you'll see that the Vault
 is still sealed, but progress is made. Vault knows it has 1 key out of 3.
-Due to the nature of the algorith, Vault doesn't know if it has the
+Due to the nature of the algorithm, Vault doesn't know if it has the
 _correct_ key until the threshold is reached.
 
 Also notice that the unseal process is stateful. You can go to another
@@ -162,7 +162,7 @@ that other computer can continue the unseal process.. This is incredibly
 important to the design of the unseal process: multiple people with multiple
 keys are required to unseal the Vault. The Vault can be unsealed from
 multiple computers and the keys should never be together. A single malicious
-operator does not have enough keys to be mailicious.
+operator does not have enough keys to be malicious.
 
 Continue with `vault unseal` to complete unsealing the Vault. Note that
 all 3 keys must be different, but they can be any other keys. As long as
