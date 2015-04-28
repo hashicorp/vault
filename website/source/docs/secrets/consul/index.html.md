@@ -19,7 +19,7 @@ on every path, use `vault help` after mounting the backend.
 
 ## Quick Start
 
-The first step to using the mysql backend is to mount it.
+The first step to using the consul backend is to mount it.
 Unlike the `generic` backend, the `consul` backend is not mounted by default.
 
 ```
