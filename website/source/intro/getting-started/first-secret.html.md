@@ -49,7 +49,12 @@ Success! Data written to: secret/hello
 `vault write` is a very powerful command. In addition to writing data
 directly from the command-line, it can read values and keypairs from
 stdin as well as files. For more information, see the
-[vault write documentation](#).
+[vault write documentation](/docs/commands/read-write.html).
+
+~> **Warning:** The documentation uses the "key=value" based entry
+throughout, but it is more secure to use files if possible. Sending
+data via the CLI is often logged in shell history. For real secrets,
+please use files. See the link above for more information.
 
 ## Reading a Secret
 
