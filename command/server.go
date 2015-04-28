@@ -101,6 +101,10 @@ func (c *ServerCommand) Run(args []string) int {
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             logger,
 	})
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))
+		return 1
+	}
 
 	// If we're in dev mode, then initialize the core
 	if dev {
