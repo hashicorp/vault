@@ -59,7 +59,7 @@ Only root or "sudo" privilege users are allowed to do this.
 
 ## Root Policy
 
-The "root" policy is a special policy that can be modified or removed.
+The "root" policy is a special policy that can not be modified or removed.
 Any user associated with the "root" policy becomes a root user. A root
 user can do _anything_ within Vault.
 
