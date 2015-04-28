@@ -8,17 +8,17 @@ description: |-
 
 # Vault vs. Consul
 
-[Consul](https://consul.io) is system for service discovery, monitoring
+[Consul](https://consul.io) is system for service discovery, monitoring,
 and configuration that is distributed and highly available. Consul also
 supports an ACL system to restrict access to keys and service information.
 
 While Consul can be used to store secret information and gate access using
 ACLs, it is not designed for that purpose. As such, data is not encrypted
 in transit nor at rest, it does not have pluggable authentication mechanisms,
-there is no per-request auditing mechansim.
+and there is no per-request auditing mechansim.
 
-Vault is designed ground up a secret management solution. As such, it
-protects secrets in transit and at rest. It provides multiple authentication
+Vault is designed from the ground up as a secret management solution. As such,
+it protects secrets in transit and at rest. It provides multiple authentication
 and audit logging mechanisms. Dynamic secret generation allows Vault to avoid
 providing clients with root privileges to underlying systems and makes
 it possible to do key rolling and revocation.
