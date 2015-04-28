@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -70,7 +71,10 @@ func (m *Meta) Client() (*api.Client, error) {
 			MinVersion:         tls.VersionTLS12,
 		}
 
-		// TODO: Root CAs
+		if m.flagCACert != "" || m.flagCAPath != "" {
+			return nil, fmt.Errorf(
+				"Custom CA certificate will be supported in Vault 0.1.1")
+		}
 
 		client := *http.DefaultClient
 		client.Transport = &http.Transport{
