@@ -16,14 +16,17 @@ Demo.DemoController = Ember.ObjectController.extend({
       var data = JSON.parse(message.data),
           controller = this;
 
+      // ignore pongs
+      if (data.pong) {
+        return
+      }
+
       // Add the item
       if (data.stdout !== "") {
-        console.log("stdout:", data.stout);
         controller.appendLog(data.stdout, false);
       }
 
       if (data.stderr !== "") {
-        console.log("stderr:", data.stderr);
         controller.appendLog(data.stderr, false);
       }
 

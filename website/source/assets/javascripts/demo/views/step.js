@@ -55,8 +55,6 @@ Demo.DemoStepView = Ember.View.extend({
   submitted: function() {
     var element  = this.$();
 
-    console.log("submitted");
-
     // Focus the input
     element.find('input.shell')[0].focus();
 
