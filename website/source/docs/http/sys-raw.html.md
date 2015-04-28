@@ -14,7 +14,7 @@ description: |-
   <dt>Description</dt>
   <dd>
       Reads the value of the key at the given path. This is the raw path in the
-        storage packend and not the logical path that is exposed via the mount system.
+        storage backend and not the logical path that is exposed via the mount system.
   </dd>
 
   <dt>Method</dt>
@@ -46,7 +46,7 @@ description: |-
   <dt>Description</dt>
   <dd>
       Update the value of the key at the given path. This is the raw path in the
-        storage packend and not the logical path that is exposed via the mount system.
+        storage backend and not the logical path that is exposed via the mount system.
   </dd>
 
   <dt>Method</dt>
@@ -77,7 +77,7 @@ description: |-
   <dt>Description</dt>
   <dd>
     Delete the key with given path. This is the raw path in the
-        storage packend and not the logical path that is exposed via the mount system.
+        storage backend and not the logical path that is exposed via the mount system.
   </dd>
 
   <dt>Method</dt>

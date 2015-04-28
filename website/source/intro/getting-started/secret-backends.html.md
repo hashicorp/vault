@@ -100,7 +100,7 @@ storage backend (after encrypting data first).
 
 However, the "aws" backend (which you'll see soon), will read/write IAM
 policies and access tokens. So, while you might do a `vault read aws/deploy`,
-this isn't readnig from any _physical_ path "aws/deploy". Instead, the AWS
+this isn't reading from any _physical_ path "aws/deploy". Instead, the AWS
 backend is dynamically generating an access key based on the "deploy" policy.
 
 This abstraction is incredibly powerful. It lets Vault interface directly

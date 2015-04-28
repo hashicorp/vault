@@ -52,7 +52,7 @@ Success! Data written to: consul/roles/readonly
 
 The backend expects the policy to be base64 encoded, so we need to encode
 it properly before writing. The policy language is
-[documented by Consul](https://consul.io/docs/internals/acl.html), but we've definited a read-only policy.
+[documented by Consul](https://consul.io/docs/internals/acl.html), but we've defined a read-only policy.
 
 To generate a new set Consul ACL token, we simply read from that role:
 

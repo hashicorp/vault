@@ -70,6 +70,6 @@ where the secret was requested from. This lets you revoke trees of
 secrets. For example, to revoke all AWS access keys, you can do
 `vault revoke -prefix aws/`.
 
-This is very useful if there is an intrustion within a specific system:
+This is very useful if there is an intrusion within a specific system:
 all secrets of a specific backend or a certain configured backend can
 be revoked quickly and easily.

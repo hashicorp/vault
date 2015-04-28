@@ -26,7 +26,7 @@ to the configured physical backend for Vault. A "read" turns into a
 "read" of the physical backend at the same path, a "write" turns into
 a write, etc. This is a lot like a normal filesystem.
 
-The "aws" backend, on the otherhand, behaves differently. When you
+The "aws" backend, on the other hand, behaves differently. When you
 write to `aws/config/root`, it expects a certain format and stores that
 information as configuration. You can't read from this path. When you
 read from `aws/<name>`, it looks up an IAM policy named `<name>` and

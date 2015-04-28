@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: Trasit"
+page_title: "Secret Backend: Transit"
 sidebar_current: "docs-secrets-transit"
 description: |-
   The transit secret backend for Vault encrypts/decrypts data in-transit. It doesn't store any secrets.
@@ -236,7 +236,7 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Dencrypts the provided ciphertext using the named key.
+    Decrypts the provided ciphertext using the named key.
   </dd>
 
   <dt>Method</dt>

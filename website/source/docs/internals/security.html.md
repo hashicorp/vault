@@ -54,7 +54,7 @@ The following are not parts of the Vault threat model:
   reads would allow an attacker to snapshot in a well-known state and rollback state
   changes if that would be beneficial to them.
 
-* Protecting against the leakage of the existance of secret material. An attacker
+* Protecting against the leakage of the existence of secret material. An attacker
   that can read from the storage backend may observe that secret material exists
   and is stored, even if it is kept confidential.
 
@@ -111,7 +111,7 @@ policies are associated with a client), the highest access level permitted is us
 For example, if the "engineering" policy permits read/write access to the "eng/" path,
 and the "ops" policy permits read access to the "ops/" path, then the user gets the
 union of those. Policy is matched using a longest-prefix match, which is the most
-specific definied policy.
+specific defined policy.
 
 Certain operations are only permitted by "root" users, which is a distinguished
 policy built into Vault. This is similar to the concept of a root user on a Unix system

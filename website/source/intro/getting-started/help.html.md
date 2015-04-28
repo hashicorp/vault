@@ -75,7 +75,7 @@ help for an individual path. For this, just use `vault help` with a path
 that would match the regular expression for that path. Note that the path
 doesn't need to actually _work_. For example, we'll get the help below
 for accessing `aws/creds/operator`, even though we never created the `operator`
-rolek:
+role:
 
 ```
 $ vault help aws/creds/operator
