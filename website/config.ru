@@ -4,11 +4,6 @@ require "rack/contrib/response_headers"
 require "rack/contrib/static_cache"
 require "rack/contrib/try_static"
 
-# TODO: Remove for launch
-use Rack::Auth::Basic, "Restricted Area" do |username, password|
-  [username, password] == ["vault", "urUdt7U2aiepNKeTbCzJCd"]
-end
-
 # Properly compress the output if the client can handle it.
 use Rack::Deflater
 
