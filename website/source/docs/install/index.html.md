@@ -47,14 +47,12 @@ and configured properly. You'll also need Git.
      exists. If it doesn't, then you didn't clone Vault into the proper
      path.
 
-  1. Run `make updatedeps`. This will download all the dependencies.
-
   1. Run `make dev`. This will build Vault for your current system
      and put the binary in `bin` (relative to the git checkout).
 
-~> **Note:** We'll be vendoring all our dependencies prior to release so
-that consistent builds can be made. This is to avoid malicious upstream
-dependencies if possible.
+~> **Note:** All the dependencies of Vault are vendored and the command
+above will use these vendored binaries. This is to avoid mailicious
+upstream dependencies if possible.
 
 ## Verifying the Installation
 
