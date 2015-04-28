@@ -51,7 +51,7 @@ and configured properly. You'll also need Git.
      and put the binary in `bin` (relative to the git checkout).
 
 ~> **Note:** All the dependencies of Vault are vendored and the command
-above will use these vendored binaries. This is to avoid mailicious
+above will use these vendored binaries. This is to avoid malicious
 upstream dependencies if possible.
 
 ## Verifying the Installation
