@@ -149,7 +149,7 @@ Disabled auth provider at path 'github'!
 ```
 
 If you ran the above, you'll probably find you can't access your Vault
-anymore unless you have another root token, since it invalided your
+anymore unless you have another root token, since it invalidated your
 own session since we authenticated with GitHub above. Since we're still
 operating in development mode, just restart the dev server to fix this.
 
