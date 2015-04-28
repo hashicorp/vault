@@ -96,7 +96,7 @@ Usage: vault audit-enable [options] type [config...]
 
 General Options:
 
-  -address=<addr>         The address of the Vault server.
+  -address=addr           The address of the Vault server.
 
   -ca-cert=path           Path to a PEM encoded CA cert file to use to
                           verify the Vault server SSL certificate.

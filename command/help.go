@@ -60,7 +60,7 @@ Usage: vault help [options] path
 
 General Options:
 
-  -address=<addr>         The address of the Vault server.
+  -address=addr           The address of the Vault server.
 
   -ca-cert=path           Path to a PEM encoded CA cert file to use to
                           verify the Vault server SSL certificate.
