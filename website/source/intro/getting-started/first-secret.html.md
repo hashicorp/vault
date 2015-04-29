@@ -63,6 +63,8 @@ As you might expect, secrets can be read with `vault read`:
 ```
 $ vault read secret/hello
 Key       Value
+lease_id        secret/hello/25f33857-15ed-b62b-dac6-4b29bb8e8bef
+lease_duration  2592000
 excited   yes
 value     world
 ```
@@ -78,8 +80,9 @@ a tool like `jq`, you can output the data in JSON format:
 ```
 $ vault read -format=json secret/hello
 {
-  "renewable": false,
+  "lease_id": "secret/hello/25f33857-15ed-b62b-dac6-4b29bb8e8bef",
   "lease_duration": 2592000,
+  "renewable": false,
   "data": {
     "excited": "yes",
     "value": "world"
@@ -103,7 +106,7 @@ and delete it. We can do this with `vault delete`:
 
 ```
 $ vault delete secret/hello
-'secret/hello' successfully deleted.
+Success! Deleted 'secret/hello'
 ```
 
 ## Next
