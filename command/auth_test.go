@@ -82,6 +82,29 @@ func TestAuth_token(t *testing.T) {
 	}
 }
 
+func TestAuth_badToken(t *testing.T) {
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	testAuthInit(t)
+
+	ui := new(cli.MockUi)
+	c := &AuthCommand{
+		Meta: Meta{
+			Ui: ui,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"not-a-valid-token",
+	}
+	if code := c.Run(args); code != 1 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+}
+
 func TestAuth_method(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)

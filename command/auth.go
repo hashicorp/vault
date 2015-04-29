@@ -151,6 +151,10 @@ func (c *AuthCommand) Run(args []string) int {
 			"Error validating token: %s", err))
 		return 1
 	}
+	if secret == nil {
+		c.Ui.Error(fmt.Sprintf("Error: Invalid token"))
+		return 1
+	}
 
 	// Get the policies we have
 	policiesRaw, ok := secret.Data["policies"]
