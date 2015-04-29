@@ -1,4 +1,4 @@
-Vault [![Build Status](https://travis-ci.org/hashicorp/vault.png)](https://travis-ci.org/hashicorp/vault)
+Vault [![Build Status](https://travis-ci.org/hashicorp/vault.svg)](https://travis-ci.org/hashicorp/vault)
 =========
 
 -	Website: https://www.vaultproject.io
