@@ -9,7 +9,7 @@ import (
 
 var (
 	kernel32           = syscall.MustLoadDLL("kernel32.dll")
-	setConsoleModeProc = kernel32.MustFindProc("SetConsoleMod")
+	setConsoleModeProc = kernel32.MustFindProc("SetConsoleMode")
 )
 
 // Magic constant from MSDN to control whether charactesr read are
