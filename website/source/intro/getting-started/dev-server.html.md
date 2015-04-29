@@ -37,7 +37,7 @@ token has already been authenticated with the CLI, so you can
 immediately begin using the Vault CLI.
 
 The only step you need to take is to set the following
-environment variable since Vault will be taking without TLS:
+environment variable since Vault will be talking without TLS:
 
     export VAULT_ADDR='http://127.0.0.1:8200'
 
