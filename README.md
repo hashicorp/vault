@@ -60,10 +60,12 @@ the appropriate dev tooling already set up for you.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go,
-install Godeps, a tool we use for vendoring dependencies:
+install Godeps, a tool we use for vendoring dependencies and Gox, a simple cross
+compilation tool:
 
 ```sh
 $ go get github.com/tools/godep
+$ go get github.com/mitchellh/gox
 ...
 ```
 
