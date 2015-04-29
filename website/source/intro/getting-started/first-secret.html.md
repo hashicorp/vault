@@ -62,11 +62,11 @@ As you might expect, secrets can be read with `vault read`:
 
 ```
 $ vault read secret/hello
-Key       Value
-lease_id        secret/hello/25f33857-15ed-b62b-dac6-4b29bb8e8bef
+Key             Value
+lease_id        secret/hello/d57fe039-1eef-9f4a-f3c9-63e2b29002b8
 lease_duration  2592000
-excited   yes
-value     world
+excited         yes
+value           world
 ```
 
 As you can see, the values we wrote are given back to us. Vault read
