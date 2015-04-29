@@ -228,7 +228,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
 		if err := mlock.LockMemory(); err != nil {
-			return nil, fmt.Errorf("failed to lock memory: %v", err)
+			return nil, fmt.Errorf(
+				"Failed to lock memory: %v\n\n"+
+					"This usually means that the mlock syscall is not available.\n"+
+					"Vault uses mlock to prevent memory from being swapped to\n"+
+					"disk. This requires root privileges as well as a machine\n"+
+					"that supports mlock. Please enable mlock on your system or\n"+
+					"disable Vault from using it. To disable Vault from using it,\n"+
+					"set the `disable_mlock` configuration option in your configuration\n"+
+					"file.",
+				err)
 		}
 	}
 
