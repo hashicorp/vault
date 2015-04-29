@@ -64,7 +64,7 @@ Policy 'secret' written.
 ```
 
 You can see the policies that are available with `vault policies`, and you
-can see the contents of a policy with `vault policy <name>`. Only users with
+can see the contents of a policy with `vault policies <name>`. Only users with
 root access can do this.
 
 ## Testing the Policy
