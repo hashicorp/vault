@@ -84,7 +84,10 @@ func (b *FileBackend) Put(entry *Entry) error {
 	}
 
 	// JSON encode the entry and write it
-	f, err := os.OpenFile(filepath.Join(path, key), os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(
+		filepath.Join(path, key),
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		0600)
 	if err != nil {
 		return err
 	}
