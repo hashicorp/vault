@@ -6,6 +6,10 @@ go:
   - 1.4
   - tip
 
+matrix:
+  allow_failures:
+    - go: tip
+
 branches:
   only:
     - master
