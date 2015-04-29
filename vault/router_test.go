@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
 )
 
 type NoopBackend struct {
+	sync.Mutex
+
 	Root     []string
 	Login    []string
 	Paths    []string
@@ -19,6 +22,9 @@ type NoopBackend struct {
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	n.Lock()
+	defer n.Unlock()
+
 	requestCopy := *req
 	n.Paths = append(n.Paths, req.Path)
 	n.Requests = append(n.Requests, &requestCopy)
