@@ -18,7 +18,7 @@ with the server over a TLS connection.
 In this page, we'll start and interact with the Vault server to understand
 how the server is started, and understanding the seal/unseal process.
 
-## Staring the Dev Server
+## Starting the Dev Server
 
 To start, we're going to start the Vault _dev server_. The dev server
 is a built-in flag to start a pre-configured server that is not very
