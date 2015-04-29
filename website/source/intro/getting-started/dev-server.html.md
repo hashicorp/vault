@@ -93,6 +93,8 @@ Sealed: false
 Key Shares: 1
 Key Threshold: 1
 Unseal Progress: 0
+
+High-Availability Enabled: false
 ```
 
 If the output looks different, especially if the numbers are different
