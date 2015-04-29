@@ -60,6 +60,7 @@ func TestCore_EnableAudit(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:      c.physical,
 		AuditBackends: make(map[string]audit.Factory),
+		DisableMlock:  true,
 	}
 	conf.AuditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
 		return &NoopAudit{}, nil
@@ -117,7 +118,10 @@ func TestCore_DisableAudit(t *testing.T) {
 		t.Fatalf("audit backend present")
 	}
 
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -146,7 +150,10 @@ func TestCore_DefaultAuditTable(t *testing.T) {
 	}
 
 	// Start a second core with same physical
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)

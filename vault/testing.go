@@ -30,6 +30,7 @@ func TestCore(t *testing.T) *Core {
 		AuditBackends:      noopAudits,
 		LogicalBackends:    noopBackends,
 		CredentialBackends: noopBackends,
+		DisableMlock:       true,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
