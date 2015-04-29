@@ -117,6 +117,7 @@ func Test(t TestT, c TestCase) {
 	})
 	if err != nil {
 		t.Fatal("error initializing core: ", err)
+		return
 	}
 
 	// Initialize the core
@@ -131,8 +132,10 @@ func Test(t TestT, c TestCase) {
 	// Unseal the core
 	if unsealed, err := core.Unseal(init.SecretShares[0]); err != nil {
 		t.Fatal("error unsealing core: ", err)
+		return
 	} else if !unsealed {
 		t.Fatal("vault shouldn't be sealed")
+		return
 	}
 
 	// Create an HTTP API server and client
@@ -143,6 +146,7 @@ func Test(t TestT, c TestCase) {
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		t.Fatal("error initializing HTTP client: ", err)
+		return
 	}
 
 	// Set the token so we're authenticated
@@ -152,6 +156,7 @@ func Test(t TestT, c TestCase) {
 	prefix := "mnt"
 	if err := client.Sys().Mount(prefix, "test", "acceptance test"); err != nil {
 		t.Fatal("error mounting backend: ", err)
+		return
 	}
 
 	// Make requests
