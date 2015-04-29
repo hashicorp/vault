@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+  * core: Very verbose error if mlock fails [GH-59]
   * command/server: Add configuration option to disable mlock
   * command/server: Disable mlock for dev mode so it works on more systems
 
