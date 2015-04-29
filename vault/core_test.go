@@ -17,7 +17,10 @@ var (
 
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
-	conf := &CoreConfig{Physical: inm}
+	conf := &CoreConfig{
+		Physical:     inm,
+		DisableMlock: true,
+	}
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1023,7 +1026,11 @@ func TestCore_LimitedUseToken(t *testing.T) {
 func TestCore_Standby(t *testing.T) {
 	// Create the first core and initialize it
 	inm := physical.NewInmemHA()
-	core, err := NewCore(&CoreConfig{Physical: inm, AdvertiseAddr: "foo"})
+	core, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: "foo",
+		DisableMlock:  true,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1084,7 +1091,11 @@ func TestCore_Standby(t *testing.T) {
 	}
 
 	// Create a second core, attached to same in-memory store
-	core2, err := NewCore(&CoreConfig{Physical: inm, AdvertiseAddr: "bar"})
+	core2, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: "bar",
+		DisableMlock:  true,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

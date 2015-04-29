@@ -12,7 +12,10 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	verifyDefaultAuthTable(t, c.auth)
 
 	// Start a second core with same physical
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -51,7 +54,10 @@ func TestCore_EnableCredential(t *testing.T) {
 		t.Fatalf("missing mount")
 	}
 
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -112,7 +118,10 @@ func TestCore_DisableCredential(t *testing.T) {
 		t.Fatalf("backend present")
 	}
 
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)

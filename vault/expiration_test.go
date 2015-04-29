@@ -859,8 +859,8 @@ func TestLeaseEntry(t *testing.T) {
 				Lease: time.Minute,
 			},
 		},
-		IssueTime:  time.Now(),
-		ExpireTime: time.Now(),
+		IssueTime:  time.Now().UTC(),
+		ExpireTime: time.Now().UTC(),
 	}
 
 	enc, err := le.encode()

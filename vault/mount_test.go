@@ -13,7 +13,10 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	verifyDefaultTable(t, c.mounts)
 
 	// Start a second core with same physical
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -48,7 +51,10 @@ func TestCore_Mount(t *testing.T) {
 		t.Fatalf("missing mount")
 	}
 
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -79,7 +85,10 @@ func TestCore_Unmount(t *testing.T) {
 		t.Fatalf("backend present")
 	}
 
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -193,7 +202,10 @@ func TestCore_Remount(t *testing.T) {
 		t.Fatalf("failed remount")
 	}
 
-	conf := &CoreConfig{Physical: c.physical}
+	conf := &CoreConfig{
+		Physical:     c.physical,
+		DisableMlock: true,
+	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
