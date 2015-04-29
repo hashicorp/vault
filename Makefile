@@ -32,9 +32,7 @@ cover:
 	@go tool cover 2>/dev/null; if [ $$? -eq 3 ]; then \
 		go get -u golang.org/x/tools/cmd/cover; \
 	fi
-	godep go test $(TEST) -coverprofile=coverage.out
-	godep go tool cover -html=coverage.out
-	rm coverage.out
+	./scripts/coverage.sh --html
 
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
