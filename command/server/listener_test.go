@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"testing"
-	"time"
 )
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
@@ -30,14 +29,19 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn) 
 	defer server.Close()
 
 	var buf bytes.Buffer
-	go io.Copy(&buf, server)
+	copyCh := make(chan struct{})
+	go func() {
+		io.Copy(&buf, server)
+		close(copyCh)
+	}()
 
 	if _, err := client.Write([]byte("foo")); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	client.Close()
 
+	<-copyCh
 	if buf.String() != "foo" {
 		t.Fatalf("bad: %v", buf.String())
 	}
