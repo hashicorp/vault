@@ -43,3 +43,5 @@ Vagrantfile
 # Configs
 *.hcl
 
+.DS_Store
+
