@@ -818,8 +818,8 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 				Lease: time.Minute,
 			},
 		},
-		IssueTime:  time.Now(),
-		ExpireTime: time.Now(),
+		IssueTime:  time.Now().UTC(),
+		ExpireTime: time.Now().UTC(),
 	}
 	if err := exp.persistEntry(le); err != nil {
 		t.Fatalf("err: %v", err)
