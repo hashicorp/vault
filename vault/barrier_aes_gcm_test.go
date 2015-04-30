@@ -118,13 +118,13 @@ func TestEncrypt_Unique(t *testing.T) {
 	primary := b.primary
 
 	if primary == nil {
-		t.Fatalf("Barrier Sealed")
+		t.Fatalf("barrier is sealed")
 	}
 
 	first := b.encrypt(primary, entry.Value)
 	second := b.encrypt(primary, entry.Value)
 
-	if (bytes.Equal(first, second) == true) {
-		t.Fatalf("Improper Random Seeding Detected")
+	if bytes.Equal(first, second) == true {
+		t.Fatalf("improper random seeding detected")
 	}
 }
