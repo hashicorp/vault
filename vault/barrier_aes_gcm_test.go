@@ -143,18 +143,18 @@ func TestInitialize_KeyLength(t *testing.T) {
 	err = b.Initialize(long)
 
 	if err == nil {
-		t.Fatalf("Key length protection failed")
+		t.Fatalf("key length protection failed")
 	}
 
 	err = b.Initialize(middle)
 
 	if err == nil {
-		t.Fatalf("Key length protection failed")
+		t.Fatalf("key length protection failed")
 	}
 
 	err = b.Initialize(short)
 
 	if err == nil {
-		t.Fatalf("Key length protection failed")
+		t.Fatalf("key length protection failed")
 	}
 }
