@@ -128,3 +128,33 @@ func TestEncrypt_Unique(t *testing.T) {
 		t.Fatalf("improper random seeding detected")
 	}
 }
+
+func TestInitialize_KeyLength(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	long := []byte("ThisKeyDoesNotHaveTheRightLength!")
+	middle := []byte("ThisIsASecretKeyAndMore")
+	short := []byte("Key")
+
+	err = b.Initialize(long)
+
+	if err == nil {
+		t.Fatalf("Key length protection failed")
+	}
+
+	err = b.Initialize(middle)
+
+	if err == nil {
+		t.Fatalf("Key length protection failed")
+	}
+
+	err = b.Initialize(short)
+
+	if err == nil {
+		t.Fatalf("Key length protection failed")
+	}
+}
