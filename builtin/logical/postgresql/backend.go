@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	_ "github.com/lib/pq"
 )
 
 func Factory(map[string]string) (logical.Backend, error) {
