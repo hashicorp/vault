@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	_ "github.com/lib/pq"
 )
 
 func pathRoleCreate(b *backend) *framework.Path {
