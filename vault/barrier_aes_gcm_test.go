@@ -102,3 +102,29 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 		t.Fatalf("should fail!")
 	}
 }
+
+func TestEncrypt_Unique(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	key, _ := b.GenerateKey()
+	b.Initialize(key)
+	b.Unseal(key)
+
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	primary := b.primary
+
+	if primary == nil {
+		t.Fatalf("Barrier Sealed")
+	}
+
+	first := b.encrypt(primary, entry.Value)
+	second := b.encrypt(primary, entry.Value)
+
+	if (bytes.Equal(first, second) == true) {
+		t.Fatalf("Improper Random Seeding Detected")
+	}
+}
