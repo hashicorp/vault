@@ -43,4 +43,16 @@ func TestConsulBackend(t *testing.T) {
 		t.Fatalf("consul does not implement HABackend")
 	}
 	testHABackend(t, ha, ha)
+
+	detect, ok := b.(AdvertiseDetect)
+	if !ok {
+		t.Fatalf("consul does not implement AdvertiseDetect")
+	}
+	host, err := detect.DetectHostAddr()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if host == "" {
+		t.Fatalf("bad addr: %v", host)
+	}
 }

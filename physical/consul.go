@@ -132,6 +132,17 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	return cl, nil
 }
 
+// DetectHostAddr is used to detect the host address by asking the Consul agent
+func (c *ConsulBackend) DetectHostAddr() (string, error) {
+	agent := c.client.Agent()
+	self, err := agent.Self()
+	if err != nil {
+		return "", err
+	}
+	addr := self["Member"]["Addr"].(string)
+	return addr, nil
+}
+
 // ConsulLock is used to provide the Lock interface backed by Consul
 type ConsulLock struct {
 	client *api.Client
