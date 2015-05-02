@@ -18,16 +18,16 @@ serves secrets.
 Vault similarly is designed as a comprehensive secret management
 solution. The client interaction with Vault is much more flexible,
 both for authentication and usage of secrets. Vault supports [mTLS
-authentication](http://localhost:4567/docs/auth/cert.html) along with
-many [other mechanisms](http://localhost:4567/docs/auth/index.html).
+authentication](/docs/auth/cert.html) along with
+many [other mechanisms](/docs/auth/index.html).
 The goal being to make it easy to authenticate as a machine for programtic
 access and as a human for operator usage.
 
 Vault exposes secrets via an API and not over a FUSE filesystem. The
-[ACL system](http://localhost:4567/docs/concepts/policies.html) is used
+[ACL system](/docs/concepts/policies.html) is used
 to protect secrets and gate access, and depends on server side enforcement
 instead of Unix permissions on the clients. All auditing is also done
-server side using [audit backends](http://localhost:4567/docs/audit/index.html).
+server side using [audit backends](/docs/audit/index.html).
 
 Keywhiz focuses on storage and distribution of secrets and decouples
 rotation, and expects external systems to be used for periodic key rotation.
