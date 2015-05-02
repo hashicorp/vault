@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
@@ -48,6 +49,8 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 		input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
 		input = append(input, fmt.Sprintf(
 			"lease_duration %s %d", config.Delim, s.LeaseDuration))
+		input = append(input, fmt.Sprintf(
+			"lease_renewable %s %d", config.Delim, strconv.FormatBool(s.Renewable)))
 	}
 
 	for k, v := range s.Data {
