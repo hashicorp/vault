@@ -5,6 +5,8 @@ IMPROVEMENTS:
   * core: Very verbose error if mlock fails [GH-59]
   * command/*: On error with TLS oversized record, show more human-friendly
       error message. [GH-123]
+  * command/read: `lease_renewable` is now outputed along with the secret
+      to show whether it is renewable or not
   * command/server: Add configuration option to disable mlock
   * command/server: Disable mlock for dev mode so it works on more systems
 
