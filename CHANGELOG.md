@@ -2,6 +2,7 @@
 
 SECURITY CHANGES:
 
+  * physical/file: create the storge with 0600 permissions [GH-102]
   * token/disk: write the token to disk with 0600 perms
 
 IMPROVEMENTS:
@@ -23,7 +24,6 @@ BUG FIXES:
   * command/auth: Using an invalid token won't crash [GH-75]
   * credential/app-id: app and user IDs can have hyphens in keys [GH-119]
   * helper/password: import proper DLL for Windows to ask password [GH-83]
-  * physical/file: create the storge with 0600 permissions [GH-102]
 
 ## 0.1.0 (April 28, 2015)
 
