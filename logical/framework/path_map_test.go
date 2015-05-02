@@ -68,3 +68,12 @@ func TestPathMap_getInvalid(t *testing.T) {
 		t.Fatalf("bad: %#v", v)
 	}
 }
+
+func TestPathMap_routes(t *testing.T) {
+	p := &PathMap{Name: "foo"}
+	TestBackendRoutes(t, &Backend{Paths: p.Paths()}, []string{
+		"map/foo",         // Normal
+		"map/foo/bar",     // Normal
+		"map/foo/bar-baz", // Hyphen key
+	})
+}
