@@ -1,5 +1,9 @@
 ## 0.1.1 (May 2, 2015)
 
+SECURITY CHANGES:
+
+  * token/disk: write the token to disk with 0600 perms
+
 IMPROVEMENTS:
 
   * core: Very verbose error if mlock fails [GH-59]

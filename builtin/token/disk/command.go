@@ -56,7 +56,7 @@ func (c *Command) Run(args []string) int {
 			return 1
 		}
 	case "store":
-		f, err := os.Create(path)
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 			return 1
