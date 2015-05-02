@@ -7,6 +7,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -170,9 +171,16 @@ START:
 		result = &Response{Response: resp}
 	}
 	if err != nil {
-		urlErr, ok := err.(*url.Error)
-		if ok && urlErr.Err == errRedirect {
+		if urlErr, ok := err.(*url.Error); ok && urlErr.Err == errRedirect {
 			err = nil
+		} else if strings.Contains(err.Error(), "tls: oversized") {
+			err = fmt.Errorf(
+				"%s\n\n"+
+					"This error usually means that the server is running with TLS disabled\n"+
+					"but the client is configured to use TLS. Please either enable TLS\n"+
+					"on the server, or run the client with -addr set to http://<addr>\n"+
+					"where <addr> is replaced by the actual address to the server.",
+				err)
 		}
 	}
 	if err != nil {
