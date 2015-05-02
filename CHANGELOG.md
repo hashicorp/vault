@@ -15,6 +15,7 @@ BUG FIXES:
   * core: if token helper isn't absolute, prepend with path to Vault
       executable, not "vault" (which requires PATH) [GH-60]
   * core: Any "mapping" routes allow hyphens in keys [GH-119]
+  * core: Validate `advertise_addr` is a valid URL with scheme [GH-106]
   * command/auth: Using an invalid token won't crash [GH-75]
   * credential/app-id: app and user IDs can have hyphens in keys [GH-119]
   * helper/password: import proper DLL for Windows to ask password [GH-83]

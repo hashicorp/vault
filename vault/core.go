@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -213,6 +214,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	if haBackend != nil && conf.AdvertiseAddr == "" {
 		return nil, fmt.Errorf("missing advertisement address")
+	}
+
+	// Validate the advertise addr if its given to us
+	if conf.AdvertiseAddr != "" {
+		u, err := url.Parse(conf.AdvertiseAddr)
+		if err != nil {
+			return nil, fmt.Errorf("advertisement address is not valid url: %s", err)
+		}
+
+		if u.Scheme == "" {
+			return nil, fmt.Errorf("advertisement address must include scheme (ex. 'http')")
+		}
 	}
 
 	// Wrap the backend in a cache unless disabled

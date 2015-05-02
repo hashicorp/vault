@@ -15,6 +15,18 @@ var (
 	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 )
 
+func TestNewCore_badAdvertiseAddr(t *testing.T) {
+	conf := &CoreConfig{
+		AdvertiseAddr: "127.0.0.1:8200",
+		Physical:      physical.NewInmem(),
+		DisableMlock:  true,
+	}
+	_, err := NewCore(conf)
+	if err == nil {
+		t.Fatal("should error")
+	}
+}
+
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{
@@ -1026,9 +1038,10 @@ func TestCore_LimitedUseToken(t *testing.T) {
 func TestCore_Standby(t *testing.T) {
 	// Create the first core and initialize it
 	inm := physical.NewInmemHA()
+	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
-		AdvertiseAddr: "foo",
+		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
 	if err != nil {
@@ -1086,14 +1099,15 @@ func TestCore_Standby(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != "foo" {
+	if advertise != advertiseOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
 	// Create a second core, attached to same in-memory store
+	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
-		AdvertiseAddr: "bar",
+		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
 	if err != nil {
@@ -1135,7 +1149,7 @@ func TestCore_Standby(t *testing.T) {
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != "foo" {
+	if advertise != advertiseOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1193,7 +1207,7 @@ func TestCore_Standby(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != "bar" {
+	if advertise != advertiseOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 }
