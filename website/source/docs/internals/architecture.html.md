@@ -8,7 +8,7 @@ description: |-
 
 # Architecture
 
-Vault is a complex system that has many different pieces. To help both users and developers of Consul
+Vault is a complex system that has many different pieces. To help both users and developers of Vault
 build a mental model of how it works, this page documents the system architecture.
 
 ~> **Advanced Topic!** This page covers technical details
