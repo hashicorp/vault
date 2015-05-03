@@ -50,7 +50,7 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 		input = append(input, fmt.Sprintf(
 			"lease_duration %s %d", config.Delim, s.LeaseDuration))
 		input = append(input, fmt.Sprintf(
-			"lease_renewable %s %d", config.Delim, strconv.FormatBool(s.Renewable)))
+			"lease_renewable %s %s", config.Delim, strconv.FormatBool(s.Renewable)))
 	}
 
 	for k, v := range s.Data {
