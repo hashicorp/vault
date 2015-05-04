@@ -6,8 +6,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -102,6 +104,18 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Attempt to detect the advertise address possible
+	if detect, ok := backend.(physical.AdvertiseDetect); ok && config.Backend.AdvertiseAddr == "" {
+		advertise, err := c.detectAdvertise(detect, config)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
+		} else if advertise == "" {
+			c.Ui.Error("Failed to detect advertise address.")
+		} else {
+			config.Backend.AdvertiseAddr = advertise
+		}
+	}
+
 	// Initialize the core
 	core, err := vault.NewCore(&vault.CoreConfig{
 		AdvertiseAddr:      config.Backend.AdvertiseAddr,
@@ -156,6 +170,8 @@ func (c *ServerCommand) Run(args []string) int {
 	// If the backend supports HA, then note it
 	if _, ok := backend.(physical.HABackend); ok {
 		info["backend"] += " (HA available)"
+		info["advertise address"] = config.Backend.AdvertiseAddr
+		infoKeys = append(infoKeys, "advertise address")
 	}
 
 	// Initialize the telemetry
@@ -252,6 +268,64 @@ func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
 	}
 
 	return init, nil
+}
+
+// detectAdvertise is used to attempt advertise address detection
+func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
+	config *server.Config) (string, error) {
+	// Get the hostname
+	host, err := detect.DetectHostAddr()
+	if err != nil {
+		return "", err
+	}
+
+	// Default the port and scheme
+	scheme := "https"
+	port := 8200
+
+	// Attempt to detect overrides
+	for _, list := range config.Listeners {
+		// Only attempt TCP
+		if list.Type != "tcp" {
+			continue
+		}
+
+		// Check if TLS is disabled
+		if _, ok := list.Config["tls_disable"]; ok {
+			scheme = "http"
+		}
+
+		// Check for address override
+		addr, ok := list.Config["address"]
+		if !ok {
+			addr = "127.0.0.1:8200"
+		}
+
+		// Check for localhost
+		hostStr, portStr, err := net.SplitHostPort(addr)
+		if err != nil {
+			continue
+		}
+		if hostStr == "127.0.0.1" {
+			host = hostStr
+		}
+
+		// Check for custom port
+		listPort, err := strconv.Atoi(portStr)
+		if err != nil {
+			continue
+		}
+		port = listPort
+	}
+
+	// Build a URL
+	url := &url.URL{
+		Scheme: scheme,
+		Host:   fmt.Sprintf("%s:%d", host, port),
+	}
+
+	// Return the URL string
+	return url.String(), nil
 }
 
 // setupTelementry is used ot setup the telemetry sub-systems

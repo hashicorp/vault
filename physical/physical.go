@@ -32,6 +32,14 @@ type HABackend interface {
 	LockWith(key, value string) (Lock, error)
 }
 
+// AdvertiseDetect is an optional interface that an HABackend
+// can implement. If they do, an advertise address can be automatically
+// detected.
+type AdvertiseDetect interface {
+	// DetectHostAddr is used to detect the host address
+	DetectHostAddr() (string, error)
+}
+
 type Lock interface {
 	// Lock is used to acquire the given lock
 	// The stopCh is optional and if closed should interrupt the lock
