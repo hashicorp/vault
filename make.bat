@@ -15,14 +15,14 @@ goto usage
 REM bin generates the releaseable binaries for Vault
 :bin
 	call :generate
-	call .\scripts\windows\build.bat %CD%
+	call .\scripts\windows\build.bat "%CD%"
 	goto :eof
 
 REM dev creates binaries for testing Vault locally. These are put
 REM into ./bin/ as well as %GOPATH%/bin
 :dev
 	call :generate
-	call .\scripts\windows\build.bat %CD% VAULT_DEV
+	call .\scripts\windows\build.bat "%CD%" VAULT_DEV
 	goto :eof
 
 REM generate runs `go generate` to build the dynamically generated
