@@ -17,13 +17,13 @@ set _GIT_DIRTY_FILE=%TEMP%\vault-git_dirty.txt
 set _NUL_CMP_FILE=%TEMP%\vault-nul_cmp.txt
 type nul >%_NUL_CMP_FILE%
 
-git rev-parse HEAD >%_GIT_COMMIT_FILE%
-set /p _GIT_COMMIT=<%_GIT_COMMIT_FILE%
+git rev-parse HEAD >"%_GIT_COMMIT_FILE%"
+set /p _GIT_COMMIT=<"%_GIT_COMMIT_FILE%"
 del /f "%_GIT_COMMIT_FILE%" 2>nul
 
 set _GIT_DIRTY=
-git status --porcelain >%_GIT_DIRTY_FILE%
-fc %_GIT_DIRTY_FILE% %_NUL_CMP_FILE% >nul
+git status --porcelain >"%_GIT_DIRTY_FILE%"
+fc "%_GIT_DIRTY_FILE%" "%_NUL_CMP_FILE%" >nul
 if errorlevel 1 set _GIT_DIRTY=+CHANGES
 del /f "%_GIT_DIRTY_FILE%" 2>nul
 del /f "%_NUL_CMP_FILE%" 2>nul
@@ -46,19 +46,19 @@ if not %_DEV_BUILD% equ 1 goto build
 
 set _ORIGINAL_GOPATH=%GOPATH%
 set _GODEP_PATH_FILE=%TEMP%\vault-godep-path.txt
-godep path >%_GODEP_PATH_FILE%
-set /p GOPATH=<%_GODEP_PATH_FILE%
+godep path >"%_GODEP_PATH_FILE%"
+set /p GOPATH=<"%_GODEP_PATH_FILE%"
 del /f "%_GODEP_PATH_FILE%" 2>nul
 set GOPATH=%GOPATH%;%_ORIGINAL_GOPATH%
 
 :devbuild
 echo ==^> Preparing for development build...
 set _GO_ENV_TMP_FILE=%TEMP%\vault-go-env.txt
-go env GOARCH >%_GO_ENV_TMP_FILE%
-set /p _XC_ARCH=<%_GO_ENV_TMP_FILE%
+go env GOARCH >"%_GO_ENV_TMP_FILE%"
+set /p _XC_ARCH=<"%_GO_ENV_TMP_FILE%"
 del /f "%_GO_ENV_TMP_FILE%" 2>nul
-go env GOOS >%_GO_ENV_TMP_FILE%
-set /p _XC_OS=<%_GO_ENV_TMP_FILE%
+go env GOOS >"%_GO_ENV_TMP_FILE%"
+set /p _XC_OS=<"%_GO_ENV_TMP_FILE%"
 del /f "%_GO_ENV_TMP_FILE%" 2>nul
 
 :build
@@ -78,16 +78,16 @@ if %_EXITCODE% equ 1 exit /b %_EXITCODE%
 
 set _GO_ENV_TMP_FILE=%TEMP%\vault-go-env.txt
 
-go env GOPATH >%_GO_ENV_TMP_FILE%
-set /p _GOPATH=<%_GO_ENV_TMP_FILE%
+go env GOPATH >"%_GO_ENV_TMP_FILE%"
+set /p _GOPATH=<"%_GO_ENV_TMP_FILE%"
 del /f "%_GO_ENV_TMP_FILE%" 2>nul
 
-go env GOARCH >%_GO_ENV_TMP_FILE%
-set /p _GOARCH=<%_GO_ENV_TMP_FILE%
+go env GOARCH >"%_GO_ENV_TMP_FILE%"
+set /p _GOARCH=<"%_GO_ENV_TMP_FILE%"
 del /f "%_GO_ENV_TMP_FILE%" 2>nul
 
-go env GOOS >%_GO_ENV_TMP_FILE%
-set /p _GOOS=<%_GO_ENV_TMP_FILE%
+go env GOOS >"%_GO_ENV_TMP_FILE%"
+set /p _GOOS=<"%_GO_ENV_TMP_FILE%"
 del /f "%_GO_ENV_TMP_FILE%" 2>nul
 
 REM Copy our OS/Arch to the bin/ directory
