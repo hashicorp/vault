@@ -80,14 +80,14 @@ REM any common errors.
 	set _vetExitCode=0
 	set _VAULT_PKG_DIRS=%TEMP%\vault-pkg-dirs.txt
 
-	go list -f {{.Dir}} ./... >%_VAULT_PKG_DIRS%
+	go list -f {{.Dir}} ./... >"%_VAULT_PKG_DIRS%"
 	REM Skip the first row, which is the main vault package (.*github.com/hashicorp/vault$)
-	for /f "delims= skip=1" %%d in (%_VAULT_PKG_DIRS%) do (
-		go tool vet %_VETARGS% %%d
+	for /f "delims= skip=1" %%d in ("%_VAULT_PKG_DIRS%") do (
+		go tool vet %_VETARGS% "%%d"
 		if ERRORLEVEL 1 set _vetExitCode=1
 		call :setMaxExitCode %_vetExitCode%
 	)
-	del /f %_VAULT_PKG_DIRS% 2>NUL
+	del /f "%_VAULT_PKG_DIRS%" 2>NUL
 	if %_vetExitCode% equ 0 exit /b %_EXITCODE%
 	echo.
 	echo Vet found suspicious constructs. Please check the reported constructs
