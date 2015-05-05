@@ -8,7 +8,7 @@ description: |-
 
 # Token Authentication
 
-The `token` authentication backend built-in and is at the core of
+The `token` authentication backend is built-in and is at the core of
 client authentication. Other authentication backends may be used to
 authenticate a client, but they eventually result in the generation of a client
 token managed by the `token` backend.
