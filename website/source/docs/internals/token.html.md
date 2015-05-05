@@ -46,7 +46,7 @@ with it. This allows clients to safely generate child tokens and then revoke
 them all along with the root.
 
 Child tokens are very useful, especially when combined with limited use tokens.
-When a token is created their use count can be optionally specified. Providing
+When a token is created, its use count can be optionally specified. Providing
 a use count of one makes a _one time token_. This means the token can be used
 for a single request before being automatically revoked. This can be generalized
 to any number of uses. Limited use tokens cannot be used to create sub-tokens,
