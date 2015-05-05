@@ -27,7 +27,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		path = "vault/"
 	}
 
-	// Ensure path is suffixed but not prefixed
+	// Ensure path is suffixed and prefixed (zk requires prefix /)
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
