@@ -58,7 +58,7 @@ durability, etc.
       and has been shown to work at high scale under heavy load.
 
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
-      It is a highly recommended backend for Vault.
+      This backend does not support HA.
 
   * `inmem` - Store data in-memory. This is only really useful for
       development and experimentation. Data is lost whenever Vault is

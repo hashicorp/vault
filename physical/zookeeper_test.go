@@ -43,22 +43,4 @@ func TestZookeeperBackend(t *testing.T) {
 
 	testBackend(t, b)
 	testBackend_ListPrefix(t, b)
-
-	// ha, ok := b.(HABackend)
-	// if !ok {
-	// 	t.Fatalf("zookeeper does not implement HABackend")
-	// }
-	// testHABackend(t, ha, ha)
-
-	// detect, ok := b.(AdvertiseDetect)
-	// if !ok {
-	// 	t.Fatalf("zookeeper does not implement AdvertiseDetect")
-	// }
-	// host, err := detect.DetectHostAddr()
-	// if err != nil {
-	// 	t.Fatalf("err: %s", err)
-	// }
-	// if host == "" {
-	// 	t.Fatalf("bad addr: %v", host)
-	// }
 }
