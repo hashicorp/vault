@@ -102,7 +102,7 @@ For Zookeeper, the following options are supported:
 
   * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
       Can be comma separated list of many Zookeeper instances.
-      Defaults to the local agent address, if available.
+      Defaults to the local instance address, if available.
 
 
 #### Backend Reference: Inmem

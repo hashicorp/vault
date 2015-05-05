@@ -36,9 +36,14 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 	}
 
 	// Configure the client
-	machines := strings.Split(conf["address"], ",")
+	var machines string
+	machines, ok = conf["address"]
+	if !ok {
+		// Default to the localhost instance
+		machines = "localhost:2128"
+	}
 
-	client, _, err := zk.Connect(machines, time.Second)
+	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("client setup failed: %v", err)
 	}
