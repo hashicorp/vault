@@ -79,6 +79,7 @@ var BuiltinBackends = map[string]Factory{
 	"inmem": func(map[string]string) (Backend, error) {
 		return NewInmem(), nil
 	},
-	"consul": newConsulBackend,
-	"file":   newFileBackend,
+	"consul":    newConsulBackend,
+	"zookeeper": newZookeeperBackend,
+	"file":      newFileBackend,
 }
