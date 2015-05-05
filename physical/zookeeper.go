@@ -112,16 +112,12 @@ func (c *ZookeeperBackend) Delete(key string) error {
 
 	fullPath := c.path + key
 
-	exists, _, err := c.client.Exists(fullPath)
+	err := c.client.Delete(fullPath, -1)
 
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return c.client.Delete(fullPath, -1)
-	} else {
+	if err == zk.ErrNoNode {
 		return nil
+	} else {
+		return err
 	}
 }
 
