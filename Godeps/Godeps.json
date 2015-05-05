@@ -124,6 +124,10 @@
 		{
 			"ImportPath": "golang.org/x/oauth2",
 			"Rev": "ec6d5d770f531108a6464462b2201b74fcd09314"
+		},
+		{
+			"ImportPath": "github.com/samuel/go-zookeeper/zk",
+			"Rev": "d0e0d8e11f318e000a8cc434616d69e329edc374"
 		}
 	]
 }
