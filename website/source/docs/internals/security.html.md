@@ -50,7 +50,7 @@ The following are not parts of the Vault threat model:
   that can perform arbitrary operations against the storage backend can
   undermine in any number of ways that are difficult or impossible to protect
   against. As an example, an attacker could delete or corrupt all the contents
-  of the storage backend causing total data loss for Vault. The ability to controls
+  of the storage backend causing total data loss for Vault. The ability to control
   reads would allow an attacker to snapshot in a well-known state and rollback state
   changes if that would be beneficial to them.
 
