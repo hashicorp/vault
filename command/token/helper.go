@@ -94,6 +94,6 @@ func (h *Helper) Store(v string) error {
 }
 
 func (h *Helper) cmd(op string) *exec.Cmd {
-	cmd := exec.Command("sh", "-c", h.Path+" "+op)
+	cmd := exec.Command("sh", "-c", strings.Replace(h.Path, "\\", "\\\\", -1)+" "+op)
 	return cmd
 }
