@@ -57,20 +57,29 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 }
 
 // zookeeper requires nodes to be there before set and get
-func (c *ZookeeperBackend) ensurePath(path string) {
+func (c *ZookeeperBackend) ensurePath(path string, value []byte) {
 
 	nodes := strings.Split(path, "/")
 
 	acl := zk.WorldACL(zk.PermAll)
 
 	fullPath := ""
-	for _, node := range nodes {
+	for index, node := range nodes {
 		if strings.TrimSpace(node) != "" {
 			fullPath += "/" + node
 
-			if exists, _, _ := c.client.Exists(fullPath); !exists {
+			isLastNode := index+1 == len(nodes)
+
+			// set parent nodes to nil, leaf to value
+			// this block reduces round trips by being smart on the leaf create/set
+			if exists, _, _ := c.client.Exists(fullPath); !isLastNode && !exists {
 				c.client.Create(fullPath, nil, int32(0), acl)
+			} else if isLastNode && !exists {
+				c.client.Create(fullPath, value, int32(0), acl)
+			} else if isLastNode && exists {
+				c.client.Set(fullPath, value, int32(0))
 			}
+
 		}
 	}
 }
@@ -81,11 +90,14 @@ func (c *ZookeeperBackend) Put(entry *Entry) error {
 
 	fullPath := c.path + entry.Key
 
-	c.ensurePath(fullPath)
-
 	_, err := c.client.Set(fullPath, entry.Value, 0)
 
-	return err
+	if err == zk.ErrNoNode {
+		c.ensurePath(fullPath, entry.Value)
+		return nil
+	} else {
+		return err
+	}
 }
 
 // Get is used to fetch an entry
@@ -94,11 +106,10 @@ func (c *ZookeeperBackend) Get(key string) (*Entry, error) {
 
 	fullPath := c.path + key
 
-	c.ensurePath(fullPath)
-
 	value, _, err := c.client.Get(fullPath)
 
-	if err != nil {
+	// dont error if the node doesnt exist
+	if err != nil && err != zk.ErrNoNode {
 		return nil, err
 	}
 	if value == nil {
@@ -133,9 +144,11 @@ func (c *ZookeeperBackend) List(prefix string) ([]string, error) {
 
 	fullPath := strings.TrimSuffix(c.path+prefix, "/")
 
-	c.ensurePath(fullPath)
+	result, _, err := c.client.Children(fullPath)
 
-	result, _, _ := c.client.Children(fullPath)
+	if err == zk.ErrNoNode {
+		return []string{}, nil
+	}
 
 	children := []string{}
 
