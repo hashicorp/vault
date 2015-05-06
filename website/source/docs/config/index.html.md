@@ -101,8 +101,8 @@ For Zookeeper, the following options are supported:
       Defaults to "vault/".
 
   * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
-      Can be comma separated list of many Zookeeper instances.
-      Defaults to the local instance address, if available.
+      Can be comma separated list (host:port) of many Zookeeper instances.
+      Defaults to "localhost:2181" if not specified.
 
 
 #### Backend Reference: Inmem
