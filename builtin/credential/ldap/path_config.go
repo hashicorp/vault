@@ -19,9 +19,13 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "ldap URL to connect to (default: ldap://127.0.0.1)",
 			},
-			"domain": &framework.FieldSchema{
+			"userdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "LDAP domain to use (eg: dc=example,dc=org)",
+				Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
+			},
+			"groupdn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP domain to use for groups (eg: ou=Groups,dc=example,dc=org)",
 			},
 			"userattr": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -69,7 +73,8 @@ func (b *backend) pathConfigRead(
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"url":      cfg.Url,
-			"domain":   cfg.Domain,
+			"userdn":   cfg.UserDN,
+			"groupdn":  cfg.GroupDN,
 			"userattr": cfg.UserAttr,
 		},
 	}, nil
@@ -84,12 +89,16 @@ func (b *backend) pathConfigWrite(
 		cfg.Url = strings.ToLower(url)
 	}
 	userattr := d.Get("userattr").(string)
-	if url != "" {
+	if userattr != "" {
 		cfg.UserAttr = strings.ToLower(userattr)
 	}
-	domain := d.Get("domain").(string)
-	if url != "" {
-		cfg.Domain = domain
+	userdn := d.Get("userdn").(string)
+	if userdn != "" {
+		cfg.UserDN = userdn
+	}
+	groupdn := d.Get("groupdn").(string)
+	if groupdn != "" {
+		cfg.GroupDN = groupdn
 	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
@@ -114,7 +123,8 @@ func (b *backend) pathConfigWrite(
 
 type ConfigEntry struct {
 	Url      string
-	Domain   string
+	UserDN   string
+	GroupDN  string
 	UserAttr string
 }
 

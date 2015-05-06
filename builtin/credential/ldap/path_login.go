@@ -2,9 +2,11 @@ package ldap
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/vanackere/ldap"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -50,15 +52,39 @@ func (b *backend) pathLogin(
 	}
 
 	// Try to authenticate to the server using the provided credentials
-	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, username, cfg.Domain)
-	cerr := c.Bind(binddn, password)
-	if cerr != nil {
-		return logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %s", cerr.Error())), nil
+	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, username, cfg.UserDN)
+	if err = c.Bind(binddn, password); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
+	}
+
+	// Enumerate all groups the user is member of. The search filter should
+	// work with both openldap and MS AD standard schemas.
+	sresult, err := c.Search(&ldap.SearchRequest{
+		BaseDN: cfg.GroupDN,
+		Scope:  2, // subtree
+		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s))", username, binddn),
+	})
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
+	}
+
+	var policies []string
+	for _, e := range sresult.Entries {
+		// Expected syntax for group DN: cn=groupanem,ou=Group,dc=example,dc=com
+		dn := strings.Split(e.DN, ",")
+		group, err := b.Group(req.Storage, dn[0][3:])
+		if err == nil && group != nil {
+			policies = append(policies, group.Policies...)
+		}
+	}
+
+	if len(policies) == 0 {
+		return logical.ErrorResponse("user is not member of any authorized group"), nil
 	}
 
 	return &logical.Response{
 		Auth: &logical.Auth{
-			Policies: []string{"root"},
+			Policies: policies,
 			Metadata: map[string]string{
 				"username": username,
 			},
