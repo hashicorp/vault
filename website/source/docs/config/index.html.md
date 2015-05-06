@@ -57,6 +57,9 @@ durability, etc.
       backend supports HA. It is the most recommended backend for Vault
       and has been shown to work at high scale under heavy load.
 
+  * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
+      This backend does not support HA.
+
   * `inmem` - Store data in-memory. This is only really useful for
       development and experimentation. Data is lost whenever Vault is
       restarted.
@@ -89,6 +92,18 @@ For Consul, the following options are supported:
       This defaults to the local datacenter.
 
   * `token` (optional) - An access token to use to write data to Consul.
+
+#### Backend Reference: Zookeeper
+
+For Zookeeper, the following options are supported:
+
+  * `path` (optional) - The path within Zookeeper where data will be stored.
+      Defaults to "vault/".
+
+  * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
+      Can be comma separated list of many Zookeeper instances.
+      Defaults to the local instance address, if available.
+
 
 #### Backend Reference: Inmem
 
