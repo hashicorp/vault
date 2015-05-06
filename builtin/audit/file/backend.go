@@ -132,7 +132,7 @@ func (b *Backend) open() error {
 	}
 
 	var err error
-	b.f, err = os.OpenFile(b.Path, os.O_APPEND|os.O_WRONLY, 0600)
+	b.f, err = os.OpenFile(b.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
