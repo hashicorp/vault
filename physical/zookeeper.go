@@ -40,7 +40,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 	machines, ok = conf["address"]
 	if !ok {
 		// Default to the localhost instance
-		machines = "localhost:2128"
+		machines = "localhost:2181"
 	}
 
 	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
