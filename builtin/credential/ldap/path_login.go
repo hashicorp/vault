@@ -2,12 +2,9 @@ package ldap
 
 import (
 	"fmt"
-	"net"
-	"net/url"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/mmitton/ldap"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -47,37 +44,14 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("ldap backend not configured"), nil
 	}
 
-	u, err := url.Parse(cfg.Url)
+	c, err := cfg.DialLDAP()
 	if err != nil {
-		return nil, err
-	}
-	host, port, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		host = u.Host
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	var c *ldap.Conn
-	var cerr *ldap.Error
-	switch u.Scheme {
-	case "ldap":
-		if port == "" {
-			port = "389"
-		}
-		c, cerr = ldap.Dial("tcp", host+":"+port)
-	case "ldaps":
-		if port == "" {
-			port = "636"
-		}
-		c, cerr = ldap.DialSSL("tcp", host+":"+port)
-	default:
-		return logical.ErrorResponse("invalid LDAP URL scheme"), nil
-	}
-	if cerr != nil {
-		return nil, cerr
-	}
-
+	// Try to authenticate to the server using the provided credentials
 	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, username, cfg.Domain)
-	cerr = c.Bind(binddn, password)
+	cerr := c.Bind(binddn, password)
 	if cerr != nil {
 		return logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %s", cerr.Error())), nil
 	}

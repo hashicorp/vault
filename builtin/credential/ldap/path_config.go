@@ -1,11 +1,14 @@
 package ldap
 
 import (
+	"fmt"
+	"net"
 	"net/url"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/vanackere/ldap"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -89,9 +92,14 @@ func (b *backend) pathConfigWrite(
 		cfg.Domain = domain
 	}
 
-	if !cfg.ValidateURL() {
-		return logical.ErrorResponse("LDAP URL is malformed"), nil
+	// Try to connect to the LDAP server, to validate the URL configuration
+	// We can also check the URL at this stage, as anything else would probably
+	// require authentication.
+	conn, cerr := cfg.DialLDAP()
+	if cerr != nil {
+		return logical.ErrorResponse(cerr.Error()), nil
 	}
+	conn.Close()
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
@@ -110,18 +118,37 @@ type ConfigEntry struct {
 	UserAttr string
 }
 
-func (c *ConfigEntry) ValidateURL() bool {
+func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
+
 	u, err := url.Parse(c.Url)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	if u.Scheme != "ldap" && u.Scheme != "ldaps" {
-		return false
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		host = u.Host
 	}
-	if u.Path != "" {
-		return false
+
+	var conn *ldap.Conn
+	switch u.Scheme {
+	case "ldap":
+		if port == "" {
+			port = "389"
+		}
+		conn, err = ldap.Dial("tcp", host+":"+port)
+	case "ldaps":
+		if port == "" {
+			port = "636"
+		}
+		conn, err = ldap.DialTLS("tcp", host+":"+port, nil)
+	default:
+		return nil, fmt.Errorf("invalid LDAP scheme")
 	}
-	return true
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to LDAP: %v", err)
+	}
+
+	return conn, nil
 }
 
 func (c *ConfigEntry) SetDefaults() {
