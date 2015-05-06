@@ -17,6 +17,7 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"config",
+				"groups/*",
 			},
 
 			Unauthenticated: []string{
@@ -27,6 +28,7 @@ func Backend() *framework.Backend {
 		Paths: append([]*framework.Path{
 			pathLogin(&b),
 			pathConfig(&b),
+			pathGroups(&b),
 		}),
 
 		// AuthRenew: b.pathLoginRenew,
