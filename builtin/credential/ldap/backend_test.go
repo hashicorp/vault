@@ -41,6 +41,8 @@ func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 		Operation: logical.WriteOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
+			// Online LDAP test server
+			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
 			"url":      "ldap://ldap.forumsys.com",
 			"userattr": "uid",
 			"userdn":   "dc=example,dc=com",
