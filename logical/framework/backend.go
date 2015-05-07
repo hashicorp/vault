@@ -110,7 +110,7 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		callback, ok = path.Callbacks[req.Operation]
 	}
 	if !ok {
-		if req.Operation == logical.HelpOperation && path.HelpSynopsis != "" {
+		if req.Operation == logical.HelpOperation {
 			callback = path.helpCallback
 			ok = true
 		}

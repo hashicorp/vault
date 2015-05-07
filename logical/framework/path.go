@@ -68,7 +68,13 @@ func (p *Path) helpCallback(
 	tplData.Request = req.Path
 	tplData.RoutePattern = p.Pattern
 	tplData.Synopsis = strings.TrimSpace(p.HelpSynopsis)
+	if tplData.Synopsis == "" {
+		tplData.Synopsis = "<no synopsis>"
+	}
 	tplData.Description = strings.TrimSpace(p.HelpDescription)
+	if tplData.Description == "" {
+		tplData.Description = "<no description>"
+	}
 
 	// Alphabetize the fields
 	fieldKeys := make([]string, 0, len(p.Fields))
