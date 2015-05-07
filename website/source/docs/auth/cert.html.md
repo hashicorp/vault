@@ -25,6 +25,21 @@ if there is a matching trusted certificate to authenticate the client.
 
 ## Configuration
 
+First, you must enable the certificate auth backend:
+
+```
+$ vault auth-enable cert
+Successfully enabled 'cert' at 'cert'!
+```
+
+Now when you run `vault auth -methods`, the certificate backend is available:
+
+```
+Path       Type      Description
+cert/      cert
+token/     token     token based credentials
+```
+
 To use the "cert" auth backend, an operator must configure it with
 trusted certificates that are allowed to authenticate. An example is shown below.
 Use `vault help` for more details.

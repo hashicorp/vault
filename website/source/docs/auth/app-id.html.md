@@ -71,6 +71,21 @@ The endpoint for the App ID login is `/login`.
 
 ## Configuration
 
+First you must enable the App ID auth backend:
+
+```
+$ vault auth-enable app-id
+Successfully enabled 'app-id' at 'app-id'!
+```
+
+Now when you run `vault auth -methods`, the App ID backend is available:
+
+```
+Path       Type      Description
+app-id/    app-id
+token/     token     token based credentials
+```
+
 To use the App ID auth backend, an operator must configure it with
 the set of App IDs, user IDs, and the mapping between them. An
 example is shown below, use `vault help` for more details.

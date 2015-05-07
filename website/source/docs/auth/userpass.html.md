@@ -34,6 +34,22 @@ The endpoint for the login is `/login/USERNAME`.
 
 ## Configuration
 
+First, you must enable the username/password auth backend:
+
+```
+$ vault auth-enable userpass
+Successfully enabled 'userpass' at 'userpass'!
+```
+
+Now when you run `vault auth -methods`, the username/password backend is
+available:
+
+```
+Path       Type      Description
+token/     token     token based credentials
+userpass/  userpass
+```
+
 To use the "userpass" auth backend, an operator must configure it with
 users that are allowed to authenticate. An example is shown below.
 Use `vault help` for more details.
