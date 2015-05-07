@@ -27,6 +27,9 @@ func pathLogin(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathLogin,
 		},
+
+		HelpSynopsis:    pathLoginSyn,
+		HelpDescription: pathLoginDesc,
 	}
 }
 
@@ -103,3 +106,11 @@ func (b *backend) pathLogin(
 		},
 	}, nil
 }
+
+const pathLoginSyn = `
+Log in with an App ID and User ID.
+`
+
+const pathLoginDesc = `
+This endpoint authenticates using an application ID, user ID and potential the IP address of the connecting client.
+`
