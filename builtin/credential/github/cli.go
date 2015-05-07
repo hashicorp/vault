@@ -41,7 +41,7 @@ To use it, specify the "token" var with the "-var" flag. The value should
 be a personal access token for your GitHub account. You can generate a personal
 access token on your account settings page on GitHub.
 
-    Example: vault auth -method=github -var="token=<token>"
+    Example: vault auth -method=github token=<token>
 
 	`
 
