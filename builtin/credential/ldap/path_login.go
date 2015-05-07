@@ -62,7 +62,7 @@ func (b *backend) pathLogin(
 	sresult, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
-		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s))", username, binddn),
+		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", username, binddn, binddn),
 	})
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
