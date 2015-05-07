@@ -63,7 +63,7 @@ clarify what is being discussed:
   Secrets always have an associated lease. This means clients cannot assume that the secret
   contents can be used indefinitely. Vault will revoke a secret at the end of the lease, and
   an operator may intervene to revoke the secret before the lease is over. This contract
-  between Vault and it's clients is critical, as it allows for changes in keys and policies
+  between Vault and its clients is critical, as it allows for changes in keys and policies
   without manual intervention.
 
 * **Server** - Vault depends on a long-running instance which operates as a server.
