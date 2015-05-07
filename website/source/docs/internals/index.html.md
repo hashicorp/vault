@@ -9,7 +9,7 @@ description: |-
 # Vault Internals
 
 This section covers the internals of Vault and explains the technical
-details of how Vault functions, it's architecture and security properties.
+details of how Vault functions, its architecture and security properties.
 
 -> **Note:** Knowledge of Vault internals is not
 required to use Vault. If you aren't interested in the internals
