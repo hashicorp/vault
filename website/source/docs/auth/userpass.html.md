@@ -42,7 +42,7 @@ $ curl https://192.168.1.100:8200/v1/auth/userpass/login/USERNAME -XPOST
 
 Response:
 ```
-"lease_id":"","renewable":false,"lease_duration":0,"data":null,"auth":{"client_token":"really_long_token","policies":["root"],"metadata":{"username":"man"},"lease_duration":2592000,"renewable":false}}
+"lease_id":"","renewable":false,"lease_duration":0,"data":null,"auth":{"client_token":"really_long_token","policies":["root"],"metadata":{"username":"USERNAME"},"lease_duration":2592000,"renewable":false}}
 ```
 
 ## Configuration
