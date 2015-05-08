@@ -23,8 +23,8 @@ passwords from an external source.
 
 ```
 $ vault auth -method=userpass \
-  -var="username=foo" \
-  -var="password=bar"
+  username=foo \
+  password=bar
 ...
 ```
 

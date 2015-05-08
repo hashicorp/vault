@@ -45,11 +45,11 @@ func (h *CLIHandler) Help() string {
 	help := `
 The "userpass" credential provider allows you to authenticate with
 a username and password. To use it, specify the "username" and "password"
-vars with the "-var" flag.
+parameters.
 
     Example: vault auth -method=userpass \
-      -var="username=<user>"
-      -var="password=<password>"
+      username=<user> \
+      password=<password>
 
 	`
 

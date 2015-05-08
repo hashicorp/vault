@@ -37,9 +37,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 func (h *CLIHandler) Help() string {
 	help := `
 The GitHub credential provider allows you to authenticate with GitHub.
-To use it, specify the "token" var with the "-var" flag. The value should
-be a personal access token for your GitHub account. You can generate a personal
-access token on your account settings page on GitHub.
+To use it, specify the "token" parameter. The value should be a personal access
+token for your GitHub account. You can generate a personal access token on your
+account settings page on GitHub.
 
     Example: vault auth -method=github token=<token>
 
