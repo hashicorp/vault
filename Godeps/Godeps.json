@@ -1,10 +1,12 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
-	"GoVersion": "go1.6",
-	"Packages": [
-		"./..."
-	],
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
 	"Deps": [
+		{
+			"ImportPath": "github.com/andygrunwald/megos",
+			"Rev": "7f393015e4adaa74deedb1eb3679e76ea772b379"
+		},
 		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "f303b03b91d770a11a39677f1d3b55da4002bbcb"
@@ -89,11 +91,6 @@
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
 		},
 		{
-			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/ec2query",
-			"Comment": "v1.1.10",
-			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
-		},
-		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/json/jsonutil",
 			"Comment": "v1.1.10",
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
@@ -145,11 +142,6 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute",
-			"Comment": "v1.1.10",
-			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
-		},
-		{
-			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
 			"Comment": "v1.1.10",
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
 		},
@@ -211,6 +203,10 @@
 			"Rev": "6e7f3d73dade2e5566f87d18c3a1d00d2ce33421"
 		},
 		{
+			"ImportPath": "github.com/donovanhide/eventsource",
+			"Rev": "fd1de70867126402be23c306e1ce32828455d85b"
+		},
+		{
 			"ImportPath": "github.com/duosecurity/duo_api_golang",
 			"Rev": "16da9e74793f6d9b97b227a0696fe32bcdaecb42"
 		},
@@ -221,6 +217,11 @@
 		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "12ff68a6f48a1c8bd118316171545683337655df"
+		},
+		{
+			"ImportPath": "github.com/gambol99/go-marathon",
+			"Comment": "v0.1.0-8-g5e63f97",
+			"Rev": "5e63f97a03e7c519e489834142de7893649aae53"
 		},
 		{
 			"ImportPath": "github.com/ghodss/yaml",

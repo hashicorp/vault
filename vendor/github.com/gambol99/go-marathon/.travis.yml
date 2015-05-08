@@ -1,0 +1,13 @@
+#
+#   Author: Rohith (gambol99@gmail.com)
+#   Date: 2015-02-17 17:11:18 +0000 (Tue, 17 Feb 2015)
+#
+#  vim:ts=2:sw=2:et
+#
+language: go
+go:
+  - 1.5
+  - 1.6
+  - 1.7
+install:
+  - make test examples
