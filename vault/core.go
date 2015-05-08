@@ -619,12 +619,6 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		return nil, fmt.Errorf("master key generation failed: %v", err)
 	}
 
-	// Initialize the barrier
-	if err := c.barrier.Initialize(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: failed to initialize barrier: %v", err)
-		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
-	}
-
 	// Return the master key if only a single key part is used
 	results := new(InitResult)
 	if config.SecretShares == 1 {
@@ -638,6 +632,12 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
+	}
+
+	// Initialize the barrier
+	if err := c.barrier.Initialize(masterKey); err != nil {
+		c.logger.Printf("[ERR] core: failed to initialize barrier: %v", err)
+		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
 	}
 	c.logger.Printf("[INFO] core: security barrier initialized")
 
