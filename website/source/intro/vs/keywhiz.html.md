@@ -38,6 +38,6 @@ is a first class concern for Vault, so that no external system needs to be used.
 Lastly Vault forces a mandatory lease contract with clients. All secrets read
 from Vault have an associated lease which enables operators to audit key usage,
 perform key rolling, and ensure automatic revocation. Vault provides multiple
-revocation mechansims to give operators a clear "break glass" procedure after
+revocation mechanisms to give operators a clear "break glass" procedure after
 a potential compromise.
 
