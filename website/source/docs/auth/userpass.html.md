@@ -30,7 +30,20 @@ $ vault auth -method=userpass \
 
 #### Via the API
 
-The endpoint for the login is `/login/USERNAME`.
+The endpoint for the login is `auth/userpass/login/USERNAME`.
+
+The password should be sent, in the POST body encoded as JSON.
+
+cURL example:
+```
+$ curl https://192.168.1.100:8200/v1/auth/userpass/login/USERNAME -XPOST
+-d'{"password":"very_secure_password"}'
+```
+
+Response:
+```
+"lease_id":"","renewable":false,"lease_duration":0,"data":null,"auth":{"client_token":"really_long_token","policies":["root"],"metadata":{"username":"man"},"lease_duration":2592000,"renewable":false}}
+```
 
 ## Configuration
 
