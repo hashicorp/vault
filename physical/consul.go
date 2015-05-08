@@ -116,7 +116,7 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	// Create the lock
 	opts := &api.LockOptions{
-		Key:         key,
+		Key:         c.path + key,
 		Value:       []byte(value),
 		SessionName: "Vault Lock",
 	}
