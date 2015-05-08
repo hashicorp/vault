@@ -85,6 +85,9 @@ func (s *SealConfig) Validate() error {
 	if s.SecretThreshold < 1 {
 		return fmt.Errorf("secret threshold must be at least one")
 	}
+	if s.SecretShares > 1 && s.SecretThreshold == 1 {
+		return fmt.Errorf("secret threshold must be greater than one for multiple shares")
+	}
 	if s.SecretShares > 255 {
 		return fmt.Errorf("secret shares must be less than 256")
 	}

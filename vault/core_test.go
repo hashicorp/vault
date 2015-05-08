@@ -27,6 +27,17 @@ func TestNewCore_badAdvertiseAddr(t *testing.T) {
 	}
 }
 
+func TestSealConfig_Invalid(t *testing.T) {
+	s := &SealConfig{
+		SecretShares:    2,
+		SecretThreshold: 1,
+	}
+	err := s.Validate()
+	if err == nil {
+		t.Fatalf("expected err")
+	}
+}
+
 func TestCore_Init(t *testing.T) {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{
