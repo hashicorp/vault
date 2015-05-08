@@ -25,24 +25,39 @@ passwords from an external source.
 $ vault auth -method=userpass \
   username=foo \
   password=bar
-...
 ```
 
 #### Via the API
 
-The endpoint for the login is `auth/userpass/login/USERNAME`.
+The endpoint for the login is `auth/userpass/login/<username>`.
 
-The password should be sent, in the POST body encoded as JSON.
+The password should be sent in the POST body encoded as JSON.
 
-cURL example:
-```
-$ curl https://192.168.1.100:8200/v1/auth/userpass/login/USERNAME -XPOST
--d'{"password":"very_secure_password"}'
+```shell
+$ curl $VAULT_ADDR/v1/auth/userpass/login/mitchellh \
+    -d "password=foo"
 ```
 
-Response:
-```
-"lease_id":"","renewable":false,"lease_duration":0,"data":null,"auth":{"client_token":"really_long_token","policies":["root"],"metadata":{"username":"USERNAME"},"lease_duration":2592000,"renewable":false}}
+The response will be in JSON. For example:
+
+```javascript
+{
+  "lease_id":"",
+  "renewable":false,
+  "lease_duration":0,
+  "data":null,
+  "auth":{
+    "client_token":"c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
+    "policies":[
+      "root"
+    ],
+    "metadata":{
+      "username":"mitchellh"
+    },
+    "lease_duration":0,
+    "renewable":false
+  }
+}
 ```
 
 ## Configuration
