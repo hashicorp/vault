@@ -50,8 +50,10 @@ func (b *backend) pathLogin(
 			Policies: policies,
 			Metadata: map[string]string{
 				"username": username,
-				"password": password,
 				"policies": strings.Join(policies, ","),
+			},
+			InternalData: map[string]interface{}{
+				"password": password,
 			},
 			DisplayName: username,
 		},
@@ -62,7 +64,7 @@ func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	username := req.Auth.Metadata["username"]
-	password := req.Auth.Metadata["password"]
+	password := req.Auth.InternalData["password"].(string)
 	prevpolicies := req.Auth.Metadata["policies"]
 
 	policies, resp, err := b.Login(req, username, password)
