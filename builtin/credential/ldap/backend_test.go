@@ -99,9 +99,8 @@ func testAccStepDeleteGroup(t *testing.T, group string) logicaltest.TestStep {
 func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "login",
+		Path:      "login/" + user,
 		Data: map[string]interface{}{
-			"username": user,
 			"password": pass,
 		},
 		Unauthenticated: true,

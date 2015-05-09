@@ -25,7 +25,7 @@ func Backend() *framework.Backend {
 			},
 
 			Unauthenticated: []string{
-				"login",
+				"login/*",
 			},
 		},
 
