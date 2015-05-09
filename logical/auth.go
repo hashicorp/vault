@@ -7,6 +7,11 @@ import "fmt"
 type Auth struct {
 	LeaseOptions
 
+	// InternalData is JSON-encodable data that is stored with the auth struct.
+	// This will be sent back during a Renew/Revoke for storing internal data
+	// used for those operations.
+	InternalData map[string]interface{}
+
 	// DisplayName is a non-security sensitive identifier that is
 	// applicable to this Auth. It is used for logging and prefixing
 	// of dynamic secrets. For example, DisplayName may be "armon" for

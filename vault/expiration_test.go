@@ -773,6 +773,9 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 				Renewable: true,
 				Lease:     time.Minute,
 			},
+			InternalData: map[string]interface{}{
+				"MySecret": "secret",
+			},
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now().Add(time.Minute),
@@ -801,6 +804,9 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		t.Fatalf("Bad: %v", req)
 	}
 	if req.Auth.LeaseIssue.IsZero() {
+		t.Fatalf("Bad: %v", req)
+	}
+	if req.Auth.InternalData["MySecret"] != "secret" {
 		t.Fatalf("Bad: %v", req)
 	}
 }
