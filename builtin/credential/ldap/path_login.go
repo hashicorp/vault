@@ -63,7 +63,7 @@ func (b *backend) pathLoginRenew(
 
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.Metadata["password"]
-	prevpolicies := req.Auth.Metadata["password"]
+	prevpolicies := req.Auth.Metadata["policies"]
 
 	policies, resp, err := b.Login(req, username, password)
 	if len(policies) == 0 {
