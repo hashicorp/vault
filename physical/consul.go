@@ -99,7 +99,7 @@ func (c *ConsulBackend) Delete(key string) error {
 	return err
 }
 
-// List is used ot list all the keys under a given
+// List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (c *ConsulBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"consul", "list"}, time.Now())
