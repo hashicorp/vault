@@ -309,7 +309,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 }
 
 // HandleRequest is used to handle a new incoming request
-func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -320,10 +320,21 @@ func (c *Core) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	}
 
 	if c.router.LoginPath(req.Path) {
-		return c.handleLoginRequest(req)
+		resp, err = c.handleLoginRequest(req)
 	} else {
-		return c.handleRequest(req)
+		resp, err = c.handleRequest(req)
 	}
+
+	// Ensure we don't leak internal data
+	if resp != nil {
+		if resp.Secret != nil {
+			resp.Secret.InternalData = nil
+		}
+		if resp.Auth != nil {
+			resp.Auth.InternalData = nil
+		}
+	}
+	return
 }
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {

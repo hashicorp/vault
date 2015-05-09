@@ -1222,3 +1222,92 @@ func TestCore_Standby(t *testing.T) {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 }
+
+// Ensure that InternalData is never returned
+func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
+	noop := &NoopBackend{
+		Login: []string{"login"},
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				Policies: []string{"foo", "bar"},
+				InternalData: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+		},
+	}
+
+	c, _, root := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to login
+	lreq := &logical.Request{
+		Path: "auth/foo/login",
+	}
+	lresp, err := c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure we do not get the internal data
+	if lresp.Auth.InternalData != nil {
+		t.Fatalf("bad: %#v", lresp)
+	}
+}
+
+// Ensure that InternalData is never returned
+func TestCore_HandleRequest_InternalData(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Secret: &logical.Secret{
+				InternalData: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		},
+	}
+
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to read
+	lreq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "foo/test",
+		ClientToken: root,
+	}
+	lresp, err := c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure we do not get the internal data
+	if lresp.Secret.InternalData != nil {
+		t.Fatalf("bad: %#v", lresp)
+	}
+}
