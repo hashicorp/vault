@@ -445,6 +445,13 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 	// Route the request
 	resp, err := c.router.Route(req)
 
+	// A login request should never return a secret!
+	if resp != nil && resp.Secret != nil {
+		c.logger.Printf("[ERR] core: unexpected Secret response for login path"+
+			"(request: %#v, response: %#v)", req, resp)
+		return nil, ErrInternalError
+	}
+
 	// If the response generated an authentication, then generate the token
 	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {

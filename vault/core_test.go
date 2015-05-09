@@ -891,13 +891,10 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
-			Secret: &logical.Secret{
+			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					Lease: time.Hour,
 				},
-			},
-
-			Auth: &logical.Auth{
 				Policies: []string{"foo", "bar"},
 				Metadata: map[string]string{
 					"user": "armon",
