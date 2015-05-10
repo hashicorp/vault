@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -22,6 +23,9 @@ import (
 
 // EnvVaultAddress can be used to set the address of Vault
 const EnvVaultAddress = "VAULT_ADDR"
+const EnvVaultCACert = "VAULT_CACERT"
+const EnvVaultCAPath = "VAULT_CAPATH"
+const EnvVaultInsecure = "VAULT_INSECURE"
 
 // FlagSetFlags is an enum to define what flags are present in the
 // default FlagSet returned by Meta.FlagSet.
@@ -67,7 +71,19 @@ func (m *Meta) Client() (*api.Client, error) {
 	if m.ForceAddress != "" {
 		config.Address = m.ForceAddress
 	}
-
+	if v := os.Getenv(EnvVaultCACert); v != "" {
+		m.flagCACert = v
+	}
+	if v := os.Getenv(EnvVaultCAPath); v != "" {
+		m.flagCAPath = v
+	}
+	if v := os.Getenv(EnvVaultInsecure); v != "" {
+		var err error
+		m.flagInsecure, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid value passed in for -insecure flag: %s", err)
+		}
+	}
 	// If we need custom TLS configuration, then set it
 	if m.flagCACert != "" || m.flagCAPath != "" || m.flagInsecure {
 		var certPool *x509.CertPool
@@ -217,6 +233,10 @@ func (m *Meta) loadCAPath(path string) (*x509.CertPool, error) {
 	fn := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+
+		if info.IsDir() {
+			return nil
 		}
 
 		certs, err := m.loadCertFromPEM(path)

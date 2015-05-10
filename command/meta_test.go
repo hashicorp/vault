@@ -2,6 +2,7 @@ package command
 
 import (
 	"flag"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
@@ -37,5 +38,29 @@ func TestFlagSet(t *testing.T) {
 			t.Fatalf("%d: flags: %#v\n\nExpected: %#v\nGot: %#v",
 				i, tc.Flags, tc.Expected, actual)
 		}
+	}
+}
+
+func TestEnvSettings(t *testing.T) {
+	os.Setenv("VAULT_CACERT", "/path/to/fake/cert.crt")
+	os.Setenv("VAULT_CAPATH", "/path/to/fake/certs")
+	os.Setenv("VAULT_INSECURE", "true")
+	defer os.Setenv("VAULT_CACERT", "")
+	defer os.Setenv("VAULT_CAPATH", "")
+	defer os.Setenv("VAULT_INSECURE", "")
+	var m Meta
+
+	// Err is ignored as it is expected that the test settings
+	// will cause errors; just check the flag settings
+	m.Client()
+
+	if m.flagCACert != "/path/to/fake/cert.crt" {
+		t.Fatalf("bad: %s", m.flagAddress)
+	}
+	if m.flagCAPath != "/path/to/fake/certs" {
+		t.Fatalf("bad: %s", m.flagAddress)
+	}
+	if m.flagInsecure != true {
+		t.Fatalf("bad: %s", m.flagAddress)
 	}
 }
