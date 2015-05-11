@@ -51,6 +51,9 @@ variable "nodes" {
 }
 
 variable "subnets" {
-    default = ""
     description = "list of subnets to launch Vault within"
+}
+
+variable "vpc-id" {
+    description = "VPC ID"
 }

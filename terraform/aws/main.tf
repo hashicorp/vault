@@ -41,6 +41,7 @@ resource "aws_launch_configuration" "vault" {
 resource "aws_security_group" "vault" {
     name = "vault"
     description = "Vault servers"
+    vpc_id = "${var.vpc-id}"
 
     ingress {
         from_port = 22
@@ -68,7 +69,6 @@ resource "aws_security_group" "vault" {
 // to only serve healthy, unsealed Vaults.
 resource "aws_elb" "vault" {
     name = "vault"
-    availability_zones = ["${split(",", var.availability-zones)}"]
     connection_draining = true
     connection_draining_timeout = 400
     internal = true
@@ -101,6 +101,7 @@ resource "aws_elb" "vault" {
 resource "aws_security_group" "elb" {
     name = "vault-elb"
     description = "Vault ELB"
+    vpc_id = "${var.vpc-id}"
 
     ingress {
         from_port = 80
