@@ -4,6 +4,7 @@ FEATURES:
 
   * **New physical backend: `zookeeper`**: store physical data in Zookeeper.
       HA not supported yet.
+  * ** New credential backend: `ldap`**: authenticate using LDAP credentials.
 
 IMPROVEMENTS:
 
