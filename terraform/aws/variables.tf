@@ -21,13 +21,18 @@ variable "extra-install" {
 //-------------------------------------------------------------------
 
 variable "ami" {
-    default = "ami-d0c807d0"
+    default = "ami-7eb2a716"
     description = "AMI for Vault instances"
 }
 
 variable "availability-zones" {
     default = "us-east-1a,us-east-1b"
     description = "Availabilizy zones for launcing the Vault instances"
+}
+
+variable "elb-health-check" {
+    default = "HTTP:8200/v1/sys/health"
+    description = "Health check for Vault servers"
 }
 
 variable "instance_type" {

@@ -19,6 +19,7 @@ resource "aws_autoscaling_group" "vault" {
     health_check_grace_period = 15
     health_check_type = "EC2"
     vpc_zone_identifier = ["${split(",", var.subnets)}"]
+    load_balancers = ["${aws_elb.vault.id}"]
 
     tag {
         key = "Name"
@@ -51,6 +52,66 @@ resource "aws_security_group" "vault" {
     ingress {
         from_port = 8200
         to_port = 8200
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+// Launch the ELB that is serving Vault. This has proper health checks
+// to only serve healthy, unsealed Vaults.
+resource "aws_elb" "vault" {
+    name = "vault"
+    availability_zones = ["${split(",", var.availability-zones)}"]
+    connection_draining = true
+    connection_draining_timeout = 400
+    internal = true
+    subnets = ["${split(",", var.subnets)}"]
+    security_groups = ["${aws_security_group.elb.id}"]
+
+    listener {
+        instance_port = 8200
+        instance_protocol = "tcp"
+        lb_port = 80
+        lb_protocol = "tcp"
+    }
+
+    listener {
+        instance_port = 8200
+        instance_protocol = "tcp"
+        lb_port = 443
+        lb_protocol = "tcp"
+    }
+
+    health_check {
+        healthy_threshold = 2
+        unhealthy_threshold = 3
+        timeout = 5
+        target = "${var.elb-health-check}"
+        interval = 15
+    }
+}
+
+resource "aws_security_group" "elb" {
+    name = "vault-elb"
+    description = "Vault ELB"
+
+    ingress {
+        from_port = 80
+        to_port = 80
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        from_port = 443
+        to_port = 443
         protocol = "tcp"
         cidr_blocks = ["0.0.0.0/0"]
     }
