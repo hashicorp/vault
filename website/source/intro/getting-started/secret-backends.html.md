@@ -17,7 +17,7 @@ the backend storage.
 Vault supports other backends in addition to "generic", and this feature
 in particular is what makes Vault unique. For example, the "aws" backend
 generates AWS access keys dynamically, on demand. Another example --
-this time of a backend that doesn't yet exist -- is a backend that
+this type of backend does not yet exist -- is a backend that
 reads and writes data directly to an
 [HSM](http://en.wikipedia.org/wiki/Hardware_security_module).
 As Vault matures, more and more backends will be added.
