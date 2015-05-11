@@ -169,6 +169,7 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 		f.StringVar(&m.flagCACert, "ca-cert", "", "")
 		f.StringVar(&m.flagCAPath, "ca-path", "", "")
 		f.BoolVar(&m.flagInsecure, "insecure", false, "")
+		f.BoolVar(&m.flagInsecure, "tls-skip-verify", false, "")
 	}
 
 	// Create an io.Writer that writes to our Ui properly for errors.
