@@ -19,6 +19,7 @@ BUG FIXES:
       error cases during init that corrupt data (no data loss)
   * core: guard against invalid init config earlier
   * audit/file: create file if it doesn't exist [GH-148]
+  * credential/*: all policy mapping keys are case insensitive [GH-163]
   * physical/consul: Fixing path for locking so HA works in every case
 
 ## 0.1.1 (May 2, 2015)
