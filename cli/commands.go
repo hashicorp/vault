@@ -232,7 +232,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			if GitDescribe != "" {
 				ver = GitDescribe
 			}
-			if GitDescribe == "" && rel == "" && VesrionPrerelease == "" {
+			if GitDescribe == "" && rel == "" && VersionPrerelease == "" {
 				rel = "dev"
 			}
 
