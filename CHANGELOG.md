@@ -1,6 +1,13 @@
 ## 0.1.2 (unreleased)
 
+IMPROVEMENTS:
 
+  * core: Auth backends can store internal data about auth creds
+
+BUG FIXES:
+
+  * core: login endpoints should never return secrets
+  * core: Internal data should never be returned from core endpoints
 
 ## 0.1.1 (May 2, 2015)
 
