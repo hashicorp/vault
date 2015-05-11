@@ -9,6 +9,7 @@ import (
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
+	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
@@ -58,6 +59,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"app-id":   credAppId.Factory,
 					"github":   credGitHub.Factory,
 					"userpass": credUserpass.Factory,
+					"ldap":     credLdap.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,
@@ -81,6 +83,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 				Handlers: map[string]command.AuthHandler{
 					"github":   &credGitHub.CLIHandler{},
 					"userpass": &credUserpass.CLIHandler{},
+					"ldap":     &credLdap.CLIHandler{},
 				},
 			}, nil
 		},

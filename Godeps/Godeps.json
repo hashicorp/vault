@@ -110,6 +110,14 @@
 			"Rev": "44cb4788b2ec3c3d158dd3d1b50aba7d66f4b59a"
 		},
 		{
+			"ImportPath": "github.com/vanackere/asn1-ber",
+			"Rev": "295c7b21db5d9525ad959e3382610f3aff029663"
+		},
+		{
+			"ImportPath": "github.com/vanackere/ldap",
+			"Rev": "e29b797d1abde6567ccb4ab56236e033cabf845a"
+		},
+		{
 			"ImportPath": "github.com/vaughan0/go-ini",
 			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
 		},
