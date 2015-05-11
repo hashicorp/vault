@@ -12,7 +12,8 @@ Installing Vault is simple. There are two approaches to installing Vault:
 downloading a precompiled binary for your system, or installing from source.
 
 Downloading a precompiled binary is easiest, and we provide downloads over
-TLS along with SHA256 sums to verify the binary is what we say it is.
+TLS along with SHA256 sums to verify the binary is what we say it is. We
+also distribute a PGP signature with the SHA256 sums that can be verified.
 However, we use a 3rd party storage host, and some people feel that
 due to the importance of security with Vault, they'd rather compile it
 from source.
