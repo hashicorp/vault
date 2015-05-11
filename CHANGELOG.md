@@ -4,7 +4,7 @@ FEATURES:
 
   * **New physical backend: `zookeeper`**: store physical data in Zookeeper.
       HA not supported yet.
-  * ** New credential backend: `ldap`**: authenticate using LDAP credentials.
+  * **New credential backend: `ldap`**: authenticate using LDAP credentials.
 
 IMPROVEMENTS:
 
@@ -13,6 +13,7 @@ IMPROVEMENTS:
   * command/*: `VAULT_TOKEN` overrides local stored auth [GH-162]
   * command/server: environment variables are copy-pastable
   * credential/app-id: hash of app and user ID are in metadata [GH-176]
+  * http: HTTP API accepts `X-Vault-Token` as auth header [GH-124]
   * logical/*: Generate help output even if no synopsis specified
 
 BUG FIXES:

@@ -14,6 +14,9 @@ import (
 // AuthCookieName is the name of the cookie containing the token.
 const AuthCookieName = "token"
 
+// AuthHeaderName is the name of the header containing the token.
+const AuthHeaderName = "X-Vault-Token"
+
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func Handler(core *vault.Core) http.Handler {
@@ -133,6 +136,11 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	cookie, err := r.Cookie(AuthCookieName)
 	if err == nil {
 		req.ClientToken = cookie.Value
+	}
+
+	// Attach the header value if we have it
+	if v := r.Header.Get(AuthHeaderName); v != "" {
+		req.ClientToken = v
 	}
 
 	return req

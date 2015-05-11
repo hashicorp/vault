@@ -35,7 +35,8 @@ depending on user settings.
 
 Once the Vault is unsealed, every other operation requires
 a _client token_. A user may have a client token explicitly.
-The client token must be sent as the `token` cookie.
+The client token must be sent as the `token` cookie or the
+`X-Vault-Token` HTTP header.
 
 Otherwise, a client token can be retrieved via
 [authentication backends](#).
@@ -46,7 +47,7 @@ and are used for authentication itself. These endpoints are specific
 to each authentication backend.
 
 Login endpoints for authentication backends that generate an identity
-will be sent down with a `Set-Cookie` header. If you are using a
+will be sent down with a `Set-Cookie` header as well as via JSON. If you have a
 well-behaved HTTP client, then authentication information will
 automatically be saved and sent to the Vault API.
 
