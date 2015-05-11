@@ -110,6 +110,11 @@ func (m *Meta) Client() (*api.Client, error) {
 	// If we have a token directly, then set that
 	token := m.ClientToken
 
+	// Try to set the token to what is already stored
+	if token == "" {
+		token = client.Token()
+	}
+
 	// If we don't have a token, check the token helper
 	if token == "" {
 		// If we have a token, then set that
