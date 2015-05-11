@@ -32,7 +32,7 @@ done
 
 # Make the checksums
 pushd ./pkg/dist
-rm ./vault_${VERSION}_SHA256SUMS*
+rm -f ./vault_${VERSION}_SHA256SUMS*
 shasum -a256 * > ./vault_${VERSION}_SHA256SUMS
 gpg --default-key 348FFC4C --detach-sig ./vault_${VERSION}_SHA256SUMS
 popd
