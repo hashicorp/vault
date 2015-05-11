@@ -15,10 +15,10 @@ import (
 // The primary use case for this is for credential providers to do their
 // mapping to policies.
 type PathMap struct {
-	Prefix          string
-	Name            string
-	Schema          map[string]*FieldSchema
-	CaseInsensitive bool
+	Prefix        string
+	Name          string
+	Schema        map[string]*FieldSchema
+	CaseSensitive bool
 
 	once sync.Once
 }
@@ -43,7 +43,7 @@ func (p *PathMap) pathStruct(k string) *PathStruct {
 	p.once.Do(p.init)
 
 	// If we don't care about casing, store everything lowercase
-	if p.CaseInsensitive {
+	if !p.CaseSensitive {
 		k = strings.ToLower(k)
 	}
 

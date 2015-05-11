@@ -46,6 +46,15 @@ func TestPathMap(t *testing.T) {
 		t.Fatalf("bad: %#v", v)
 	}
 
+	// Read via API with other casing
+	v, err = p.Get(storage, "A")
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if v["value"] != "bar" {
+		t.Fatalf("bad: %#v", v)
+	}
+
 	// Verify List
 	keys, err := p.List(storage, "")
 	if err != nil {

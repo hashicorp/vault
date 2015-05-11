@@ -17,8 +17,7 @@ func Backend() *framework.Backend {
 	var b backend
 	b.Map = &framework.PolicyMap{
 		PathMap: framework.PathMap{
-			Name:            "teams",
-			CaseInsensitive: true,
+			Name: "teams",
 		},
 		DefaultKey: "default",
 	}
