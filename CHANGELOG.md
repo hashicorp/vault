@@ -8,6 +8,7 @@ FEATURES:
 IMPROVEMENTS:
 
   * core: Auth backends can store internal data about auth creds
+  * command/*: `VAULT_TOKEN` overrides local stored auth [GH-162]
   * command/server: environment variables are copy-pastable
   * logical/*: Generate help output even if no synopsis specified
 
