@@ -14,8 +14,9 @@ func TestBackend_basic(t *testing.T) {
 		Backend:  Backend(),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccMap(t),
-			testAccLogin(t),
+			testAccMap(t, "default", "foo"),
+			testAccMap(t, "oWnErs", "bar"),
+			testAccLogin(t, []string{"bar", "foo"}),
 		},
 	})
 }
@@ -40,17 +41,17 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testAccMap(t *testing.T) logicaltest.TestStep {
+func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "map/teams/default",
+		Path:      "map/teams/" + k,
 		Data: map[string]interface{}{
-			"value": "foo",
+			"value": v,
 		},
 	}
 }
 
-func testAccLogin(t *testing.T) logicaltest.TestStep {
+func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "login",
@@ -59,6 +60,6 @@ func testAccLogin(t *testing.T) logicaltest.TestStep {
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"foo"}),
+		Check: logicaltest.TestCheckAuth(keys),
 	}
 }
