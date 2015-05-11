@@ -126,7 +126,7 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	}
 	cl := &ConsulLock{
 		client: c.client,
-		key:    key,
+		key:    c.path + key,
 		lock:   lock,
 	}
 	return cl, nil
