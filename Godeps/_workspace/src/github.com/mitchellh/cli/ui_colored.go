@@ -35,6 +35,10 @@ func (u *ColoredUi) Ask(query string) (string, error) {
 	return u.Ui.Ask(u.colorize(query, u.OutputColor))
 }
 
+func (u *ColoredUi) AskSecret(query string) (string, error) {
+	return u.Ui.AskSecret(u.colorize(query, u.OutputColor))
+}
+
 func (u *ColoredUi) Output(message string) {
 	u.Ui.Output(u.colorize(message, u.OutputColor))
 }

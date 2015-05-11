@@ -48,8 +48,8 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/consul/api",
-			"Comment": "v0.5.0-199-g205af6b",
-			"Rev": "205af6ba750b88863e6ee50c7c3d19edc180a6f6"
+			"Comment": "v0.5.0-253-g7062ecc",
+			"Rev": "7062ecc50fef9307e532c4a188da7ce1dd759dde"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/errwrap",
@@ -86,7 +86,7 @@
 		},
 		{
 			"ImportPath": "github.com/mitchellh/cli",
-			"Rev": "afc399c273e70173826fb6f518a48edff23fe897"
+			"Rev": "6cc8bc522243675a2882b81662b0b0d2e04b99c9"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/copystructure",
@@ -110,6 +110,10 @@
 			"Rev": "44cb4788b2ec3c3d158dd3d1b50aba7d66f4b59a"
 		},
 		{
+			"ImportPath": "github.com/samuel/go-zookeeper/zk",
+			"Rev": "d0e0d8e11f318e000a8cc434616d69e329edc374"
+		},
+		{
 			"ImportPath": "github.com/vanackere/asn1-ber",
 			"Rev": "295c7b21db5d9525ad959e3382610f3aff029663"
 		},
@@ -123,19 +127,15 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "c84e1f8e3a7e322d497cd16c0e8a13c7e127baf3"
+			"Rev": "59435533c88bd0b1254c738244da1fe96b59d05d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "ff8eb9a34a5cbb9941ffc6f84a19a8014c2646ad"
+			"Rev": "a8c61998a557a37435f719980da368469c10bfed"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
 			"Rev": "ec6d5d770f531108a6464462b2201b74fcd09314"
-		},
-		{
-			"ImportPath": "github.com/samuel/go-zookeeper/zk",
-			"Rev": "d0e0d8e11f318e000a8cc434616d69e329edc374"
 		}
 	]
 }

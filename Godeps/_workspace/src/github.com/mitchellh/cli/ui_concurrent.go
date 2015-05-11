@@ -18,6 +18,13 @@ func (u *ConcurrentUi) Ask(query string) (string, error) {
 	return u.Ui.Ask(query)
 }
 
+func (u *ConcurrentUi) AskSecret(query string) (string, error) {
+	u.l.Lock()
+	defer u.l.Unlock()
+
+	return u.Ui.AskSecret(query)
+}
+
 func (u *ConcurrentUi) Error(message string) {
 	u.l.Lock()
 	defer u.l.Unlock()

@@ -29,6 +29,10 @@ func (u *MockUi) Ask(query string) (string, error) {
 	return result, nil
 }
 
+func (u *MockUi) AskSecret(query string) (string, error) {
+	return u.Ask(query)
+}
+
 func (u *MockUi) Error(message string) {
 	u.once.Do(u.init)
 
