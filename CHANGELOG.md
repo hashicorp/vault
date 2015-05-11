@@ -1,4 +1,4 @@
-## 0.1.2 (unreleased)
+## 0.1.2 (May 11, 2015)
 
 FEATURES:
 
