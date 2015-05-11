@@ -25,7 +25,7 @@ import (
 const EnvVaultAddress = "VAULT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
-const EnvVaultInsecure = "VAULT_INSECURE"
+const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 
 // FlagSetFlags is an enum to define what flags are present in the
 // default FlagSet returned by Meta.FlagSet.

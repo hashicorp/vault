@@ -44,10 +44,10 @@ func TestFlagSet(t *testing.T) {
 func TestEnvSettings(t *testing.T) {
 	os.Setenv("VAULT_CACERT", "/path/to/fake/cert.crt")
 	os.Setenv("VAULT_CAPATH", "/path/to/fake/certs")
-	os.Setenv("VAULT_INSECURE", "true")
+	os.Setenv("VAULT_SKIP_VERIFY", "true")
 	defer os.Setenv("VAULT_CACERT", "")
 	defer os.Setenv("VAULT_CAPATH", "")
-	defer os.Setenv("VAULT_INSECURE", "")
+	defer os.Setenv("VAULT_SKIP_VERIFY", "")
 	var m Meta
 
 	// Err is ignored as it is expected that the test settings
