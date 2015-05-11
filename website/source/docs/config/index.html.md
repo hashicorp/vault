@@ -73,8 +73,8 @@ All backends support the following options:
 
   * `advertise_addr` (optional) - For backends that support HA, this
       is the address to advertise to other Vault servers in the cluster
-      for request forwarding. If this isn't specified, it'll default to
-      the first private address on the machine running Vault.
+      for request forwarding. Most HA backends will attempt to determine
+      the advertise address if not provided.
 
 #### Backend Reference: Consul
 
