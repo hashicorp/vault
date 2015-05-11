@@ -3,11 +3,17 @@
 IMPROVEMENTS:
 
   * core: Auth backends can store internal data about auth creds
+  * command/server: environment variables are copy-pastable
+  * logical/*: Generate help output even if no synopsis specified
 
 BUG FIXES:
 
   * core: login endpoints should never return secrets
   * core: Internal data should never be returned from core endpoints
+  * core: defer barrier initialization to as late as possible to avoid
+      error cases during init that corrupt data (no data loss)
+  * core: guard against invalid init config earlier
+  * physical/consul: Fixing path for locking so HA works in every case
 
 ## 0.1.1 (May 2, 2015)
 
