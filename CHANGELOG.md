@@ -9,8 +9,10 @@ FEATURES:
 IMPROVEMENTS:
 
   * core: Auth backends can store internal data about auth creds
+  * audit: display name for auth is shown in logs [GH-176]
   * command/*: `VAULT_TOKEN` overrides local stored auth [GH-162]
   * command/server: environment variables are copy-pastable
+  * credential/app-id: hash of app and user ID are in metadata [GH-176]
   * logical/*: Generate help output even if no synopsis specified
 
 BUG FIXES:
