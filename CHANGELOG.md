@@ -1,5 +1,10 @@
 ## 0.1.2 (unreleased)
 
+FEATURES:
+
+  * **New physical backend: `zookeeper`**: store physical data in Zookeeper.
+      HA not supported yet.
+
 IMPROVEMENTS:
 
   * core: Auth backends can store internal data about auth creds
