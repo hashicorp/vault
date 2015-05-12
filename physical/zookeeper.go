@@ -88,6 +88,26 @@ func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 	return nil
 }
 
+// deletePath is a helper that will recursively delete
+// a given path
+func (c *ZookeeperBackend) deletePath(path string) error {
+	children, _, _ := c.client.Children(path)
+
+	for _, childPath := range children {
+		err := c.deletePath(path + "/" + childPath)
+
+		if err != nil {
+			return err
+		}
+	}
+	err := c.client.Delete(path, -1)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Put is used to insert or update an entry
 func (c *ZookeeperBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "put"}, time.Now())
@@ -136,7 +156,7 @@ func (c *ZookeeperBackend) Delete(key string) error {
 
 	// Delete the full path
 	fullPath := c.path + key
-	err := c.client.Delete(fullPath, -1)
+	err := c.deletePath(fullPath)
 
 	// Mask if the node does not exist
 	if err == zk.ErrNoNode {
