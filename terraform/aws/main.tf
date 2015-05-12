@@ -10,7 +10,7 @@ resource "template_file" "install" {
 
 // We launch Vault into an ASG so that it can properly bring them up for us.
 resource "aws_autoscaling_group" "vault" {
-    name = "vault"
+    name = "vault - ${aws_launch_configuration.vault.name}"
     launch_configuration = "${aws_launch_configuration.vault.name}"
     availability_zones = ["${split(",", var.availability-zones)}"]
     min_size = "${var.nodes}"
@@ -34,10 +34,6 @@ resource "aws_launch_configuration" "vault" {
     key_name = "${var.key-name}"
     security_groups = ["${aws_security_group.vault.id}"]
     user_data = "${template_file.install.rendered}"
-
-    lifecycle {
-        create_before_destroy = true
-    }
 }
 
 // Security group for Vault allows SSH and HTTP access (via "tcp" in
