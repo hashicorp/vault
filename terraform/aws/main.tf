@@ -34,6 +34,10 @@ resource "aws_launch_configuration" "vault" {
     key_name = "${var.key-name}"
     security_groups = ["${aws_security_group.vault.id}"]
     user_data = "${template_file.install.rendered}"
+
+    lifecycle {
+        create_before_destroy = true
+    }
 }
 
 // Security group for Vault allows SSH and HTTP access (via "tcp" in
