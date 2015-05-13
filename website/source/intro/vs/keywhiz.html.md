@@ -18,10 +18,10 @@ serves secrets.
 Vault similarly is designed as a comprehensive secret management
 solution. The client interaction with Vault is much more flexible,
 both for authentication and usage of secrets. Vault supports [mTLS
-authentication](/docs/auth/cert.html) along with
-many [other mechanisms](/docs/auth/index.html).
-The goal being to make it easy to authenticate as a machine for programtic
-access and as a human for operator usage.
+authentication](/docs/auth/cert.html) along with many [other
+mechanisms](/docs/auth/index.html). The goal being to make it easy to
+authenticate as a machine for programmatic access and as a human for
+operator usage.
 
 Vault exposes secrets via an API and not over a FUSE filesystem. The
 [ACL system](/docs/concepts/policies.html) is used
