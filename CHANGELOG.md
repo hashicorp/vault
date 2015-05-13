@@ -1,3 +1,9 @@
+## 0.1.3 (unreleased)
+
+IMPROVEMENTS:
+
+  * core: `/sys/auth` allows for PUT requests as well
+
 ## 0.1.2 (May 11, 2015)
 
 FEATURES:
