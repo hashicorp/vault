@@ -53,4 +53,40 @@ func TestPathStruct(t *testing.T) {
 	if v["value"] != "baz" {
 		t.Fatalf("bad: %#v", v)
 	}
+
+	// Delete via HTTP
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "bar",
+		Data:      nil,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Re-read via HTTP
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "bar",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if _, ok := resp.Data["value"]; ok {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Re-read via API
+	v, err = p.Get(storage)
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if v != nil {
+		t.Fatalf("bad: %#v", v)
+	}
 }
