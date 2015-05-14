@@ -11,8 +11,7 @@ import (
 
 // Test is a public function that can be used in other tests to
 // test that a helper is functioning properly.
-func Test(t *testing.T, path string) {
-	h := &Helper{Path: path}
+func Test(t *testing.T, h *Helper) {
 	if err := h.Store("foo"); err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -44,7 +43,8 @@ func Test(t *testing.T, path string) {
 // helper process. For this to work, the TestHelperProcess function must
 // exist.
 func TestProcess(t *testing.T, s ...string) {
-	Test(t, TestProcessPath(t, s...))
+	h := &Helper{Path: TestProcessPath(t, s...)}
+	Test(t, h)
 }
 
 // TestProcessPath returns the path to the test process.

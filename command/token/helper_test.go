@@ -5,14 +5,34 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestHelperPath(t *testing.T) {
 	cases := map[string]string{
+		"foo": exePath + " token-foo",
+	}
+
+	unixCases := map[string]string{
 		"/foo": "/foo",
-		"foo":  exePath + " token-foo",
+	}
+	windowsCases := map[string]string{
+		"/foo":             exePath + " token-/foo",
+		"C:/foo":           "C:/foo",
+		`C:\Program Files`: `C:\Program Files`,
+	}
+
+	var runtimeCases map[string]string
+	if runtime.GOOS == "windows" {
+		runtimeCases = windowsCases
+	} else {
+		runtimeCases = unixCases
+	}
+
+	for k, v := range runtimeCases {
+		cases[k] = v
 	}
 
 	for k, v := range cases {
@@ -26,28 +46,33 @@ func TestHelperPath(t *testing.T) {
 }
 
 func TestHelper(t *testing.T) {
-	h := testHelper(t)
-	Test(t, h.Path)
+	Test(t, testHelper(t))
 }
 
 func testHelper(t *testing.T) *Helper {
-	return &Helper{Path: helperPath("helper")}
+	return &Helper{Path: helperPath("helper"), Env: helperEnv()}
 }
 
 func helperPath(s ...string) string {
+	cs := []string{"-test.run=TestHelperProcess", "--"}
+	cs = append(cs, s...)
+	return fmt.Sprintf(
+		"%s %s",
+		os.Args[0],
+		strings.Join(cs, " "))
+}
+
+func helperEnv() []string {
+	var env []string
+
 	tf, err := ioutil.TempFile("", "vault")
 	if err != nil {
 		panic(err)
 	}
 	tf.Close()
 
-	cs := []string{"-test.run=TestHelperProcess", "--"}
-	cs = append(cs, s...)
-	return fmt.Sprintf(
-		"GO_HELPER_PATH=%s GO_WANT_HELPER_PROCESS=1 %s %s",
-		tf.Name(),
-		os.Args[0],
-		strings.Join(cs, " "))
+	env = append(env, "GO_HELPER_PATH="+tf.Name(), "GO_WANT_HELPER_PROCESS=1")
+	return env
 }
 
 // This is not a real test. This is just a helper process kicked off by tests.
