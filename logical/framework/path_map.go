@@ -120,7 +120,7 @@ func (p *PathMap) Paths() []*Path {
 				logical.DeleteOperation: p.pathSingleDelete,
 			},
 
-			HelpSynopsis: fmt.Sprintf("Read/write/Delete a single %s mapping", p.Name),
+			HelpSynopsis: fmt.Sprintf("Read/write/delete a single %s mapping", p.Name),
 		},
 	}
 }
