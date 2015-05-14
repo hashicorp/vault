@@ -79,12 +79,32 @@ func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 					return err
 				}
 			} else if isLastNode && exists {
-				if _, err := c.client.Set(fullPath, value, int32(0)); err != nil {
+				if _, err := c.client.Set(fullPath, value, int32(-1)); err != nil {
 					return err
 				}
 			}
 		}
 	}
+	return nil
+}
+
+// deletePath is a helper that will recursively delete
+// a given path
+func (c *ZookeeperBackend) deletePath(path string) error {
+	children, _, _ := c.client.Children(path)
+
+	for _, childPath := range children {
+		err := c.deletePath(path + "/" + childPath)
+
+		if err != nil {
+			return err
+		}
+	}
+	err := c.client.Delete(path, -1)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -94,7 +114,7 @@ func (c *ZookeeperBackend) Put(entry *Entry) error {
 
 	// Attempt to set the full path
 	fullPath := c.path + entry.Key
-	_, err := c.client.Set(fullPath, entry.Value, 0)
+	_, err := c.client.Set(fullPath, entry.Value, -1)
 
 	// If we get ErrNoNode, we need to construct the path hierarchy
 	if err == zk.ErrNoNode {
@@ -136,7 +156,7 @@ func (c *ZookeeperBackend) Delete(key string) error {
 
 	// Delete the full path
 	fullPath := c.path + key
-	err := c.client.Delete(fullPath, -1)
+	err := c.deletePath(fullPath)
 
 	// Mask if the node does not exist
 	if err == zk.ErrNoNode {
