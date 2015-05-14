@@ -293,7 +293,7 @@ func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
 		}
 
 		// Check if TLS is disabled
-		if _, ok := list.Config["tls_disable"]; ok {
+		if val, ok := list.Config["tls_disable"]; ok && val == "1" {
 			scheme = "http"
 		}
 
