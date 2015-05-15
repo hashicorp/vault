@@ -63,6 +63,11 @@ func (p *PathMap) Put(s logical.Storage, k string, v map[string]interface{}) err
 	return p.pathStruct(k).Put(s, v)
 }
 
+// Delete removes a value from the mapping
+func (p *PathMap) Delete(s logical.Storage, k string) error {
+	return p.pathStruct(k).Delete(s)
+}
+
 // List reads the keys under a given path
 func (p *PathMap) List(s logical.Storage, prefix string) ([]string, error) {
 	stripPrefix := fmt.Sprintf("struct/map/%s/", p.Name)
@@ -110,11 +115,12 @@ func (p *PathMap) Paths() []*Path {
 			Fields: schema,
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.WriteOperation: p.pathSingleWrite,
-				logical.ReadOperation:  p.pathSingleRead,
+				logical.WriteOperation:  p.pathSingleWrite,
+				logical.ReadOperation:   p.pathSingleRead,
+				logical.DeleteOperation: p.pathSingleDelete,
 			},
 
-			HelpSynopsis: fmt.Sprintf("Read/write a single %s mapping", p.Name),
+			HelpSynopsis: fmt.Sprintf("Read/write/delete a single %s mapping", p.Name),
 		},
 	}
 }
@@ -144,5 +150,11 @@ func (p *PathMap) pathSingleRead(
 func (p *PathMap) pathSingleWrite(
 	req *logical.Request, d *FieldData) (*logical.Response, error) {
 	err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
+	return nil, err
+}
+
+func (p *PathMap) pathSingleDelete(
+	req *logical.Request, d *FieldData) (*logical.Response, error) {
+	err := p.Delete(req.Storage, d.Get("key").(string))
 	return nil, err
 }

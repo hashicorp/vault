@@ -63,6 +63,41 @@ func TestPathMap(t *testing.T) {
 	if len(keys) != 1 || keys[0] != "a" {
 		t.Fatalf("bad: %#v", keys)
 	}
+
+	// Delete via HTTP
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "map/foo/a",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Re-read via HTTP
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "map/foo/a",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if _, ok := resp.Data["value"]; ok {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Re-read via API
+	v, err = p.Get(storage, "a")
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if v != nil {
+		t.Fatalf("bad: %#v", v)
+	}
 }
 
 func TestPathMap_getInvalid(t *testing.T) {
