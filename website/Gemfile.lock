@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/hashicorp/middleman-hashicorp.git
-  revision: 5d1edbfa4ceec20b33b501f0162e2f881afadfa9
+  revision: 7796ba44d303ac8e1b566e855e2766e6d0f695fc
   specs:
     middleman-hashicorp (0.1.0)
       bootstrap-sass (~> 3.3)
@@ -71,7 +71,7 @@ GEM
     http_parser.rb (0.6.0)
     i18n (0.7.0)
     json (1.8.2)
-    kramdown (1.6.0)
+    kramdown (1.7.0)
     less (2.6.0)
       commonjs (~> 0.2.7)
     libv8 (3.16.14.7)
@@ -79,18 +79,18 @@ GEM
       celluloid (~> 0.16.0)
       rb-fsevent (>= 0.9.3)
       rb-inotify (>= 0.9)
-    middleman (3.3.11)
+    middleman (3.3.13)
       coffee-script (~> 2.2)
       compass (>= 1.0.0, < 2.0.0)
       compass-import-once (= 1.0.5)
       execjs (~> 2.0)
       haml (>= 4.0.5)
       kramdown (~> 1.2)
-      middleman-core (= 3.3.11)
+      middleman-core (= 3.3.13)
       middleman-sprockets (>= 3.1.2)
       sass (>= 3.4.0, < 4.0)
       uglifier (~> 2.5)
-    middleman-core (3.3.11)
+    middleman-core (3.3.13)
       activesupport (~> 4.1.0)
       bundler (~> 1.1)
       erubis
@@ -117,7 +117,7 @@ GEM
     middleman-syntax (2.0.0)
       middleman-core (~> 3.2)
       rouge (~> 1.0)
-    minitest (5.6.0)
+    minitest (5.6.1)
     multi_json (1.11.0)
     padrino-helpers (0.12.5)
       i18n (~> 0.6, >= 0.6.7)
@@ -125,7 +125,7 @@ GEM
       tilt (~> 1.4.1)
     padrino-support (0.12.5)
       activesupport (>= 3.1)
-    rack (1.6.0)
+    rack (1.6.1)
     rack-contrib (1.2.0)
       rack (>= 0.9.1)
     rack-livereload (0.3.15)
