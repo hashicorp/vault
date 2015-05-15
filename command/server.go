@@ -293,8 +293,15 @@ func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
 		}
 
 		// Check if TLS is disabled
-		if _, ok := list.Config["tls_disable"]; ok {
-			scheme = "http"
+		if val, ok := list.Config["tls_disable"]; ok {
+			disable, err := strconv.ParseBool(val)
+			if err != nil {
+				return "", fmt.Errorf("tls_disable: %s", err)
+			}
+
+			if disable {
+				scheme = "http"
+			}
 		}
 
 		// Check for address override
