@@ -67,7 +67,8 @@ App ID authentication is not allowed via the CLI.
 
 #### Via the API
 
-The endpoint for the App ID login is `/login`.
+The endpoint for the App ID login is `/login`. The client is expected
+to provide the `app_id` and `user_id` parameters as part of the request.
 
 ## Configuration
 
