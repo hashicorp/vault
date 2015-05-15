@@ -51,7 +51,7 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 	if appsMap == nil {
-		return logical.ErrorResponse("unknown app_id or user_id"), nil
+		return logical.ErrorResponse("invalid user ID or app ID"), nil
 	}
 
 	// If there is a CIDR block restriction, check that
@@ -97,7 +97,7 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 	if appRaw == nil {
-		return logical.ErrorResponse("unknown app_id or user_id"), nil
+		return logical.ErrorResponse("invalid user ID or app ID"), nil
 	}
 
 	// Get the policies associated with the app
