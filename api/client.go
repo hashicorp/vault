@@ -178,8 +178,12 @@ START:
 				"%s\n\n"+
 					"This error usually means that the server is running with TLS disabled\n"+
 					"but the client is configured to use TLS. Please either enable TLS\n"+
-					"on the server, or run the client with -addr set to http://<addr>\n"+
-					"where <addr> is replaced by the actual address to the server.",
+					"on the server or run the client with -address set to an address\n"+
+					"that uses the http protocol:\n\n"+
+					"    vault <command> -address http://<address>\n\n"+
+					"You can also set the VAULT_ADDR environment variable:\n\n\n"+
+					"    VAULT_ADDR=http://<address> vault <command>\n\n"+
+					"where <address> is replaced by the actual address to the server.",
 				err)
 		}
 	}
