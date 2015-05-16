@@ -1344,3 +1344,75 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 }
+
+// Based on bug GH-203, attempt to disable a credential backend with leased secrets
+func TestCore_EnableDisableCred_WithLease(t *testing.T) {
+	// Create a badass credential backend that always logs in as armon
+	noopBack := &NoopBackend{
+		Login: []string{"login"},
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				Policies: []string{"root"},
+			},
+		},
+	}
+	c, _, root := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noopBack, nil
+	}
+
+	// Enable the credential backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to login
+	lreq := &logical.Request{
+		Path: "auth/foo/login",
+	}
+	lresp, err := c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create a leasable secret
+	req = &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: lresp.Auth.ClientToken,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+
+	// Disable the credential backend
+	req = logical.TestRequest(t, logical.DeleteOperation, "sys/auth/foo")
+	req.ClientToken = root
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+}
