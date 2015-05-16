@@ -1456,9 +1456,17 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 
+	// Renew the lease
+	req = logical.TestRequest(t, logical.WriteOperation, "sys/renew/"+resp.Secret.LeaseID)
+	req.ClientToken = lresp.Auth.ClientToken
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	// Disable the credential backend
 	req = logical.TestRequest(t, logical.DeleteOperation, "sys/auth/foo")
-	req.ClientToken = root
+	req.ClientToken = lresp.Auth.ClientToken
 	resp, err = c.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
