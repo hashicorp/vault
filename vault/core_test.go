@@ -1345,6 +1345,54 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 	}
 }
 
+// Renew should return the same lease back
+func TestCore_RenewSameLease(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Create a leasable secret
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	original := resp.Secret.LeaseID
+
+	// Renew the lease
+	req = logical.TestRequest(t, logical.WriteOperation, "sys/renew/"+resp.Secret.LeaseID)
+	req.ClientToken = root
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the lease did not change
+	if resp.Secret.LeaseID != original {
+		t.Fatalf("lease id changed: %s %s", original, resp.Secret.LeaseID)
+	}
+}
+
 // Based on bug GH-203, attempt to disable a credential backend with leased secrets
 func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
