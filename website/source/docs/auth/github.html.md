@@ -72,7 +72,7 @@ Success! Data written to: auth/github/map/teams/owners
 ```
 
 The above would make anyone in the "owners" team a root user in Vault
-(not recommended). Note: the team ("owners") is case-sensitive.
+(not recommended).
 
 You can then auth with a user that is a member of the "owners" team using a Personal Access Token with the `read:org` scope.
 
