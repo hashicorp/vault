@@ -75,6 +75,11 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if config.Backend == nil {
+		c.Ui.Error("Error: A physical backend must be specified in the configuration")
+		return 1
+	}
+
 	// If mlock isn't supported, show a warning. We disable this in
 	// dev because it is quite scary to see when first using Vault.
 	if !dev && !mlock.Supported() {
