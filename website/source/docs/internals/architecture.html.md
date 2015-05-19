@@ -58,7 +58,7 @@ clarify what is being discussed:
   ACL policies.
 
 * **Secret** - A secret is the term for anything returned by Vault which contains confidential
-  or cryptographic material. Not all everything returned by Vault is a secret, for example
+  or cryptographic material. Not everything returned by Vault is a secret, for example
   system configuration, status information, or backend policies are not considered Secrets.
   Secrets always have an associated lease. This means clients cannot assume that the secret
   contents can be used indefinitely. Vault will revoke a secret at the end of the lease, and
