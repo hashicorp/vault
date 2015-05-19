@@ -147,6 +147,11 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
+	// Adjust status code when sealed
+	if err == vault.ErrSealed {
+		status = http.StatusServiceUnavailable
+	}
+
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
 
