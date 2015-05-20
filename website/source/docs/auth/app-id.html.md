@@ -102,7 +102,7 @@ $ vault write auth/app-id/map/user-id/bar value=foo cidr_block=10.0.0.0/16
 The above creates an App ID "foo" that associates with the policy "root".
 The `display_name` sets the display name for audit logs and secrets.
 Next, we configure the user ID "bar" and say that the user ID bar
-can be paired with "foo" but only in client is in the "10.0.0.0/16" CIDR block.
+can be paired with "foo" but only if the client is in the "10.0.0.0/16" CIDR block.
 The `cidr_block` configuration is optional.
 
 This means that if a client authenticates and provide both "foo" and "bar",
