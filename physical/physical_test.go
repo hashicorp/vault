@@ -189,6 +189,21 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 	if keys[0] != "baz" {
 		t.Fatalf("bad: %v", keys)
 	}
+
+	// Delete should recursively remove paths
+	err = b.Delete("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should now be empty
+	keys, err = b.List("")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 0 {
+		t.Fatalf("bad: %v", keys)
+	}
 }
 
 func testHABackend(t *testing.T, b HABackend, b2 HABackend) {
