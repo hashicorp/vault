@@ -19,7 +19,8 @@ in Vault, and also allows you to discover new paths.
 -> **Important!** The help system is incredibly important in day-to-day
 use of Vault. As a beginner or experienced user of Vault, you'll be using
 the help command a lot to remember how to use different components of
-Vault.
+Vault. Note that the Vault Server must be running and the client configured
+properly to execute this command to look up paths. 
 
 ## Discovering Paths
 
