@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -21,7 +20,6 @@ import (
 type S3Backend struct {
 	bucket string
 	client *s3.S3
-	l      sync.Mutex
 }
 
 // newS3Backend constructs a S3 backend using a pre-existing
@@ -79,8 +77,6 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 
 // Put is used to insert or update an entry
 func (s *S3Backend) Put(entry *Entry) error {
-	s.l.Lock()
-	defer s.l.Unlock()
 	defer metrics.MeasureSince([]string{"s3", "put"}, time.Now())
 
 	_, err := s.client.PutObject(&s3.PutObjectInput{
@@ -98,8 +94,6 @@ func (s *S3Backend) Put(entry *Entry) error {
 
 // Get is used to fetch an entry
 func (s *S3Backend) Get(key string) (*Entry, error) {
-	s.l.Lock()
-	defer s.l.Unlock()
 	defer metrics.MeasureSince([]string{"s3", "get"}, time.Now())
 
 	resp, err := s.client.GetObject(&s3.GetObjectInput{
@@ -132,33 +126,15 @@ func (s *S3Backend) Get(key string) (*Entry, error) {
 
 // Delete is used to permanently delete an entry
 func (s *S3Backend) Delete(key string) error {
-	s.l.Lock()
-	defer s.l.Unlock()
 	defer metrics.MeasureSince([]string{"s3", "delete"}, time.Now())
 
-	listResp, err := s.client.ListObjects(&s3.ListObjectsInput{
+	_, err := s.client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(key),
+		Key:    aws.String(key),
 	})
+
 	if err != nil {
 		return err
-	}
-
-	objects := &s3.Delete{}
-	for _, key := range listResp.Contents {
-		oi := &s3.ObjectIdentifier{Key: key.Key}
-		objects.Objects = append(objects.Objects, oi)
-	}
-
-	if len(objects.Objects) > 0 {
-		_, err := s.client.DeleteObjects(&s3.DeleteObjectsInput{
-			Bucket: aws.String(s.bucket),
-			Delete: objects,
-		})
-
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -167,8 +143,6 @@ func (s *S3Backend) Delete(key string) error {
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (s *S3Backend) List(prefix string) ([]string, error) {
-	s.l.Lock()
-	defer s.l.Unlock()
 	defer metrics.MeasureSince([]string{"s3", "list"}, time.Now())
 
 	resp, err := s.client.ListObjects(&s3.ListObjectsInput{

@@ -16,7 +16,7 @@ func TestS3Backend(t *testing.T) {
 	credentialChain := aws.DefaultChainCredentials
 	creds, err := credentialChain.Get()
 	if err != nil {
-		t.Fatalf("err: %s", err)
+		t.SkipNow()
 	}
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
