@@ -189,6 +189,7 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 	if keys[0] != "baz" {
 		t.Fatalf("bad: %v", keys)
 	}
+
 }
 
 func testHABackend(t *testing.T, b HABackend, b2 HABackend) {

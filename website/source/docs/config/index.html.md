@@ -60,6 +60,9 @@ durability, etc.
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
       This backend does not support HA.
 
+  * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
+      This backend does not support HA.
+
   * `inmem` - Store data in-memory. This is only really useful for
       development and experimentation. Data is lost whenever Vault is
       restarted.
@@ -104,6 +107,17 @@ For Zookeeper, the following options are supported:
       Can be comma separated list (host:port) of many Zookeeper instances.
       Defaults to "localhost:2181" if not specified.
 
+#### Backend Reference: S3
+
+For S3, the following options are supported:
+
+  * `bucket` (required) - The name of the S3 bucket to use.
+
+  * `access_key` - (Required) This is the AWS access key. It must be provided, but it can also be sourced from the AWS_ACCESS_KEY_ID environment variable.
+
+  * `secret_key` - (Required) This is the AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
+
+  * `region` (optional) - This is the AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
 #### Backend Reference: Inmem
 
