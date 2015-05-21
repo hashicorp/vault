@@ -113,11 +113,11 @@ For S3, the following options are supported:
 
   * `bucket` (required) - The name of the S3 bucket to use.
 
-  * `access_key` - (Required) This is the AWS access key. It must be provided, but it can also be sourced from the AWS_ACCESS_KEY_ID environment variable.
+  * `access_key` - (required) The AWS access key. It must be provided, but it can also be sourced from the AWS_ACCESS_KEY_ID environment variable.
 
-  * `secret_key` - (Required) This is the AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
+  * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
 
-  * `region` (optional) - This is the AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
+  * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
 #### Backend Reference: Inmem
 
