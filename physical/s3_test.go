@@ -12,11 +12,14 @@ import (
 )
 
 func TestS3Backend(t *testing.T) {
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		t.SkipNow()
+	}
 
 	credentialChain := aws.DefaultChainCredentials
 	creds, err := credentialChain.Get()
 	if err != nil {
-		t.SkipNow()
+		t.Fatalf("err: %v", err)
 	}
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
