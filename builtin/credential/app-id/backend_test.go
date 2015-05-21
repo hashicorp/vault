@@ -15,6 +15,8 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepMapUserId(t),
 			testAccLogin(t, ""),
 			testAccLoginInvalid(t),
+			testAccStepDeleteUserId(t),
+			testAccLoginDeleted(t),
 		},
 	})
 }
@@ -40,6 +42,8 @@ func TestBackend_displayName(t *testing.T) {
 			testAccStepMapUserId(t),
 			testAccLogin(t, "tubbin"),
 			testAccLoginInvalid(t),
+			testAccStepDeleteUserId(t),
+			testAccLoginDeleted(t),
 		},
 	})
 }
@@ -72,6 +76,13 @@ func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 		Data: map[string]interface{}{
 			"value": "foo",
 		},
+	}
+}
+
+func testAccStepDeleteUserId(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "map/user-id/42",
 	}
 }
 
@@ -131,6 +142,21 @@ func testAccLoginInvalid(t *testing.T) logicaltest.TestStep {
 		Data: map[string]interface{}{
 			"app_id":  "foo",
 			"user_id": "48",
+		},
+		ErrorOk:         true,
+		Unauthenticated: true,
+
+		Check: logicaltest.TestCheckError(),
+	}
+}
+
+func testAccLoginDeleted(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "login",
+		Data: map[string]interface{}{
+			"app_id":  "foo",
+			"user_id": "42",
 		},
 		ErrorOk:         true,
 		Unauthenticated: true,

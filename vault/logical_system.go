@@ -10,8 +10,7 @@ import (
 
 func NewSystemBackend(core *Core) logical.Backend {
 	b := &SystemBackend{Core: core}
-
-	return &framework.Backend{
+	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
 
 		PathsSpecial: &logical.Paths{
@@ -284,13 +283,15 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 		},
 	}
+	return b.Backend
 }
 
 // SystemBackend implements logical.Backend and is used to interact with
 // the core of the system. This backend is hardcoded to exist at the "sys"
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
-	Core *Core
+	Core    *Core
+	Backend *framework.Backend
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
@@ -336,6 +337,7 @@ func (b *SystemBackend) handleMount(
 
 	// Attempt mount
 	if err := b.Core.mount(me); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: mount %#v failed: %v", me, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -351,6 +353,7 @@ func (b *SystemBackend) handleUnmount(
 
 	// Attempt unmount
 	if err := b.Core.unmount(suffix); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: unmount '%s' failed: %v", suffix, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -371,6 +374,7 @@ func (b *SystemBackend) handleRemount(
 
 	// Attempt remount
 	if err := b.Core.remount(fromPath, toPath); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -390,6 +394,7 @@ func (b *SystemBackend) handleRenew(
 	// Invoke the expiration manager directly
 	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: renew '%s' failed: %v", leaseID, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return resp, err
@@ -403,6 +408,7 @@ func (b *SystemBackend) handleRevoke(
 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: revoke '%s' failed: %v", leaseID, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -416,6 +422,7 @@ func (b *SystemBackend) handleRevokePrefix(
 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.RevokePrefix(prefix); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: revoke prefix '%s' failed: %v", prefix, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -463,6 +470,7 @@ func (b *SystemBackend) handleEnableAuth(
 
 	// Attempt enabling
 	if err := b.Core.enableCredential(me); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: enable auth %#v failed: %v", me, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -478,6 +486,7 @@ func (b *SystemBackend) handleDisableAuth(
 
 	// Attempt disable
 	if err := b.Core.disableCredential(suffix); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: disable auth '%s' failed: %v", suffix, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -597,6 +606,7 @@ func (b *SystemBackend) handleEnableAudit(
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(me); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: enable audit %#v failed: %v", me, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -609,6 +619,7 @@ func (b *SystemBackend) handleDisableAudit(
 
 	// Attempt disable
 	if err := b.Core.disableAudit(path); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: disable audit '%s' failed: %v", path, err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil

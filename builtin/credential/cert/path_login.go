@@ -154,9 +154,14 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 	certs := cs.PeerCertificates
+	if len(certs) == 0 {
+		return nil, nil
+	}
 
-	for _, cert := range certs[1:] {
-		opts.Intermediates.AddCert(cert)
+	if len(certs) > 1 {
+		for _, cert := range certs[1:] {
+			opts.Intermediates.AddCert(cert)
+		}
 	}
 
 	chains, err := certs[0].Verify(opts)

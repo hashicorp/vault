@@ -24,11 +24,6 @@ description: |-
   <dd>
     <ul>
       <li>
-        <span class="param">secret_shares</span>
-        <span class="param-flags">required</span>
-        The number of shares to split the master key into.
-      </li>
-      <li>
         <span class="param">key</span>
         <span class="param-flags">required</span>
         A single master share key.

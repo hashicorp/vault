@@ -54,9 +54,7 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems,
 you'll first need [Go](https://www.golang.org) installed on your
-machine (version 1.4+ is *required*). Alternatively, you can use the
-Vagrantfile in the root of this repo to stand up a virtual machine with
-the appropriate dev tooling already set up for you.
+machine (version 1.4+ is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go,

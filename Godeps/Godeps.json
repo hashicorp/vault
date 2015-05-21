@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.4.2",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -12,6 +9,38 @@
 		{
 			"ImportPath": "github.com/armon/go-radix",
 			"Rev": "0bab926c3433cfd6490c6d3c504a7b471362390c"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/aws",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/endpoints",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/query",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/rest",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/restxml",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/signer/v4",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+		},
+		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/service/s3",
+			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
@@ -28,11 +57,6 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/aws-sdk-go/aws",
-			"Comment": "tf0.4.0-3-ge6ea019",
-			"Rev": "e6ea0192eee4640f32ec73c0cbb71f63e4f2b65a"
-		},
-		{
-			"ImportPath": "github.com/hashicorp/aws-sdk-go/gen/ec2",
 			"Comment": "tf0.4.0-3-ge6ea019",
 			"Rev": "e6ea0192eee4640f32ec73c0cbb71f63e4f2b65a"
 		},

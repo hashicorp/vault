@@ -33,6 +33,18 @@ func (c *UnsealCommand) Run(args []string) int {
 		return 2
 	}
 
+	sealStatus, err := client.Sys().SealStatus()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error checking seal status: %s", err))
+		return 2
+	}
+
+	if !sealStatus.Sealed {
+		c.Ui.Output("Vault is already unsealed.")
+		return 0
+	}
+
 	args = flags.Args()
 
 	value := c.Key

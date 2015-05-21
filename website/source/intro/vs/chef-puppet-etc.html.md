@@ -15,7 +15,7 @@ a problem of safely storing these secrets.
 
 Chef, Puppet, etc. all solve this in a similar way: single-key
 encrypted storage. Chef has encrypted data bags, Puppet has encrypted
-Hiera, an so on. The encrypted data is always one secret (a password,
+Hiera, and so on. The encrypted data is always one secret (a password,
 a key, etc.) away from being decrypted, and this secret is generally
 not well protected since in an elastic environment, every server needs
 to somehow get this secret to decrypt the data. Additionally, access to

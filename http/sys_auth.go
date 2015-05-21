@@ -13,9 +13,7 @@ func handleSysAuth(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "GET":
 			handleSysListAuth(core).ServeHTTP(w, r)
-		case "POST":
-			fallthrough
-		case "DELETE":
+		case "POST", "PUT", "DELETE":
 			handleSysEnableDisableAuth(core, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
@@ -58,7 +56,7 @@ func handleSysEnableDisableAuth(core *vault.Core, w http.ResponseWriter, r *http
 	}
 
 	switch r.Method {
-	case "POST":
+	case "PUT", "POST":
 		handleSysEnableAuth(core, w, r, path)
 	case "DELETE":
 		handleSysDisableAuth(core, w, r, path)

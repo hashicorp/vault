@@ -23,7 +23,7 @@ func TestBackend_basic(t *testing.T) {
 
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("GITHUB_TOKEN"); v == "" {
-		t.Fatal("GITHUB_USER must be set for acceptance tests")
+		t.Fatal("GITHUB_TOKEN must be set for acceptance tests")
 	}
 
 	if v := os.Getenv("GITHUB_ORG"); v == "" {

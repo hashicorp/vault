@@ -51,6 +51,11 @@ func (p *PathStruct) Put(s logical.Storage, v map[string]interface{}) error {
 	})
 }
 
+// Delete removes the structure.
+func (p *PathStruct) Delete(s logical.Storage) error {
+	return s.Delete(fmt.Sprintf("struct/%s", p.Name))
+}
+
 // Paths are the paths to append to the Backend paths.
 func (p *PathStruct) Paths() []*Path {
 	// The single path we support to read/write this config
@@ -59,7 +64,8 @@ func (p *PathStruct) Paths() []*Path {
 		Fields:  p.Schema,
 
 		Callbacks: map[logical.Operation]OperationFunc{
-			logical.WriteOperation: p.pathWrite,
+			logical.WriteOperation:  p.pathWrite,
+			logical.DeleteOperation: p.pathDelete,
 		},
 
 		HelpSynopsis:    p.HelpSynopsis,
@@ -89,5 +95,11 @@ func (p *PathStruct) pathRead(
 func (p *PathStruct) pathWrite(
 	req *logical.Request, d *FieldData) (*logical.Response, error) {
 	err := p.Put(req.Storage, d.Raw)
+	return nil, err
+}
+
+func (p *PathStruct) pathDelete(
+	req *logical.Request, d *FieldData) (*logical.Response, error) {
+	err := p.Delete(req.Storage)
 	return nil, err
 }

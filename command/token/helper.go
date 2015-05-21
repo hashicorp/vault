@@ -43,8 +43,8 @@ func HelperPath(path string) string {
 
 // Helper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the
-// Path is executed within a shell. The last argument appended will be the
-// operation, which is:
+// Path is executed within a shell with environment Env. The last argument
+// appended will be the operation, which is:
 //
 //   * "get" - Read the value of the token and write it to stdout.
 //   * "store" - Store the value of the token which is on stdin. Output
@@ -55,6 +55,7 @@ func HelperPath(path string) string {
 // exit code then the stderr will be made part of the error value.
 type Helper struct {
 	Path string
+	Env  []string
 }
 
 // Erase deletes the contents from the helper.
@@ -105,7 +106,12 @@ func (h *Helper) Store(v string) error {
 
 func (h *Helper) cmd(op string) (*exec.Cmd, error) {
 	script := strings.Replace(h.Path, "\\", "\\\\", -1) + " " + op
-	return ExecScript(script)
+	cmd, err := ExecScript(script)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Env = h.Env
+	return cmd, nil
 }
 
 // ExecScript returns a command to execute a script

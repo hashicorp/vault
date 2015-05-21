@@ -51,6 +51,10 @@ configure it, use the `/config` endpoint with the following arguments:
   * `organization` (string, required) - The organization name a user must
        be a part of to authenticate.
 
+###Generate a GitHub Personal Access Token
+Access your Personal Access Tokens in GitHub at [https://github.com/settings/tokens](https://github.com/settings/tokens).
+Generate a new Token that has the scope `read:org`. Save the generated token. This is what you will provide to vault.
+
 For example:
 
 ```
@@ -69,3 +73,14 @@ Success! Data written to: auth/github/map/teams/owners
 
 The above would make anyone in the "owners" team a root user in Vault
 (not recommended).
+
+You can then auth with a user that is a member of the "owners" team using a Personal Access Token with the `read:org` scope.
+
+```
+$ vault auth -method=github token=000000905b381e723b3d6a7d52f148a5d43c4b45
+Successfully authenticated! The policies that are associated
+with this token are listed below:
+
+root
+```
+

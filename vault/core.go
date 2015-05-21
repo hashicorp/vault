@@ -369,7 +369,8 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	resp, err := c.router.Route(req)
 
 	// If there is a secret, we must register it with the expiration manager.
-	if resp != nil && resp.Secret != nil {
+	// We exclude renewal of a lease, since it does not need to be re-registered
+	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
 		// Apply the default lease if none given
 		if resp.Secret.Lease == 0 {
 			resp.Secret.Lease = defaultLeaseDuration

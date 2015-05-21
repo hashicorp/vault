@@ -99,6 +99,32 @@ func testBackend(t *testing.T, b Backend) {
 	if out != nil {
 		t.Fatalf("bad: %v", out)
 	}
+
+	// Multiple Puts should work; GH-189
+	e = &Entry{Key: "foo", Value: []byte("test")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	e = &Entry{Key: "foo", Value: []byte("test")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Make a nested entry
+	e = &Entry{Key: "foo/bar", Value: []byte("baz")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete with children should work
+	err = b.Delete("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 }
 
 func testBackend_ListPrefix(t *testing.T, b Backend) {
@@ -163,6 +189,7 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 	if keys[0] != "baz" {
 		t.Fatalf("bad: %v", keys)
 	}
+
 }
 
 func testHABackend(t *testing.T, b HABackend, b2 HABackend) {

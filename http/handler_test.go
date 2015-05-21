@@ -43,3 +43,17 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		t.Fatalf("bad: %#v", actual)
 	}
 }
+
+func TestHandler_sealed(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	core.Seal(token)
+
+	resp, err := http.Get(addr + "/v1/secret/foo")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 503)
+}

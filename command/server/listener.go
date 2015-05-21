@@ -54,6 +54,7 @@ func listenerWrapTLS(
 	tlsConf.Certificates = []tls.Certificate{cert}
 	tlsConf.NextProtos = []string{"http/1.1"}
 	tlsConf.MinVersion = tls.VersionTLS12 // Minimum version is TLS 1.2
+	tlsConf.ClientAuth = tls.RequestClientCert
 
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
