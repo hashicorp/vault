@@ -75,8 +75,9 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Ensure that a backend is provided
 	if config.Backend == nil {
-		c.Ui.Error("Error: A physical backend must be specified in the configuration")
+		c.Ui.Error("A physical backend must be specified")
 		return 1
 	}
 
