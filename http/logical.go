@@ -2,6 +2,7 @@ package http
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -53,6 +54,13 @@ func handleLogical(core *vault.Core) http.Handler {
 			}
 		}
 
+		// http.Server will set RemoteAddr to an "IP:port" string
+		var remoteAddr string
+		remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			remoteAddr = ""
+		}
+
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
@@ -61,7 +69,7 @@ func handleLogical(core *vault.Core) http.Handler {
 			Path:      path,
 			Data:      req,
 			Connection: &logical.Connection{
-				RemoteAddr: r.RemoteAddr,
+				RemoteAddr: remoteAddr,
 				ConnState:  r.TLS,
 			},
 		}))
