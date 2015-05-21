@@ -1,7 +1,9 @@
 package command
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -63,6 +65,17 @@ func (c *AuthCommand) Run(args []string) int {
 
 	// token is where the final token will go
 	handler := c.Handlers[method]
+
+	if len(args) > 0 && args[0] == "-" {
+		stdin := bufio.NewReader(os.Stdin)
+		args[0], err = stdin.ReadString('\n')
+		if err != nil && err != io.EOF {
+			c.Ui.Error(fmt.Sprintf("Error reading from stdin: %s", err))
+			return 1
+		}
+		args[0] = strings.TrimSpace(args[0])
+	}
+
 	if method == "" {
 		token := ""
 		if len(args) > 0 {
