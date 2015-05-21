@@ -14,8 +14,7 @@ import (
 // prefix within Zookeeper. It is used in production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
 type ZookeeperBackend struct {
-	datapath   string
-	lockpath   string
+	path   string
 	client *zk.Conn
 }
 
@@ -23,20 +22,18 @@ type ZookeeperBackend struct {
 // and the prefix in the KV store.
 func newZookeeperBackend(conf map[string]string) (Backend, error) {
 	// Get the path in Zookeeper
-	basepath, ok := conf["path"]
+	path, ok := conf["path"]
 	if !ok {
-		basepath = "vault/"
+		path = "vault/"
 	}
 
 	// Ensure path is suffixed and prefixed (zk requires prefix /)
-	if !strings.HasSuffix(basepath, "/") {
-		basepath += "/"
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
 	}
-	if !strings.HasPrefix(basepath, "/") {
-		basepath = "/" + basepath
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
 	}
-	datapath := basepath + "data/"
-	lockpath := basepath + "lock/"
 
 	// Configure the client, default to localhost instance
 	var machines string
@@ -53,8 +50,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 
 	// Setup the backend
 	c := &ZookeeperBackend{
-		datapath:   datapath,
-		lockpath:   lockpath,
+		path:   path,
 		client: client,
 	}
 	return c, nil
@@ -117,7 +113,7 @@ func (c *ZookeeperBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "put"}, time.Now())
 
 	// Attempt to set the full path
-	fullPath := c.datapath + entry.Key
+	fullPath := c.path + entry.Key
 	_, err := c.client.Set(fullPath, entry.Value, -1)
 
 	// If we get ErrNoNode, we need to construct the path hierarchy
@@ -132,7 +128,7 @@ func (c *ZookeeperBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"zookeeper", "get"}, time.Now())
 
 	// Attempt to read the full path
-	fullPath := c.datapath + key
+	fullPath := c.path + key
 	value, _, err := c.client.Get(fullPath)
 
 	// Ignore if the node does not exist
@@ -159,7 +155,7 @@ func (c *ZookeeperBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "delete"}, time.Now())
 
 	// Delete the full path
-	fullPath := c.datapath + key
+	fullPath := c.path + key
 	err := c.deletePath(fullPath)
 
 	// Mask if the node does not exist
@@ -175,7 +171,7 @@ func (c *ZookeeperBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"zookeeper", "list"}, time.Now())
 
 	// Query the children at the full path
-	fullPath := strings.TrimSuffix(c.datapath+prefix, "/")
+	fullPath := strings.TrimSuffix(c.path+prefix, "/")
 	result, _, err := c.client.Children(fullPath)
 
 	// If the path nodes are missing, no children!
@@ -234,7 +230,7 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	didLock := make(chan struct{})
 	failLock := make(chan error, 1)
 	releaseCh := make(chan bool, 1)
-	lockpath := i.in.lockpath + i.key
+	lockpath := i.in.path + i.key
 	go func() {
 		// Wait to acquire the lock in ZK
 		acl := zk.WorldACL(zk.PermAll)
@@ -322,7 +318,7 @@ func (i *ZookeeperHALock) Unlock() error {
 }
 
 func (i *ZookeeperHALock) Value() (bool, string, error) {
-	lockpath := i.in.lockpath + i.key
+	lockpath := i.in.path + i.key
 	value, _, err := i.in.client.Get(lockpath)
 	return i.held, string(value), err
 }
