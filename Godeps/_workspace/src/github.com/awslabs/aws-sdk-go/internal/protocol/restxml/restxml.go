@@ -8,6 +8,7 @@ import (
 	"encoding/xml"
 
 	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"github.com/awslabs/aws-sdk-go/internal/protocol/query"
 	"github.com/awslabs/aws-sdk-go/internal/protocol/rest"
 	"github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil"
@@ -21,7 +22,7 @@ func Build(r *aws.Request) {
 		var buf bytes.Buffer
 		err := xmlutil.BuildXML(r.Params, xml.NewEncoder(&buf))
 		if err != nil {
-			r.Error = err
+			r.Error = apierr.New("Marshal", "failed to enode rest XML request", err)
 			return
 		}
 		r.SetBufferBody(buf.Bytes())
@@ -35,7 +36,7 @@ func Unmarshal(r *aws.Request) {
 		decoder := xml.NewDecoder(r.HTTPResponse.Body)
 		err := xmlutil.UnmarshalXML(r.Data, decoder, "")
 		if err != nil {
-			r.Error = err
+			r.Error = apierr.New("Unmarshal", "failed to decode REST XML response", err)
 			return
 		}
 	}

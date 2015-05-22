@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 
 	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil"
 )
 
@@ -16,7 +17,7 @@ func Unmarshal(r *aws.Request) {
 		decoder := xml.NewDecoder(r.HTTPResponse.Body)
 		err := xmlutil.UnmarshalXML(r.Data, decoder, r.Operation.Name+"Result")
 		if err != nil {
-			r.Error = err
+			r.Error = apierr.New("Unmarshal", "failed decoding Query response", err)
 			return
 		}
 	}

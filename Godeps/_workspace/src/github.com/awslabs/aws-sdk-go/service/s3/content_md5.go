@@ -3,10 +3,10 @@ package s3
 import (
 	"crypto/md5"
 	"encoding/base64"
-	"fmt"
 	"io"
 
 	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 )
 
 // contentMD5 computes and sets the HTTP Content-MD5 header for requests that
@@ -19,12 +19,12 @@ func contentMD5(r *aws.Request) {
 	// body.
 	_, err := io.Copy(h, r.Body)
 	if err != nil {
-		r.Error = fmt.Errorf("content-md5: read: %v", err)
+		r.Error = apierr.New("ContentMD5", "failed to read body", err)
 		return
 	}
 	_, err = r.Body.Seek(0, 0)
 	if err != nil {
-		r.Error = fmt.Errorf("content-md5: seek: %v", err)
+		r.Error = apierr.New("ContentMD5", "failed to seek body", err)
 		return
 	}
 

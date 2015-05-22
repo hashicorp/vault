@@ -14,7 +14,7 @@ func TestEnvProviderRetrieve(t *testing.T) {
 
 	e := EnvProvider{}
 	creds, err := e.Retrieve()
-	assert.Nil(t, err, "Expect no error", err)
+	assert.Nil(t, err, "Expect no error")
 
 	assert.Equal(t, "access", creds.AccessKeyID, "Expect access key ID to match")
 	assert.Equal(t, "secret", creds.SecretAccessKey, "Expect secret access key to match")
@@ -32,7 +32,7 @@ func TestEnvProviderIsExpired(t *testing.T) {
 	assert.True(t, e.IsExpired(), "Expect creds to be expired before retrieve.")
 
 	_, err := e.Retrieve()
-	assert.Nil(t, err, "Expect no error", err)
+	assert.Nil(t, err, "Expect no error")
 
 	assert.False(t, e.IsExpired(), "Expect creds to not be expired after retrieve.")
 }

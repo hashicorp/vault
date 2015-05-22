@@ -1,7 +1,7 @@
 package credentials
 
 import (
-	"errors"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -9,8 +9,8 @@ import (
 func TestChainProviderGet(t *testing.T) {
 	p := &ChainProvider{
 		Providers: []Provider{
-			&stubProvider{err: errors.New("first provider error")},
-			&stubProvider{err: errors.New("second provider error")},
+			&stubProvider{err: apierr.New("FirstError", "first provider error", nil)},
+			&stubProvider{err: apierr.New("SecondError", "second provider error", nil)},
 			&stubProvider{
 				creds: Value{
 					AccessKeyID:     "AKID",
@@ -61,12 +61,12 @@ func TestChainProviderWithNoProvider(t *testing.T) {
 func TestChainProviderWithNoValidProvider(t *testing.T) {
 	p := &ChainProvider{
 		Providers: []Provider{
-			&stubProvider{err: errors.New("first provider error")},
-			&stubProvider{err: errors.New("second provider error")},
+			&stubProvider{err: apierr.New("FirstError", "first provider error", nil)},
+			&stubProvider{err: apierr.New("SecondError", "second provider error", nil)},
 		},
 	}
 
 	assert.True(t, p.IsExpired(), "Expect expired with no providers")
 	_, err := p.Retrieve()
-	assert.Contains(t, "no valid providers in chain", err.Error(), "Expect no providers error returned")
+	assert.Equal(t, ErrNoValidProvidersFoundInChain, err, "Expect no providers error returned")
 }

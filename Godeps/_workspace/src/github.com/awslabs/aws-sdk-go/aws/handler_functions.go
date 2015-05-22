@@ -3,6 +3,7 @@ package aws
 import (
 	"bytes"
 	"fmt"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"github.com/awslabs/aws-sdk-go/aws/awserr"
 )
 
 var sleepDelay = func(delay time.Duration) {
@@ -59,19 +61,26 @@ var reStatusCode = regexp.MustCompile(`^(\d+)`)
 
 // SendHandler is a request handler to send service request using HTTP client.
 func SendHandler(r *Request) {
-	r.HTTPResponse, r.Error = r.Service.Config.HTTPClient.Do(r.HTTPRequest)
-	if r.Error != nil {
-		if e, ok := r.Error.(*url.Error); ok {
-			if s := reStatusCode.FindStringSubmatch(e.Err.Error()); s != nil {
+	var err error
+	r.HTTPResponse, err = r.Service.Config.HTTPClient.Do(r.HTTPRequest)
+	if err != nil {
+		// Capture the case where url.Error is returned for error processing
+		// response. e.g. 301 without location header comes back as string
+		// error and r.HTTPResponse is nil. Other url redirect errors will
+		// comeback in a similar method.
+		if e, ok := err.(*url.Error); ok {
+			if s := reStatusCode.FindStringSubmatch(e.Error()); s != nil {
 				code, _ := strconv.ParseInt(s[1], 10, 64)
-				r.Error = nil
 				r.HTTPResponse = &http.Response{
 					StatusCode: int(code),
 					Status:     http.StatusText(int(code)),
 					Body:       ioutil.NopCloser(bytes.NewReader([]byte{})),
 				}
+				return
 			}
 		}
+		// Catch all other request errors.
+		r.Error = apierr.New("RequestError", "send request failed", err)
 	}
 }
 
@@ -79,11 +88,7 @@ func SendHandler(r *Request) {
 func ValidateResponseHandler(r *Request) {
 	if r.HTTPResponse.StatusCode == 0 || r.HTTPResponse.StatusCode >= 300 {
 		// this may be replaced by an UnmarshalError handler
-		r.Error = &APIError{
-			StatusCode: r.HTTPResponse.StatusCode,
-			Code:       "UnknownError",
-			Message:    "unknown error",
-		}
+		r.Error = apierr.New("UnknownError", "unknown error", nil)
 	}
 }
 
@@ -103,10 +108,12 @@ func AfterRetryHandler(r *Request) {
 		// when the expired token exception occurs the credentials
 		// need to be expired locally so that the next request to
 		// get credentials will trigger a credentials refresh.
-		if err := Error(r.Error); err != nil && err.Code == "ExpiredTokenException" {
-			r.Config.Credentials.Expire()
-			// The credentials will need to be resigned with new credentials
-			r.signed = false
+		if r.Error != nil {
+			if err, ok := r.Error.(awserr.Error); ok && err.Code() == "ExpiredTokenException" {
+				r.Config.Credentials.Expire()
+				// The credentials will need to be resigned with new credentials
+				r.signed = false
+			}
 		}
 
 		r.RetryCount++
@@ -117,11 +124,11 @@ func AfterRetryHandler(r *Request) {
 var (
 	// ErrMissingRegion is an error that is returned if region configuration is
 	// not found.
-	ErrMissingRegion = fmt.Errorf("could not find region configuration")
+	ErrMissingRegion error = apierr.New("MissingRegion", "could not find region configuration", nil)
 
 	// ErrMissingEndpoint is an error that is returned if an endpoint cannot be
 	// resolved for a service.
-	ErrMissingEndpoint = fmt.Errorf("`Endpoint' configuration is required for this service")
+	ErrMissingEndpoint error = apierr.New("MissingEndpoint", "'Endpoint' configuration is required for this service", nil)
 )
 
 // ValidateEndpointHandler is a request handler to validate a request had the

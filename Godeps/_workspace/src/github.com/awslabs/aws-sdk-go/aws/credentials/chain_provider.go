@@ -1,13 +1,13 @@
 package credentials
 
 import (
-	"fmt"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 )
 
 var (
 	// ErrNoValidProvidersFoundInChain Is returned when there are no valid
 	// providers in the ChainProvider.
-	ErrNoValidProvidersFoundInChain = fmt.Errorf("no valid providers in chain")
+	ErrNoValidProvidersFoundInChain = apierr.New("NoCredentialProviders", "no valid providers in chain", nil)
 )
 
 // A ChainProvider will search for a provider which returns credentials

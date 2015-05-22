@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"net/http"
 	"time"
 )
@@ -89,7 +90,7 @@ func (m *EC2RoleProvider) Retrieve() (Value, error) {
 	}
 
 	if len(credsList) == 0 {
-		return Value{}, fmt.Errorf("empty MetadataService credentials list")
+		return Value{}, apierr.New("EmptyEC2RoleList", "empty EC2 Role list", nil)
 	}
 	credsName := credsList[0]
 
@@ -130,7 +131,7 @@ type ec2RoleCredRespBody struct {
 func requestCredList(client *http.Client, endpoint string) ([]string, error) {
 	resp, err := client.Get(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("%s listing MetadataService credentials", err)
+		return nil, apierr.New("ListEC2Role", "failed to list EC2 Roles", err)
 	}
 	defer resp.Body.Close()
 
@@ -141,7 +142,7 @@ func requestCredList(client *http.Client, endpoint string) ([]string, error) {
 	}
 
 	if err := s.Err(); err != nil {
-		return nil, fmt.Errorf("%s reading list of MetadataService credentials", err)
+		return nil, apierr.New("ReadEC2Role", "failed to read list of EC2 Roles", err)
 	}
 
 	return credsList, nil
@@ -154,13 +155,17 @@ func requestCredList(client *http.Client, endpoint string) ([]string, error) {
 func requestCred(client *http.Client, endpoint, credsName string) (*ec2RoleCredRespBody, error) {
 	resp, err := client.Get(endpoint + credsName)
 	if err != nil {
-		return nil, fmt.Errorf("getting %s MetadataService credentials", credsName)
+		return nil, apierr.New("GetEC2RoleCredentials",
+			fmt.Sprintf("failed to get %s EC2 Role credentials", credsName),
+			err)
 	}
 	defer resp.Body.Close()
 
 	respCreds := &ec2RoleCredRespBody{}
 	if err := json.NewDecoder(resp.Body).Decode(respCreds); err != nil {
-		return nil, fmt.Errorf("decoding %s MetadataService credentials", credsName)
+		return nil, apierr.New("DecodeEC2RoleCredentials",
+			fmt.Sprintf("failed to decode %s EC2 Role credentials", credsName),
+			err)
 	}
 
 	return respCreds, nil

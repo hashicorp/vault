@@ -3,6 +3,7 @@ package aws
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/awslabs/aws-sdk-go/aws/awserr"
 	"github.com/awslabs/aws-sdk-go/aws/credentials"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,26 +36,27 @@ func unmarshal(req *Request) {
 func unmarshalError(req *Request) {
 	bodyBytes, err := ioutil.ReadAll(req.HTTPResponse.Body)
 	if err != nil {
-		req.Error = err
+		req.Error = apierr.New("UnmarshaleError", req.HTTPResponse.Status, err)
 		return
 	}
 	if len(bodyBytes) == 0 {
-		req.Error = APIError{
-			StatusCode: req.HTTPResponse.StatusCode,
-			Message:    req.HTTPResponse.Status,
-		}
+		req.Error = apierr.NewRequestError(
+			apierr.New("UnmarshaleError", req.HTTPResponse.Status, fmt.Errorf("empty body")),
+			req.HTTPResponse.StatusCode,
+			"",
+		)
 		return
 	}
 	var jsonErr jsonErrorResponse
 	if err := json.Unmarshal(bodyBytes, &jsonErr); err != nil {
-		req.Error = err
+		req.Error = apierr.New("UnmarshaleError", "JSON unmarshal", err)
 		return
 	}
-	req.Error = APIError{
-		StatusCode: req.HTTPResponse.StatusCode,
-		Code:       jsonErr.Code,
-		Message:    jsonErr.Message,
-	}
+	req.Error = apierr.NewRequestError(
+		apierr.New(jsonErr.Code, jsonErr.Message, nil),
+		req.HTTPResponse.StatusCode,
+		"",
+	)
 }
 
 type jsonErrorResponse struct {
@@ -125,12 +129,14 @@ func TestRequest4xxUnretryable(t *testing.T) {
 	out := &testData{}
 	r := NewRequest(s, &Operation{Name: "Operation"}, nil, out)
 	err := r.Send()
-	apiErr := Error(err)
 	assert.NotNil(t, err)
-	assert.NotNil(t, apiErr)
-	assert.Equal(t, 401, apiErr.StatusCode)
-	assert.Equal(t, "SignatureDoesNotMatch", apiErr.Code)
-	assert.Equal(t, "Signature does not match.", apiErr.Message)
+	if e, ok := err.(awserr.RequestFailure); ok {
+		assert.Equal(t, 401, e.StatusCode())
+	} else {
+		assert.Fail(t, "Expected error to be a service failure")
+	}
+	assert.Equal(t, "SignatureDoesNotMatch", err.(awserr.Error).Code())
+	assert.Equal(t, "Signature does not match.", err.(awserr.Error).Message())
 	assert.Equal(t, 0, int(r.RetryCount))
 }
 
@@ -159,12 +165,14 @@ func TestRequestExhaustRetries(t *testing.T) {
 	})
 	r := NewRequest(s, &Operation{Name: "Operation"}, nil, nil)
 	err := r.Send()
-	apiErr := Error(err)
 	assert.NotNil(t, err)
-	assert.NotNil(t, apiErr)
-	assert.Equal(t, 500, apiErr.StatusCode)
-	assert.Equal(t, "UnknownError", apiErr.Code)
-	assert.Equal(t, "An error occurred.", apiErr.Message)
+	if e, ok := err.(awserr.RequestFailure); ok {
+		assert.Equal(t, 500, e.StatusCode())
+	} else {
+		assert.Fail(t, "Expected error to be a service failure")
+	}
+	assert.Equal(t, "UnknownError", err.(awserr.Error).Code())
+	assert.Equal(t, "An error occurred.", err.(awserr.Error).Message())
 	assert.Equal(t, 3, int(r.RetryCount))
 	assert.True(t, reflect.DeepEqual([]time.Duration{30 * time.Millisecond, 60 * time.Millisecond, 120 * time.Millisecond}, delays))
 }
@@ -186,7 +194,7 @@ func TestRequestRecoverExpiredCreds(t *testing.T) {
 	credExpiredAfterRetry := false
 
 	s.Handlers.Retry.PushBack(func(r *Request) {
-		if err := Error(r.Error); err != nil && err.Code == "ExpiredTokenException" {
+		if r.Error != nil && r.Error.(awserr.Error).Code() == "ExpiredTokenException" {
 			credExpiredBeforeRetry = r.Config.Credentials.IsExpired()
 		}
 	})

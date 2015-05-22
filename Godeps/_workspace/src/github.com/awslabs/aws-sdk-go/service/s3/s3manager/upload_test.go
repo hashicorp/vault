@@ -1,5 +1,3 @@
-// +build !integration
-
 package s3manager_test
 
 import (
@@ -12,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/aws/awserr"
 	"github.com/awslabs/aws-sdk-go/aws/awsutil"
 	"github.com/awslabs/aws-sdk-go/internal/test/unit"
 	"github.com/awslabs/aws-sdk-go/service/s3"
@@ -258,7 +257,8 @@ func TestUploadOrderReadFail1(t *testing.T) {
 		Body:   failreader{1},
 	}, nil)
 
-	assert.EqualError(t, err, "random failure")
+	assert.Equal(t, "ReadRequestBody", err.(awserr.Error).Code())
+	assert.EqualError(t, err.(awserr.Error).OrigErr(), "random failure")
 	assert.Equal(t, []string{}, *ops)
 }
 
@@ -271,6 +271,8 @@ func TestUploadOrderReadFail2(t *testing.T) {
 		Body:   failreader{2},
 	}, nil)
 
-	assert.EqualError(t, err, "random failure")
+	assert.Equal(t, "MultipartUpload", err.(awserr.Error).Code())
+	assert.Equal(t, "ReadRequestBody", err.(awserr.Error).OrigErr().(awserr.Error).Code())
+	assert.EqualError(t, err.(awserr.Error).OrigErr().(awserr.Error).OrigErr(), "random failure")
 	assert.Equal(t, []string{"CreateMultipartUpload", "AbortMultipartUpload"}, *ops)
 }

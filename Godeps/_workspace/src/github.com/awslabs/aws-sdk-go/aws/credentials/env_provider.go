@@ -1,17 +1,17 @@
 package credentials
 
 import (
-	"fmt"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"os"
 )
 
 var (
 	// ErrAccessKeyIDNotFound is returned when the AWS Access Key ID can't be
 	// found in the process's environment.
-	ErrAccessKeyIDNotFound = fmt.Errorf("AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY not found in environment")
+	ErrAccessKeyIDNotFound = apierr.New("EnvAccessKeyNotFound", "AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY not found in environment", nil)
 	// ErrSecretAccessKeyNotFound is returned when the AWS Secret Access Key
 	// can't be found in the process's environment.
-	ErrSecretAccessKeyNotFound = fmt.Errorf("AWS_SECRET_ACCESS_KEY or AWS_SECRET_KEY not found in environment")
+	ErrSecretAccessKeyNotFound = apierr.New("EnvSecretNotFound", "AWS_SECRET_ACCESS_KEY or AWS_SECRET_KEY not found in environment", nil)
 )
 
 // A EnvProvider retrieves credentials from the environment variables of the
