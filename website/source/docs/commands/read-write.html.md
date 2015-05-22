@@ -107,3 +107,12 @@ value           itsasecret
 You can use the `-format` flag to get various different formats out
 from the command. Some formats are easier to use in different environments
 than others.
+
+You can also use the `-field` flag to extract an individual field
+from the secret data.
+
+```
+$ vault read -field=value secret/password
+itsasecret
+```
+
