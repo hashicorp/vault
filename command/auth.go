@@ -27,6 +27,9 @@ type AuthCommand struct {
 	Meta
 
 	Handlers map[string]AuthHandler
+
+	// The fields below can be overwritten for tests
+	testStdin io.Reader
 }
 
 func (c *AuthCommand) Run(args []string) int {
@@ -66,9 +69,15 @@ func (c *AuthCommand) Run(args []string) int {
 	// token is where the final token will go
 	handler := c.Handlers[method]
 
+	// Read token from stdin if first arg is exactly "-"
+	var stdin io.Reader = os.Stdin
+	if c.testStdin != nil {
+		stdin = c.testStdin
+	}
+
 	if len(args) > 0 && args[0] == "-" {
-		stdin := bufio.NewReader(os.Stdin)
-		args[0], err = stdin.ReadString('\n')
+		stdinR := bufio.NewReader(stdin)
+		args[0], err = stdinR.ReadString('\n')
 		if err != nil && err != io.EOF {
 			c.Ui.Error(fmt.Sprintf("Error reading from stdin: %s", err))
 			return 1
