@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestKeyring(t *testing.T) {
@@ -21,7 +22,8 @@ func TestKeyring(t *testing.T) {
 
 	// Add a key
 	testKey := []byte("testing")
-	err := k.AddKey(1, testKey)
+	key1 := &Key{1, testKey, time.Now()}
+	err := k.AddKey(key1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -44,21 +46,23 @@ func TestKeyring(t *testing.T) {
 	}
 
 	// Should handle idempotent set
-	err = k.AddKey(1, testKey)
+	err = k.AddKey(key1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should not allow conficting set
 	testConflict := []byte("nope")
-	err = k.AddKey(1, testConflict)
+	key1Conf := &Key{1, testConflict, time.Now()}
+	err = k.AddKey(key1Conf)
 	if err == nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Add a new key
 	testSecond := []byte("second")
-	err = k.AddKey(2, testSecond)
+	key2 := &Key{2, testSecond, time.Now()}
+	err = k.AddKey(key2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -136,8 +140,8 @@ func TestKeyring_Serialize(t *testing.T) {
 
 	testKey := []byte("testing")
 	testSecond := []byte("second")
-	k.AddKey(1, testKey)
-	k.AddKey(2, testSecond)
+	k.AddKey(&Key{1, testKey, time.Now()})
+	k.AddKey(&Key{2, testSecond, time.Now()})
 
 	buf, err := k.Serialize()
 	if err != nil {

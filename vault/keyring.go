@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // Keyring is used to manage multiple encryption keys used by
@@ -30,8 +31,9 @@ type EncodedKeyring struct {
 
 // Key represents a single term, along with the key used.
 type Key struct {
-	Term  uint32
-	Value []byte
+	Term        uint32
+	Value       []byte
+	InstallTime time.Time
 }
 
 // NewKeyring creates a new keyring
@@ -44,28 +46,24 @@ func NewKeyring() *Keyring {
 }
 
 // AddKey adds a new key to the keyring
-func (k *Keyring) AddKey(term uint32, value []byte) error {
+func (k *Keyring) AddKey(key *Key) error {
 	k.l.Lock()
 	defer k.l.Unlock()
 
 	// Ensure there is no confict
-	if key, ok := k.keys[term]; ok {
-		if !bytes.Equal(key.Value, value) {
-			return fmt.Errorf("Conflicting key for term %d already installed", term)
+	if exist, ok := k.keys[key.Term]; ok {
+		if !bytes.Equal(key.Value, exist.Value) {
+			return fmt.Errorf("Conflicting key for term %d already installed", key.Term)
 		}
 		return nil
 	}
 
 	// Install the new key
-	key := &Key{
-		Term:  term,
-		Value: value,
-	}
-	k.keys[term] = key
+	k.keys[key.Term] = key
 
 	// Update the active term if newer
-	if term > k.activeTerm {
-		k.activeTerm = term
+	if key.Term > k.activeTerm {
+		k.activeTerm = key.Term
 	}
 	return nil
 }
@@ -150,7 +148,7 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	k := NewKeyring()
 	k.SetMasterKey(enc.MasterKey)
 	for _, key := range enc.Keys {
-		if err := k.AddKey(key.Term, key.Value); err != nil {
+		if err := k.AddKey(key); err != nil {
 			return nil, fmt.Errorf("failed to add key for term %d: %v", key.Term, err)
 		}
 	}
