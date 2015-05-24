@@ -15,6 +15,10 @@
 			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
+			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/apierr",
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
+		},
+		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/endpoints",
 			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
@@ -41,6 +45,11 @@
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/service/s3",
 			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-etcd/etcd",
+			"Comment": "v2.0.0-7-g73a8ef7",
+			"Rev": "73a8ef737e8ea002281a28b4cb92a1de121ad4c6"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",

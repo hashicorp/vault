@@ -83,4 +83,5 @@ var BuiltinBackends = map[string]Factory{
 	"zookeeper": newZookeeperBackend,
 	"file":      newFileBackend,
 	"s3":        newS3Backend,
+	"etcd":      newEtcdBackend,
 }
