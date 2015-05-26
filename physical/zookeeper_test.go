@@ -30,7 +30,11 @@ func TestZookeeperBackend(t *testing.T) {
 	}
 
 	defer func() {
+		client.Delete(randPath + "/foo/bar/baz", -1)
+		client.Delete(randPath + "/foo/bar", -1)
+		client.Delete(randPath + "/foo", -1)
 		client.Delete(randPath, -1)
+		client.Close()
 	}()
 
 	b, err := NewBackend("zookeeper", map[string]string{
@@ -43,4 +47,51 @@ func TestZookeeperBackend(t *testing.T) {
 
 	testBackend(t, b)
 	testBackend_ListPrefix(t, b)
+}
+
+func TestZookeeperHABackend(t *testing.T) {
+	addr := os.Getenv("ZOOKEEPER_ADDR")
+	if addr == "" {
+		t.SkipNow()
+	}
+
+	client, _, err := zk.Connect([]string{addr}, time.Second)
+
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	randPath := fmt.Sprintf("/vault-ha-%d", time.Now().Unix())
+	acl := zk.WorldACL(zk.PermAll)
+	_, err = client.Create(randPath, []byte("hi"), int32(0), acl)
+
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	defer func() {
+		client.Delete(randPath + "/foo", -1)
+		client.Delete(randPath, -1)
+		client.Close()
+	}()
+
+	b, err := NewBackend("zookeeper", map[string]string{
+		"address": addr + "," + addr,
+		"path":    randPath,
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	ha, ok := b.(HABackend)
+	if !ok {
+		t.Fatalf("zookeeper does not implement HABackend")
+	}
+	testHABackend(t, ha, ha)
+
+	err = client.Delete(randPath + "/foo", -1)
+	if err != nil {
+		t.Fatalf("err: failed to cleanup! %s", err)
+	}
+
 }

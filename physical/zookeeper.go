@@ -255,7 +255,7 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	if i.value != string(currentVal) {
 		return nil, fmt.Errorf("lost HA lock immediately before watch")
 	}
-	go i.monitorLock(lockeventCh, i.leaderCh)
+	go i.monitorLock(lockeventCh)
 
 	return i.leaderCh, nil
 }
@@ -270,7 +270,8 @@ func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, fa
 		return
 	}
 	// Set node value
-	err2 := i.in.ensurePath(lockpath, []byte(i.value))
+	data := []byte(i.value)
+	err2 := i.in.ensurePath(lockpath, data)
 	if err2 != nil {
 		failLock <- err2
 		lock.Unlock()
@@ -288,21 +289,24 @@ func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, fa
 	}
 }
 
-func (i *ZookeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan struct{}) {
+func (i *ZookeeperHALock) monitorLock(lockeventCh <-chan zk.Event) {
 	for {
 		select {
 		case event := <- lockeventCh:
 			// Lost connection?
-			if event.State != zk.StateConnected && event.State != zk.StateHasSession {
+			if event.State == zk.StateUnknown || event.State == zk.StateDisconnected ||  event.State == zk.StateConnecting || event.State == zk.StateAuthFailed || event.State == zk.StateConnectedReadOnly || event.State == zk.StateExpired {
 				close(i.leaderCh)
+				return
 			}
 			// Lost watch
 			if event.Type == zk.EventNotWatching {
 				close(i.leaderCh)
+				return
 			}
 			// Lock changed
 			if event.Type == zk.EventNodeCreated || event.Type == zk.EventNodeDeleted || event.Type == zk.EventNodeDataChanged {
 				close(i.leaderCh)
+				return
 			}
 		}
 	}
@@ -315,8 +319,6 @@ func (i *ZookeeperHALock) Unlock() error {
 		return nil
 	}
 
-	close(i.leaderCh)
-	i.leaderCh = nil
 	i.held = false
 	i.zkLock.Unlock()
 	return nil

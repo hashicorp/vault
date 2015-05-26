@@ -264,4 +264,6 @@ func testHABackend(t *testing.T, b HABackend, b2 HABackend) {
 	if val != "baz" {
 		t.Fatalf("bad value: %v", err)
 	}
+	// Cleanup
+	lock2.Unlock()
 }
