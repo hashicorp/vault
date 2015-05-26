@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 )
 
 // RFC822 returns an RFC822 formatted timestamp for AWS protocols
@@ -100,7 +101,9 @@ func buildBody(r *aws.Request, v reflect.Value) {
 					case string:
 						r.SetStringBody(reader)
 					default:
-						r.Error = fmt.Errorf("unknown payload type %s", payload.Type())
+						r.Error = apierr.New("Marshal",
+							"failed to encode REST request",
+							fmt.Errorf("unknown payload type %s", payload.Type()))
 					}
 				}
 			}
@@ -111,7 +114,7 @@ func buildBody(r *aws.Request, v reflect.Value) {
 func buildHeader(r *aws.Request, v reflect.Value, name string) {
 	str, err := convertType(v)
 	if err != nil {
-		r.Error = err
+		r.Error = apierr.New("Marshal", "failed to encode REST request", err)
 	} else if str != nil {
 		r.HTTPRequest.Header.Add(name, *str)
 	}
@@ -120,9 +123,8 @@ func buildHeader(r *aws.Request, v reflect.Value, name string) {
 func buildHeaderMap(r *aws.Request, v reflect.Value, prefix string) {
 	for _, key := range v.MapKeys() {
 		str, err := convertType(v.MapIndex(key))
-
 		if err != nil {
-			r.Error = err
+			r.Error = apierr.New("Marshal", "failed to encode REST request", err)
 		} else if str != nil {
 			r.HTTPRequest.Header.Add(prefix+key.String(), *str)
 		}
@@ -132,7 +134,7 @@ func buildHeaderMap(r *aws.Request, v reflect.Value, prefix string) {
 func buildURI(r *aws.Request, v reflect.Value, name string) {
 	value, err := convertType(v)
 	if err != nil {
-		r.Error = err
+		r.Error = apierr.New("Marshal", "failed to encode REST request", err)
 	} else if value != nil {
 		uri := r.HTTPRequest.URL.Path
 		uri = strings.Replace(uri, "{"+name+"}", EscapePath(*value, true), -1)
@@ -144,7 +146,7 @@ func buildURI(r *aws.Request, v reflect.Value, name string) {
 func buildQueryString(r *aws.Request, v reflect.Value, name string, query url.Values) {
 	str, err := convertType(v)
 	if err != nil {
-		r.Error = err
+		r.Error = apierr.New("Marshal", "failed to encode REST request", err)
 	} else if str != nil {
 		query.Set(name, *str)
 	}

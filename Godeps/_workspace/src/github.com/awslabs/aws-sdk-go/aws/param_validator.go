@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"reflect"
 	"strings"
 )
@@ -16,7 +17,7 @@ func ValidateParameters(r *Request) {
 		if count := len(v.errors); count > 0 {
 			format := "%d validation errors:\n- %s"
 			msg := fmt.Sprintf(format, count, strings.Join(v.errors, "\n- "))
-			r.Error = APIError{Code: "InvalidParameter", Message: msg}
+			r.Error = apierr.New("InvalidParameter", msg, nil)
 		}
 	}
 }

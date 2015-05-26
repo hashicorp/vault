@@ -1,5 +1,3 @@
-// +build !integration
-
 package s3_test
 
 import (

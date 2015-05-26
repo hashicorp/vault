@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/awslabs/aws-sdk-go/aws/credentials"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,11 +56,11 @@ func TestAfterRetryRefreshCreds(t *testing.T) {
 
 	svc.Handlers.Clear()
 	svc.Handlers.ValidateResponse.PushBack(func(r *Request) {
-		r.Error = &APIError{Code: "UnknownError"}
+		r.Error = apierr.New("UnknownError", "", nil)
 		r.HTTPResponse = &http.Response{StatusCode: 400}
 	})
 	svc.Handlers.UnmarshalError.PushBack(func(r *Request) {
-		r.Error = &APIError{Code: "ExpiredTokenException"}
+		r.Error = apierr.New("ExpiredTokenException", "", nil)
 	})
 	svc.Handlers.AfterRetry.PushBack(func(r *Request) {
 		AfterRetryHandler(r)

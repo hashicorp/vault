@@ -1,12 +1,12 @@
 package credentials
 
 import (
-	"fmt"
+	"github.com/awslabs/aws-sdk-go/internal/apierr"
 )
 
 var (
 	// ErrStaticCredentialsEmpty is emitted when static credentials are empty.
-	ErrStaticCredentialsEmpty = fmt.Errorf("static credentials are empty")
+	ErrStaticCredentialsEmpty = apierr.New("EmptyStaticCreds", "static credentials are empty", nil)
 )
 
 // A StaticProvider is a set of credentials which are set pragmatically,

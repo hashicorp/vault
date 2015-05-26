@@ -85,11 +85,10 @@ func (c *OutputService1ProtocolTest) OutputService1TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService1ProtocolTest) OutputService1TestCaseOperation1(input *OutputService1TestShapeOutputService1TestCaseOperation1Input) (output *OutputService1TestShapeOutputShape, err error) {
+func (c *OutputService1ProtocolTest) OutputService1TestCaseOperation1(input *OutputService1TestShapeOutputService1TestCaseOperation1Input) (*OutputService1TestShapeOutputShape, error) {
 	req, out := c.OutputService1TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService1TestCaseOperation1 *aws.Operation
@@ -113,11 +112,10 @@ func (c *OutputService1ProtocolTest) OutputService1TestCaseOperation2Request(inp
 	return
 }
 
-func (c *OutputService1ProtocolTest) OutputService1TestCaseOperation2(input *OutputService1TestShapeOutputService1TestCaseOperation2Input) (output *OutputService1TestShapeOutputShape, err error) {
+func (c *OutputService1ProtocolTest) OutputService1TestCaseOperation2(input *OutputService1TestShapeOutputService1TestCaseOperation2Input) (*OutputService1TestShapeOutputShape, error) {
 	req, out := c.OutputService1TestCaseOperation2Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService1TestCaseOperation2 *aws.Operation
@@ -223,11 +221,10 @@ func (c *OutputService2ProtocolTest) OutputService2TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService2ProtocolTest) OutputService2TestCaseOperation1(input *OutputService2TestShapeOutputService2TestCaseOperation1Input) (output *OutputService2TestShapeOutputShape, err error) {
+func (c *OutputService2ProtocolTest) OutputService2TestCaseOperation1(input *OutputService2TestShapeOutputService2TestCaseOperation1Input) (*OutputService2TestShapeOutputShape, error) {
 	req, out := c.OutputService2TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService2TestCaseOperation1 *aws.Operation
@@ -305,11 +302,10 @@ func (c *OutputService3ProtocolTest) OutputService3TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService3ProtocolTest) OutputService3TestCaseOperation1(input *OutputService3TestShapeOutputService3TestCaseOperation1Input) (output *OutputService3TestShapeOutputShape, err error) {
+func (c *OutputService3ProtocolTest) OutputService3TestCaseOperation1(input *OutputService3TestShapeOutputService3TestCaseOperation1Input) (*OutputService3TestShapeOutputShape, error) {
 	req, out := c.OutputService3TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService3TestCaseOperation1 *aws.Operation
@@ -387,11 +383,10 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1(input *OutputService4TestShapeOutputService4TestCaseOperation1Input) (output *OutputService4TestShapeOutputShape, err error) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1(input *OutputService4TestShapeOutputService4TestCaseOperation1Input) (*OutputService4TestShapeOutputShape, error) {
 	req, out := c.OutputService4TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService4TestCaseOperation1 *aws.Operation
@@ -469,11 +464,10 @@ func (c *OutputService5ProtocolTest) OutputService5TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService5ProtocolTest) OutputService5TestCaseOperation1(input *OutputService5TestShapeOutputService5TestCaseOperation1Input) (output *OutputService5TestShapeOutputShape, err error) {
+func (c *OutputService5ProtocolTest) OutputService5TestCaseOperation1(input *OutputService5TestShapeOutputService5TestCaseOperation1Input) (*OutputService5TestShapeOutputShape, error) {
 	req, out := c.OutputService5TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService5TestCaseOperation1 *aws.Operation
@@ -551,11 +545,10 @@ func (c *OutputService6ProtocolTest) OutputService6TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService6ProtocolTest) OutputService6TestCaseOperation1(input *OutputService6TestShapeOutputService6TestCaseOperation1Input) (output *OutputService6TestShapeOutputShape, err error) {
+func (c *OutputService6ProtocolTest) OutputService6TestCaseOperation1(input *OutputService6TestShapeOutputService6TestCaseOperation1Input) (*OutputService6TestShapeOutputShape, error) {
 	req, out := c.OutputService6TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService6TestCaseOperation1 *aws.Operation
@@ -643,11 +636,10 @@ func (c *OutputService7ProtocolTest) OutputService7TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService7ProtocolTest) OutputService7TestCaseOperation1(input *OutputService7TestShapeOutputService7TestCaseOperation1Input) (output *OutputService7TestShapeOutputShape, err error) {
+func (c *OutputService7ProtocolTest) OutputService7TestCaseOperation1(input *OutputService7TestShapeOutputService7TestCaseOperation1Input) (*OutputService7TestShapeOutputShape, error) {
 	req, out := c.OutputService7TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService7TestCaseOperation1 *aws.Operation
@@ -725,11 +717,10 @@ func (c *OutputService8ProtocolTest) OutputService8TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService8ProtocolTest) OutputService8TestCaseOperation1(input *OutputService8TestShapeOutputService8TestCaseOperation1Input) (output *OutputService8TestShapeOutputShape, err error) {
+func (c *OutputService8ProtocolTest) OutputService8TestCaseOperation1(input *OutputService8TestShapeOutputService8TestCaseOperation1Input) (*OutputService8TestShapeOutputShape, error) {
 	req, out := c.OutputService8TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService8TestCaseOperation1 *aws.Operation
@@ -807,11 +798,10 @@ func (c *OutputService9ProtocolTest) OutputService9TestCaseOperation1Request(inp
 	return
 }
 
-func (c *OutputService9ProtocolTest) OutputService9TestCaseOperation1(input *OutputService9TestShapeOutputService9TestCaseOperation1Input) (output *OutputService9TestShapeOutputShape, err error) {
+func (c *OutputService9ProtocolTest) OutputService9TestCaseOperation1(input *OutputService9TestShapeOutputService9TestCaseOperation1Input) (*OutputService9TestShapeOutputShape, error) {
 	req, out := c.OutputService9TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService9TestCaseOperation1 *aws.Operation
@@ -901,11 +891,10 @@ func (c *OutputService10ProtocolTest) OutputService10TestCaseOperation1Request(i
 	return
 }
 
-func (c *OutputService10ProtocolTest) OutputService10TestCaseOperation1(input *OutputService10TestShapeOutputService10TestCaseOperation1Input) (output *OutputService10TestShapeOutputShape, err error) {
+func (c *OutputService10ProtocolTest) OutputService10TestCaseOperation1(input *OutputService10TestShapeOutputService10TestCaseOperation1Input) (*OutputService10TestShapeOutputShape, error) {
 	req, out := c.OutputService10TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService10TestCaseOperation1 *aws.Operation
@@ -983,11 +972,10 @@ func (c *OutputService11ProtocolTest) OutputService11TestCaseOperation1Request(i
 	return
 }
 
-func (c *OutputService11ProtocolTest) OutputService11TestCaseOperation1(input *OutputService11TestShapeOutputService11TestCaseOperation1Input) (output *OutputService11TestShapeOutputShape, err error) {
+func (c *OutputService11ProtocolTest) OutputService11TestCaseOperation1(input *OutputService11TestShapeOutputService11TestCaseOperation1Input) (*OutputService11TestShapeOutputShape, error) {
 	req, out := c.OutputService11TestCaseOperation1Request(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opOutputService11TestCaseOperation1 *aws.Operation
@@ -1024,6 +1012,87 @@ type OutputService11TestShapeOutputShape struct {
 
 type metadataOutputService11TestShapeOutputShape struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// OutputService12ProtocolTest is a client for OutputService12ProtocolTest.
+type OutputService12ProtocolTest struct {
+	*aws.Service
+}
+
+// New returns a new OutputService12ProtocolTest client.
+func NewOutputService12ProtocolTest(config *aws.Config) *OutputService12ProtocolTest {
+	if config == nil {
+		config = &aws.Config{}
+	}
+
+	service := &aws.Service{
+		Config:      aws.DefaultConfig.Merge(config),
+		ServiceName: "outputservice12protocoltest",
+		APIVersion:  "",
+	}
+	service.Initialize()
+
+	// Handlers
+	service.Handlers.Sign.PushBack(v4.Sign)
+	service.Handlers.Build.PushBack(restxml.Build)
+	service.Handlers.Unmarshal.PushBack(restxml.Unmarshal)
+	service.Handlers.UnmarshalMeta.PushBack(restxml.UnmarshalMeta)
+	service.Handlers.UnmarshalError.PushBack(restxml.UnmarshalError)
+
+	return &OutputService12ProtocolTest{service}
+}
+
+// newRequest creates a new request for a OutputService12ProtocolTest operation and runs any
+// custom request initialization.
+func (c *OutputService12ProtocolTest) newRequest(op *aws.Operation, params, data interface{}) *aws.Request {
+	req := aws.NewRequest(c.Service, op, params, data)
+
+	return req
+}
+
+// OutputService12TestCaseOperation1Request generates a request for the OutputService12TestCaseOperation1 operation.
+func (c *OutputService12ProtocolTest) OutputService12TestCaseOperation1Request(input *OutputService12TestShapeOutputService12TestCaseOperation1Input) (req *aws.Request, output *OutputService12TestShapeOutputShape) {
+
+	if opOutputService12TestCaseOperation1 == nil {
+		opOutputService12TestCaseOperation1 = &aws.Operation{
+			Name: "OperationName",
+		}
+	}
+
+	if input == nil {
+		input = &OutputService12TestShapeOutputService12TestCaseOperation1Input{}
+	}
+
+	req = c.newRequest(opOutputService12TestCaseOperation1, input, output)
+	output = &OutputService12TestShapeOutputShape{}
+	req.Data = output
+	return
+}
+
+func (c *OutputService12ProtocolTest) OutputService12TestCaseOperation1(input *OutputService12TestShapeOutputService12TestCaseOperation1Input) (*OutputService12TestShapeOutputShape, error) {
+	req, out := c.OutputService12TestCaseOperation1Request(input)
+	err := req.Send()
+	return out, err
+}
+
+var opOutputService12TestCaseOperation1 *aws.Operation
+
+type OutputService12TestShapeOutputService12TestCaseOperation1Input struct {
+	metadataOutputService12TestShapeOutputService12TestCaseOperation1Input `json:"-" xml:"-"`
+}
+
+type metadataOutputService12TestShapeOutputService12TestCaseOperation1Input struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+type OutputService12TestShapeOutputShape struct {
+	String *string `type:"string"`
+
+	metadataOutputService12TestShapeOutputShape `json:"-" xml:"-"`
+}
+
+type metadataOutputService12TestShapeOutputShape struct {
+	SDKShapeTraits bool `type:"structure" payload:"String"`
 }
 
 //
@@ -1316,6 +1385,26 @@ func TestOutputService11ProtocolTestScalarMembersInHeadersCase1(t *testing.T) {
 	assert.Equal(t, "string", *out.Str)
 	assert.Equal(t, time.Unix(1.4221728e+09, 0).UTC().String(), out.Timestamp.String())
 	assert.Equal(t, true, *out.TrueBool)
+
+}
+
+func TestOutputService12ProtocolTestStringCase1(t *testing.T) {
+	svc := NewOutputService12ProtocolTest(nil)
+
+	buf := bytes.NewReader([]byte("operation result string"))
+	req, out := svc.OutputService12TestCaseOperation1Request(nil)
+	req.HTTPResponse = &http.Response{StatusCode: 200, Body: ioutil.NopCloser(buf), Header: http.Header{}}
+
+	// set headers
+
+	// unmarshal response
+	restxml.UnmarshalMeta(req)
+	restxml.Unmarshal(req)
+	assert.NoError(t, req.Error)
+
+	// assert response
+	assert.NotNil(t, out) // ensure out variable is used
+	assert.Equal(t, "operation result string", *out.String)
 
 }
 

@@ -41,11 +41,10 @@ func (c *S3) AbortMultipartUploadRequest(input *AbortMultipartUploadInput) (req 
 // To verify that all parts have been removed, so you don't get charged for
 // the part storage, you should call the List Parts operation and ensure the
 // parts list is empty.
-func (c *S3) AbortMultipartUpload(input *AbortMultipartUploadInput) (output *AbortMultipartUploadOutput, err error) {
+func (c *S3) AbortMultipartUpload(input *AbortMultipartUploadInput) (*AbortMultipartUploadOutput, error) {
 	req, out := c.AbortMultipartUploadRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opAbortMultipartUpload *aws.Operation
@@ -74,11 +73,10 @@ func (c *S3) CompleteMultipartUploadRequest(input *CompleteMultipartUploadInput)
 }
 
 // Completes a multipart upload by assembling previously uploaded parts.
-func (c *S3) CompleteMultipartUpload(input *CompleteMultipartUploadInput) (output *CompleteMultipartUploadOutput, err error) {
+func (c *S3) CompleteMultipartUpload(input *CompleteMultipartUploadInput) (*CompleteMultipartUploadOutput, error) {
 	req, out := c.CompleteMultipartUploadRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opCompleteMultipartUpload *aws.Operation
@@ -107,11 +105,10 @@ func (c *S3) CopyObjectRequest(input *CopyObjectInput) (req *aws.Request, output
 }
 
 // Creates a copy of an object that is already stored in Amazon S3.
-func (c *S3) CopyObject(input *CopyObjectInput) (output *CopyObjectOutput, err error) {
+func (c *S3) CopyObject(input *CopyObjectInput) (*CopyObjectOutput, error) {
 	req, out := c.CopyObjectRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opCopyObject *aws.Operation
@@ -140,11 +137,10 @@ func (c *S3) CreateBucketRequest(input *CreateBucketInput) (req *aws.Request, ou
 }
 
 // Creates a new bucket.
-func (c *S3) CreateBucket(input *CreateBucketInput) (output *CreateBucketOutput, err error) {
+func (c *S3) CreateBucket(input *CreateBucketInput) (*CreateBucketOutput, error) {
 	req, out := c.CreateBucketRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opCreateBucket *aws.Operation
@@ -179,11 +175,10 @@ func (c *S3) CreateMultipartUploadRequest(input *CreateMultipartUploadInput) (re
 // charged for storage of the uploaded parts. Only after you either complete
 // or abort multipart upload, Amazon S3 frees up the parts storage and stops
 // charging you for the parts storage.
-func (c *S3) CreateMultipartUpload(input *CreateMultipartUploadInput) (output *CreateMultipartUploadOutput, err error) {
+func (c *S3) CreateMultipartUpload(input *CreateMultipartUploadInput) (*CreateMultipartUploadOutput, error) {
 	req, out := c.CreateMultipartUploadRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opCreateMultipartUpload *aws.Operation
@@ -213,11 +208,10 @@ func (c *S3) DeleteBucketRequest(input *DeleteBucketInput) (req *aws.Request, ou
 
 // Deletes the bucket. All objects (including all object versions and Delete
 // Markers) in the bucket must be deleted before the bucket itself can be deleted.
-func (c *S3) DeleteBucket(input *DeleteBucketInput) (output *DeleteBucketOutput, err error) {
+func (c *S3) DeleteBucket(input *DeleteBucketInput) (*DeleteBucketOutput, error) {
 	req, out := c.DeleteBucketRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucket *aws.Operation
@@ -246,11 +240,10 @@ func (c *S3) DeleteBucketCORSRequest(input *DeleteBucketCORSInput) (req *aws.Req
 }
 
 // Deletes the cors configuration information set for the bucket.
-func (c *S3) DeleteBucketCORS(input *DeleteBucketCORSInput) (output *DeleteBucketCORSOutput, err error) {
+func (c *S3) DeleteBucketCORS(input *DeleteBucketCORSInput) (*DeleteBucketCORSOutput, error) {
 	req, out := c.DeleteBucketCORSRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucketCORS *aws.Operation
@@ -279,11 +272,10 @@ func (c *S3) DeleteBucketLifecycleRequest(input *DeleteBucketLifecycleInput) (re
 }
 
 // Deletes the lifecycle configuration from the bucket.
-func (c *S3) DeleteBucketLifecycle(input *DeleteBucketLifecycleInput) (output *DeleteBucketLifecycleOutput, err error) {
+func (c *S3) DeleteBucketLifecycle(input *DeleteBucketLifecycleInput) (*DeleteBucketLifecycleOutput, error) {
 	req, out := c.DeleteBucketLifecycleRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucketLifecycle *aws.Operation
@@ -312,11 +304,10 @@ func (c *S3) DeleteBucketPolicyRequest(input *DeleteBucketPolicyInput) (req *aws
 }
 
 // Deletes the policy from the bucket.
-func (c *S3) DeleteBucketPolicy(input *DeleteBucketPolicyInput) (output *DeleteBucketPolicyOutput, err error) {
+func (c *S3) DeleteBucketPolicy(input *DeleteBucketPolicyInput) (*DeleteBucketPolicyOutput, error) {
 	req, out := c.DeleteBucketPolicyRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucketPolicy *aws.Operation
@@ -344,11 +335,10 @@ func (c *S3) DeleteBucketReplicationRequest(input *DeleteBucketReplicationInput)
 	return
 }
 
-func (c *S3) DeleteBucketReplication(input *DeleteBucketReplicationInput) (output *DeleteBucketReplicationOutput, err error) {
+func (c *S3) DeleteBucketReplication(input *DeleteBucketReplicationInput) (*DeleteBucketReplicationOutput, error) {
 	req, out := c.DeleteBucketReplicationRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucketReplication *aws.Operation
@@ -377,11 +367,10 @@ func (c *S3) DeleteBucketTaggingRequest(input *DeleteBucketTaggingInput) (req *a
 }
 
 // Deletes the tags from the bucket.
-func (c *S3) DeleteBucketTagging(input *DeleteBucketTaggingInput) (output *DeleteBucketTaggingOutput, err error) {
+func (c *S3) DeleteBucketTagging(input *DeleteBucketTaggingInput) (*DeleteBucketTaggingOutput, error) {
 	req, out := c.DeleteBucketTaggingRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucketTagging *aws.Operation
@@ -410,11 +399,10 @@ func (c *S3) DeleteBucketWebsiteRequest(input *DeleteBucketWebsiteInput) (req *a
 }
 
 // This operation removes the website configuration from the bucket.
-func (c *S3) DeleteBucketWebsite(input *DeleteBucketWebsiteInput) (output *DeleteBucketWebsiteOutput, err error) {
+func (c *S3) DeleteBucketWebsite(input *DeleteBucketWebsiteInput) (*DeleteBucketWebsiteOutput, error) {
 	req, out := c.DeleteBucketWebsiteRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteBucketWebsite *aws.Operation
@@ -445,11 +433,10 @@ func (c *S3) DeleteObjectRequest(input *DeleteObjectInput) (req *aws.Request, ou
 // Removes the null version (if there is one) of an object and inserts a delete
 // marker, which becomes the latest version of the object. If there isn't a
 // null version, Amazon S3 does not remove any objects.
-func (c *S3) DeleteObject(input *DeleteObjectInput) (output *DeleteObjectOutput, err error) {
+func (c *S3) DeleteObject(input *DeleteObjectInput) (*DeleteObjectOutput, error) {
 	req, out := c.DeleteObjectRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteObject *aws.Operation
@@ -479,11 +466,10 @@ func (c *S3) DeleteObjectsRequest(input *DeleteObjectsInput) (req *aws.Request, 
 
 // This operation enables you to delete multiple objects from a bucket using
 // a single HTTP request. You may specify up to 1000 keys.
-func (c *S3) DeleteObjects(input *DeleteObjectsInput) (output *DeleteObjectsOutput, err error) {
+func (c *S3) DeleteObjects(input *DeleteObjectsInput) (*DeleteObjectsOutput, error) {
 	req, out := c.DeleteObjectsRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opDeleteObjects *aws.Operation
@@ -512,11 +498,10 @@ func (c *S3) GetBucketACLRequest(input *GetBucketACLInput) (req *aws.Request, ou
 }
 
 // Gets the access control policy for the bucket.
-func (c *S3) GetBucketACL(input *GetBucketACLInput) (output *GetBucketACLOutput, err error) {
+func (c *S3) GetBucketACL(input *GetBucketACLInput) (*GetBucketACLOutput, error) {
 	req, out := c.GetBucketACLRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketACL *aws.Operation
@@ -545,11 +530,10 @@ func (c *S3) GetBucketCORSRequest(input *GetBucketCORSInput) (req *aws.Request, 
 }
 
 // Returns the cors configuration for the bucket.
-func (c *S3) GetBucketCORS(input *GetBucketCORSInput) (output *GetBucketCORSOutput, err error) {
+func (c *S3) GetBucketCORS(input *GetBucketCORSInput) (*GetBucketCORSOutput, error) {
 	req, out := c.GetBucketCORSRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketCORS *aws.Operation
@@ -578,11 +562,10 @@ func (c *S3) GetBucketLifecycleRequest(input *GetBucketLifecycleInput) (req *aws
 }
 
 // Returns the lifecycle configuration information set on the bucket.
-func (c *S3) GetBucketLifecycle(input *GetBucketLifecycleInput) (output *GetBucketLifecycleOutput, err error) {
+func (c *S3) GetBucketLifecycle(input *GetBucketLifecycleInput) (*GetBucketLifecycleOutput, error) {
 	req, out := c.GetBucketLifecycleRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketLifecycle *aws.Operation
@@ -611,11 +594,10 @@ func (c *S3) GetBucketLocationRequest(input *GetBucketLocationInput) (req *aws.R
 }
 
 // Returns the region the bucket resides in.
-func (c *S3) GetBucketLocation(input *GetBucketLocationInput) (output *GetBucketLocationOutput, err error) {
+func (c *S3) GetBucketLocation(input *GetBucketLocationInput) (*GetBucketLocationOutput, error) {
 	req, out := c.GetBucketLocationRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketLocation *aws.Operation
@@ -645,11 +627,10 @@ func (c *S3) GetBucketLoggingRequest(input *GetBucketLoggingInput) (req *aws.Req
 
 // Returns the logging status of a bucket and the permissions users have to
 // view and modify that status. To use GET, you must be the bucket owner.
-func (c *S3) GetBucketLogging(input *GetBucketLoggingInput) (output *GetBucketLoggingOutput, err error) {
+func (c *S3) GetBucketLogging(input *GetBucketLoggingInput) (*GetBucketLoggingOutput, error) {
 	req, out := c.GetBucketLoggingRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketLogging *aws.Operation
@@ -678,11 +659,10 @@ func (c *S3) GetBucketNotificationRequest(input *GetBucketNotificationInput) (re
 }
 
 // Return the notification configuration of a bucket.
-func (c *S3) GetBucketNotification(input *GetBucketNotificationInput) (output *GetBucketNotificationOutput, err error) {
+func (c *S3) GetBucketNotification(input *GetBucketNotificationInput) (*GetBucketNotificationOutput, error) {
 	req, out := c.GetBucketNotificationRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketNotification *aws.Operation
@@ -711,11 +691,10 @@ func (c *S3) GetBucketPolicyRequest(input *GetBucketPolicyInput) (req *aws.Reque
 }
 
 // Returns the policy of a specified bucket.
-func (c *S3) GetBucketPolicy(input *GetBucketPolicyInput) (output *GetBucketPolicyOutput, err error) {
+func (c *S3) GetBucketPolicy(input *GetBucketPolicyInput) (*GetBucketPolicyOutput, error) {
 	req, out := c.GetBucketPolicyRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketPolicy *aws.Operation
@@ -743,11 +722,10 @@ func (c *S3) GetBucketReplicationRequest(input *GetBucketReplicationInput) (req 
 	return
 }
 
-func (c *S3) GetBucketReplication(input *GetBucketReplicationInput) (output *GetBucketReplicationOutput, err error) {
+func (c *S3) GetBucketReplication(input *GetBucketReplicationInput) (*GetBucketReplicationOutput, error) {
 	req, out := c.GetBucketReplicationRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketReplication *aws.Operation
@@ -776,11 +754,10 @@ func (c *S3) GetBucketRequestPaymentRequest(input *GetBucketRequestPaymentInput)
 }
 
 // Returns the request payment configuration of a bucket.
-func (c *S3) GetBucketRequestPayment(input *GetBucketRequestPaymentInput) (output *GetBucketRequestPaymentOutput, err error) {
+func (c *S3) GetBucketRequestPayment(input *GetBucketRequestPaymentInput) (*GetBucketRequestPaymentOutput, error) {
 	req, out := c.GetBucketRequestPaymentRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketRequestPayment *aws.Operation
@@ -809,11 +786,10 @@ func (c *S3) GetBucketTaggingRequest(input *GetBucketTaggingInput) (req *aws.Req
 }
 
 // Returns the tag set associated with the bucket.
-func (c *S3) GetBucketTagging(input *GetBucketTaggingInput) (output *GetBucketTaggingOutput, err error) {
+func (c *S3) GetBucketTagging(input *GetBucketTaggingInput) (*GetBucketTaggingOutput, error) {
 	req, out := c.GetBucketTaggingRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketTagging *aws.Operation
@@ -842,11 +818,10 @@ func (c *S3) GetBucketVersioningRequest(input *GetBucketVersioningInput) (req *a
 }
 
 // Returns the versioning state of a bucket.
-func (c *S3) GetBucketVersioning(input *GetBucketVersioningInput) (output *GetBucketVersioningOutput, err error) {
+func (c *S3) GetBucketVersioning(input *GetBucketVersioningInput) (*GetBucketVersioningOutput, error) {
 	req, out := c.GetBucketVersioningRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketVersioning *aws.Operation
@@ -875,11 +850,10 @@ func (c *S3) GetBucketWebsiteRequest(input *GetBucketWebsiteInput) (req *aws.Req
 }
 
 // Returns the website configuration for a bucket.
-func (c *S3) GetBucketWebsite(input *GetBucketWebsiteInput) (output *GetBucketWebsiteOutput, err error) {
+func (c *S3) GetBucketWebsite(input *GetBucketWebsiteInput) (*GetBucketWebsiteOutput, error) {
 	req, out := c.GetBucketWebsiteRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetBucketWebsite *aws.Operation
@@ -908,11 +882,10 @@ func (c *S3) GetObjectRequest(input *GetObjectInput) (req *aws.Request, output *
 }
 
 // Retrieves objects from Amazon S3.
-func (c *S3) GetObject(input *GetObjectInput) (output *GetObjectOutput, err error) {
+func (c *S3) GetObject(input *GetObjectInput) (*GetObjectOutput, error) {
 	req, out := c.GetObjectRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetObject *aws.Operation
@@ -941,11 +914,10 @@ func (c *S3) GetObjectACLRequest(input *GetObjectACLInput) (req *aws.Request, ou
 }
 
 // Returns the access control list (ACL) of an object.
-func (c *S3) GetObjectACL(input *GetObjectACLInput) (output *GetObjectACLOutput, err error) {
+func (c *S3) GetObjectACL(input *GetObjectACLInput) (*GetObjectACLOutput, error) {
 	req, out := c.GetObjectACLRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetObjectACL *aws.Operation
@@ -974,11 +946,10 @@ func (c *S3) GetObjectTorrentRequest(input *GetObjectTorrentInput) (req *aws.Req
 }
 
 // Return torrent files from a bucket.
-func (c *S3) GetObjectTorrent(input *GetObjectTorrentInput) (output *GetObjectTorrentOutput, err error) {
+func (c *S3) GetObjectTorrent(input *GetObjectTorrentInput) (*GetObjectTorrentOutput, error) {
 	req, out := c.GetObjectTorrentRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opGetObjectTorrent *aws.Operation
@@ -1008,11 +979,10 @@ func (c *S3) HeadBucketRequest(input *HeadBucketInput) (req *aws.Request, output
 
 // This operation is useful to determine if a bucket exists and you have permission
 // to access it.
-func (c *S3) HeadBucket(input *HeadBucketInput) (output *HeadBucketOutput, err error) {
+func (c *S3) HeadBucket(input *HeadBucketInput) (*HeadBucketOutput, error) {
 	req, out := c.HeadBucketRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opHeadBucket *aws.Operation
@@ -1043,11 +1013,10 @@ func (c *S3) HeadObjectRequest(input *HeadObjectInput) (req *aws.Request, output
 // The HEAD operation retrieves metadata from an object without returning the
 // object itself. This operation is useful if you're only interested in an object's
 // metadata. To use HEAD, you must have READ access to the object.
-func (c *S3) HeadObject(input *HeadObjectInput) (output *HeadObjectOutput, err error) {
+func (c *S3) HeadObject(input *HeadObjectInput) (*HeadObjectOutput, error) {
 	req, out := c.HeadObjectRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opHeadObject *aws.Operation
@@ -1076,11 +1045,10 @@ func (c *S3) ListBucketsRequest(input *ListBucketsInput) (req *aws.Request, outp
 }
 
 // Returns a list of all buckets owned by the authenticated sender of the request.
-func (c *S3) ListBuckets(input *ListBucketsInput) (output *ListBucketsOutput, err error) {
+func (c *S3) ListBuckets(input *ListBucketsInput) (*ListBucketsOutput, error) {
 	req, out := c.ListBucketsRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opListBuckets *aws.Operation
@@ -1109,11 +1077,10 @@ func (c *S3) ListMultipartUploadsRequest(input *ListMultipartUploadsInput) (req 
 }
 
 // This operation lists in-progress multipart uploads.
-func (c *S3) ListMultipartUploads(input *ListMultipartUploadsInput) (output *ListMultipartUploadsOutput, err error) {
+func (c *S3) ListMultipartUploads(input *ListMultipartUploadsInput) (*ListMultipartUploadsOutput, error) {
 	req, out := c.ListMultipartUploadsRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opListMultipartUploads *aws.Operation
@@ -1142,11 +1109,10 @@ func (c *S3) ListObjectVersionsRequest(input *ListObjectVersionsInput) (req *aws
 }
 
 // Returns metadata about all of the versions of objects in a bucket.
-func (c *S3) ListObjectVersions(input *ListObjectVersionsInput) (output *ListObjectVersionsOutput, err error) {
+func (c *S3) ListObjectVersions(input *ListObjectVersionsInput) (*ListObjectVersionsOutput, error) {
 	req, out := c.ListObjectVersionsRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opListObjectVersions *aws.Operation
@@ -1177,11 +1143,10 @@ func (c *S3) ListObjectsRequest(input *ListObjectsInput) (req *aws.Request, outp
 // Returns some or all (up to 1000) of the objects in a bucket. You can use
 // the request parameters as selection criteria to return a subset of the objects
 // in a bucket.
-func (c *S3) ListObjects(input *ListObjectsInput) (output *ListObjectsOutput, err error) {
+func (c *S3) ListObjects(input *ListObjectsInput) (*ListObjectsOutput, error) {
 	req, out := c.ListObjectsRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opListObjects *aws.Operation
@@ -1210,11 +1175,10 @@ func (c *S3) ListPartsRequest(input *ListPartsInput) (req *aws.Request, output *
 }
 
 // Lists the parts that have been uploaded for a specific multipart upload.
-func (c *S3) ListParts(input *ListPartsInput) (output *ListPartsOutput, err error) {
+func (c *S3) ListParts(input *ListPartsInput) (*ListPartsOutput, error) {
 	req, out := c.ListPartsRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opListParts *aws.Operation
@@ -1243,11 +1207,10 @@ func (c *S3) PutBucketACLRequest(input *PutBucketACLInput) (req *aws.Request, ou
 }
 
 // Sets the permissions on a bucket using access control lists (ACL).
-func (c *S3) PutBucketACL(input *PutBucketACLInput) (output *PutBucketACLOutput, err error) {
+func (c *S3) PutBucketACL(input *PutBucketACLInput) (*PutBucketACLOutput, error) {
 	req, out := c.PutBucketACLRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketACL *aws.Operation
@@ -1276,11 +1239,10 @@ func (c *S3) PutBucketCORSRequest(input *PutBucketCORSInput) (req *aws.Request, 
 }
 
 // Sets the cors configuration for a bucket.
-func (c *S3) PutBucketCORS(input *PutBucketCORSInput) (output *PutBucketCORSOutput, err error) {
+func (c *S3) PutBucketCORS(input *PutBucketCORSInput) (*PutBucketCORSOutput, error) {
 	req, out := c.PutBucketCORSRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketCORS *aws.Operation
@@ -1310,11 +1272,10 @@ func (c *S3) PutBucketLifecycleRequest(input *PutBucketLifecycleInput) (req *aws
 
 // Sets lifecycle configuration for your bucket. If a lifecycle configuration
 // exists, it replaces it.
-func (c *S3) PutBucketLifecycle(input *PutBucketLifecycleInput) (output *PutBucketLifecycleOutput, err error) {
+func (c *S3) PutBucketLifecycle(input *PutBucketLifecycleInput) (*PutBucketLifecycleOutput, error) {
 	req, out := c.PutBucketLifecycleRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketLifecycle *aws.Operation
@@ -1345,11 +1306,10 @@ func (c *S3) PutBucketLoggingRequest(input *PutBucketLoggingInput) (req *aws.Req
 // Set the logging parameters for a bucket and to specify permissions for who
 // can view and modify the logging parameters. To set the logging status of
 // a bucket, you must be the bucket owner.
-func (c *S3) PutBucketLogging(input *PutBucketLoggingInput) (output *PutBucketLoggingOutput, err error) {
+func (c *S3) PutBucketLogging(input *PutBucketLoggingInput) (*PutBucketLoggingOutput, error) {
 	req, out := c.PutBucketLoggingRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketLogging *aws.Operation
@@ -1378,11 +1338,10 @@ func (c *S3) PutBucketNotificationRequest(input *PutBucketNotificationInput) (re
 }
 
 // Enables notifications of specified events for a bucket.
-func (c *S3) PutBucketNotification(input *PutBucketNotificationInput) (output *PutBucketNotificationOutput, err error) {
+func (c *S3) PutBucketNotification(input *PutBucketNotificationInput) (*PutBucketNotificationOutput, error) {
 	req, out := c.PutBucketNotificationRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketNotification *aws.Operation
@@ -1412,11 +1371,10 @@ func (c *S3) PutBucketPolicyRequest(input *PutBucketPolicyInput) (req *aws.Reque
 
 // Replaces a policy on a bucket. If the bucket already has a policy, the one
 // in this request completely replaces it.
-func (c *S3) PutBucketPolicy(input *PutBucketPolicyInput) (output *PutBucketPolicyOutput, err error) {
+func (c *S3) PutBucketPolicy(input *PutBucketPolicyInput) (*PutBucketPolicyOutput, error) {
 	req, out := c.PutBucketPolicyRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketPolicy *aws.Operation
@@ -1446,11 +1404,10 @@ func (c *S3) PutBucketReplicationRequest(input *PutBucketReplicationInput) (req 
 
 // Creates a new replication configuration (or replaces an existing one, if
 // present).
-func (c *S3) PutBucketReplication(input *PutBucketReplicationInput) (output *PutBucketReplicationOutput, err error) {
+func (c *S3) PutBucketReplication(input *PutBucketReplicationInput) (*PutBucketReplicationOutput, error) {
 	req, out := c.PutBucketReplicationRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketReplication *aws.Operation
@@ -1483,11 +1440,10 @@ func (c *S3) PutBucketRequestPaymentRequest(input *PutBucketRequestPaymentInput)
 // the bucket owner (only) to specify that the person requesting the download
 // will be charged for the download. Documentation on requester pays buckets
 // can be found at http://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html
-func (c *S3) PutBucketRequestPayment(input *PutBucketRequestPaymentInput) (output *PutBucketRequestPaymentOutput, err error) {
+func (c *S3) PutBucketRequestPayment(input *PutBucketRequestPaymentInput) (*PutBucketRequestPaymentOutput, error) {
 	req, out := c.PutBucketRequestPaymentRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketRequestPayment *aws.Operation
@@ -1516,11 +1472,10 @@ func (c *S3) PutBucketTaggingRequest(input *PutBucketTaggingInput) (req *aws.Req
 }
 
 // Sets the tags for a bucket.
-func (c *S3) PutBucketTagging(input *PutBucketTaggingInput) (output *PutBucketTaggingOutput, err error) {
+func (c *S3) PutBucketTagging(input *PutBucketTaggingInput) (*PutBucketTaggingOutput, error) {
 	req, out := c.PutBucketTaggingRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketTagging *aws.Operation
@@ -1550,11 +1505,10 @@ func (c *S3) PutBucketVersioningRequest(input *PutBucketVersioningInput) (req *a
 
 // Sets the versioning state of an existing bucket. To set the versioning state,
 // you must be the bucket owner.
-func (c *S3) PutBucketVersioning(input *PutBucketVersioningInput) (output *PutBucketVersioningOutput, err error) {
+func (c *S3) PutBucketVersioning(input *PutBucketVersioningInput) (*PutBucketVersioningOutput, error) {
 	req, out := c.PutBucketVersioningRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketVersioning *aws.Operation
@@ -1583,11 +1537,10 @@ func (c *S3) PutBucketWebsiteRequest(input *PutBucketWebsiteInput) (req *aws.Req
 }
 
 // Set the website configuration for a bucket.
-func (c *S3) PutBucketWebsite(input *PutBucketWebsiteInput) (output *PutBucketWebsiteOutput, err error) {
+func (c *S3) PutBucketWebsite(input *PutBucketWebsiteInput) (*PutBucketWebsiteOutput, error) {
 	req, out := c.PutBucketWebsiteRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutBucketWebsite *aws.Operation
@@ -1616,11 +1569,10 @@ func (c *S3) PutObjectRequest(input *PutObjectInput) (req *aws.Request, output *
 }
 
 // Adds an object to a bucket.
-func (c *S3) PutObject(input *PutObjectInput) (output *PutObjectOutput, err error) {
+func (c *S3) PutObject(input *PutObjectInput) (*PutObjectOutput, error) {
 	req, out := c.PutObjectRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutObject *aws.Operation
@@ -1650,11 +1602,10 @@ func (c *S3) PutObjectACLRequest(input *PutObjectACLInput) (req *aws.Request, ou
 
 // uses the acl subresource to set the access control list (ACL) permissions
 // for an object that already exists in a bucket
-func (c *S3) PutObjectACL(input *PutObjectACLInput) (output *PutObjectACLOutput, err error) {
+func (c *S3) PutObjectACL(input *PutObjectACLInput) (*PutObjectACLOutput, error) {
 	req, out := c.PutObjectACLRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opPutObjectACL *aws.Operation
@@ -1683,11 +1634,10 @@ func (c *S3) RestoreObjectRequest(input *RestoreObjectInput) (req *aws.Request, 
 }
 
 // Restores an archived copy of an object back into Amazon S3
-func (c *S3) RestoreObject(input *RestoreObjectInput) (output *RestoreObjectOutput, err error) {
+func (c *S3) RestoreObject(input *RestoreObjectInput) (*RestoreObjectOutput, error) {
 	req, out := c.RestoreObjectRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opRestoreObject *aws.Operation
@@ -1722,11 +1672,10 @@ func (c *S3) UploadPartRequest(input *UploadPartInput) (req *aws.Request, output
 // charged for storage of the uploaded parts. Only after you either complete
 // or abort multipart upload, Amazon S3 frees up the parts storage and stops
 // charging you for the parts storage.
-func (c *S3) UploadPart(input *UploadPartInput) (output *UploadPartOutput, err error) {
+func (c *S3) UploadPart(input *UploadPartInput) (*UploadPartOutput, error) {
 	req, out := c.UploadPartRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opUploadPart *aws.Operation
@@ -1755,11 +1704,10 @@ func (c *S3) UploadPartCopyRequest(input *UploadPartCopyInput) (req *aws.Request
 }
 
 // Uploads a part by copying data from an existing object as data source.
-func (c *S3) UploadPartCopy(input *UploadPartCopyInput) (output *UploadPartCopyOutput, err error) {
+func (c *S3) UploadPartCopy(input *UploadPartCopyInput) (*UploadPartCopyOutput, error) {
 	req, out := c.UploadPartCopyRequest(input)
-	output = out
-	err = req.Send()
-	return
+	err := req.Send()
+	return out, err
 }
 
 var opUploadPartCopy *aws.Operation

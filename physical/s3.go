@@ -11,6 +11,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/aws/awserr"
 	"github.com/awslabs/aws-sdk-go/aws/credentials"
 	"github.com/awslabs/aws-sdk-go/service/s3"
 )
@@ -101,9 +102,9 @@ func (s *S3Backend) Get(key string) (*Entry, error) {
 		Key:    aws.String(key),
 	})
 
-	if awserr := aws.Error(err); awserr != nil {
+	if awsErr, ok := err.(awserr.RequestFailure); ok {
 		// Return nil on 404s, error on anything else
-		if awserr.StatusCode == 404 {
+		if awsErr.StatusCode() == 404 {
 			return nil, nil
 		} else {
 			return nil, err

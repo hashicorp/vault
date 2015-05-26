@@ -12,8 +12,10 @@ type ReadCommand struct {
 
 func (c *ReadCommand) Run(args []string) int {
 	var format string
+	var field string
 	flags := c.Meta.FlagSet("read", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
+	flags.StringVar(&field, "field", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -44,6 +46,18 @@ func (c *ReadCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf(
 			"No value found at %s", path))
 		return 1
+	}
+
+	// Handle single field output
+	if field != "" {
+		if val, ok := secret.Data[field]; ok {
+			c.Ui.Output(val.(string))
+			return 0
+		} else {
+			c.Ui.Error(fmt.Sprintf(
+				"Field %s not present in secret", field))
+			return 1
+		}
 	}
 
 	return OutputSecret(c.Ui, format, secret)
@@ -83,6 +97,9 @@ Read Options:
 
   -format=table           The format for output. By default it is a whitespace-
                           delimited table. This can also be json.
+
+  -field=field            If included, the raw value of the specified field 
+  						  will be output raw to stdout.
 
 `
 	return strings.TrimSpace(helpText)

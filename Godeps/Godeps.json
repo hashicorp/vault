@@ -12,35 +12,35 @@
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/aws",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/endpoints",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/query",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/rest",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/restxml",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/protocol/xml/xmlutil",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/internal/signer/v4",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/awslabs/aws-sdk-go/service/s3",
-			"Rev": "5e038f730cbb99b144eeb1dbf92cd06c2d00b503"
+			"Rev": "29717a72a2fc649e790ce97dc2c4d96e32950844"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
