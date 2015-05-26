@@ -26,7 +26,7 @@ func TestBackend_basic(t *testing.T) {
 		Backend:  Backend(),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
-			testAccStepWritePolicy(t, "test", testPolicy),
+			testAccStepWritePolicy(t, "test", testPolicy, ""),
 			testAccStepReadToken(t, "test", config),
 		},
 	})
@@ -40,8 +40,23 @@ func TestBackend_crud(t *testing.T) {
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  Backend(),
 		Steps: []logicaltest.TestStep{
-			testAccStepWritePolicy(t, "test", testPolicy),
-			testAccStepReadPolicy(t, "test", testPolicy),
+			testAccStepWritePolicy(t, "test", testPolicy, ""),
+			testAccStepReadPolicy(t, "test", testPolicy, DefaultLeaseDuration),
+			testAccStepDeletePolicy(t, "test"),
+		},
+	})
+}
+
+func TestBackend_role_lease(t *testing.T) {
+	_, process := testStartConsulServer(t)
+	defer testStopConsulServer(t, process)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepWritePolicy(t, "test", testPolicy, "6h"),
+			testAccStepReadPolicy(t, "test", testPolicy, 6*time.Hour),
 			testAccStepDeletePolicy(t, "test"),
 		},
 	})
@@ -142,17 +157,18 @@ func testAccStepReadToken(
 	}
 }
 
-func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
+func testAccStepWritePolicy(t *testing.T, name string, policy string, lease string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
+			"lease":  lease,
 		},
 	}
 }
 
-func testAccStepReadPolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
+func testAccStepReadPolicy(t *testing.T, name string, policy string, lease time.Duration) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
@@ -164,6 +180,15 @@ func testAccStepReadPolicy(t *testing.T, name string, policy string) logicaltest
 			}
 			if string(out) != policy {
 				return fmt.Errorf("mismatch: %s %s", out, policy)
+			}
+
+			leaseRaw := resp.Data["lease"].(string)
+			l, err := time.ParseDuration(leaseRaw)
+			if err != nil {
+				return err
+			}
+			if l != lease {
+				return fmt.Errorf("mismatch: %v %v", l, lease)
 			}
 			return nil
 		},

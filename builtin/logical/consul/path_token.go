@@ -27,19 +27,20 @@ func pathToken(b *backend) *framework.Path {
 
 func (b *backend) pathTokenRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	policyName := d.Get("name").(string)
-
-	// Generate a random name for the token
-	name := fmt.Sprintf("Vault %s %d", req.DisplayName, time.Now().Unix())
+	name := d.Get("name").(string)
 
 	// Read the policy
-	policy, err := req.Storage.Get("policy/" + policyName)
+	policy, err := req.Storage.Get("policy/" + name)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
 	if policy == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", policyName)), nil
+			"Role '%s' not found", name)), nil
+	}
+	leaseRaw, err := req.Storage.Get("policy/" + name + "/lease")
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving lease: %s", err)
 	}
 
 	// Get the consul client
@@ -48,9 +49,11 @@ func (b *backend) pathTokenRead(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	// Generate a random name for the token
+	tokenName := fmt.Sprintf("Vault %s %d", req.DisplayName, time.Now().Unix())
 	// Create it
 	token, _, err := c.ACL().Create(&api.ACLEntry{
-		Name:  name,
+		Name:  tokenName,
 		Type:  "client",
 		Rules: string(policy.Value),
 	}, nil)
@@ -59,7 +62,14 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Use the helper to create the secret
-	return b.Secret(SecretTokenType).Response(map[string]interface{}{
+	s := b.Secret(SecretTokenType)
+	if leaseRaw != nil {
+		lease, err := time.ParseDuration(string(leaseRaw.Value))
+		if err == nil {
+			s.DefaultDuration = lease
+		}
+	}
+	return s.Response(map[string]interface{}{
 		"token": token,
 	}, nil), nil
 }
