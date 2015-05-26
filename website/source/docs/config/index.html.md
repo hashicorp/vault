@@ -60,6 +60,9 @@ durability, etc.
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
       This backend does not support HA.
 
+  * `etcd` - Store data within [etcd](https://coreos.com/etcd/).
+      This backend does not support HA.
+
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
       This backend does not support HA.
 
@@ -106,6 +109,17 @@ For Zookeeper, the following options are supported:
   * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
       Can be comma separated list (host:port) of many Zookeeper instances.
       Defaults to "localhost:2181" if not specified.
+
+#### Backend Reference: etcd
+
+For etcd, the following options are supported:
+
+  * `path` (optional) - The path within etcd where data will be stored.
+      Defaults to "vault/".
+
+  * `address` (optional) - The address(es) of the etcd instance(s) to talk to.
+      Can be comma separated list (protocol://host:port) of many etcd instances.
+      Defaults to "http://localhost:4001" if not specified.
 
 #### Backend Reference: S3
 
