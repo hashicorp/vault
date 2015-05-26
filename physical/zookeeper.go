@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -205,23 +206,21 @@ func (c *ZookeeperBackend) LockWith(key, value string) (Lock, error) {
 	return l, nil
 }
 
-func (c *ZookeeperBackend) DetectHostAddr() (string, error) {
-	// TODO: implement this!
-	return "", nil
-}
-
 // ZookeeperHALock is a Zookeeper Lock implementation for the HABackend
 type ZookeeperHALock struct {
 	in    *ZookeeperBackend
 	key   string
 	value string
 
-	held     bool
-	leaderCh chan struct{}
-	zkLock *zk.Lock
+	held      bool
+	localLock sync.Mutex
+	leaderCh  chan struct{}
+	zkLock    *zk.Lock
 }
 
 func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	i.localLock.Lock()
+	defer i.localLock.Unlock()
 	if i.held {
 		return nil, fmt.Errorf("lock already held")
 	}
@@ -231,33 +230,7 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	failLock := make(chan error, 1)
 	releaseCh := make(chan bool, 1)
 	lockpath := i.in.path + i.key
-	go func() {
-		// Wait to acquire the lock in ZK
-		acl := zk.WorldACL(zk.PermAll)
-		lock := zk.NewLock(i.in.client, lockpath, acl)
-		err := lock.Lock()
-		if err != nil {
-			failLock <- err
-			return
-		}
-		// Set node value
-		err2 := i.in.ensurePath(lockpath, []byte(i.value))
-		if err2 != nil {
-			failLock <- err2
-			lock.Unlock()
-			return
-		}
-		i.zkLock = lock
-
-		// Signal that lock is held
-		close(didLock)
-
-		// Handle an early abort
-		release := <-releaseCh
-		if release {
-			lock.Unlock()
-		}
-	}()
+	go i.attemptLock(lockpath, didLock, failLock, releaseCh)
 
 	// Wait for lock acquisition, failure, or shutdown
 	select {
@@ -282,30 +255,62 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	if i.value != string(currentVal) {
 		return nil, fmt.Errorf("lost HA lock immediately before watch")
 	}
-	go func() {
-		for {
-			select {
-			case event := <- lockeventCh:
-				// Lost connection?
-				if event.State != zk.StateConnected && event.State != zk.StateHasSession {
-					close(i.leaderCh)
-				}
-				// Lost watch
-				if event.Type == zk.EventNotWatching {
-					close(i.leaderCh)
-				}
-				// Lock changed
-				if event.Type == zk.EventNodeCreated || event.Type == zk.EventNodeDeleted || event.Type == zk.EventNodeDataChanged {
-					close(i.leaderCh)
-				}
-			}
-		}
-	}()
+	go i.monitorLock(lockeventCh, i.leaderCh)
 
 	return i.leaderCh, nil
 }
 
+func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
+	// Wait to acquire the lock in ZK
+	acl := zk.WorldACL(zk.PermAll)
+	lock := zk.NewLock(i.in.client, lockpath, acl)
+	err := lock.Lock()
+	if err != nil {
+		failLock <- err
+		return
+	}
+	// Set node value
+	err2 := i.in.ensurePath(lockpath, []byte(i.value))
+	if err2 != nil {
+		failLock <- err2
+		lock.Unlock()
+		return
+	}
+	i.zkLock = lock
+
+	// Signal that lock is held
+	close(didLock)
+
+	// Handle an early abort
+	release := <-releaseCh
+	if release {
+		lock.Unlock()
+	}
+}
+
+func (i *ZookeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan struct{}) {
+	for {
+		select {
+		case event := <- lockeventCh:
+			// Lost connection?
+			if event.State != zk.StateConnected && event.State != zk.StateHasSession {
+				close(i.leaderCh)
+			}
+			// Lost watch
+			if event.Type == zk.EventNotWatching {
+				close(i.leaderCh)
+			}
+			// Lock changed
+			if event.Type == zk.EventNodeCreated || event.Type == zk.EventNodeDeleted || event.Type == zk.EventNodeDataChanged {
+				close(i.leaderCh)
+			}
+		}
+	}
+}
+
 func (i *ZookeeperHALock) Unlock() error {
+	i.localLock.Lock()
+	defer i.localLock.Unlock()
 	if !i.held {
 		return nil
 	}
@@ -320,6 +325,6 @@ func (i *ZookeeperHALock) Unlock() error {
 func (i *ZookeeperHALock) Value() (bool, string, error) {
 	lockpath := i.in.path + i.key
 	value, _, err := i.in.client.Get(lockpath)
-	return i.held, string(value), err
+	return (value != nil), string(value), err
 }
 
