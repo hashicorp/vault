@@ -98,6 +98,35 @@ access_key      AKIAJZ5YRPHFH3QHRRRQ
 secret_key      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
 ```
 
+If you get an error message similar to the following, the root credentials that you wrote to `aws/config/root` have insufficient privilege:
+
+```text
+* Error creating IAM user: User: arn:aws:iam::000000000000:user/hashicorp is not authorized to perform: iam:CreateUser on resource: arn:aws:iam::000000000000:user/vault-root-1432735386-4059
+```
+
+The root credentials need `iam:CreateUser`, `iam:PutUserPolicy` and `iam:CreateAccessKey` permissions in IAM. These are the actions that the AWS secret backend uses to manage IAM credentials. Here is an example IAM policy that would grant these permissions:
+
+```javascript
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateAccessKey",
+                "iam:CreateUser",
+                "iam:PutUserPolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+            ]
+        }
+    ]
+}
+```
+
+Note that this policy example is unrelated to the policy you wrote to `aws/roles/deploy`. This policy example should be applied to the IAM user (or role) associated with the root credentials that you wrote to `aws/config/root`. You have to apply it yourself in IAM. The policy you wrote to `aws/roles/deploy` is the policy you want the AWS secret backend to apply to the temporary credentials it returns from `aws/creds/deploy`.
+
 If you get stuck at any time, simply run `vault help aws` or with a subpath for
 interactive help output.
 
