@@ -32,6 +32,7 @@ type EncodedKeyring struct {
 // Key represents a single term, along with the key used.
 type Key struct {
 	Term        uint32
+	Version     int
 	Value       []byte
 	InstallTime time.Time
 }
