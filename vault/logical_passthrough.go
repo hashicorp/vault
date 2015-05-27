@@ -160,7 +160,7 @@ revoke and/or replace the secret at that path.
 `
 
 const passthroughHelpSynopsis = `
-Pass-through secret storage to the physical backend, allowing you to
+Pass-through secret storage to the storage backend, allowing you to
 read/write arbitrary data into secret storage.
 `
 
