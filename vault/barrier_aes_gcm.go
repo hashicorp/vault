@@ -102,12 +102,6 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 		return ErrBarrierAlreadyInit
 	}
 
-	// Create the AES-GCM
-	gcm, err := b.aeadFromKey(key)
-	if err != nil {
-		return err
-	}
-
 	// Generate encryption key
 	encrypt, err := b.GenerateKey()
 	if err != nil {
@@ -122,13 +116,24 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 		Version: 1,
 		Value:   encrypt,
 	})
+	return b.persistKeyring(keyring)
+}
 
+// persistKeyring is used to write out the keyring using the
+// master key to encrypt it.
+func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 	// Create the keyring entry
 	buf, err := keyring.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize keyring: %v", err)
 	}
 	defer memzero(buf)
+
+	// Create the AES-GCM
+	gcm, err := b.aeadFromKey(keyring.MasterKey())
+	if err != nil {
+		return err
+	}
 
 	// Encrypt the barrier init value
 	value := b.encrypt(initialKeyTerm, gcm, buf)
@@ -244,24 +249,8 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 		Version: 1,
 		Value:   init.Key,
 	})
-
-	// Serialize the keyring
-	buf, err := keyring.Serialize()
-	if err != nil {
-		return fmt.Errorf("failed to serialize keyring: %v", err)
-	}
-	defer memzero(buf)
-
-	// Encrypt the barrier init value
-	value := b.encrypt(initialKeyTerm, gcm, buf)
-
-	// Create the barrierInitPath
-	pe := &physical.Entry{
-		Key:   keyringPath,
-		Value: value,
-	}
-	if err := b.backend.Put(pe); err != nil {
-		return fmt.Errorf("failed to persist keyring: %v", err)
+	if err := b.persistKeyring(keyring); err != nil {
+		return err
 	}
 
 	// Set the vault as unsealed
