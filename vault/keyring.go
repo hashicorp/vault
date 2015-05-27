@@ -58,6 +58,11 @@ func (k *Keyring) AddKey(key *Key) error {
 		return nil
 	}
 
+	// Add a time if none
+	if key.InstallTime.IsZero() {
+		key.InstallTime = time.Now()
+	}
+
 	// Install the new key
 	k.keys[key.Term] = key
 
