@@ -1,6 +1,8 @@
 package http
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"reflect"
 	"testing"
@@ -180,5 +182,36 @@ func TestLogical_CreateToken(t *testing.T) {
 	// Should not get auth cookie
 	if cookies := resp.Cookies(); len(cookies) != 0 {
 		t.Fatalf("should not get cookies: %#v", cookies)
+	}
+}
+
+func TestLogical_RawHTTP(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, addr+"/v1/sys/mounts/foo", map[string]interface{}{
+		"type": "http",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Get the raw response
+	resp, err := http.Get(addr + "/v1/foo/raw")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+
+	// Test the headers
+	if resp.Header.Get("Content-Type") != "plain/text" {
+		t.Fatalf("Bad: %#v", resp.Header)
+	}
+
+	// Get the body
+	body := new(bytes.Buffer)
+	io.Copy(body, resp.Body)
+	if string(body.Bytes()) != "hello world" {
+		t.Fatalf("Bad: %s", body.Bytes())
 	}
 }

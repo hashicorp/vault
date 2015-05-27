@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"log"
 	"testing"
 
 	"github.com/hashicorp/vault/audit"
@@ -22,6 +23,9 @@ func TestCore(t *testing.T) *Core {
 	noopBackends := make(map[string]logical.Factory)
 	noopBackends["noop"] = func(map[string]string) (logical.Backend, error) {
 		return new(framework.Backend), nil
+	}
+	noopBackends["http"] = func(map[string]string) (logical.Backend, error) {
+		return new(rawHTTP), nil
 	}
 
 	physicalBackend := physical.NewInmem()
@@ -89,3 +93,21 @@ func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request) error {
 func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical.Response, err error) error {
 	return nil
 }
+
+type rawHTTP struct{}
+
+func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	return &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPContentType: "plain/text",
+			logical.HTTPRawBody:     []byte("hello world"),
+		},
+	}, nil
+}
+
+func (n *rawHTTP) SpecialPaths() *logical.Paths {
+	return &logical.Paths{Unauthenticated: []string{"*"}}
+}
+
+func (n *rawHTTP) SetLogger(l *log.Logger) {}

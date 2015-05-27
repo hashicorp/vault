@@ -96,6 +96,12 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, resp *l
 			return
 		}
 
+		// Check if this is a raw response
+		if _, ok := resp.Data[logical.HTTPContentType]; ok {
+			respondRaw(w, r, path, resp)
+			return
+		}
+
 		logicalResp := &LogicalResponse{Data: resp.Data}
 		if resp.Secret != nil {
 			logicalResp.LeaseID = resp.Secret.LeaseID
@@ -138,6 +144,58 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, resp *l
 
 	// Respond
 	respondOk(w, httpResp)
+}
+
+// respondRaw is used when the response is using HTTPContentType and HTTPRawBody
+// to change the default response handling. This is only used for specific things like
+// returning the CRL information on the PKI backends.
+func respondRaw(w http.ResponseWriter, r *http.Request, path string, resp *logical.Response) {
+	// Ensure this is never a secret or auth response
+	if resp.Secret != nil || resp.Auth != nil {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+
+	// Get the status code
+	statusRaw, ok := resp.Data[logical.HTTPStatusCode]
+	if !ok {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+	status, ok := statusRaw.(int)
+	if !ok {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+
+	// Get the header
+	contentTypeRaw, ok := resp.Data[logical.HTTPContentType]
+	if !ok {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+	contentType, ok := contentTypeRaw.(string)
+	if !ok {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+
+	// Get the body
+	bodyRaw, ok := resp.Data[logical.HTTPRawBody]
+	if !ok {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+	body, ok := bodyRaw.([]byte)
+	if !ok {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
+
+	// Write the response
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(status)
+	w.Write(body)
 }
 
 type LogicalResponse struct {

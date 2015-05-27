@@ -1,5 +1,24 @@
 package logical
 
+const (
+	// HTTPContentType can be specified in the Data field of a Response
+	// so that the HTTP front end can specify a custom Content-Type associated
+	// with the HTTPRawBody. This can only be used for non-secrets, and should
+	// be avoided unless absolutely necessary, such as implementing a specification.
+	// The value must be a string.
+	HTTPContentType = "http_content_type"
+
+	// HTTPRawBody is the raw content of the HTTP body that goes with the HTTPContentType.
+	// This can only be specified for non-secrets, and should should be similarly
+	// avoided like the HTTPContentType. The value must be a byte slice.
+	HTTPRawBody = "http_raw_body"
+
+	// HTTPStatusCode is the response code the HTTP body that goes with the HTTPContentType.
+	// This can only be specified for non-secrets, and should should be similarly
+	// avoided like the HTTPContentType. The value must be an integer.
+	HTTPStatusCode = "http_status_code"
+)
+
 // Response is a struct that stores the response of a request.
 // It is used to abstract the details of the higher level request protocol.
 type Response struct {
