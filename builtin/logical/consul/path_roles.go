@@ -41,30 +41,24 @@ func pathRolesRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	// Read the policy
-	policy, err := req.Storage.Get("policy/" + name)
+	entry, err := req.Storage.Get("policy/" + name)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %s", err)
+		return nil, err
 	}
-	if policy == nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", name)), nil
+	if entry == nil {
+		return nil, nil
 	}
 
-	leaseRaw, err := req.Storage.Get("policy/" + name + "/lease")
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving lease: %s", err)
-	}
-	lease, err := time.ParseDuration(string(leaseRaw.Value))
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving lease: %s", err)
+	var result roleConfig
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"policy": base64.StdEncoding.EncodeToString(policy.Value),
-			"lease":  lease.String(),
+			"policy": base64.StdEncoding.EncodeToString([]byte(result.Policy)),
+			"lease":  result.Lease.String(),
 		},
 	}
 	return resp, nil
@@ -78,26 +72,20 @@ func pathRolesWrite(
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error decoding policy base64: %s", err)), nil
 	}
+	lease, err := time.ParseDuration(d.Get("lease").(string))
+	if err != nil || lease == time.Duration(0) {
+		lease = DefaultLeaseDuration
+	}
 
-	// Write the policy into storage
-	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name,
-		Value: policyRaw,
+	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
+		Policy: string(policyRaw),
+		Lease:  lease,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Write the policy lease into storage
-	lease, err := time.ParseDuration(d.Get("lease").(string))
-	if err != nil || lease == time.Duration(0) {
-		lease = DefaultLeaseDuration
-	}
-	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name + "/lease",
-		Value: []byte(lease.String()),
-	})
-	if err != nil {
+	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
 
@@ -111,4 +99,9 @@ func pathRolesDelete(
 		return nil, err
 	}
 	return nil, nil
+}
+
+type roleConfig struct {
+	Policy string        `json:"policy"`
+	Lease  time.Duration `json:"lease"`
 }
