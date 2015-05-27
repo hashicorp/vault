@@ -114,15 +114,16 @@ func TestEncrypt_Unique(t *testing.T) {
 	b.Initialize(key)
 	b.Unseal(key)
 
-	entry := &Entry{Key: "test", Value: []byte("test")}
-	primary := b.primary
-
-	if primary == nil {
+	if b.keyring == nil {
 		t.Fatalf("barrier is sealed")
 	}
 
-	first := b.encrypt(primary, entry.Value)
-	second := b.encrypt(primary, entry.Value)
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	term := b.keyring.ActiveTerm()
+	primary, _ := b.aeadForTerm(term)
+
+	first := b.encrypt(term, primary, entry.Value)
+	second := b.encrypt(term, primary, entry.Value)
 
 	if bytes.Equal(first, second) == true {
 		t.Fatalf("improper random seeding detected")

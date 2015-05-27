@@ -120,12 +120,12 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	// List should have only "barrier/"
+	// List should have only "core/"
 	keys, err := b.List("")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(keys) != 1 || keys[0] != "barrier/" {
+	if len(keys) != 1 || keys[0] != "core/" {
 		t.Fatalf("bad: %v", keys)
 	}
 
@@ -151,7 +151,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	if len(keys) != 2 {
 		t.Fatalf("bad: %v", keys)
 	}
-	if keys[0] != "barrier/" || keys[1] != "test" {
+	if keys[0] != "core/" || keys[1] != "test" {
 		t.Fatalf("bad: %v", keys)
 	}
 
@@ -181,7 +181,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(keys) != 1 || keys[0] != "barrier/" {
+	if len(keys) != 1 || keys[0] != "core/" {
 		t.Fatalf("bad: %v", keys)
 	}
 

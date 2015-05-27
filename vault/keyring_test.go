@@ -22,7 +22,7 @@ func TestKeyring(t *testing.T) {
 
 	// Add a key
 	testKey := []byte("testing")
-	key1 := &Key{1, testKey, time.Now()}
+	key1 := &Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()}
 	err := k.AddKey(key1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -53,7 +53,7 @@ func TestKeyring(t *testing.T) {
 
 	// Should not allow conficting set
 	testConflict := []byte("nope")
-	key1Conf := &Key{1, testConflict, time.Now()}
+	key1Conf := &Key{Term: 1, Version: 1, Value: testConflict, InstallTime: time.Now()}
 	err = k.AddKey(key1Conf)
 	if err == nil {
 		t.Fatalf("err: %v", err)
@@ -61,7 +61,7 @@ func TestKeyring(t *testing.T) {
 
 	// Add a new key
 	testSecond := []byte("second")
-	key2 := &Key{2, testSecond, time.Now()}
+	key2 := &Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()}
 	err = k.AddKey(key2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -140,8 +140,8 @@ func TestKeyring_Serialize(t *testing.T) {
 
 	testKey := []byte("testing")
 	testSecond := []byte("second")
-	k.AddKey(&Key{1, testKey, time.Now()})
-	k.AddKey(&Key{2, testSecond, time.Now()})
+	k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()})
+	k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()})
 
 	buf, err := k.Serialize()
 	if err != nil {

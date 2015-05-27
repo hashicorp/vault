@@ -142,6 +142,18 @@ func (k *Keyring) Serialize() ([]byte, error) {
 	return buf, err
 }
 
+// Wipe is used to prepare for sealing my removing everything from memory
+func (k *Keyring) Wipe() {
+	if k.masterKey != nil {
+		memzero(k.masterKey)
+		k.masterKey = nil
+	}
+	for idx, key := range k.keys {
+		memzero(key.Value)
+		k.keys[idx] = nil
+	}
+}
+
 // DeserializeKeyring is used to deserialize and return a new keyring
 func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Deserialize the keyring
