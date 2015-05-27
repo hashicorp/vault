@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -79,6 +80,36 @@ func TestAuth_token(t *testing.T) {
 
 	if actual != token {
 		t.Fatalf("bad: %s", actual)
+	}
+}
+
+func TestAuth_stdin(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	testAuthInit(t)
+
+	stdinR, stdinW := io.Pipe()
+	ui := new(cli.MockUi)
+	c := &AuthCommand{
+		Meta: Meta{
+			Ui: ui,
+		},
+		testStdin: stdinR,
+	}
+
+	go func() {
+		stdinW.Write([]byte(token))
+		stdinW.Close()
+	}()
+
+	args := []string{
+		"-address", addr,
+		"-",
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 }
 
