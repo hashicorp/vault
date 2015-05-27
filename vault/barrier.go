@@ -26,6 +26,10 @@ var (
 const (
 	// barrierInitPath is the path used to store our init sentinel file
 	barrierInitPath = "barrier/init"
+
+	// keyringPath is the location of the keyring data. This is encrypted
+	// by the master key.
+	keyringPath = "core/keyring"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
