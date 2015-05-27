@@ -47,6 +47,11 @@ type Request struct {
 	// dynamic secrets with the source entity. This is not a sensitive
 	// name, but is useful for operators.
 	DisplayName string
+
+	// MountPoint is provided so that a logical backend can generate
+	// paths relative to itself. The `Path` is effectively the client
+	// request path with the MountPoint trimmed off.
+	MountPoint string
 }
 
 // Get returns a data field and guards for nil Data

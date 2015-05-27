@@ -1472,3 +1472,42 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		t.Fatalf("err: %v %#v", err, resp)
 	}
 }
+
+func TestCore_HandleRequest_MountPoint(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{},
+	}
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the logical backend
+	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.Data["description"] = "foo"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to request
+	req = &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "foo/test",
+		Connection: &logical.Connection{},
+	}
+	req.ClientToken = root
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify Path and MountPoint
+	if noop.Requests[0].Path != "test" {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+	if noop.Requests[0].MountPoint != "foo/" {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+}

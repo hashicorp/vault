@@ -178,6 +178,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	// Adjust the path to exclude the routing prefix
 	original := req.Path
 	req.Path = strings.TrimPrefix(req.Path, mount)
+	req.MountPoint = mount
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -200,6 +201,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	// Reset the request before returning
 	defer func() {
 		req.Path = original
+		req.MountPoint = ""
 		req.Connection = originalConn
 		req.Storage = nil
 		req.ClientToken = clientToken
