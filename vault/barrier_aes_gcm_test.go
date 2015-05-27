@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/vault/physical"
@@ -29,6 +30,69 @@ func TestAESGCMBarrier_Basic(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	testBarrier(t, b)
+}
+
+// Test an upgrade from the old (0.1) barrier/init to the new
+// core/keyring style
+func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Generate a barrier/init entry
+	encrypt, _ := b.GenerateKey()
+	init := &barrierInit{
+		Version: 1,
+		Key:     encrypt,
+	}
+	buf, _ := json.Marshal(init)
+
+	// Protect with master key
+	master, _ := b.GenerateKey()
+	gcm, _ := b.aeadFromKey(master)
+	value := b.encrypt(initialKeyTerm, gcm, buf)
+
+	// Write to the physical backend
+	pe := &physical.Entry{
+		Key:   barrierInitPath,
+		Value: value,
+	}
+	inm.Put(pe)
+
+	// Should still be initialized
+	isInit, err := b.Initialized()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isInit {
+		t.Fatalf("should be initialized")
+	}
+
+	// Unseal should work and migrate online
+	err = b.Unseal(master)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check for migraiton
+	out, err := inm.Get(barrierInitPath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("should delete old barrier init")
+	}
+
+	// Should have keyring
+	out, err = inm.Get(keyringPath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("should have keyring file")
+	}
 }
 
 // Verify data sent through is encrypted

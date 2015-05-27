@@ -138,7 +138,7 @@ func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 	// Encrypt the barrier init value
 	value := b.encrypt(initialKeyTerm, gcm, buf)
 
-	// Create the barrierInitPath
+	// Create the keyring physical entry
 	pe := &physical.Entry{
 		Key:   keyringPath,
 		Value: value,
@@ -251,6 +251,11 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 	})
 	if err := b.persistKeyring(keyring); err != nil {
 		return err
+	}
+
+	// Delete the old barrier entry
+	if err := b.backend.Delete(barrierInitPath); err != nil {
+		return fmt.Errorf("failed to delete barrier init file: %v", err)
 	}
 
 	// Set the vault as unsealed
