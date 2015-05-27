@@ -29,8 +29,8 @@ to specify where the configuration is.
 
 ## Reference
 
-* `backend` (required) - Configures the physical backend where Vault data
-  is stored. There are multiple options available for physical backends,
+* `backend` (required) - Configures the storage backend where Vault data
+  is stored. There are multiple options available for storage backends,
   and they're documented below.
 
 * `listener` (required) - Configures how Vault is listening for API requests.

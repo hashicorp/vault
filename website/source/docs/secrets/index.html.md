@@ -22,8 +22,8 @@ any read/write/delete is sent to the secret backend, and the secret
 backend can choose to react to that operation however it sees fit.
 
 For example, the "generic" backend passes through any operation back
-to the configured physical backend for Vault. A "read" turns into a
-"read" of the physical backend at the same path, a "write" turns into
+to the configured storage backend for Vault. A "read" turns into a
+"read" of the storage backend at the same path, a "write" turns into
 a write, etc. This is a lot like a normal filesystem.
 
 The "aws" backend, on the other hand, behaves differently. When you

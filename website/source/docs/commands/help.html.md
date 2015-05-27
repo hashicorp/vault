@@ -62,7 +62,7 @@ the path pattern. Note that depending on the policy of your auth token,
 you may or may not be able to access certain paths.
 
     ^.*$
-        Pass-through secret storage to the physical backend, allowing you to
+        Pass-through secret storage to the storage backend, allowing you to
         read/write arbitrary data into secret storage.
 ```
 
@@ -85,7 +85,7 @@ $ vault help secret/password
 Request:        password
 Matching Route: ^.*$
 
-Pass-through secret storage to the physical backend, allowing you to
+Pass-through secret storage to the storage backend, allowing you to
 read/write arbitrary data into secret storage.
 
 ## PARAMETERS
