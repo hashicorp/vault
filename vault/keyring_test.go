@@ -23,7 +23,7 @@ func TestKeyring(t *testing.T) {
 	// Add a key
 	testKey := []byte("testing")
 	key1 := &Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()}
-	err := k.AddKey(key1)
+	k, err := k.AddKey(key1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestKeyring(t *testing.T) {
 	}
 
 	// Should handle idempotent set
-	err = k.AddKey(key1)
+	k, err = k.AddKey(key1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestKeyring(t *testing.T) {
 	// Should not allow conficting set
 	testConflict := []byte("nope")
 	key1Conf := &Key{Term: 1, Version: 1, Value: testConflict, InstallTime: time.Now()}
-	err = k.AddKey(key1Conf)
+	_, err = k.AddKey(key1Conf)
 	if err == nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestKeyring(t *testing.T) {
 	// Add a new key
 	testSecond := []byte("second")
 	key2 := &Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()}
-	err = k.AddKey(key2)
+	k, err = k.AddKey(key2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestKeyring(t *testing.T) {
 	}
 
 	// Remove the old key
-	err = k.RemoveKey(1)
+	k, err = k.RemoveKey(1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestKeyring(t *testing.T) {
 	}
 
 	// Remove the active key should fail
-	err = k.RemoveKey(2)
+	k, err = k.RemoveKey(2)
 	if err == nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -119,14 +119,14 @@ func TestKeyring_MasterKey(t *testing.T) {
 	}
 
 	// Set master
-	k.SetMasterKey(master)
+	k = k.SetMasterKey(master)
 	out = k.MasterKey()
 	if !bytes.Equal(out, master) {
 		t.Fatalf("bad: %v", out)
 	}
 
 	// Update master
-	k.SetMasterKey(master2)
+	k = k.SetMasterKey(master2)
 	out = k.MasterKey()
 	if !bytes.Equal(out, master2) {
 		t.Fatalf("bad: %v", out)
@@ -136,12 +136,12 @@ func TestKeyring_MasterKey(t *testing.T) {
 func TestKeyring_Serialize(t *testing.T) {
 	k := NewKeyring()
 	master := []byte("test")
-	k.SetMasterKey(master)
+	k = k.SetMasterKey(master)
 
 	testKey := []byte("testing")
 	testSecond := []byte("second")
-	k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()})
-	k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()})
+	k, _ = k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()})
+	k, _ = k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()})
 
 	buf, err := k.Serialize()
 	if err != nil {

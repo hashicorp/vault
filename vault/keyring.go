@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -20,7 +19,6 @@ type Keyring struct {
 	masterKey  []byte
 	keys       map[uint32]*Key
 	activeTerm uint32
-	l          sync.RWMutex
 }
 
 // EncodedKeyring is used for serialization of the keyring
@@ -46,17 +44,27 @@ func NewKeyring() *Keyring {
 	return k
 }
 
-// AddKey adds a new key to the keyring
-func (k *Keyring) AddKey(key *Key) error {
-	k.l.Lock()
-	defer k.l.Unlock()
+// Clone returns a new copy of the keyring
+func (k *Keyring) Clone() *Keyring {
+	clone := &Keyring{
+		masterKey:  k.masterKey,
+		keys:       make(map[uint32]*Key, len(k.keys)),
+		activeTerm: k.activeTerm,
+	}
+	for idx, key := range k.keys {
+		clone.keys[idx] = key
+	}
+	return clone
+}
 
+// AddKey adds a new key to the keyring
+func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 	// Ensure there is no confict
 	if exist, ok := k.keys[key.Term]; ok {
 		if !bytes.Equal(key.Value, exist.Value) {
-			return fmt.Errorf("Conflicting key for term %d already installed", key.Term)
+			return nil, fmt.Errorf("Conflicting key for term %d already installed", key.Term)
 		}
-		return nil
+		return k, nil
 	}
 
 	// Add a time if none
@@ -64,71 +72,66 @@ func (k *Keyring) AddKey(key *Key) error {
 		key.InstallTime = time.Now()
 	}
 
+	// Make a new keyring
+	clone := k.Clone()
+
 	// Install the new key
-	k.keys[key.Term] = key
+	clone.keys[key.Term] = key
 
 	// Update the active term if newer
-	if key.Term > k.activeTerm {
-		k.activeTerm = key.Term
+	if key.Term > clone.activeTerm {
+		clone.activeTerm = key.Term
 	}
-	return nil
+	return clone, nil
 }
 
 // RemoveKey removes a new key to the keyring
-func (k *Keyring) RemoveKey(term uint32) error {
-	k.l.Lock()
-	defer k.l.Unlock()
-
+func (k *Keyring) RemoveKey(term uint32) (*Keyring, error) {
 	// Ensure this is not the active key
 	if term == k.activeTerm {
-		return fmt.Errorf("Cannot remove active key")
+		return nil, fmt.Errorf("Cannot remove active key")
+	}
+
+	// Check if this term does not exist
+	if _, ok := k.keys[term]; !ok {
+		return k, nil
 	}
 
 	// Delete the key
-	delete(k.keys, term)
-	return nil
+	clone := k.Clone()
+	delete(clone.keys, term)
+	return clone, nil
 }
 
 // ActiveTerm returns the currently active term
 func (k *Keyring) ActiveTerm() uint32 {
-	k.l.RLock()
-	defer k.l.RUnlock()
 	return k.activeTerm
 }
 
 // ActiveKey returns the active encryption key, or nil
 func (k *Keyring) ActiveKey() *Key {
-	k.l.RLock()
-	defer k.l.RUnlock()
 	return k.keys[k.activeTerm]
 }
 
 // TermKey returns the key for the given term, or nil
 func (k *Keyring) TermKey(term uint32) *Key {
-	k.l.RLock()
-	defer k.l.RUnlock()
 	return k.keys[term]
 }
 
 // SetMasterKey is used to update the master key
-func (k *Keyring) SetMasterKey(val []byte) {
-	k.l.Lock()
-	defer k.l.Unlock()
-	k.masterKey = val
+func (k *Keyring) SetMasterKey(val []byte) *Keyring {
+	clone := k.Clone()
+	clone.masterKey = val
+	return clone
 }
 
 // MasterKey returns the master key
 func (k *Keyring) MasterKey() []byte {
-	k.l.RLock()
-	defer k.l.RUnlock()
 	return k.masterKey
 }
 
 // Serialize is used to create a byte encoded keyring
 func (k *Keyring) Serialize() ([]byte, error) {
-	k.l.RLock()
-	defer k.l.RUnlock()
-
 	// Create the encoded entry
 	enc := EncodedKeyring{
 		MasterKey: k.masterKey,
@@ -142,18 +145,6 @@ func (k *Keyring) Serialize() ([]byte, error) {
 	return buf, err
 }
 
-// Wipe is used to prepare for sealing my removing everything from memory
-func (k *Keyring) Wipe() {
-	if k.masterKey != nil {
-		memzero(k.masterKey)
-		k.masterKey = nil
-	}
-	for idx, key := range k.keys {
-		memzero(key.Value)
-		k.keys[idx] = nil
-	}
-}
-
 // DeserializeKeyring is used to deserialize and return a new keyring
 func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Deserialize the keyring
@@ -164,10 +155,11 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 
 	// Create a new keyring
 	k := NewKeyring()
-	k.SetMasterKey(enc.MasterKey)
+	k.masterKey = enc.MasterKey
 	for _, key := range enc.Keys {
-		if err := k.AddKey(key); err != nil {
-			return nil, fmt.Errorf("failed to add key for term %d: %v", key.Term, err)
+		k.keys[key.Term] = key
+		if key.Term > k.activeTerm {
+			k.activeTerm = key.Term
 		}
 	}
 	return k, nil
