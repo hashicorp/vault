@@ -14,7 +14,7 @@ An example configuration is shown below:
 
 ```javascript
 backend "consul" {
-  address = "demo.consul.io:80"
+  address = "127.0.0.1:8500"
   path = "vault"
 }
 
