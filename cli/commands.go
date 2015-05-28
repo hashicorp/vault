@@ -160,6 +160,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"rekey": func() (cli.Command, error) {
+			return &command.RekeyCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"renew": func() (cli.Command, error) {
 			return &command.RenewCommand{
 				Meta: meta,
