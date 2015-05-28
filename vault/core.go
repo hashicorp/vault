@@ -107,6 +107,12 @@ type InitResult struct {
 	RootToken    string
 }
 
+// RekeyResult is used to provide the key parts back after
+// they are generated as part of the rekey.
+type RekeyResult struct {
+	SecretShares [][]byte
+}
+
 // ErrInvalidKey is returned if there is an error with a
 // provided unseal key.
 type ErrInvalidKey struct {
@@ -156,6 +162,12 @@ type Core struct {
 	// unlockParts has the keys provided to Unseal until
 	// the threshold number of parts is available.
 	unlockParts [][]byte
+
+	// rekeyProgress holds the shares we have until we reach enough
+	// to verify the master key.
+	rekeyConfig   *SealConfig
+	rekeyProgress [][]byte
+	rekeyLock     sync.Mutex
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
@@ -627,8 +639,8 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		Value: buf,
 	}
 	if err := c.physical.Put(pe); err != nil {
-		c.logger.Printf("[ERR] core: failed to read seal configuration: %v", err)
-		return nil, fmt.Errorf("failed to check seal configuration: %v", err)
+		c.logger.Printf("[ERR] core: failed to write seal configuration: %v", err)
+		return nil, fmt.Errorf("failed to write seal configuration: %v", err)
 	}
 
 	// Generate a master key
@@ -931,6 +943,197 @@ func (c *Core) Seal(token string) error {
 		return err
 	}
 	c.logger.Printf("[INFO] core: vault is sealed")
+	return nil
+}
+
+// RekeyProgress is used to return the rekey progress (num shares)
+func (c *Core) RekeyProgress() (int, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return 0, ErrSealed
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+	return len(c.rekeyProgress), nil
+}
+
+// RekeyConfig is used to read the rekey configuration
+func (c *Core) RekeyConfig() (*SealConfig, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Copy the seal config if any
+	var conf *SealConfig
+	if c.rekeyConfig != nil {
+		conf = new(SealConfig)
+		*conf = *c.rekeyConfig
+	}
+	return conf, nil
+}
+
+// RekeyInit is used to initialize the rekey settings
+func (c *Core) RekeyInit(config *SealConfig) error {
+	// Check if the seal configuraiton is valid
+	if err := config.Validate(); err != nil {
+		c.logger.Printf("[ERR] core: invalid rekey seal configuration: %v", err)
+		return fmt.Errorf("invalid rekey seal configuration: %v", err)
+	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return ErrSealed
+	}
+
+	// Prevent multiple concurrent re-keys
+	if c.rekeyConfig != nil {
+		return fmt.Errorf("Rekey already in progress")
+	}
+
+	// Copy the configuration
+	c.rekeyConfig = new(SealConfig)
+	*c.rekeyConfig = *config
+	return nil
+}
+
+// RekeyUpdate is used to provide a new key part
+func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
+	// Verify the key length
+	min, max := c.barrier.KeyLength()
+	max += shamir.ShareOverhead
+	if len(key) < min {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+	}
+	if len(key) > max {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+	}
+
+	// Get the seal configuration
+	config, err := c.SealConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the barrier is initialized
+	if config == nil {
+		return nil, ErrNotInit
+	}
+
+	// Ensure we are already unsealed
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Check if we already have this piece
+	for _, existing := range c.rekeyProgress {
+		if bytes.Equal(existing, key) {
+			return nil, nil
+		}
+	}
+
+	// Store this key
+	c.rekeyProgress = append(c.rekeyProgress, key)
+
+	// Check if we don't have enough keys to unlock
+	if len(c.rekeyProgress) < config.SecretThreshold {
+		c.logger.Printf("[DEBUG] core: cannot rekey, have %d of %d keys",
+			len(c.rekeyProgress), config.SecretThreshold)
+		return nil, nil
+	}
+
+	// Recover the master key
+	var masterKey []byte
+	if config.SecretThreshold == 1 {
+		masterKey = c.rekeyProgress[0]
+		c.rekeyProgress = nil
+	} else {
+		masterKey, err = shamir.Combine(c.rekeyProgress)
+		c.rekeyProgress = nil
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute master key: %v", err)
+		}
+	}
+
+	// Verify the master key
+	if err := c.barrier.VerifyMaster(masterKey); err != nil {
+		c.logger.Printf("[ERR] core: rekey aborted, master key verification failed: %v", err)
+		return nil, err
+	}
+
+	// Generate a new master key
+	newMasterKey, err := c.barrier.GenerateKey()
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to generate master key: %v", err)
+		return nil, fmt.Errorf("master key generation failed: %v", err)
+	}
+
+	// Return the master key if only a single key part is used
+	results := new(RekeyResult)
+	if c.rekeyConfig.SecretShares == 1 {
+		results.SecretShares = append(results.SecretShares, newMasterKey)
+
+	} else {
+		// Split the master key using the Shamir algorithm
+		shares, err := shamir.Split(newMasterKey, c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
+			return nil, fmt.Errorf("failed to generate shares: %v", err)
+		}
+		results.SecretShares = shares
+	}
+
+	// Encode the seal configuration
+	buf, err := json.Marshal(c.rekeyConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode seal configuration: %v", err)
+	}
+
+	// Rekey the barrier
+	if err := c.barrier.Rekey(newMasterKey); err != nil {
+		c.logger.Printf("[ERR] core: failed to rekey barrier: %v", err)
+		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
+	}
+
+	// Store the seal configuration
+	pe := &physical.Entry{
+		Key:   coreSealConfigPath,
+		Value: buf,
+	}
+	if err := c.physical.Put(pe); err != nil {
+		c.logger.Printf("[ERR] core: failed to update seal configuration: %v", err)
+		return nil, fmt.Errorf("failed to update seal configuration: %v", err)
+	}
+
+	// Done!
+	c.rekeyProgress = nil
+	c.rekeyConfig = nil
+	return results, nil
+}
+
+// RekeyCancel is used to cancel an inprogress rekey
+func (c *Core) RekeyCancel() error {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return ErrSealed
+	}
+
+	// Clear any progress or config
+	c.rekeyConfig = nil
+	c.rekeyProgress = nil
 	return nil
 }
 
