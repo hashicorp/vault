@@ -269,9 +269,12 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Rotate the encryption key
-	err = b.Rotate()
+	newTerm, err := b.Rotate()
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if newTerm != 2 {
+		t.Fatalf("bad: %v", newTerm)
 	}
 
 	// Check the key info
@@ -334,28 +337,6 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	}
 	if out == nil {
 		t.Fatalf("bad: %v", out)
-	}
-
-	// Attempt to do AddKey
-	randKey, _ := b.GenerateKey()
-	newKey := &Key{
-		Term:        3,
-		Version:     1,
-		Value:       randKey,
-		InstallTime: time.Now(),
-	}
-	err = b.AddKey(newKey)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Check the key info
-	info, err = b.ActiveKeyInfo()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if info.Term != 3 {
-		t.Fatalf("Bad term: %d", info.Term)
 	}
 
 	// Should be fine to reload keyring
@@ -442,5 +423,76 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	err = b.ReloadKeyring()
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+}
+
+func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
+	// Initialize the barrier
+	key, _ := b1.GenerateKey()
+	b1.Initialize(key)
+	err := b1.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = b2.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Rotate the encryption key
+	newTerm, err := b1.Rotate()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create upgrade path
+	err = b1.CreateUpgrade(newTerm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check for an upgrade
+	did, updated, err := b2.CheckUpgrade()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !did || updated != newTerm {
+		t.Fatalf("failed to upgrade")
+	}
+
+	// Should have no upgrades pending
+	did, updated, err = b2.CheckUpgrade()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if did {
+		t.Fatalf("should not have upgrade")
+	}
+
+	// Rotate the encryption key
+	newTerm, err = b1.Rotate()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create upgrade path
+	err = b1.CreateUpgrade(newTerm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Destroy upgrade path
+	err = b1.DestroyUpgrade(newTerm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should have no upgrades pending
+	did, updated, err = b2.CheckUpgrade()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if did {
+		t.Fatalf("should not have upgrade")
 	}
 }

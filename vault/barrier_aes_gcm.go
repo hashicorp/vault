@@ -339,54 +339,123 @@ func (b *AESGCMBarrier) Seal() error {
 
 // Rotate is used to create a new encryption key. All future writes
 // should use the new key, while old values should still be decryptable.
-func (b *AESGCMBarrier) Rotate() error {
+func (b *AESGCMBarrier) Rotate() (uint32, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
 	if b.sealed {
-		return ErrBarrierSealed
+		return 0, ErrBarrierSealed
 	}
 
 	// Generate a new key
 	encrypt, err := b.GenerateKey()
 	if err != nil {
-		return fmt.Errorf("failed to generate encryption key: %v", err)
+		return 0, fmt.Errorf("failed to generate encryption key: %v", err)
 	}
 
 	// Get the next term
 	term := b.keyring.ActiveTerm()
+	newTerm := term + 1
 
 	// Add a new encryption key
 	newKeyring, err := b.keyring.AddKey(&Key{
-		Term:    term + 1,
+		Term:    newTerm,
 		Version: 1,
 		Value:   encrypt,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to add new encryption key: %v", err)
+		return 0, fmt.Errorf("failed to add new encryption key: %v", err)
 	}
 
 	// Persist the new keyring
 	if err := b.persistKeyring(newKeyring); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Swap the keyrings
 	b.keyring = newKeyring
-	return nil
+	return newTerm, nil
 }
 
-// AddKey is used to add a new key to the keyring. This assumes the keyring
-// has already been updated and does not persist a new keyring.
-func (b *AESGCMBarrier) AddKey(k *Key) error {
+// CreateUpgrade creates an upgrade path key to the given term from the previous term
+func (b *AESGCMBarrier) CreateUpgrade(term uint32) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	if b.sealed {
+		return ErrBarrierSealed
+	}
+
+	// Get the key for this term
+	termKey := b.keyring.TermKey(term)
+	buf, err := termKey.Serialize()
+	if err != nil {
+		return err
+	}
+
+	// Get the AEAD for the previous term
+	prevTerm := term - 1
+	primary, err := b.aeadForTerm(prevTerm)
+	if err != nil {
+		return err
+	}
+
+	// Create upgrade key
+	pe := &physical.Entry{
+		Key:   fmt.Sprintf("%s%d", keyringUpgradePrefix, prevTerm),
+		Value: b.encrypt(prevTerm, primary, buf),
+	}
+	return b.backend.Put(pe)
+}
+
+// DestroyUpgrade destroys the upgrade path key to the given term
+func (b *AESGCMBarrier) DestroyUpgrade(term uint32) error {
+	path := fmt.Sprintf("%s%d", keyringUpgradePrefix, term-1)
+	return b.Delete(path)
+}
+
+// CheckUpgrade looks for an upgrade to the current term and installs it
+func (b *AESGCMBarrier) CheckUpgrade() (bool, uint32, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	if b.sealed {
+		return false, 0, ErrBarrierSealed
+	}
+
+	// Get the current term
+	activeTerm := b.keyring.ActiveTerm()
+
+	// Check for an upgrade key
+	upgrade := fmt.Sprintf("%s%d", keyringUpgradePrefix, activeTerm)
+	entry, err := b.Get(upgrade)
+	if err != nil {
+		return false, 0, err
+	}
+
+	// Nothing to do if no upgrade
+	if entry == nil {
+		return false, 0, nil
+	}
+
+	// Deserialize the key
+	key, err := DeserializeKey(entry.Value)
+	if err != nil {
+		return false, 0, err
+	}
+
+	// Upgrade from read lock to write lock
+	b.l.RUnlock()
+	defer b.l.RLock()
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	newKeyring, err := b.keyring.AddKey(k)
+	// Update the keyring
+	newKeyring, err := b.keyring.AddKey(key)
 	if err != nil {
-		return fmt.Errorf("failed to add new encryption key: %v", err)
+		return false, 0, fmt.Errorf("failed to add new encryption key: %v", err)
 	}
 	b.keyring = newKeyring
-	return nil
+
+	// Done!
+	return true, key.Term, nil
 }
 
 // ActiveKeyInfo is used to inform details about the active key

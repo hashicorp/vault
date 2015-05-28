@@ -88,11 +88,16 @@ type SecurityBarrier interface {
 
 	// Rotate is used to create a new encryption key. All future writes
 	// should use the new key, while old values should still be decryptable.
-	Rotate() error
+	Rotate() (uint32, error)
 
-	// AddKey is used to add a new key to the keyring. This assumes the keyring
-	// has already been updated and does not persist a new keyring.
-	AddKey(k *Key) error
+	// CreateUpgrade creates an upgrade path key to the given term from the previous term
+	CreateUpgrade(term uint32) error
+
+	// DestroyUpgrade destroys the upgrade path key to the given term
+	DestroyUpgrade(term uint32) error
+
+	// CheckUpgrade looks for an upgrade to the current term and installs it
+	CheckUpgrade() (bool, uint32, error)
 
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)
