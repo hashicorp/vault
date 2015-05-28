@@ -670,7 +670,8 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		c.logger.Printf("[ERR] core: failed to initialize barrier: %v", err)
 		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
 	}
-	c.logger.Printf("[INFO] core: security barrier initialized")
+	c.logger.Printf("[INFO] core: security barrier initialized (shares: %d, threshold %d)",
+		config.SecretShares, config.SecretThreshold)
 
 	// Unseal the barrier
 	if err := c.barrier.Unseal(masterKey); err != nil {
@@ -1001,6 +1002,8 @@ func (c *Core) RekeyInit(config *SealConfig) error {
 	// Copy the configuration
 	c.rekeyConfig = new(SealConfig)
 	*c.rekeyConfig = *config
+	c.logger.Printf("[INFO] core: rekey initialized (shares: %d, threshold: %d)",
+		c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
 	return nil
 }
 
@@ -1111,7 +1114,8 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 		c.logger.Printf("[ERR] core: failed to rekey barrier: %v", err)
 		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
 	}
-	c.logger.Printf("[INFO] core: security barrier rekeyed")
+	c.logger.Printf("[INFO] core: security barrier rekeyed (shares: %d, threshold: %d)",
+		c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
 
 	// Store the seal configuration
 	pe := &physical.Entry{
