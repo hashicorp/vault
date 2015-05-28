@@ -120,8 +120,10 @@ func (k *Keyring) TermKey(term uint32) *Key {
 
 // SetMasterKey is used to update the master key
 func (k *Keyring) SetMasterKey(val []byte) *Keyring {
+	valCopy := make([]byte, len(val))
+	copy(valCopy, val)
 	clone := k.Clone()
-	clone.masterKey = val
+	clone.masterKey = valCopy
 	return clone
 }
 
