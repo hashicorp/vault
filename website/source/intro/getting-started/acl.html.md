@@ -77,21 +77,25 @@ back to a root user later.
 $ vault token-create -policy="secret"
 d97ef000-48cf-45d9-1907-3ea6ce298a29
 
-$ vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
+$ VAULT_TOKEN="" vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
 secret
 ```
 
+Note that you need to temporarily unset the `VAULT_TOKEN` environment
+variable that you exported earlier when you were preparing your shell
+session to interact with the Vault sever in dev mode.
+
 You can now verify that you can write data to `secret/`, but only
 read from `secret/foo`:
 
 ```
-$ vault write secret/bar value=yes
+$ VAULT_TOKEN="" vault write secret/bar value=yes
 Success! Data written to: secret/bar
 
-$ vault write secret/foo value=yes
+$ VAULT_TOKEN="" vault write secret/foo value=yes
 Error writing data to secret/foo: Error making API request.
 
 URL: PUT http://127.0.0.1:8200/v1/secret/foo
@@ -99,6 +103,11 @@ Code: 400. Errors:
 
 * permission denied
 ```
+
+Temporarily unsetting the `VAULT_TOKEN` environment variable for
+these commands forces vault to use the token that was written to
+`~/.vault-token` by the `vault auth` command. In production use, you would
+not have this environment variable set, and so this would be unnecessary.
 
 You also don't have access to `sys` according to the policy, so commands
 such as `vault mounts` will not work either.
