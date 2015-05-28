@@ -79,6 +79,24 @@ You'll notice that you can't execute any commands. We don't have any
 auth information! When you first setup a Vault server, you have to start
 by _initializing_ it.
 
+On Linux, Vault may fail to start with the following error:
+
+```shell
+$ vault server -config=example.hcl
+Error initializing core: Failed to lock memory: cannot allocate memory
+
+This usually means that the mlock syscall is not available.
+Vault uses mlock to prevent memory from being swapped to
+disk. This requires root privileges as well as a machine
+that supports mlock. Please enable mlock on your system or
+disable Vault from using it. To disable Vault from using it,
+set the `disable_mlock` configuration option in your configuration
+file.
+```
+
+For guidance on dealing with this issue, see the discussion of
+`disable_mlock` in [Server Configuration](/docs/config/index.html).
+
 ## Initializing the Vault
 
 Initialization is the process of first configuring the Vault. This
