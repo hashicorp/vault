@@ -195,17 +195,13 @@ func (c *RekeyCommand) Help() string {
 	helpText := `
 Usage: vault rekey [options] [key]
 
-  Unseal the vault by entering a portion of the master key. Once all
-  portions are entered, the Vault will be unsealed.
+  Rekey is used to change the unseal keys. This can be done to generate
+  a new set of unseal keys or to change the number of shares and the
+  required threshold.
 
-  Every Vault server initially starts as sealed. It cannot perform any
-  operation except unsealing until it is sealed. Secrets cannot be accessed
-  in any way until the vault is unsealed. This command allows you to enter
-  a portion of the master key to unseal the vault.
-
-  The unseal key can be specified via the command line, but this is
-  not recommended. The key may then live in your terminal history. This
-  only exists to assist in scripting.
+  Rekey can only be done when the Vault is already unsealed. The operation
+  is done online, but requires that a threshold of the current unseal
+  keys be provided.
 
 General Options:
 
@@ -224,9 +220,22 @@ General Options:
 
 Unseal Options:
 
-  -reset                  Reset the unsealing process by throwing away
-                          prior keys in process to unseal the vault.
+  -init                   Initialize the rekey operation by setting the desired
+                          number of shares and the key threshold. This can only be
+                          done if no rekey is already initiated.
 
+  -cancel				  Reset the rekey process by throwing away
+                          prior keys and the rekey configuration.
+
+  -status                 Prints the status of the current rekey operation.
+                          This can be used to see the status without attempting
+                          to provide an unseal key.
+
+  -key-shares=5           The number of key shares to split the master key
+                          into.
+
+  -key-threshold=3        The number of key shares required to reconstruct
+                          the master key.
 `
 	return strings.TrimSpace(helpText)
 }
