@@ -1179,6 +1179,9 @@ func (c *Core) postUnseal() error {
 		if err := c.barrier.ReloadKeyring(); err != nil {
 			return err
 		}
+		if err := c.scheduleUpgradeCleanup(); err != nil {
+			return err
+		}
 	}
 	if err := c.loadMounts(); err != nil {
 		return err
@@ -1384,6 +1387,32 @@ func (c *Core) checkKeyUpgrades() error {
 		}
 		c.logger.Printf("[INFO] core: upgraded to key term %d", newTerm)
 	}
+	return nil
+}
+
+// scheduleUpgradeCleanup is used to ensure that all the upgrade paths
+// are cleaned up in a timely manner if a leader failover takes place
+func (c *Core) scheduleUpgradeCleanup() error {
+	// List the upgrades
+	upgrades, err := c.barrier.List(keyringUpgradePrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list upgrades: %v", err)
+	}
+
+	// Nothing to do if no upgrades
+	if len(upgrades) == 0 {
+		return nil
+	}
+
+	// Schedule cleanup for all of them
+	time.AfterFunc(keyRotateGracePeriod, func() {
+		for _, upgrade := range upgrades {
+			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
+			if err := c.barrier.Delete(path); err != nil {
+				c.logger.Printf("[ERR] core: failed to cleanup upgrade: %s", path)
+			}
+		}
+	})
 	return nil
 }
 
