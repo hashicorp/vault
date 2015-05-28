@@ -1,11 +1,21 @@
 package vault
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+)
+
+var (
+	// protectedPaths cannot be accessed via the raw APIs.
+	// This is both for security and to prevent disrupting Vault.
+	protectedPaths = []string{
+		barrierInitPath,
+		keyringPath,
+	}
 )
 
 func NewSystemBackend(core *Core) logical.Backend {
@@ -652,6 +662,15 @@ func (b *SystemBackend) handleDisableAudit(
 func (b *SystemBackend) handleRawRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot read '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
 	entry, err := b.Core.barrier.Get(path)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -671,6 +690,15 @@ func (b *SystemBackend) handleRawRead(
 func (b *SystemBackend) handleRawWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot write '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
 	value := data.Get("value").(string)
 	entry := &Entry{
 		Key:   path,
@@ -686,6 +714,15 @@ func (b *SystemBackend) handleRawWrite(
 func (b *SystemBackend) handleRawDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot delete '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
 	if err := b.Core.barrier.Delete(path); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

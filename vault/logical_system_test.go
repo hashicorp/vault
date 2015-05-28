@@ -600,6 +600,16 @@ func TestSystemBackend_disableAudit_invalid(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_rawRead_Protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "raw/"+keyringPath)
+	_, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestSystemBackend_rawRead(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -610,6 +620,16 @@ func TestSystemBackend_rawRead(t *testing.T) {
 	}
 	if resp.Data["value"].(string)[0] != '{' {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawWrite_Protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "raw/"+keyringPath)
+	_, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
 	}
 }
 
@@ -636,6 +656,16 @@ func TestSystemBackend_rawWrite(t *testing.T) {
 	}
 	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != PathPolicyRead {
 		t.Fatalf("Bad: %#v", p)
+	}
+}
+
+func TestSystemBackend_rawDelete_Protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.DeleteOperation, "raw/"+keyringPath)
+	_, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
 	}
 }
 
