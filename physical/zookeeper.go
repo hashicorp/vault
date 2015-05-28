@@ -248,14 +248,14 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	i.leaderCh = make(chan struct{})
 
 	// Watch for Events which could result in loss of our zkLock and close(i.leaderCh)
-	currentVal, _, lockeventCh, err3 := i.in.client.GetW(lockpath)
-	if err3 != nil {
-		return nil, fmt.Errorf("unable to watch HA lock")
+	currentVal, _, lockeventCh, err := i.in.client.GetW(lockpath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to watch HA lock: %v", err)
 	}
 	if i.value != string(currentVal) {
 		return nil, fmt.Errorf("lost HA lock immediately before watch")
 	}
-	go i.monitorLock(lockeventCh)
+	go i.monitorLock(lockeventCh, i.leaderCh)
 
 	return i.leaderCh, nil
 }
@@ -271,9 +271,9 @@ func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, fa
 	}
 	// Set node value
 	data := []byte(i.value)
-	err2 := i.in.ensurePath(lockpath, data)
-	if err2 != nil {
-		failLock <- err2
+	err = i.in.ensurePath(lockpath, data)
+	if err != nil {
+		failLock <- err
 		lock.Unlock()
 		return
 	}
@@ -289,23 +289,26 @@ func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, fa
 	}
 }
 
-func (i *ZookeeperHALock) monitorLock(lockeventCh <-chan zk.Event) {
+func (i *ZookeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan struct{}) {
 	for {
 		select {
 		case event := <- lockeventCh:
 			// Lost connection?
-			if event.State == zk.StateUnknown || event.State == zk.StateDisconnected ||  event.State == zk.StateConnecting || event.State == zk.StateAuthFailed || event.State == zk.StateConnectedReadOnly || event.State == zk.StateExpired {
-				close(i.leaderCh)
+			switch event.State {
+			case zk.StateConnected:
+			case zk.StateSyncConnected:
+			case zk.StateHasSession:
+			default:
+				close(leaderCh)
 				return
 			}
-			// Lost watch
-			if event.Type == zk.EventNotWatching {
-				close(i.leaderCh)
-				return
-			}
-			// Lock changed
-			if event.Type == zk.EventNodeCreated || event.Type == zk.EventNodeDeleted || event.Type == zk.EventNodeDataChanged {
-				close(i.leaderCh)
+
+			// Lost lock?
+			switch event.Type {
+			case zk.EventNodeChildrenChanged:
+			case zk.EventSession:
+			default:
+				close(leaderCh)
 				return
 			}
 		}
