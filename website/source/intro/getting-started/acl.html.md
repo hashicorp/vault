@@ -77,12 +77,16 @@ back to a root user later.
 $ vault token-create -policy="secret"
 d97ef000-48cf-45d9-1907-3ea6ce298a29
 
-$ vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
+$ VAULT_TOKEN="" vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
 secret
 ```
+
+Note that you need to temporarily unset the `VAULT_AUTH` environment
+variable that you exported earlier when you were preparing your shell
+session to interact with the Vault sever in dev mode.
 
 You can now verify that you can write data to `secret/`, but only
 read from `secret/foo`:
