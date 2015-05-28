@@ -750,11 +750,28 @@ func (b *SystemBackend) handleKeyStatus(
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := b.Core.barrier.Rotate(); err != nil {
+	// Rotate to the new term
+	newTerm, err := b.Core.barrier.Rotate()
+	if err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: failed to create new encryption key: %v", err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
+
+	// In non-HA mode, we need to an upgrade path for the standby instances
+	if b.Core.ha != nil {
+		// Create the upgrade path to the new term
+		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
+			b.Backend.Logger().Printf("[ERR] sys: failed to create new upgrade for key term %d: %v", newTerm, err)
+		}
+
+		// Schedule the destroy of the upgrade path
+		time.AfterFunc(keyRotateGracePeriod, func() {
+			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
+				b.Backend.Logger().Printf("[ERR] sys: failed to destroy upgrade for key term %d: %v", newTerm, err)
+			}
+		})
+	}
 	return nil, nil
 }
 
