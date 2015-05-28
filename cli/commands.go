@@ -208,6 +208,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"rotate": func() (cli.Command, error) {
+			return &command.RotateCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"unmount": func() (cli.Command, error) {
 			return &command.UnmountCommand{
 				Meta: meta,
