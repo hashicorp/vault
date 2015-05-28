@@ -321,6 +321,26 @@ func (b *AESGCMBarrier) Rotate() error {
 	return nil
 }
 
+// ActiveKeyInfo is used to inform details about the active key
+func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	if b.sealed {
+		return nil, ErrBarrierSealed
+	}
+
+	// Determine the key install time
+	term := b.keyring.ActiveTerm()
+	key := b.keyring.TermKey(term)
+
+	// Return the key info
+	info := &KeyInfo{
+		Term:        int(term),
+		InstallTime: key.InstallTime,
+	}
+	return info, nil
+}
+
 // Rekey is used to change the master key used to protect the keyring
 func (b *AESGCMBarrier) Rekey(key []byte) error {
 	b.l.Lock()

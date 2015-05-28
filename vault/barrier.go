@@ -2,6 +2,7 @@ package vault
 
 import (
 	"errors"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -69,6 +70,9 @@ type SecurityBarrier interface {
 	// should use the new key, while old values should still be decryptable.
 	Rotate() error
 
+	// ActiveKeyInfo is used to inform details about the active key
+	ActiveKeyInfo() (*KeyInfo, error)
+
 	// Rekey is used to change the master key used to protect the keyring
 	Rekey([]byte) error
 
@@ -104,4 +108,10 @@ func (e *Entry) Logical() *logical.StorageEntry {
 		Key:   e.Key,
 		Value: e.Value,
 	}
+}
+
+// KeyInfo is used to convey information about the encryption key
+type KeyInfo struct {
+	Term        int
+	InstallTime time.Time
 }

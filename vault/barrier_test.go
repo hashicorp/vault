@@ -3,6 +3,7 @@ package vault
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func testBarrier(t *testing.T, b SecurityBarrier) {
@@ -243,6 +244,19 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Check the key info
+	info, err := b.ActiveKeyInfo()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if info.Term != 1 {
+		t.Fatalf("Bad term: %d", info.Term)
+	}
+	if time.Since(info.InstallTime) > time.Second {
+		t.Fatalf("Bad install: %v", info.InstallTime)
+	}
+	first := info.InstallTime
+
 	// Write a key
 	e1 := &Entry{Key: "test", Value: []byte("test")}
 	if err := b.Put(e1); err != nil {
@@ -253,6 +267,18 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	err = b.Rotate()
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	// Check the key info
+	info, err = b.ActiveKeyInfo()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if info.Term != 2 {
+		t.Fatalf("Bad term: %d", info.Term)
+	}
+	if !info.InstallTime.After(first) {
+		t.Fatalf("Bad install: %v", info.InstallTime)
 	}
 
 	// Write another key
