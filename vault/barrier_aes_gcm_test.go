@@ -41,6 +41,15 @@ func TestAESGCMBarrier_Rotate(t *testing.T) {
 	testBarrier_Rotate(t, b)
 }
 
+func TestAESGCMBarrier_Rekey(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	testBarrier_Rekey(t, b)
+}
+
 // Test an upgrade from the old (0.1) barrier/init to the new
 // core/keyring style
 func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {

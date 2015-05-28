@@ -305,3 +305,62 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("bad: %v", out)
 	}
 }
+
+func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
+	// Initialize the barrier
+	key, _ := b.GenerateKey()
+	b.Initialize(key)
+	err := b.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Write a key
+	e1 := &Entry{Key: "test", Value: []byte("test")}
+	if err := b.Put(e1); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Rekey to a new key
+	newKey, _ := b.GenerateKey()
+	err = b.Rekey(newKey)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reading should work
+	out, err := b.Get(e1.Key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("bad: %v", out)
+	}
+
+	// Seal
+	err = b.Seal()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Unseal with old key should fail
+	err = b.Unseal(key)
+	if err == nil {
+		t.Fatalf("unseal should fail")
+	}
+
+	// Unseal with new keys should work
+	err = b.Unseal(newKey)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reading should work
+	out, err = b.Get(e1.Key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("bad: %v", out)
+	}
+}
