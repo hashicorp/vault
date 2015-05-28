@@ -1372,35 +1372,17 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 // and if there is a chain of upgrades available
 func (c *Core) checkKeyUpgrades() error {
 	for {
-		// Get the current term
-		info, err := c.barrier.ActiveKeyInfo()
-		if err != nil {
-			return err
-		}
-
-		// Check for an upgrade key
-		upgrade := fmt.Sprintf("%s%d", keyringUpgradePrefix, info.Term)
-		entry, err := c.barrier.Get(upgrade)
+		// Check for an upgrade
+		didUpgrade, newTerm, err := c.barrier.CheckUpgrade()
 		if err != nil {
 			return err
 		}
 
 		// Nothing to do if no upgrade
-		if entry == nil {
+		if !didUpgrade {
 			break
 		}
-
-		// Deserialize the key
-		key, err := DeserializeKey(entry.Value)
-		if err != nil {
-			return err
-		}
-
-		// Add the key
-		if err := c.barrier.AddKey(key); err != nil {
-			return err
-		}
-		c.logger.Printf("[INFO] core: upgraded to key term %d", key.Term)
+		c.logger.Printf("[INFO] core: upgraded to key term %d", newTerm)
 	}
 	return nil
 }
