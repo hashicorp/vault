@@ -65,6 +65,10 @@ type SecurityBarrier interface {
 	// be unsealed again to perform any further operations.
 	Seal() error
 
+	// Rotate is used to create a new encryption key. All future writes
+	// should use the new key, while old values should still be decryptable.
+	Rotate() error
+
 	// SecurityBarrier must provide the storage APIs
 	BarrierStorage
 }

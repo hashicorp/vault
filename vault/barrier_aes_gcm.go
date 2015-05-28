@@ -283,6 +283,44 @@ func (b *AESGCMBarrier) Seal() error {
 	return nil
 }
 
+// Rotate is used to create a new encryption key. All future writes
+// should use the new key, while old values should still be decryptable.
+func (b *AESGCMBarrier) Rotate() error {
+	b.l.Lock()
+	defer b.l.Unlock()
+	if b.sealed {
+		return ErrBarrierSealed
+	}
+
+	// Generate a new key
+	encrypt, err := b.GenerateKey()
+	if err != nil {
+		return fmt.Errorf("failed to generate encryption key: %v", err)
+	}
+
+	// Get the next term
+	term := b.keyring.ActiveTerm()
+
+	// Add a new encryption key
+	newKeyring, err := b.keyring.AddKey(&Key{
+		Term:    term + 1,
+		Version: 1,
+		Value:   encrypt,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add new encryption key: %v", err)
+	}
+
+	// Persist the new keyring
+	if err := b.persistKeyring(newKeyring); err != nil {
+		return err
+	}
+
+	// Swap the keyrings
+	b.keyring = newKeyring
+	return nil
+}
+
 // Put is used to insert or update an entry
 func (b *AESGCMBarrier) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
