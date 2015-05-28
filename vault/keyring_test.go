@@ -171,3 +171,26 @@ func TestKeyring_Serialize(t *testing.T) {
 		}
 	}
 }
+
+func TestKey_Serialize(t *testing.T) {
+	k := &Key{
+		Term:        10,
+		Version:     1,
+		Value:       []byte("foobarbaz"),
+		InstallTime: time.Now(),
+	}
+
+	buf, err := k.Serialize()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	out, err := DeserializeKey(buf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(k, out) {
+		t.Fatalf("bad: %#v", out)
+	}
+}

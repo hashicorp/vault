@@ -35,6 +35,21 @@ type Key struct {
 	InstallTime time.Time
 }
 
+// Serialize is used to create a byte encoded key
+func (k *Key) Serialize() ([]byte, error) {
+	buf, err := json.Marshal(k)
+	return buf, err
+}
+
+// DeserializeKey is used to deserialize and return a new key
+func DeserializeKey(buf []byte) (*Key, error) {
+	k := new(Key)
+	if err := json.Unmarshal(buf, k); err != nil {
+		return nil, fmt.Errorf("deserialization failed: %v", err)
+	}
+	return k, nil
+}
+
 // NewKeyring creates a new keyring
 func NewKeyring() *Keyring {
 	k := &Keyring{
