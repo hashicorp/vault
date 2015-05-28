@@ -1513,7 +1513,12 @@ func TestCore_HandleRequest_MountPoint(t *testing.T) {
 }
 
 func TestCore_Rekey_Lifecycle(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, master, _ := TestCoreUnsealed(t)
+
+	// Verify update not allowed
+	if _, err := c.RekeyUpdate(master); err == nil {
+		t.Fatalf("no rekey in progress")
+	}
 
 	// Should be no progress
 	num, err := c.RekeyProgress()

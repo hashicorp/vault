@@ -995,7 +995,7 @@ func (c *Core) RekeyInit(config *SealConfig) error {
 
 	// Prevent multiple concurrent re-keys
 	if c.rekeyConfig != nil {
-		return fmt.Errorf("Rekey already in progress")
+		return fmt.Errorf("rekey already in progress")
 	}
 
 	// Copy the configuration
@@ -1036,6 +1036,11 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
+
+	// Ensure a rekey is in progress
+	if c.rekeyConfig == nil {
+		return nil, fmt.Errorf("no rekey in progress")
+	}
 
 	// Check if we already have this piece
 	for _, existing := range c.rekeyProgress {
@@ -1106,6 +1111,7 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 		c.logger.Printf("[ERR] core: failed to rekey barrier: %v", err)
 		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
 	}
+	c.logger.Printf("[INFO] core: security barrier rekeyed")
 
 	// Store the seal configuration
 	pe := &physical.Entry{
@@ -1185,6 +1191,11 @@ func (c *Core) postUnseal() error {
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Printf("[INFO] core: pre-seal teardown starting")
+
+	// Clear any rekey progress
+	c.rekeyConfig = nil
+	c.rekeyProgress = nil
+
 	if c.metricsCh != nil {
 		close(c.metricsCh)
 		c.metricsCh = nil
