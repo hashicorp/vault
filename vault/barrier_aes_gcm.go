@@ -110,12 +110,15 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 
 	// Create a new keyring, install the keys
 	keyring := NewKeyring()
-	keyring.SetMasterKey(key)
-	keyring.AddKey(&Key{
+	keyring = keyring.SetMasterKey(key)
+	keyring, err = keyring.AddKey(&Key{
 		Term:    1,
 		Version: 1,
 		Value:   encrypt,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to create keyring: %v", err)
+	}
 	return b.persistKeyring(keyring)
 }
 
@@ -243,12 +246,15 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 
 	// Setup a new keyring, this is for backwards compatability
 	keyring := NewKeyring()
-	keyring.SetMasterKey(key)
-	keyring.AddKey(&Key{
+	keyring = keyring.SetMasterKey(key)
+	keyring, err = keyring.AddKey(&Key{
 		Term:    1,
 		Version: 1,
 		Value:   init.Key,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to create keyring: %v", err)
+	}
 	if err := b.persistKeyring(keyring); err != nil {
 		return err
 	}
@@ -272,10 +278,7 @@ func (b *AESGCMBarrier) Seal() error {
 
 	// Remove the primary key, and seal the vault
 	b.cache = make(map[uint32]cipher.AEAD)
-	if b.keyring != nil {
-		b.keyring.Wipe()
-		b.keyring = nil
-	}
+	b.keyring = nil
 	b.sealed = true
 	return nil
 }
@@ -285,12 +288,11 @@ func (b *AESGCMBarrier) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
 	b.l.RLock()
 	defer b.l.RUnlock()
-
-	keyring := b.keyring
-	if keyring == nil {
+	if b.sealed {
 		return ErrBarrierSealed
 	}
-	term := keyring.ActiveTerm()
+
+	term := b.keyring.ActiveTerm()
 	primary, err := b.aeadForTerm(term)
 	if err != nil {
 		return err
@@ -308,9 +310,7 @@ func (b *AESGCMBarrier) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"barrier", "get"}, time.Now())
 	b.l.RLock()
 	defer b.l.RUnlock()
-
-	keyring := b.keyring
-	if keyring == nil {
+	if b.sealed {
 		return nil, ErrBarrierSealed
 	}
 
