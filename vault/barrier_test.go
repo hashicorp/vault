@@ -335,6 +335,28 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	if out == nil {
 		t.Fatalf("bad: %v", out)
 	}
+
+	// Attempt to do AddKey
+	randKey, _ := b.GenerateKey()
+	newKey := &Key{
+		Term:        3,
+		Version:     1,
+		Value:       randKey,
+		InstallTime: time.Now(),
+	}
+	err = b.AddKey(newKey)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the key info
+	info, err = b.ActiveKeyInfo()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if info.Term != 3 {
+		t.Fatalf("Bad term: %d", info.Term)
+	}
 }
 
 func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {

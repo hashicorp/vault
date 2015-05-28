@@ -31,6 +31,18 @@ const (
 	// keyringPath is the location of the keyring data. This is encrypted
 	// by the master key.
 	keyringPath = "core/keyring"
+
+	// keyringUpgradePrefix is the path used to store keyring update entries.
+	// When running in HA mode, the active instance will install the new key
+	// and re-write the keyring. For standby instances, they need an upgrade
+	// path from key N to N+1. They cannot just use the master key because
+	// in the event of a rekey, that master key can no longer decrypt the keyring.
+	// When key N+1 is installed, we create an entry at "prefix/N" which uses
+	// encryption key N to provide the N+1 key. The standby instances scan
+	// for this periodically and refresh their keyring. The upgrade keys
+	// are deleted after a few minutes, but this provides enough time for the
+	// standby instances to upgrade without causing any disruption.
+	keyringUpgradePrefix = "core/upgrade/"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -72,6 +84,9 @@ type SecurityBarrier interface {
 	// Rotate is used to create a new encryption key. All future writes
 	// should use the new key, while old values should still be decryptable.
 	Rotate() error
+
+	// AddKey is used to add a new key to the keyring
+	AddKey(k *Key) error
 
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)

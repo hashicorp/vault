@@ -335,6 +335,20 @@ func (b *AESGCMBarrier) Rotate() error {
 	return nil
 }
 
+// AddKey is used to add a new key to the keyring. This assumes the keyring
+// has already been updated and does not persist a new keyring.
+func (b *AESGCMBarrier) AddKey(k *Key) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	newKeyring, err := b.keyring.AddKey(k)
+	if err != nil {
+		return fmt.Errorf("failed to add new encryption key: %v", err)
+	}
+	b.keyring = newKeyring
+	return nil
+}
+
 // ActiveKeyInfo is used to inform details about the active key
 func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
 	b.l.RLock()
