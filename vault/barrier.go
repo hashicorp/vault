@@ -69,6 +69,9 @@ type SecurityBarrier interface {
 	// should use the new key, while old values should still be decryptable.
 	Rotate() error
 
+	// Rekey is used to change the master key used to protect the keyring
+	Rekey([]byte) error
+
 	// SecurityBarrier must provide the storage APIs
 	BarrierStorage
 }

@@ -321,6 +321,33 @@ func (b *AESGCMBarrier) Rotate() error {
 	return nil
 }
 
+// Rekey is used to change the master key used to protect the keyring
+func (b *AESGCMBarrier) Rekey(key []byte) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+	if b.sealed {
+		return ErrBarrierSealed
+	}
+
+	// Verify the key size
+	min, max := b.KeyLength()
+	if len(key) < min || len(key) > max {
+		return fmt.Errorf("Key size must be %d or %d", min, max)
+	}
+
+	// Add a new encryption key
+	newKeyring := b.keyring.SetMasterKey(key)
+
+	// Persist the new keyring
+	if err := b.persistKeyring(newKeyring); err != nil {
+		return err
+	}
+
+	// Swap the keyrings
+	b.keyring = newKeyring
+	return nil
+}
+
 // Put is used to insert or update an entry
 func (b *AESGCMBarrier) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
