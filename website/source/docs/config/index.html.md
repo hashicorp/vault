@@ -39,13 +39,23 @@ to specify where the configuration is.
 
 * `disable_mlock` (optional) - A boolean. If true, this will disable the
   server from executing the `mlock` syscall to prevent memory from being
-  swapped to disk. This is not recommended.
+  swapped to disk. This is not recommended in production (see below).
 
 * `statsite_addr` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
   instances for metrics. This is highly recommended for production usage.
 
 * `statsd_addr` (optional) - This is the same as `statsite_addr` but
   for StatsD.
+
+In production, you should only consider setting the `disable_mlock` option
+on Linux systems that only use encrypted swap or do not use swap at all.
+Vault does not currently support memory locking on Mac OS X and Windows
+and so the feature is automatically disabled on those platforms.  To give
+the Vault executable access to the `mlock` syscall on Linux systems:
+
+```shell
+sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
+```
 
 ## Backend Reference
 
