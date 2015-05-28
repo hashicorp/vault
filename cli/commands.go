@@ -118,6 +118,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"key-status": func() (cli.Command, error) {
+			return &command.KeyStatusCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"policies": func() (cli.Command, error) {
 			return &command.PolicyListCommand{
 				Meta: meta,
