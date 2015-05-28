@@ -51,6 +51,40 @@ will be sent down with a `Set-Cookie` header as well as via JSON. If you have a
 well-behaved HTTP client, then authentication information will
 automatically be saved and sent to the Vault API.
 
+## Reading and writing secrets
+
+Reading a secret is done by issuing a GET using the following URL:
+
+`/v1/secret/foo`
+
+This maps to `secret/foo` where `foo` is the key in the `secret/` backend
+
+Here is an example of reading a secret using cURL:
+
+`curl -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" -X GET http://127.0.0.1:8200/v1/secret/foo`
+
+In order to write a secret to `secret/foo` for instance, issue a POST on the following URL:
+
+`/v1/secret/foo`
+
+with the following JSON body:
+
+```javascript
+{
+  "value": "bar"
+}
+```
+
+Here is an example of writing a secret using cURL:
+
+`curl -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" -H "Content-Type: application/json" -X POST -d '{"value":"bar"}' http://127.0.0.1:8200/v1/secret/baz`
+
+Also ensure that `X-Vault-Token` is present in the request header
+
+
+
+
+
 ## Help
 
 To retrieve the help for any API within Vault, including mounted
