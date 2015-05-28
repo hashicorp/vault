@@ -38,6 +38,14 @@ const (
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
 	lockRetryInterval = 10 * time.Second
+
+	// keyRotateCheckInterval is how often a standby checks for a key
+	// rotation taking place.
+	keyRotateCheckInterval = 30 * time.Second
+
+	// keyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	keyRotateGracePeriod = 2 * time.Minute
 )
 
 var (
@@ -1163,6 +1171,15 @@ func (c *Core) postUnseal() error {
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
+	// HA mode requires us to handle keyring rotation and rekeying
+	if c.ha != nil {
+		if err := c.checkKeyUpgrades(); err != nil {
+			return err
+		}
+		if err := c.barrier.ReloadKeyring(); err != nil {
+			return err
+		}
+	}
 	if err := c.loadMounts(); err != nil {
 		return err
 	}
@@ -1241,6 +1258,16 @@ func (c *Core) preSeal() error {
 func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	c.logger.Printf("[INFO] core: entering standby mode")
+
+	// Monitor for key rotation
+	keyRotateDone := make(chan struct{})
+	keyRotateStop := make(chan struct{})
+	go c.periodicCheckKeyUpgrade(keyRotateDone, keyRotateStop)
+	defer func() {
+		close(keyRotateStop)
+		<-keyRotateDone
+	}()
+
 	for {
 		// Check for a shutdown
 		select {
@@ -1316,6 +1343,66 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 			continue
 		}
 	}
+}
+
+// periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
+func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	for {
+		select {
+		case <-time.After(keyRotateCheckInterval):
+			// Only check if we are a standby
+			c.stateLock.RLock()
+			standby := c.standby
+			c.stateLock.RUnlock()
+			if !standby {
+				continue
+			}
+
+			if err := c.checkKeyUpgrades(); err != nil {
+				c.logger.Printf("[ERR] core: upgrade due to key rotation failed: %v", err)
+			}
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+// checkKeyUpgrades is used to check if there have been any key rotations
+// and if there is a chain of upgrades available
+func (c *Core) checkKeyUpgrades() error {
+	for {
+		// Get the current term
+		info, err := c.barrier.ActiveKeyInfo()
+		if err != nil {
+			return err
+		}
+
+		// Check for an upgrade key
+		upgrade := fmt.Sprintf("%s%d", keyringUpgradePrefix, info.Term)
+		entry, err := c.barrier.Get(upgrade)
+		if err != nil {
+			return err
+		}
+
+		// Nothing to do if no upgrade
+		if entry == nil {
+			break
+		}
+
+		// Deserialize the key
+		key, err := DeserializeKey(entry.Value)
+		if err != nil {
+			return err
+		}
+
+		// Add the key
+		if err := c.barrier.AddKey(key); err != nil {
+			return err
+		}
+		c.logger.Printf("[INFO] core: upgraded to key term %d", key.Term)
+	}
+	return nil
 }
 
 // acquireLock blocks until the lock is acquired, returning the leaderCh
