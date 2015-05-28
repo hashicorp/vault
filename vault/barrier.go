@@ -62,6 +62,9 @@ type SecurityBarrier interface {
 	// to be unsealed. If the key is not correct, the barrier remains sealed.
 	Unseal(key []byte) error
 
+	// VerifyMaster is used to check if the given key matches the master key
+	VerifyMaster(key []byte) error
+
 	// Seal is used to re-seal the barrier. This requires the barrier to
 	// be unsealed again to perform any further operations.
 	Seal() error

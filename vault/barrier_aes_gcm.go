@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -171,6 +172,19 @@ func (b *AESGCMBarrier) Sealed() (bool, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 	return b.sealed, nil
+}
+
+// VerifyMaster is used to check if the given key matches the master key
+func (b *AESGCMBarrier) VerifyMaster(key []byte) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	if b.sealed {
+		return ErrBarrierSealed
+	}
+	if subtle.ConstantTimeCompare(key, b.keyring.MasterKey()) != 1 {
+		return ErrBarrierInvalidKey
+	}
+	return nil
 }
 
 // Unseal is used to provide the master key which permits the barrier
