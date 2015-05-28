@@ -714,8 +714,10 @@ func (b *SystemBackend) handleKeyStatus(
 func (b *SystemBackend) handleRotate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if err := b.Core.barrier.Rotate(); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: failed to create new encryption key: %v", err)
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
 	return nil, nil
 }
 
