@@ -993,6 +993,9 @@ func (c *Core) RekeyInit(config *SealConfig) error {
 	if c.sealed {
 		return ErrSealed
 	}
+	if c.standby {
+		return ErrStandby
+	}
 
 	// Prevent multiple concurrent re-keys
 	if c.rekeyConfig != nil {
@@ -1035,6 +1038,9 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 	defer c.stateLock.RUnlock()
 	if c.sealed {
 		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
 	}
 
 	c.rekeyLock.Lock()
