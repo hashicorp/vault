@@ -357,6 +357,12 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	if info.Term != 3 {
 		t.Fatalf("Bad term: %d", info.Term)
 	}
+
+	// Should be fine to reload keyring
+	err = b.ReloadKeyring()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 }
 
 func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
@@ -430,5 +436,11 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	}
 	if out == nil {
 		t.Fatalf("bad: %v", out)
+	}
+
+	// Should be fine to reload keyring
+	err = b.ReloadKeyring()
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 }

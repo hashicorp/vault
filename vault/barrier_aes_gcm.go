@@ -187,6 +187,46 @@ func (b *AESGCMBarrier) VerifyMaster(key []byte) error {
 	return nil
 }
 
+// ReloadKeyring is used to re-read the underlying keyring.
+// This is used for HA deployments to ensure the latest keyring
+// is present in the leader.
+func (b *AESGCMBarrier) ReloadKeyring() error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	// Create the AES-GCM
+	gcm, err := b.aeadFromKey(b.keyring.MasterKey())
+	if err != nil {
+		return err
+	}
+
+	// Read in the keyring
+	out, err := b.backend.Get(keyringPath)
+	if err != nil {
+		return fmt.Errorf("failed to check for keyring: %v", err)
+	}
+
+	// Decrypt the barrier init key
+	plain, err := b.decrypt(gcm, out.Value)
+	if err != nil {
+		if strings.Contains(err.Error(), "message authentication failed") {
+			return ErrBarrierInvalidKey
+		}
+		return err
+	}
+	defer memzero(plain)
+
+	// Recover the keyring
+	keyring, err := DeserializeKeyring(plain)
+	if err != nil {
+		return fmt.Errorf("keyring deserialization failed: %v", err)
+	}
+
+	// Setup the keyring and finish
+	b.keyring = keyring
+	return nil
+}
+
 // Unseal is used to provide the master key which permits the barrier
 // to be unsealed. If the key is not correct, the barrier remains sealed.
 func (b *AESGCMBarrier) Unseal(key []byte) error {

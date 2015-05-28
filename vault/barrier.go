@@ -77,6 +77,11 @@ type SecurityBarrier interface {
 	// VerifyMaster is used to check if the given key matches the master key
 	VerifyMaster(key []byte) error
 
+	// ReloadKeyring is used to re-read the underlying keyring.
+	// This is used for HA deployments to ensure the latest keyring
+	// is present in the leader.
+	ReloadKeyring() error
+
 	// Seal is used to re-seal the barrier. This requires the barrier to
 	// be unsealed again to perform any further operations.
 	Seal() error
@@ -85,7 +90,8 @@ type SecurityBarrier interface {
 	// should use the new key, while old values should still be decryptable.
 	Rotate() error
 
-	// AddKey is used to add a new key to the keyring
+	// AddKey is used to add a new key to the keyring. This assumes the keyring
+	// has already been updated and does not persist a new keyring.
 	AddKey(k *Key) error
 
 	// ActiveKeyInfo is used to inform details about the active key
