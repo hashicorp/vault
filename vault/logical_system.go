@@ -25,6 +25,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 				"audit/*",
 				"seal", // Must be set for Core.Seal() logic
 				"raw/*",
+				"rotate",
 			},
 		},
 
@@ -280,6 +281,28 @@ func NewSystemBackend(core *Core) logical.Backend {
 					logical.WriteOperation:  b.handleRawWrite,
 					logical.DeleteOperation: b.handleRawDelete,
 				},
+			},
+
+			&framework.Path{
+				Pattern: "key-status$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleKeyStatus,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["key-status"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["key-status"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "rotate$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: b.handleRotate,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
 		},
 	}
@@ -669,6 +692,33 @@ func (b *SystemBackend) handleRawDelete(
 	return nil, nil
 }
 
+// handleKeyStatus returns status information about the backend key
+func (b *SystemBackend) handleKeyStatus(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	info, err := b.Core.barrier.ActiveKeyInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"term":         info.Term,
+			"install_time": info.InstallTime,
+		},
+	}
+	return resp, nil
+}
+
+// handleRotate is used to trigger a key rotation
+func (b *SystemBackend) handleRotate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if err := b.Core.barrier.Rotate(); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 const sysHelpRoot = `
 The system backend is built-in to Vault and cannot be remounted or
 unmounted. It contains the paths that are used to configure Vault itself
@@ -864,6 +914,22 @@ a user friendly description of the audit backend, and it's configuration options
 		`Enable or disable audit backends.`,
 		`
 Enable a new audit backend or disable an existing backend.
+		`,
+	},
+
+	"key-status": {
+		"Provides information about the backend encryption key.",
+		`
+		Provides the current backend encryption key term and installation time.
+		`,
+	},
+
+	"rotate": {
+		"Rotates the backend encryption key used to persist data.",
+		`
+		Rotate generates a new encryption key which is used to encrypt all
+		data going to the storage backend. The old encryption keys are kept so
+		that data encrypted using those keys can still be decrypted.
 		`,
 	},
 }
