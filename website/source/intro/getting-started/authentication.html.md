@@ -10,7 +10,7 @@ description: |-
 
 Now that we know how to use the basics of Vault, it is important to understand
 how to authenticate to Vault itself. Up to this point, we haven't had to
-authenticate because starting the Vault sever in dev mode automatically logs
+authenticate because starting the Vault server in dev mode automatically logs
 us in as root. In practice, you'll almost always have to manually authenticate.
 
 On this page, we'll talk specifically about _authentication_. On the next
