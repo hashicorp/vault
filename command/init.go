@@ -48,9 +48,11 @@ func (c *InitCommand) Run(args []string) int {
 	c.Ui.Output(fmt.Sprintf(
 		"\n"+
 			"Vault initialized with %d keys and a key threshold of %d. Please\n"+
-			"securely distribute the above keys. When Vault restarts you must\n"+
-			"provide %d keys to unseal it. Vault does not store the master key.\n"+
-			"Without at least %d keys, your Vault will remain permanently sealed.",
+			"securely distribute the above keys. When the Vault is re-sealed,\n"+
+			"restarted, or stopped, you must provide at least %d of these keys\n"+
+			"to unseal it again.\n\n"+
+			"Vault does not store the master key. Without at least %d keys,\n"+
+			"your Vault will remain permanently sealed.",
 		shares,
 		threshold,
 		threshold,
