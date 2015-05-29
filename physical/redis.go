@@ -46,7 +46,7 @@ func newRedisBackend(conf map[string]string) (Backend, error) {
 func (r *RedisBackend) Put(entry *Entry) error {
     defer metrics.MeasuredSince([]string{"redis", "put"}, time.Now())
 
-    gore.NewCommand("SET", entry.Key, entry.Value).Run(redisConn)
+    gore.NewCommand("SET", entry.Key, entry.Value).Run(r.client)
 }
 
 // TODO implement Get
