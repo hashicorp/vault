@@ -12,7 +12,7 @@ import (
 type RedisBackend struct {
     // path is used as a key prefix
     path string
-    client *gore.Dial
+    client *gore.Conn
 }
 
 // newRedisBackend constructs a new backend using the given server address
