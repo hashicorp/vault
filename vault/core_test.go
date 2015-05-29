@@ -1070,20 +1070,7 @@ func TestCore_Standby(t *testing.T) {
 	}
 
 	// Wait for core to become active
-	start := time.Now()
-	var standby bool
-	for time.Now().Sub(start) < time.Second {
-		standby, err = core.Standby()
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if !standby {
-			break
-		}
-	}
-	if standby {
-		t.Fatalf("should not be in standby mode")
-	}
+	testWaitActive(t, core)
 
 	// Put a secret
 	req := &logical.Request{
@@ -1135,7 +1122,7 @@ func TestCore_Standby(t *testing.T) {
 	}
 
 	// Core2 should be in standby
-	standby, err = core2.Standby()
+	standby, err := core2.Standby()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1177,19 +1164,7 @@ func TestCore_Standby(t *testing.T) {
 	}
 
 	// Wait for core2 to become active
-	start = time.Now()
-	for time.Now().Sub(start) < time.Second {
-		standby, err = core2.Standby()
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if !standby {
-			break
-		}
-	}
-	if standby {
-		t.Fatalf("should not be in standby mode")
-	}
+	testWaitActive(t, core2)
 
 	// Read the secret
 	req = &logical.Request{
@@ -1745,5 +1720,168 @@ func TestCore_Rekey_InvalidMaster(t *testing.T) {
 	_, err = c.RekeyUpdate(master)
 	if err == nil {
 		t.Fatalf("expected error")
+	}
+}
+
+func testWaitActive(t *testing.T, core *Core) {
+	start := time.Now()
+	var standby bool
+	var err error
+	for time.Now().Sub(start) < time.Second {
+		standby, err = core.Standby()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !standby {
+			break
+		}
+	}
+	if standby {
+		t.Fatalf("should not be in standby mode")
+	}
+}
+
+func TestCore_Standby_Rotate(t *testing.T) {
+	// Create the first core and initialize it
+	inm := physical.NewInmemHA()
+	advertiseOriginal := "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: advertiseOriginal,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	key, root := TestCoreInit(t, core)
+	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Wait for core to become active
+	testWaitActive(t, core)
+
+	// Create a second core, attached to same in-memory store
+	advertiseOriginal2 := "http://127.0.0.1:8500"
+	core2, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: advertiseOriginal2,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Rotate the encryption key
+	req := &logical.Request{
+		Operation:   logical.WriteOperation,
+		Path:        "sys/rotate",
+		ClientToken: root,
+	}
+	_, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Seal the first core, should step down
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait for core2 to become active
+	testWaitActive(t, core2)
+
+	// Read the key status
+	req = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "sys/key-status",
+		ClientToken: root,
+	}
+	resp, err := core2.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the response
+	if resp.Data["term"] != 2 {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestCore_Standby_Rekey(t *testing.T) {
+	// Create the first core and initialize it
+	inm := physical.NewInmemHA()
+	advertiseOriginal := "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: advertiseOriginal,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	key, root := TestCoreInit(t, core)
+	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Wait for core to become active
+	testWaitActive(t, core)
+
+	// Create a second core, attached to same in-memory store
+	advertiseOriginal2 := "http://127.0.0.1:8500"
+	core2, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: advertiseOriginal2,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Rekey the master key
+	newConf := &SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+	err = core.RekeyInit(newConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	result, err := core.RekeyUpdate(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("rekey failed")
+	}
+
+	// Seal the first core, should step down
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait for core2 to become active
+	testWaitActive(t, core2)
+
+	// Rekey the master key again
+	err = core2.RekeyInit(newConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	result, err = core2.RekeyUpdate(result.SecretShares[0])
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("rekey failed")
 	}
 }
