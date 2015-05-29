@@ -496,3 +496,36 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 		t.Fatalf("should not have upgrade")
 	}
 }
+
+func testBarrier_Upgrade_Rekey(t *testing.T, b1, b2 SecurityBarrier) {
+	// Initialize the barrier
+	key, _ := b1.GenerateKey()
+	b1.Initialize(key)
+	err := b1.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = b2.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Rekey to a new key
+	newKey, _ := b1.GenerateKey()
+	err = b1.Rekey(newKey)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reload the master key
+	err = b2.ReloadMasterKey()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reload the keyring
+	err = b2.ReloadKeyring()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}

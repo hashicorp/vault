@@ -43,6 +43,15 @@ const (
 	// are deleted after a few minutes, but this provides enough time for the
 	// standby instances to upgrade without causing any disruption.
 	keyringUpgradePrefix = "core/upgrade/"
+
+	// masterKeyPath is the location of the master key. This is encrypted
+	// by the latest key in the keyring. This is only used by standby instances
+	// to handle the case of a rekey. If the active instance does a rekey,
+	// the standby instances can no longer reload the keyring since they
+	// have the old master key. This key can be decrypted if you have the
+	// keyring to discover the new master key. The new master key is then
+	// used to reload the keyring itself.
+	masterKeyPath = "core/master"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -81,6 +90,11 @@ type SecurityBarrier interface {
 	// This is used for HA deployments to ensure the latest keyring
 	// is present in the leader.
 	ReloadKeyring() error
+
+	// ReloadMasterKey is used to re-read the underlying masterkey.
+	// This is used for HA deployments to ensure the latest master key
+	// is available for keyring reloading.
+	ReloadMasterKey() error
 
 	// Seal is used to re-seal the barrier. This requires the barrier to
 	// be unsealed again to perform any further operations.

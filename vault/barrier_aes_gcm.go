@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -150,6 +151,35 @@ func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 	if err := b.backend.Put(pe); err != nil {
 		return fmt.Errorf("failed to persist keyring: %v", err)
 	}
+
+	// Serialize the master key value
+	key := &Key{
+		Term:    1,
+		Version: 1,
+		Value:   keyring.MasterKey(),
+	}
+	buf, err = key.Serialize()
+	if err != nil {
+		return fmt.Errorf("failed to serialize master key: %v", err)
+	}
+	defer memzero(buf)
+
+	// Encrypt the master key
+	activeKey := keyring.ActiveKey()
+	aead, err := b.aeadFromKey(activeKey.Value)
+	if err != nil {
+		return err
+	}
+	value = b.encrypt(activeKey.Term, aead, buf)
+
+	// Update the masterKeyPath for standby instances
+	pe = &physical.Entry{
+		Key:   masterKeyPath,
+		Value: value,
+	}
+	if err := b.backend.Put(pe); err != nil {
+		return fmt.Errorf("failed to persist master key: %v", err)
+	}
 	return nil
 }
 
@@ -224,6 +254,42 @@ func (b *AESGCMBarrier) ReloadKeyring() error {
 
 	// Setup the keyring and finish
 	b.keyring = keyring
+	return nil
+}
+
+// ReloadMasterKey is used to re-read the underlying masterkey.
+// This is used for HA deployments to ensure the latest master key
+// is available for keyring reloading.
+func (b *AESGCMBarrier) ReloadMasterKey() error {
+	// Read the masterKeyPath upgrade
+	out, err := b.Get(masterKeyPath)
+	if err != nil {
+		return fmt.Errorf("failed to read master key path: %v", err)
+	}
+
+	// The masterKeyPath could be missing (backwards incompatable),
+	// we can ignore this and attempt to make progress with the current
+	// master key.
+	if out == nil {
+		return nil
+	}
+
+	// Deserialize the master key
+	key, err := DeserializeKey(out.Value)
+	if err != nil {
+		return fmt.Errorf("failed to deserialize key: %v", err)
+	}
+
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	// Check if the master key is the same
+	if bytes.Equal(b.keyring.MasterKey(), key.Value) {
+		return nil
+	}
+
+	// Update the master key
+	b.keyring = b.keyring.SetMasterKey(key.Value)
 	return nil
 }
 
