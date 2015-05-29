@@ -962,6 +962,9 @@ func (c *Core) RekeyProgress() (int, error) {
 	if c.sealed {
 		return 0, ErrSealed
 	}
+	if c.standby {
+		return 0, ErrStandby
+	}
 
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
@@ -974,6 +977,9 @@ func (c *Core) RekeyConfig() (*SealConfig, error) {
 	defer c.stateLock.RUnlock()
 	if c.sealed {
 		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
 	}
 
 	c.rekeyLock.Lock()
@@ -1153,6 +1159,9 @@ func (c *Core) RekeyCancel() error {
 	defer c.stateLock.RUnlock()
 	if c.sealed {
 		return ErrSealed
+	}
+	if c.standby {
+		return ErrStandby
 	}
 
 	// Clear any progress or config
