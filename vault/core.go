@@ -1185,6 +1185,9 @@ func (c *Core) postUnseal() error {
 		if err := c.checkKeyUpgrades(); err != nil {
 			return err
 		}
+		if err := c.barrier.ReloadMasterKey(); err != nil {
+			return err
+		}
 		if err := c.barrier.ReloadKeyring(); err != nil {
 			return err
 		}
