@@ -113,6 +113,10 @@
 			"Rev": "8fef92e41e22a70e700a96b29f066cda30ea24ef"
 		},
 		{
+			"ImportPath": "github.com/keimoon/gore",
+			"Rev": "3ac3096e5355aabbf4d9a13b1981e3c4aacbb164"
+		},
+		{
 			"ImportPath": "github.com/lib/pq",
 			"Comment": "go1.0-cutoff-40-g8910d1c",
 			"Rev": "8910d1c3a4bda5c97c50bc38543953f1f1e1f8bb"
