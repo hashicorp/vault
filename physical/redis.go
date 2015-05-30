@@ -44,19 +44,36 @@ func newRedisBackend(conf map[string]string) (Backend, error) {
 
 // Put is used to insert or update an entry
 func (r *RedisBackend) Put(entry *Entry) error {
-    defer metrics.MeasuredSince([]string{"redis", "put"}, time.Now())
+    defer metrics.MeasureSince([]string{"redis", "put"}, time.Now())
 
     _, err := gore.NewCommand("SET", entry.Key, entry.Value).Run(r.client)
     if err != nil {
-        fmt.Errorf("Unable to create entry: ", err)
+        return err
     }
     return nil
 }
 
-// TODO implement Get
+// Get is used to retrieve an entry from the backend
+func (r *RedisBackend) Get(key string) (*Entry, error) {
+    defer metrics.MeasureSince([]string{"redis", "get"}, time.Now())
+    resp, err := gore.NewCommand("GET", key).Run(r.client)
+    if err != nil{
+        return nil, err
+    }
+    if resp == nil {
+        return nil, nil
+    }
+    value, _ := resp.Bytes()
+    ent := &Entry {
+        Key: key,
+        Value: value,
+    }
+    return ent, nil
+}
 
 // Delete is used to destroy an entry in the backend
 func (r *RedisBackend) Delete(key string) error {
+    defer metrics.MeasureSince([]string{"redis", "delete"}, time.Now())
     _, err := gore.NewCommand("DEL", key).Run(r.client)
    if err != nil {
        fmt.Errorf("Unable to delete entry: ", err)
