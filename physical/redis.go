@@ -10,19 +10,12 @@ import (
 
 // A backend to store key/value pairs in redis
 type RedisBackend struct {
-    // path is used as a key prefix
-    path string
+    keyPrefix string
     client *gore.Conn
 }
 
 // newRedisBackend constructs a new backend using the given server address
 func newRedisBackend(conf map[string]string) (Backend, error) {
-
-    // Get or set path. Defaults to vault:
-    path, ok := conf["path"]
-    if !ok {
-        path = "vault:"
-    }
 
     // Get or set reddis address. Defaults to the localhost and default port
     address, ok := conf["address"]
@@ -37,7 +30,6 @@ func newRedisBackend(conf map[string]string) (Backend, error) {
 
     r := &RedisBackend {
         client: redisConn,
-        path: path,
     }
     return r, nil
 }
