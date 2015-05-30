@@ -30,8 +30,8 @@ func newRedisBackend(conf map[string]string) (Backend, error) {
         address = "127.0.0.1:6379"
     }
 
-    redisConn, ok := gore.Dial(address)
-    if !ok {
+    redisConn, err := gore.Dial(address)
+    if err != nil {
         fmt.Errorf("Unable to connect to redis server at '%s'", address)
     }
 
