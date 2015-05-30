@@ -76,9 +76,28 @@ func (r *RedisBackend) Delete(key string) error {
     defer metrics.MeasureSince([]string{"redis", "delete"}, time.Now())
     _, err := gore.NewCommand("DEL", key).Run(r.client)
    if err != nil {
-       fmt.Errorf("Unable to delete entry: ", err)
+       return err
    }
    return nil
 }
 
-// TODO implement List
+// List is used to list all keys with given prefix
+func(r *RedisBackend) List(prefix string) ([]string, error) {
+    defer metrics.MeasureSince([]string{"redis", "list"}, time.Now())
+    resp, err := gore.NewCommand("KEYS", prefix + "*").Run(r.client)
+    if err != nil {
+        return nil, err
+    }
+    if resp.IsArray() {
+        entries := []string{}
+        respArray, _ := resp.Array()
+        for _, entry := range respArray {
+            entryString, _ := entry.String()
+            entries = append(entries, entryString)
+        }
+    return entries, nil
+
+    } else {
+        return nil, nil
+    }
+}
