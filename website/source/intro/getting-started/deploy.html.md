@@ -59,7 +59,7 @@ $ consul agent -server -bootstrap-expect 1 -data-dir /tmp/consul
 ## Starting the Server
 
 With the configuration in place, starting the server is simple, as
-shown below. Modify the `-config` flag to point to the the proper path
+shown below. Modify the `-config` flag to point to the proper path
 where you saved the configuration above.
 
 ```
