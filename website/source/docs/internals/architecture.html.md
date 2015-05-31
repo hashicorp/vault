@@ -25,7 +25,7 @@ Before describing the architecture, we provide a glossary of terms to help
 clarify what is being discussed:
 
 * **Storage Backend** - A storage backend is responsible for durable storage of _encrypted_ data.
-  backends are not trusted by Vault and are only expected to provide durability. The storage
+  Backends are not trusted by Vault and are only expected to provide durability. The storage
   backend is configured when starting the Vault server.
 
 * **Barrier** - The barrier is cryptographic steel and concrete around the Vault. All data that

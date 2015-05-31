@@ -21,7 +21,7 @@ the sub-fields are not merged together.
 ## Quick Start
 
 The generic backend allows for writing keys with arbitrary values. The
-only value that special is the `lease` key, which can be provided with
+only value that is special is the `lease` key, which can be provided with
 any key to restrict the lease time of the secret. This is useful to ensure
 clients periodically renew so that key rolling can be time bounded.
 

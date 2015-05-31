@@ -121,7 +121,7 @@ Success! Data written to: auth/github/map/teams/default
 For GitHub, the "default" team is the default policy set that everyone
 is assigned to no matter what team they're on.
 
-Other auth backends use alternate, but likely similar mechanism for
+Other auth backends use alternate, but likely similar mechanisms for
 mapping policies to identity.
 
 ## Next

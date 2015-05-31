@@ -16,7 +16,7 @@ the paths to use differed. AWS in particular had special paths like
 
 Instead of having to memorize or reference documentation constantly
 to determine what paths to use, we built a help system directly into
-Vault. This help system can be access via the API or the command-line and
+Vault. This help system can be accessed via the API or the command-line and
 generates human-readable help for any mounted backend.
 
 On this page, we'll learn how to use this help system. It is an invaluable
