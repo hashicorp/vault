@@ -27,7 +27,7 @@ use, minimizing the amount of time the secret existed.
 -> **Note:** Before starting this page, please register for an
 [AWS account](http://aws.amazon.com). We won't be using any features that
 cost money, so you shouldn't be charged for anything. However, we're not
-responsible for any charges that may incur.
+responsible for any charges you may incur.
 
 ## Mounting the AWS Backend
 
