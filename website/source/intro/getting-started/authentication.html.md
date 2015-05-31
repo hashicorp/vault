@@ -17,7 +17,7 @@ On this page, we'll talk specifically about _authentication_. On the next
 page, we talk about _authorization_.
 Authentication is the mechanism of assigning an identity to a Vault user.
 The access control and permissions associated with an identity are
-authorization, and will not covered on this page.
+authorization, and will not be covered on this page.
 
 Vault has pluggable authentication backends, making it easy to authenticate
 with Vault using whatever form works best for your organization. On this page
