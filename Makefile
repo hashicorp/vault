@@ -1,5 +1,10 @@
 TEST?=./...
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
+EXTERNAL_TOOLS=\
+	github.com/tools/godep \
+	github.com/mitchellh/gox \
+	golang.org/x/tools/cmd/cover \
+	golang.org/x/tools/cmd/vet
 
 default: test
 
@@ -29,17 +34,11 @@ testrace: generate
 	TF_ACC= godep go test -race $(TEST) $(TESTARGS)
 
 cover:
-	@go tool cover 2>/dev/null; if [ $$? -eq 3 ]; then \
-		go get -u golang.org/x/tools/cmd/cover; \
-	fi
 	./scripts/coverage.sh --html
 
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@go tool vet 2>/dev/null ; if [ $$? -eq 3 ]; then \
-		go get golang.org/x/tools/cmd/vet; \
-	fi
 	@go list -f '{{.Dir}}' ./... \
 		| grep -v '.*github.com/hashicorp/vault$$' \
 		| xargs go tool vet ; if [ $$? -eq 1 ]; then \
@@ -53,4 +52,11 @@ vet:
 generate:
 	go generate ./...
 
-.PHONY: bin default generate test vet
+# bootstrap the build by downloading additional tools
+bootstrap:
+	@for tool in  $(EXTERNAL_TOOLS) ; do \
+		echo "Installing $$tool" ; \
+    go get $$tool; \
+	done
+
+.PHONY: bin default generate test vet bootstrap
