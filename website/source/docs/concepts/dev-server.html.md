@@ -8,13 +8,12 @@ description: |-
 
 # "Dev" Server Mode
 
-Vault can start itself as a server in "dev" mode. This dev-mode server
-requires no further setup, and your local `vault` CLI will be authenticated
-to talk to it. This makes it easy to experiment with Vault or start a Vault
-instance for development.
-
-Every feature of Vault is available in "dev" mode. The "dev" flag just
-shortcircuits a lot of setup to insecure defaults.
+You can start Vault as a server in "dev" mode like so: `vault server -dev`.
+This dev-mode server requires no further setup, and your local `vault` CLI will
+be authenticated to talk to it. This makes it easy to experiment with Vault or
+start a Vault instance for development. Every feature of Vault is available in 
+"dev" mode. The `-dev` flag just short-circuits a lot of setup to insecure 
+defaults.
 
 ~> **Warning:** Never, ever, ever run a "dev" mode server in production.
 It is insecure and will lose data on every restart (since it stores data
