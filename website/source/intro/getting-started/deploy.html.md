@@ -177,8 +177,8 @@ Due to the nature of the algorithm, Vault doesn't know if it has the
 _correct_ key until the threshold is reached.
 
 Also notice that the unseal process is stateful. You can go to another
-computer, use `vault unseal`, and as long as its pointing to the same server,
-that other computer can continue the unseal process.. This is incredibly
+computer, use `vault unseal`, and as long as it's pointing to the same server,
+that other computer can continue the unseal process. This is incredibly
 important to the design of the unseal process: multiple people with multiple
 keys are required to unseal the Vault. The Vault can be unsealed from
 multiple computers and the keys should never be together. A single malicious
