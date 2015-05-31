@@ -65,7 +65,7 @@ the Vault core system.
 
 Spend some time reading and writing secrets to the new mount point to
 convince yourself it works. As a bonus, write to the `secret/` endpoint
-and observe that those values unavailable via `generic/`: they share the
+and observe that those values are unavailable via `generic/`: they share the
 same backend, but do not share any data. In addition to this, backends
 (of the same type or otherwise) _cannot_ access the data of other backends;
 they can only access data within their mount point.
