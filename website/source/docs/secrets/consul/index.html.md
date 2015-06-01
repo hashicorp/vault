@@ -143,6 +143,11 @@ Permission denied
         <span class="param-flags">required</span>
         The base64 encoded Consul ACL policy. This is documented in [more detail here](https://consul.io/docs/internals/acl.html).
       </li>
+      <li>
+        <span class="param">lease</span>
+        <span class="param-flags">optional</span>
+        The lease value provided as a string duration with time suffix. Hour is the largest suffix.
+      </li>
     </ul>
   </dd>
 
