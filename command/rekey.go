@@ -120,18 +120,18 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	c.Ui.Output(fmt.Sprintf(
 		"\n"+
-			"Vault rekeyed with %d keys and a key threshold of %d!\n\n"+
-			"Please securely distribute the above keys. Whenever a Vault server\n"+
-			"is started, it must be unsealed with %d (the threshold) of the\n"+
-			"keys above (any of the keys, as long as the total number equals\n"+
-			"the threshold).\n\n"+
-			"Vault does not store the original master key. If you lose the keys\n"+
-			"above such that you no longer have the minimum number (the\n"+
-			"threshold), then your Vault will not be able to be unsealed.",
+			"Vault rekeyed with %d keys and a key threshold of %d. Please\n"+
+			"securely distribute the above keys. When the Vault is re-sealed,\n"+
+			"restarted, or stopped, you must provide at least %d of these keys\n"+
+			"to unseal it again.\n\n"+
+			"Vault does not store the master key. Without at least %d keys,\n"+
+			"your Vault will remain permanently sealed.",
 		shares,
 		threshold,
 		threshold,
+		threshold,
 	))
+
 	return 0
 }
 
