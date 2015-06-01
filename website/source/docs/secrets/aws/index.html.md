@@ -98,6 +98,51 @@ access_key      AKIAJZ5YRPHFH3QHRRRQ
 secret_key      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
 ```
 
+If you get an error message similar to either of the following, the root credentials that you wrote to `aws/config/root` have insufficient privilege:
+
+```text
+$ vault read aws/creds/deploy
+* Error creating IAM user: User: arn:aws:iam::000000000000:user/hashicorp is not authorized to perform: iam:CreateUser on resource: arn:aws:iam::000000000000:user/vault-root-1432735386-4059
+
+$ vault revoke aws/creds/deploy/774cfb27-c22d-6e78-0077-254879d1af3c
+Revoke error: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/sys/revoke/aws/creds/deploy/774cfb27-c22d-6e78-0077-254879d1af3c
+Code: 400. Errors:
+
+* invalid request
+```
+
+The root credentials need permission to perform various IAM actions. These are the actions that the AWS secret backend uses to manage IAM credentials. Here is an example IAM policy that would grant these permissions:
+
+```javascript
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateAccessKey",
+                "iam:CreateUser",
+                "iam:PutUserPolicy",
+                "iam:ListGroupsForUser",
+                "iam:ListUserPolicies",
+                "iam:ListAccessKeys",
+                "iam:DeleteAccessKey",
+                "iam:DeleteUserPolicy",
+                "iam:RemoveUserFromGroup",
+                "iam:DeleteUser"
+            ],
+            "Resource": [
+                "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+            ]
+        }
+    ]
+}
+```
+
+Note that this policy example is unrelated to the policy you wrote to `aws/roles/deploy`. This policy example should be applied to the IAM user (or role) associated with the root credentials that you wrote to `aws/config/root`. You have to apply it yourself in IAM. The policy you wrote to `aws/roles/deploy` is the policy you want the AWS secret backend to apply to the temporary credentials it returns from `aws/creds/deploy`.
+
 If you get stuck at any time, simply run `vault help aws` or with a subpath for
 interactive help output.
 
