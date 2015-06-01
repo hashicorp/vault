@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/hashicorp/vault/physical"
@@ -29,6 +30,113 @@ func TestAESGCMBarrier_Basic(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	testBarrier(t, b)
+}
+
+func TestAESGCMBarrier_Rotate(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	testBarrier_Rotate(t, b)
+}
+
+func TestAESGCMBarrier_Upgrade(t *testing.T) {
+	inm := physical.NewInmem()
+	b1, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b2, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	testBarrier_Upgrade(t, b1, b2)
+}
+
+func TestAESGCMBarrier_Upgrade_Rekey(t *testing.T) {
+	inm := physical.NewInmem()
+	b1, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b2, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	testBarrier_Upgrade_Rekey(t, b1, b2)
+}
+
+func TestAESGCMBarrier_Rekey(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	testBarrier_Rekey(t, b)
+}
+
+// Test an upgrade from the old (0.1) barrier/init to the new
+// core/keyring style
+func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Generate a barrier/init entry
+	encrypt, _ := b.GenerateKey()
+	init := &barrierInit{
+		Version: 1,
+		Key:     encrypt,
+	}
+	buf, _ := json.Marshal(init)
+
+	// Protect with master key
+	master, _ := b.GenerateKey()
+	gcm, _ := b.aeadFromKey(master)
+	value := b.encrypt(initialKeyTerm, gcm, buf)
+
+	// Write to the physical backend
+	pe := &physical.Entry{
+		Key:   barrierInitPath,
+		Value: value,
+	}
+	inm.Put(pe)
+
+	// Should still be initialized
+	isInit, err := b.Initialized()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isInit {
+		t.Fatalf("should be initialized")
+	}
+
+	// Unseal should work and migrate online
+	err = b.Unseal(master)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check for migraiton
+	out, err := inm.Get(barrierInitPath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("should delete old barrier init")
+	}
+
+	// Should have keyring
+	out, err = inm.Get(keyringPath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("should have keyring file")
+	}
 }
 
 // Verify data sent through is encrypted
@@ -114,15 +222,16 @@ func TestEncrypt_Unique(t *testing.T) {
 	b.Initialize(key)
 	b.Unseal(key)
 
-	entry := &Entry{Key: "test", Value: []byte("test")}
-	primary := b.primary
-
-	if primary == nil {
+	if b.keyring == nil {
 		t.Fatalf("barrier is sealed")
 	}
 
-	first := b.encrypt(primary, entry.Value)
-	second := b.encrypt(primary, entry.Value)
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	term := b.keyring.ActiveTerm()
+	primary, _ := b.aeadForTerm(term)
+
+	first := b.encrypt(term, primary, entry.Value)
+	second := b.encrypt(term, primary, entry.Value)
 
 	if bytes.Equal(first, second) == true {
 		t.Fatalf("improper random seeding detected")

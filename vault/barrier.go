@@ -2,6 +2,7 @@ package vault
 
 import (
 	"errors"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -26,6 +27,31 @@ var (
 const (
 	// barrierInitPath is the path used to store our init sentinel file
 	barrierInitPath = "barrier/init"
+
+	// keyringPath is the location of the keyring data. This is encrypted
+	// by the master key.
+	keyringPath = "core/keyring"
+
+	// keyringUpgradePrefix is the path used to store keyring update entries.
+	// When running in HA mode, the active instance will install the new key
+	// and re-write the keyring. For standby instances, they need an upgrade
+	// path from key N to N+1. They cannot just use the master key because
+	// in the event of a rekey, that master key can no longer decrypt the keyring.
+	// When key N+1 is installed, we create an entry at "prefix/N" which uses
+	// encryption key N to provide the N+1 key. The standby instances scan
+	// for this periodically and refresh their keyring. The upgrade keys
+	// are deleted after a few minutes, but this provides enough time for the
+	// standby instances to upgrade without causing any disruption.
+	keyringUpgradePrefix = "core/upgrade/"
+
+	// masterKeyPath is the location of the master key. This is encrypted
+	// by the latest key in the keyring. This is only used by standby instances
+	// to handle the case of a rekey. If the active instance does a rekey,
+	// the standby instances can no longer reload the keyring since they
+	// have the old master key. This key can be decrypted if you have the
+	// keyring to discover the new master key. The new master key is then
+	// used to reload the keyring itself.
+	masterKeyPath = "core/master"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -57,9 +83,41 @@ type SecurityBarrier interface {
 	// to be unsealed. If the key is not correct, the barrier remains sealed.
 	Unseal(key []byte) error
 
+	// VerifyMaster is used to check if the given key matches the master key
+	VerifyMaster(key []byte) error
+
+	// ReloadKeyring is used to re-read the underlying keyring.
+	// This is used for HA deployments to ensure the latest keyring
+	// is present in the leader.
+	ReloadKeyring() error
+
+	// ReloadMasterKey is used to re-read the underlying masterkey.
+	// This is used for HA deployments to ensure the latest master key
+	// is available for keyring reloading.
+	ReloadMasterKey() error
+
 	// Seal is used to re-seal the barrier. This requires the barrier to
 	// be unsealed again to perform any further operations.
 	Seal() error
+
+	// Rotate is used to create a new encryption key. All future writes
+	// should use the new key, while old values should still be decryptable.
+	Rotate() (uint32, error)
+
+	// CreateUpgrade creates an upgrade path key to the given term from the previous term
+	CreateUpgrade(term uint32) error
+
+	// DestroyUpgrade destroys the upgrade path key to the given term
+	DestroyUpgrade(term uint32) error
+
+	// CheckUpgrade looks for an upgrade to the current term and installs it
+	CheckUpgrade() (bool, uint32, error)
+
+	// ActiveKeyInfo is used to inform details about the active key
+	ActiveKeyInfo() (*KeyInfo, error)
+
+	// Rekey is used to change the master key used to protect the keyring
+	Rekey([]byte) error
 
 	// SecurityBarrier must provide the storage APIs
 	BarrierStorage
@@ -93,4 +151,10 @@ func (e *Entry) Logical() *logical.StorageEntry {
 		Key:   e.Key,
 		Value: e.Value,
 	}
+}
+
+// KeyInfo is used to convey information about the encryption key
+type KeyInfo struct {
+	Term        int
+	InstallTime time.Time
 }

@@ -20,6 +20,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"audit/*",
 		"seal",
 		"raw/*",
+		"rotate",
 	}
 
 	b := testSystemBackend(t)
@@ -599,6 +600,16 @@ func TestSystemBackend_disableAudit_invalid(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_rawRead_Protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "raw/"+keyringPath)
+	_, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestSystemBackend_rawRead(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -609,6 +620,16 @@ func TestSystemBackend_rawRead(t *testing.T) {
 	}
 	if resp.Data["value"].(string)[0] != '{' {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawWrite_Protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "raw/"+keyringPath)
+	_, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
 	}
 }
 
@@ -635,6 +656,16 @@ func TestSystemBackend_rawWrite(t *testing.T) {
 	}
 	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != PathPolicyRead {
 		t.Fatalf("Bad: %#v", p)
+	}
+}
+
+func TestSystemBackend_rawDelete_Protected(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.DeleteOperation, "raw/"+keyringPath)
+	_, err := b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
 	}
 }
 
@@ -666,6 +697,50 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	}
 	if out != nil {
 		t.Fatalf("policy should be gone")
+	}
+}
+
+func TestSystemBackend_keyStatus(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "key-status")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"term": 1,
+	}
+	delete(resp.Data, "install_time")
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_rotate(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "rotate")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "key-status")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"term": 2,
+	}
+	delete(resp.Data, "install_time")
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 }
 

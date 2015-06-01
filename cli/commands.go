@@ -118,6 +118,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"key-status": func() (cli.Command, error) {
+			return &command.KeyStatusCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"policies": func() (cli.Command, error) {
 			return &command.PolicyListCommand{
 				Meta: meta,
@@ -150,6 +156,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 
 		"delete": func() (cli.Command, error) {
 			return &command.DeleteCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"rekey": func() (cli.Command, error) {
+			return &command.RekeyCommand{
 				Meta: meta,
 			}, nil
 		},
@@ -198,6 +210,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 
 		"remount": func() (cli.Command, error) {
 			return &command.RemountCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"rotate": func() (cli.Command, error) {
+			return &command.RotateCommand{
 				Meta: meta,
 			}, nil
 		},

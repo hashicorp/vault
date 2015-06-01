@@ -1,11 +1,21 @@
 package vault
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+)
+
+var (
+	// protectedPaths cannot be accessed via the raw APIs.
+	// This is both for security and to prevent disrupting Vault.
+	protectedPaths = []string{
+		barrierInitPath,
+		keyringPath,
+	}
 )
 
 func NewSystemBackend(core *Core) logical.Backend {
@@ -25,6 +35,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 				"audit/*",
 				"seal", // Must be set for Core.Seal() logic
 				"raw/*",
+				"rotate",
 			},
 		},
 
@@ -280,6 +291,28 @@ func NewSystemBackend(core *Core) logical.Backend {
 					logical.WriteOperation:  b.handleRawWrite,
 					logical.DeleteOperation: b.handleRawDelete,
 				},
+			},
+
+			&framework.Path{
+				Pattern: "key-status$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleKeyStatus,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["key-status"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["key-status"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "rotate$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: b.handleRotate,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
 		},
 	}
@@ -629,6 +662,15 @@ func (b *SystemBackend) handleDisableAudit(
 func (b *SystemBackend) handleRawRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot read '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
 	entry, err := b.Core.barrier.Get(path)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -648,6 +690,15 @@ func (b *SystemBackend) handleRawRead(
 func (b *SystemBackend) handleRawWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot write '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
 	value := data.Get("value").(string)
 	entry := &Entry{
 		Key:   path,
@@ -663,8 +714,63 @@ func (b *SystemBackend) handleRawWrite(
 func (b *SystemBackend) handleRawDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot delete '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
 	if err := b.Core.barrier.Delete(path); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
+// handleKeyStatus returns status information about the backend key
+func (b *SystemBackend) handleKeyStatus(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	info, err := b.Core.barrier.ActiveKeyInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"term":         info.Term,
+			"install_time": info.InstallTime,
+		},
+	}
+	return resp, nil
+}
+
+// handleRotate is used to trigger a key rotation
+func (b *SystemBackend) handleRotate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Rotate to the new term
+	newTerm, err := b.Core.barrier.Rotate()
+	if err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: failed to create new encryption key: %v", err)
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
+
+	// In non-HA mode, we need to an upgrade path for the standby instances
+	if b.Core.ha != nil {
+		// Create the upgrade path to the new term
+		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
+			b.Backend.Logger().Printf("[ERR] sys: failed to create new upgrade for key term %d: %v", newTerm, err)
+		}
+
+		// Schedule the destroy of the upgrade path
+		time.AfterFunc(keyRotateGracePeriod, func() {
+			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
+				b.Backend.Logger().Printf("[ERR] sys: failed to destroy upgrade for key term %d: %v", newTerm, err)
+			}
+		})
 	}
 	return nil, nil
 }
@@ -864,6 +970,22 @@ a user friendly description of the audit backend, and it's configuration options
 		`Enable or disable audit backends.`,
 		`
 Enable a new audit backend or disable an existing backend.
+		`,
+	},
+
+	"key-status": {
+		"Provides information about the backend encryption key.",
+		`
+		Provides the current backend encryption key term and installation time.
+		`,
+	},
+
+	"rotate": {
+		"Rotates the backend encryption key used to persist data.",
+		`
+		Rotate generates a new encryption key which is used to encrypt all
+		data going to the storage backend. The old encryption keys are kept so
+		that data encrypted using those keys can still be decrypted.
 		`,
 	},
 }

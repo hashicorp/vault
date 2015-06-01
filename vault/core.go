@@ -38,6 +38,14 @@ const (
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
 	lockRetryInterval = 10 * time.Second
+
+	// keyRotateCheckInterval is how often a standby checks for a key
+	// rotation taking place.
+	keyRotateCheckInterval = 30 * time.Second
+
+	// keyRotateGracePeriod is how long we allow an upgrade path
+	// for standby instances before we delete the upgrade keys
+	keyRotateGracePeriod = 2 * time.Minute
 )
 
 var (
@@ -107,6 +115,12 @@ type InitResult struct {
 	RootToken    string
 }
 
+// RekeyResult is used to provide the key parts back after
+// they are generated as part of the rekey.
+type RekeyResult struct {
+	SecretShares [][]byte
+}
+
 // ErrInvalidKey is returned if there is an error with a
 // provided unseal key.
 type ErrInvalidKey struct {
@@ -156,6 +170,12 @@ type Core struct {
 	// unlockParts has the keys provided to Unseal until
 	// the threshold number of parts is available.
 	unlockParts [][]byte
+
+	// rekeyProgress holds the shares we have until we reach enough
+	// to verify the master key.
+	rekeyConfig   *SealConfig
+	rekeyProgress [][]byte
+	rekeyLock     sync.Mutex
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
@@ -627,8 +647,8 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		Value: buf,
 	}
 	if err := c.physical.Put(pe); err != nil {
-		c.logger.Printf("[ERR] core: failed to read seal configuration: %v", err)
-		return nil, fmt.Errorf("failed to check seal configuration: %v", err)
+		c.logger.Printf("[ERR] core: failed to write seal configuration: %v", err)
+		return nil, fmt.Errorf("failed to write seal configuration: %v", err)
 	}
 
 	// Generate a master key
@@ -658,7 +678,8 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		c.logger.Printf("[ERR] core: failed to initialize barrier: %v", err)
 		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
 	}
-	c.logger.Printf("[INFO] core: security barrier initialized")
+	c.logger.Printf("[INFO] core: security barrier initialized (shares: %d, threshold %d)",
+		config.SecretShares, config.SecretThreshold)
 
 	// Unseal the barrier
 	if err := c.barrier.Unseal(masterKey); err != nil {
@@ -934,6 +955,221 @@ func (c *Core) Seal(token string) error {
 	return nil
 }
 
+// RekeyProgress is used to return the rekey progress (num shares)
+func (c *Core) RekeyProgress() (int, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return 0, ErrSealed
+	}
+	if c.standby {
+		return 0, ErrStandby
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+	return len(c.rekeyProgress), nil
+}
+
+// RekeyConfig is used to read the rekey configuration
+func (c *Core) RekeyConfig() (*SealConfig, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Copy the seal config if any
+	var conf *SealConfig
+	if c.rekeyConfig != nil {
+		conf = new(SealConfig)
+		*conf = *c.rekeyConfig
+	}
+	return conf, nil
+}
+
+// RekeyInit is used to initialize the rekey settings
+func (c *Core) RekeyInit(config *SealConfig) error {
+	// Check if the seal configuraiton is valid
+	if err := config.Validate(); err != nil {
+		c.logger.Printf("[ERR] core: invalid rekey seal configuration: %v", err)
+		return fmt.Errorf("invalid rekey seal configuration: %v", err)
+	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return ErrSealed
+	}
+	if c.standby {
+		return ErrStandby
+	}
+
+	// Prevent multiple concurrent re-keys
+	if c.rekeyConfig != nil {
+		return fmt.Errorf("rekey already in progress")
+	}
+
+	// Copy the configuration
+	c.rekeyConfig = new(SealConfig)
+	*c.rekeyConfig = *config
+	c.logger.Printf("[INFO] core: rekey initialized (shares: %d, threshold: %d)",
+		c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
+	return nil
+}
+
+// RekeyUpdate is used to provide a new key part
+func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
+	// Verify the key length
+	min, max := c.barrier.KeyLength()
+	max += shamir.ShareOverhead
+	if len(key) < min {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+	}
+	if len(key) > max {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+	}
+
+	// Get the seal configuration
+	config, err := c.SealConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the barrier is initialized
+	if config == nil {
+		return nil, ErrNotInit
+	}
+
+	// Ensure we are already unsealed
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Ensure a rekey is in progress
+	if c.rekeyConfig == nil {
+		return nil, fmt.Errorf("no rekey in progress")
+	}
+
+	// Check if we already have this piece
+	for _, existing := range c.rekeyProgress {
+		if bytes.Equal(existing, key) {
+			return nil, nil
+		}
+	}
+
+	// Store this key
+	c.rekeyProgress = append(c.rekeyProgress, key)
+
+	// Check if we don't have enough keys to unlock
+	if len(c.rekeyProgress) < config.SecretThreshold {
+		c.logger.Printf("[DEBUG] core: cannot rekey, have %d of %d keys",
+			len(c.rekeyProgress), config.SecretThreshold)
+		return nil, nil
+	}
+
+	// Recover the master key
+	var masterKey []byte
+	if config.SecretThreshold == 1 {
+		masterKey = c.rekeyProgress[0]
+		c.rekeyProgress = nil
+	} else {
+		masterKey, err = shamir.Combine(c.rekeyProgress)
+		c.rekeyProgress = nil
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute master key: %v", err)
+		}
+	}
+
+	// Verify the master key
+	if err := c.barrier.VerifyMaster(masterKey); err != nil {
+		c.logger.Printf("[ERR] core: rekey aborted, master key verification failed: %v", err)
+		return nil, err
+	}
+
+	// Generate a new master key
+	newMasterKey, err := c.barrier.GenerateKey()
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to generate master key: %v", err)
+		return nil, fmt.Errorf("master key generation failed: %v", err)
+	}
+
+	// Return the master key if only a single key part is used
+	results := new(RekeyResult)
+	if c.rekeyConfig.SecretShares == 1 {
+		results.SecretShares = append(results.SecretShares, newMasterKey)
+
+	} else {
+		// Split the master key using the Shamir algorithm
+		shares, err := shamir.Split(newMasterKey, c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
+			return nil, fmt.Errorf("failed to generate shares: %v", err)
+		}
+		results.SecretShares = shares
+	}
+
+	// Encode the seal configuration
+	buf, err := json.Marshal(c.rekeyConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode seal configuration: %v", err)
+	}
+
+	// Rekey the barrier
+	if err := c.barrier.Rekey(newMasterKey); err != nil {
+		c.logger.Printf("[ERR] core: failed to rekey barrier: %v", err)
+		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
+	}
+	c.logger.Printf("[INFO] core: security barrier rekeyed (shares: %d, threshold: %d)",
+		c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
+
+	// Store the seal configuration
+	pe := &physical.Entry{
+		Key:   coreSealConfigPath,
+		Value: buf,
+	}
+	if err := c.physical.Put(pe); err != nil {
+		c.logger.Printf("[ERR] core: failed to update seal configuration: %v", err)
+		return nil, fmt.Errorf("failed to update seal configuration: %v", err)
+	}
+
+	// Done!
+	c.rekeyProgress = nil
+	c.rekeyConfig = nil
+	return results, nil
+}
+
+// RekeyCancel is used to cancel an inprogress rekey
+func (c *Core) RekeyCancel() error {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return ErrSealed
+	}
+	if c.standby {
+		return ErrStandby
+	}
+
+	// Clear any progress or config
+	c.rekeyConfig = nil
+	c.rekeyProgress = nil
+	return nil
+}
+
 // postUnseal is invoked after the barrier is unsealed, but before
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
@@ -943,6 +1179,21 @@ func (c *Core) postUnseal() error {
 	c.logger.Printf("[INFO] core: post-unseal setup starting")
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
+	}
+	// HA mode requires us to handle keyring rotation and rekeying
+	if c.ha != nil {
+		if err := c.checkKeyUpgrades(); err != nil {
+			return err
+		}
+		if err := c.barrier.ReloadMasterKey(); err != nil {
+			return err
+		}
+		if err := c.barrier.ReloadKeyring(); err != nil {
+			return err
+		}
+		if err := c.scheduleUpgradeCleanup(); err != nil {
+			return err
+		}
 	}
 	if err := c.loadMounts(); err != nil {
 		return err
@@ -982,6 +1233,11 @@ func (c *Core) postUnseal() error {
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Printf("[INFO] core: pre-seal teardown starting")
+
+	// Clear any rekey progress
+	c.rekeyConfig = nil
+	c.rekeyProgress = nil
+
 	if c.metricsCh != nil {
 		close(c.metricsCh)
 		c.metricsCh = nil
@@ -1017,6 +1273,16 @@ func (c *Core) preSeal() error {
 func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	c.logger.Printf("[INFO] core: entering standby mode")
+
+	// Monitor for key rotation
+	keyRotateDone := make(chan struct{})
+	keyRotateStop := make(chan struct{})
+	go c.periodicCheckKeyUpgrade(keyRotateDone, keyRotateStop)
+	defer func() {
+		close(keyRotateStop)
+		<-keyRotateDone
+	}()
+
 	for {
 		// Check for a shutdown
 		select {
@@ -1092,6 +1358,74 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 			continue
 		}
 	}
+}
+
+// periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
+func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	for {
+		select {
+		case <-time.After(keyRotateCheckInterval):
+			// Only check if we are a standby
+			c.stateLock.RLock()
+			standby := c.standby
+			c.stateLock.RUnlock()
+			if !standby {
+				continue
+			}
+
+			if err := c.checkKeyUpgrades(); err != nil {
+				c.logger.Printf("[ERR] core: upgrade due to key rotation failed: %v", err)
+			}
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+// checkKeyUpgrades is used to check if there have been any key rotations
+// and if there is a chain of upgrades available
+func (c *Core) checkKeyUpgrades() error {
+	for {
+		// Check for an upgrade
+		didUpgrade, newTerm, err := c.barrier.CheckUpgrade()
+		if err != nil {
+			return err
+		}
+
+		// Nothing to do if no upgrade
+		if !didUpgrade {
+			break
+		}
+		c.logger.Printf("[INFO] core: upgraded to key term %d", newTerm)
+	}
+	return nil
+}
+
+// scheduleUpgradeCleanup is used to ensure that all the upgrade paths
+// are cleaned up in a timely manner if a leader failover takes place
+func (c *Core) scheduleUpgradeCleanup() error {
+	// List the upgrades
+	upgrades, err := c.barrier.List(keyringUpgradePrefix)
+	if err != nil {
+		return fmt.Errorf("failed to list upgrades: %v", err)
+	}
+
+	// Nothing to do if no upgrades
+	if len(upgrades) == 0 {
+		return nil
+	}
+
+	// Schedule cleanup for all of them
+	time.AfterFunc(keyRotateGracePeriod, func() {
+		for _, upgrade := range upgrades {
+			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
+			if err := c.barrier.Delete(path); err != nil {
+				c.logger.Printf("[ERR] core: failed to cleanup upgrade: %s", path)
+			}
+		}
+	})
+	return nil
 }
 
 // acquireLock blocks until the lock is acquired, returning the leaderCh
