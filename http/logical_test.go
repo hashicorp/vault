@@ -270,9 +270,7 @@ func TestLogical_RemoteAddr(t *testing.T) {
 	}
 
 	for _, it := range tt {
-		r := &http.Request{}
-		r.RemoteAddr = it.RemoteAddr
-		r.Header = it.Headers
+		r := &http.Request{RemoteAddr: it.RemoteAddr, Header: it.Headers}
 
 		if remoteAddr := getRemoteAddr(r); remoteAddr != it.Expected {
 			t.Fatalf("mismatch: %s, expected %s", remoteAddr, it.Expected)

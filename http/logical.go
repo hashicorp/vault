@@ -82,8 +82,8 @@ func handleLogical(core *vault.Core) http.Handler {
 func getRemoteAddr(r *http.Request) string {
 	// Check headers for Proxy protocol
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// List will be client, proxy1, proxy2, etc...
-		ips := strings.Split(xff, ",")
+		// List will be: "client, proxy1, proxy2, etc"
+		ips := strings.SplitN(xff, ",", 2)
 		if len(ips) > 0 {
 			if ip := net.ParseIP(strings.TrimSpace(ips[0])); ip != nil {
 				return ip.String()
