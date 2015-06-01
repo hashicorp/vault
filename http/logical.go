@@ -54,13 +54,6 @@ func handleLogical(core *vault.Core) http.Handler {
 			}
 		}
 
-		// http.Server will set RemoteAddr to an "IP:port" string
-		var remoteAddr string
-		remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			remoteAddr = ""
-		}
-
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
@@ -69,7 +62,7 @@ func handleLogical(core *vault.Core) http.Handler {
 			Path:      path,
 			Data:      req,
 			Connection: &logical.Connection{
-				RemoteAddr: remoteAddr,
+				RemoteAddr: getRemoteAddr(r),
 				ConnState:  r.TLS,
 			},
 		}))
@@ -84,6 +77,26 @@ func handleLogical(core *vault.Core) http.Handler {
 		// Build the proper response
 		respondLogical(w, r, path, resp)
 	})
+}
+
+func getRemoteAddr(r *http.Request) string {
+	// Check headers for Proxy protocol
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		// List will be client, proxy1, proxy2, etc...
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			if ip := net.ParseIP(strings.TrimSpace(ips[0])); ip != nil {
+				return ip.String()
+			}
+		}
+	}
+
+	// http.Server will set RemoteAddr to an "IP:port" string
+	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return ""
+	}
+	return remoteAddr
 }
 
 func respondLogical(w http.ResponseWriter, r *http.Request, path string, resp *logical.Response) {
