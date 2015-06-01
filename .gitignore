@@ -45,4 +45,5 @@ Vagrantfile
 *.hcl
 
 .DS_Store
+.idea
 

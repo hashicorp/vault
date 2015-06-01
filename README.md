@@ -57,13 +57,12 @@ you'll first need [Go](https://www.golang.org) installed on your
 machine (version 1.4+ is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go,
-install Godeps, a tool we use for vendoring dependencies and Gox, a simple cross
-compilation tool:
+[GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go, you can
+downlaod the required build tools such as vet, cover, godep etc by bootstrapping
+your environment. 
 
 ```sh
-$ go get github.com/tools/godep
-$ go get github.com/mitchellh/gox
+$ make bootstrap
 ...
 ```
 
