@@ -28,6 +28,12 @@ const (
 
 	// The lock TTL matches the default that Consul API uses, 15 seconds.
 	EtcdLockTTL = uint64(15)
+
+	// The ammount of time to wait if a watch fails before trying again.
+	EtcdWatchRetryInterval = time.Second
+
+	// The number of times to re-try a failed watch before signaling that leadership is lost.
+	EtcdWatchRetryMax = 5
 )
 
 var (
@@ -189,19 +195,17 @@ func (b *EtcdBackend) nodePathLock(key string) string {
 // Lock is used for mutual exclusion based on the given key.
 func (c *EtcdBackend) LockWith(key, value string) (Lock, error) {
 	return &EtcdLock{
-		backend: c,
-		key:     key,
-		value:   value,
+		client:          c.client,
+		value:           value,
+		semaphoreDirKey: c.nodePathLock(key),
 	}, nil
 }
 
 // EtcdLock emplements a lock using and etcd backend.
 type EtcdLock struct {
-	backend                  *EtcdBackend
-	key, value, semaphoreKey string
-	lock                     sync.Mutex
-	isHeld                   bool
-	done                     chan struct{}
+	client                               *etcd.Client
+	value, semaphoreDirKey, semaphoreKey string
+	lock                                 sync.Mutex
 }
 
 // addSemaphoreKey aquires a new ordered semaphore key.
@@ -211,7 +215,7 @@ func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
 	// request onto a semaphore. In the rest of the comments, we refer to the
 	// resulting key as a "semaphore key".
 	// https://coreos.com/etcd/docs/2.0.8/api.html#atomically-creating-in-order-keys
-	response, err := c.backend.client.CreateInOrder(c.backend.nodePathLock(c.key), "Vault Lock", EtcdLockTTL)
+	response, err := c.client.CreateInOrder(c.semaphoreDirKey, c.value, EtcdLockTTL)
 	if err != nil {
 		return "", 0, err
 	}
@@ -219,21 +223,106 @@ func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
 	return response.Node.Key, response.EtcdIndex, nil
 }
 
-// getSemaphoreKey determines which semaphore key holder has aquired the lock.
-func (c *EtcdLock) getSemaphoreKey() (string, uint64, error) {
+// getSemaphoreKey determines which semaphore key holder has aquired the lock
+// and its value.
+func (c *EtcdLock) getSemaphoreKey() (string, string, uint64, error) {
 
 	// Get the list of waiters in order to see if we are next.
-	response, err := c.backend.client.Get(c.backend.nodePathLock(c.key), true, false)
+	response, err := c.client.Get(c.semaphoreDirKey, true, false)
 	if err != nil {
-		return "", 0, err
+		return "", "", 0, err
 	}
 
 	// Make sure the list isn't empty.
 	if response.Node.Nodes.Len() == 0 {
-		return "", response.EtcdIndex, nil
+		return "", "", response.EtcdIndex, nil
 	}
 
-	return response.Node.Nodes[0].Key, response.EtcdIndex, nil
+	return response.Node.Nodes[0].Key, response.Node.Nodes[0].Value, response.EtcdIndex, nil
+}
+
+// isHeld determines if we are the current holders of the lock.
+func (c *EtcdLock) isHeld() (bool, error) {
+
+	if c.semaphoreKey == "" {
+		return false, nil
+	}
+
+	currentSemaphoreKey, _, _, err := c.getSemaphoreKey()
+	if err != nil {
+		return false, err
+	}
+
+	return c.semaphoreKey == currentSemaphoreKey, nil
+}
+
+func (c *EtcdLock) assertHeld() error {
+
+	held, err := c.isHeld()
+	if err != nil {
+		return err
+	}
+
+	if !held {
+		return EtcdLockNotHeldError
+	}
+
+	return nil
+}
+
+func (c *EtcdLock) assertNotHeld() error {
+
+	held, err := c.isHeld()
+	if err != nil {
+		return err
+	}
+
+	if held {
+		return EtcdLockHeldError
+	}
+
+	return nil
+}
+
+func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan struct{}) {
+
+	retries := EtcdWatchRetryMax
+
+	for {
+
+		// Start a non-recursive watch of the given key.
+		response, err := c.client.Watch(key, etcdIndex, false, nil, nil)
+		if err != nil {
+
+			// If the key is just missing, we can exit the loop.
+			if errorIsMissingKey(err) {
+				break
+			}
+
+			// If the error is something else, there's nothing we can do but retry
+			// the watch. Check that we still have retries left.
+			retries -= 1
+			if retries == 0 {
+				break
+			}
+
+			// Sleep for a period of time to avoid slamming etcd.
+			time.Sleep(EtcdWatchRetryInterval)
+			continue
+		}
+
+		// Check if the key we are concerned with has been removed. If it has, we
+		// can exit the loop.
+		if response.Node.Key == key &&
+			(response.Action == "delete" || response.Action == "expire") {
+			break
+		}
+
+		// Update the etcd index.
+		etcdIndex = response.EtcdIndex + 1
+	}
+
+	close(closeCh)
 }
 
 func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
@@ -243,8 +332,8 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	defer c.lock.Unlock()
 
 	// Check if the lock is already held.
-	if c.isHeld {
-		return nil, EtcdLockHeldError
+	if err := c.assertNotHeld(); err != nil {
+		return nil, err
 	}
 
 	// Add a new semaphore key that we will track.
@@ -255,7 +344,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	c.semaphoreKey = semaphoreKey
 
 	// Get the current semaphore key.
-	currentSemaphoreKey, currentEtcdIndex, err := c.getSemaphoreKey()
+	currentSemaphoreKey, _, currentEtcdIndex, err := c.getSemaphoreKey()
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +353,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// interface stop channel.
 	boolStopCh := make(chan bool)
 	go func() {
-		for _ = range stopCh {
-		}
+		<-stopCh
 		close(boolStopCh)
 	}()
 
@@ -274,7 +362,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		var err error
 
 		// Start a watch of the entire lock directory, providing the stop channel.
-		response, err := c.backend.client.Watch(c.backend.nodePathLock(c.key), currentEtcdIndex+1, true, nil, boolStopCh)
+		response, err := c.client.Watch(c.semaphoreDirKey, currentEtcdIndex+1, true, nil, boolStopCh)
 		if err != nil {
 
 			// If the error is not an etcd error, we can assume it's a notification
@@ -282,7 +370,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			// remove our semaphore key as we are no longer waiting to aquire the
 			// lock.
 			if _, ok := err.(*etcd.EtcdError); !ok {
-				_, err = c.backend.client.Delete(c.semaphoreKey, false)
+				_, err = c.client.Delete(c.semaphoreKey, false)
 			}
 
 			return nil, err
@@ -296,26 +384,17 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 
 		// Get the current semaphore key and etcd index.
-		currentSemaphoreKey, currentEtcdIndex, err = c.getSemaphoreKey()
+		currentSemaphoreKey, _, currentEtcdIndex, err = c.getSemaphoreKey()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// We now hold the lock.
-	c.isHeld = true
-
-	// Because we hold the lock, we can set our value for the given key.
-	if err := c.backend.Put(&Entry{
-		Key:   c.key,
-		Value: []byte(c.value),
-	}); err != nil {
-		return nil, err
-	}
-
 	// Create a channel to signal when we lose the lock.
-	c.done = make(chan struct{})
-	return c.done, nil
+	done := make(chan struct{})
+	go c.watchForKeyRemoval(c.semaphoreKey, currentEtcdIndex+1, done)
+
+	return done, nil
 }
 
 func (c *EtcdLock) Unlock() error {
@@ -324,43 +403,29 @@ func (c *EtcdLock) Unlock() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if !c.isHeld {
-		return EtcdLockNotHeldError
-	}
-
-	// Delete our semaphore key.
-	if _, err := c.backend.client.Delete(c.semaphoreKey, false); err != nil {
+	// Check that the lock is held.
+	if err := c.assertHeld(); err != nil {
 		return err
 	}
 
-	// We no longer hold the lock.
-	c.isHeld = false
+	// Delete our semaphore key.
+	if _, err := c.client.Delete(c.semaphoreKey, false); err != nil {
+		return err
+	}
 
-	// Signal that we no longer hold the lock.
-	close(c.done)
 	return nil
 }
 
 func (c *EtcdLock) Value() (bool, string, error) {
 
-	entry, err := c.backend.Get(c.key)
-	if err != nil {
-		return false, "", err
-	}
-
-	var value string
-	if entry.Value != nil {
-		value = string(entry.Value)
-	}
-
-	semaphoreKey, _, err := c.getSemaphoreKey()
+	semaphoreKey, semaphoreValue, _, err := c.getSemaphoreKey()
 	if err != nil {
 		return false, "", err
 	}
 
 	if semaphoreKey == "" {
-		return false, value, nil
+		return false, "", nil
 	}
 
-	return true, value, nil
+	return true, semaphoreValue, nil
 }
