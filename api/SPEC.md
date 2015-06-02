@@ -86,8 +86,7 @@ The following HTTP status codes are used throughout the API.
 
 - `200` - Success with data.
 - `204` - Success, no data returned.
-- `400` - Invalid request, missing or invalid data. See the
-   "validation" section for more details on the error response.
+- `400` - Invalid request, missing or invalid data.
 - `401` - Unauthorized, your authentication details are either
    incorrect or you don't have access to this feature.
 - `404` - Invalid path. This can both mean that the path truly
