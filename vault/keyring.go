@@ -100,7 +100,7 @@ func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 	return clone, nil
 }
 
-// RemoveKey removes a new key to the keyring
+// RemoveKey removes a key from the keyring
 func (k *Keyring) RemoveKey(term uint32) (*Keyring, error) {
 	// Ensure this is not the active key
 	if term == k.activeTerm {
