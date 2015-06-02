@@ -13,7 +13,6 @@ import (
 )
 
 const (
-
 	// Ideally, this prefix would match the "_" used in the file backend, but
 	// that prefix has special meaining in etcd. Specifically, it excludes those
 	// entries from directory listings.
@@ -61,7 +60,6 @@ type EtcdBackend struct {
 
 // newEtcdBackend constructs a etcd backend using a given machine address.
 func newEtcdBackend(conf map[string]string) (Backend, error) {
-
 	// Get the etcd path form the configuration.
 	path, ok := conf["path"]
 	if !ok {
@@ -86,7 +84,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 		return nil, EtcdSyncClusterError
 	}
 
-	// Setup the backend
+	// Setup the backend.
 	return &EtcdBackend{
 		path:   path,
 		client: client,
@@ -135,7 +133,6 @@ func (c *EtcdBackend) Delete(key string) error {
 	if err != nil && !errorIsMissingKey(err) {
 		return err
 	}
-
 	return nil
 }
 
@@ -172,7 +169,6 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 			out[i] = name[1:]
 		}
 	}
-
 	return out, nil
 }
 
@@ -210,7 +206,6 @@ type EtcdLock struct {
 
 // addSemaphoreKey aquires a new ordered semaphore key.
 func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
-
 	// CreateInOrder is an atomic operation that can be used to enqueue a
 	// request onto a semaphore. In the rest of the comments, we refer to the
 	// resulting key as a "semaphore key".
@@ -219,14 +214,12 @@ func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
 	if err != nil {
 		return "", 0, err
 	}
-
 	return response.Node.Key, response.EtcdIndex, nil
 }
 
 // getSemaphoreKey determines which semaphore key holder has aquired the lock
 // and its value.
 func (c *EtcdLock) getSemaphoreKey() (string, string, uint64, error) {
-
 	// Get the list of waiters in order to see if we are next.
 	response, err := c.client.Get(c.semaphoreDirKey, true, false)
 	if err != nil {
@@ -237,59 +230,60 @@ func (c *EtcdLock) getSemaphoreKey() (string, string, uint64, error) {
 	if response.Node.Nodes.Len() == 0 {
 		return "", "", response.EtcdIndex, nil
 	}
-
 	return response.Node.Nodes[0].Key, response.Node.Nodes[0].Value, response.EtcdIndex, nil
 }
 
 // isHeld determines if we are the current holders of the lock.
 func (c *EtcdLock) isHeld() (bool, error) {
-
 	if c.semaphoreKey == "" {
 		return false, nil
 	}
 
+	// Get the key of the curren holder of the lock.
 	currentSemaphoreKey, _, _, err := c.getSemaphoreKey()
 	if err != nil {
 		return false, err
 	}
-
 	return c.semaphoreKey == currentSemaphoreKey, nil
 }
 
+// assertHeld determines whether or not we are the current holders of the lock
+// and returns an EtcdLockNotHeldError if we are not.
 func (c *EtcdLock) assertHeld() error {
-
 	held, err := c.isHeld()
 	if err != nil {
 		return err
 	}
 
+	// Check if we don't hold the lock.
 	if !held {
 		return EtcdLockNotHeldError
 	}
-
 	return nil
 }
 
+// assertNotHeld determines whether or not we are the current holders of the
+// lock and returns an EtcdLockHeldError if we are.
 func (c *EtcdLock) assertNotHeld() error {
-
 	held, err := c.isHeld()
 	if err != nil {
 		return err
 	}
 
+	// Check if we hold the lock.
 	if held {
 		return EtcdLockHeldError
 	}
-
 	return nil
 }
 
+// watchForKeyRemoval continuously watches a single non-directory key starting
+// from the provided etcd index and closes the provided channel when it's
+// deleted, expires, or appears to be missing.
 func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan struct{}) {
-
 	retries := EtcdWatchRetryMax
 
 	for {
-
 		// Start a non-recursive watch of the given key.
 		response, err := c.client.Watch(key, etcdIndex, false, nil, nil)
 		if err != nil {
@@ -322,11 +316,19 @@ func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan
 		etcdIndex = response.EtcdIndex + 1
 	}
 
+	// Regardless of what happened, we need to close the close channel.
 	close(closeCh)
 }
 
+// Lock attempts to aquire the lock by waiting for a new semaphore key in etcd
+// to become the first in the queue and will block until it is successful or
+// it recieves a signal on the provided channel. The returned channel will be
+// closed when the lock is lost, either by an explicit call to Unlock or by
+// the associated semaphore key in etcd otherwise being deleted or expiring.
+//
+// If the lock is currently held by this instance of EtcdLock, Lock will
+// return an EtcdLockHeldError error.
 func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
-
 	// Get the local lock before interacting with etcd.
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -372,7 +374,6 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			if _, ok := err.(*etcd.EtcdError); !ok {
 				_, err = c.client.Delete(c.semaphoreKey, false)
 			}
-
 			return nil, err
 		}
 
@@ -393,12 +394,14 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// Create a channel to signal when we lose the lock.
 	done := make(chan struct{})
 	go c.watchForKeyRemoval(c.semaphoreKey, currentEtcdIndex+1, done)
-
 	return done, nil
 }
 
+// Unlock releases the lock by deleting the associated semaphore key in etcd.
+//
+// If the lock is not currently held by this instance of EtcdLock, Unlock will
+// return an EtcdLockNotHeldError error.
 func (c *EtcdLock) Unlock() error {
-
 	// Get the local lock before interacting with etcd.
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -412,12 +415,12 @@ func (c *EtcdLock) Unlock() error {
 	if _, err := c.client.Delete(c.semaphoreKey, false); err != nil {
 		return err
 	}
-
 	return nil
 }
 
+// Value checks whether or not the lock is held by any instance of EtcdLock,
+// including this one, and returns the current value.
 func (c *EtcdLock) Value() (bool, string, error) {
-
 	semaphoreKey, semaphoreValue, _, err := c.getSemaphoreKey()
 	if err != nil {
 		return false, "", err
@@ -426,6 +429,5 @@ func (c *EtcdLock) Value() (bool, string, error) {
 	if semaphoreKey == "" {
 		return false, "", nil
 	}
-
 	return true, semaphoreValue, nil
 }
