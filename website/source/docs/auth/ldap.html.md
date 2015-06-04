@@ -39,7 +39,7 @@ The password should be sent in the POST body encoded as JSON.
 
 ```shell
 $ curl $VAULT_ADDR/v1/auth/ldap/login/mitchellh \
-    -d "password=foo"
+    -d '{ "password": "foo" }'
 ```
 
 The response will be in JSON. For example:
