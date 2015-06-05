@@ -86,7 +86,7 @@ func pathRoles(b *backend) *framework.Path {
 			"key_type": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "rsa",
-				Description: "The type of key to use; defaults to RSA. \"rsa\" and \"ecdsa\" are the only valid values.",
+				Description: "The type of key to use; defaults to RSA. \"rsa\" and \"ec\" are the only valid values.",
 			},
 
 			"key_bits": &framework.FieldSchema{
@@ -209,16 +209,23 @@ func (b *backend) pathRoleCreate(
 		}
 	}
 
+	if len(entry.KeyType) == 0 {
+		entry.KeyType = "rsa"
+	}
+	if entry.KeyBits == 0 {
+		entry.KeyBits = 2048
+	}
+
 	switch entry.KeyType {
 	case "rsa":
-	case "ecdsa":
+	case "ec":
 		switch entry.KeyBits {
 		case 224:
 		case 256:
 		case 384:
 		case 521:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("Unsupported bit length for ECDSA key: %d", entry.KeyBits)), nil
+			return logical.ErrorResponse(fmt.Sprintf("Unsupported bit length for EC key: %d", entry.KeyBits)), nil
 		}
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("Unknown key type %s", entry.KeyType)), nil
@@ -237,19 +244,19 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	LeaseMax              string `json:"lease_max"`
-	Lease                 string `json:"lease"`
-	AllowLocalhost        bool   `json:"allow_localhost"`
-	AllowedBaseDomain     string `json:"allowed_base_domain"`
-	AllowTokenDisplayName bool   `json:"allow_token_displaynae"`
-	AllowSubdomains       bool   `json:"allow_subdomains"`
-	AllowAnyName          bool   `json:"allow_any_name"`
-	AllowIPSANs           bool   `json:"allow_ip_sans"`
-	ServerFlag            bool   `json:"server_flag"`
-	ClientFlag            bool   `json:"client_flag"`
-	CodeSigningFlag       bool   `json:"code_signing_flag"`
-	KeyType               string `json:"key_type"`
-	KeyBits               int    `json:"key_bits"`
+	LeaseMax              string `json:"lease_max" structs:"lease_max" mapstructure:"lease_max"`
+	Lease                 string `json:"lease" structs:"lease" mapstructure:"lease"`
+	AllowLocalhost        bool   `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
+	AllowedBaseDomain     string `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
+	AllowSubdomains       bool   `json:"allow_subdomains" structs:"allow_subdomains" mapstructure:"allow_subdomains"`
+	AllowAnyName          bool   `json:"allow_any_name" structs:"allow_any_name" mapstructure:"allow_any_name"`
+	AllowIPSANs           bool   `json:"allow_ip_sans" structs:"allow_ip_sans" mapstructure:"allow_ip_sans"`
+	ServerFlag            bool   `json:"server_flag" structs:"server_flag" mapstructure:"server_flag"`
+	ClientFlag            bool   `json:"client_flag" structs:"client_flag" mapstructure:"client_flag"`
+	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
+	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
+	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 }
 
 const pathRoleHelpSyn = `

@@ -585,7 +585,7 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
         <span class="param">key_type</span>
         <span class="param-flags">optional</span>
         The type of key to generate for generated private
-        keys. Currently, `rsa` and `ecdsa` are supported.
+        keys. Currently, `rsa` and `ec` are supported.
         Defaults to `rsa`.
       </li>
       <li>
@@ -593,8 +593,8 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
         <span class="param-flags">optional</span>
         The number of bits to use for the generated keys.
         Defaults to `2048`; this will need to be changed for
-        `ecdsa` keys. See https://golang.org/pkg/crypto/elliptic/#Curve
-        for an overview of allowed bit lengths for `ecdsa`.
+        `ec` keys. See https://golang.org/pkg/crypto/elliptic/#Curve
+        for an overview of allowed bit lengths for `ec`.
       </li>
     </ul>
   </dd>

@@ -80,7 +80,7 @@ func (b *backend) pathIssueCert(
 	ipAlt := data.Get("ip_sans").(string)
 	if len(ipAlt) != 0 {
 		if !role.AllowIPSANs {
-			return logical.ErrorResponse("IP Subject Alternative Names are not allowed in this role"), nil
+			return logical.ErrorResponse(fmt.Sprintf("IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)), nil
 		}
 		for _, v := range strings.Split(ipAlt, ",") {
 			parsedIP := net.ParseIP(v)
@@ -134,6 +134,10 @@ func (b *backend) pathIssueCert(
 	if role.ClientFlag {
 		usage = usage | clientUsage
 	}
+	if role.CodeSigningFlag {
+		usage = usage | codeSigningUsage
+	}
+
 	creationBundle := &certCreationBundle{
 		RawSigningBundle: rawSigningBundle,
 		CACert:           caCert,
@@ -176,7 +180,7 @@ func (b *backend) pathIssueCert(
 	switch rawBundle.PrivateKeyType {
 	case RSAPrivateKeyType:
 		block.Type = "RSA PRIVATE KEY"
-	case ECDSAPrivateKeyType:
+	case ECPrivateKeyType:
 		block.Type = "EC PRIVATE KEY"
 	default:
 		return nil, fmt.Errorf("Could not determine private key type when creating block")

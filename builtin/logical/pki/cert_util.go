@@ -26,7 +26,7 @@ import (
 const (
 	UnknownPrivateKeyType = iota
 	RSAPrivateKeyType
-	ECDSAPrivateKeyType
+	ECPrivateKeyType
 )
 
 type certUsage int
@@ -107,7 +107,7 @@ func (r *rawCertBundle) getSigner() (crypto.Signer, error) {
 	var signer crypto.Signer
 	var err error
 	switch r.PrivateKeyType {
-	case ECDSAPrivateKeyType:
+	case ECPrivateKeyType:
 		signer, err = x509.ParseECPrivateKey(r.PrivateKeyBytes)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to parse CA's private EC key: %s", err)
@@ -295,8 +295,8 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 			return nil, nil, fmt.Errorf("Error generating RSA private key")
 		}
 		rawBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
-	case "ecdsa":
-		rawBundle.PrivateKeyType = ECDSAPrivateKeyType
+	case "ec":
+		rawBundle.PrivateKeyType = ECPrivateKeyType
 		var curve elliptic.Curve
 		switch creationInfo.KeyBits {
 		case 224:
@@ -308,15 +308,15 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 		case 521:
 			curve = elliptic.P521()
 		default:
-			return nil, fmt.Errorf("Unsupported bit length for ECDSA key: %d", creationInfo.KeyBits), nil
+			return nil, fmt.Errorf("Unsupported bit length for EC key: %d", creationInfo.KeyBits), nil
 		}
 		clientPrivKey, err = ecdsa.GenerateKey(curve, crand.Reader)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error generating ECDSA private key")
+			return nil, nil, fmt.Errorf("Error generating EC private key")
 		}
 		rawBundle.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error marshalling ECDSA private key")
+			return nil, nil, fmt.Errorf("Error marshalling EC private key")
 		}
 	default:
 		return nil, fmt.Errorf("Unknown key type: %s", creationInfo.KeyType), nil

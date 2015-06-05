@@ -49,7 +49,7 @@ func (b *backend) pathCAWrite(
 			if rawBundle.PrivateKeyType != UnknownPrivateKeyType {
 				return logical.ErrorResponse("More than one private key given; provide only one private key in the bundle"), nil
 			}
-			rawBundle.PrivateKeyType = ECDSAPrivateKeyType
+			rawBundle.PrivateKeyType = ECPrivateKeyType
 			rawBundle.PrivateKeyBytes = pemBlock.Bytes
 			// TODO?: CRLs can only be generated with RSA keys right now, in the
 			// Go standard library. The plubming is here to support non-RSA keys
@@ -84,7 +84,7 @@ func (b *backend) pathCAWrite(
 
 	switch {
 	case rawBundle.PrivateKeyType == UnknownPrivateKeyType:
-		return logical.ErrorResponse("Unable to figure out the private key type; must be RSA or ECDSA"), nil
+		return logical.ErrorResponse("Unable to figure out the private key type; must be RSA or EC"), nil
 	case len(rawBundle.PrivateKeyBytes) == 0:
 		return logical.ErrorResponse("Unable to decode the private key from the bundle"), nil
 	case len(rawBundle.CertificateBytes) == 0:
