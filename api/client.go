@@ -69,6 +69,10 @@ func NewClient(c *Config) (*Client, error) {
 		return nil, err
 	}
 
+	if c.HttpClient == nil {
+		c.HttpClient = http.DefaultClient
+	}
+
 	// Make a copy of the HTTP client so we can configure it without
 	// affecting the original
 	//
