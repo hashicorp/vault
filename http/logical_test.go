@@ -215,3 +215,65 @@ func TestLogical_RawHTTP(t *testing.T) {
 		t.Fatalf("Bad: %s", body.Bytes())
 	}
 }
+
+func TestLogical_RemoteAddr(t *testing.T) {
+	tt := []struct {
+		RemoteAddr string
+		Headers    map[string][]string
+		Expected   string
+	}{
+		{
+			RemoteAddr: "127.0.0.1:12345",
+			Headers:    map[string][]string{},
+			Expected:   "127.0.0.1",
+		},
+		{
+			RemoteAddr: "8.9.10.11:112233",
+			Headers: map[string][]string{
+				"X-Forwarded-For": {"1.2.3.4, 5.6.7.8, 8.9.10.11"},
+			},
+			Expected: "1.2.3.4",
+		},
+		{
+			RemoteAddr: "invalid",
+			Headers: map[string][]string{
+				"X-Forwarded-For": {"1.2.3.4, 5.6.7.8, 8.9.10.11"},
+			},
+			Expected: "1.2.3.4",
+		},
+		{
+			RemoteAddr: "127.0.0.1:12345",
+			Headers: map[string][]string{
+				"X-Forwarded-For": {"garbage ignore me"},
+			},
+			Expected: "127.0.0.1",
+		},
+
+		// Invalid
+		{
+			RemoteAddr: "garbage",
+			Headers:    map[string][]string{},
+			Expected:   "",
+		},
+		{
+			RemoteAddr: "1.2.3.4",
+			Headers:    map[string][]string{},
+			Expected:   "",
+		},
+		{
+			RemoteAddr: "garbage",
+			Headers: map[string][]string{
+				"X-Forwarded-For": {"garbage ignore me"},
+			},
+			Expected: "",
+		},
+	}
+
+	for _, it := range tt {
+		r := &http.Request{RemoteAddr: it.RemoteAddr, Header: it.Headers}
+
+		if remoteAddr := getRemoteAddr(r); remoteAddr != it.Expected {
+			t.Fatalf("mismatch: %s, expected %s", remoteAddr, it.Expected)
+		}
+	}
+}
