@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -54,7 +55,6 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open handler with database")
 	}
-	defer db.Close()
 
 	// Create the required table if it doesn't exists.
 	create_query := "CREATE TABLE IF NOT EXISTS " + database + "." + table + " (vault_key varchar(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
@@ -79,7 +79,6 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 		return nil, MySQLPrepareStmtFailure
 	}
 	statements["put"] = insert_stmt
-	defer insert_stmt.Close()
 
 	// Prepare statement for select query.
 	select_query := "SELECT vault_value FROM " + database + "." + table + " WHERE vault_key = ?"
@@ -88,7 +87,6 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 		return nil, MySQLPrepareStmtFailure
 	}
 	statements["get"] = select_stmt
-	defer select_stmt.Close()
 
 	// Prepare statement for delete query.
 	delete_query := "DELETE FROM " + database + "." + table + " WHERE vault_key = ?"
@@ -97,7 +95,6 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 		return nil, MySQLPrepareStmtFailure
 	}
 	statements["delete"] = delete_stmt
-	defer delete_stmt.Close()
 
 	// Setup the backend.
 	m := &MySQLBackend{
@@ -131,6 +128,11 @@ func (m *MySQLBackend) Get(key string) (*Entry, error) {
 	err := m.statements["get"].QueryRow(key).Scan(&result)
 	if err != nil {
 		return nil, MySQLExecuteStmtFailure
+	}
+
+	// Handle a non-existing value
+	if result == nil {
+		return nil, nil
 	}
 
 	ent := &Entry{
@@ -184,8 +186,15 @@ func (m *MySQLBackend) List(prefix string) ([]string, error) {
 			return nil, fmt.Errorf("failed to scan rows")
 		}
 
-		for _, col := range values {
-			keys = append(keys, string(col))
+		for _, key := range values {
+			key := strings.TrimPrefix(string(key), prefix)
+			if i := strings.Index(string(key), "/"); i == -1 {
+				// Add objects only from the current 'folder'
+				keys = append(keys, string(key))
+			} else if i != -1 {
+				// Add truncated 'folder' paths
+				keys = appendIfMissing(keys, string(key[:i+1]))
+			}
 		}
 	}
 

@@ -37,7 +37,7 @@ func TestMySQLBackend(t *testing.T) {
 	defer db.Close()
 
 	// Prepare statement for creating table.
-	create_stmt := "CREATE TABLE IF NOT EXISTS " + database + "." + table + "(num int, sqr int, PRIMARY KEY (num))"
+	create_stmt := "CREATE TABLE IF NOT EXISTS test.square (num int, sqr int, PRIMARY KEY (num))"
 	stmtCrt, err := db.Prepare(create_stmt)
 	if err != nil {
 		t.Fatalf("Failed to prepare statement: %v", err)
@@ -51,7 +51,7 @@ func TestMySQLBackend(t *testing.T) {
 	}
 
 	// Prepare statement for inserting data.
-	insert_stmt := "INSERT INTO " + database + "." + table + " VALUES( ?, ? ) ON DUPLICATE KEY UPDATE sqr=VALUES(sqr)"
+	insert_stmt := "INSERT INTO test.square VALUES( ?, ? ) ON DUPLICATE KEY UPDATE sqr=VALUES(sqr)"
 	stmtIns, err := db.Prepare(insert_stmt)
 	if err != nil {
 		t.Fatalf("Failed to prepare statement: %v", err)
@@ -59,7 +59,7 @@ func TestMySQLBackend(t *testing.T) {
 	defer stmtIns.Close()
 
 	// Prepare statement for reading data.
-	select_stmt := "SELECT sqr FROM " + database + "." + table + " WHERE num = ?"
+	select_stmt := "SELECT sqr FROM test.square WHERE num = ?"
 	stmtOut, err := db.Prepare(select_stmt)
 	if err != nil {
 		t.Fatalf("Failed to prepare statement: %v", err)
@@ -83,6 +83,7 @@ func TestMySQLBackend(t *testing.T) {
 	}
 	fmt.Printf("The square number of 13 is: %d", square)
 
+	// Run vault tests
 	b, err := NewBackend("mysql", map[string]string{
 		"address":  address,
 		"database": database,
