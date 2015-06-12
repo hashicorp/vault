@@ -45,10 +45,16 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 		return logical.ErrorResponse("The serial number must be provided"), nil
 	}
 
+	revokeStorageLock.Lock()
+	defer revokeStorageLock.Unlock()
+
 	return revokeCert(req, serial)
 }
 
 func (b *backend) pathRotateCRLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	revokeStorageLock.Lock()
+	defer revokeStorageLock.Unlock()
+
 	err := buildCRL(req)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error building CRL: %s", err)), err

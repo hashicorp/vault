@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -16,7 +17,8 @@ type revocationInfo struct {
 }
 
 var (
-	crlLifetime = time.Hour * 72
+	crlLifetime       = time.Hour * 72
+	revokeStorageLock = &sync.Mutex{}
 )
 
 func revokeCert(req *logical.Request, serial string) (*logical.Response, error) {
@@ -37,6 +39,7 @@ func revokeCert(req *logical.Request, serial string) (*logical.Response, error) 
 			if err != nil {
 				return nil, fmt.Errorf("Error getting existing revocation info")
 			}
+
 			err = revEntry.DecodeJSON(&revInfo)
 			if err != nil {
 				return nil, fmt.Errorf("Error decoding existing revocation info")
