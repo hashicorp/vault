@@ -23,7 +23,7 @@ func Backend() *framework.Backend {
 				"config/*",
 				"revoked/*",
 				"revoke/*",
-				"crl/build",
+				"crl/rotate",
 			},
 			Unauthenticated: []string{
 				"cert/*",

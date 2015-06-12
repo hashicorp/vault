@@ -5,7 +5,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	crand "crypto/rand"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
@@ -13,7 +13,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
-	mrand "math/rand"
 	"net"
 	"regexp"
 	"strings"
@@ -281,16 +280,19 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 }
 
 func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBundle, userErr, intErr error) {
-	rawBundle = &rawCertBundle{
-		SerialNumber: (&big.Int{}).Rand(mrand.New(mrand.NewSource(time.Now().UnixNano())), (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil)),
-	}
-
 	var clientPrivKey crypto.Signer
 	var err error
+	rawBundle = &rawCertBundle{}
+
+	rawBundle.SerialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error getting random serial number")
+	}
+
 	switch creationInfo.KeyType {
 	case "rsa":
 		rawBundle.PrivateKeyType = RSAPrivateKeyType
-		clientPrivKey, err = rsa.GenerateKey(crand.Reader, creationInfo.KeyBits)
+		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error generating RSA private key")
 		}
@@ -310,7 +312,7 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 		default:
 			return nil, fmt.Errorf("Unsupported bit length for EC key: %d", creationInfo.KeyBits), nil
 		}
-		clientPrivKey, err = ecdsa.GenerateKey(curve, crand.Reader)
+		clientPrivKey, err = ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error generating EC private key")
 		}
@@ -371,7 +373,7 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 		return nil, nil, fmt.Errorf("Unable to get signing private key: %s", err)
 	}
 
-	cert, err := x509.CreateCertificate(crand.Reader, certTemplate, creationInfo.CACert, clientPrivKey.Public(), signingPrivKey)
+	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, creationInfo.CACert, clientPrivKey.Public(), signingPrivKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Unable to create certificate: %s", err)
 	}

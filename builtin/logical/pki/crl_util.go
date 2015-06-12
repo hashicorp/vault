@@ -15,60 +15,82 @@ type revocationInfo struct {
 	RevocationTime   int64  `json:"unix_time"`
 }
 
+var (
+	crlLifetime = time.Hour * 72
+)
+
 func revokeCert(req *logical.Request, serial string) (*logical.Response, error) {
+	alreadyRevoked := false
+	var err error
+
+	revInfo := revocationInfo{}
+
 	certEntry, userErr, intErr := fetchCertBySerial(req, "revoked/", serial)
 	if certEntry != nil {
-		return nil, nil
+		// Verify that it is also deleted from certs/
+		// in case of partial failure from an earlier run.
+		certEntry, _, _ = fetchCertBySerial(req, "certs/", serial)
+		if certEntry != nil {
+			alreadyRevoked = true
+
+			revEntry, err := req.Storage.Get("revoked/" + serial)
+			if err != nil {
+				return nil, fmt.Errorf("Error getting existing revocation info")
+			}
+			err = revEntry.DecodeJSON(&revInfo)
+			if err != nil {
+				return nil, fmt.Errorf("Error decoding existing revocation info")
+			}
+		} else {
+			return nil, nil
+		}
 	}
 
-	certEntry, userErr, intErr = fetchCertBySerial(req, "certs/", serial)
-	switch {
-	case userErr != nil:
-		return logical.ErrorResponse(userErr.Error()), nil
-	case intErr != nil:
-		return nil, intErr
-	}
+	if !alreadyRevoked {
+		certEntry, userErr, intErr = fetchCertBySerial(req, "certs/", serial)
+		switch {
+		case userErr != nil:
+			return logical.ErrorResponse(userErr.Error()), nil
+		case intErr != nil:
+			return nil, intErr
+		}
 
-	// Possible TODO: use some kind of transaction log in case of an
-	// error anywhere along here (so we've validated that we got a
-	// value back, but want to make sure it not only is deleted from
-	// certs/ but also shows up in revoked/ and a CRL is generated)
-	err := req.Storage.Delete("certs/" + serial)
+		cert, err := x509.ParseCertificate(certEntry.Value)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing certificate")
+		}
+		if cert == nil {
+			return nil, fmt.Errorf("Got a nil certificate")
+		}
 
-	if err != nil {
-		return nil, fmt.Errorf("Error deleting cert from valid-certs location")
-	}
+		if cert.NotAfter.Before(time.Now()) {
+			return nil, nil
+		}
 
-	cert, err := x509.ParseCertificate(certEntry.Value)
-	if err != nil {
-		return nil, fmt.Errorf("Error parsing certificate")
-	}
-	if cert == nil {
-		return nil, fmt.Errorf("Got a nil certificate")
-	}
+		revInfo.CertificateBytes = certEntry.Value
+		revInfo.RevocationTime = time.Now().Unix()
 
-	if cert.NotAfter.Before(time.Now()) {
-		return nil, nil
-	}
+		certEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("Error creating revocation entry")
+		}
 
-	revInfo := revocationInfo{
-		CertificateBytes: certEntry.Value,
-		RevocationTime:   time.Now().Unix(),
-	}
+		err = req.Storage.Put(certEntry)
+		if err != nil {
+			return nil, fmt.Errorf("Error saving revoked certificate to new location")
+		}
 
-	certEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
-	if err != nil {
-		return nil, fmt.Errorf("Error creating revocation entry")
-	}
-
-	err = req.Storage.Put(certEntry)
-	if err != nil {
-		return nil, fmt.Errorf("Error saving revoked certificate to new location")
 	}
 
 	err = buildCRL(req)
 	if err != nil {
 		return nil, fmt.Errorf("Error encountered during CRL building: %s", err)
+	}
+
+	err = req.Storage.Delete("certs/" + serial)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error deleting cert from valid-certs location")
 	}
 
 	return &logical.Response{
@@ -136,7 +158,7 @@ func buildCRL(req *logical.Request) error {
 	}
 
 	// TODO: Make expiry configurable
-	crlBytes, err := caCert.CreateCRL(rand.Reader, signingPrivKey, revokedCerts, time.Now(), time.Now().Add(time.Hour*72))
+	crlBytes, err := caCert.CreateCRL(rand.Reader, signingPrivKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
 	if err != nil {
 		return fmt.Errorf("Error creating new CRL: %s", err)
 	}

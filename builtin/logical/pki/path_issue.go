@@ -107,7 +107,7 @@ func (b *backend) pathIssueCert(
 			"Invalid lease: %s", err)), nil
 	}
 
-	if time.Now().Add(lease).After(time.Now().Add(leaseMax)) {
+	if lease > leaseMax {
 		return logical.ErrorResponse("Lease expires after maximum allowed by this role"), nil
 	}
 
@@ -159,11 +159,11 @@ func (b *backend) pathIssueCert(
 
 	serial := strings.ToLower(getOctalFormatted(rawBundle.SerialNumber.Bytes(), ":"))
 
-	resp := b.Secret(SecretCertsType).Response(map[string]interface{}{}, map[string]interface{}{
+	resp := b.Secret(SecretCertsType).Response(map[string]interface{}{
+		"serial": serial,
+	}, map[string]interface{}{
 		"serial": serial,
 	})
-
-	resp.Data["serial"] = serial
 
 	block := pem.Block{
 		Type:  "CERTIFICATE",
