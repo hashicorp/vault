@@ -70,7 +70,7 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 	}
 
 	// Map of query type as key to prepared statement.
-	var statements map[string]*sql.Stmt
+	statements := make(map[string]*sql.Stmt)
 
 	// Prepare statement for put query.
 	insert_query := "INSERT INTO " + database + "." + table + " VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)"
@@ -158,6 +158,7 @@ func (m *MySQLBackend) Delete(key string) error {
 func (m *MySQLBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mysql", "list"}, time.Now())
 
+	// Query to get all keys matching a prefix.
 	list_query := "SELECT vault_key FROM " + m.database + "." + m.table + " WHERE vault_key LIKE '" + prefix + "%'"
 	rows, err := m.client.Query(list_query)
 	if err != nil {

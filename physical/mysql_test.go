@@ -83,4 +83,18 @@ func TestMySQLBackend(t *testing.T) {
 	}
 	fmt.Printf("The square number of 13 is: %d", square)
 
+	b, err := NewBackend("mysql", map[string]string{
+		"address":  address,
+		"database": database,
+		"table":    table,
+		"username": username,
+		"password": password,
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to create new backend: %v", err)
+	}
+
+	testBackend(t, b)
+	testBackend_ListPrefix(t, b)
 }
