@@ -62,6 +62,6 @@ type backend struct {
 const backendHelp = `
 The PKI backend dynamically generates X509 server and client certificates.
 
-After mounting this backend, configure the CA using the "ca_bundle" endpoint within
+After mounting this backend, configure the CA using the "pem_bundle" endpoint within
 the "config/" path.
 `
