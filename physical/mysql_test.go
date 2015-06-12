@@ -37,7 +37,7 @@ func TestMySQLBackend(t *testing.T) {
 	defer db.Close()
 
 	// Prepare statement for creating table.
-	create_stmt := "CREATE TABLE " + database + "." + table + "(num int, sqr int, PRIMARY KEY (num))"
+	create_stmt := "CREATE TABLE IF NOT EXISTS " + database + "." + table + "(num int, sqr int, PRIMARY KEY (num))"
 	stmtCrt, err := db.Prepare(create_stmt)
 	if err != nil {
 		t.Fatalf("Failed to prepare statement: %v", err)
