@@ -326,7 +326,7 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
 </dl>
 
 ### /pki/issue/
-#### GET
+#### POST
 
 <dl class="api">
   <dt>Description</dt>
@@ -341,7 +341,7 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/pki/issue/<name>`</dd>
