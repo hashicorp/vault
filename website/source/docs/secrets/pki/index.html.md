@@ -74,14 +74,14 @@ Successfully mounted 'pki' at 'pki'!
 Next, Vault must be configured with a root certificate and associated private key. This is done by writing the contents of a file or *stdin*:
 
 ```text
-$ vault write pki/config/ca value="@ca_bundle.pem"
+$ vault write pki/config/ca pem_bundle="@ca_bundle.pem"
 Success! Data written to: pki/config/ca
 ```
 
 or
 
 ```
-$ cat bundle.pem | vault write pki/config/ca value="-"
+$ cat bundle.pem | vault write pki/config/ca pem_bundle="-"
 Success! Data written to: pki/config/ca
 ```
 
@@ -218,7 +218,14 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
     command similar to the following:<br/>
 
     ```text
-    curl -X POST --data "@cert_and_key.pem" ...
+    curl -X POST --data "@cabundle.json" http://127.0.0.1:8200/v1/pki/config/ca -H X-Vault-Token:06b9d...
+    ```
+
+    Note that if you provide the data through the HTTP API it must be
+    JSON-formatted, with newlines replaced with `\n`, like so:
+
+    ```text
+    { "pem_bundle": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END CERTIFICATE-----" }
     ```
   </dd>
 
