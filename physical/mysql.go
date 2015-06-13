@@ -127,7 +127,7 @@ func (m *MySQLBackend) Get(key string) (*Entry, error) {
 
 	err := m.statements["get"].QueryRow(key).Scan(&result)
 	if err != nil {
-		return nil, MySQLExecuteStmtFailure
+		return nil, nil
 	}
 
 	// Handle a non-existing value

@@ -98,4 +98,17 @@ func TestMySQLBackend(t *testing.T) {
 
 	testBackend(t, b)
 	testBackend_ListPrefix(t, b)
+
+	// Drop table after running tests
+	drop_stmt := "DROP TABLE " + database + "." + table
+	stmt, err := db.Prepare(drop_stmt)
+	if err != nil {
+		t.Fatalf("Failed to prepare statement: %v", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec()
+	if err != nil {
+		t.Fatalf("Failed to drop table: %v", err)
+	}
 }
