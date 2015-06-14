@@ -62,6 +62,7 @@ func (b *backend) pathLogin(
 			DisplayName: matched.Entry.DisplayName,
 			Metadata: map[string]string{
 				"cert_name": matched.Entry.Name,
+				"common_name": connState.PeerCertificates[0].Subject.CommonName,
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
