@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -145,21 +146,7 @@ func (b *backend) pathRoleRead(
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"lease_max":               role.LeaseMax,
-			"lease":                   role.Lease,
-			"allow_localhost":         role.AllowLocalhost,
-			"allowed_base_domain":     role.AllowedBaseDomain,
-			"allow_token_displayname": role.AllowTokenDisplayName,
-			"allow_subdomains":        role.AllowSubdomains,
-			"allow_ip_sans":           role.AllowIPSANs,
-			"allow_any_name":          role.AllowAnyName,
-			"server_flag":             role.ServerFlag,
-			"client_flag":             role.ClientFlag,
-			"code_signing_flag":       role.CodeSigningFlag,
-			"key_type":                role.KeyType,
-			"key_bits":                role.KeyBits,
-		},
+		Data: structs.New(role).Map(),
 	}
 
 	return resp, nil

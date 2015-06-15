@@ -1,16 +1,13 @@
 package pki
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"fmt"
 	"math/big"
 	"net"
@@ -19,13 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
-)
-
-// The type of Private Key, for storage
-const (
-	UnknownPrivateKeyType = iota
-	RSAPrivateKeyType
-	ECPrivateKeyType
+	"github.com/hashicorp/vault/logical/certutil"
 )
 
 type certUsage int
@@ -36,21 +27,8 @@ const (
 	codeSigningUsage
 )
 
-type certBundle struct {
-	PrivateKeyType    int    `json:"private_key_type"`
-	PrivateKeyString  string `json:"private_key_string"`
-	CertificateString string `json:"certificate_string"`
-}
-
-type rawCertBundle struct {
-	PrivateKeyType   int
-	PrivateKeyBytes  []byte
-	CertificateBytes []byte
-	SerialNumber     *big.Int
-}
-
 type certCreationBundle struct {
-	RawSigningBundle *rawCertBundle
+	RawSigningBundle *certutil.RawCertBundle
 	CACert           *x509.Certificate
 	CommonNames      []string
 	IPSANs           []net.IP
@@ -60,85 +38,7 @@ type certCreationBundle struct {
 	Usage            certUsage
 }
 
-func (c *certBundle) toRawCertBundle() (*rawCertBundle, error) {
-	decoder := base64.URLEncoding
-	result := &rawCertBundle{
-		PrivateKeyType: c.PrivateKeyType,
-	}
-	var err error
-	if result.PrivateKeyBytes, err = decoder.DecodeString(c.PrivateKeyString); err != nil {
-		return nil, err
-	}
-	if result.CertificateBytes, err = decoder.DecodeString(c.CertificateString); err != nil {
-		return nil, err
-	}
-
-	if err := result.populateSerialNumber(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func (r *rawCertBundle) toCertBundle() *certBundle {
-	encoder := base64.URLEncoding
-	result := &certBundle{
-		PrivateKeyType:    r.PrivateKeyType,
-		PrivateKeyString:  encoder.EncodeToString(r.PrivateKeyBytes),
-		CertificateString: encoder.EncodeToString(r.CertificateBytes),
-	}
-	return result
-}
-
-func (r *rawCertBundle) populateSerialNumber() error {
-	cert, err := x509.ParseCertificate(r.CertificateBytes)
-	if err != nil {
-		return fmt.Errorf("Error encountered parsing certificate bytes from raw bundle")
-	}
-	r.SerialNumber = cert.SerialNumber
-	return nil
-}
-
-// "Signer" corresponds to the Go interface that private keys implement
-// that provides a Public() function for getting the corresponding public
-// key. It can be type converted to private keys.
-func (r *rawCertBundle) getSigner() (crypto.Signer, error) {
-	var signer crypto.Signer
-	var err error
-	switch r.PrivateKeyType {
-	case ECPrivateKeyType:
-		signer, err = x509.ParseECPrivateKey(r.PrivateKeyBytes)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to parse CA's private EC key: %s", err)
-		}
-	case RSAPrivateKeyType:
-		signer, err = x509.ParsePKCS1PrivateKey(r.PrivateKeyBytes)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to parse CA's private RSA key: %s", err)
-		}
-	default:
-		return nil, fmt.Errorf("Unable to determine the type of private key")
-	}
-	return signer, nil
-}
-
-func (r *rawCertBundle) getSubjKeyID() ([]byte, error) {
-	privateKey, err := r.getSigner()
-	if err != nil {
-		return nil, err
-	}
-
-	marshaledKey, err := x509.MarshalPKIXPublicKey(privateKey.Public())
-	if err != nil {
-		return nil, fmt.Errorf("Error marshalling public key: %s", err)
-	}
-
-	subjKeyID := sha1.Sum(marshaledKey)
-
-	return subjKeyID[:], nil
-}
-
-func getCertBundle(s logical.Storage, path string) (*certBundle, error) {
+func getCertBundle(s logical.Storage, path string) (*certutil.CertBundle, error) {
 	bundle, err := s.Get(path)
 	if err != nil {
 		return nil, err
@@ -147,7 +47,7 @@ func getCertBundle(s logical.Storage, path string) (*certBundle, error) {
 		return nil, nil
 	}
 
-	var result certBundle
+	var result certutil.CertBundle
 	if err := bundle.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -155,40 +55,29 @@ func getCertBundle(s logical.Storage, path string) (*certBundle, error) {
 	return &result, nil
 }
 
-func getOctalFormatted(buf []byte, sep string) string {
-	var ret bytes.Buffer
-	for _, cur := range buf {
-		if ret.Len() > 0 {
-			fmt.Fprintf(&ret, sep)
-		}
-		fmt.Fprintf(&ret, "%02x", cur)
-	}
-	return ret.String()
-}
-
-func fetchCAInfo(req *logical.Request) (*rawCertBundle, *x509.Certificate, error) {
+func fetchCAInfo(req *logical.Request) (*certutil.RawCertBundle, *x509.Certificate, error, error) {
 	bundle, err := getCertBundle(req.Storage, "config/ca_bundle")
 	if err != nil {
-		return nil, nil, fmt.Errorf("Unable to fetch local CA certificate/key: %s", err)
+		return nil, nil, nil, fmt.Errorf("Unable to fetch local CA certificate/key: %s", err)
 	}
 	if bundle == nil {
-		return nil, nil, fmt.Errorf("Backend must be configured with a CA certificate/key")
+		return nil, nil, fmt.Errorf("Backend must be configured with a CA certificate/key"), nil
 	}
 
-	rawBundle, err := bundle.toRawCertBundle()
+	rawBundle, err := bundle.ToRawCertBundle()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	certificates, err := x509.ParseCertificates(rawBundle.CertificateBytes)
 	switch {
 	case err != nil:
-		return nil, nil, err
+		return nil, nil, nil, err
 	case len(certificates) != 1:
-		return nil, nil, fmt.Errorf("Length of CA certificate bundle is wrong")
+		return nil, nil, nil, fmt.Errorf("Length of CA certificate bundle is wrong")
 	}
 
-	return rawBundle, certificates[0], nil
+	return rawBundle, certificates[0], nil, nil
 }
 
 func fetchCertBySerial(req *logical.Request, prefix, serial string) (certEntry *logical.StorageEntry, userError, internalError error) {
@@ -279,10 +168,10 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 	return "", nil
 }
 
-func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBundle, userErr, intErr error) {
+func createCertificate(creationInfo *certCreationBundle) (rawBundle *certutil.RawCertBundle, userErr, intErr error) {
 	var clientPrivKey crypto.Signer
 	var err error
-	rawBundle = &rawCertBundle{}
+	rawBundle = &certutil.RawCertBundle{}
 
 	rawBundle.SerialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
@@ -291,14 +180,14 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 
 	switch creationInfo.KeyType {
 	case "rsa":
-		rawBundle.PrivateKeyType = RSAPrivateKeyType
+		rawBundle.PrivateKeyType = certutil.RSAPrivateKeyType
 		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error generating RSA private key")
 		}
 		rawBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
 	case "ec":
-		rawBundle.PrivateKeyType = ECPrivateKeyType
+		rawBundle.PrivateKeyType = certutil.ECPrivateKeyType
 		var curve elliptic.Curve
 		switch creationInfo.KeyBits {
 		case 224:
@@ -324,7 +213,7 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 		return nil, fmt.Errorf("Unknown key type: %s", creationInfo.KeyType), nil
 	}
 
-	subjKeyID, err := rawBundle.getSubjKeyID()
+	subjKeyID, err := rawBundle.GetSubjKeyID()
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error getting subject key ID: %s", err)
 	}
@@ -368,7 +257,7 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
 	}
 
-	signingPrivKey, err := creationInfo.RawSigningBundle.getSigner()
+	signingPrivKey, err := creationInfo.RawSigningBundle.GetSigner()
 	if err != nil {
 		return nil, nil, fmt.Errorf("Unable to get signing private key: %s", err)
 	}
@@ -379,6 +268,7 @@ func createCertificate(creationInfo *certCreationBundle) (rawBundle *rawCertBund
 	}
 
 	rawBundle.CertificateBytes = cert
+	rawBundle.IssuingCABytes = creationInfo.RawSigningBundle.CertificateBytes
 
 	return
 }

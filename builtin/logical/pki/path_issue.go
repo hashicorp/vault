@@ -1,12 +1,12 @@
 package pki
 
 import (
-	"encoding/pem"
 	"fmt"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -118,9 +118,12 @@ func (b *backend) pathIssueCert(
 		return nil, fmt.Errorf("Error validating name %s: %s", badName, err)
 	}
 
-	rawSigningBundle, caCert, err := fetchCAInfo(req)
-	if err != nil {
-		return logical.ErrorResponse("Could not fetch the CA certificate; has it been set?"), nil
+	rawSigningBundle, caCert, userErr, intErr := fetchCAInfo(req)
+	switch {
+	case userErr != nil:
+		return logical.ErrorResponse(fmt.Sprintf("Could not fetch the CA certificate: %s", userErr)), nil
+	case intErr != nil:
+		return nil, fmt.Errorf("Error fetching CA certificate: %s", intErr)
 	}
 
 	if time.Now().Add(lease).After(caCert.NotAfter) {
@@ -157,40 +160,21 @@ func (b *backend) pathIssueCert(
 		return nil, intErr
 	}
 
-	serial := strings.ToLower(getOctalFormatted(rawBundle.SerialNumber.Bytes(), ":"))
-
-	resp := b.Secret(SecretCertsType).Response(map[string]interface{}{
-		"serial": serial,
-	}, map[string]interface{}{
-		"serial": serial,
-	})
-
-	block := pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: rawBundle.CertificateBytes,
+	cb, err := rawBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
 	}
-	certificateString := string(pem.EncodeToMemory(&block))
-	resp.Data["certificate"] = certificateString
 
-	block.Bytes = rawSigningBundle.CertificateBytes
-	caString := string(pem.EncodeToMemory(&block))
-	resp.Data["issuing_ca"] = caString
-
-	block.Bytes = rawBundle.PrivateKeyBytes
-	switch rawBundle.PrivateKeyType {
-	case RSAPrivateKeyType:
-		block.Type = "RSA PRIVATE KEY"
-	case ECPrivateKeyType:
-		block.Type = "EC PRIVATE KEY"
-	default:
-		return nil, fmt.Errorf("Could not determine private key type when creating block")
-	}
-	resp.Data["private_key"] = string(pem.EncodeToMemory(&block))
+	resp := b.Secret(SecretCertsType).Response(
+		structs.New(cb).Map(),
+		map[string]interface{}{
+			"serial_number": cb.SerialNumber,
+		})
 
 	resp.Secret.Lease = lease
 
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + serial,
+		Key:   "certs/" + cb.SerialNumber,
 		Value: rawBundle.CertificateBytes,
 	})
 	if err != nil {

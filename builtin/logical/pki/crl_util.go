@@ -13,7 +13,7 @@ import (
 
 type revocationInfo struct {
 	CertificateBytes []byte `json:"certificate_bytes"`
-	RevocationTime   int64  `json:"unix_time"`
+	RevocationTime   int64  `json:"revocation_time"`
 }
 
 var (
@@ -85,9 +85,12 @@ func revokeCert(req *logical.Request, serial string) (*logical.Response, error) 
 
 	}
 
-	err = buildCRL(req)
-	if err != nil {
-		return nil, fmt.Errorf("Error encountered during CRL building: %s", err)
+	userErr, intErr = buildCRL(req)
+	switch {
+	case userErr != nil:
+		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", userErr)), nil
+	case intErr != nil:
+		return nil, fmt.Errorf("Error encountered during CRL building: %s", intErr)
 	}
 
 	err = req.Storage.Delete("certs/" + serial)
@@ -103,10 +106,10 @@ func revokeCert(req *logical.Request, serial string) (*logical.Response, error) 
 	}, nil
 }
 
-func buildCRL(req *logical.Request) error {
+func buildCRL(req *logical.Request) (error, error) {
 	revokedSerials, err := req.Storage.List("revoked/")
 	if err != nil {
-		return fmt.Errorf("Error fetching list of revoked certs: %s", err)
+		return nil, fmt.Errorf("Error fetching list of revoked certs: %s", err)
 	}
 
 	revokedCerts := []pkix.RevokedCertificate{}
@@ -114,32 +117,32 @@ func buildCRL(req *logical.Request) error {
 	for _, serial := range revokedSerials {
 		revokedEntry, err := req.Storage.Get("revoked/" + serial)
 		if err != nil {
-			return fmt.Errorf("Unable to fetch revoked cert with serial %s: %s", serial, err)
+			return nil, fmt.Errorf("Unable to fetch revoked cert with serial %s: %s", serial, err)
 		}
 		if revokedEntry == nil {
-			return fmt.Errorf("Revoked certificate entry for serial %s is nil", serial)
+			return nil, fmt.Errorf("Revoked certificate entry for serial %s is nil", serial)
 		}
 		if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return fmt.Errorf("Found revoked serial but actual certificate is empty")
+			return nil, fmt.Errorf("Found revoked serial but actual certificate is empty")
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return fmt.Errorf("Error decoding revocation entry for serial %s: %s", serial, err)
+			return nil, fmt.Errorf("Error decoding revocation entry for serial %s: %s", serial, err)
 		}
 
 		revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 		if err != nil {
-			return fmt.Errorf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)
+			return nil, fmt.Errorf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)
 		}
 
 		if revokedCert.NotAfter.Before(time.Now()) {
 			err = req.Storage.Delete(serial)
 			if err != nil {
-				return fmt.Errorf("Unable to delete revoked, expired certificate with serial %s: %s", serial, err)
+				return nil, fmt.Errorf("Unable to delete revoked, expired certificate with serial %s: %s", serial, err)
 			}
 			continue
 		}
@@ -150,20 +153,23 @@ func buildCRL(req *logical.Request) error {
 		})
 	}
 
-	rawSigningBundle, caCert, err := fetchCAInfo(req)
-	if err != nil {
-		return fmt.Errorf("Could not fetch the CA certificate")
+	rawSigningBundle, caCert, userErr, intErr := fetchCAInfo(req)
+	switch {
+	case userErr != nil:
+		return fmt.Errorf("Could not fetch the CA certificate: %s", userErr), nil
+	case intErr != nil:
+		return nil, fmt.Errorf("Error fetching CA certificate: %s", intErr)
 	}
 
-	signingPrivKey, err := rawSigningBundle.getSigner()
+	signingPrivKey, err := rawSigningBundle.GetSigner()
 	if err != nil {
-		return fmt.Errorf("Unable to get signing private key: %s", err)
+		return nil, fmt.Errorf("Unable to get signing private key: %s", err)
 	}
 
 	// TODO: Make expiry configurable
 	crlBytes, err := caCert.CreateCRL(rand.Reader, signingPrivKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
 	if err != nil {
-		return fmt.Errorf("Error creating new CRL: %s", err)
+		return nil, fmt.Errorf("Error creating new CRL: %s", err)
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
@@ -171,8 +177,8 @@ func buildCRL(req *logical.Request) error {
 		Value: crlBytes,
 	})
 	if err != nil {
-		return fmt.Errorf("Error storing CRL: %s", err)
+		return nil, fmt.Errorf("Error storing CRL: %s", err)
 	}
 
-	return nil
+	return nil, nil
 }

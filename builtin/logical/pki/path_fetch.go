@@ -91,7 +91,7 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	var pemType string
 	var contentType string
 	var certEntry *logical.StorageEntry
-	var userErr, intErr, err error
+	var userErr, intErr error
 	var certificate []byte
 	response = &logical.Response{
 		Data: map[string]interface{}{},
@@ -122,9 +122,13 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		goto reply
 	}
 
-	_, _, err = fetchCAInfo(req)
-	if err != nil {
-		response = logical.ErrorResponse("No CA information configured for this backend")
+	_, _, userErr, intErr = fetchCAInfo(req)
+	switch {
+	case userErr != nil:
+		response = logical.ErrorResponse(fmt.Sprintf("%s", userErr))
+		goto reply
+	case intErr != nil:
+		retErr = intErr
 		goto reply
 	}
 
@@ -173,7 +177,6 @@ reply:
 		}
 		retErr = nil
 		response.Data[logical.HTTPStatusCode] = 200
-
 	case retErr != nil:
 		response = nil
 	default:

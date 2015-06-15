@@ -3,8 +3,10 @@ package pki
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/certutil"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
@@ -37,7 +39,7 @@ func (b *backend) pathCAWrite(
 
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
-	rawBundle := &rawCertBundle{}
+	rawBundle := &certutil.RawCertBundle{}
 
 	for {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
@@ -46,10 +48,10 @@ func (b *backend) pathCAWrite(
 		}
 
 		if _, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
-			if rawBundle.PrivateKeyType != UnknownPrivateKeyType {
+			if rawBundle.PrivateKeyType != certutil.UnknownPrivateKeyType {
 				return logical.ErrorResponse("More than one private key given; provide only one private key in the bundle"), nil
 			}
-			rawBundle.PrivateKeyType = ECPrivateKeyType
+			rawBundle.PrivateKeyType = certutil.ECPrivateKeyType
 			rawBundle.PrivateKeyBytes = pemBlock.Bytes
 			// TODO?: CRLs can only be generated with RSA keys right now, in the
 			// Go standard library. The plubming is here to support non-RSA keys
@@ -57,10 +59,10 @@ func (b *backend) pathCAWrite(
 			return logical.ErrorResponse("Only RSA keys are supported at this time due to limitations in the Go standard library"), nil
 		} else if _, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
 
-			if rawBundle.PrivateKeyType != UnknownPrivateKeyType {
+			if rawBundle.PrivateKeyType != certutil.UnknownPrivateKeyType {
 				return logical.ErrorResponse("More than one private key given; provide only one private key in the bundle"), nil
 			}
-			rawBundle.PrivateKeyType = RSAPrivateKeyType
+			rawBundle.PrivateKeyType = certutil.RSAPrivateKeyType
 			rawBundle.PrivateKeyBytes = pemBlock.Bytes
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			switch len(certificates) {
@@ -72,6 +74,7 @@ func (b *backend) pathCAWrite(
 					return logical.ErrorResponse("The given certificate is not marked for CA use and cannot be used with this backend"), nil
 				}
 				rawBundle.CertificateBytes = pemBlock.Bytes
+				rawBundle.SerialNumber = cert.SerialNumber
 			default:
 				return logical.ErrorResponse("More than one certificate given; provide only one certificate in the bundle"), nil
 			}
@@ -83,7 +86,7 @@ func (b *backend) pathCAWrite(
 	}
 
 	switch {
-	case rawBundle.PrivateKeyType == UnknownPrivateKeyType:
+	case rawBundle.PrivateKeyType == certutil.UnknownPrivateKeyType:
 		return logical.ErrorResponse("Unable to figure out the private key type; must be RSA or EC"), nil
 	case len(rawBundle.PrivateKeyBytes) == 0:
 		return logical.ErrorResponse("Unable to decode the private key from the bundle"), nil
@@ -91,7 +94,10 @@ func (b *backend) pathCAWrite(
 		return logical.ErrorResponse("Unable to decode the certificate from the bundle"), nil
 	}
 
-	cb := rawBundle.toCertBundle()
+	cb, err := rawBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw values into cert bundle: %s", err)
+	}
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err

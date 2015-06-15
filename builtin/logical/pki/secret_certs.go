@@ -43,7 +43,7 @@ func (b *backend) secretCredsRevoke(
 		return nil, fmt.Errorf("Secret is nil in request")
 	}
 
-	serialInt, ok := req.Secret.InternalData["serial"]
+	serialInt, ok := req.Secret.InternalData["serial_number"]
 	if !ok {
 		return nil, fmt.Errorf("Could not find serial in internal secret data")
 	}

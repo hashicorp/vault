@@ -13,31 +13,19 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/certutil"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
-
-type issueEntry struct {
-	Lease      string `structs:"lease" mapstructure:"lease"`
-	CommonName string `structs:"common_name" mapstructure:"common_name"`
-	AltNames   string `structs:"alt_names" mapstructure:"alt_names"`
-	IPSANs     string `structs:"ip_sans" mapstructure:"ip_sans"`
-}
-
-type issueReply struct {
-	Certificate string `structs:"certificate" mapstructure:"certificate"`
-	IssuingCA   string `structs:"issuing_ca" mapstructure:"issuing_ca"`
-	PrivateKey  string `structs:"private_key" mapstructure:"private_key"`
-}
 
 var (
 	stepCount = 0
 )
 
-func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Duration, issueResp *issueReply) (cert, ca *x509.Certificate, privKey crypto.Signer, err error) {
+func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Duration, certBundle *certutil.CertBundle) (cert, ca *x509.Certificate, privKey crypto.Signer, err error) {
 	var pemBlock *pem.Block
 
-	pemBlock, _ = pem.Decode([]byte(issueResp.Certificate))
+	pemBlock, _ = pem.Decode([]byte(certBundle.Certificate))
 	if pemBlock == nil {
 		return nil, nil, nil, fmt.Errorf("No PEM data found for cert")
 	}
@@ -46,7 +34,7 @@ func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Dura
 		return nil, nil, nil, err
 	}
 
-	pemBlock, _ = pem.Decode([]byte(issueResp.IssuingCA))
+	pemBlock, _ = pem.Decode([]byte(certBundle.IssuingCA))
 	if pemBlock == nil {
 		return nil, nil, nil, fmt.Errorf("No PEM data found for issuing CA")
 	}
@@ -55,7 +43,7 @@ func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Dura
 		return nil, nil, nil, err
 	}
 
-	pemBlock, _ = pem.Decode([]byte(issueResp.PrivateKey))
+	pemBlock, _ = pem.Decode([]byte(certBundle.PrivateKey))
 	if pemBlock == nil {
 		return nil, nil, nil, fmt.Errorf("No PEM data found for private key")
 	}
@@ -68,7 +56,7 @@ func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Dura
 	case "ec":
 		privKey, err = x509.ParseECPrivateKey(pemBlock.Bytes)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Unable to decode EC private key: %s; value was %s", err, issueResp.PrivateKey)
+			return nil, nil, nil, fmt.Errorf("Unable to decode EC private key: %s; value was %s", err, certBundle.PrivateKey)
 		}
 	default:
 		return nil, nil, nil, fmt.Errorf("Unknown private key type %s", keyType)
@@ -208,7 +196,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 	roleVals := roleEntry{
 		LeaseMax: "12h",
 	}
-	issueVals := issueEntry{}
+	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
 
 	roleTestStep := logicaltest.TestStep{
@@ -245,13 +233,13 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 	}
 
 	getCnCheck := func(name, keyType string, usage certUsage, validity time.Duration) logicaltest.TestCheckFunc {
-		var issueResp issueReply
+		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
-			err := mapstructure.Decode(resp.Data, &issueResp)
+			err := mapstructure.Decode(resp.Data, &certBundle)
 			if err != nil {
 				return err
 			}
-			cert, _, _, err := checkCertsAndPrivateKey(keyType, usage, validity, &issueResp)
+			cert, _, _, err := checkCertsAndPrivateKey(keyType, usage, validity, &certBundle)
 			if err != nil {
 				return fmt.Errorf("Error checking generated certificate: %s", err)
 			}
