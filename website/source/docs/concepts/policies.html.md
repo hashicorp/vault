@@ -37,6 +37,10 @@ This works well due to Vault's architecture of being like a filesystem:
 everything has a path associated with it, including the core configuration
 mechanism under "sys".
 
+~> Policy paths are matched using a longest-prefix match, which is the most
+specific defined policy. This means if you define a policy for `"secret/foo"`,
+the policy would also match `"secret/foobar"`.
+
 ## Policies
 
 Allowed policies for a path are:
