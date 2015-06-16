@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/consul"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
+	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
 	"github.com/hashicorp/vault/audit"
@@ -67,6 +68,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"postgresql": postgresql.Factory,
 					"transit":    transit.Factory,
 					"mysql":      mysql.Factory,
+					"ssh":        ssh.Factory,
 				},
 			}, nil
 		},
