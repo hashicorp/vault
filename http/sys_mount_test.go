@@ -76,6 +76,22 @@ func TestSysMount(t *testing.T) {
 	}
 }
 
+func TestSysMount_put(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, addr+"/v1/sys/mounts/foo", map[string]interface{}{
+		"type":        "generic",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// The TestSysMount test tests the thing is actually created. See that test
+	// for more info.
+}
+
 func TestSysRemount(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)

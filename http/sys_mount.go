@@ -13,7 +13,7 @@ func handleSysMounts(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "GET":
 			handleSysListMounts(core).ServeHTTP(w, r)
-		case "POST":
+		case "PUT", "POST":
 			fallthrough
 		case "DELETE":
 			handleSysMountUnmount(core, w, r)
@@ -27,8 +27,7 @@ func handleSysMounts(core *vault.Core) http.Handler {
 func handleSysRemount(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case "POST":
-		case "PUT":
+		case "PUT", "POST":
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
@@ -80,7 +79,7 @@ func handleSysListMounts(core *vault.Core) http.Handler {
 
 func handleSysMountUnmount(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case "POST":
+	case "PUT", "POST":
 	case "DELETE":
 	default:
 		respondError(w, http.StatusMethodNotAllowed, nil)
@@ -100,7 +99,7 @@ func handleSysMountUnmount(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	}
 
 	switch r.Method {
-	case "POST":
+	case "PUT", "POST":
 		handleSysMount(core, w, r, path)
 	case "DELETE":
 		handleSysUnmount(core, w, r, path)
