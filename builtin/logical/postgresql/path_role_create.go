@@ -51,10 +51,15 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	// Generate the username, password and expiration
+	// Generate our username, password and expiration.  PostreSQL limits user to
+	// 63 characters.
+	displayName := req.DisplayName
+	if len(displayName) > 40 {
+		displayName = displayName[:40]
+	}
 	username := fmt.Sprintf(
 		"vault-%s-%d-%d",
-		req.DisplayName, time.Now().Unix(), rand.Int31n(10000))
+		displayName, time.Now().Unix(), rand.Int31n(10000))
 	password := generateUUID()
 	expiration := time.Now().UTC().
 		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
