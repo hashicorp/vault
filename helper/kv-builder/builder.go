@@ -78,30 +78,32 @@ func (b *Builder) add(raw string) error {
 	}
 	key, value := parts[0], parts[1]
 
-	if len(value) > 0 && value[0] == '@' {
-		contents, err := ioutil.ReadFile(value[1:])
-		if err != nil {
-			return fmt.Errorf("error reading file: %s", err)
-		}
+	if len(value) > 0 {
+		if value[0] == '@' {
+			contents, err := ioutil.ReadFile(value[1:])
+			if err != nil {
+				return fmt.Errorf("error reading file: %s", err)
+			}
 
-		value = string(contents)
-	} else if value[0] == '\\' && value[1] == '@' {
-		value = value[1:]
-	} else if value == "-" {
-		if b.Stdin == nil {
-			return fmt.Errorf("stdin is not supported")
-		}
-		if b.stdin {
-			return fmt.Errorf("stdin already consumed")
-		}
-		b.stdin = true
+			value = string(contents)
+		} else if value[0] == '\\' && value[1] == '@' {
+			value = value[1:]
+		} else if value == "-" {
+			if b.Stdin == nil {
+				return fmt.Errorf("stdin is not supported")
+			}
+			if b.stdin {
+				return fmt.Errorf("stdin already consumed")
+			}
+			b.stdin = true
 
-		var buf bytes.Buffer
-		if _, err := io.Copy(&buf, b.Stdin); err != nil {
-			return err
-		}
+			var buf bytes.Buffer
+			if _, err := io.Copy(&buf, b.Stdin); err != nil {
+				return err
+			}
 
-		value = buf.String()
+			value = buf.String()
+		}
 	}
 
 	b.result[key] = value
