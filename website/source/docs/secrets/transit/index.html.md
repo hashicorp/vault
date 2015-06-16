@@ -65,7 +65,7 @@ Now, if we wanted to encrypt a piece of plain text, we use the encrypt
 endpoint using our named key:
 
 ```
-$ echo "the quick brown fox" | base64 | vault write transit/encrypt/foo plaintext=-
+$ echo -n "the quick brown fox" | base64 | vault write transit/encrypt/foo plaintext=-
 Key       	Value
 ciphertext	vault:v0:czEwyKqGZY/limnuzDCUUe5AK0tbBObWqeZgFqxCuIqq7A84SeiOq3sKD0Y/KUvv
 ```
