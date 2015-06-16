@@ -8,7 +8,7 @@ import (
 
 func TestBuilder_basic(t *testing.T) {
 	var b Builder
-	err := b.Add("foo=bar", "bar=baz")
+	err := b.Add("foo=bar", "bar=baz", "baz=")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -16,6 +16,7 @@ func TestBuilder_basic(t *testing.T) {
 	expected := map[string]interface{}{
 		"foo": "bar",
 		"bar": "baz",
+		"baz": "",
 	}
 	actual := b.Map()
 	if !reflect.DeepEqual(actual, expected) {
