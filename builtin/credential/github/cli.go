@@ -46,7 +46,7 @@ account settings page on GitHub.
 Key/Value Pairs:
 
     mount=github      The mountpoint for the GitHub credential provider.
-	                  Defaults to "github"
+                      Defaults to "github"
 
     token=<token>     The GitHub personal access token for authentication.
 	`
