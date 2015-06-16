@@ -4,6 +4,10 @@ IMPROVEMENTS:
 
   * core: `/sys/auth` allows for PUT requests as well
 
+BUG FIXES:
+
+  * command/*: commands accepting `k=v` allow blank values
+
 ## 0.1.2 (May 11, 2015)
 
 FEATURES:
