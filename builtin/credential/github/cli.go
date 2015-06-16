@@ -43,6 +43,12 @@ account settings page on GitHub.
 
     Example: vault auth -method=github token=<token>
 
+Key/Value Pairs:
+
+    mount=github      The mountpoint for the GitHub credential provider.
+	                  Defaults to "github"
+
+    token=<token>     The GitHub personal access token for authentication.
 	`
 
 	return strings.TrimSpace(help)

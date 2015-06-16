@@ -242,7 +242,13 @@ Usage: vault auth [options] [token or config...]
   By specifying -method, alternate authentication methods can be used
   such as OAuth or TLS certificates. For these, additional values for
   configuration can be specified with "key=value" pairs just like
-  "vault write".
+  "vault write". Specify the "-method-help" flag to get help for a specific
+  method.
+
+  If you've mounted a credential backend to a different path, such
+  as mounting "github" to "github-private", the "method" flag should
+  still be "github." Most credential providers support the "mount" option
+  to specify the mount point. See the "-method-help" for more info.
 
 General Options:
 
