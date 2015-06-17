@@ -508,6 +508,16 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 			&FieldSchema{Type: TypeString},
 			"",
 		},
+
+		"default duration set": {
+			&FieldSchema{Type: TypeDurationSecond, Default: 60},
+			60,
+		},
+
+		"default duration not set": {
+			&FieldSchema{Type: TypeDurationSecond},
+			0,
+		},
 	}
 
 	for name, tc := range cases {
