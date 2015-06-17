@@ -73,6 +73,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"ssh": func() (cli.Command, error) {
+			return &command.SshCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"help": func() (cli.Command, error) {
 			return &command.HelpCommand{
 				Meta: meta,

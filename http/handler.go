@@ -44,6 +44,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/key-status", handleSysKeyStatus(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
+	mux.Handle("/v1/ssh/connect", handleSysSsh(core))
 	mux.Handle("/v1/", handleLogical(core))
 
 	// Wrap the handler in another handler to trigger all help paths.

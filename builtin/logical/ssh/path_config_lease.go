@@ -1,7 +1,9 @@
 package ssh
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -34,7 +36,38 @@ func pathConfigLease(b *backend) *framework.Path {
 
 func (b *backend) pathLeaseWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.pathLeaseWrite\n")
+	leaseRaw := d.Get("lease").(string)
+	leaseMaxRaw := d.Get("lease_max").(string)
+
+	lease, err := time.ParseDuration(leaseRaw)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid lease: %s", err)), nil
+	}
+	leaseMax, err := time.ParseDuration(leaseMaxRaw)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid lease: %s", err)), nil
+	}
+
+	// Store it
+	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
+		Lease:    lease,
+		LeaseMax: leaseMax,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(entry); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
+}
+
+type configLease struct {
+	Lease    time.Duration
+	LeaseMax time.Duration
 }
 
 const pathConfigLeaseHelpSyn = `

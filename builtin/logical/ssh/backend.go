@@ -27,6 +27,7 @@ func Backend() *framework.Backend {
 			pathConfigAddHostKey(&b),
 			pathConfigRemoveHostKey(&b),
 			pathRoles(&b),
+			sshConnect(&b),
 		},
 
 		Secrets: []*framework.Secret{
