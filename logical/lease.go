@@ -46,22 +46,8 @@ func (l *LeaseOptions) LeaseTotal() time.Duration {
 // ExpirationTime computes the time until expiration including the grace period
 func (l *LeaseOptions) ExpirationTime() time.Time {
 	var expireTime time.Time
-	if !l.LeaseIssue.IsZero() && l.Lease > 0 {
-		expireTime = l.LeaseIssue.UTC().Add(l.LeaseTotal())
+	if l.LeaseEnabled() {
+		expireTime = time.Now().UTC().Add(l.LeaseTotal())
 	}
-
 	return expireTime
-}
-
-// IncrementedLease returns the lease duration that would need to set
-// in order to increment the _current_ lease by the given duration
-// if the auth were re-issued right now.
-func (l *LeaseOptions) IncrementedLease(inc time.Duration) time.Duration {
-	var result time.Duration
-	expireTime := l.ExpirationTime()
-	if expireTime.IsZero() {
-		return result
-	}
-
-	return expireTime.Add(inc).Sub(time.Now().UTC())
 }

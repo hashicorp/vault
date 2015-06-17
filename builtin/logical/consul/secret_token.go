@@ -26,7 +26,7 @@ func secretToken() *framework.Secret {
 		DefaultDuration:    DefaultLeaseDuration,
 		DefaultGracePeriod: DefaultGracePeriod,
 
-		Renew:  framework.LeaseExtend(1*time.Hour, 0),
+		Renew:  framework.LeaseExtend(0, 0, true),
 		Revoke: secretTokenRevoke,
 	}
 }
