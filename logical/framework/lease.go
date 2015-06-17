@@ -14,11 +14,20 @@ import (
 //
 // maxSession is the maximum session length allowed since the original
 // issue time. If this is zero, it is ignored.
-func LeaseExtend(max, maxSession time.Duration) OperationFunc {
+//
+// maxFromLease controls if the maximum renewal period comes from the existing
+// lease. This means the value of `max` will be replaced with the existing
+// lease duration.
+func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc {
 	return func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		lease := detectLease(req)
 		if lease == nil {
 			return nil, fmt.Errorf("no lease options for request")
+		}
+
+		// Check if we should limit max
+		if maxFromLease {
+			max = lease.Lease
 		}
 
 		// Sanity check the desired increment

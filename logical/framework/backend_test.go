@@ -215,7 +215,7 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 func TestBackendHandleRequest_renewExtend(t *testing.T) {
 	secret := &Secret{
 		Type:            "foo",
-		Renew:           LeaseExtend(0, 0),
+		Renew:           LeaseExtend(0, 0, false),
 		DefaultDuration: 5 * time.Minute,
 	}
 	b := &Backend{
