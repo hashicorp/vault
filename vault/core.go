@@ -345,7 +345,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 			return nil, logical.ErrUnsupportedPath
 		}
 	}
-			
 	
 	if c.router.LoginPath(req.Path) {
 		resp, err = c.handleLoginRequest(req)

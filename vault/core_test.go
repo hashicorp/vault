@@ -483,6 +483,25 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	}
 }
 
+// To check for a blank space in req.Path
+func TestCore_HandleRequest_SpaceInPath(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "secret/ test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != logical.ErrUnsupportedPath {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestCore_HandleRequest_MissingToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
