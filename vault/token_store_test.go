@@ -822,7 +822,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 
 	beforeRenew := time.Now().UTC()
 	req := logical.TestRequest(t, logical.WriteOperation, "renew/"+root.ID)
-	req.Data["increment"] = "3600"
+	req.Data["increment"] = "3600s"
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)

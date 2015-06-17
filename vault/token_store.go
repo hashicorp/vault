@@ -211,7 +211,7 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 						Description: "Token to renew",
 					},
 					"increment": &framework.FieldSchema{
-						Type:        framework.TypeInt,
+						Type:        framework.TypeDurationSecond,
 						Description: "The desired increment in seconds to the token expiration",
 					},
 				},
