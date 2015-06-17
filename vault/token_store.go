@@ -85,7 +85,10 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
-		AuthRenew: framework.LeaseExtend(0, 0),
+		// Allow a token lease to be extended indefinitely, but each time for only
+		// as much as the original lease allowed for. If the lease has a 1 hour expiration,
+		// it can only be extended up to another hour each time this means.
+		AuthRenew: framework.LeaseExtend(0, 0, true),
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
