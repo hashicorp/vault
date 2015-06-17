@@ -153,7 +153,7 @@ func buildCRL(req *logical.Request) (error, error) {
 		})
 	}
 
-	rawSigningBundle, caCert, userErr, intErr := fetchCAInfo(req)
+	signingBundle, caCert, userErr, intErr := fetchCAInfo(req)
 	switch {
 	case userErr != nil:
 		return fmt.Errorf("Could not fetch the CA certificate: %s", userErr), nil
@@ -161,13 +161,8 @@ func buildCRL(req *logical.Request) (error, error) {
 		return nil, fmt.Errorf("Error fetching CA certificate: %s", intErr)
 	}
 
-	signingPrivKey, err := rawSigningBundle.GetSigner()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to get signing private key: %s", err)
-	}
-
 	// TODO: Make expiry configurable
-	crlBytes, err := caCert.CreateCRL(rand.Reader, signingPrivKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
+	crlBytes, err := caCert.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
 	if err != nil {
 		return nil, fmt.Errorf("Error creating new CRL: %s", err)
 	}

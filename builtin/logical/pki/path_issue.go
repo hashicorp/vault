@@ -118,7 +118,7 @@ func (b *backend) pathIssueCert(
 		return nil, fmt.Errorf("Error validating name %s: %s", badName, err)
 	}
 
-	rawSigningBundle, caCert, userErr, intErr := fetchCAInfo(req)
+	signingBundle, caCert, userErr, intErr := fetchCAInfo(req)
 	switch {
 	case userErr != nil:
 		return logical.ErrorResponse(fmt.Sprintf("Could not fetch the CA certificate: %s", userErr)), nil
@@ -142,17 +142,17 @@ func (b *backend) pathIssueCert(
 	}
 
 	creationBundle := &certCreationBundle{
-		RawSigningBundle: rawSigningBundle,
-		CACert:           caCert,
-		CommonNames:      commonNames,
-		IPSANs:           ipSANs,
-		KeyType:          role.KeyType,
-		KeyBits:          role.KeyBits,
-		Lease:            lease,
-		Usage:            usage,
+		SigningBundle: signingBundle,
+		CACert:        caCert,
+		CommonNames:   commonNames,
+		IPSANs:        ipSANs,
+		KeyType:       role.KeyType,
+		KeyBits:       role.KeyBits,
+		Lease:         lease,
+		Usage:         usage,
 	}
 
-	rawBundle, userErr, intErr := createCertificate(creationBundle)
+	parsedBundle, userErr, intErr := createCertificate(creationBundle)
 	switch {
 	case userErr != nil:
 		return logical.ErrorResponse(userErr.Error()), nil
@@ -160,7 +160,7 @@ func (b *backend) pathIssueCert(
 		return nil, intErr
 	}
 
-	cb, err := rawBundle.ToCertBundle()
+	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
 	}
@@ -175,7 +175,7 @@ func (b *backend) pathIssueCert(
 
 	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "certs/" + cb.SerialNumber,
-		Value: rawBundle.CertificateBytes,
+		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Unable to store certificate locally")

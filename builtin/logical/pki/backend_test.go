@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/certutil"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
