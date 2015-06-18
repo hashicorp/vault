@@ -635,7 +635,7 @@ func (l *leaseEntry) encode() ([]byte, error) {
 func (le *leaseEntry) renewable() error {
 	// If there is no entry, cannot review
 	if le == nil || le.ExpireTime.IsZero() {
-		return fmt.Errorf("lease not found")
+		return fmt.Errorf("lease not found or lease is not renewable")
 	}
 
 	// Determine if the lease is expired
