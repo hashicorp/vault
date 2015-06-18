@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -56,7 +57,10 @@ func pathEncryptWrite(
 
 	// Error if invalid policy
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		p, err = generatePolicy(req.Storage, name)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to upsert policy: %v", err)), logical.ErrInvalidRequest
+		}
 	}
 
 	// Guard against a potentially invalid cipher-mode

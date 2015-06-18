@@ -15,11 +15,13 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"keys/*",
+				"raw/*",
 			},
 		},
 
 		Paths: []*framework.Path{
 			pathKeys(),
+			pathRaw(),
 			pathEncrypt(),
 			pathDecrypt(),
 		},
