@@ -362,12 +362,14 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
         list. If any requested names do not match role policy,
         the entire request will be denied.
       </li>
+      <li>
         <span class="param">ip_sans</span>
         <span class="param-flags">optional</span>
         Requested IP Subject Alternative Names, in a comma-delimited
         list. Only valid if the role allows IP SANs (which is the
         default).
       </li>
+      <li>
       <span class="param">lease</span>
       <span class="param-flags">optional</span>
         Requested lease time. Cannot be greater than the role's

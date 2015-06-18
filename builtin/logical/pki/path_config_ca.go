@@ -13,8 +13,9 @@ func pathConfigCA(b *backend) *framework.Path {
 		Pattern: "config/ca",
 		Fields: map[string]*framework.FieldSchema{
 			"pem_bundle": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "PEM-format, concatenated unencrypted secret key and certificate",
+				Type: framework.TypeString,
+				Description: `PEM-format, concatenated unencrypted secret key
+and certificate`,
 			},
 		},
 
@@ -39,6 +40,12 @@ func (b *backend) pathCAWrite(
 		default:
 			return logical.ErrorResponse(err.Error()), nil
 		}
+	}
+
+	// Handle the case of a self-signed certificate
+	if parsedBundle.Certificate == nil && parsedBundle.IssuingCA != nil {
+		parsedBundle.Certificate = parsedBundle.IssuingCA
+		parsedBundle.CertificateBytes = parsedBundle.IssuingCABytes
 	}
 
 	// TODO?: CRLs can only be generated with RSA keys right now, in the

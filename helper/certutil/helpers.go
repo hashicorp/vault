@@ -31,6 +31,7 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, InternalError{"Passed-in private key is nil"}
 	}
+
 	marshaledKey, err := x509.MarshalPKIXPublicKey(privateKey.Public())
 	if err != nil {
 		return nil, InternalError{fmt.Sprintf("Error marshalling public key: %s", err)}
@@ -121,20 +122,30 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				if parsedBundle.Certificate != nil {
 					switch {
 					// We just found the issuing CA
-					case bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, certificates[0].SubjectKeyId):
+					case bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, certificates[0].SubjectKeyId) && certificates[0].IsCA:
 						parsedBundle.IssuingCABytes = pemBlock.Bytes
 						parsedBundle.IssuingCA = certificates[0]
 
 					// Our saved certificate is actually the issuing CA
-					case bytes.Equal(parsedBundle.Certificate.SubjectKeyId, certificates[0].AuthorityKeyId):
+					case bytes.Equal(parsedBundle.Certificate.SubjectKeyId, certificates[0].AuthorityKeyId) && parsedBundle.Certificate.IsCA:
 						parsedBundle.IssuingCA = parsedBundle.Certificate
 						parsedBundle.IssuingCABytes = parsedBundle.CertificateBytes
 						parsedBundle.CertificateBytes = pemBlock.Bytes
 						parsedBundle.Certificate = certificates[0]
 					}
 				} else {
-					parsedBundle.CertificateBytes = pemBlock.Bytes
-					parsedBundle.Certificate = certificates[0]
+					switch {
+					// If this case isn't correct, the caller needs to assign
+					// the values to Certificate/CertificateBytes; assumptions
+					// made here will not be valid for all cases.
+					case certificates[0].IsCA:
+						parsedBundle.IssuingCABytes = pemBlock.Bytes
+						parsedBundle.IssuingCA = certificates[0]
+
+					default:
+						parsedBundle.CertificateBytes = pemBlock.Bytes
+						parsedBundle.Certificate = certificates[0]
+					}
 				}
 
 			default:
@@ -145,15 +156,6 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 		if len(pemBytes) == 0 {
 			break
 		}
-	}
-
-	switch {
-	case parsedBundle.PrivateKeyType == UnknownPrivateKey:
-		return nil, UserError{"Unable to figure out the private key type; must be RSA or EC"}
-	case len(parsedBundle.PrivateKeyBytes) == 0:
-		return nil, UserError{"Unable to decode the private key from the bundle"}
-	case len(parsedBundle.CertificateBytes) == 0:
-		return nil, UserError{"Unable to decode the certificate from the bundle"}
 	}
 
 	return parsedBundle, nil

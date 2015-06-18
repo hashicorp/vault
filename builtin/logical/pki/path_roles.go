@@ -15,85 +15,106 @@ func pathRoles(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: "Name of the role",
 			},
 
 			"lease": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "The lease length if no specific lease length is requested. The lease length controls the expiration of certificates issued by this backend. Defaults to the value of lease_max.",
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `The lease length if no specific lease length is
+requested. The lease length controls the expiration
+of certificates issued by this backend. Defaults to
+the value of lease_max.`,
 			},
 
 			"lease_max": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "The maximum allowed lease length.",
+				Description: "The maximum allowed lease length",
 			},
 
 			"allow_localhost": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: "Whether to allow \"localhost\" as a valid common name in a request.",
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `Whether to allow "localhost" as a valid common
+name in a request`,
 			},
 
 			"allowed_base_domain": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "If set, clients can request certificates for subdomains directly beneath this base domain, including the wildcard subdomain. See the documentation for more information.",
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, clients can request certificates for
+subdomains directly beneath this base domain, including
+the wildcard subdomain. See the documentation for more
+information.`,
 			},
 
 			"allow_token_displayname": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "If set, clients can request certificates for matching the value of the Display Name on the requesting token. See the documentation for more information.",
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, clients can request certificates for
+matching the value of the Display Name on the requesting
+token. See the documentation for more information.`,
 			},
 
 			"allow_subdomains": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "If set, clients can request certificates for subdomains of the CNs allowed by the other role options, including wildcard subdomains. See the documentation for more information.",
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, clients can request certificates for
+subdomains of the CNs allowed by the other role options,
+including wildcard subdomains. See the documentation for
+more information.`,
 			},
 
 			"allow_any_name": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "If set, clients can request certificates for any CN they like. See the documentation for more information.",
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, clients can request certificates for
+any CN they like. See the documentation for more
+information.`,
 			},
 
 			"allow_ip_sans": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: "If set, IP Subject Alternative Names are allowed. Any valid IP is accepted.",
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, IP Subject Alternative Names are allowed.
+Any valid IP is accepted.`,
 			},
 
 			"server_flag": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: "If set, certificates are flagged for server use. Defaults to true.",
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, certificates are flagged for server use.
+Defaults to true.`,
 			},
 
 			"client_flag": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: "If set, certificates are flagged for client use. Defaults to true.",
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, certificates are flagged for client use.
+Defaults to true.`,
 			},
 
 			"code_signing_flag": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "If set, certificates are flagged for code signing use. Defaults to false.",
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, certificates are flagged for code signing
+use. Defaults to false.`,
 			},
 
 			"key_type": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "rsa",
-				Description: "The type of key to use; defaults to RSA. \"rsa\" and \"ec\" are the only valid values.",
+				Type:    framework.TypeString,
+				Default: "rsa",
+				Description: `The type of key to use; defaults to RSA. "rsa"
+and "ec" are the only valid values.`,
 			},
 
 			"key_bits": &framework.FieldSchema{
-				Type:        framework.TypeInt,
-				Default:     2048,
-				Description: "The number of bits to use. You will almost certainly want to change this if you adjust the key_type.",
+				Type:    framework.TypeInt,
+				Default: 2048,
+				Description: `The number of bits to use. You will almost
+certainly want to change this if you adjust
+the key_type.`,
 			},
 		},
 

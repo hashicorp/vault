@@ -16,20 +16,25 @@ func pathIssue(b *backend) *framework.Path {
 		Pattern: `issue/(?P<role>\w+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "The desired role with configuration for this request",
+				Type: framework.TypeString,
+				Description: `The desired role with configuration for this
+request`,
 			},
 			"common_name": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "The requested common name; if you want more than one, specify the alternative names in the alt_names map",
+				Type: framework.TypeString,
+				Description: `The requested common name; if you want more than
+one, specify the alternative names in the
+alt_names map`,
 			},
 			"alt_names": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "The requested Subject Alternative Names, if any, in a comma-delimited list",
+				Type: framework.TypeString,
+				Description: `The requested Subject Alternative Names, if any,
+in a comma-delimited list`,
 			},
 			"ip_sans": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "The requested IP SANs, if any, in a common-delimited list",
+				Type: framework.TypeString,
+				Description: `The requested IP SANs, if any, in a
+common-delimited list`,
 			},
 			"lease": &framework.FieldSchema{
 				Type:        framework.TypeString,

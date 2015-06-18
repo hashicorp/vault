@@ -88,46 +88,50 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 	var err error
 	var pemBlock *pem.Block
 
-	pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
-	if pemBlock == nil {
-		return nil, UserError{"Error decoding private key from cert bundle"}
-	}
-	result.PrivateKeyBytes = pemBlock.Bytes
+	if len(c.PrivateKey) > 0 {
+		pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
+		if pemBlock == nil {
+			return nil, UserError{"Error decoding private key from cert bundle"}
+		}
+		result.PrivateKeyBytes = pemBlock.Bytes
 
-	switch c.PrivateKeyType {
-	case "ec":
-		result.PrivateKeyType = ECPrivateKey
-	case "rsa":
-		result.PrivateKeyType = RSAPrivateKey
-	default:
-		// Try to figure it out and correct
-		if _, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
+		switch c.PrivateKeyType {
+		case "ec":
 			result.PrivateKeyType = ECPrivateKey
-			c.PrivateKeyType = "ec"
-		} else if _, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
+		case "rsa":
 			result.PrivateKeyType = RSAPrivateKey
-			c.PrivateKeyType = "rsa"
-		} else {
-			return nil, UserError{fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
+		default:
+			// Try to figure it out and correct
+			if _, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
+				result.PrivateKeyType = ECPrivateKey
+				c.PrivateKeyType = "ec"
+			} else if _, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
+				result.PrivateKeyType = RSAPrivateKey
+				c.PrivateKeyType = "rsa"
+			} else {
+				return nil, UserError{fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
+			}
+		}
+
+		result.PrivateKey, err = result.getSigner()
+		if err != nil {
+			return nil, UserError{fmt.Sprintf("Error getting signer: %s", err)}
 		}
 	}
 
-	result.PrivateKey, err = result.getSigner()
-	if err != nil {
-		return nil, UserError{fmt.Sprintf("Error getting signer: %s", err)}
+	if len(c.Certificate) > 0 {
+		pemBlock, _ = pem.Decode([]byte(c.Certificate))
+		if pemBlock == nil {
+			return nil, UserError{"Error decoding certificate from cert bundle"}
+		}
+		result.CertificateBytes = pemBlock.Bytes
+		result.Certificate, err = x509.ParseCertificate(result.CertificateBytes)
+		if err != nil {
+			return nil, UserError{"Error encountered parsing certificate bytes from raw bundle"}
+		}
 	}
 
-	pemBlock, _ = pem.Decode([]byte(c.Certificate))
-	if pemBlock == nil {
-		return nil, UserError{"Error decoding certificate from cert bundle"}
-	}
-	result.CertificateBytes = pemBlock.Bytes
-	result.Certificate, err = x509.ParseCertificate(result.CertificateBytes)
-	if err != nil {
-		return nil, UserError{"Error encountered parsing certificate bytes from raw bundle"}
-	}
-
-	if len(c.IssuingCA) != 0 {
+	if len(c.IssuingCA) > 0 {
 		pemBlock, _ = pem.Decode([]byte(c.IssuingCA))
 		if pemBlock == nil {
 			return nil, UserError{"Error decoding issuing CA from cert bundle"}
@@ -139,7 +143,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		}
 	}
 
-	if len(c.SerialNumber) == 0 {
+	if len(c.SerialNumber) == 0 && len(c.Certificate) > 0 {
 		c.SerialNumber = GetOctalFormatted(result.Certificate.SerialNumber.Bytes(), ":")
 	}
 
@@ -149,33 +153,39 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 // ToCertBundle converts a byte-based raw DER certificate bundle
 // to a PEM-based string certificate bundle
 func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
-	result := &CertBundle{
-		SerialNumber: GetOctalFormatted(p.Certificate.SerialNumber.Bytes(), ":"),
-	}
-
+	result := &CertBundle{}
 	block := pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: p.CertificateBytes,
+		Type: "CERTIFICATE",
 	}
-	result.Certificate = string(pem.EncodeToMemory(&block))
 
-	if len(p.IssuingCABytes) != 0 {
+	if p.Certificate != nil {
+		result.SerialNumber = GetOctalFormatted(p.Certificate.SerialNumber.Bytes(), ":")
+	}
+
+	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
+		block.Bytes = p.CertificateBytes
+		result.Certificate = string(pem.EncodeToMemory(&block))
+	}
+
+	if p.IssuingCABytes != nil && len(p.IssuingCABytes) > 0 {
 		block.Bytes = p.IssuingCABytes
 		result.IssuingCA = string(pem.EncodeToMemory(&block))
 	}
 
-	block.Bytes = p.PrivateKeyBytes
-	switch p.PrivateKeyType {
-	case RSAPrivateKey:
-		result.PrivateKeyType = "rsa"
-		block.Type = "RSA PRIVATE KEY"
-	case ECPrivateKey:
-		result.PrivateKeyType = "ec"
-		block.Type = "EC PRIVATE KEY"
-	default:
-		return nil, InternalError{"Could not determine private key type when creating block"}
+	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
+		block.Bytes = p.PrivateKeyBytes
+		switch p.PrivateKeyType {
+		case RSAPrivateKey:
+			result.PrivateKeyType = "rsa"
+			block.Type = "RSA PRIVATE KEY"
+		case ECPrivateKey:
+			result.PrivateKeyType = "ec"
+			block.Type = "EC PRIVATE KEY"
+		default:
+			return nil, InternalError{"Could not determine private key type when creating block"}
+		}
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
-	result.PrivateKey = string(pem.EncodeToMemory(&block))
 
 	return result, nil
 }
@@ -187,17 +197,24 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 	var signer crypto.Signer
 	var err error
+
+	if p.PrivateKeyBytes == nil || len(p.PrivateKeyBytes) == 0 {
+		return nil, UserError{"Given parsed cert bundle does not have private key information"}
+	}
+
 	switch p.PrivateKeyType {
 	case ECPrivateKey:
 		signer, err = x509.ParseECPrivateKey(p.PrivateKeyBytes)
 		if err != nil {
 			return nil, UserError{fmt.Sprintf("Unable to parse CA's private EC key: %s", err)}
 		}
+
 	case RSAPrivateKey:
 		signer, err = x509.ParsePKCS1PrivateKey(p.PrivateKeyBytes)
 		if err != nil {
 			return nil, UserError{fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
 		}
+
 	default:
 		return nil, UserError{"Unable to determine type of private key; only RSA and EC are supported"}
 	}
@@ -210,20 +227,27 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 // specifically, you should set the value of ClientAuth in the returned
 // config to match your needs.
 func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
-	tlsCert := &tls.Certificate{
-		Certificate: [][]byte{
-			p.CertificateBytes,
-		},
-		PrivateKey: p.PrivateKey,
-		Leaf:       p.Certificate,
+	tlsCert := tls.Certificate{
+		Certificate: [][]byte{},
 	}
 
 	tlsConfig := &tls.Config{
-		NextProtos:   []string{"http/1.1"},
-		Certificates: []tls.Certificate{*tlsCert},
+		NextProtos: []string{"http/1.1"},
 	}
 
-	if len(p.IssuingCABytes) > 0 {
+	if p.Certificate != nil {
+		tlsCert.Leaf = p.Certificate
+	}
+
+	if p.PrivateKey != nil {
+		tlsCert.PrivateKey = p.PrivateKey
+	}
+
+	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
+		tlsCert.Certificate = append(tlsCert.Certificate, p.CertificateBytes)
+	}
+
+	if p.IssuingCABytes != nil && len(p.IssuingCABytes) > 0 {
 		tlsCert.Certificate = append(tlsCert.Certificate, p.IssuingCABytes)
 
 		// Technically we only need one cert, but this doesn't duplicate code
@@ -238,16 +262,19 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 			return nil, fmt.Errorf("Could not append CA certificate")
 		}
 
-		if usage&TLSServer != 0 {
+		if usage&TLSServer > 0 {
 			tlsConfig.ClientCAs = caPool
 			tlsConfig.ClientAuth = tls.VerifyClientCertIfGiven
 		}
-		if usage&TLSClient != 0 {
+		if usage&TLSClient > 0 {
 			tlsConfig.RootCAs = caPool
 		}
 	}
 
-	tlsConfig.BuildNameToCertificate()
+	if tlsCert.Certificate != nil && len(tlsCert.Certificate) > 0 {
+		tlsConfig.Certificates = []tls.Certificate{tlsCert}
+		tlsConfig.BuildNameToCertificate()
+	}
 
 	return tlsConfig, nil
 }

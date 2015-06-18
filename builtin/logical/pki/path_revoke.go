@@ -12,8 +12,9 @@ func pathRevoke(b *backend) *framework.Path {
 		Pattern: `revoke`,
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Certificate serial number, in colon- or hyphen-separated octal",
+				Type: framework.TypeString,
+				Description: `Certificate serial number, in colon- or
+hyphen-separated octal`,
 			},
 		},
 

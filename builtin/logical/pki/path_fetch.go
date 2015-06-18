@@ -40,8 +40,9 @@ func pathFetchValid(b *backend) *framework.Path {
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"serial": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Certificate serial number, in colon- or hyphen-separated octal",
+				Type: framework.TypeString,
+				Description: `Certificate serial number, in colon- or
+hyphen-separated octal`,
 			},
 		},
 
