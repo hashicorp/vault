@@ -20,10 +20,6 @@ func pathConfigRemoveHostKey(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "IP address of host.",
 			},
-			"key": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "SSH private key for host.",
-			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathRemoveHostKeyWrite,
@@ -33,8 +29,16 @@ func pathConfigRemoveHostKey(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRemoveHostKeyWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRemoveHostKeyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.pathRemoveHostKeyWrite\n")
+	username := d.Get("username").(string)
+	ip := d.Get("ip").(string)
+	//TODO: parse ip into ipv4 address and validate it
+	log.Printf("Vishal: ssh.pathRemoveHostKeyWrite username:%#v ip:%#v\n", username, ip)
+	err := req.Storage.Delete("hosts/" + ip + "/" + username)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 

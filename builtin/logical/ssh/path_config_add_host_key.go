@@ -1,8 +1,6 @@
 package ssh
 
 import (
-	"bytes"
-	"fmt"
 	"log"
 
 	"github.com/hashicorp/vault/logical"
@@ -39,28 +37,28 @@ func (b *backend) pathAddHostKeyWrite(req *logical.Request, d *framework.FieldDa
 	log.Printf("Vishal: ssh.pathAddHostKeyWrite\n")
 	username := d.Get("username").(string)
 	ip := d.Get("ip").(string)
+	//TODO: parse ip into ipv4 address and validate it
 	key := d.Get("key").(string)
 	log.Printf("Vishal: ssh.pathAddHostKeyWrite username:%#v ip:%#v key:%#v\n", username, ip, key)
-	localCmdString := `
-	rm -f vault_ssh_otk.pem vault_ssh_otk.pem.pub;
-	ssh-keygen -f vault_ssh_otk.pem -t rsa -N '';
-	chmod 400 vault_ssh_otk.pem;
-	scp -i vault_ssh_shared.pem vault_ssh_otk.pem.pub vishal@localhost:/home/vishal
-	echo done!
-	`
-	err := exec_command(localCmdString)
+
+	entry, err := logical.StorageEntryJSON("hosts/"+ip+"/"+username, &sshAddHostKey{
+		Username: username,
+		IP:       ip,
+		Key:      key,
+	})
 	if err != nil {
-		fmt.Errorf("Running command failed " + err.Error())
+		return nil, err
 	}
-	session := createSSHPublicKeysSession("vishal", "127.0.0.1")
-	var buf bytes.Buffer
-	session.Stdout = &buf
-	if err := installSshOtkInTarget(session); err != nil {
-		fmt.Errorf("Failed to install one-time-key at target machine: " + err.Error())
+	if err := req.Storage.Put(entry); err != nil {
+		return nil, err
 	}
-	session.Close()
-	fmt.Println(buf.String())
 	return nil, nil
+}
+
+type sshAddHostKey struct {
+	Username string
+	IP       string
+	Key      string
 }
 
 const pathConfigAddHostKeySyn = `

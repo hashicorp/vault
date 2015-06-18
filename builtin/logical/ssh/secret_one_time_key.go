@@ -30,7 +30,7 @@ func secretOneTimeKey(b *backend) *framework.Secret {
 		},
 		DefaultDuration:    1 * time.Hour,
 		DefaultGracePeriod: 10 * time.Minute,
-		Renew:              framework.LeaseExtend(1*time.Hour, 0),
+		Renew:              framework.LeaseExtend(1*time.Hour, 0, false),
 		Revoke:             b.secretPrivateKeyRevoke,
 	}
 }
