@@ -16,6 +16,12 @@ import (
 	"fmt"
 )
 
+// Secret is used to attempt to unmarshal a Vault secret
+// JSON response, as a convenience
+type Secret struct {
+	Data map[string]interface{} `json:"data"`
+}
+
 // TLSUsage controls whether the intended usage of a *tls.Config
 // returned from ParsedCertBundle.GetTLSConfig is for server use,
 // client use, or both, which affects which values are set
@@ -234,6 +240,7 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 
 		if usage&TLSServer != 0 {
 			tlsConfig.ClientCAs = caPool
+			tlsConfig.ClientAuth = tls.VerifyClientCertIfGiven
 		}
 		if usage&TLSClient != 0 {
 			tlsConfig.RootCAs = caPool

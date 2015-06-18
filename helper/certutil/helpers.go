@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -42,12 +41,6 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	return subjKeyID[:], nil
 }
 
-// ParsePKISecret takes an api.Secret returned from the PKI backend)
-// and returns a ParsedCertBundle.
-func ParsePKISecret(secret *api.Secret) (*ParsedCertBundle, error) {
-	return ParsePKIMap(secret.Data)
-}
-
 // ParsePKIMap takes a map (for instance, the Secret.Data
 // returned from the PKI backend) and returns a ParsedCertBundle.
 func ParsePKIMap(data map[string]interface{}) (*ParsedCertBundle, error) {
@@ -74,7 +67,7 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 		return result.ToParsedCertBundle()
 	}
 
-	var secret api.Secret
+	var secret Secret
 	err = json.Unmarshal(input, &secret)
 
 	if err == nil {
