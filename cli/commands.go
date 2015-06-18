@@ -74,8 +74,8 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
-		"help": func() (cli.Command, error) {
-			return &command.HelpCommand{
+		"path-help": func() (cli.Command, error) {
+			return &command.PathHelpCommand{
 				Meta: meta,
 			}, nil
 		},
