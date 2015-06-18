@@ -19,15 +19,18 @@ type WriteCommand struct {
 
 func (c *WriteCommand) Run(args []string) int {
 	var format string
+	var force bool
 	flags := c.Meta.FlagSet("write", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
+	flags.BoolVar(&force, "force", false, "")
+	flags.BoolVar(&force, "f", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
 	args = flags.Args()
-	if len(args) < 2 {
+	if len(args) < 2 && !force {
 		c.Ui.Error("write expects at least two arguments")
 		flags.Usage()
 		return 1
@@ -116,6 +119,12 @@ General Options:
   -tls-skip-verify        Do not verify TLS certificate. This is highly
                           not recommended. This is especially not recommended
                           for unsealing a vault.
+
+Write Options:
+
+  -f | -force             Force the write to continue without any data values
+                          specified. This allows writing to keys that do not
+                          need or expect any fields to be specified.
 
 `
 	return strings.TrimSpace(helpText)

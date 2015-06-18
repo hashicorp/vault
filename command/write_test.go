@@ -246,3 +246,26 @@ func TestWrite_Output(t *testing.T) {
 		t.Fatalf("bad: %s", string(ui.OutputWriter.Bytes()))
 	}
 }
+
+func TestWrite_force(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	ui := new(cli.MockUi)
+	c := &WriteCommand{
+		Meta: Meta{
+			ClientToken: token,
+			Ui:          ui,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"-force",
+		"sys/rotate",
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+}
