@@ -2,7 +2,6 @@ package physical
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,16 +11,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var (
-	MySQLPrepareStmtFailure = errors.New("failed to prepare statement")
-	MySQLExecuteStmtFailure = errors.New("failed to execute statement")
-)
-
 // MySQLBackend is a physical backend that stores data
 // within MySQL database.
 type MySQLBackend struct {
-	table      string
-	database   string
+	dbTable    string
 	client     *sql.DB
 	statements map[string]*sql.Stmt
 }
@@ -29,82 +22,83 @@ type MySQLBackend struct {
 // newMySQLBackend constructs a MySQL backend using the given API client and
 // server address and credential for accessing mysql database.
 func newMySQLBackend(conf map[string]string) (Backend, error) {
+	// Get the MySQL credentials to perform read/write operations.
+	username, ok := conf["username"]
+	if !ok || username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+	password, ok := conf["password"]
+	if !ok || username == "" {
+		return nil, fmt.Errorf("missing password")
+	}
+
 	// Get or set MySQL server address. Defaults to localhost and default port(3306)
 	address, ok := conf["address"]
 	if !ok {
 		address = "127.0.0.1:3306"
 	}
 
-	// Get the MySQL credentials to perform read/write operations.
-	username, ok := conf["username"]
-	password, ok := conf["password"]
-
 	// Get the MySQL database and table details.
 	database, ok := conf["database"]
 	if !ok {
-		return nil, fmt.Errorf("database name is missing in the configuration")
+		database = "vault"
 	}
 	table, ok := conf["table"]
 	if !ok {
-		return nil, fmt.Errorf("table name is missing in the configuration")
+		table = "vault"
 	}
+	dbTable := database + "." + table
 
 	// Create MySQL handle for the database.
-	dsn := username + ":" + password + "@tcp(" + address + ")/" + database
+	dsn := username + ":" + password + "@tcp(" + address + ")/"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open handler with database")
+		return nil, fmt.Errorf("failed to connect to mysql: %v", err)
+	}
+
+	// Create the required database if it doesn't exists.
+	if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
+		return nil, fmt.Errorf("failed to create mysql database: %v", err)
 	}
 
 	// Create the required table if it doesn't exists.
-	create_query := "CREATE TABLE IF NOT EXISTS " + database + "." + table + " (vault_key varchar(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
-	create_stmt, err := db.Prepare(create_query)
-	if err != nil {
-		return nil, MySQLPrepareStmtFailure
+	create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
+		" (vault_key varchar(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
+	if _, err := db.Exec(create_query); err != nil {
+		return nil, fmt.Errorf("failed to create mysql table: %v", err)
 	}
-	defer create_stmt.Close()
-
-	_, err = create_stmt.Exec()
-	if err != nil {
-		return nil, MySQLExecuteStmtFailure
-	}
-
-	// Map of query type as key to prepared statement.
-	statements := make(map[string]*sql.Stmt)
-
-	// Prepare statement for put query.
-	insert_query := "INSERT INTO " + database + "." + table + " VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)"
-	insert_stmt, err := db.Prepare(insert_query)
-	if err != nil {
-		return nil, MySQLPrepareStmtFailure
-	}
-	statements["put"] = insert_stmt
-
-	// Prepare statement for select query.
-	select_query := "SELECT vault_value FROM " + database + "." + table + " WHERE vault_key = ?"
-	select_stmt, err := db.Prepare(select_query)
-	if err != nil {
-		return nil, MySQLPrepareStmtFailure
-	}
-	statements["get"] = select_stmt
-
-	// Prepare statement for delete query.
-	delete_query := "DELETE FROM " + database + "." + table + " WHERE vault_key = ?"
-	delete_stmt, err := db.Prepare(delete_query)
-	if err != nil {
-		return nil, MySQLPrepareStmtFailure
-	}
-	statements["delete"] = delete_stmt
 
 	// Setup the backend.
 	m := &MySQLBackend{
+		dbTable:    dbTable,
 		client:     db,
-		table:      table,
-		database:   database,
-		statements: statements,
+		statements: make(map[string]*sql.Stmt),
 	}
 
+	// Prepare all the statements required
+	statements := map[string]string{
+		"put": "INSERT INTO " + dbTable +
+			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
+		"get":    "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
+		"delete": "DELETE FROM " + dbTable + " WHERE vault_key = ?",
+		"list":   "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
+	}
+	for name, query := range statements {
+		if err := m.prepare(name, query); err != nil {
+			return nil, err
+		}
+	}
 	return m, nil
+}
+
+// prepare is a helper to prepare a query for future execution
+func (m *MySQLBackend) prepare(name, query string) error {
+	stmt, err := m.client.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare '%s': %v", name, err)
+	}
+	m.statements[name] = stmt
+	return nil
 }
 
 // Put is used to insert or update an entry.
@@ -115,7 +109,6 @@ func (m *MySQLBackend) Put(entry *Entry) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -124,22 +117,18 @@ func (m *MySQLBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"mysql", "get"}, time.Now())
 
 	var result []byte
-
 	err := m.statements["get"].QueryRow(key).Scan(&result)
-	if err != nil {
+	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-
-	// Handle a non-existing value
-	if result == nil {
-		return nil, nil
+	if err != nil {
+		return nil, err
 	}
 
 	ent := &Entry{
 		Key:   key,
 		Value: result,
 	}
-
 	return ent, nil
 }
 
@@ -151,7 +140,6 @@ func (m *MySQLBackend) Delete(key string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -160,45 +148,28 @@ func (m *MySQLBackend) Delete(key string) error {
 func (m *MySQLBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mysql", "list"}, time.Now())
 
-	// Query to get all keys matching a prefix.
-	list_query := "SELECT vault_key FROM " + m.database + "." + m.table + " WHERE vault_key LIKE '" + prefix + "%'"
-	rows, err := m.client.Query(list_query)
-	if err != nil {
-		return nil, MySQLExecuteStmtFailure
-	}
+	// Add the % wildcard to the prefix to do the prefix search
+	likePrefix := prefix + "%"
+	rows, err := m.statements["list"].Query(likePrefix)
 
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get columns")
-	}
-
-	values := make([]sql.RawBytes, len(columns))
-
-	scanArgs := make([]interface{}, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
-	keys := []string{}
+	var keys []string
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
+		var key string
+		err = rows.Scan(&key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows")
+			return nil, fmt.Errorf("failed to scan rows: %v", err)
 		}
 
-		for _, key := range values {
-			key := strings.TrimPrefix(string(key), prefix)
-			if i := strings.Index(string(key), "/"); i == -1 {
-				// Add objects only from the current 'folder'
-				keys = append(keys, string(key))
-			} else if i != -1 {
-				// Add truncated 'folder' paths
-				keys = appendIfMissing(keys, string(key[:i+1]))
-			}
+		key = strings.TrimPrefix(key, prefix)
+		if i := strings.Index(key, "/"); i == -1 {
+			// Add objects only from the current 'folder'
+			keys = append(keys, key)
+		} else if i != -1 {
+			// Add truncated 'folder' paths
+			keys = appendIfMissing(keys, string(key[:i+1]))
 		}
 	}
 
 	sort.Strings(keys)
-
 	return keys, nil
 }
