@@ -77,7 +77,7 @@ func (b *backend) pathLoginRenew(
 		return logical.ErrorResponse("policies have changed, revoking login"), nil
 	}
 
-	return framework.LeaseExtend(1*time.Hour, 0)(req, d)
+	return framework.LeaseExtend(1*time.Hour, 0, false)(req, d)
 }
 
 const pathLoginSyn = `

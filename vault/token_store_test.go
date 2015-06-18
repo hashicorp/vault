@@ -820,8 +820,9 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	// Get the original expire time to compare
 	originalExpire := auth.ExpirationTime()
 
+	beforeRenew := time.Now().UTC()
 	req := logical.TestRequest(t, logical.WriteOperation, "renew/"+root.ID)
-	req.Data["increment"] = "3600"
+	req.Data["increment"] = "3600s"
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -829,9 +830,11 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 
 	// Get the new expire time
 	newExpire := resp.Auth.ExpirationTime()
-	expireDiff := newExpire.Sub(originalExpire)
-	if expireDiff < 30*time.Minute || expireDiff > 3*time.Hour {
-		t.Fatalf("bad: %#v", expireDiff)
+	if newExpire.Before(originalExpire) {
+		t.Fatalf("should expire later: %s %s", newExpire, originalExpire)
+	}
+	if newExpire.Before(beforeRenew.Add(time.Hour)) {
+		t.Fatalf("should have at least an hour: %s %s", newExpire, beforeRenew)
 	}
 }
 

@@ -337,7 +337,6 @@ func (m *ExpirationManager) RenewToken(source string, token string,
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
 	resp.Auth.LeaseIncrement = 0
-	resp.Auth.LeaseIssue = time.Now().UTC()
 
 	// Update the lease entry
 	le.Auth = resp.Auth
@@ -366,9 +365,6 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		return "", err
 	}
 
-	// Setup some of the fields on auth
-	resp.Secret.LeaseIssue = time.Now().UTC()
-
 	// Create a lease entry
 	le := leaseEntry{
 		LeaseID:     path.Join(req.Path, generateUUID()),
@@ -376,7 +372,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		Path:        req.Path,
 		Data:        resp.Data,
 		Secret:      resp.Secret,
-		IssueTime:   resp.Secret.LeaseIssue,
+		IssueTime:   time.Now().UTC(),
 		ExpireTime:  resp.Secret.ExpirationTime(),
 	}
 
@@ -403,16 +399,13 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
-	// Setup some of the fields on auth
-	auth.LeaseIssue = time.Now().UTC()
-
 	// Create a lease entry
 	le := leaseEntry{
 		LeaseID:     path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        source,
-		IssueTime:   auth.LeaseIssue,
+		IssueTime:   time.Now().UTC(),
 		ExpireTime:  auth.ExpirationTime(),
 	}
 

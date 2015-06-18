@@ -115,7 +115,7 @@ func (b *backend) secretAccessKeysRenew(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax)
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
 	return f(req, d)
 }
 

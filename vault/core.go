@@ -413,8 +413,9 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	}
 
 	// Only the token store is allowed to return an auth block, for any
-	// other request this is an internal error
-	if resp != nil && resp.Auth != nil {
+	// other request this is an internal error. We exclude renewal of a token,
+	// since it does not need to be re-registered
+	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew/") {
 		if !strings.HasPrefix(req.Path, "auth/token/") {
 			c.logger.Printf(
 				"[ERR] core: unexpected Auth response for non-token backend "+

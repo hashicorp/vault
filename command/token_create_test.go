@@ -1,6 +1,7 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/http"
@@ -26,5 +27,11 @@ func TestTokenCreate(t *testing.T) {
 	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	// Ensure we get lease info
+	output := ui.OutputWriter.String()
+	if !strings.Contains(output, "token_duration") {
+		t.Fatalf("bad: %#v", output)
 	}
 }

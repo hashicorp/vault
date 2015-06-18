@@ -11,11 +11,12 @@ func TestLeaseExtend(t *testing.T) {
 	now := time.Now().UTC().Round(time.Hour)
 
 	cases := map[string]struct {
-		Max        time.Duration
-		MaxSession time.Duration
-		Request    time.Duration
-		Result     time.Duration
-		Error      bool
+		Max          time.Duration
+		MaxSession   time.Duration
+		Request      time.Duration
+		Result       time.Duration
+		MaxFromLease bool
+		Error        bool
 	}{
 		"valid request, good bounds": {
 			Max:     30 * time.Hour,
@@ -62,20 +63,26 @@ func TestLeaseExtend(t *testing.T) {
 			Request: -7 * time.Hour,
 			Error:   true,
 		},
+
+		"max form lease, request too large": {
+			Request:      10 * time.Hour,
+			MaxFromLease: true,
+			Result:       time.Hour,
+		},
 	}
 
 	for name, tc := range cases {
 		req := &logical.Request{
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					Lease:          1 * time.Second,
+					Lease:          1 * time.Hour,
 					LeaseIssue:     now,
 					LeaseIncrement: tc.Request,
 				},
 			},
 		}
 
-		callback := LeaseExtend(tc.Max, tc.MaxSession)
+		callback := LeaseExtend(tc.Max, tc.MaxSession, tc.MaxFromLease)
 		resp, err := callback(req, nil)
 		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)

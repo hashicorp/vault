@@ -1368,6 +1368,55 @@ func TestCore_RenewSameLease(t *testing.T) {
 	}
 }
 
+// Renew of a token should not create a new lease
+func TestCore_RenewToken_SingleRegister(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Create a new token
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "auth/token/create",
+		Data: map[string]interface{}{
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	newClient := resp.Auth.ClientToken
+
+	// Renew the token
+	req = logical.TestRequest(t, logical.WriteOperation, "auth/token/renew/"+newClient)
+	req.ClientToken = newClient
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Revoke using the renew prefix
+	req = logical.TestRequest(t, logical.WriteOperation, "sys/revoke-prefix/auth/token/renew/")
+	req.ClientToken = root
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify our token is still valid (e.g. we did not get invalided by the revoke)
+	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/lookup/"+newClient)
+	req.ClientToken = newClient
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the token exists
+	if resp.Data["id"] != newClient {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
 // Based on bug GH-203, attempt to disable a credential backend with leased secrets
 func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon

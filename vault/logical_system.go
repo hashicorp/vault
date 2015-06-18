@@ -110,7 +110,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
 					"increment": &framework.FieldSchema{
-						Type:        framework.TypeInt,
+						Type:        framework.TypeDurationSecond,
 						Description: strings.TrimSpace(sysHelp["increment"][0]),
 					},
 				},

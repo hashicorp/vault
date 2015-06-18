@@ -58,7 +58,7 @@ func (b *backend) secretCredsRenew(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax)
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
 	resp, err := f(req, d)
 	if err != nil {
 		return nil, err
