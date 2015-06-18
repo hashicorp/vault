@@ -124,7 +124,6 @@ func pathPolicyRead(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name":        p.Name,
-			"key":         p.Key,
 			"cipher_mode": p.CipherMode,
 		},
 	}

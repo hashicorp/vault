@@ -21,10 +21,12 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", false),
+			testAccStepReadRaw(t, "test", false),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", true),
+			testAccStepReadRaw(t, "test", true),
 		},
 	})
 }
@@ -47,6 +49,43 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone bool) logicalte
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil && !expectNone {
+				return fmt.Errorf("missing response")
+			} else if expectNone {
+				if resp != nil {
+					return fmt.Errorf("response when expecting none")
+				}
+				return nil
+			}
+			var d struct {
+				Name       string `mapstructure:"name"`
+				Key        []byte `mapstructure:"key"`
+				CipherMode string `mapstructure:"cipher_mode"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.Name != name {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.CipherMode != "aes-gcm" {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			// Should NOT get a key back
+			if d.Key != nil {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepReadRaw(t *testing.T, name string, expectNone bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "raw/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && !expectNone {
 				return fmt.Errorf("missing response")
