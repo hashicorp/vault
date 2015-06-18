@@ -114,6 +114,15 @@ func (c *AuthCommand) Run(args []string) int {
 		return 0
 	}
 
+	// Warn if the VAULT_TOKEN environment variable is set, as that will take
+	// precedence
+	if os.Getenv("VAULT_TOKEN") != "" {
+		c.Ui.Output("==> WARNING: VAULT_TOKEN environment variable set!\n")
+		c.Ui.Output("  The environment variable takes precedence over the value")
+		c.Ui.Output("  set by the auth command. Either update the value of the")
+		c.Ui.Output("  environment variable or unset it to use the new token.\n")
+	}
+
 	var vars map[string]string
 	if len(args) > 0 {
 		builder := kvbuilder.Builder{Stdin: os.Stdin}
@@ -171,15 +180,6 @@ func (c *AuthCommand) Run(args []string) int {
 	if secret == nil {
 		c.Ui.Error(fmt.Sprintf("Error: Invalid token"))
 		return 1
-	}
-
-	// Warn if the VAULT_TOKEN environment variable is set, as that will take
-	// precedence
-	if os.Getenv("VAULT_TOKEN") != "" {
-		c.Ui.Output("==> WARNING: VAULT_TOKEN environment variable set!\n")
-		c.Ui.Output("  The environment variable takes precedence over the value")
-		c.Ui.Output("  set by the auth command. Either update the value of the")
-		c.Ui.Output("  environment variable or unset it to use the new token.\n")
 	}
 
 	// Get the policies we have
