@@ -22,8 +22,8 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) < 1 || len(args) > 2 {
-		c.Ui.Error("read expects one or two arguments")
+	if len(args) != 1 {
+		c.Ui.Error("read expects one argument")
 		flags.Usage()
 		return 1
 	}
