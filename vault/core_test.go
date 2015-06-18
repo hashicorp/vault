@@ -348,6 +348,17 @@ func TestCore_SealUnseal(t *testing.T) {
 	}
 }
 
+// Attempt to shutdown after unseal
+func TestCore_Shutdown(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	if err := c.Shutdown(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed, err := c.Sealed(); err != nil || !sealed {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 // Attempt to seal bad token
 func TestCore_Seal_BadToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

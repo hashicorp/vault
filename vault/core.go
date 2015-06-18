@@ -328,6 +328,21 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, nil
 }
 
+// Shutdown is invoked when the Vault instance is about to be terminated. It
+// should not be accessible as part of an API call as it will cause an availability
+// problem. It is only used to gracefully quit in the case of HA so that failover
+// happens as quickly as possible.
+func (c *Core) Shutdown() error {
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	if c.sealed {
+		return nil
+	}
+
+	// Seal the Vault, causes a leader stepdown
+	return c.sealInternal()
+}
+
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
@@ -930,6 +945,14 @@ func (c *Core) Seal(token string) error {
 		return err
 	}
 
+	// Seal the Vault
+	return c.sealInternal()
+}
+
+// sealInternal is an internal method used to seal the vault.
+// It does not do any authorization checking. The stateLock must
+// be held prior to calling.
+func (c *Core) sealInternal() error {
 	// Enable that we are sealed to prevent furthur transactions
 	c.sealed = true
 
