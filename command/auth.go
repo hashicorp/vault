@@ -173,6 +173,15 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Warn if the VAULT_TOKEN environment variable is set, as that will take
+	// precedence
+	if os.Getenv("VAULT_TOKEN") != "" {
+		c.Ui.Output("==> WARNING: VAULT_TOKEN environment variable set!\n")
+		c.Ui.Output("  The environment variable takes precedence over the value")
+		c.Ui.Output("  set by the auth command. Either update the value of the")
+		c.Ui.Output("  environment variable or unset it to use the new token.\n")
+	}
+
 	// Get the policies we have
 	policiesRaw, ok := secret.Data["policies"]
 	if !ok {
