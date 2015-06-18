@@ -54,6 +54,15 @@ $ vault read transit/keys/foo
 Key        	Value
 name       	foo
 cipher_mode	aes-gcm
+````
+
+We can read from the `raw/` endpoint to see the encryption key itself:
+
+```
+$ vault read transit/raw/foo
+Key        	Value
+name       	foo
+cipher_mode	aes-gcm
 key        	PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8=
 ````
 
@@ -114,17 +123,7 @@ only encrypt or decrypt using the named keys they need access to.
 
   <dt>Returns</dt>
   <dd>
-
-    ```javascript
-    {
-      "data": {
-          "name":        "foo",
-          "cipher_mode": "aes-gcm",
-          "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
-      }
-    }
-    ```
-
+    A `204` response code.
   </dd>
 </dl>
 
@@ -156,7 +155,6 @@ only encrypt or decrypt using the named keys they need access to.
       "data": {
           "name":        "foo",
           "cipher_mode": "aes-gcm",
-          "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
       }
     }
     ```
@@ -269,3 +267,42 @@ only encrypt or decrypt using the named keys they need access to.
 
   </dd>
 </dl>
+
+### /transit/raw/
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns raw information about a named encryption key,
+    Including the underlying encryption key. This is a root protected endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/raw/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+          "name":        "foo",
+          "cipher_mode": "aes-gcm",
+          "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
+
