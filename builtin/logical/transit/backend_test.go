@@ -31,6 +31,21 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_upsert(t *testing.T) {
+	decryptData := make(map[string]interface{})
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepReadPolicy(t, "test", true),
+			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
+			testAccStepReadPolicy(t, "test", false),
+			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadPolicy(t, "test", true),
+		},
+	})
+}
+
 func testAccStepWritePolicy(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
