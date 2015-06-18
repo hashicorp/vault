@@ -14,7 +14,7 @@ func handleSysSsh(core *vault.Core) http.Handler {
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
-		log.Printf("Vishal: http.sys_ssh.handleSysSsh req:%#v\n", r)
+		log.Printf("Vishal: http.sys_ssh.handleSysSsh\n")
 		var req SshRequest
 		if err := parseRequest(r, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)

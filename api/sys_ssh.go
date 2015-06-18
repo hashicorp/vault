@@ -30,7 +30,6 @@ func (c *Sys) Ssh(target string) (*OneTimeKey, error) {
 
 	var result OneTimeKey
 	err = resp.DecodeJSON(&result)
-	log.Printf("Vishal: api.Sys.Ssh: result:%#v\n", result)
 	return &result, err
 }
 
