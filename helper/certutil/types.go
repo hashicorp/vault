@@ -14,6 +14,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
 )
 
 // Secret is used to attempt to unmarshal a Vault secret
@@ -35,7 +36,8 @@ const (
 	RSAPrivateKey
 	ECPrivateKey
 
-	TLSServer TLSUsage = 1 << iota
+	TLSUnknown TLSUsage = 0
+	TLSServer  TLSUsage = 1 << iota
 	TLSClient
 )
 
@@ -159,17 +161,17 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	}
 
 	if p.Certificate != nil {
-		result.SerialNumber = GetOctalFormatted(p.Certificate.SerialNumber.Bytes(), ":")
+		result.SerialNumber = strings.TrimSpace(GetOctalFormatted(p.Certificate.SerialNumber.Bytes(), ":"))
 	}
 
 	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
 		block.Bytes = p.CertificateBytes
-		result.Certificate = string(pem.EncodeToMemory(&block))
+		result.Certificate = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	if p.IssuingCABytes != nil && len(p.IssuingCABytes) > 0 {
 		block.Bytes = p.IssuingCABytes
-		result.IssuingCA = string(pem.EncodeToMemory(&block))
+		result.IssuingCA = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
@@ -184,7 +186,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 		default:
 			return nil, InternalError{"Could not determine private key type when creating block"}
 		}
-		result.PrivateKey = string(pem.EncodeToMemory(&block))
+		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	return result, nil
