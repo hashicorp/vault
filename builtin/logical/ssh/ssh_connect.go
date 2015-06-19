@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -34,24 +35,45 @@ func sshConnect(b *backend) *framework.Path {
 
 func (b *backend) sshConnectWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.sshConnectWrite username:%#v address:%#v\n", d.Get("username").(string), d.Get("address").(string))
+	username := d.Get("username").(string)
+	ipAddr := d.Get("address").(string)
+	log.Printf("Vishal: ssh.sshConnectWrite username:%#v address:%#v\n", username, ipAddr)
 
-	//username := d.Get("username").(string)
-	//ip := d.Get("ip").(string)
-	//key := d.Get("key").(string)
-	//log.Printf("Vishal: ssh.pathAddHostKeyWrite username:%#v ip:%#v key:%#v\n", username, ip, key)
-	localCmdString := `
-	rm -f vault_ssh_otk.pem vault_ssh_otk.pem.pub;
-	ssh-keygen -f vault_ssh_otk.pem -t rsa -N '';
-	chmod 400 vault_ssh_otk.pem;
-	scp -i vault_ssh_shared.pem vault_ssh_otk.pem.pub vishal@localhost:/home/vishal
-	echo done!
-	`
-	err := exec_command(localCmdString)
+	hostKeyPath := "hosts/" + ipAddr + "/" + username
+	entry, err := req.Storage.Get(hostKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, fmt.Errorf("Host key is not configured. Please configure them at the config/addhostkey endpoint")
+	}
+	var hostKey sshHostKey
+	if err := entry.DecodeJSON(&hostKey); err != nil {
+		return nil, fmt.Errorf("Error reading the host key: %s", err)
+	}
+	log.Printf("Vishal: host key previously configured: \n---------------\n%#v\n--------------\n", hostKey.Key)
+
+	//TODO: save th entry in a file
+	//TODO: read the hosts path and get the key
+	//TODO: Input validation for the commands below
+
+	rmCmd := "rm -f " + "vault_ssh_otk.pem" + " " + "vault_ssh_otk.pem.pub" + ";"
+	sshKeygenCmd := "ssh-keygen -f " + "vault_ssh_otk.pem" + " -t rsa -N ''" + ";"
+	chmodCmd := "chmod 400 " + "vault_ssh_otk.pem" + ";"
+	scpCmd := "scp -i " + "vault_ssh_shared.pem" + " " + "vault_ssh_otk.pem.pub" + " " + username + "@" + ipAddr + ":~;"
+
+	localCmdString := strings.Join([]string{
+		rmCmd,
+		sshKeygenCmd,
+		chmodCmd,
+		scpCmd,
+	}, "")
+	err = exec_command(localCmdString)
 	if err != nil {
 		fmt.Errorf("Running command failed " + err.Error())
 	}
-	session := createSSHPublicKeysSession("vishal", "127.0.0.1")
+	session := createSSHPublicKeysSession(username, ipAddr)
 	var buf bytes.Buffer
 	session.Stdout = &buf
 	if err := installSshOtkInTarget(session); err != nil {
@@ -61,11 +83,16 @@ func (b *backend) sshConnectWrite(
 	fmt.Println(buf.String())
 	keyBytes, err := ioutil.ReadFile("vault_ssh_otk.pem")
 	oneTimeKey := string(keyBytes)
-	return &logical.Response{
+	log.Printf("Vishal: Returning:%s\n", oneTimeKey)
+	return b.Secret(SecretSshHostKeyType).Response(map[string]interface{}{
+		"key": oneTimeKey,
+	}, nil), nil
+	/*return &logical.Response{
 		Data: map[string]interface{}{
 			"key": oneTimeKey,
 		},
 	}, nil
+	*/
 }
 
 const sshConnectHelpSyn = `
@@ -73,5 +100,5 @@ sshConnectionHelpSyn
 `
 
 const sshConnectHelpDesc = `
-sshConnectionHelpDesc
+rshConnectionHelpDesc
 `

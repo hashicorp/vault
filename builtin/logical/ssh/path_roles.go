@@ -1,6 +1,9 @@
 package ssh
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/vault/logical"
@@ -33,18 +36,45 @@ func pathRoles(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.pathRoleRead\n")
-	return nil, nil
+	entry, err := req.Storage.Get("policy/" + d.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"policy": string(entry.Value),
+		},
+	}, nil
 }
 
-func (b *backend) pathRoleWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.pathRoleWrite\n")
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error compacting policy: %s", err)), nil
+	}
+
+	err := req.Storage.Put(&logical.StorageEntry{
+		Key:   "policy/" + d.Get("name").(string),
+		Value: buf.Bytes(),
+	})
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
-func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.pathRoleDelete\n")
+	err := req.Storage.Delete("policy/" + d.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 

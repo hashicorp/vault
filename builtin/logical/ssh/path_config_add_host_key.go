@@ -34,17 +34,18 @@ func pathConfigAddHostKey(b *backend) *framework.Path {
 }
 
 func (b *backend) pathAddHostKeyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Printf("Vishal: ssh.pathAddHostKeyWrite\n")
 	username := d.Get("username").(string)
 	ip := d.Get("ip").(string)
 	//TODO: parse ip into ipv4 address and validate it
 	key := d.Get("key").(string)
-	log.Printf("Vishal: ssh.pathAddHostKeyWrite username:%#v ip:%#v key:%#v\n", username, ip, key)
+	//log.Printf("Vishal: ssh.pathAddHostKeyWrite username:%#v ip:%#v key:%#v\n", username, ip, key)
 
-	entry, err := logical.StorageEntryJSON("hosts/"+ip+"/"+username, &sshAddHostKey{
-		Username: username,
-		IP:       ip,
-		Key:      key,
+	hostKeyPath := "hosts/" + ip + "/" + username
+	log.Printf("Vishal: hostKeyPath: %#v\n", hostKeyPath)
+	entry, err := logical.StorageEntryJSON("hosts/"+ip+"/"+username, &sshHostKey{
+		Key: key,
 	})
 	if err != nil {
 		return nil, err
@@ -55,10 +56,8 @@ func (b *backend) pathAddHostKeyWrite(req *logical.Request, d *framework.FieldDa
 	return nil, nil
 }
 
-type sshAddHostKey struct {
-	Username string
-	IP       string
-	Key      string
+type sshHostKey struct {
+	Key string
 }
 
 const pathConfigAddHostKeySyn = `

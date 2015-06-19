@@ -47,7 +47,9 @@ func (c *SshCommand) Run(args []string) int {
 
 	sshEnv := os.Environ()
 
-	sshCmdArgs := []string{"ssh", "-i", "vault_ssh_otk_" + args[0] + ".pem", "vishal@localhost"}
+	sshNew := "ssh -i " + "vault_ssh_otk_" + args[0] + ".pem " + args[0]
+	log.Printf("Vishal: sshNew:%#v\n", sshNew)
+	sshCmdArgs := []string{"ssh", "-i", "vault_ssh_otk_" + args[0] + ".pem", args[0]}
 	defer os.Remove("vault_ssh_otk_" + args[0] + ".pem")
 
 	if err := syscall.Exec(sshBinary, sshCmdArgs, sshEnv); err != nil {

@@ -70,6 +70,23 @@ type configLease struct {
 	LeaseMax time.Duration
 }
 
+func (b *backend) Lease(s logical.Storage) (*configLease, error) {
+	entry, err := s.Get("config/lease")
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result configLease
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 const pathConfigLeaseHelpSyn = `
 Configure the default lease information for SSH one time keys.
 `

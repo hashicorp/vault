@@ -3,7 +3,9 @@ package ssh
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os/exec"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -17,12 +19,19 @@ func exec_command(cmdString string) error {
 }
 
 func installSshOtkInTarget(session *ssh.Session) error {
-	remoteCmdString := `
-	grep -vFf vault_ssh_otk.pem.pub ~/.ssh/authorized_keys > ./temp_authorized_keys
-	cat ./temp_authorized_keys > ~/.ssh/authorized_keys
-	cat ./vault_ssh_otk.pem.pub >> ~/.ssh/authorized_keys
-	rm -f ./temp_authorized_keys ./vault_ssh_otk.pem.pub
-	`
+	log.Printf("Vishal: ssh.installSshOtkInTarget\n")
+
+	grepCmd := "grep -vFf " + "vault_ssh_otk.pem.pub" + " " + "~/.ssh/authorized_keys" + " > " + "./temp_authorized_keys" + ";"
+	catCmdRemoveDuplicate := "cat " + "./temp_authorized_keys" + " > " + "~/.ssh/authorized_keys" + ";"
+	catCmdAppendNew := "cat " + "./vault_ssh_otk.pem.pub" + " >> " + "~/.ssh/authorized_keys" + ";"
+	rmCmd := "rm -f " + "./temp_authorized_keys" + " " + "./vault_ssh_otk.pem.pub" + ";"
+	remoteCmdString := strings.Join([]string{
+		grepCmd,
+		catCmdRemoveDuplicate,
+		catCmdAppendNew,
+		rmCmd,
+	}, "")
+
 	if err := session.Run(remoteCmdString); err != nil {
 		return err
 	}
