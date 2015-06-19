@@ -18,7 +18,6 @@ func pathConfigLease(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Default lease for roles.",
 			},
-
 			"lease_max": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Maximum time a credential is valid for.",

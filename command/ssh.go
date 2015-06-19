@@ -37,7 +37,9 @@ func (c *SshCommand) Run(args []string) int {
 	}
 
 	log.Printf("Vishal: command.ssh.Run returned! OTK:%#v\n", sshOneTimeKey)
-	err = ioutil.WriteFile("./vault_ssh_otk_"+args[0]+".pem", []byte(sshOneTimeKey.Key), 0400)
+	ag := strings.Split(args[0], "@")
+	sshOtkFileName := "vault_ssh_otk_" + ag[0] + "_" + ag[1] + ".pem"
+	err = ioutil.WriteFile(sshOtkFileName, []byte(sshOneTimeKey.Key), 0400)
 	//if sshOneTimeKey is empty, fail
 	//Establish a session directly from client to the target using the one time key received without making the vault server the middle guy:w
 	sshBinary, err := exec.LookPath("ssh")
@@ -47,10 +49,10 @@ func (c *SshCommand) Run(args []string) int {
 
 	sshEnv := os.Environ()
 
-	sshNew := "ssh -i " + "vault_ssh_otk_" + args[0] + ".pem " + args[0]
+	sshNew := "ssh -i " + sshOtkFileName + " " + args[0]
 	log.Printf("Vishal: sshNew:%#v\n", sshNew)
-	sshCmdArgs := []string{"ssh", "-i", "vault_ssh_otk_" + args[0] + ".pem", args[0]}
-	defer os.Remove("vault_ssh_otk_" + args[0] + ".pem")
+	sshCmdArgs := []string{"ssh", "-i", sshOtkFileName, args[0]}
+	//defer os.Remove("vault_ssh_otk_" + args[0] + ".pem")
 
 	if err := syscall.Exec(sshBinary, sshCmdArgs, sshEnv); err != nil {
 		log.Printf("Execution failed: sshCommand: " + err.Error())

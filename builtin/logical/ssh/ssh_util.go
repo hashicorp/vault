@@ -18,18 +18,28 @@ func exec_command(cmdString string) error {
 	return nil
 }
 
-func installSshOtkInTarget(session *ssh.Session) error {
+func installSshOtkInTarget(session *ssh.Session, username string, ipAddr string) error {
 	log.Printf("Vishal: ssh.installSshOtkInTarget\n")
 
-	grepCmd := "grep -vFf " + "vault_ssh_otk.pem.pub" + " " + "~/.ssh/authorized_keys" + " > " + "./temp_authorized_keys" + ";"
-	catCmdRemoveDuplicate := "cat " + "./temp_authorized_keys" + " > " + "~/.ssh/authorized_keys" + ";"
-	catCmdAppendNew := "cat " + "./vault_ssh_otk.pem.pub" + " >> " + "~/.ssh/authorized_keys" + ";"
-	rmCmd := "rm -f " + "./temp_authorized_keys" + " " + "./vault_ssh_otk.pem.pub" + ";"
+	//TODO: Input validation for the commands below
+	otkPrivateKeyFileName := "vault_ssh_" + username + "_" + ipAddr + "_otk.pem"
+	otkPublicKeyFileName := otkPrivateKeyFileName + ".pub"
+	authKeysFileName := "~/.ssh/authorized_keys"
+	tempKeysFileName := "./temp_authorized_keys"
+
+	grepCmd := "grep -vFf " + otkPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
+	catCmdRemoveDuplicate := "cat " + tempKeysFileName + " > " + authKeysFileName + ";"
+	catCmdAppendNew := "cat " + otkPublicKeyFileName + " >> " + authKeysFileName + ";"
+	rmCmd := "rm -f " + tempKeysFileName + " " + otkPublicKeyFileName + ";"
+	log.Printf("Vishal: grepCmd:%#v\n catCmdRemoveDuplicate:%#v\n catCmdAppendNew:%#v\n rmCmd: %#v\n", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, rmCmd)
 	remoteCmdString := strings.Join([]string{
 		grepCmd,
+		"echo 1;",
 		catCmdRemoveDuplicate,
+		"echo 2;",
 		catCmdAppendNew,
-		rmCmd,
+		"echo 3;",
+		//rmCmd,
 	}, "")
 
 	if err := session.Run(remoteCmdString); err != nil {
@@ -38,7 +48,8 @@ func installSshOtkInTarget(session *ssh.Session) error {
 	return nil
 }
 func createSSHPublicKeysSession(username string, ipAddr string) *ssh.Session {
-	pemBytes, err := ioutil.ReadFile("vault_ssh_shared.pem")
+	hostKeyFileName := "./vault_ssh_" + username + "_" + ipAddr + "_shared.pem"
+	pemBytes, err := ioutil.ReadFile(hostKeyFileName)
 	if err != nil {
 		fmt.Errorf("Reading shared key failed: " + err.Error())
 	}
@@ -58,6 +69,9 @@ func createSSHPublicKeysSession(username string, ipAddr string) *ssh.Session {
 	client, err := ssh.Dial("tcp", ipAddr+":22", config)
 	if err != nil {
 		fmt.Errorf("Dial Failed: " + err.Error())
+	}
+	if client == nil {
+		fmt.Errorf("SSH Dial to target failed: ", err.Error())
 	}
 
 	session, err := client.NewSession()

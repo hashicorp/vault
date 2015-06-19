@@ -57,11 +57,17 @@ func (b *backend) sshConnectWrite(
 	//TODO: save th entry in a file
 	//TODO: read the hosts path and get the key
 	//TODO: Input validation for the commands below
+	hostKeyFileName := "./vault_ssh_" + username + "_" + ipAddr + "_shared.pem"
+	err = ioutil.WriteFile(hostKeyFileName, []byte(hostKey.Key), 0400)
 
-	rmCmd := "rm -f " + "vault_ssh_otk.pem" + " " + "vault_ssh_otk.pem.pub" + ";"
-	sshKeygenCmd := "ssh-keygen -f " + "vault_ssh_otk.pem" + " -t rsa -N ''" + ";"
-	chmodCmd := "chmod 400 " + "vault_ssh_otk.pem" + ";"
-	scpCmd := "scp -i " + "vault_ssh_shared.pem" + " " + "vault_ssh_otk.pem.pub" + " " + username + "@" + ipAddr + ":~;"
+	otkPrivateKeyFileName := "vault_ssh_" + username + "_" + ipAddr + "_otk.pem"
+	otkPublicKeyFileName := otkPrivateKeyFileName + ".pub"
+	rmCmd := "rm -f " + otkPrivateKeyFileName + " " + otkPublicKeyFileName + ";"
+	sshKeygenCmd := "ssh-keygen -f " + otkPrivateKeyFileName + " -t rsa -N ''" + ";"
+	chmodCmd := "chmod 400 " + otkPrivateKeyFileName + ";"
+	scpCmd := "scp -i " + hostKeyFileName + " " + otkPublicKeyFileName + " " + username + "@" + ipAddr + ":~;"
+
+	log.Printf("Vishal: scpCmd: \n", scpCmd)
 
 	localCmdString := strings.Join([]string{
 		rmCmd,
@@ -73,18 +79,20 @@ func (b *backend) sshConnectWrite(
 	if err != nil {
 		fmt.Errorf("Running command failed " + err.Error())
 	}
+	log.Printf("Vishal: Creating session\n")
 	session := createSSHPublicKeysSession(username, ipAddr)
 	var buf bytes.Buffer
 	session.Stdout = &buf
-	if err := installSshOtkInTarget(session); err != nil {
+	log.Printf("Vishal: Installing keys\n")
+	if err := installSshOtkInTarget(session, username, ipAddr); err != nil {
 		fmt.Errorf("Failed to install one-time-key at target machine: " + err.Error())
 	}
 	session.Close()
 	fmt.Println(buf.String())
-	keyBytes, err := ioutil.ReadFile("vault_ssh_otk.pem")
+	keyBytes, err := ioutil.ReadFile(otkPrivateKeyFileName)
 	oneTimeKey := string(keyBytes)
-	log.Printf("Vishal: Returning:%s\n", oneTimeKey)
-	return b.Secret(SecretSshHostKeyType).Response(map[string]interface{}{
+	log.Printf("Vishal: Returning:[%s]\n", oneTimeKey)
+	return b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
 		"key": oneTimeKey,
 	}, nil), nil
 	/*return &logical.Response{

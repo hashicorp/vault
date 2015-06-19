@@ -8,12 +8,12 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const SecretSshHostKeyType = "secret_ssh_host_key_type"
+const SecretOneTimeKeyType = "secret_one_type_key_type"
 
 func secretOneTimeKey(b *backend) *framework.Secret {
 	log.Printf("Vishal: ssh.secretPrivateKey\n")
 	return &framework.Secret{
-		Type: SecretSshHostKeyType,
+		Type: SecretOneTimeKeyType,
 		Fields: map[string]*framework.FieldSchema{
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
