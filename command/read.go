@@ -22,12 +22,16 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) < 1 || len(args) > 2 {
-		c.Ui.Error("read expects one or two arguments")
+	if len(args) != 1 {
+		c.Ui.Error("read expects one argument")
 		flags.Usage()
 		return 1
 	}
+
 	path := args[0]
+	if path[0] == '/' {
+		path = path[1:]
+	}
 
 	client, err := c.Client()
 	if err != nil {
@@ -98,7 +102,7 @@ Read Options:
   -format=table           The format for output. By default it is a whitespace-
                           delimited table. This can also be json.
 
-  -field=field            If included, the raw value of the specified field 
+  -field=field            If included, the raw value of the specified field
   						  will be output raw to stdout.
 
 `

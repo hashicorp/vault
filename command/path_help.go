@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// HelpCommand is a Command that lists the mounts.
-type HelpCommand struct {
+// PathHelpCommand is a Command that lists the mounts.
+type PathHelpCommand struct {
 	Meta
 }
 
-func (c *HelpCommand) Run(args []string) int {
+func (c *PathHelpCommand) Run(args []string) int {
 	flags := c.Meta.FlagSet("help", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -35,8 +35,15 @@ func (c *HelpCommand) Run(args []string) int {
 
 	help, err := client.Help(path)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error reading help: %s", err))
+		if strings.Contains(err.Error(), "Vault is sealed") {
+			c.Ui.Error(`Error: Vault is sealed.
+
+The path-help command requires the Vault to be unsealed so that
+mount points of secret backends are known.`)
+		} else {
+			c.Ui.Error(fmt.Sprintf(
+				"Error reading help: %s", err))
+		}
 		return 1
 	}
 
@@ -44,19 +51,22 @@ func (c *HelpCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *HelpCommand) Synopsis() string {
+func (c *PathHelpCommand) Synopsis() string {
 	return "Look up the help for a path"
 }
 
-func (c *HelpCommand) Help() string {
+func (c *PathHelpCommand) Help() string {
 	helpText := `
-Usage: vault help [options] path
+Usage: vault path-help [options] path
 
   Look up the help for a path.
 
   All endpoints in Vault from system paths, secret paths, and credential
   providers provide built-in help. This command looks up and outputs that
   help.
+
+  The command requires that the Vault be unsealed, because otherwise
+  the mount points of the backends are unknown.
 
 General Options:
 

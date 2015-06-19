@@ -13,14 +13,14 @@ import (
 // HelpFunc is a cli.HelpFunc that can is used to output the help for Vault.
 func HelpFunc(commands map[string]cli.CommandFactory) string {
 	commonNames := map[string]struct{}{
-		"delete": struct{}{},
-		"help":   struct{}{},
-		"read":   struct{}{},
-		"renew":  struct{}{},
-		"revoke": struct{}{},
-		"write":  struct{}{},
-		"server": struct{}{},
-		"status": struct{}{},
+		"delete":    struct{}{},
+		"path-help": struct{}{},
+		"read":      struct{}{},
+		"renew":     struct{}{},
+		"revoke":    struct{}{},
+		"write":     struct{}{},
+		"server":    struct{}{},
+		"status":    struct{}{},
 	}
 
 	// Determine the maximum key length, and classify based on type
