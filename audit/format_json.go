@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/hashicorp/vault/logical"
+	"errors"
 )
 
 // FormatJSON is a Formatter implementation that structuteres data into
@@ -31,9 +32,10 @@ func (f *FormatJSON) FormatRequest(
 		},
 
 		Request: JSONRequest{
-			Operation: req.Operation,
-			Path:      req.Path,
-			Data:      req.Data,
+			Operation:  req.Operation,
+			Path:       req.Path,
+			Data:       req.Data,
+			RemoteAddr: req.Connection.RemoteAddr,
 		},
 	})
 }
@@ -50,6 +52,9 @@ func (f *FormatJSON) FormatResponse(
 	}
 	if resp == nil {
 		resp = new(logical.Response)
+	}
+	if err == nil {
+		err = errors.New("")
 	}
 
 	var respAuth JSONAuth
@@ -73,6 +78,7 @@ func (f *FormatJSON) FormatResponse(
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
 		Type: "response",
+		Error: err.Error(),
 
 		Auth: JSONAuth{
 			Policies: auth.Policies,
@@ -80,9 +86,10 @@ func (f *FormatJSON) FormatResponse(
 		},
 
 		Request: JSONRequest{
-			Operation: req.Operation,
-			Path:      req.Path,
-			Data:      req.Data,
+			Operation:  req.Operation,
+			Path:       req.Path,
+			Data:       req.Data,
+			RemoteAddr: req.Connection.RemoteAddr,
 		},
 
 		Response: JSONResponse{
@@ -111,9 +118,10 @@ type JSONResponseEntry struct {
 }
 
 type JSONRequest struct {
-	Operation logical.Operation      `json:"operation"`
-	Path      string                 `json:"path"`
-	Data      map[string]interface{} `json:"data"`
+	Operation  logical.Operation      `json:"operation"`
+	Path       string                 `json:"path"`
+	Data       map[string]interface{} `json:"data"`
+	RemoteAddr string                 `json:"remote_address"`
 }
 
 type JSONResponse struct {

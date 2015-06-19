@@ -140,6 +140,7 @@ func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err e
 	req := &logical.Request{
 		Operation: logical.RollbackOperation,
 		Path:      path,
+		Connection: &logical.Connection{},
 	}
 	_, err = m.router.Route(req)
 
