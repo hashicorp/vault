@@ -86,7 +86,7 @@ func TestKeyCopy(key []byte) []byte {
 
 type noopAudit struct{}
 
-func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request) error {
+func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, e error) error {
 	return nil
 }
 

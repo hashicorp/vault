@@ -374,6 +374,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
+
 	// Validate the token
 	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
 	if err != nil {
@@ -387,6 +388,11 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 			errType = logical.ErrInvalidRequest
 		}
 
+		if err := c.auditBroker.LogRequest(auth, req, err); err != nil {
+			c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
+				req, err)
+		}
+
 		return logical.ErrorResponse(err.Error()), errType
 	}
 
@@ -394,7 +400,7 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 	req.DisplayName = auth.DisplayName
 
 	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(auth, req); err != nil {
+	if err := c.auditBroker.LogRequest(auth, req, errors.New("")); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
 			req, err)
 		return nil, ErrInternalError
@@ -473,7 +479,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req); err != nil {
+	if err := c.auditBroker.LogRequest(nil, req, errors.New("")); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
 			req, err)
 		return nil, ErrInternalError

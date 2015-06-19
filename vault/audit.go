@@ -261,7 +261,7 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error {
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.l.RLock()
 	defer a.l.RUnlock()
@@ -270,7 +270,7 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error
 	anyLogged := false
 	for name, be := range a.backends {
 		start := time.Now()
-		err := be.backend.LogRequest(auth, req)
+		err := be.backend.LogRequest(auth, req, outerErr)
 		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
 		if err != nil {
 			a.logger.Printf("[ERR] audit: backend '%s' failed to log request: %v", name, err)

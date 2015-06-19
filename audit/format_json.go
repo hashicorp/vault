@@ -8,22 +8,29 @@ import (
 	"errors"
 )
 
-// FormatJSON is a Formatter implementation that structuteres data into
+// FormatJSON is a Formatter implementation that structures data into
 // a JSON format.
 type FormatJSON struct{}
 
 func (f *FormatJSON) FormatRequest(
 	w io.Writer,
-	auth *logical.Auth, req *logical.Request) error {
+	auth *logical.Auth,
+	req *logical.Request,
+	err error) error {
+
 	// If auth is nil, make an empty one
 	if auth == nil {
 		auth = new(logical.Auth)
+	}
+	if err == nil {
+		err = errors.New("")
 	}
 
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
 		Type: "request",
+		Error: err.Error(),
 
 		Auth: JSONAuth{
 			DisplayName: auth.DisplayName,
@@ -106,6 +113,7 @@ type JSONRequestEntry struct {
 	Type    string      `json:"type"`
 	Auth    JSONAuth    `json:"auth"`
 	Request JSONRequest `json:"request"`
+	Error   string      `json:"error"`
 }
 
 // JSONResponseEntry is the structure of a response audit log entry in JSON.
