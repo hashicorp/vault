@@ -1,7 +1,6 @@
 package pki
 
 import (
-	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -22,77 +21,7 @@ var (
 	stepCount = 0
 )
 
-func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Duration, certBundle *certutil.CertBundle) (cert, ca *x509.Certificate, privKey crypto.Signer, err error) {
-	var pemBlock *pem.Block
-
-	pemBlock, _ = pem.Decode([]byte(certBundle.Certificate))
-	if pemBlock == nil {
-		return nil, nil, nil, fmt.Errorf("No PEM data found for cert")
-	}
-	cert, err = x509.ParseCertificate(pemBlock.Bytes)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	pemBlock, _ = pem.Decode([]byte(certBundle.IssuingCA))
-	if pemBlock == nil {
-		return nil, nil, nil, fmt.Errorf("No PEM data found for issuing CA")
-	}
-	ca, err = x509.ParseCertificate(pemBlock.Bytes)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	pemBlock, _ = pem.Decode([]byte(certBundle.PrivateKey))
-	if pemBlock == nil {
-		return nil, nil, nil, fmt.Errorf("No PEM data found for private key")
-	}
-	switch keyType {
-	case "rsa":
-		privKey, err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-	case "ec":
-		privKey, err = x509.ParseECPrivateKey(pemBlock.Bytes)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Unable to decode EC private key: %s; value was %s", err, certBundle.PrivateKey)
-		}
-	default:
-		return nil, nil, nil, fmt.Errorf("Unknown private key type %s", keyType)
-	}
-
-	// There should only be one usage type, because only one is requested
-	// in the tests
-	if len(cert.ExtKeyUsage) != 1 {
-		return cert, nil, nil, fmt.Errorf("Got wrong size key usage in generated cert")
-	}
-	switch usage {
-	case serverUsage:
-		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageServerAuth {
-			return cert, nil, nil, fmt.Errorf("Bad key usage")
-		}
-	case clientUsage:
-		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageClientAuth {
-			return cert, nil, nil, fmt.Errorf("Bad key usage")
-		}
-	case codeSigningUsage:
-		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageCodeSigning {
-			return cert, nil, nil, fmt.Errorf("Bad key usage")
-		}
-	}
-
-	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 10 {
-		return cert, nil, nil, fmt.Errorf("Validity period starts out of range")
-	}
-
-	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
-		return cert, nil, nil, fmt.Errorf("Validity period too large")
-	}
-
-	return
-}
-
+// Performs basic tests on CA functionality
 func TestBackend_basic(t *testing.T) {
 	b := Backend()
 
@@ -108,6 +37,8 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+// Generates and tests steps that walk through the various possibilities
+// of role flags to ensure that they are properly restricted
 func TestBackend_roles(t *testing.T) {
 	b := Backend()
 
@@ -129,6 +60,65 @@ func TestBackend_roles(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+// Performs some validity checking on the returned bundles
+func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Duration, certBundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
+	parsedCertBundle, err := certBundle.ToParsedCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing cert bundle: %s", err)
+	}
+
+	switch {
+	case parsedCertBundle.Certificate == nil:
+		return nil, fmt.Errorf("Did not find a certificate in the cert bundle")
+	case parsedCertBundle.IssuingCA == nil:
+		return nil, fmt.Errorf("Did not find a CA in the cert bundle")
+	case parsedCertBundle.PrivateKey == nil:
+		return nil, fmt.Errorf("Did not find a private key in the cert bundle")
+	case parsedCertBundle.PrivateKeyType == certutil.UnknownPrivateKey:
+		return nil, fmt.Errorf("Could not figure out type of private key")
+	}
+
+	switch {
+	case parsedCertBundle.PrivateKeyType == certutil.RSAPrivateKey && keyType != "rsa":
+		fallthrough
+	case parsedCertBundle.PrivateKeyType == certutil.ECPrivateKey && keyType != "ec":
+		return nil, fmt.Errorf("Given key type does not match type found in bundle")
+	}
+
+	cert := parsedCertBundle.Certificate
+	// There should only be one usage type, because only one is requested
+	// in the tests
+	if len(cert.ExtKeyUsage) != 1 {
+		return nil, fmt.Errorf("Got wrong size key usage in generated cert")
+	}
+	switch usage {
+	case serverUsage:
+		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageServerAuth {
+			return nil, fmt.Errorf("Bad key usage")
+		}
+	case clientUsage:
+		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageClientAuth {
+			return nil, fmt.Errorf("Bad key usage")
+		}
+	case codeSigningUsage:
+		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageCodeSigning {
+			return nil, fmt.Errorf("Bad key usage")
+		}
+	}
+
+	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 10 {
+		return nil, fmt.Errorf("Validity period starts out of range")
+	}
+
+	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
+		return nil, fmt.Errorf("Validity period too large")
+	}
+
+	return parsedCertBundle, nil
+}
+
+// Generates steps to test out CA configuration -- certificates + CRL expiry,
+// and ensure that the certificates are readable after storing them
 func generateCASteps(t *testing.T) []logicaltest.TestStep {
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
@@ -136,6 +126,14 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 			Path:      "config/ca",
 			Data: map[string]interface{}{
 				"pem_bundle": caKey + caCert,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/crl",
+			Data: map[string]interface{}{
+				"expiry": "16h",
 			},
 		},
 
@@ -187,11 +185,23 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 				return nil
 			},
 		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/crl",
+			Check: func(resp *logical.Response) error {
+				if resp.Data["expiry"].(string) != "16h" {
+					return fmt.Errorf("CRL lifetimes do not match (got %s)", resp.Data["expiry"].(string))
+				}
+				return nil
+			},
+		},
 	}
 
 	return ret
 }
 
+// Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 	roleVals := roleEntry{
 		LeaseMax: "12h",
@@ -215,6 +225,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		return fmt.Errorf("Expected an error, but did not seem to get one")
 	}
 
+	// Adds tests with the currently configured issue/role information
 	addTests := func(testCheck logicaltest.TestCheckFunc) {
 		//fmt.Printf("role vals: %#v\n", roleVals)
 		//fmt.Printf("issue vals: %#v\n", issueTestStep)
@@ -232,6 +243,8 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		ret = append(ret, issueTestStep)
 	}
 
+	// Returns a TestCheckFunc that performs various validity checks on the
+	// returned certificate information, mostly within checkCertsAndPrivateKey
 	getCnCheck := func(name, keyType string, usage certUsage, validity time.Duration) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
@@ -239,10 +252,11 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 			if err != nil {
 				return err
 			}
-			cert, _, _, err := checkCertsAndPrivateKey(keyType, usage, validity, &certBundle)
+			parsedCertBundle, err := checkCertsAndPrivateKey(keyType, usage, validity, &certBundle)
 			if err != nil {
 				return fmt.Errorf("Error checking generated certificate: %s", err)
 			}
+			cert := parsedCertBundle.Certificate
 			if cert.Subject.CommonName != name {
 				return fmt.Errorf("Error: returned certificate has CN of %s but %s was requested", cert.Subject.CommonName, name)
 			}
@@ -256,6 +270,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		}
 	}
 
+	// Common names to test with the various role flags toggled
 	var commonNames struct {
 		Localhost         bool `structs:"localhost"`
 		BaseDomain        bool `structs:"foo.example.com"`
@@ -265,6 +280,11 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		AnyHost           bool `structs:"porkslap.beer"`
 	}
 
+	// Adds a series of tests based on the current selection of
+	// allowed common names; contains some (seeded) randomness
+	//
+	// This allows for a variety of common names to be tested in various
+	// combinations with allowed toggles of the role
 	addCnTests := func() {
 		cnMap := structs.New(commonNames).Map()
 		// For the number of tests being run, this is known to hit all

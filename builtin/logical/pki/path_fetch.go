@@ -3,12 +3,13 @@ package pki
 import (
 	"encoding/pem"
 	"fmt"
-	"strings"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// Returns the CA in raw format
 func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `ca(/pem)?`,
@@ -22,6 +23,7 @@ func pathFetchCA(b *backend) *framework.Path {
 	}
 }
 
+// Returns the CRL in raw format
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl(/pem)?`,
@@ -35,6 +37,8 @@ func pathFetchCRL(b *backend) *framework.Path {
 	}
 }
 
+// Returns any valid (non-revoked) cert. Since "ca" fits the pattern, this path
+// also handles returning the CA cert in a non-raw format.
 func pathFetchValid(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)`,
@@ -55,28 +59,10 @@ hyphen-separated octal`,
 	}
 }
 
+// This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/crl`,
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
-		},
-
-		HelpSynopsis:    pathFetchHelpSyn,
-		HelpDescription: pathFetchHelpDesc,
-	}
-}
-
-func pathFetchRevoked(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: `revoked/(?P<serial>[0-9A-Fa-f-:]+)`,
-		Fields: map[string]*framework.FieldSchema{
-			"serial": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Certificate serial number, in colon- or hyphen-separated octal",
-			},
-		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathFetchRead,
@@ -92,11 +78,16 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	var pemType string
 	var contentType string
 	var certEntry *logical.StorageEntry
-	var userErr, intErr error
+	var funcErr error
 	var certificate []byte
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
+
+	// Some of these need to return raw and some non-raw;
+	// this is basically handled by setting contentType or not.
+	// Errors don't cause an immediate exit, because the raw
+	// paths still need to return raw output.
 
 	switch {
 	case req.Path == "ca" || req.Path == "ca/pem":
@@ -123,39 +114,27 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		goto reply
 	}
 
-	_, _, userErr, intErr = fetchCAInfo(req)
-	switch {
-	case userErr != nil:
-		response = logical.ErrorResponse(fmt.Sprintf("%s", userErr))
+	_, funcErr = fetchCAInfo(req)
+	switch funcErr.(type) {
+	case certutil.UserError:
+		response = logical.ErrorResponse(fmt.Sprintf("%s", funcErr))
 		goto reply
-	case intErr != nil:
-		retErr = intErr
-		goto reply
-	}
-
-	certEntry, userErr, intErr = fetchCertBySerial(req, req.Path, serial)
-	switch {
-	case userErr != nil:
-		response = logical.ErrorResponse(userErr.Error())
-		goto reply
-	case intErr != nil:
-		retErr = intErr
+	case certutil.InternalError:
+		retErr = funcErr
 		goto reply
 	}
 
-	switch {
-	case strings.HasPrefix(req.Path, "revoked/"):
-		var revInfo revocationInfo
-		err := certEntry.DecodeJSON(&revInfo)
-		if err != nil {
-			retErr = fmt.Errorf("Error decoding revocation entry for serial %s: %s", serial, err)
-			goto reply
-		}
-		certificate = revInfo.CertificateBytes
-		response.Data["revocation_time"] = revInfo.RevocationTime
-	default:
-		certificate = certEntry.Value
+	certEntry, funcErr = fetchCertBySerial(req, req.Path, serial)
+	switch funcErr.(type) {
+	case certutil.UserError:
+		response = logical.ErrorResponse(funcErr.Error())
+		goto reply
+	case certutil.InternalError:
+		retErr = funcErr
+		goto reply
 	}
+
+	certificate = certEntry.Value
 
 	if len(pemType) != 0 {
 		block := pem.Block{
@@ -188,11 +167,11 @@ reply:
 }
 
 const pathFetchHelpSyn = `
-Fetch a CA, CRL, valid or revoked certificate.
+Fetch a CA, CRL, or non-revoked certificate.
 `
 
 const pathFetchHelpDesc = `
-This allows certificates to be fetched. If using the fetch/ prefix any valid certificate can be fetched; if using the revoked/ prefix, which requires a root token, revoked certificates can also be fetched.
+This allows certificates to be fetched. If using the fetch/ prefix any non-revoked certificate can be fetched.
 
 Using "ca" or "crl" as the value fetches the appropriate information in DER encoding. Add "/pem" to either to get PEM encoding.
 `

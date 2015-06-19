@@ -5,9 +5,9 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -16,46 +16,45 @@ type revocationInfo struct {
 	RevocationTime   int64  `json:"revocation_time"`
 }
 
-var (
-	crlLifetime       = time.Hour * 72
-	revokeStorageLock = &sync.Mutex{}
-)
-
-func revokeCert(req *logical.Request, serial string) (*logical.Response, error) {
+// Revokes a cert, and tries to be smart about error recovery
+func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Response, error) {
 	alreadyRevoked := false
-	var err error
+	var revInfo revocationInfo
 
-	revInfo := revocationInfo{}
-
-	certEntry, userErr, intErr := fetchCertBySerial(req, "revoked/", serial)
+	certEntry, err := fetchCertBySerial(req, "revoked/", serial)
+	// Don't check error because it's expected that it may fail here;
+	// just check for existence
 	if certEntry != nil {
 		// Verify that it is also deleted from certs/
 		// in case of partial failure from an earlier run.
-		certEntry, _, _ = fetchCertBySerial(req, "certs/", serial)
-		if certEntry != nil {
-			alreadyRevoked = true
-
-			revEntry, err := req.Storage.Get("revoked/" + serial)
-			if err != nil {
-				return nil, fmt.Errorf("Error getting existing revocation info")
-			}
-
-			err = revEntry.DecodeJSON(&revInfo)
-			if err != nil {
-				return nil, fmt.Errorf("Error decoding existing revocation info")
-			}
-		} else {
+		certEntry, _ = fetchCertBySerial(req, "certs/", serial)
+		if certEntry == nil {
+			// Everything seems sane, so don't rebuild the CRL
 			return nil, nil
+		}
+
+		// Still exists in certs/; set the revocation info, below it will
+		// be removed from certs/ and the CRL rotated
+		alreadyRevoked = true
+
+		revEntry, err := req.Storage.Get("revoked/" + serial)
+		if revEntry == nil || err != nil {
+			return nil, fmt.Errorf("Error getting existing revocation info")
+		}
+
+		err = revEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("Error decoding existing revocation info")
 		}
 	}
 
 	if !alreadyRevoked {
-		certEntry, userErr, intErr = fetchCertBySerial(req, "certs/", serial)
-		switch {
-		case userErr != nil:
-			return logical.ErrorResponse(userErr.Error()), nil
-		case intErr != nil:
-			return nil, intErr
+		certEntry, err = fetchCertBySerial(req, "certs/", serial)
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		case certutil.InternalError:
+			return nil, err
 		}
 
 		cert, err := x509.ParseCertificate(certEntry.Value)
@@ -85,12 +84,12 @@ func revokeCert(req *logical.Request, serial string) (*logical.Response, error) 
 
 	}
 
-	userErr, intErr = buildCRL(req)
-	switch {
-	case userErr != nil:
-		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", userErr)), nil
-	case intErr != nil:
-		return nil, fmt.Errorf("Error encountered during CRL building: %s", intErr)
+	crlErr := buildCRL(b, req)
+	switch crlErr.(type) {
+	case certutil.UserError:
+		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+	case certutil.InternalError:
+		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
 	}
 
 	err = req.Storage.Delete("certs/" + serial)
@@ -106,10 +105,15 @@ func revokeCert(req *logical.Request, serial string) (*logical.Response, error) 
 	}, nil
 }
 
-func buildCRL(req *logical.Request) (error, error) {
+// Builds a CRL by going through the list of revoked certificates and building
+// a new CRL with the stored revocation times and serial numbers.
+//
+// If a certificate has already expired, it will be removed entirely rather than
+// become part of the new CRL.
+func buildCRL(b *backend, req *logical.Request) error {
 	revokedSerials, err := req.Storage.List("revoked/")
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching list of revoked certs: %s", err)
+		return certutil.InternalError{Err: fmt.Sprintf("Error fetching list of revoked certs: %s", err)}
 	}
 
 	revokedCerts := []pkix.RevokedCertificate{}
@@ -117,32 +121,32 @@ func buildCRL(req *logical.Request) (error, error) {
 	for _, serial := range revokedSerials {
 		revokedEntry, err := req.Storage.Get("revoked/" + serial)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to fetch revoked cert with serial %s: %s", serial, err)
+			return certutil.InternalError{Err: fmt.Sprintf("Unable to fetch revoked cert with serial %s: %s", serial, err)}
 		}
 		if revokedEntry == nil {
-			return nil, fmt.Errorf("Revoked certificate entry for serial %s is nil", serial)
+			return certutil.InternalError{Err: fmt.Sprintf("Revoked certificate entry for serial %s is nil", serial)}
 		}
 		if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return nil, fmt.Errorf("Found revoked serial but actual certificate is empty")
+			return certutil.InternalError{Err: fmt.Sprintf("Found revoked serial but actual certificate is empty")}
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("Error decoding revocation entry for serial %s: %s", serial, err)
+			return certutil.InternalError{Err: fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)}
 		}
 
 		revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)
+			return certutil.InternalError{Err: fmt.Sprintf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)}
 		}
 
 		if revokedCert.NotAfter.Before(time.Now()) {
 			err = req.Storage.Delete(serial)
 			if err != nil {
-				return nil, fmt.Errorf("Unable to delete revoked, expired certificate with serial %s: %s", serial, err)
+				return certutil.InternalError{Err: fmt.Sprintf("Unable to delete revoked, expired certificate with serial %s: %s", serial, err)}
 			}
 			continue
 		}
@@ -153,18 +157,30 @@ func buildCRL(req *logical.Request) (error, error) {
 		})
 	}
 
-	signingBundle, caCert, userErr, intErr := fetchCAInfo(req)
-	switch {
-	case userErr != nil:
-		return fmt.Errorf("Could not fetch the CA certificate: %s", userErr), nil
-	case intErr != nil:
-		return nil, fmt.Errorf("Error fetching CA certificate: %s", intErr)
+	signingBundle, caErr := fetchCAInfo(req)
+	switch caErr.(type) {
+	case certutil.UserError:
+		return certutil.UserError{Err: fmt.Sprintf("Could not fetch the CA certificate: %s", caErr)}
+	case certutil.InternalError:
+		return certutil.InternalError{Err: fmt.Sprintf("Error fetching CA certificate: %s", caErr)}
 	}
 
-	// TODO: Make expiry configurable
-	crlBytes, err := caCert.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
+	crlLifetime := b.crlLifetime
+	crlInfo, err := b.CRL(req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating new CRL: %s", err)
+		return certutil.InternalError{Err: fmt.Sprintf("Error fetching CRL config information: %s", err)}
+	}
+	if crlInfo != nil {
+		crlDur, err := time.ParseDuration(crlInfo.Expiry)
+		if err != nil {
+			return certutil.InternalError{Err: fmt.Sprintf("Error parsing CRL duration of %s", crlInfo.Expiry)}
+		}
+		crlLifetime = crlDur
+	}
+
+	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
+	if err != nil {
+		return certutil.InternalError{Err: fmt.Sprintf("Error creating new CRL: %s", err)}
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
@@ -172,8 +188,8 @@ func buildCRL(req *logical.Request) (error, error) {
 		Value: crlBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error storing CRL: %s", err)
+		return certutil.InternalError{Err: fmt.Sprintf("Error storing CRL: %s", err)}
 	}
 
-	return nil, nil
+	return nil
 }

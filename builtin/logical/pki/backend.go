@@ -2,6 +2,8 @@ package pki
 
 import (
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -21,7 +23,6 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"config/*",
-				"revoked/*",
 				"revoke/*",
 				"crl/rotate",
 			},
@@ -37,13 +38,13 @@ func Backend() *framework.Backend {
 		Paths: []*framework.Path{
 			pathRoles(&b),
 			pathConfigCA(&b),
+			pathConfigCRL(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
 			pathFetchCA(&b),
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
 			pathFetchValid(&b),
-			pathFetchRevoked(&b),
 			pathRevoke(&b),
 		},
 
@@ -52,11 +53,17 @@ func Backend() *framework.Backend {
 		},
 	}
 
+	b.crlLifetime = time.Hour * 72
+	b.revokeStorageLock = &sync.Mutex{}
+
 	return b.Backend
 }
 
 type backend struct {
 	*framework.Backend
+
+	crlLifetime       time.Duration
+	revokeStorageLock *sync.Mutex
 }
 
 const backendHelp = `

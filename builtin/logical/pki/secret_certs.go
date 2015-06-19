@@ -52,8 +52,8 @@ func (b *backend) secretCredsRevoke(
 
 	serial := strings.Replace(strings.ToLower(serialInt.(string)), "-", ":", -1)
 
-	revokeStorageLock.Lock()
-	defer revokeStorageLock.Unlock()
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(req, serial)
+	return revokeCert(b, req, serial)
 }

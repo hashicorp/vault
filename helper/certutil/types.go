@@ -41,21 +41,21 @@ const (
 
 // UserError represents an error generated due to invalid user input
 type UserError struct {
-	s string
+	Err string
 }
 
 func (e UserError) Error() string {
-	return e.s
+	return e.Err
 }
 
 // InternalError represents an error generated internally,
 // presumably not due to invalid user input
 type InternalError struct {
-	s string
+	Err string
 }
 
 func (e InternalError) Error() string {
-	return e.s
+	return e.Err
 }
 
 // CertBundle contains a key type, a PEM-encoded private key,

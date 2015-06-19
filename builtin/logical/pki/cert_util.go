@@ -38,51 +38,39 @@ type certCreationBundle struct {
 	Usage         certUsage
 }
 
-func getCertBundle(s logical.Storage, path string) (*certutil.CertBundle, error) {
-	bundle, err := s.Get(path)
+// Fetches the CA info. Unlike other certificates, the CA info is stored
+// in the backend as a CertBundle, because we are storing its private key
+func fetchCAInfo(req *logical.Request) (*certutil.ParsedCertBundle, error) {
+	bundleEntry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
-		return nil, err
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch local CA certificate/key: %s", err)}
 	}
-	if bundle == nil {
-		return nil, nil
-	}
-
-	var result certutil.CertBundle
-	if err := bundle.DecodeJSON(&result); err != nil {
-		return nil, err
+	if bundleEntry == nil {
+		return nil, certutil.UserError{Err: fmt.Sprintf("Backend must be configured with a CA certificate/key")}
 	}
 
-	return &result, nil
-}
-
-func fetchCAInfo(req *logical.Request) (*certutil.ParsedCertBundle, *x509.Certificate, error, error) {
-	bundle, err := getCertBundle(req.Storage, "config/ca_bundle")
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Unable to fetch local CA certificate/key: %s", err)
-	}
-	if bundle == nil {
-		return nil, nil, fmt.Errorf("Backend must be configured with a CA certificate/key"), nil
+	var bundle certutil.CertBundle
+	if err := bundleEntry.DecodeJSON(&bundle); err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to decode local CA certificate/key: %s", err)}
 	}
 
 	parsedBundle, err := bundle.ToParsedCertBundle()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, certutil.InternalError{Err: err.Error()}
 	}
 
-	certificates, err := x509.ParseCertificates(parsedBundle.CertificateBytes)
-	switch {
-	case err != nil:
-		return nil, nil, nil, err
-	case len(certificates) != 1:
-		return nil, nil, nil, fmt.Errorf("Length of CA certificate bundle is wrong")
+	if parsedBundle.Certificate == nil {
+		return nil, certutil.InternalError{Err: "Stored CA information not able to be parsed"}
 	}
 
-	return parsedBundle, certificates[0], nil, nil
+	return parsedBundle, nil
 }
 
-func fetchCertBySerial(req *logical.Request, prefix, serial string) (certEntry *logical.StorageEntry, userError, internalError error) {
+// Allows fetching certificates from the backend; it handles the slightly
+// separate pathing for CA, CRL, and revoked certificates.
+func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path string
-	var err error
+
 	switch {
 	case serial == "ca":
 		path = "ca"
@@ -94,20 +82,22 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (certEntry *
 		path = "certs/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
 	}
 
-	certEntry, err = req.Storage.Get(path)
+	certEntry, err := req.Storage.Get(path)
 	if err != nil || certEntry == nil {
-		return nil, fmt.Errorf("Certificate with serial number %s not found (if it has been revoked, the revoked/ endpoint must be used)", serial), nil
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Certificate with serial number %s not found", serial)}
 	}
 
-	if len(certEntry.Value) == 0 {
-		return nil, nil, fmt.Errorf("Returned certificate bytes for serial %s were empty", serial)
+	if certEntry.Value == nil || len(certEntry.Value) == 0 {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Returned certificate bytes for serial %s were empty", serial)}
 	}
 
-	return
+	return certEntry, nil
 }
 
+// Given a set of requested names for a certificate, verifies that all of them
+// match the various toggles set in the role for controlling issuance.
+// If one does not pass, it is returned in the string argument.
 func validateCommonNames(req *logical.Request, commonNames []string, role *roleEntry) (string, error) {
-	// TODO: handle wildcards
 	hostnameRegex, err := regexp.Compile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	if err != nil {
 		return "", fmt.Errorf("Error compiling hostname regex: %s", err)
@@ -168,28 +158,30 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 	return "", nil
 }
 
-func createCertificate(creationInfo *certCreationBundle) (parsedBundle *certutil.ParsedCertBundle, userErr, intErr error) {
+// Performs the heavy lifting of creating a certificate. Returns
+// a fully-filled-in ParsedCertBundle.
+func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBundle, error) {
 	var clientPrivKey crypto.Signer
 	var err error
-	parsedBundle = &certutil.ParsedCertBundle{}
+	result := &certutil.ParsedCertBundle{}
 
 	var serialNumber *big.Int
 	serialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error getting random serial number")
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Error getting random serial number")}
 	}
 
 	switch creationInfo.KeyType {
 	case "rsa":
-		parsedBundle.PrivateKeyType = certutil.RSAPrivateKey
+		result.PrivateKeyType = certutil.RSAPrivateKey
 		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error generating RSA private key")
+			return nil, certutil.InternalError{Err: fmt.Sprintf("Error generating RSA private key")}
 		}
-		parsedBundle.PrivateKey = clientPrivKey
-		parsedBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
+		result.PrivateKey = clientPrivKey
+		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
 	case "ec":
-		parsedBundle.PrivateKeyType = certutil.ECPrivateKey
+		result.PrivateKeyType = certutil.ECPrivateKey
 		var curve elliptic.Curve
 		switch creationInfo.KeyBits {
 		case 224:
@@ -201,24 +193,24 @@ func createCertificate(creationInfo *certCreationBundle) (parsedBundle *certutil
 		case 521:
 			curve = elliptic.P521()
 		default:
-			return nil, fmt.Errorf("Unsupported bit length for EC key: %d", creationInfo.KeyBits), nil
+			return nil, certutil.UserError{Err: fmt.Sprintf("Unsupported bit length for EC key: %d", creationInfo.KeyBits)}
 		}
 		clientPrivKey, err = ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error generating EC private key")
+			return nil, certutil.InternalError{Err: fmt.Sprintf("Error generating EC private key")}
 		}
-		parsedBundle.PrivateKey = clientPrivKey
-		parsedBundle.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
+		result.PrivateKey = clientPrivKey
+		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error marshalling EC private key")
+			return nil, certutil.InternalError{Err: fmt.Sprintf("Error marshalling EC private key")}
 		}
 	default:
-		return nil, fmt.Errorf("Unknown key type: %s", creationInfo.KeyType), nil
+		return nil, certutil.UserError{Err: fmt.Sprintf("Unknown key type: %s", creationInfo.KeyType)}
 	}
 
-	subjKeyID, err := certutil.GetSubjKeyID(parsedBundle.PrivateKey)
+	subjKeyID, err := certutil.GetSubjKeyID(result.PrivateKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error getting subject key ID: %s", err)
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Error getting subject key ID: %s", err)}
 	}
 
 	subject := pkix.Name{
@@ -262,17 +254,17 @@ func createCertificate(creationInfo *certCreationBundle) (parsedBundle *certutil
 
 	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, creationInfo.CACert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Unable to create certificate: %s", err)
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to create certificate: %s", err)}
 	}
 
-	parsedBundle.CertificateBytes = cert
-	parsedBundle.Certificate, err = x509.ParseCertificate(cert)
+	result.CertificateBytes = cert
+	result.Certificate, err = x509.ParseCertificate(cert)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Unable to parse created certificate: %s", err)
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to parse created certificate: %s", err)}
 	}
 
-	parsedBundle.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
-	parsedBundle.IssuingCA = creationInfo.SigningBundle.Certificate
+	result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
+	result.IssuingCA = creationInfo.SigningBundle.Certificate
 
-	return
+	return result, nil
 }

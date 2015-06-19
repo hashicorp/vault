@@ -3,6 +3,7 @@ package pki
 import (
 	"fmt"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -46,29 +47,29 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 		return logical.ErrorResponse("The serial number must be provided"), nil
 	}
 
-	revokeStorageLock.Lock()
-	defer revokeStorageLock.Unlock()
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(req, serial)
+	return revokeCert(b, req, serial)
 }
 
 func (b *backend) pathRotateCRLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	revokeStorageLock.Lock()
-	defer revokeStorageLock.Unlock()
+	b.revokeStorageLock.Lock()
+	defer b.revokeStorageLock.Unlock()
 
-	userErr, intErr := buildCRL(req)
-	switch {
-	case userErr != nil:
-		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", userErr)), nil
-	case intErr != nil:
-		return nil, fmt.Errorf("Error encountered during CRL building: %s", intErr)
+	crlErr := buildCRL(b, req)
+	switch crlErr.(type) {
+	case certutil.UserError:
+		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+	case certutil.InternalError:
+		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
+	default:
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"success": true,
+			},
+		}, nil
 	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"success": true,
-		},
-	}, nil
 }
 
 const pathRevokeHelpSyn = `

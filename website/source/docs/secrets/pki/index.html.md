@@ -443,44 +443,6 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
   </dd>
 </dl>
 
-### /pki/revoked/
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Retrieves a revoked certificate and its revocation time. The serial
-    number must be in either hyphen-separated or colon-separated octal format.
-    <br /><br />This is a root-protected endpoint.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/pki/revoked/<serial>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-        "data": {
-            "revocation_time": 1433269787,
-            "certificate": "-----BEGIN CERTIFICATE-----\nMIIGmDCCBYCgAwIBAgIHBzEB3fTzhTANBgkqhkiG9w0BAQsFADCBjDELMAkGA1UE\n..."
-        }
-    }
-    ...
-    ```
-
-  </dd>
-</dl>
-
 ### /pki/roles/
 #### POST
 
@@ -665,7 +627,8 @@ If you get stuck at any time, simply run `vault help pki` or with a subpath for 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the role definition.
+    Deletes the role definition. Deleting a role does <b>not</b> revoke
+    certificates previously issued under this role.
   </dd>
 
   <dt>Method</dt>

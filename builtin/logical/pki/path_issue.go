@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -123,15 +124,15 @@ func (b *backend) pathIssueCert(
 		return nil, fmt.Errorf("Error validating name %s: %s", badName, err)
 	}
 
-	signingBundle, caCert, userErr, intErr := fetchCAInfo(req)
-	switch {
-	case userErr != nil:
-		return logical.ErrorResponse(fmt.Sprintf("Could not fetch the CA certificate: %s", userErr)), nil
-	case intErr != nil:
-		return nil, fmt.Errorf("Error fetching CA certificate: %s", intErr)
+	signingBundle, caErr := fetchCAInfo(req)
+	switch caErr.(type) {
+	case certutil.UserError:
+		return logical.ErrorResponse(fmt.Sprintf("Could not fetch the CA certificate: %s", caErr)), nil
+	case certutil.InternalError:
+		return nil, fmt.Errorf("Error fetching CA certificate: %s", caErr)
 	}
 
-	if time.Now().Add(lease).After(caCert.NotAfter) {
+	if time.Now().Add(lease).After(signingBundle.Certificate.NotAfter) {
 		return logical.ErrorResponse(fmt.Sprintf("Cannot satisfy request, as maximum lease is beyond the expiration of the CA certificate")), nil
 	}
 
@@ -148,7 +149,7 @@ func (b *backend) pathIssueCert(
 
 	creationBundle := &certCreationBundle{
 		SigningBundle: signingBundle,
-		CACert:        caCert,
+		CACert:        signingBundle.Certificate,
 		CommonNames:   commonNames,
 		IPSANs:        ipSANs,
 		KeyType:       role.KeyType,
@@ -157,12 +158,12 @@ func (b *backend) pathIssueCert(
 		Usage:         usage,
 	}
 
-	parsedBundle, userErr, intErr := createCertificate(creationBundle)
-	switch {
-	case userErr != nil:
-		return logical.ErrorResponse(userErr.Error()), nil
-	case intErr != nil:
-		return nil, intErr
+	parsedBundle, err := createCertificate(creationBundle)
+	switch err.(type) {
+	case certutil.UserError:
+		return logical.ErrorResponse(err.Error()), nil
+	case certutil.InternalError:
+		return nil, err
 	}
 
 	cb, err := parsedBundle.ToCertBundle()
