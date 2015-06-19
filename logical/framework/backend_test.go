@@ -215,7 +215,7 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 func TestBackendHandleRequest_renewExtend(t *testing.T) {
 	secret := &Secret{
 		Type:            "foo",
-		Renew:           LeaseExtend(0, 0),
+		Renew:           LeaseExtend(0, 0, false),
 		DefaultDuration: 5 * time.Minute,
 	}
 	b := &Backend{
@@ -507,6 +507,16 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 		"default not set": {
 			&FieldSchema{Type: TypeString},
 			"",
+		},
+
+		"default duration set": {
+			&FieldSchema{Type: TypeDurationSecond, Default: 60},
+			60,
+		},
+
+		"default duration not set": {
+			&FieldSchema{Type: TypeDurationSecond},
+			0,
 		},
 	}
 

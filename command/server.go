@@ -32,6 +32,7 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 
+	ShutdownCh <-chan struct{}
 	Meta
 }
 
@@ -154,7 +155,7 @@ func (c *ServerCommand) Run(args []string) int {
 				"immediately begin using the Vault CLI.\n\n"+
 				"The only step you need to take is to set the following\n"+
 				"environment variables:\n\n"+
-				"    export VAULT_ADDR='http://127.0.0.1:8200'\n"+
+				"    export VAULT_ADDR='http://127.0.0.1:8200'\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
 				"Unseal Key: %s\nRoot Token: %s\n",
@@ -237,7 +238,14 @@ func (c *ServerCommand) Run(args []string) int {
 	// Release the log gate.
 	logGate.Flush()
 
-	<-make(chan struct{})
+	// Wait for shutdown
+	select {
+	case <-c.ShutdownCh:
+		c.Ui.Output("==> Vault shutdown triggered")
+		if err := core.Shutdown(); err != nil {
+			c.Ui.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+		}
+	}
 	return 0
 }
 
@@ -407,8 +415,8 @@ General Options:
                       specified multiple times. If it is a directory, all
                       files with a ".hcl" or ".json" suffix will be loaded.
 
-  -dev                Enables Dev mode. In this mode, Vault is completely 
-                      in-memory and unsealed. Do not run the Dev server in 
+  -dev                Enables Dev mode. In this mode, Vault is completely
+                      in-memory and unsealed. Do not run the Dev server in
                       production!
 
   -log-level=info     Log verbosity. Defaults to "info", will be outputted

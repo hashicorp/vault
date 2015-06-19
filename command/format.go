@@ -53,6 +53,16 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 			"lease_renewable %s %s", config.Delim, strconv.FormatBool(s.Renewable)))
 	}
 
+	if s.Auth != nil {
+		input = append(input, fmt.Sprintf("token %s %s", config.Delim, s.Auth.ClientToken))
+		input = append(input, fmt.Sprintf("token_duration %s %d", config.Delim, s.Auth.LeaseDuration))
+		input = append(input, fmt.Sprintf("token_renewable %s %v", config.Delim, s.Auth.Renewable))
+		input = append(input, fmt.Sprintf("token_policies %s %v", config.Delim, s.Auth.Policies))
+		for k, v := range s.Auth.Metadata {
+			input = append(input, fmt.Sprintf("token_meta_%s %s %#v", k, config.Delim, v))
+		}
+	}
+
 	for k, v := range s.Data {
 		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, v))
 	}

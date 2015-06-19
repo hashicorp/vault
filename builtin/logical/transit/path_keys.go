@@ -45,6 +45,41 @@ func getPolicy(req *logical.Request, name string) (*Policy, error) {
 	return p, nil
 }
 
+// generatePolicy is used to create a new named policy with
+// a randomly generated key
+func generatePolicy(storage logical.Storage, name string) (*Policy, error) {
+	// Create the policy object
+	p := &Policy{
+		Name:       name,
+		CipherMode: "aes-gcm",
+	}
+
+	// Generate a 256bit key
+	p.Key = make([]byte, 32)
+	_, err := rand.Read(p.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Encode the policy
+	buf, err := p.Serialize()
+	if err != nil {
+		return nil, err
+	}
+
+	// Write the policy into storage
+	err = storage.Put(&logical.StorageEntry{
+		Key:   "policy/" + name,
+		Value: buf,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the policy
+	return p, nil
+}
+
 func pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: `keys/(?P<name>\w+)`,
@@ -79,34 +114,9 @@ func pathPolicyWrite(
 		return nil, nil
 	}
 
-	// Create the policy object
-	p := &Policy{
-		Name:       name,
-		CipherMode: "aes-gcm",
-	}
-
-	// Generate a 256bit key
-	p.Key = make([]byte, 32)
-	_, err = rand.Read(p.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encode the policy
-	buf, err := p.Serialize()
-	if err != nil {
-		return nil, err
-	}
-
-	// Write the policy into storage
-	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name,
-		Value: buf,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	// Generate the policy
+	_, err = generatePolicy(req.Storage, name)
+	return nil, err
 }
 
 func pathPolicyRead(
@@ -124,7 +134,6 @@ func pathPolicyRead(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name":        p.Name,
-			"key":         p.Key,
 			"cipher_mode": p.CipherMode,
 		},
 	}

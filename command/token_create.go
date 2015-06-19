@@ -15,12 +15,14 @@ type TokenCreateCommand struct {
 }
 
 func (c *TokenCreateCommand) Run(args []string) int {
+	var format string
 	var displayName, lease string
 	var orphan bool
 	var metadata map[string]string
 	var numUses int
 	var policies []string
 	flags := c.Meta.FlagSet("mount", FlagSetDefault)
+	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&displayName, "display-name", "", "")
 	flags.StringVar(&lease, "lease", "", "")
 	flags.BoolVar(&orphan, "orphan", false, "")
@@ -61,8 +63,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.Ui.Output(secret.Auth.ClientToken)
-	return 0
+	return OutputSecret(c.Ui, format, secret)
 }
 
 func (c *TokenCreateCommand) Synopsis() string {
@@ -121,6 +122,10 @@ Token Options:
 
   -use-limit=5            The number of times this token can be used until
                           it is automatically revoked.
+
+  -format=table           The format for output. By default it is a whitespace-
+                          delimited table. This can also be json.
+
 `
 	return strings.TrimSpace(helpText)
 }

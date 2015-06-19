@@ -80,6 +80,8 @@ func TestCopy_response(t *testing.T) {
 }
 
 func TestHash(t *testing.T) {
+	now := time.Now().UTC()
+
 	cases := []struct {
 		Input  interface{}
 		Output interface{}
@@ -115,6 +117,24 @@ func TestHash(t *testing.T) {
 		{
 			"foo",
 			"foo",
+		},
+		{
+			&logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					Lease:      1 * time.Hour,
+					LeaseIssue: now,
+				},
+
+				ClientToken: "foo",
+			},
+			&logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					Lease:      1 * time.Hour,
+					LeaseIssue: now,
+				},
+
+				ClientToken: "sha1:0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+			},
 		},
 	}
 

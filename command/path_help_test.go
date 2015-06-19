@@ -14,7 +14,7 @@ func TestHelp(t *testing.T) {
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
-	c := &HelpCommand{
+	c := &PathHelpCommand{
 		Meta: Meta{
 			ClientToken: token,
 			Ui:          ui,

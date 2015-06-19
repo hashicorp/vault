@@ -348,6 +348,17 @@ func TestCore_SealUnseal(t *testing.T) {
 	}
 }
 
+// Attempt to shutdown after unseal
+func TestCore_Shutdown(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	if err := c.Shutdown(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed, err := c.Sealed(); err != nil || !sealed {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 // Attempt to seal bad token
 func TestCore_Seal_BadToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -1365,6 +1376,55 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Verify the lease did not change
 	if resp.Secret.LeaseID != original {
 		t.Fatalf("lease id changed: %s %s", original, resp.Secret.LeaseID)
+	}
+}
+
+// Renew of a token should not create a new lease
+func TestCore_RenewToken_SingleRegister(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Create a new token
+	req := &logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "auth/token/create",
+		Data: map[string]interface{}{
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	newClient := resp.Auth.ClientToken
+
+	// Renew the token
+	req = logical.TestRequest(t, logical.WriteOperation, "auth/token/renew/"+newClient)
+	req.ClientToken = newClient
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Revoke using the renew prefix
+	req = logical.TestRequest(t, logical.WriteOperation, "sys/revoke-prefix/auth/token/renew/")
+	req.ClientToken = root
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify our token is still valid (e.g. we did not get invalided by the revoke)
+	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/lookup/"+newClient)
+	req.ClientToken = newClient
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the token exists
+	if resp.Data["id"] != newClient {
+		t.Fatalf("bad: %#v", resp.Data)
 	}
 }
 

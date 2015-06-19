@@ -76,6 +76,8 @@ durability, etc.
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
       This backend does not support HA.
 
+  * `mysql` - Store data within MySQL. This backend does not support HA.
+
   * `inmem` - Store data in-memory. This is only really useful for
       development and experimentation. Data is lost whenever Vault is
       restarted.
@@ -142,6 +144,21 @@ For S3, the following options are supported:
   * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
 
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
+
+#### Backend Reference: MySQL
+
+The MySQL backend has the following options:
+
+  * `username` (required) - The MySQL username to connect with.
+
+  * `password` (required) - The MySQL password to connect with.
+
+  * `address` (optional) - The address of the MySQL host. Defaults to
+    "127.0.0.1:3306.
+
+  * `database` (optional) - The name of the database to use. Defaults to "vault".
+
+  * `table` (optional) - The name of the table to use. Defaults to "vault".
 
 #### Backend Reference: Inmem
 

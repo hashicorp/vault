@@ -9,6 +9,10 @@ const (
 	TypeInt
 	TypeBool
 	TypeMap
+
+	// TypeDurationSecond represent as seconds, this can be either an
+	// integer or go duration format string (e.g. 24h)
+	TypeDurationSecond
 )
 
 func (t FieldType) String() string {
@@ -21,6 +25,8 @@ func (t FieldType) String() string {
 		return "bool"
 	case TypeMap:
 		return "map"
+	case TypeDurationSecond:
+		return "duration (sec)"
 	default:
 		return "unknown type"
 	}

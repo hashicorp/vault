@@ -2,6 +2,9 @@ package framework
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -64,13 +67,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool:
-		fallthrough
-	case TypeInt:
-		fallthrough
-	case TypeMap:
-		fallthrough
-	case TypeString:
+	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -114,6 +111,38 @@ func (d *FieldData) getPrimitive(
 		}
 
 		return result, true, nil
+
+	case TypeDurationSecond:
+		var result int
+		switch inp := raw.(type) {
+		case int:
+			result = inp
+		case float32:
+			result = int(inp)
+		case float64:
+			result = int(inp)
+		case string:
+			// Look for a suffix otherwise its a plain second value
+			if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") {
+				dur, err := time.ParseDuration(inp)
+				if err != nil {
+					return nil, true, err
+				}
+				result = int(dur.Seconds())
+			} else {
+				// Plain integer
+				val, err := strconv.ParseInt(inp, 10, 64)
+				if err != nil {
+					return nil, true, err
+				}
+				result = int(val)
+			}
+
+		default:
+			return nil, false, fmt.Errorf("invalid input '%v'", raw)
+		}
+		return result, true, nil
+
 	default:
 		panic(fmt.Sprintf("Unknown type: %s", schema.Type))
 	}

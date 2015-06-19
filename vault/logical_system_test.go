@@ -181,7 +181,7 @@ func TestSystemBackend_renew(t *testing.T) {
 
 	// Attempt renew
 	req2 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.LeaseID)
-	req2.Data["increment"] = 100
+	req2.Data["increment"] = "100s"
 	resp2, err := b.HandleRequest(req2)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -202,7 +202,7 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "lease not found" {
+	if resp.Data["error"] != "lease not found or lease is not renewable" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -250,7 +250,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp3.Data["error"] != "lease not found" {
+	if resp3.Data["error"] != "lease not found or lease is not renewable" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -312,7 +312,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp3.Data["error"] != "lease not found" {
+	if resp3.Data["error"] != "lease not found or lease is not renewable" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
