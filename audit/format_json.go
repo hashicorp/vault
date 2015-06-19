@@ -64,9 +64,9 @@ func (f *FormatJSON) FormatResponse(
 		err = errors.New("")
 	}
 
-	var respAuth JSONAuth
+	var respAuth *JSONAuth
 	if resp.Auth != nil {
-		respAuth = JSONAuth{
+		respAuth = &JSONAuth{
 			ClientToken: resp.Auth.ClientToken,
 			DisplayName: resp.Auth.DisplayName,
 			Policies:    resp.Auth.Policies,
@@ -74,9 +74,9 @@ func (f *FormatJSON) FormatResponse(
 		}
 	}
 
-	var respSecret JSONSecret
+	var respSecret *JSONSecret
 	if resp.Secret != nil {
-		respSecret = JSONSecret{
+		respSecret = &JSONSecret{
 			LeaseID: resp.Secret.LeaseID,
 		}
 	}
@@ -133,8 +133,8 @@ type JSONRequest struct {
 }
 
 type JSONResponse struct {
-	Auth     JSONAuth               `json:"auth,omitempty"`
-	Secret   JSONSecret             `json:"secret,emitempty"`
+	Auth     *JSONAuth               `json:"auth,omitempty"`
+	Secret   *JSONSecret             `json:"secret,emitempty"`
 	Data     map[string]interface{} `json:"data"`
 	Redirect string                 `json:"redirect"`
 }
