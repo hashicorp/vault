@@ -45,6 +45,40 @@ type backend struct {
 	*framework.Backend
 }
 
+func EscapeLDAPValue(input string) string {
+	// RFC4514 forbids un-escaped:
+	// - leading space or hash
+	// - trailing space
+	// - special characters '"', '+', ',', ';', '<', '>', '\\'
+	// - null
+	for i := 0; i < len(input); i++ {
+		escaped := false
+		if input[i] == '\\' {
+			i++
+			escaped = true
+		}
+		switch input[i] {
+		case '"', '+', ',', ';', '<', '>', '\\':
+			if !escaped {
+				input = input[0:i] + "\\" + input[i:]
+				i++
+			}
+			continue
+		}
+		if escaped {
+			input = input[0:i] + "\\" + input[i:]
+			i++
+		}
+	}
+	if input[0] == ' ' || input[0] == '#' {
+		input = "\\" + input
+	}
+	if input[len(input)-1] == ' ' {
+		input = input[0:len(input)-1] + "\\ "
+	}
+	return input
+}
+
 func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
 
 	cfg, err := b.Config(req)
@@ -60,8 +94,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
+
 	// Try to authenticate to the server using the provided credentials
-	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, username, cfg.UserDN)
+	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
 	if err = c.Bind(binddn, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
 	}
