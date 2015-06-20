@@ -2,11 +2,10 @@ package ldap
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/vanackere/ldap"
+	"github.com/go-ldap/ldap"
 )
 
 func Factory(map[string]string) (logical.Backend, error) {
@@ -45,6 +44,40 @@ type backend struct {
 	*framework.Backend
 }
 
+func EscapeLDAPValue(input string) string {
+	// RFC4514 forbids un-escaped:
+	// - leading space or hash
+	// - trailing space
+	// - special characters '"', '+', ',', ';', '<', '>', '\\'
+	// - null
+	for i := 0; i < len(input); i++ {
+		escaped := false
+		if input[i] == '\\' {
+			i++
+			escaped = true
+		}
+		switch input[i] {
+		case '"', '+', ',', ';', '<', '>', '\\':
+			if !escaped {
+				input = input[0:i] + "\\" + input[i:]
+				i++
+			}
+			continue
+		}
+		if escaped {
+			input = input[0:i] + "\\" + input[i:]
+			i++
+		}
+	}
+	if input[0] == ' ' || input[0] == '#' {
+		input = "\\" + input
+	}
+	if input[len(input)-1] == ' ' {
+		input = input[0:len(input)-1] + "\\ "
+	}
+	return input
+}
+
 func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
 
 	cfg, err := b.Config(req)
@@ -60,8 +93,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
+
 	// Try to authenticate to the server using the provided credentials
-	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, username, cfg.UserDN)
+	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
 	if err = c.Bind(binddn, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
 	}
@@ -80,9 +114,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	var allgroups []string
 	var policies []string
 	for _, e := range sresult.Entries {
-		// Expected syntax for group DN: cn=groupanem,ou=Group,dc=example,dc=com
-		dn := strings.Split(e.DN, ",")
-		gname := strings.SplitN(dn[0], "=", 2)[1]
+		dn, err := ldap.ParseDN(e.DN)
+		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
+			continue
+		}
+		gname := dn.RDNs[0].Attributes[0].Value
 		allgroups = append(allgroups, gname)
 		group, err := b.Group(req.Storage, gname)
 		if err == nil && group != nil {
