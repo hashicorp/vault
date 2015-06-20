@@ -1,0 +1,19 @@
+"" => []
+sep is always ,
+multivalue is +
+
+type=value
+
+type is numericoid or keystring:
+ keystring = leadkeychar *keychar
+      leadkeychar = ALPHA
+      keychar = ALPHA / DIGIT / HYPHEN
+ numericoid = number 1*( DOT number )
+
+example oid:
+givenname = 2.5.4.42 
+
+ If the AttributeType is of the dotted-decimal form, the
+   AttributeValue is represented by an number sign ('#' U+0023)
+   character followed by the hexadecimal encoding of each of the octets
+   of the BER encoding of the X.500 AttributeValue.
