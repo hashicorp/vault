@@ -2,11 +2,10 @@ package ldap
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/vanackere/ldap"
+	"github.com/go-ldap/ldap"
 )
 
 func Factory(map[string]string) (logical.Backend, error) {
@@ -115,9 +114,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	var allgroups []string
 	var policies []string
 	for _, e := range sresult.Entries {
-		// Expected syntax for group DN: cn=groupanem,ou=Group,dc=example,dc=com
-		dn := strings.Split(e.DN, ",")
-		gname := strings.SplitN(dn[0], "=", 2)[1]
+		dn, err := ldap.ParseDN(e.DN)
+		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
+			continue
+		}
+		gname := dn.RDNs[0].Attributes[0].Value
 		allgroups = append(allgroups, gname)
 		group, err := b.Group(req.Storage, gname)
 		if err == nil && group != nil {

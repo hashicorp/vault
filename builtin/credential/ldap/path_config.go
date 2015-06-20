@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/vanackere/ldap"
+	"github.com/go-ldap/ldap"
 )
 
 func pathConfig(b *backend) *framework.Path {
