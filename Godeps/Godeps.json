@@ -64,6 +64,10 @@
 			"Rev": "73a8ef737e8ea002281a28b4cb92a1de121ad4c6"
 		},
 		{
+			"ImportPath": "github.com/fatih/structs",
+			"Rev": "a9f7daa9c2729e97450c2da2feda19130a367d8f"
+		},
+		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
 			"Comment": "v1.2-88-ga197e5d",
 			"Rev": "a197e5d40516f2e9f74dcee085a5f2d4604e94df"
