@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
@@ -30,6 +31,10 @@ func pathConfig(b *backend) *framework.Path {
 			"userattr": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Attribute used for users (default: cn)",
+			},
+			"sslverify": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Verify LDAP server SSL Certificate?",
 			},
 		},
 
@@ -72,10 +77,11 @@ func (b *backend) pathConfigRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"url":      cfg.Url,
-			"userdn":   cfg.UserDN,
-			"groupdn":  cfg.GroupDN,
-			"userattr": cfg.UserAttr,
+			"url":       cfg.Url,
+			"userdn":    cfg.UserDN,
+			"groupdn":   cfg.GroupDN,
+			"userattr":  cfg.UserAttr,
+			"sslverify": cfg.SSLVerify,
 		},
 	}, nil
 }
@@ -100,6 +106,12 @@ func (b *backend) pathConfigWrite(
 	if groupdn != "" {
 		cfg.GroupDN = groupdn
 	}
+	sslverify := d.Get("sslverify").(bool)
+	if sslverify {
+		cfg.SSLVerify = sslverify
+	} else {
+		cfg.SSLVerify = false
+	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
 	// We can also check the URL at this stage, as anything else would probably
@@ -122,10 +134,11 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url      string
-	UserDN   string
-	GroupDN  string
-	UserAttr string
+	Url       string
+	UserDN    string
+	GroupDN   string
+	UserAttr  string
+	SSLVerify bool
 }
 
 func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
@@ -150,7 +163,13 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if port == "" {
 			port = "636"
 		}
-		conn, err = ldap.DialTLS("tcp", host+":"+port, nil)
+		tlsConfig := tls.Config{}
+		if c.SSLVerify {
+			tlsConfig = tls.Config{InsecureSkipVerify: false}
+		} else {
+			tlsConfig = tls.Config{InsecureSkipVerify: true}
+		}
+		conn, err = ldap.DialTLS("tcp", host+":"+port, &tlsConfig)
 	default:
 		return nil, fmt.Errorf("invalid LDAP scheme")
 	}
