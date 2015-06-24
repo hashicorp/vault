@@ -107,10 +107,8 @@ func (b *backend) pathConfigWrite(
 		cfg.GroupDN = groupdn
 	}
 	sslverify := d.Get("sslverify").(bool)
-	if sslverify {
+	if !sslverify {
 		cfg.SSLVerify = sslverify
-	} else {
-		cfg.SSLVerify = false
 	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
@@ -163,10 +161,8 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if port == "" {
 			port = "636"
 		}
-		tlsConfig := tls.Config{}
-		if c.SSLVerify {
-			tlsConfig = tls.Config{InsecureSkipVerify: false}
-		} else {
+		tlsConfig := tls.Config{InsecureSkipVerify: false}
+		if !c.SSLVerify {
 			tlsConfig = tls.Config{InsecureSkipVerify: true}
 		}
 		conn, err = ldap.DialTLS("tcp", host+":"+port, &tlsConfig)
