@@ -1,9 +1,6 @@
 package ssh
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/hashicorp/vault/logical"
@@ -19,9 +16,21 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
-			"policy": &framework.FieldSchema{
+			"key": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "String representing the policy for the role. See help for more info.",
+				Description: "Named key in Vault",
+			},
+			"admin_user": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Admin user at target address",
+			},
+			"default_user": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Default user to whom the dynamic key is installed",
+			},
+			"cidr": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "CIDR blocks and IP addresses",
 			},
 		},
 
@@ -36,9 +45,43 @@ func pathRoles(b *backend) *framework.Path {
 	}
 }
 
+func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Vishal: ssh.pathRoleWrite\n")
+
+	roleName := d.Get("name").(string)
+	keyName := d.Get("key").(string)
+	adminUser := d.Get("admin_user").(string)
+	defaultUser := d.Get("default_user").(string)
+	cidr := d.Get("cidr").(string)
+
+	log.Printf("Vishal: name[%s] key[%s] admin_user[%s] default_user[%s] cidr[%s]\n", roleName, keyName, adminUser, defaultUser, cidr)
+
+	rolePath := "policy/" + roleName
+
+	entry, err := logical.StorageEntryJSON(rolePath, sshRole{
+		KeyName:     keyName,
+		AdminUser:   adminUser,
+		DefaultUser: defaultUser,
+		CIDR:        cidr,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Vishal: entryJSON:%s\n", entry.Value)
+	if err := req.Storage.Put(entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.pathRoleRead\n")
-	entry, err := req.Storage.Get("policy/" + d.Get("name").(string))
+	roleName := d.Get("name").(string)
+	rolePath := "policy/" + roleName
+	entry, err := req.Storage.Get(rolePath)
 	if err != nil {
 		return nil, err
 	}
@@ -52,30 +95,22 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 	}, nil
 }
 
-func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.pathRoleWrite\n")
-	var buf bytes.Buffer
-	if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error compacting policy: %s", err)), nil
-	}
-
-	err := req.Storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + d.Get("name").(string),
-		Value: buf.Bytes(),
-	})
+func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Vishal: ssh.pathRoleDelete\n")
+	roleName := d.Get("name").(string)
+	rolePath := "policy/" + roleName
+	err := req.Storage.Delete(rolePath)
 	if err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.pathRoleDelete\n")
-	err := req.Storage.Delete("policy/" + d.Get("name").(string))
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+type sshRole struct {
+	KeyName     string `json:"key"`
+	AdminUser   string `json:"admin_user"`
+	DefaultUser string `json:"default_user"`
+	CIDR        string `json: "cidr"`
 }
 
 const pathRoleHelpSyn = `

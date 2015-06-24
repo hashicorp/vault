@@ -10,7 +10,7 @@ import (
 
 const SecretOneTimeKeyType = "secret_one_type_key_type"
 
-func secretOneTimeKey(b *backend) *framework.Secret {
+func secretSshKey(b *backend) *framework.Secret {
 	log.Printf("Vishal: ssh.secretPrivateKey\n")
 	return &framework.Secret{
 		Type: SecretOneTimeKeyType,
@@ -26,12 +26,12 @@ func secretOneTimeKey(b *backend) *framework.Secret {
 		},
 		DefaultDuration:    1 * time.Hour,
 		DefaultGracePeriod: 10 * time.Minute,
-		Renew:              b.secretPrivateKeyRenew,
-		Revoke:             b.secretPrivateKeyRevoke,
+		Renew:              b.secretSshKeyRenew,
+		Revoke:             b.secretSshKeyRevoke,
 	}
 }
 
-func (b *backend) secretPrivateKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretSshKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.secretPrivateKeyRenew\n")
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
@@ -44,7 +44,7 @@ func (b *backend) secretPrivateKeyRenew(req *logical.Request, d *framework.Field
 	return f(req, d)
 }
 
-func (b *backend) secretPrivateKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretSshKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("Vishal: ssh.secretPrivateKeyRevoke\n")
 	//TODO: implement here
 	return nil, nil

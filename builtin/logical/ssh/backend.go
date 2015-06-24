@@ -24,14 +24,13 @@ func Backend() *framework.Backend {
 
 		Paths: []*framework.Path{
 			pathConfigLease(&b),
-			pathConfigAddHostKey(&b),
-			pathConfigRemoveHostKey(&b),
+			pathKeys(&b),
 			pathRoles(&b),
-			sshConnect(&b),
+			pathRoleCreate(&b),
 		},
 
 		Secrets: []*framework.Secret{
-			secretOneTimeKey(&b),
+			secretSshKey(&b),
 		},
 	}
 	return b.Backend

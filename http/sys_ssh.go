@@ -9,12 +9,13 @@ import (
 )
 
 func handleSysSsh(core *vault.Core) http.Handler {
+	log.Printf("Vishal: http.sys_ssh.handleSysSsh!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
+		if r.Method != "PUT" {
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
-		log.Printf("Vishal: http.sys_ssh.handleSysSsh\n")
+		log.Printf("Vishal: http.sys_ssh.handleSysSsh: requesting\n")
 		var req SshRequest
 		if err := parseRequest(r, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
@@ -23,7 +24,7 @@ func handleSysSsh(core *vault.Core) http.Handler {
 
 		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
 			Operation: logical.WriteOperation,
-			Path:      "ssh/connect",
+			Path:      "ssh/creds/web",
 			Data: map[string]interface{}{
 				"username": req.Username,
 				"address":  req.Address,

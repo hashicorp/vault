@@ -11,51 +11,70 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func sshConnect(b *backend) *framework.Path {
+func pathRoleCreate(b *backend) *framework.Path {
 	log.Printf("Vishal: ssh.sshConnect\n")
 	return &framework.Path{
-		Pattern: "connect",
+		Pattern: "creds/(?P<name>\\w+)",
 		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "name of the policy",
+			},
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "username at SSH host",
+				Description: "username in target",
 			},
-			"address": &framework.FieldSchema{
+			"ip": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "IPv4 address of SSH host",
+				Description: "IP of the target machine",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.sshConnectWrite,
+			logical.WriteOperation: b.pathRoleCreateWrite,
 		},
 		HelpSynopsis:    sshConnectHelpSyn,
 		HelpDescription: sshConnectHelpDesc,
 	}
 }
 
-func (b *backend) sshConnectWrite(
+func (b *backend) pathRoleCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := d.Get("username").(string)
-	ipAddr := d.Get("address").(string)
-	log.Printf("Vishal: ssh.sshConnectWrite username:%#v address:%#v\n", username, ipAddr)
+	log.Printf("Vishal: ssh.pathRoleCreateWrite\n")
 
-	hostKeyPath := "hosts/" + ipAddr + "/" + username
-	entry, err := req.Storage.Get(hostKeyPath)
+	roleName := d.Get("name").(string)
+	username := d.Get("username").(string)
+	ipAddr := d.Get("ip").(string)
+
+	rolePath := "policy/" + roleName
+	roleEntry, err := req.Storage.Get(rolePath)
 	if err != nil {
+		return nil, fmt.Errorf("error retrieving role: %s", err)
+	}
+	if roleEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", roleName)), nil
+	}
+
+	var role sshRole
+	if err := roleEntry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
 
-	if entry == nil {
-		return nil, fmt.Errorf("Host key is not configured. Please configure them at the config/addhostkey endpoint")
+	log.Printf("Vishal: ssh.pathRoleCreateWrite username:%#v address:%#v name:%#v result:%s\n", username, ipAddr, roleName, role)
+	//TODO: do the role verification here
+
+	keyPath := "keys/" + role.KeyName
+	keyEntry, err := req.Storage.Get(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("Key '%s' not found error:%s", role.KeyName, err)
 	}
+
+	log.Printf("Vishal: KeyName:%s keyPath:%s\n", role.KeyName, keyPath)
 	var hostKey sshHostKey
-	if err := entry.DecodeJSON(&hostKey); err != nil {
+	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
 		return nil, fmt.Errorf("Error reading the host key: %s", err)
 	}
 	log.Printf("Vishal: host key previously configured: \n---------------\n%#v\n--------------\n", hostKey.Key)
 
-	//TODO: save th entry in a file
-	//TODO: read the hosts path and get the key
 	//TODO: Input validation for the commands below
 	hostKeyFileName := "./vault_ssh_" + username + "_" + ipAddr + "_shared.pem"
 	err = ioutil.WriteFile(hostKeyFileName, []byte(hostKey.Key), 0400)
@@ -95,12 +114,6 @@ func (b *backend) sshConnectWrite(
 	return b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
 		"key": oneTimeKey,
 	}, nil), nil
-	/*return &logical.Response{
-		Data: map[string]interface{}{
-			"key": oneTimeKey,
-		},
-	}, nil
-	*/
 }
 
 const sshConnectHelpSyn = `

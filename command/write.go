@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -18,6 +19,7 @@ type WriteCommand struct {
 }
 
 func (c *WriteCommand) Run(args []string) int {
+	log.Printf("Vishal: writeCommand\n")
 	var format string
 	var force bool
 	flags := c.Meta.FlagSet("write", FlagSetDefault)
@@ -55,6 +57,7 @@ func (c *WriteCommand) Run(args []string) int {
 		return 2
 	}
 
+	log.Printf("Vishal: write Path: %#v\n", path)
 	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(

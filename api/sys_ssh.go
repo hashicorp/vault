@@ -1,24 +1,10 @@
 package api
 
-import (
-	"fmt"
-	"log"
-	"net"
-	"strings"
-)
+import "fmt"
 
-func (c *Sys) Ssh(target string) (*OneTimeKey, error) {
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/ssh/connect"))
-	input := strings.Split(target, "@")
-	username := input[0]
-	ipAddr := input[1]
-	ip4Addr, err := net.ResolveIPAddr("ip4", ipAddr)
-	log.Printf("Vishal: ssh.Ssh ipAddr_resolved: %#v\n", ip4Addr.String())
-	body := map[string]interface{}{
-		"username": username,
-		"address":  ip4Addr.String(),
-	}
-	if err := r.SetJSONBody(body); err != nil {
+func (c *Sys) Ssh(data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/ssh/creds/web"))
+	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
@@ -28,11 +14,17 @@ func (c *Sys) Ssh(target string) (*OneTimeKey, error) {
 	}
 	defer resp.Body.Close()
 
-	var result OneTimeKey
-	err = resp.DecodeJSON(&result)
-	return &result, err
-}
+	return ParseSecret(resp.Body)
 
-type OneTimeKey struct {
-	Key string
+	/*
+		result := new(Secret)
+		err = resp.DecodeJSON(&result)
+		log.Printf("Vishal: api.sys_ssh.Ssh: result:%#v\n", result.Data)
+
+		var oneTimeKey OneTimeKey
+		err = result.Data.DecodeJSON(&oneTimeKey)
+		log.Printf("Vishal: oneTimeKey:%#v\n", oneTimeKey)
+		return &oneTimeKey, err
+	*/
+	//return result, err
 }

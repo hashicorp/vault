@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -145,10 +146,12 @@ func (r *Router) MatchingView(path string) *BarrierView {
 
 // Route is used to route a given request
 func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
+	log.Printf("Vishal: vault.router.Route: req.Path:%#v\n", req.Path)
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
 	if !ok {
+		log.Printf("Vishal: vault.router.Route: here\n")
 		// Re-check for a backend by appending a slash. This lets "foo" mean
 		// "foo/" at the root level which is almost always what we want.
 		req.Path += "/"

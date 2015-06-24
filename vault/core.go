@@ -345,6 +345,7 @@ func (c *Core) Shutdown() error {
 
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
+	log.Printf("Vishal: vault.core.HandleRequest: req.Path:%#v\n", req.Path)
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -373,6 +374,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 }
 
 func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
+	log.Printf("Vishal: vault.core.handleRequest\n")
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 	// Validate the token
 	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)

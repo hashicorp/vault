@@ -34,12 +34,9 @@ func installSshOtkInTarget(session *ssh.Session, username string, ipAddr string)
 	log.Printf("Vishal: grepCmd:%#v\n catCmdRemoveDuplicate:%#v\n catCmdAppendNew:%#v\n rmCmd: %#v\n", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, rmCmd)
 	remoteCmdString := strings.Join([]string{
 		grepCmd,
-		"echo 1;",
 		catCmdRemoveDuplicate,
-		"echo 2;",
 		catCmdAppendNew,
-		"echo 3;",
-		//rmCmd,
+		rmCmd,
 	}, "")
 
 	if err := session.Run(remoteCmdString); err != nil {

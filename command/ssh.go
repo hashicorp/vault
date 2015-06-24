@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -30,16 +31,25 @@ func (c *SshCommand) Run(args []string) int {
 	}
 	//if len(args) < 3, fail
 	log.Printf("Vishal: sshCommand.Run: args[0]: %#v\n", args[0])
-	sshOneTimeKey, err := client.Sys().Ssh(args[0])
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error getting one-time-key for establishing SSH session", err))
-		return 2
+	input := strings.Split(args[0], "@")
+	username := input[0]
+	ipAddr, err := net.ResolveIPAddr("ip4", input[1])
+	log.Printf("Vishal: ssh.Ssh ipAddr_resolved: %#v\n", ipAddr.String())
+	data := map[string]interface{}{
+		"username": username,
+		"ip":       ipAddr.String(),
 	}
 
+	keySecret, err := client.Sys().Ssh(data)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error getting key for establishing SSH session", err))
+		return 2
+	}
+	sshOneTimeKey := string(keySecret.Data["key"].(string))
 	log.Printf("Vishal: command.ssh.Run returned! OTK:%#v\n", sshOneTimeKey)
 	ag := strings.Split(args[0], "@")
 	sshOtkFileName := "vault_ssh_otk_" + ag[0] + "_" + ag[1] + ".pem"
-	err = ioutil.WriteFile(sshOtkFileName, []byte(sshOneTimeKey.Key), 0400)
+	err = ioutil.WriteFile(sshOtkFileName, []byte(sshOneTimeKey), 0400)
 	//if sshOneTimeKey is empty, fail
 	//Establish a session directly from client to the target using the one time key received without making the vault server the middle guy:w
 	sshBinary, err := exec.LookPath("ssh")
@@ -58,6 +68,10 @@ func (c *SshCommand) Run(args []string) int {
 		log.Printf("Execution failed: sshCommand: " + err.Error())
 	}
 	return 0
+}
+
+type OneTimeKey struct {
+	Key string
 }
 
 func (c *SshCommand) Synopsis() string {
