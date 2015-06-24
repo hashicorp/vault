@@ -32,9 +32,9 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Attribute used for users (default: cn)",
 			},
-			"sslverify": &framework.FieldSchema{
+			"skipsslverify": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Description: "Verify LDAP server SSL Certificate?",
+				Description: "Skip LDAP server SSL Certificate verification - VERY insecure",
 			},
 		},
 
@@ -77,11 +77,11 @@ func (b *backend) pathConfigRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"url":       cfg.Url,
-			"userdn":    cfg.UserDN,
-			"groupdn":   cfg.GroupDN,
-			"userattr":  cfg.UserAttr,
-			"sslverify": cfg.SSLVerify,
+			"url":           cfg.Url,
+			"userdn":        cfg.UserDN,
+			"groupdn":       cfg.GroupDN,
+			"userattr":      cfg.UserAttr,
+			"skipsslverify": cfg.SkipSSLVerify,
 		},
 	}, nil
 }
@@ -106,9 +106,9 @@ func (b *backend) pathConfigWrite(
 	if groupdn != "" {
 		cfg.GroupDN = groupdn
 	}
-	sslverify := d.Get("sslverify").(bool)
-	if !sslverify {
-		cfg.SSLVerify = sslverify
+	skipsslverify := d.Get("skipsslverify").(bool)
+	if skipsslverify {
+		cfg.SkipSSLVerify = skipsslverify
 	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
@@ -132,11 +132,11 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url       string
-	UserDN    string
-	GroupDN   string
-	UserAttr  string
-	SSLVerify bool
+	Url           string
+	UserDN        string
+	GroupDN       string
+	UserAttr      string
+	SkipSSLVerify bool
 }
 
 func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
@@ -162,7 +162,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 			port = "636"
 		}
 		tlsConfig := tls.Config{InsecureSkipVerify: false}
-		if !c.SSLVerify {
+		if c.SkipSSLVerify {
 			tlsConfig = tls.Config{InsecureSkipVerify: true}
 		}
 		conn, err = ldap.DialTLS("tcp", host+":"+port, &tlsConfig)
