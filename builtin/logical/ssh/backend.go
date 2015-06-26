@@ -27,6 +27,7 @@ func Backend() *framework.Backend {
 			pathKeys(&b),
 			pathRoles(&b),
 			pathRoleCreate(&b),
+			pathLookup(&b),
 		},
 
 		Secrets: []*framework.Secret{

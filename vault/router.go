@@ -146,7 +146,6 @@ func (r *Router) MatchingView(path string) *BarrierView {
 
 // Route is used to route a given request
 func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
-	log.Printf("Vishal: vault.router.Route: req.Path:%#v\n", req.Path)
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)

@@ -29,7 +29,10 @@ func (c *SshCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %s", err))
 		return 2
 	}
-	//if len(args) < 3, fail
+	if len(args) < 1 {
+		c.Ui.Error(fmt.Sprintf("Insufficient arguments"))
+		return 2
+	}
 	log.Printf("Vishal: sshCommand.Run: args[0]: %#v\n", args[0])
 	input := strings.Split(args[0], "@")
 	username := input[0]
@@ -40,13 +43,13 @@ func (c *SshCommand) Run(args []string) int {
 		"ip":       ipAddr.String(),
 	}
 
-	keySecret, err := client.Sys().Ssh(data)
+	keySecret, err := client.Ssh().KeyCreate(data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error getting key for establishing SSH session", err))
 		return 2
 	}
 	sshOneTimeKey := string(keySecret.Data["key"].(string))
-	log.Printf("Vishal: command.ssh.Run returned! OTK:%#v\n", sshOneTimeKey)
+	log.Printf("Vishal: command.ssh.Run returned! len(key):%d\n", len(sshOneTimeKey))
 	ag := strings.Split(args[0], "@")
 	sshOtkFileName := "vault_ssh_otk_" + ag[0] + "_" + ag[1] + ".pem"
 	err = ioutil.WriteFile(sshOtkFileName, []byte(sshOneTimeKey), 0400)

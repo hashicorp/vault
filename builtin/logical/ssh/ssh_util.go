@@ -2,10 +2,7 @@ package ssh
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os/exec"
-	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -18,40 +15,8 @@ func exec_command(cmdString string) error {
 	return nil
 }
 
-func installSshOtkInTarget(session *ssh.Session, username string, ipAddr string) error {
-	log.Printf("Vishal: ssh.installSshOtkInTarget\n")
-
-	//TODO: Input validation for the commands below
-	otkPrivateKeyFileName := "vault_ssh_" + username + "_" + ipAddr + "_otk.pem"
-	otkPublicKeyFileName := otkPrivateKeyFileName + ".pub"
-	authKeysFileName := "~/.ssh/authorized_keys"
-	tempKeysFileName := "./temp_authorized_keys"
-
-	grepCmd := "grep -vFf " + otkPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
-	catCmdRemoveDuplicate := "cat " + tempKeysFileName + " > " + authKeysFileName + ";"
-	catCmdAppendNew := "cat " + otkPublicKeyFileName + " >> " + authKeysFileName + ";"
-	rmCmd := "rm -f " + tempKeysFileName + " " + otkPublicKeyFileName + ";"
-	log.Printf("Vishal: grepCmd:%#v\n catCmdRemoveDuplicate:%#v\n catCmdAppendNew:%#v\n rmCmd: %#v\n", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, rmCmd)
-	remoteCmdString := strings.Join([]string{
-		grepCmd,
-		catCmdRemoveDuplicate,
-		catCmdAppendNew,
-		rmCmd,
-	}, "")
-
-	if err := session.Run(remoteCmdString); err != nil {
-		return err
-	}
-	return nil
-}
-func createSSHPublicKeysSession(username string, ipAddr string) *ssh.Session {
-	hostKeyFileName := "./vault_ssh_" + username + "_" + ipAddr + "_shared.pem"
-	pemBytes, err := ioutil.ReadFile(hostKeyFileName)
-	if err != nil {
-		fmt.Errorf("Reading shared key failed: " + err.Error())
-	}
-
-	signer, err := ssh.ParsePrivateKey(pemBytes)
+func createSSHPublicKeysSession(username string, ipAddr string, hostKey string) *ssh.Session {
+	signer, err := ssh.ParsePrivateKey([]byte(hostKey))
 	if err != nil {
 		fmt.Errorf("Parsing Private Key failed: " + err.Error())
 	}
