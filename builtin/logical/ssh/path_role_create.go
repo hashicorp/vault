@@ -103,14 +103,16 @@ func (b *backend) pathRoleCreateWrite(
 	otkPublicKeyFileName := otkPrivateKeyFileName + ".pub"
 
 	//commands to be run on vault server
-	rmCmd := "rm -f " + otkPrivateKeyFileName + " " + otkPublicKeyFileName + ";"
-	sshKeygenCmd := "ssh-keygen -f " + otkPrivateKeyFileName + " -t rsa -N ''" + ";"
-	chmodCmd := "chmod 400 " + otkPrivateKeyFileName + ";"
+	removeFile(otkPrivateKeyFileName)
+	removeFile(otkPublicKeyFileName)
+	dynamicPublicKey, dynamicPrivateKey, _ := generateRSAKeys()
+	ioutil.WriteFile(otkPrivateKeyFileName, []byte(dynamicPrivateKey), 0600)
+	ioutil.WriteFile(otkPublicKeyFileName, []byte(dynamicPublicKey), 0600)
+	//ioutil.WriteFile("testkey.pub", []byte(publicKeyRsa), 0600)
+	//sshKeygenCmd := "ssh-keygen -f " + otkPrivateKeyFileName + " -t rsa -N ''" + ";"
+	//chmodCmd := "chmod 600 " + otkPrivateKeyFileName + ";"
 	scpCmd := "scp -i " + hostKeyFileName + " " + otkPublicKeyFileName + " " + username + "@" + ip + ":~;"
 	localCmdString := strings.Join([]string{
-		rmCmd,
-		sshKeygenCmd,
-		chmodCmd,
 		scpCmd,
 	}, "")
 	//run the commands on vault server
@@ -151,13 +153,13 @@ func (b *backend) pathRoleCreateWrite(
 	if err != nil {
 		fmt.Errorf("Failed to open '%s':%s", otkPrivateKeyFileName, err)
 	}
-	dynamicPrivateKey := string(dynamicPrivateKeyBytes)
+	dynamicPrivateKey = string(dynamicPrivateKeyBytes)
 
 	dynamicPublicKeyBytes, err := ioutil.ReadFile(otkPublicKeyFileName)
 	if err != nil {
 		fmt.Errorf("Failed to open '%s':%s", otkPublicKeyFileName, err)
 	}
-	dynamicPublicKey := string(dynamicPublicKeyBytes)
+	dynamicPublicKey = string(dynamicPublicKeyBytes)
 	return b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
 		"key": dynamicPrivateKey,
 	}, map[string]interface{}{

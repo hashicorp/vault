@@ -19,18 +19,21 @@ func (c *SshCommand) Run(args []string) int {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Printf("Vishal: SshCommand.Run: args:%#v len(args):%d\n", args, len(args))
 	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
+	var role string
+	flags.StringVar(&role, "role", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
-
+	log.Printf("Vishal: Role:%s\n", role)
+	args = flags.Args()
+	if len(args) < 1 {
+		c.Ui.Error("ssh expects at least one argument")
+		return 2
+	}
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %s", err))
-		return 2
-	}
-	if len(args) < 1 {
-		c.Ui.Error(fmt.Sprintf("Insufficient arguments"))
 		return 2
 	}
 	log.Printf("Vishal: sshCommand.Run: args[0]: %#v\n", args[0])
