@@ -85,4 +85,5 @@ var BuiltinBackends = map[string]Factory{
 	"s3":        newS3Backend,
 	"etcd":      newEtcdBackend,
 	"mysql":     newMySQLBackend,
+	"mssql":     newMsSQLBackend,
 }
