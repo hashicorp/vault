@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.4.2",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -61,8 +58,8 @@
 		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "a9f7daa9c2729e97450c2da2feda19130a367d8f"
-        },
-        {
+		},
+		{
 			"ImportPath": "github.com/go-ldap/ldap",
 			"Comment": "v1-8-g4d41e0d",
 			"Rev": "4d41e0d546efa36b1500653d519d1b39fc007dbd"
