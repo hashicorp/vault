@@ -16,8 +16,9 @@ func handleSysListAudit(core *vault.Core) http.Handler {
 		}
 
 		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "sys/audit",
+			Operation:  logical.ReadOperation,
+			Path:       "sys/audit",
+			Connection: getConnection(r),
 		}))
 		if !ok {
 			return
@@ -57,8 +58,9 @@ func handleSysDisableAudit(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	}
 
 	_, ok := request(core, w, r, requestAuth(r, &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "sys/audit/" + path,
+		Operation:  logical.DeleteOperation,
+		Path:       "sys/audit/" + path,
+		Connection: getConnection(r),
 	}))
 	if !ok {
 		return
@@ -74,6 +76,7 @@ func handleSysEnableAudit(core *vault.Core, w http.ResponseWriter, r *http.Reque
 		respondError(w, http.StatusNotFound, nil)
 		return
 	}
+
 	path := r.URL.Path[len(prefix):]
 	if path == "" {
 		respondError(w, http.StatusNotFound, nil)
@@ -88,8 +91,9 @@ func handleSysEnableAudit(core *vault.Core, w http.ResponseWriter, r *http.Reque
 	}
 
 	_, ok := request(core, w, r, requestAuth(r, &logical.Request{
-		Operation: logical.WriteOperation,
-		Path:      "sys/audit/" + path,
+		Operation:  logical.WriteOperation,
+		Path:       "sys/audit/" + path,
+		Connection: getConnection(r),
 		Data: map[string]interface{}{
 			"type":        req.Type,
 			"description": req.Description,

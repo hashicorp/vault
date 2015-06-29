@@ -52,7 +52,7 @@ type Backend struct {
 	logRaw bool
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
+func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if !b.logRaw {
 		// Copy the structures
 		cp, err := copystructure.Copy(auth)
@@ -79,7 +79,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
 	// Encode the entry as JSON
 	var buf bytes.Buffer
 	var format audit.FormatJSON
-	if err := format.FormatRequest(&buf, auth, req); err != nil {
+	if err := format.FormatRequest(&buf, auth, req, outerErr); err != nil {
 		return err
 	}
 

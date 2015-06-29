@@ -41,8 +41,9 @@ func handleSysRemount(core *vault.Core) http.Handler {
 		}
 
 		_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.WriteOperation,
-			Path:      "sys/remount",
+			Operation:  logical.WriteOperation,
+			Path:       "sys/remount",
+			Connection: getConnection(r),
 			Data: map[string]interface{}{
 				"from": req.From,
 				"to":   req.To,
@@ -65,8 +66,9 @@ func handleSysListMounts(core *vault.Core) http.Handler {
 		}
 
 		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "sys/mounts",
+			Operation:  logical.ReadOperation,
+			Path:       "sys/mounts",
+			Connection: getConnection(r),
 		}))
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
@@ -121,8 +123,9 @@ func handleSysMount(
 	}
 
 	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-		Operation: logical.WriteOperation,
-		Path:      "sys/mounts/" + path,
+		Operation:  logical.WriteOperation,
+		Path:       "sys/mounts/" + path,
+		Connection: getConnection(r),
 		Data: map[string]interface{}{
 			"type":        req.Type,
 			"description": req.Description,
@@ -142,8 +145,9 @@ func handleSysUnmount(
 	r *http.Request,
 	path string) {
 	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "sys/mounts/" + path,
+		Operation:  logical.DeleteOperation,
+		Path:       "sys/mounts/" + path,
+		Connection: getConnection(r),
 	}))
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)

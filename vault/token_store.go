@@ -656,13 +656,13 @@ func (ts *TokenStore) handleLookup(
 
 	// Lookup the token
 	out, err := ts.Lookup(id)
+
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	// Fast-path the not found case
 	if out == nil {
-		return nil, nil
+		return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
 	}
 
 	// Generate a response. We purposely omit the parent reference otherwise

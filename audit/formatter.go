@@ -12,6 +12,6 @@ import (
 //
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
-	FormatRequest(io.Writer, *logical.Auth, *logical.Request) error
+	FormatRequest(io.Writer, *logical.Auth, *logical.Request, error) error
 	FormatResponse(io.Writer, *logical.Auth, *logical.Request, *logical.Response, error) error
 }
