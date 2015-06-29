@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
+	"errors"
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
 	cases := map[string]struct {
 		Auth   *logical.Auth
 		Req    *logical.Request
+		Err    error
 		Result string
 	}{
 		"auth, request": {
@@ -18,7 +20,11 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			&logical.Request{
 				Operation: logical.WriteOperation,
 				Path:      "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
 			},
+			errors.New("this is an error"),
 			testFormatJSONReqBasicStr,
 		},
 	}
@@ -26,7 +32,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	for name, tc := range cases {
 		var buf bytes.Buffer
 		var format FormatJSON
-		if err := format.FormatRequest(&buf, tc.Auth, tc.Req); err != nil {
+		if err := format.FormatRequest(&buf, tc.Auth, tc.Req, tc.Err); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 
@@ -38,5 +44,5 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}
 }
 
-const testFormatJSONReqBasicStr = `{"type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"write","path":"/foo","data":null}}
+const testFormatJSONReqBasicStr = `{"type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"write","path":"/foo","data":null,"remote_address":"127.0.0.1"},"error":"this is an error"}
 `

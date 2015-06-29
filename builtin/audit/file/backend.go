@@ -48,7 +48,7 @@ type Backend struct {
 	f    *os.File
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
+func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if err := b.open(); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
 	}
 
 	var format audit.FormatJSON
-	return format.FormatRequest(b.f, auth, req)
+	return format.FormatRequest(b.f, auth, req, outerErr)
 }
 
 func (b *Backend) LogResponse(

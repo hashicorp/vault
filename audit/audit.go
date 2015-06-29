@@ -11,7 +11,7 @@ type Backend interface {
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogRequest(*logical.Auth, *logical.Request) error
+	LogRequest(*logical.Auth, *logical.Request, error) error
 
 	// LogResponse is used to syncronously log a response. This is done after
 	// the request is processed but before the response is sent. The arguments
