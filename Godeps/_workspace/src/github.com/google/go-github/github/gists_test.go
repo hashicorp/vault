@@ -146,6 +146,32 @@ func TestGistsService_Get_invalidID(t *testing.T) {
 	testURLParseError(t, err)
 }
 
+func TestGistsService_GetRevision(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/gists/1/s", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"id": "1"}`)
+	})
+
+	gist, _, err := client.Gists.GetRevision("1", "s")
+
+	if err != nil {
+		t.Errorf("Gists.Get returned error: %v", err)
+	}
+
+	want := &Gist{ID: String("1")}
+	if !reflect.DeepEqual(gist, want) {
+		t.Errorf("Gists.Get returned %+v, want %+v", gist, want)
+	}
+}
+
+func TestGistsService_GetRevision_invalidID(t *testing.T) {
+	_, _, err := client.Gists.GetRevision("%", "%")
+	testURLParseError(t, err)
+}
+
 func TestGistsService_Create(t *testing.T) {
 	setup()
 	defer teardown()

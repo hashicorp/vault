@@ -63,6 +63,15 @@ func TestInmemSink(t *testing.T) {
 		t.Fatalf("bad val: %v", agg)
 	}
 
+	if agg.LastUpdated.IsZero() {
+		t.Fatalf("agg.LastUpdated is not set: %v", agg)
+	}
+
+	diff := time.Now().Sub(agg.LastUpdated).Seconds()
+	if diff > 1 {
+		t.Fatalf("time diff too great: %f", diff)
+	}
+
 	if agg = intvM.Samples["foo.bar"]; agg == nil {
 		t.Fatalf("missing sample")
 	}

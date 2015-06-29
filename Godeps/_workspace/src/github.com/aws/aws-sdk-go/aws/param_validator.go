@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 // ValidateParameters is a request handler to validate the input parameters.
@@ -18,7 +18,7 @@ func ValidateParameters(r *Request) {
 		if count := len(v.errors); count > 0 {
 			format := "%d validation errors:\n- %s"
 			msg := fmt.Sprintf(format, count, strings.Join(v.errors, "\n- "))
-			r.Error = apierr.New("InvalidParameter", msg, nil)
+			r.Error = awserr.New("InvalidParameter", msg, nil)
 		}
 	}
 }

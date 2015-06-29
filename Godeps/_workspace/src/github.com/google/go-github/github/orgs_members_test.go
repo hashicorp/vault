@@ -217,7 +217,6 @@ func TestOrganizationsService_ListOrgMemberships(t *testing.T) {
 
 	mux.HandleFunc("/user/memberships/orgs", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		testHeader(t, r, "Accept", mediaTypeMembershipPreview)
 		testFormValues(t, r, values{
 			"state": "active",
 			"page":  "2",
@@ -246,7 +245,6 @@ func TestOrganizationsService_GetOrgMembership(t *testing.T) {
 
 	mux.HandleFunc("/user/memberships/orgs/o", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		testHeader(t, r, "Accept", mediaTypeMembershipPreview)
 		fmt.Fprint(w, `{"url":"u"}`)
 	})
 
@@ -272,7 +270,6 @@ func TestOrganizationsService_EditOrgMembership(t *testing.T) {
 		json.NewDecoder(r.Body).Decode(v)
 
 		testMethod(t, r, "PATCH")
-		testHeader(t, r, "Accept", mediaTypeMembershipPreview)
 		if !reflect.DeepEqual(v, input) {
 			t.Errorf("Request body = %+v, want %+v", v, input)
 		}

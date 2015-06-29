@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/internal/apierr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,12 +35,12 @@ func unmarshal(req *Request) {
 func unmarshalError(req *Request) {
 	bodyBytes, err := ioutil.ReadAll(req.HTTPResponse.Body)
 	if err != nil {
-		req.Error = apierr.New("UnmarshaleError", req.HTTPResponse.Status, err)
+		req.Error = awserr.New("UnmarshaleError", req.HTTPResponse.Status, err)
 		return
 	}
 	if len(bodyBytes) == 0 {
-		req.Error = apierr.NewRequestError(
-			apierr.New("UnmarshaleError", req.HTTPResponse.Status, fmt.Errorf("empty body")),
+		req.Error = awserr.NewRequestFailure(
+			awserr.New("UnmarshaleError", req.HTTPResponse.Status, fmt.Errorf("empty body")),
 			req.HTTPResponse.StatusCode,
 			"",
 		)
@@ -49,11 +48,11 @@ func unmarshalError(req *Request) {
 	}
 	var jsonErr jsonErrorResponse
 	if err := json.Unmarshal(bodyBytes, &jsonErr); err != nil {
-		req.Error = apierr.New("UnmarshaleError", "JSON unmarshal", err)
+		req.Error = awserr.New("UnmarshaleError", "JSON unmarshal", err)
 		return
 	}
-	req.Error = apierr.NewRequestError(
-		apierr.New(jsonErr.Code, jsonErr.Message, nil),
+	req.Error = awserr.NewRequestFailure(
+		awserr.New(jsonErr.Code, jsonErr.Message, nil),
 		req.HTTPResponse.StatusCode,
 		"",
 	)
@@ -68,9 +67,9 @@ type jsonErrorResponse struct {
 func TestRequestRecoverRetry5xx(t *testing.T) {
 	reqNum := 0
 	reqs := []http.Response{
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 501, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 200, Body: body(`{"data":"valid"}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 501, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 200, Body: body(`{"data":"valid"}`)},
 	}
 
 	s := NewService(&Config{MaxRetries: 10})
@@ -94,9 +93,9 @@ func TestRequestRecoverRetry5xx(t *testing.T) {
 func TestRequestRecoverRetry4xxRetryable(t *testing.T) {
 	reqNum := 0
 	reqs := []http.Response{
-		http.Response{StatusCode: 400, Body: body(`{"__type":"Throttling","message":"Rate exceeded."}`)},
-		http.Response{StatusCode: 429, Body: body(`{"__type":"ProvisionedThroughputExceededException","message":"Rate exceeded."}`)},
-		http.Response{StatusCode: 200, Body: body(`{"data":"valid"}`)},
+		{StatusCode: 400, Body: body(`{"__type":"Throttling","message":"Rate exceeded."}`)},
+		{StatusCode: 429, Body: body(`{"__type":"ProvisionedThroughputExceededException","message":"Rate exceeded."}`)},
+		{StatusCode: 200, Body: body(`{"data":"valid"}`)},
 	}
 
 	s := NewService(&Config{MaxRetries: 10})
@@ -148,10 +147,10 @@ func TestRequestExhaustRetries(t *testing.T) {
 
 	reqNum := 0
 	reqs := []http.Response{
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
-		http.Response{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
+		{StatusCode: 500, Body: body(`{"__type":"UnknownError","message":"An error occurred."}`)},
 	}
 
 	s := NewService(&Config{MaxRetries: -1})
@@ -181,8 +180,8 @@ func TestRequestExhaustRetries(t *testing.T) {
 func TestRequestRecoverExpiredCreds(t *testing.T) {
 	reqNum := 0
 	reqs := []http.Response{
-		http.Response{StatusCode: 400, Body: body(`{"__type":"ExpiredTokenException","message":"expired token"}`)},
-		http.Response{StatusCode: 200, Body: body(`{"data":"valid"}`)},
+		{StatusCode: 400, Body: body(`{"__type":"ExpiredTokenException","message":"expired token"}`)},
+		{StatusCode: 200, Body: body(`{"data":"valid"}`)},
 	}
 
 	s := NewService(&Config{MaxRetries: 10, Credentials: credentials.NewStaticCredentials("AKID", "SECRET", "")})

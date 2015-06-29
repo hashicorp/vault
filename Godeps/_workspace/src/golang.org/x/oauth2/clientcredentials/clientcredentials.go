@@ -11,7 +11,7 @@
 // server.
 //
 // See http://tools.ietf.org/html/draft-ietf-oauth-v2-31#section-4.4
-package clientcredentials
+package clientcredentials // import "golang.org/x/oauth2/clientcredentials"
 
 import (
 	"net/http"

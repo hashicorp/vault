@@ -30,7 +30,7 @@ func TestMD5InPutBucketCORS(t *testing.T) {
 		Bucket: aws.String("bucketname"),
 		CORSConfiguration: &s3.CORSConfiguration{
 			CORSRules: []*s3.CORSRule{
-				&s3.CORSRule{AllowedMethods: []*string{aws.String("GET")}},
+				{AllowedMethods: []*string{aws.String("GET")}},
 			},
 		},
 	})
@@ -43,7 +43,7 @@ func TestMD5InPutBucketLifecycle(t *testing.T) {
 		Bucket: aws.String("bucketname"),
 		LifecycleConfiguration: &s3.LifecycleConfiguration{
 			Rules: []*s3.LifecycleRule{
-				&s3.LifecycleRule{
+				{
 					ID:     aws.String("ID"),
 					Prefix: aws.String("Prefix"),
 					Status: aws.String("Enabled"),
@@ -69,7 +69,7 @@ func TestMD5InPutBucketTagging(t *testing.T) {
 		Bucket: aws.String("bucketname"),
 		Tagging: &s3.Tagging{
 			TagSet: []*s3.Tag{
-				&s3.Tag{Key: aws.String("KEY"), Value: aws.String("VALUE")},
+				{Key: aws.String("KEY"), Value: aws.String("VALUE")},
 			},
 		},
 	})
@@ -82,7 +82,7 @@ func TestMD5InDeleteObjects(t *testing.T) {
 		Bucket: aws.String("bucketname"),
 		Delete: &s3.Delete{
 			Objects: []*s3.ObjectIdentifier{
-				&s3.ObjectIdentifier{Key: aws.String("key")},
+				{Key: aws.String("key")},
 			},
 		},
 	})

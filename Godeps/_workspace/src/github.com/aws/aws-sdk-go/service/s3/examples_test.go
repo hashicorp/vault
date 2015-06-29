@@ -36,7 +36,7 @@ func ExampleS3_AbortMultipartUpload() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -55,7 +55,7 @@ func ExampleS3_CompleteMultipartUpload() {
 		UploadID: aws.String("MultipartUploadId"), // Required
 		MultipartUpload: &s3.CompletedMultipartUpload{
 			Parts: []*s3.CompletedPart{
-				&s3.CompletedPart{ // Required
+				{ // Required
 					ETag:       aws.String("ETag"),
 					PartNumber: aws.Long(1),
 				},
@@ -75,7 +75,7 @@ func ExampleS3_CompleteMultipartUpload() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -135,7 +135,7 @@ func ExampleS3_CopyObject() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -171,7 +171,7 @@ func ExampleS3_CreateBucket() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -222,7 +222,7 @@ func ExampleS3_CreateMultipartUpload() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -249,7 +249,7 @@ func ExampleS3_DeleteBucket() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -276,7 +276,7 @@ func ExampleS3_DeleteBucketCORS() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -303,7 +303,7 @@ func ExampleS3_DeleteBucketLifecycle() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -330,7 +330,7 @@ func ExampleS3_DeleteBucketPolicy() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -357,7 +357,7 @@ func ExampleS3_DeleteBucketReplication() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -384,7 +384,7 @@ func ExampleS3_DeleteBucketTagging() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -411,7 +411,7 @@ func ExampleS3_DeleteBucketWebsite() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -442,7 +442,7 @@ func ExampleS3_DeleteObject() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -459,7 +459,7 @@ func ExampleS3_DeleteObjects() {
 		Bucket: aws.String("BucketName"), // Required
 		Delete: &s3.Delete{ // Required
 			Objects: []*s3.ObjectIdentifier{ // Required
-				&s3.ObjectIdentifier{ // Required
+				{ // Required
 					Key:       aws.String("ObjectKey"), // Required
 					VersionID: aws.String("ObjectVersionId"),
 				},
@@ -481,7 +481,7 @@ func ExampleS3_DeleteObjects() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -508,7 +508,7 @@ func ExampleS3_GetBucketACL() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -535,7 +535,7 @@ func ExampleS3_GetBucketCORS() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -562,7 +562,7 @@ func ExampleS3_GetBucketLifecycle() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -589,7 +589,7 @@ func ExampleS3_GetBucketLocation() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -616,7 +616,7 @@ func ExampleS3_GetBucketLogging() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -643,7 +643,7 @@ func ExampleS3_GetBucketNotification() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -670,7 +670,7 @@ func ExampleS3_GetBucketNotificationConfiguration() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -697,7 +697,7 @@ func ExampleS3_GetBucketPolicy() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -724,7 +724,7 @@ func ExampleS3_GetBucketReplication() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -751,7 +751,7 @@ func ExampleS3_GetBucketRequestPayment() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -778,7 +778,7 @@ func ExampleS3_GetBucketTagging() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -805,7 +805,7 @@ func ExampleS3_GetBucketVersioning() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -832,7 +832,7 @@ func ExampleS3_GetBucketWebsite() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -876,7 +876,7 @@ func ExampleS3_GetObject() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -906,7 +906,7 @@ func ExampleS3_GetObjectACL() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -935,7 +935,7 @@ func ExampleS3_GetObjectTorrent() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -962,7 +962,7 @@ func ExampleS3_HeadBucket() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1000,7 +1000,7 @@ func ExampleS3_HeadObject() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1025,7 +1025,7 @@ func ExampleS3_ListBuckets() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1058,7 +1058,7 @@ func ExampleS3_ListMultipartUploads() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1091,7 +1091,7 @@ func ExampleS3_ListObjectVersions() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1123,7 +1123,7 @@ func ExampleS3_ListObjects() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1155,7 +1155,7 @@ func ExampleS3_ListParts() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1173,7 +1173,7 @@ func ExampleS3_PutBucketACL() {
 		ACL:    aws.String("BucketCannedACL"),
 		AccessControlPolicy: &s3.AccessControlPolicy{
 			Grants: []*s3.Grant{
-				&s3.Grant{ // Required
+				{ // Required
 					Grantee: &s3.Grantee{
 						Type:         aws.String("Type"), // Required
 						DisplayName:  aws.String("DisplayName"),
@@ -1207,7 +1207,7 @@ func ExampleS3_PutBucketACL() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1224,7 +1224,7 @@ func ExampleS3_PutBucketCORS() {
 		Bucket: aws.String("BucketName"), // Required
 		CORSConfiguration: &s3.CORSConfiguration{
 			CORSRules: []*s3.CORSRule{
-				&s3.CORSRule{ // Required
+				{ // Required
 					AllowedHeaders: []*string{
 						aws.String("AllowedHeader"), // Required
 						// More values...
@@ -1258,7 +1258,7 @@ func ExampleS3_PutBucketCORS() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1275,7 +1275,7 @@ func ExampleS3_PutBucketLifecycle() {
 		Bucket: aws.String("BucketName"), // Required
 		LifecycleConfiguration: &s3.LifecycleConfiguration{
 			Rules: []*s3.LifecycleRule{ // Required
-				&s3.LifecycleRule{ // Required
+				{ // Required
 					Prefix: aws.String("Prefix"),           // Required
 					Status: aws.String("ExpirationStatus"), // Required
 					Expiration: &s3.LifecycleExpiration{
@@ -1311,7 +1311,7 @@ func ExampleS3_PutBucketLifecycle() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1330,7 +1330,7 @@ func ExampleS3_PutBucketLogging() {
 			LoggingEnabled: &s3.LoggingEnabled{
 				TargetBucket: aws.String("TargetBucket"),
 				TargetGrants: []*s3.TargetGrant{
-					&s3.TargetGrant{ // Required
+					{ // Required
 						Grantee: &s3.Grantee{
 							Type:         aws.String("Type"), // Required
 							DisplayName:  aws.String("DisplayName"),
@@ -1357,7 +1357,7 @@ func ExampleS3_PutBucketLogging() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1414,7 +1414,7 @@ func ExampleS3_PutBucketNotification() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1431,7 +1431,7 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 		Bucket: aws.String("BucketName"), // Required
 		NotificationConfiguration: &s3.NotificationConfiguration{ // Required
 			LambdaFunctionConfigurations: []*s3.LambdaFunctionConfiguration{
-				&s3.LambdaFunctionConfiguration{ // Required
+				{ // Required
 					Events: []*string{ // Required
 						aws.String("Event"), // Required
 						// More values...
@@ -1442,7 +1442,7 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 				// More values...
 			},
 			QueueConfigurations: []*s3.QueueConfiguration{
-				&s3.QueueConfiguration{ // Required
+				{ // Required
 					Events: []*string{ // Required
 						aws.String("Event"), // Required
 						// More values...
@@ -1453,7 +1453,7 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 				// More values...
 			},
 			TopicConfigurations: []*s3.TopicConfiguration{
-				&s3.TopicConfiguration{ // Required
+				{ // Required
 					Events: []*string{ // Required
 						aws.String("Event"), // Required
 						// More values...
@@ -1476,7 +1476,7 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1504,7 +1504,7 @@ func ExampleS3_PutBucketPolicy() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1522,7 +1522,7 @@ func ExampleS3_PutBucketReplication() {
 		ReplicationConfiguration: &s3.ReplicationConfiguration{ // Required
 			Role: aws.String("Role"), // Required
 			Rules: []*s3.ReplicationRule{ // Required
-				&s3.ReplicationRule{ // Required
+				{ // Required
 					Destination: &s3.Destination{ // Required
 						Bucket: aws.String("BucketName"), // Required
 					},
@@ -1545,7 +1545,7 @@ func ExampleS3_PutBucketReplication() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1575,7 +1575,7 @@ func ExampleS3_PutBucketRequestPayment() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1592,7 +1592,7 @@ func ExampleS3_PutBucketTagging() {
 		Bucket: aws.String("BucketName"), // Required
 		Tagging: &s3.Tagging{ // Required
 			TagSet: []*s3.Tag{ // Required
-				&s3.Tag{ // Required
+				{ // Required
 					Key:   aws.String("ObjectKey"), // Required
 					Value: aws.String("Value"),     // Required
 				},
@@ -1611,7 +1611,7 @@ func ExampleS3_PutBucketTagging() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1643,7 +1643,7 @@ func ExampleS3_PutBucketVersioning() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1670,7 +1670,7 @@ func ExampleS3_PutBucketWebsite() {
 				Protocol: aws.String("Protocol"),
 			},
 			RoutingRules: []*s3.RoutingRule{
-				&s3.RoutingRule{ // Required
+				{ // Required
 					Redirect: &s3.Redirect{ // Required
 						HTTPRedirectCode:     aws.String("HttpRedirectCode"),
 						HostName:             aws.String("HostName"),
@@ -1698,7 +1698,7 @@ func ExampleS3_PutBucketWebsite() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1751,7 +1751,7 @@ func ExampleS3_PutObject() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1770,7 +1770,7 @@ func ExampleS3_PutObjectACL() {
 		ACL:    aws.String("ObjectCannedACL"),
 		AccessControlPolicy: &s3.AccessControlPolicy{
 			Grants: []*s3.Grant{
-				&s3.Grant{ // Required
+				{ // Required
 					Grantee: &s3.Grantee{
 						Type:         aws.String("Type"), // Required
 						DisplayName:  aws.String("DisplayName"),
@@ -1805,7 +1805,7 @@ func ExampleS3_PutObjectACL() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1838,7 +1838,7 @@ func ExampleS3_RestoreObject() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1874,7 +1874,7 @@ func ExampleS3_UploadPart() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}
@@ -1917,7 +1917,7 @@ func ExampleS3_UploadPartCopy() {
 				fmt.Println(reqErr.Code(), reqErr.Message(), reqErr.StatusCode(), reqErr.RequestID())
 			}
 		} else {
-			// This case should never be hit, The SDK should alwsy return an
+			// This case should never be hit, the SDK should always return an
 			// error which satisfies the awserr.Error interface.
 			fmt.Println(err.Error())
 		}

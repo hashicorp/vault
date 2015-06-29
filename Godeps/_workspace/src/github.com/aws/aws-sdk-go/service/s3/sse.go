@@ -5,11 +5,11 @@ import (
 	"encoding/base64"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
-	"github.com/aws/aws-sdk-go/internal/apierr"
 )
 
-var errSSERequiresSSL = apierr.New("ConfigError", "cannot send SSE keys over HTTP.", nil)
+var errSSERequiresSSL = awserr.New("ConfigError", "cannot send SSE keys over HTTP.", nil)
 
 func validateSSERequiresSSL(r *aws.Request) {
 	if r.HTTPRequest.URL.Scheme != "https" {

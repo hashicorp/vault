@@ -49,6 +49,9 @@ type Repository struct {
 	Organization     *Organization    `json:"organization,omitempty"`
 	Permissions      *map[string]bool `json:"permissions,omitempty"`
 
+	// Only provided when using RepositoriesService.Get while in preview
+	License *License `json:"license,omitempty"`
+
 	// Additional mutable fields when creating and editing a repository
 	Private      *bool `json:"private"`
 	HasIssues    *bool `json:"has_issues"`
@@ -119,6 +122,11 @@ type RepositoryListOptions struct {
 	// Default is "asc" when sort is "full_name", otherwise default is "desc".
 	Direction string `url:"direction,omitempty"`
 
+	// Include orginization repositories the user has access to.
+	// This will become the default behavior in the future, but is opt-in for now.
+	// See https://developer.github.com/changes/2015-01-07-prepare-for-organization-permissions-changes/
+	IncludeOrg bool `url:"-"`
+
 	ListOptions
 }
 
@@ -141,6 +149,10 @@ func (s *RepositoriesService) List(user string, opt *RepositoryListOptions) ([]R
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if opt != nil && opt.IncludeOrg {
+		req.Header.Set("Accept", mediaTypeOrganizationsPreview)
 	}
 
 	repos := new([]Repository)
@@ -254,6 +266,10 @@ func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, e
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when the license support fully launches
+	// https://developer.github.com/v3/licenses/#get-a-repositorys-license
+	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	repository := new(Repository)
 	resp, err := s.client.Do(req, repository)

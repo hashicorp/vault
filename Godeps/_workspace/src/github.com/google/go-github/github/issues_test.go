@@ -176,7 +176,7 @@ func TestIssuesService_Create(t *testing.T) {
 		Title:    String("t"),
 		Body:     String("b"),
 		Assignee: String("a"),
-		Labels:   []string{"l1", "l2"},
+		Labels:   &[]string{"l1", "l2"},
 	}
 
 	mux.HandleFunc("/repos/o/r/issues", func(w http.ResponseWriter, r *http.Request) {

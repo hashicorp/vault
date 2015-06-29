@@ -3,12 +3,14 @@ package etcd
 import (
 	"math/rand"
 	"strings"
+	"sync"
 )
 
 type Cluster struct {
 	Leader   string   `json:"leader"`
 	Machines []string `json:"machines"`
 	picked   int
+	mu       sync.RWMutex
 }
 
 func NewCluster(machines []string) *Cluster {
@@ -25,10 +27,22 @@ func NewCluster(machines []string) *Cluster {
 	}
 }
 
-func (cl *Cluster) failure()     { cl.picked = rand.Intn(len(cl.Machines)) }
-func (cl *Cluster) pick() string { return cl.Machines[cl.picked] }
+func (cl *Cluster) failure() {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	cl.picked = rand.Intn(len(cl.Machines))
+}
+
+func (cl *Cluster) pick() string {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	return cl.Machines[cl.picked]
+}
 
 func (cl *Cluster) updateFromStr(machines string) {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+
 	cl.Machines = strings.Split(machines, ",")
 	for i := range cl.Machines {
 		cl.Machines[i] = strings.TrimSpace(cl.Machines[i])

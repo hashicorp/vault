@@ -224,3 +224,24 @@ func TestEscapeFilter(t *testing.T) {
 		t.Errorf("Got %s, expected %s", want, got)
 	}
 }
+
+func TestCompare(t *testing.T) {
+	fmt.Printf("TestCompare: starting...\n")
+	l, err := Dial("tcp", fmt.Sprintf("%s:%d", ldapServer, ldapPort))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer l.Close()
+
+	dn := "cn=math mich,ou=User Groups,ou=Groups,dc=umich,dc=edu"
+	attribute := "cn"
+	value := "math mich"
+
+	sr, err := l.Compare(dn, attribute, value)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	fmt.Printf("TestCompare: -> num of entries = %d\n", sr)
+}

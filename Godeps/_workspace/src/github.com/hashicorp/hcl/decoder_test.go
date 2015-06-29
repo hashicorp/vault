@@ -188,6 +188,20 @@ func TestDecode_interface(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			"nested_block_comment.hcl",
+			false,
+			map[string]interface{}{
+				"bar": "value",
+			},
+		},
+
+		{
+			"unterminated_block_comment.hcl",
+			true,
+			nil,
+		},
 	}
 
 	for _, tc := range cases {
