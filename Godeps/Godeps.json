@@ -69,8 +69,8 @@
 		},
 		{
 			"ImportPath": "github.com/go-ldap/ldap",
-			"Comment": "v1-8-g4d41e0d",
-			"Rev": "4d41e0d546efa36b1500653d519d1b39fc007dbd"
+			"Comment": "v1-14-g406aa05",
+			"Rev": "406aa05eb8272fb8aa201e410afa6f9fdcb2bf68"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
