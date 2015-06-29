@@ -261,10 +261,16 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error {
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) (reterr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.l.RLock()
 	defer a.l.RUnlock()
+	defer func() {
+		if r := recover(); r != nil {
+			a.logger.Printf("[ERR] audit: panic logging: auth: %#v, req: %#v: %v", auth, req, r)
+			reterr = fmt.Errorf("panic generating audit log")
+		}
+	}()
 
 	// Ensure at least one backend logs
 	anyLogged := false
@@ -287,10 +293,16 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request) error
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
 func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
-	resp *logical.Response, err error) error {
+	resp *logical.Response, err error) (reterr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.l.RLock()
 	defer a.l.RUnlock()
+	defer func() {
+		if r := recover(); r != nil {
+			a.logger.Printf("[ERR] audit: panic logging: auth: %#v, req: %#v, resp: %#v: %v", auth, req, resp, r)
+			reterr = fmt.Errorf("panic generating audit log")
+		}
+	}()
 
 	// Ensure at least one backend logs
 	anyLogged := false
