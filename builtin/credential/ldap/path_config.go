@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/vanackere/ldap"
+	"github.com/go-ldap/ldap"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -150,7 +151,8 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if port == "" {
 			port = "636"
 		}
-		conn, err = ldap.DialTLS("tcp", host+":"+port, nil)
+		conn, err = ldap.DialTLS(
+			"tcp", host+":"+port, &tls.Config{ServerName: host})
 	default:
 		return nil, fmt.Errorf("invalid LDAP scheme")
 	}

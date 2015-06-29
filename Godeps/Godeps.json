@@ -19,11 +19,6 @@
 			"Rev": "ea83c25c44525da47e8044bbd21e4045758ea39b"
 		},
 		{
-			"ImportPath": "github.com/aws/aws-sdk-go/internal/apierr",
-			"Comment": "v0.6.0",
-			"Rev": "ea83c25c44525da47e8044bbd21e4045758ea39b"
-		},
-		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/endpoints",
 			"Comment": "v0.6.0",
 			"Rev": "ea83c25c44525da47e8044bbd21e4045758ea39b"
@@ -66,6 +61,11 @@
 		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "a9f7daa9c2729e97450c2da2feda19130a367d8f"
+        },
+        {
+			"ImportPath": "github.com/go-ldap/ldap",
+			"Comment": "v1-8-g4d41e0d",
+			"Rev": "4d41e0d546efa36b1500653d519d1b39fc007dbd"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
@@ -168,12 +168,8 @@
 			"Rev": "d0e0d8e11f318e000a8cc434616d69e329edc374"
 		},
 		{
-			"ImportPath": "github.com/vanackere/asn1-ber",
-			"Rev": "295c7b21db5d9525ad959e3382610f3aff029663"
-		},
-		{
-			"ImportPath": "github.com/vanackere/ldap",
-			"Rev": "e29b797d1abde6567ccb4ab56236e033cabf845a"
+			"ImportPath": "github.com/ugorji/go/codec",
+			"Rev": "821cda7e48749cacf7cad2c6ed01e96457ca7e9d"
 		},
 		{
 			"ImportPath": "github.com/vaughan0/go-ini",
@@ -190,6 +186,11 @@
 		{
 			"ImportPath": "golang.org/x/oauth2",
 			"Rev": "ec6d5d770f531108a6464462b2201b74fcd09314"
+		},
+		{
+			"ImportPath": "gopkg.in/asn1-ber.v1",
+			"Comment": "v1",
+			"Rev": "9eae18c3681ae3d3c677ac2b80a8fe57de45fc09"
 		}
 	]
 }

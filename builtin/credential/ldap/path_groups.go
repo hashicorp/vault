@@ -9,7 +9,7 @@ import (
 
 func pathGroups(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `groups/(?P<name>\w+)`,
+		Pattern: `groups/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
