@@ -7,6 +7,7 @@ package ldap
 import (
 	"crypto/tls"
 	"errors"
+	"flag"
 	"fmt"
 	"gopkg.in/asn1-ber.v1"
 	"log"
