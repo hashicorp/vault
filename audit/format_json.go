@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/hashicorp/vault/logical"
-	"errors"
 )
 
 // FormatJSON is a Formatter implementation that structures data into
@@ -22,15 +21,16 @@ func (f *FormatJSON) FormatRequest(
 	if auth == nil {
 		auth = new(logical.Auth)
 	}
-	if err == nil {
-		err = errors.New("")
+	var errString string
+	if err != nil {
+		errString = err.Error()
 	}
 
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
-		Type: "request",
-		Error: err.Error(),
+		Type:  "request",
+		Error: errString,
 
 		Auth: JSONAuth{
 			DisplayName: auth.DisplayName,
@@ -42,7 +42,7 @@ func (f *FormatJSON) FormatRequest(
 			Operation:  req.Operation,
 			Path:       req.Path,
 			Data:       req.Data,
-			RemoteAddr: req.Connection.RemoteAddr,
+			RemoteAddr: getRemoteAddr(req),
 		},
 	})
 }
@@ -60,8 +60,9 @@ func (f *FormatJSON) FormatResponse(
 	if resp == nil {
 		resp = new(logical.Response)
 	}
-	if err == nil {
-		err = errors.New("")
+	var errString string
+	if err != nil {
+		errString = err.Error()
 	}
 
 	var respAuth *JSONAuth
@@ -84,8 +85,8 @@ func (f *FormatJSON) FormatResponse(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
-		Type: "response",
-		Error: err.Error(),
+		Type:  "response",
+		Error: errString,
 
 		Auth: JSONAuth{
 			Policies: auth.Policies,
@@ -96,7 +97,7 @@ func (f *FormatJSON) FormatResponse(
 			Operation:  req.Operation,
 			Path:       req.Path,
 			Data:       req.Data,
-			RemoteAddr: req.Connection.RemoteAddr,
+			RemoteAddr: getRemoteAddr(req),
 		},
 
 		Response: JSONResponse{
@@ -133,8 +134,8 @@ type JSONRequest struct {
 }
 
 type JSONResponse struct {
-	Auth     *JSONAuth               `json:"auth,omitempty"`
-	Secret   *JSONSecret             `json:"secret,emitempty"`
+	Auth     *JSONAuth              `json:"auth,omitempty"`
+	Secret   *JSONSecret            `json:"secret,emitempty"`
 	Data     map[string]interface{} `json:"data"`
 	Redirect string                 `json:"redirect"`
 }
@@ -148,4 +149,12 @@ type JSONAuth struct {
 
 type JSONSecret struct {
 	LeaseID string `json:"lease_id"`
+}
+
+// getRemoteAddr safely gets the remote address avoiding a nil pointer
+func getRemoteAddr(req *logical.Request) string {
+	if req != nil && req.Connection != nil {
+		return req.Connection.RemoteAddr
+	}
+	return ""
 }

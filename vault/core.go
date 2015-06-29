@@ -355,7 +355,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 
 	var auth *logical.Auth
-
 	if c.router.LoginPath(req.Path) {
 		resp, auth, err = c.handleLoginRequest(req)
 	} else {
@@ -410,7 +409,7 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.
 	req.DisplayName = auth.DisplayName
 
 	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(auth, req, errors.New("")); err != nil {
+	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
 			req, err)
 		return nil, auth, ErrInternalError
@@ -482,7 +481,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req, errors.New("")); err != nil {
+	if err := c.auditBroker.LogRequest(nil, req, nil); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
 			req, err)
 		return nil, nil, ErrInternalError

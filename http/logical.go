@@ -58,9 +58,9 @@ func handleLogical(core *vault.Core) http.Handler {
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
 		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation: op,
-			Path:      path,
-			Data:      req,
+			Operation:  op,
+			Path:       path,
+			Data:       req,
 			Connection: getConnection(r),
 		}))
 		if !ok {
@@ -188,6 +188,8 @@ func respondRaw(w http.ResponseWriter, r *http.Request, path string, resp *logic
 	w.Write(body)
 }
 
+// getConnection is used to format the connection information for
+// attaching to a logical request
 func getConnection(r *http.Request) (connection *logical.Connection) {
 	var remoteAddr string
 
@@ -200,7 +202,6 @@ func getConnection(r *http.Request) (connection *logical.Connection) {
 		RemoteAddr: remoteAddr,
 		ConnState:  r.TLS,
 	}
-
 	return
 }
 
