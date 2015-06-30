@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -40,7 +41,7 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	displayName := req.DisplayName
-	username := fmt.Sprintf("vault-%s-%s-%s", name, displayName, generateUUID())
+	username := fmt.Sprintf("vault-%s-%s-%s-%d", name, displayName, generateUUID(), time.Now().Unix())
 	password := generateUUID()
 
 	// Get our connection
