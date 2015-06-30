@@ -53,7 +53,9 @@ of the syntax and grammar are listed here.
 
   * Single line comments start with `#` or `//`
 
-  * Multi-line comments are wrapped in `/*` and `*/`
+  * Multi-line comments are wrapped in `/*` and `*/`. Nested block comments
+    are not allowed. A multi-line comment (also known as a block comment)
+    terminates at the first `*/` found.
 
   * Values are assigned with the syntax `key = value` (whitespace doesn't
     matter). The value can be any primitive: a string, number, boolean,

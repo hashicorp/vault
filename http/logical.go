@@ -54,24 +54,14 @@ func handleLogical(core *vault.Core) http.Handler {
 			}
 		}
 
-		// http.Server will set RemoteAddr to an "IP:port" string
-		var remoteAddr string
-		remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			remoteAddr = ""
-		}
-
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
 		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation: op,
-			Path:      path,
-			Data:      req,
-			Connection: &logical.Connection{
-				RemoteAddr: remoteAddr,
-				ConnState:  r.TLS,
-			},
+			Operation:  op,
+			Path:       path,
+			Data:       req,
+			Connection: getConnection(r),
 		}))
 		if !ok {
 			return
@@ -196,6 +186,23 @@ func respondRaw(w http.ResponseWriter, r *http.Request, path string, resp *logic
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 	w.Write(body)
+}
+
+// getConnection is used to format the connection information for
+// attaching to a logical request
+func getConnection(r *http.Request) (connection *logical.Connection) {
+	var remoteAddr string
+
+	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		remoteAddr = ""
+	}
+
+	connection = &logical.Connection{
+		RemoteAddr: remoteAddr,
+		ConnState:  r.TLS,
+	}
+	return
 }
 
 type LogicalResponse struct {

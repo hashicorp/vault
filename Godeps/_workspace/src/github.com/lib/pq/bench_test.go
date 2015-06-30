@@ -325,7 +325,7 @@ var testIntBytes = []byte("1234")
 
 func BenchmarkDecodeInt64(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		decode(&parameterStatus{}, testIntBytes, oid.T_int8)
+		decode(&parameterStatus{}, testIntBytes, oid.T_int8, formatText)
 	}
 }
 
@@ -333,7 +333,7 @@ var testFloatBytes = []byte("3.14159")
 
 func BenchmarkDecodeFloat64(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		decode(&parameterStatus{}, testFloatBytes, oid.T_float8)
+		decode(&parameterStatus{}, testFloatBytes, oid.T_float8, formatText)
 	}
 }
 
@@ -341,7 +341,7 @@ var testBoolBytes = []byte{'t'}
 
 func BenchmarkDecodeBool(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		decode(&parameterStatus{}, testBoolBytes, oid.T_bool)
+		decode(&parameterStatus{}, testBoolBytes, oid.T_bool, formatText)
 	}
 }
 
@@ -358,7 +358,7 @@ var testTimestamptzBytes = []byte("2013-09-17 22:15:32.360754-07")
 
 func BenchmarkDecodeTimestamptz(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		decode(&parameterStatus{}, testTimestamptzBytes, oid.T_timestamptz)
+		decode(&parameterStatus{}, testTimestamptzBytes, oid.T_timestamptz, formatText)
 	}
 }
 
@@ -371,7 +371,7 @@ func BenchmarkDecodeTimestamptzMultiThread(b *testing.B) {
 	f := func(wg *sync.WaitGroup, loops int) {
 		defer wg.Done()
 		for i := 0; i < loops; i++ {
-			decode(&parameterStatus{}, testTimestamptzBytes, oid.T_timestamptz)
+			decode(&parameterStatus{}, testTimestamptzBytes, oid.T_timestamptz, formatText)
 		}
 	}
 

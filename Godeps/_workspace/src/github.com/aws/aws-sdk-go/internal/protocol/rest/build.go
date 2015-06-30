@@ -1,3 +1,4 @@
+// Package rest provides RESTful serialisation of AWS requests and responses.
 package rest
 
 import (
@@ -13,7 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 // RFC822 returns an RFC822 formatted timestamp for AWS protocols
@@ -101,7 +102,7 @@ func buildBody(r *aws.Request, v reflect.Value) {
 					case string:
 						r.SetStringBody(reader)
 					default:
-						r.Error = apierr.New("Marshal",
+						r.Error = awserr.New("SerializationError",
 							"failed to encode REST request",
 							fmt.Errorf("unknown payload type %s", payload.Type()))
 					}
@@ -114,7 +115,7 @@ func buildBody(r *aws.Request, v reflect.Value) {
 func buildHeader(r *aws.Request, v reflect.Value, name string) {
 	str, err := convertType(v)
 	if err != nil {
-		r.Error = apierr.New("Marshal", "failed to encode REST request", err)
+		r.Error = awserr.New("SerializationError", "failed to encode REST request", err)
 	} else if str != nil {
 		r.HTTPRequest.Header.Add(name, *str)
 	}
@@ -124,7 +125,7 @@ func buildHeaderMap(r *aws.Request, v reflect.Value, prefix string) {
 	for _, key := range v.MapKeys() {
 		str, err := convertType(v.MapIndex(key))
 		if err != nil {
-			r.Error = apierr.New("Marshal", "failed to encode REST request", err)
+			r.Error = awserr.New("SerializationError", "failed to encode REST request", err)
 		} else if str != nil {
 			r.HTTPRequest.Header.Add(prefix+key.String(), *str)
 		}
@@ -134,7 +135,7 @@ func buildHeaderMap(r *aws.Request, v reflect.Value, prefix string) {
 func buildURI(r *aws.Request, v reflect.Value, name string) {
 	value, err := convertType(v)
 	if err != nil {
-		r.Error = apierr.New("Marshal", "failed to encode REST request", err)
+		r.Error = awserr.New("SerializationError", "failed to encode REST request", err)
 	} else if value != nil {
 		uri := r.HTTPRequest.URL.Path
 		uri = strings.Replace(uri, "{"+name+"}", EscapePath(*value, true), -1)
@@ -146,7 +147,7 @@ func buildURI(r *aws.Request, v reflect.Value, name string) {
 func buildQueryString(r *aws.Request, v reflect.Value, name string, query url.Values) {
 	str, err := convertType(v)
 	if err != nil {
-		r.Error = apierr.New("Marshal", "failed to encode REST request", err)
+		r.Error = awserr.New("SerializationError", "failed to encode REST request", err)
 	} else if str != nil {
 		query.Set(name, *str)
 	}

@@ -48,11 +48,21 @@ type Backend struct {
 	f    *os.File
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
+func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if err := b.open(); err != nil {
 		return err
 	}
 	if !b.LogRaw {
+		// Before we copy the structure we must nil out some data
+		// otherwise we will cause reflection to panic and die
+		if req.Connection != nil && req.Connection.ConnState != nil {
+			origState := req.Connection.ConnState
+			req.Connection.ConnState = nil
+			defer func() {
+				req.Connection.ConnState = origState
+			}()
+		}
+
 		// Copy the structures
 		cp, err := copystructure.Copy(auth)
 		if err != nil {
@@ -76,7 +86,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
 	}
 
 	var format audit.FormatJSON
-	return format.FormatRequest(b.f, auth, req)
+	return format.FormatRequest(b.f, auth, req, outerErr)
 }
 
 func (b *Backend) LogResponse(
@@ -88,6 +98,16 @@ func (b *Backend) LogResponse(
 		return err
 	}
 	if !b.LogRaw {
+		// Before we copy the structure we must nil out some data
+		// otherwise we will cause reflection to panic and die
+		if req.Connection != nil && req.Connection.ConnState != nil {
+			origState := req.Connection.ConnState
+			req.Connection.ConnState = nil
+			defer func() {
+				req.Connection.ConnState = origState
+			}()
+		}
+
 		// Copy the structure
 		cp, err := copystructure.Copy(auth)
 		if err != nil {

@@ -52,8 +52,18 @@ type Backend struct {
 	logRaw bool
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
+func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if !b.logRaw {
+		// Before we copy the structure we must nil out some data
+		// otherwise we will cause reflection to panic and die
+		if req.Connection != nil && req.Connection.ConnState != nil {
+			origState := req.Connection.ConnState
+			req.Connection.ConnState = nil
+			defer func() {
+				req.Connection.ConnState = origState
+			}()
+		}
+
 		// Copy the structures
 		cp, err := copystructure.Copy(auth)
 		if err != nil {
@@ -79,7 +89,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
 	// Encode the entry as JSON
 	var buf bytes.Buffer
 	var format audit.FormatJSON
-	if err := format.FormatRequest(&buf, auth, req); err != nil {
+	if err := format.FormatRequest(&buf, auth, req, outerErr); err != nil {
 		return err
 	}
 
@@ -91,6 +101,16 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request) error {
 func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 	resp *logical.Response, err error) error {
 	if !b.logRaw {
+		// Before we copy the structure we must nil out some data
+		// otherwise we will cause reflection to panic and die
+		if req.Connection != nil && req.Connection.ConnState != nil {
+			origState := req.Connection.ConnState
+			req.Connection.ConnState = nil
+			defer func() {
+				req.Connection.ConnState = origState
+			}()
+		}
+
 		// Copy the structure
 		cp, err := copystructure.Copy(auth)
 		if err != nil {

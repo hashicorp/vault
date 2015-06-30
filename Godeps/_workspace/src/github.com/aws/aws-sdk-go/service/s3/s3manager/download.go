@@ -129,12 +129,7 @@ func (d *downloader) download() (n int64, err error) {
 		}
 
 		// Queue the next range of bytes to read.
-		ch <- dlchunk{
-			dlchunkcounter: &dlchunkcounter{},
-			w:              d.w,
-			start:          d.pos,
-			size:           d.opts.PartSize,
-		}
+		ch <- dlchunk{w: d.w, start: d.pos, size: d.opts.PartSize}
 		d.pos += d.opts.PartSize
 	}
 
@@ -175,7 +170,7 @@ func (d *downloader) downloadPart(ch chan dlchunk) {
 			} else {
 				d.setTotalBytes(resp) // Set total if not yet set.
 
-				n, err := io.Copy(chunk, resp.Body)
+				n, err := io.Copy(&chunk, resp.Body)
 				resp.Body.Close()
 
 				if err != nil {
@@ -242,21 +237,15 @@ func (d *downloader) seterr(e error) {
 // io.WriterAt, effectively making it an io.SectionWriter (which does not
 // exist).
 type dlchunk struct {
-	*dlchunkcounter
 	w     io.WriterAt
 	start int64
 	size  int64
-}
-
-// dlchunkcounter keeps track of the current position the dlchunk struct is
-// writing to.
-type dlchunkcounter struct {
-	cur int64
+	cur   int64
 }
 
 // Write wraps io.WriterAt for the dlchunk, writing from the dlchunk's start
 // position to its end (or EOF).
-func (c dlchunk) Write(p []byte) (n int, err error) {
+func (c *dlchunk) Write(p []byte) (n int, err error) {
 	if c.cur >= c.size {
 		return 0, io.EOF
 	}

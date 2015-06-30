@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestComposeDecodeHookFunc(t *testing.T) {
@@ -23,7 +24,8 @@ func TestComposeDecodeHookFunc(t *testing.T) {
 
 	f := ComposeDecodeHookFunc(f1, f2)
 
-	result, err := f(reflect.String, reflect.Slice, "")
+	result, err := DecodeHookExec(
+		f, reflect.TypeOf(""), reflect.TypeOf([]byte("")), "")
 	if err != nil {
 		t.Fatalf("bad: %s", err)
 	}
@@ -43,7 +45,8 @@ func TestComposeDecodeHookFunc_err(t *testing.T) {
 
 	f := ComposeDecodeHookFunc(f1, f2)
 
-	_, err := f(reflect.String, reflect.Slice, 42)
+	_, err := DecodeHookExec(
+		f, reflect.TypeOf(""), reflect.TypeOf([]byte("")), 42)
 	if err.Error() != "foo" {
 		t.Fatalf("bad: %s", err)
 	}
@@ -69,7 +72,8 @@ func TestComposeDecodeHookFunc_kinds(t *testing.T) {
 
 	f := ComposeDecodeHookFunc(f1, f2)
 
-	_, err := f(reflect.String, reflect.Slice, "")
+	_, err := DecodeHookExec(
+		f, reflect.TypeOf(""), reflect.TypeOf([]byte("")), "")
 	if err != nil {
 		t.Fatalf("bad: %s", err)
 	}
@@ -81,24 +85,26 @@ func TestComposeDecodeHookFunc_kinds(t *testing.T) {
 func TestStringToSliceHookFunc(t *testing.T) {
 	f := StringToSliceHookFunc(",")
 
+	strType := reflect.TypeOf("")
+	sliceType := reflect.TypeOf([]byte(""))
 	cases := []struct {
-		f, t   reflect.Kind
+		f, t   reflect.Type
 		data   interface{}
 		result interface{}
 		err    bool
 	}{
-		{reflect.Slice, reflect.Slice, 42, 42, false},
-		{reflect.String, reflect.String, 42, 42, false},
+		{sliceType, sliceType, 42, 42, false},
+		{strType, strType, 42, 42, false},
 		{
-			reflect.String,
-			reflect.Slice,
+			strType,
+			sliceType,
 			"foo,bar,baz",
 			[]string{"foo", "bar", "baz"},
 			false,
 		},
 		{
-			reflect.String,
-			reflect.Slice,
+			strType,
+			sliceType,
 			"",
 			[]string{},
 			false,
@@ -106,7 +112,36 @@ func TestStringToSliceHookFunc(t *testing.T) {
 	}
 
 	for i, tc := range cases {
-		actual, err := f(tc.f, tc.t, tc.data)
+		actual, err := DecodeHookExec(f, tc.f, tc.t, tc.data)
+		if tc.err != (err != nil) {
+			t.Fatalf("case %d: expected err %#v", i, tc.err)
+		}
+		if !reflect.DeepEqual(actual, tc.result) {
+			t.Fatalf(
+				"case %d: expected %#v, got %#v",
+				i, tc.result, actual)
+		}
+	}
+}
+
+func TestStringToTimeDurationHookFunc(t *testing.T) {
+	f := StringToTimeDurationHookFunc()
+
+	strType := reflect.TypeOf("")
+	timeType := reflect.TypeOf(time.Duration(5))
+	cases := []struct {
+		f, t   reflect.Type
+		data   interface{}
+		result interface{}
+		err    bool
+	}{
+		{strType, timeType, "5s", 5 * time.Second, false},
+		{strType, timeType, "5", time.Duration(0), true},
+		{strType, strType, "5", "5", false},
+	}
+
+	for i, tc := range cases {
+		actual, err := DecodeHookExec(f, tc.f, tc.t, tc.data)
 		if tc.err != (err != nil) {
 			t.Fatalf("case %d: expected err %#v", i, tc.err)
 		}
@@ -121,56 +156,59 @@ func TestStringToSliceHookFunc(t *testing.T) {
 func TestWeaklyTypedHook(t *testing.T) {
 	var f DecodeHookFunc = WeaklyTypedHook
 
+	boolType := reflect.TypeOf(true)
+	strType := reflect.TypeOf("")
+	sliceType := reflect.TypeOf([]byte(""))
 	cases := []struct {
-		f, t   reflect.Kind
+		f, t   reflect.Type
 		data   interface{}
 		result interface{}
 		err    bool
 	}{
 		// TO STRING
 		{
-			reflect.Bool,
-			reflect.String,
+			boolType,
+			strType,
 			false,
 			"0",
 			false,
 		},
 
 		{
-			reflect.Bool,
-			reflect.String,
+			boolType,
+			strType,
 			true,
 			"1",
 			false,
 		},
 
 		{
-			reflect.Float32,
-			reflect.String,
+			reflect.TypeOf(float32(1)),
+			strType,
 			float32(7),
 			"7",
 			false,
 		},
 
 		{
-			reflect.Int,
-			reflect.String,
+			reflect.TypeOf(int(1)),
+			strType,
 			int(7),
 			"7",
 			false,
 		},
 
 		{
-			reflect.Slice,
-			reflect.String,
+			sliceType,
+			strType,
 			[]uint8("foo"),
 			"foo",
 			false,
 		},
 
 		{
-			reflect.Uint,
-			reflect.String,
+			reflect.TypeOf(uint(1)),
+			strType,
 			uint(7),
 			"7",
 			false,
@@ -178,7 +216,7 @@ func TestWeaklyTypedHook(t *testing.T) {
 	}
 
 	for i, tc := range cases {
-		actual, err := f(tc.f, tc.t, tc.data)
+		actual, err := DecodeHookExec(f, tc.f, tc.t, tc.data)
 		if tc.err != (err != nil) {
 			t.Fatalf("case %d: expected err %#v", i, tc.err)
 		}

@@ -115,7 +115,7 @@ func TestRouter_Unmount(t *testing.T) {
 		Path: "prod/aws/foo",
 	}
 	_, err = r.Route(req)
-	if !strings.Contains(err.Error(), "no handler for route") {
+	if !strings.Contains(err.Error(), "unsupported path") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -145,7 +145,7 @@ func TestRouter_Remount(t *testing.T) {
 		Path: "prod/aws/foo",
 	}
 	_, err = r.Route(req)
-	if !strings.Contains(err.Error(), "no handler for route") {
+	if !strings.Contains(err.Error(), "unsupported path") {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -258,7 +258,7 @@ func TestRouter_Taint(t *testing.T) {
 		Path:      "prod/aws/foo",
 	}
 	_, err = r.Route(req)
-	if err.Error() != "no handler for route 'prod/aws/foo'" {
+	if err.Error() != "unsupported path" {
 		t.Fatalf("err: %v", err)
 	}
 

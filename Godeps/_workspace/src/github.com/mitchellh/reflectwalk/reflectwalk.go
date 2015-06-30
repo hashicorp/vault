@@ -113,17 +113,7 @@ func walk(v reflect.Value, w interface{}) (err error) {
 
 	switch k {
 	// Primitives
-	case reflect.Bool:
-		fallthrough
-	case reflect.Chan:
-		fallthrough
-	case reflect.Func:
-		fallthrough
-	case reflect.Int:
-		fallthrough
-	case reflect.String:
-		fallthrough
-	case reflect.Invalid:
+	case reflect.Bool, reflect.Chan, reflect.Func, reflect.Int, reflect.String, reflect.Invalid:
 		err = walkPrimitive(originalV, w)
 		return
 	case reflect.Map:

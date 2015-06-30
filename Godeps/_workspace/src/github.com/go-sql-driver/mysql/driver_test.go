@@ -780,6 +780,49 @@ func TestNULL(t *testing.T) {
 	})
 }
 
+func TestUint64(t *testing.T) {
+	const (
+		u0    = uint64(0)
+		uall  = ^u0
+		uhigh = uall >> 1
+		utop  = ^uhigh
+		s0    = int64(0)
+		sall  = ^s0
+		shigh = int64(uhigh)
+		stop  = ^shigh
+	)
+	runTests(t, dsn, func(dbt *DBTest) {
+		stmt, err := dbt.db.Prepare(`SELECT ?, ?, ? ,?, ?, ?, ?, ?`)
+		if err != nil {
+			dbt.Fatal(err)
+		}
+		defer stmt.Close()
+		row := stmt.QueryRow(
+			u0, uhigh, utop, uall,
+			s0, shigh, stop, sall,
+		)
+
+		var ua, ub, uc, ud uint64
+		var sa, sb, sc, sd int64
+
+		err = row.Scan(&ua, &ub, &uc, &ud, &sa, &sb, &sc, &sd)
+		if err != nil {
+			dbt.Fatal(err)
+		}
+		switch {
+		case ua != u0,
+			ub != uhigh,
+			uc != utop,
+			ud != uall,
+			sa != s0,
+			sb != shigh,
+			sc != stop,
+			sd != sall:
+			dbt.Fatal("Unexpected result value")
+		}
+	})
+}
+
 func TestLongData(t *testing.T) {
 	runTests(t, dsn, func(dbt *DBTest) {
 		var maxAllowedPacketSize int

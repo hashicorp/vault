@@ -38,8 +38,9 @@ func handleSysRenew(core *vault.Core) http.Handler {
 		}
 
 		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation: logical.WriteOperation,
-			Path:      "sys/renew/" + path,
+			Operation:  logical.WriteOperation,
+			Path:       "sys/renew/" + path,
+			Connection: getConnection(r),
 			Data: map[string]interface{}{
 				"increment": req.Increment,
 			},
@@ -72,8 +73,9 @@ func handleSysRevoke(core *vault.Core) http.Handler {
 		}
 
 		_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.WriteOperation,
-			Path:      "sys/revoke/" + path,
+			Operation:  logical.WriteOperation,
+			Path:       "sys/revoke/" + path,
+			Connection: getConnection(r),
 		}))
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
@@ -104,8 +106,9 @@ func handleSysRevokePrefix(core *vault.Core) http.Handler {
 		}
 
 		_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.WriteOperation,
-			Path:      "sys/revoke-prefix/" + path,
+			Operation:  logical.WriteOperation,
+			Path:       "sys/revoke-prefix/" + path,
+			Connection: getConnection(r),
 		}))
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)

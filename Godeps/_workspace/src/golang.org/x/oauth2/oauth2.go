@@ -5,7 +5,7 @@
 // Package oauth2 provides support for making
 // OAuth2 authorized and authenticated HTTP requests.
 // It can additionally grant authorization with Bearer JWT.
-package oauth2
+package oauth2 // import "golang.org/x/oauth2"
 
 import (
 	"bytes"
@@ -251,6 +251,22 @@ func (s *reuseTokenSource) Token() (*Token, error) {
 	}
 	s.t = t
 	return t, nil
+}
+
+// StaticTokenSource returns a TokenSource that always returns the same token.
+// Because the provided token t is never refreshed, StaticTokenSource is only
+// useful for tokens that never expire.
+func StaticTokenSource(t *Token) TokenSource {
+	return staticTokenSource{t}
+}
+
+// staticTokenSource is a TokenSource that always returns the same Token.
+type staticTokenSource struct {
+	t *Token
+}
+
+func (s staticTokenSource) Token() (*Token, error) {
+	return s.t, nil
 }
 
 // HTTPClient is the context key to use with golang.org/x/net/context's

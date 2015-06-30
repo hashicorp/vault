@@ -68,6 +68,7 @@ type AgentServiceCheck struct {
 	Timeout  string `json:",omitempty"`
 	TTL      string `json:",omitempty"`
 	HTTP     string `json:",omitempty"`
+	Status   string `json:",omitempty"`
 }
 type AgentServiceChecks []*AgentServiceCheck
 

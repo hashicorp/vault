@@ -106,12 +106,41 @@ type conn struct {
 	// If true, this connection is bad and all public-facing functions should
 	// return ErrBadConn.
 	bad bool
+
+	// If set, this connection should never use the binary format when
+	// receiving query results from prepared statements.  Only provided for
+	// debugging.
+	disablePreparedBinaryResult bool
+}
+
+// Handle driver-side settings in parsed connection string.
+func (c *conn) handleDriverSettings(o values) (err error) {
+	boolSetting := func(key string, val *bool) error {
+		if value := o.Get(key); value != "" {
+			if value == "yes" {
+				*val = true
+			} else if value == "no" {
+				*val = false
+			} else {
+				return fmt.Errorf("unrecognized value %q for disable_prepared_binary_result", value)
+			}
+		}
+		return nil
+	}
+
+	err = boolSetting("disable_prepared_binary_result", &c.disablePreparedBinaryResult)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *conn) writeBuf(b byte) *writeBuf {
 	c.scratch[0] = b
-	w := writeBuf(c.scratch[:5])
-	return &w
+	return &writeBuf{
+		buf: c.scratch[:5],
+		pos: 1,
+	}
 }
 
 func Open(name string) (_ driver.Conn, err error) {
@@ -119,22 +148,11 @@ func Open(name string) (_ driver.Conn, err error) {
 }
 
 func DialOpen(d Dialer, name string) (_ driver.Conn, err error) {
-	defer func() {
-		// Handle any panics during connection initialization.  Note that we
-		// specifically do *not* want to use errRecover(), as that would turn
-		// any connection errors into ErrBadConns, hiding the real error
-		// message from the user.
-		e := recover()
-		if e == nil {
-			// Do nothing
-			return
-		}
-		var ok bool
-		err, ok = e.(error)
-		if !ok {
-			err = fmt.Errorf("pq: unexpected error: %#v", e)
-		}
-	}()
+	// Handle any panics during connection initialization.  Note that we
+	// specifically do *not* want to use errRecover(), as that would turn any
+	// connection errors into ErrBadConns, hiding the real error message from
+	// the user.
+	defer errRecoverNoErrBadConn(&err)
 
 	o := make(values)
 
@@ -203,12 +221,16 @@ func DialOpen(d Dialer, name string) (_ driver.Conn, err error) {
 		}
 	}
 
-	c, err := dial(d, o)
+	cn := &conn{}
+	err = cn.handleDriverSettings(o)
 	if err != nil {
 		return nil, err
 	}
 
-	cn := &conn{c: c}
+	cn.c, err = dial(d, o)
+	if err != nil {
+		return nil, err
+	}
 	cn.ssl(o)
 	cn.buf = bufio.NewReader(cn.c)
 	cn.startup(o)
@@ -505,7 +527,7 @@ func (cn *conn) simpleExec(q string) (res driver.Result, commandTag string, err 
 	}
 }
 
-func (cn *conn) simpleQuery(q string) (res driver.Rows, err error) {
+func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 	defer cn.errRecover(&err)
 
 	st := &stmt{cn: cn, name: ""}
@@ -526,7 +548,13 @@ func (cn *conn) simpleQuery(q string) (res driver.Rows, err error) {
 				cn.bad = true
 				errorf("unexpected message %q in simple query execution", t)
 			}
-			res = &rows{st: st, done: true}
+			res = &rows{
+				cn:      cn,
+				cols:    st.cols,
+				rowTyps: st.rowTyps,
+				rowFmts: st.rowFmts,
+				done:    true,
+			}
 		case 'Z':
 			cn.processReadyForQuery(r)
 			// done
@@ -545,8 +573,8 @@ func (cn *conn) simpleQuery(q string) (res driver.Rows, err error) {
 		case 'T':
 			// res might be non-nil here if we received a previous
 			// CommandComplete, but that's fine; just overwrite it
-			res = &rows{st: st}
-			st.cols, st.rowTyps = parseMeta(r)
+			res = &rows{cn: cn}
+			res.cols, res.rowFmts, res.rowTyps = parseMeta(r)
 
 			// To work around a bug in QueryRow in Go 1.2 and earlier, wait
 			// until the first DataRow has been received.
@@ -557,6 +585,54 @@ func (cn *conn) simpleQuery(q string) (res driver.Rows, err error) {
 	}
 }
 
+// Decides which column formats to use for a prepared statement.  The input is
+// an array of type oids, one element per result column.
+func decideColumnFormats(rowTyps []oid.Oid, forceText bool) (rowFmts []format, rowFmtData []byte) {
+	if len(rowTyps) == 0 {
+		return nil, rowFmtDataAllText
+	}
+
+	rowFmts = make([]format, len(rowTyps))
+	if forceText {
+		return rowFmts, rowFmtDataAllText
+	}
+
+	allBinary := true
+	allText := true
+	for i, o := range rowTyps {
+		switch o {
+		// This is the list of types to use binary mode for when receiving them
+		// through a prepared statement.  If a type appears in this list, it
+		// must also be implemented in binaryDecode in encode.go.
+		case oid.T_bytea:
+			fallthrough
+		case oid.T_int8:
+			fallthrough
+		case oid.T_int4:
+			fallthrough
+		case oid.T_int2:
+			rowFmts[i] = formatBinary
+			allText = false
+
+		default:
+			allBinary = false
+		}
+	}
+
+	if allBinary {
+		return rowFmts, rowFmtDataAllBinary
+	} else if allText {
+		return rowFmts, rowFmtDataAllText
+	} else {
+		rowFmtData = make([]byte, 2+len(rowFmts)*2)
+		binary.BigEndian.PutUint16(rowFmtData, uint16(len(rowFmts)))
+		for i, v := range rowFmts {
+			binary.BigEndian.PutUint16(rowFmtData[2+i*2:], uint16(v))
+		}
+		return rowFmts, rowFmtData
+	}
+}
+
 func (cn *conn) prepareTo(q, stmtName string) (_ *stmt, err error) {
 	st := &stmt{cn: cn, name: stmtName}
 
@@ -564,14 +640,13 @@ func (cn *conn) prepareTo(q, stmtName string) (_ *stmt, err error) {
 	b.string(st.name)
 	b.string(q)
 	b.int16(0)
-	cn.send(b)
 
-	b = cn.writeBuf('D')
+	b.next('D')
 	b.byte('S')
 	b.string(st.name)
-	cn.send(b)
 
-	cn.send(cn.writeBuf('S'))
+	b.next('S')
+	cn.send(b)
 
 	for {
 		t, r := cn.recv1()
@@ -585,9 +660,11 @@ func (cn *conn) prepareTo(q, stmtName string) (_ *stmt, err error) {
 				st.paramTyps[i] = r.oid()
 			}
 		case 'T':
-			st.cols, st.rowTyps = parseMeta(r)
+			st.cols, st.rowTyps = parseStatementRowDescribe(r)
+			st.rowFmts, st.rowFmtData = decideColumnFormats(st.rowTyps, cn.disablePreparedBinaryResult)
 		case 'n':
 			// no data
+			st.rowFmtData = rowFmtDataAllText
 		case 'Z':
 			cn.processReadyForQuery(r)
 			return st, err
@@ -647,7 +724,12 @@ func (cn *conn) Query(query string, args []driver.Value) (_ driver.Rows, err err
 	}
 
 	st.exec(args)
-	return &rows{st: st}, nil
+	return &rows{
+		cn:      cn,
+		cols:    st.cols,
+		rowTyps: st.rowTyps,
+		rowFmts: st.rowFmts,
+	}, nil
 }
 
 // Implement the optional "Execer" interface for one-shot queries
@@ -681,16 +763,20 @@ func (cn *conn) Exec(query string, args []driver.Value) (_ driver.Result, err er
 	return r, err
 }
 
-// Assumes len(*m) is > 5
 func (cn *conn) send(m *writeBuf) {
-	b := (*m)[1:]
-	binary.BigEndian.PutUint32(b, uint32(len(b)))
+	_, err := cn.c.Write(m.wrap())
+	if err != nil {
+		panic(err)
+	}
+}
 
-	if (*m)[0] == 0 {
-		*m = b
+func (cn *conn) sendStartupPacket(m *writeBuf) {
+	// sanity check
+	if m.buf[0] != 0 {
+		panic("oops")
 	}
 
-	_, err := cn.c.Write(*m)
+	_, err := cn.c.Write((m.wrap())[1:])
 	if err != nil {
 		panic(err)
 	}
@@ -830,7 +916,7 @@ func (cn *conn) ssl(o values) {
 
 	w := cn.writeBuf(0)
 	w.int32(80877103)
-	cn.send(w)
+	cn.sendStartupPacket(w)
 
 	b := cn.scratch[:1]
 	_, err := io.ReadFull(cn.c, b)
@@ -967,6 +1053,8 @@ func isDriverSetting(key string) bool {
 		return true
 	case "connect_timeout":
 		return true
+	case "disable_prepared_binary_result":
+		return true
 
 	default:
 		return false
@@ -994,7 +1082,7 @@ func (cn *conn) startup(o values) {
 		w.string(v)
 	}
 	w.string("")
-	cn.send(w)
+	cn.sendStartupPacket(w)
 
 	for {
 		t, r := cn.recv()
@@ -1049,13 +1137,26 @@ func (cn *conn) auth(r *readBuf, o values) {
 	}
 }
 
+type format int
+
+const formatText format = 0
+const formatBinary format = 1
+
+// One result-column format code with the value 1 (i.e. all binary).
+var rowFmtDataAllBinary []byte = []byte{0, 1, 0, 1}
+
+// No result-column format codes (i.e. all text).
+var rowFmtDataAllText []byte = []byte{0, 0}
+
 type stmt struct {
-	cn        *conn
-	name      string
-	cols      []string
-	rowTyps   []oid.Oid
-	paramTyps []oid.Oid
-	closed    bool
+	cn         *conn
+	name       string
+	cols       []string
+	rowFmts    []format
+	rowFmtData []byte
+	rowTyps    []oid.Oid
+	paramTyps  []oid.Oid
+	closed     bool
 }
 
 func (st *stmt) Close() (err error) {
@@ -1098,7 +1199,12 @@ func (st *stmt) Query(v []driver.Value) (r driver.Rows, err error) {
 	defer st.cn.errRecover(&err)
 
 	st.exec(v)
-	return &rows{st: st}, nil
+	return &rows{
+		cn:      st.cn,
+		cols:    st.cols,
+		rowTyps: st.rowTyps,
+		rowFmts: st.rowFmts,
+	}, nil
 }
 
 func (st *stmt) Exec(v []driver.Value) (res driver.Result, err error) {
@@ -1138,7 +1244,7 @@ func (st *stmt) exec(v []driver.Value) {
 	}
 
 	w := st.cn.writeBuf('B')
-	w.string("")
+	w.byte(0)
 	w.string(st.name)
 	w.int16(0)
 	w.int16(len(v))
@@ -1151,15 +1257,14 @@ func (st *stmt) exec(v []driver.Value) {
 			w.bytes(b)
 		}
 	}
-	w.int16(0)
-	st.cn.send(w)
+	w.bytes(st.rowFmtData)
 
-	w = st.cn.writeBuf('E')
-	w.string("")
+	w.next('E')
+	w.byte(0)
 	w.int32(0)
-	st.cn.send(w)
 
-	st.cn.send(st.cn.writeBuf('S'))
+	w.next('S')
+	st.cn.send(w)
 
 	var err error
 	for {
@@ -1271,9 +1376,12 @@ func (cn *conn) parseComplete(commandTag string) (driver.Result, string) {
 }
 
 type rows struct {
-	st   *stmt
-	done bool
-	rb   readBuf
+	cn      *conn
+	cols    []string
+	rowTyps []oid.Oid
+	rowFmts []format
+	done    bool
+	rb      readBuf
 }
 
 func (rs *rows) Close() error {
@@ -1291,7 +1399,7 @@ func (rs *rows) Close() error {
 }
 
 func (rs *rows) Columns() []string {
-	return rs.st.cols
+	return rs.cols
 }
 
 func (rs *rows) Next(dest []driver.Value) (err error) {
@@ -1299,7 +1407,7 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 		return io.EOF
 	}
 
-	conn := rs.st.cn
+	conn := rs.cn
 	if conn.bad {
 		return driver.ErrBadConn
 	}
@@ -1330,7 +1438,7 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 					dest[i] = nil
 					continue
 				}
-				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.st.rowTyps[i])
+				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.rowTyps[i], rs.rowFmts[i])
 			}
 			return
 		default:
@@ -1392,7 +1500,7 @@ func (c *conn) processReadyForQuery(r *readBuf) {
 	c.txnStatus = transactionStatus(r.byte())
 }
 
-func parseMeta(r *readBuf) (cols []string, rowTyps []oid.Oid) {
+func parseStatementRowDescribe(r *readBuf) (cols []string, rowTyps []oid.Oid) {
 	n := r.int16()
 	cols = make([]string, n)
 	rowTyps = make([]oid.Oid, n)
@@ -1400,7 +1508,24 @@ func parseMeta(r *readBuf) (cols []string, rowTyps []oid.Oid) {
 		cols[i] = r.string()
 		r.next(6)
 		rowTyps[i] = r.oid()
-		r.next(8)
+		r.next(6)
+		// format code not known; always 0
+		r.next(2)
+	}
+	return
+}
+
+func parseMeta(r *readBuf) (cols []string, rowFmts []format, rowTyps []oid.Oid) {
+	n := r.int16()
+	cols = make([]string, n)
+	rowFmts = make([]format, n)
+	rowTyps = make([]oid.Oid, n)
+	for i := range cols {
+		cols[i] = r.string()
+		r.next(6)
+		rowTyps[i] = r.oid()
+		r.next(6)
+		rowFmts[i] = format(r.int16())
 	}
 	return
 }

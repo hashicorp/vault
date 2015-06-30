@@ -387,12 +387,14 @@ func TestCopyRespLoopConnectionError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// We have to try and send something over, since postgres won't process
-	// SIGTERMs while it's waiting for CopyData/CopyEnd messages; see
-	// tcop/postgres.c.
-	_, err = stmt.Exec(1)
-	if err != nil {
-		t.Fatal(err)
+	if getServerVersion(t, db) < 90500 {
+		// We have to try and send something over, since postgres before
+		// version 9.5 won't process SIGTERMs while it's waiting for
+		// CopyData/CopyEnd messages; see tcop/postgres.c.
+		_, err = stmt.Exec(1)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	_, err = stmt.Exec()
 	if err == nil {

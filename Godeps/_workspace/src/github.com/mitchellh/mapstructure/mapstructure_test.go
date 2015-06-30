@@ -17,6 +17,10 @@ type Basic struct {
 	Vdata   interface{}
 }
 
+type BasicSquash struct {
+	Test Basic `mapstructure:",squash"`
+}
+
 type Embedded struct {
 	Basic
 	Vunique string
@@ -158,6 +162,47 @@ func TestBasic_IntWithFloat(t *testing.T) {
 	}
 }
 
+func TestBasic_Merge(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"vint": 42,
+	}
+
+	var result Basic
+	result.Vuint = 100
+	err := Decode(input, &result)
+	if err != nil {
+		t.Fatalf("got an err: %s", err)
+	}
+
+	expected := Basic{
+		Vint:  42,
+		Vuint: 100,
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("bad: %#v", result)
+	}
+}
+
+func TestDecode_BasicSquash(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"vstring": "foo",
+	}
+
+	var result BasicSquash
+	err := Decode(input, &result)
+	if err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if result.Test.Vstring != "foo" {
+		t.Errorf("vstring value should be 'foo': %#v", result.Test.Vstring)
+	}
+}
+
 func TestDecode_Embedded(t *testing.T) {
 	t.Parallel()
 
@@ -261,6 +306,43 @@ func TestDecode_DecodeHook(t *testing.T) {
 	}
 }
 
+func TestDecode_DecodeHookType(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"vint": "WHAT",
+	}
+
+	decodeHook := func(from reflect.Type, to reflect.Type, v interface{}) (interface{}, error) {
+		if from.Kind() == reflect.String &&
+			to.Kind() != reflect.String {
+			return 5, nil
+		}
+
+		return v, nil
+	}
+
+	var result Basic
+	config := &DecoderConfig{
+		DecodeHook: decodeHook,
+		Result:     &result,
+	}
+
+	decoder, err := NewDecoder(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	err = decoder.Decode(input)
+	if err != nil {
+		t.Fatalf("got an err: %s", err)
+	}
+
+	if result.Vint != 5 {
+		t.Errorf("vint should be 5: %#v", result.Vint)
+	}
+}
+
 func TestDecode_Nil(t *testing.T) {
 	t.Parallel()
 
@@ -295,6 +377,26 @@ func TestDecode_NonStruct(t *testing.T) {
 
 	if result["foo"] != "bar" {
 		t.Fatal("foo is not bar")
+	}
+}
+
+func TestDecode_StructMatch(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"vbar": Basic{
+			Vstring: "foo",
+		},
+	}
+
+	var result Nested
+	err := Decode(input, &result)
+	if err != nil {
+		t.Fatalf("got an err: %s", err.Error())
+	}
+
+	if result.Vbar.Vstring != "foo" {
+		t.Errorf("bad: %#v", result)
 	}
 }
 
@@ -457,6 +559,38 @@ func TestMap(t *testing.T) {
 
 	if result.Vother["bar"] != "bar" {
 		t.Errorf("'bar' key should be bar, got: %#v", result.Vother["bar"])
+	}
+}
+
+func TestMapMerge(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]interface{}{
+		"vfoo": "foo",
+		"vother": map[interface{}]interface{}{
+			"foo": "foo",
+			"bar": "bar",
+		},
+	}
+
+	var result Map
+	result.Vother = map[string]string{"hello": "world"}
+	err := Decode(input, &result)
+	if err != nil {
+		t.Fatalf("got an error: %s", err)
+	}
+
+	if result.Vfoo != "foo" {
+		t.Errorf("vfoo value should be 'foo': %#v", result.Vfoo)
+	}
+
+	expected := map[string]string{
+		"foo":   "foo",
+		"bar":   "bar",
+		"hello": "world",
+	}
+	if !reflect.DeepEqual(result.Vother, expected) {
+		t.Errorf("bad: %#v", result.Vother)
 	}
 }
 
@@ -656,6 +790,42 @@ func TestInvalidType(t *testing.T) {
 	}
 
 	if derr.Errors[0] != "'Vstring' expected type 'string', got unconvertible type 'int'" {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	inputNegIntUint := map[string]interface{}{
+		"vuint": -42,
+	}
+
+	err = Decode(inputNegIntUint, &result)
+	if err == nil {
+		t.Fatal("error should exist")
+	}
+
+	derr, ok = err.(*Error)
+	if !ok {
+		t.Fatalf("error should be kind of Error, instead: %#v", err)
+	}
+
+	if derr.Errors[0] != "cannot parse 'Vuint', -42 overflows uint" {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	inputNegFloatUint := map[string]interface{}{
+		"vuint": -42.0,
+	}
+
+	err = Decode(inputNegFloatUint, &result)
+	if err == nil {
+		t.Fatal("error should exist")
+	}
+
+	derr, ok = err.(*Error)
+	if !ok {
+		t.Fatalf("error should be kind of Error, instead: %#v", err)
+	}
+
+	if derr.Errors[0] != "cannot parse 'Vuint', -42.000000 overflows uint" {
 		t.Errorf("got unexpected error: %s", err)
 	}
 }

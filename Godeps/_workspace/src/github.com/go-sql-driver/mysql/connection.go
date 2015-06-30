@@ -34,21 +34,22 @@ type mysqlConn struct {
 }
 
 type config struct {
-	user              string
-	passwd            string
-	net               string
-	addr              string
-	dbname            string
-	params            map[string]string
-	loc               *time.Location
-	tls               *tls.Config
-	timeout           time.Duration
-	collation         uint8
-	allowAllFiles     bool
-	allowOldPasswords bool
-	clientFoundRows   bool
-	columnsWithAlias  bool
-	interpolateParams bool
+	user                    string
+	passwd                  string
+	net                     string
+	addr                    string
+	dbname                  string
+	params                  map[string]string
+	loc                     *time.Location
+	tls                     *tls.Config
+	timeout                 time.Duration
+	collation               uint8
+	allowAllFiles           bool
+	allowOldPasswords       bool
+	allowCleartextPasswords bool
+	clientFoundRows         bool
+	columnsWithAlias        bool
+	interpolateParams       bool
 }
 
 // Handles parameters set in DSN after the connection is established

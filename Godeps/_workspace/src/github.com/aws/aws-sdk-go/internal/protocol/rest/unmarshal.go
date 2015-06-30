@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 // Unmarshal unmarshals the REST component of a response in a REST service.
@@ -34,14 +34,14 @@ func unmarshalBody(r *aws.Request, v reflect.Value) {
 					case []byte:
 						b, err := ioutil.ReadAll(r.HTTPResponse.Body)
 						if err != nil {
-							r.Error = apierr.New("Unmarshal", "failed to decode REST response", err)
+							r.Error = awserr.New("SerializationError", "failed to decode REST response", err)
 						} else {
 							payload.Set(reflect.ValueOf(b))
 						}
 					case *string:
 						b, err := ioutil.ReadAll(r.HTTPResponse.Body)
 						if err != nil {
-							r.Error = apierr.New("Unmarshal", "failed to decode REST response", err)
+							r.Error = awserr.New("SerializationError", "failed to decode REST response", err)
 						} else {
 							str := string(b)
 							payload.Set(reflect.ValueOf(&str))
@@ -53,7 +53,7 @@ func unmarshalBody(r *aws.Request, v reflect.Value) {
 						case "aws.ReadSeekCloser", "io.ReadCloser":
 							payload.Set(reflect.ValueOf(r.HTTPResponse.Body))
 						default:
-							r.Error = apierr.New("Unmarshal",
+							r.Error = awserr.New("SerializationError",
 								"failed to decode REST response",
 								fmt.Errorf("unknown payload type %s", payload.Type()))
 						}
@@ -83,14 +83,14 @@ func unmarshalLocationElements(r *aws.Request, v reflect.Value) {
 			case "header":
 				err := unmarshalHeader(m, r.HTTPResponse.Header.Get(name))
 				if err != nil {
-					r.Error = apierr.New("Unmarshal", "failed to decode REST response", err)
+					r.Error = awserr.New("SerializationError", "failed to decode REST response", err)
 					break
 				}
 			case "headers":
 				prefix := field.Tag.Get("locationName")
 				err := unmarshalHeaderMap(m, r.HTTPResponse.Header, prefix)
 				if err != nil {
-					r.Error = apierr.New("Unmarshal", "failed to decode REST response", err)
+					r.Error = awserr.New("SerializationError", "failed to decode REST response", err)
 					break
 				}
 			}

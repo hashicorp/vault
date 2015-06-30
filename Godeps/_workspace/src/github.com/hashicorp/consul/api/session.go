@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -131,19 +132,32 @@ func (s *Session) RenewPeriodic(initialTTL string, id string, q *WriteOptions, d
 	if err != nil {
 		return err
 	}
+
+	waitDur := ttl / 2
+	lastRenewTime := time.Now()
+	var lastErr error
 	for {
+		if time.Since(lastRenewTime) > ttl {
+			return lastErr
+		}
 		select {
-		case <-time.After(ttl / 2):
+		case <-time.After(waitDur):
 			entry, _, err := s.Renew(id, q)
 			if err != nil {
-				return err
+				waitDur = time.Second
+				lastErr = err
+				continue
 			}
 			if entry == nil {
-				return nil
+				waitDur = time.Second
+				lastErr = fmt.Errorf("No SessionEntry returned")
+				continue
 			}
 
 			// Handle the server updating the TTL
 			ttl, _ = time.ParseDuration(entry.TTL)
+			waitDur = ttl / 2
+			lastRenewTime = time.Now()
 
 		case <-doneCh:
 			// Attempt a session destroy

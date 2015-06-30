@@ -5,6 +5,7 @@ import (
 )
 
 func TestSession_CreateDestroy(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -34,6 +35,7 @@ func TestSession_CreateDestroy(t *testing.T) {
 }
 
 func TestSession_CreateRenewDestroy(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -84,6 +86,7 @@ func TestSession_CreateRenewDestroy(t *testing.T) {
 }
 
 func TestSession_Info(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -137,6 +140,7 @@ func TestSession_Info(t *testing.T) {
 }
 
 func TestSession_Node(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -171,6 +175,7 @@ func TestSession_Node(t *testing.T) {
 }
 
 func TestSession_List(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 

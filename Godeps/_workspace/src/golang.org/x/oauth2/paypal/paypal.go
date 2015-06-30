@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package paypal provides constants for using OAuth2 to access PayPal.
-package paypal
+package paypal // import "golang.org/x/oauth2/paypal"
 
 import (
 	"golang.org/x/oauth2"

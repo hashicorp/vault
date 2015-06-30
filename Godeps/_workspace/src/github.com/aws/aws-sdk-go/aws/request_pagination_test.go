@@ -19,9 +19,9 @@ func TestPagination(t *testing.T) {
 
 	reqNum := 0
 	resps := []*dynamodb.ListTablesOutput{
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table1"), aws.String("Table2")}, LastEvaluatedTableName: aws.String("Table2")},
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table3"), aws.String("Table4")}, LastEvaluatedTableName: aws.String("Table4")},
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table5")}},
+		{TableNames: []*string{aws.String("Table1"), aws.String("Table2")}, LastEvaluatedTableName: aws.String("Table2")},
+		{TableNames: []*string{aws.String("Table3"), aws.String("Table4")}, LastEvaluatedTableName: aws.String("Table4")},
+		{TableNames: []*string{aws.String("Table5")}},
 	}
 
 	db.Handlers.Send.Clear() // mock sending
@@ -71,9 +71,9 @@ func TestPaginationEachPage(t *testing.T) {
 
 	reqNum := 0
 	resps := []*dynamodb.ListTablesOutput{
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table1"), aws.String("Table2")}, LastEvaluatedTableName: aws.String("Table2")},
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table3"), aws.String("Table4")}, LastEvaluatedTableName: aws.String("Table4")},
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table5")}},
+		{TableNames: []*string{aws.String("Table1"), aws.String("Table2")}, LastEvaluatedTableName: aws.String("Table2")},
+		{TableNames: []*string{aws.String("Table3"), aws.String("Table4")}, LastEvaluatedTableName: aws.String("Table4")},
+		{TableNames: []*string{aws.String("Table5")}},
 	}
 
 	db.Handlers.Send.Clear() // mock sending
@@ -124,9 +124,9 @@ func TestPaginationEarlyExit(t *testing.T) {
 
 	reqNum := 0
 	resps := []*dynamodb.ListTablesOutput{
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table1"), aws.String("Table2")}, LastEvaluatedTableName: aws.String("Table2")},
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table3"), aws.String("Table4")}, LastEvaluatedTableName: aws.String("Table4")},
-		&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("Table5")}},
+		{TableNames: []*string{aws.String("Table1"), aws.String("Table2")}, LastEvaluatedTableName: aws.String("Table2")},
+		{TableNames: []*string{aws.String("Table3"), aws.String("Table4")}, LastEvaluatedTableName: aws.String("Table4")},
+		{TableNames: []*string{aws.String("Table5")}},
 	}
 
 	db.Handlers.Send.Clear() // mock sending
@@ -189,10 +189,10 @@ func TestPaginationTruncation(t *testing.T) {
 
 	reqNum := &count
 	resps := []*s3.ListObjectsOutput{
-		&s3.ListObjectsOutput{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{&s3.Object{Key: aws.String("Key1")}}},
-		&s3.ListObjectsOutput{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{&s3.Object{Key: aws.String("Key2")}}},
-		&s3.ListObjectsOutput{IsTruncated: aws.Boolean(false), Contents: []*s3.Object{&s3.Object{Key: aws.String("Key3")}}},
-		&s3.ListObjectsOutput{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{&s3.Object{Key: aws.String("Key4")}}},
+		{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{{Key: aws.String("Key1")}}},
+		{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{{Key: aws.String("Key2")}}},
+		{IsTruncated: aws.Boolean(false), Contents: []*s3.Object{{Key: aws.String("Key3")}}},
+		{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{{Key: aws.String("Key4")}}},
 	}
 
 	client.Handlers.Send.Clear() // mock sending
@@ -232,20 +232,20 @@ func TestPaginationTruncation(t *testing.T) {
 
 // Benchmarks
 var benchResps = []*dynamodb.ListTablesOutput{
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
-	&dynamodb.ListTablesOutput{TableNames: []*string{aws.String("TABLE")}},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE"), aws.String("NXT")}, LastEvaluatedTableName: aws.String("NXT")},
+	{TableNames: []*string{aws.String("TABLE")}},
 }
 
 var benchDb = func() *dynamodb.DynamoDB {

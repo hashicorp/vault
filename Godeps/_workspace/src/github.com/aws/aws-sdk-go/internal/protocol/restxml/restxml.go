@@ -1,3 +1,5 @@
+// Package restxml provides RESTful XML serialisation of AWS
+// requests and responses.
 package restxml
 
 //go:generate go run ../../fixtures/protocol/generate.go ../../fixtures/protocol/input/rest-xml.json build_test.go
@@ -8,7 +10,7 @@ import (
 	"encoding/xml"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/internal/protocol/query"
 	"github.com/aws/aws-sdk-go/internal/protocol/rest"
 	"github.com/aws/aws-sdk-go/internal/protocol/xml/xmlutil"
@@ -22,7 +24,7 @@ func Build(r *aws.Request) {
 		var buf bytes.Buffer
 		err := xmlutil.BuildXML(r.Params, xml.NewEncoder(&buf))
 		if err != nil {
-			r.Error = apierr.New("Marshal", "failed to enode rest XML request", err)
+			r.Error = awserr.New("SerializationError", "failed to enode rest XML request", err)
 			return
 		}
 		r.SetBufferBody(buf.Bytes())
@@ -36,7 +38,7 @@ func Unmarshal(r *aws.Request) {
 		decoder := xml.NewDecoder(r.HTTPResponse.Body)
 		err := xmlutil.UnmarshalXML(r.Data, decoder, "")
 		if err != nil {
-			r.Error = apierr.New("Unmarshal", "failed to decode REST XML response", err)
+			r.Error = awserr.New("SerializationError", "failed to decode REST XML response", err)
 			return
 		}
 	}
