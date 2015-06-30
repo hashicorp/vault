@@ -21,7 +21,7 @@ questionable data access is discovered: you can track it down to the specific
 instance of a service based on the Cassandra username.
 
 This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault help` after mounting the backend.
+on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 

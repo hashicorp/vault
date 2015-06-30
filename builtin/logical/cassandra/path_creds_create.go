@@ -2,8 +2,6 @@ package cassandra
 
 import (
 	"fmt"
-	"math/rand"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -41,10 +39,8 @@ func (b *backend) pathCredsCreateRead(
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", name)), nil
 	}
 
-	// Generate the username, password and expiration
-	username := fmt.Sprintf(
-		"vault-%s-%d-%d",
-		req.DisplayName, time.Now().Unix(), rand.Int31n(10000))
+	displayName := req.DisplayName
+	username := fmt.Sprintf("vault-%s-%s-%s", name, displayName, generateUUID())
 	password := generateUUID()
 
 	// Get our connection
