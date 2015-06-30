@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -25,6 +26,8 @@ import (
 const EnvVaultAddress = "VAULT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
+const EnvVaultClientCert = "VAULT_CLIENT_CERT"
+const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 
 // FlagSetFlags is an enum to define what flags are present in the
@@ -48,10 +51,12 @@ type Meta struct {
 	ForceConfig  *Config // Force a config, don't load from disk
 
 	// These are set by the command line flags.
-	flagAddress  string
-	flagCACert   string
-	flagCAPath   string
-	flagInsecure bool
+	flagAddress    string
+	flagCACert     string
+	flagCAPath     string
+	flagClientCert string
+	flagClientKey  string
+	flagInsecure   bool
 
 	// These are internal and shouldn't be modified or access by anyone
 	// except Meta.
@@ -77,6 +82,12 @@ func (m *Meta) Client() (*api.Client, error) {
 	if v := os.Getenv(EnvVaultCAPath); v != "" {
 		m.flagCAPath = v
 	}
+	if v := os.Getenv(EnvVaultClientCert); v != "" {
+		m.flagClientCert = v
+	}
+	if v := os.Getenv(EnvVaultClientKey); v != "" {
+		m.flagClientKey = v
+	}
 	if v := os.Getenv(EnvVaultInsecure); v != "" {
 		var err error
 		m.flagInsecure, err = strconv.ParseBool(v)
@@ -101,6 +112,16 @@ func (m *Meta) Client() (*api.Client, error) {
 			InsecureSkipVerify: m.flagInsecure,
 			MinVersion:         tls.VersionTLS12,
 			RootCAs:            certPool,
+		}
+
+		if m.flagClientCert != "" && m.flagClientKey != "" {
+			tlsCert, err := tls.LoadX509KeyPair(m.flagClientCert, m.flagClientKey)
+			if err != nil {
+				return nil, err
+			}
+			tlsConfig.Certificates = []tls.Certificate{tlsCert}
+		} else if m.flagClientCert != "" || m.flagClientKey != "" {
+			return nil, fmt.Errorf("Both client cert and client key must be provided")
 		}
 
 		client := *http.DefaultClient
@@ -184,6 +205,8 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 		f.StringVar(&m.flagAddress, "address", "", "")
 		f.StringVar(&m.flagCACert, "ca-cert", "", "")
 		f.StringVar(&m.flagCAPath, "ca-path", "", "")
+		f.StringVar(&m.flagClientCert, "client-cert", "", "")
+		f.StringVar(&m.flagClientKey, "client-key", "", "")
 		f.BoolVar(&m.flagInsecure, "insecure", false, "")
 		f.BoolVar(&m.flagInsecure, "tls-skip-verify", false, "")
 	}
@@ -285,4 +308,30 @@ func (m *Meta) loadCertFromPEM(path string) ([]*x509.Certificate, error) {
 	}
 
 	return certs, nil
+}
+
+// generalOptionsUsage returns the usage documenation for commonly
+// available options
+func generalOptionsUsage() string {
+	general := `
+  -address=addr           The address of the Vault server.
+
+  -ca-cert=path           Path to a PEM encoded CA cert file to use to
+                          verify the Vault server SSL certificate.
+
+  -ca-path=path           Path to a directory of PEM encoded CA cert files
+                          to verify the Vault server SSL certificate. If both
+                          -ca-cert and -ca-path are specified, -ca-path is used.
+
+  -client-cert=path       Path to a PEM encoded client certificate for TLS
+                          authentication to the Vault server. Must also specify
+                          -client-key.
+
+  -client-key=path        Path to an unencrypted PEM encoded private key
+                          matching the client certificate from -client-cert.
+
+  -tls-skip-verify        Do not verify TLS certificate. This is highly
+                          not recommended.
+	`
+	return strings.TrimSpace(general)
 }

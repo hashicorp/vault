@@ -15,6 +15,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -1317,7 +1318,7 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		}
 
 		// Create a lock
-		uuid := generateUUID()
+		uuid := uuid.GenerateUUID()
 		lock, err := c.ha.LockWith(coreLockPath, uuid)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to create lock: %v", err)

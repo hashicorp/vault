@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -67,7 +68,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	entry.UUID = generateUUID()
+	entry.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 	// Update the auth table
@@ -296,7 +297,7 @@ func defaultAuthTable() *MountTable {
 		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
-		UUID:        generateUUID(),
+		UUID:        uuid.GenerateUUID(),
 	}
 	table.Entries = append(table.Entries, tokenAuth)
 	return table

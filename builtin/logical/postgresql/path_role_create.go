@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -55,11 +56,11 @@ func (b *backend) pathRoleCreateRead(
 	if len(displayName) > 26 {
 		displayName = displayName[:26]
 	}
-	username := fmt.Sprintf("%s-%s", displayName, generateUUID())
+	username := fmt.Sprintf("%s-%s", displayName, uuid.GenerateUUID())
 	if len(username) > 63 {
 		username = username[:63]
 	}
-	password := generateUUID()
+	password := uuid.GenerateUUID()
 	expiration := time.Now().UTC().
 		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
 		Format("2006-01-02 15:04:05")

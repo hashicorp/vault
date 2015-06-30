@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -39,9 +38,7 @@ type mountEntry struct {
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversable
 func (me *mountEntry) SaltID(id string) string {
-	comb := me.salt + id
-	hash := sha1.Sum([]byte(comb))
-	return hex.EncodeToString(hash[:])
+	return salt.SaltID(me.salt, id, salt.SHA1Hash)
 }
 
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,

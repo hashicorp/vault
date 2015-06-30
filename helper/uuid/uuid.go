@@ -1,12 +1,12 @@
-package postgresql
+package uuid
 
 import (
 	"crypto/rand"
 	"fmt"
 )
 
-// generateUUID is used to generate a random UUID
-func generateUUID() string {
+// GenerateUUID is used to generate a random UUID
+func GenerateUUID() string {
 	buf := make([]byte, 16)
 	if _, err := rand.Read(buf); err != nil {
 		panic(fmt.Errorf("failed to read random bytes: %v", err))

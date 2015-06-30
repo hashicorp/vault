@@ -15,6 +15,7 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
+	"github.com/hashicorp/vault/builtin/logical/cassandra"
 	"github.com/hashicorp/vault/builtin/logical/consul"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -69,6 +70,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"aws":        aws.Factory,
 					"consul":     consul.Factory,
 					"postgresql": postgresql.Factory,
+					"cassandra":  cassandra.Factory,
 					"pki":        pki.Factory,
 					"transit":    transit.Factory,
 					"mysql":      mysql.Factory,
@@ -97,6 +99,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"github":   &credGitHub.CLIHandler{},
 					"userpass": &credUserpass.CLIHandler{},
 					"ldap":     &credLdap.CLIHandler{},
+					"cert":     &credCert.CLIHandler{},
 				},
 			}, nil
 		},

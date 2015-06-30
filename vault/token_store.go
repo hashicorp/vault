@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -10,6 +8,8 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -23,12 +23,6 @@ const (
 	// parentPrefix is the prefix used to store tokens for their
 	// secondar parent based index
 	parentPrefix = "parent/"
-
-	// tokenSaltLocation is the path in the view we store our key salt.
-	// This is used to ensure the paths we write out are obfuscated so
-	// that token names cannot be guessed as that would compromise their
-	// use.
-	tokenSaltLocation = "salt"
 
 	// tokenSubPath is the sub-path used for the token store
 	// view. This is nested under the system view.
@@ -47,7 +41,7 @@ type TokenStore struct {
 	*framework.Backend
 
 	view *BarrierView
-	salt string
+	salt *salt.Salt
 
 	expiration *ExpirationManager
 }
@@ -63,25 +57,12 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 		view: view,
 	}
 
-	// Look for the salt
-	raw, err := view.Get(tokenSaltLocation)
+	// Setup the salt
+	salt, err := salt.NewSalt(view, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read salt: %v", err)
+		return nil, err
 	}
-
-	// Restore the salt if it exists
-	if raw != nil {
-		t.salt = string(raw.Value)
-	}
-
-	// Generate a new salt if necessary
-	if t.salt == "" {
-		t.salt = generateUUID()
-		raw = &logical.StorageEntry{Key: tokenSaltLocation, Value: []byte(t.salt)}
-		if err := view.Put(raw); err != nil {
-			return nil, fmt.Errorf("failed to persist salt: %v", err)
-		}
-	}
+	t.salt = salt
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -249,9 +230,7 @@ func (t *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversable
 func (ts *TokenStore) SaltID(id string) string {
-	comb := ts.salt + id
-	hash := sha1.Sum([]byte(comb))
-	return hex.EncodeToString(hash[:])
+	return ts.salt.SaltID(id)
 }
 
 // RootToken is used to generate a new token with root privileges and no parent
@@ -273,7 +252,7 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
-		entry.ID = generateUUID()
+		entry.ID = uuid.GenerateUUID()
 	}
 	saltedId := ts.SaltID(entry.ID)
 

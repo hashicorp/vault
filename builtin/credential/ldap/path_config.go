@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/go-ldap/ldap"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -31,6 +31,10 @@ func pathConfig(b *backend) *framework.Path {
 			"userattr": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Attribute used for users (default: cn)",
+			},
+			"insecure_tls": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Skip LDAP server SSL Certificate verification - VERY insecure",
 			},
 		},
 
@@ -73,10 +77,11 @@ func (b *backend) pathConfigRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"url":      cfg.Url,
-			"userdn":   cfg.UserDN,
-			"groupdn":  cfg.GroupDN,
-			"userattr": cfg.UserAttr,
+			"url":          cfg.Url,
+			"userdn":       cfg.UserDN,
+			"groupdn":      cfg.GroupDN,
+			"userattr":     cfg.UserAttr,
+			"insecure_tls": cfg.InsecureTLS,
 		},
 	}, nil
 }
@@ -101,6 +106,10 @@ func (b *backend) pathConfigWrite(
 	if groupdn != "" {
 		cfg.GroupDN = groupdn
 	}
+	insecureTLS := d.Get("insecure_tls").(bool)
+	if insecureTLS {
+		cfg.InsecureTLS = insecureTLS
+	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
 	// We can also check the URL at this stage, as anything else would probably
@@ -123,10 +132,11 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url      string
-	UserDN   string
-	GroupDN  string
-	UserAttr string
+	Url         string
+	UserDN      string
+	GroupDN     string
+	UserAttr    string
+	InsecureTLS bool
 }
 
 func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
@@ -151,8 +161,14 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if port == "" {
 			port = "636"
 		}
-		conn, err = ldap.DialTLS(
-			"tcp", host+":"+port, &tls.Config{ServerName: host})
+		tlsConfig := tls.Config{
+			ServerName:         host,
+			InsecureSkipVerify: false,
+		}
+		if c.InsecureTLS {
+			tlsConfig.InsecureSkipVerify = true
+		}
+		conn, err = ldap.DialTLS("tcp", host+":"+port, &tlsConfig)
 	default:
 		return nil, fmt.Errorf("invalid LDAP scheme")
 	}

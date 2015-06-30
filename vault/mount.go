@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -157,7 +158,7 @@ func (c *Core) mount(me *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	me.UUID = generateUUID()
+	me.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
 
 	// Update the mount table
@@ -476,13 +477,13 @@ func defaultMountTable() *MountTable {
 		Path:        "secret/",
 		Type:        "generic",
 		Description: "generic secret storage",
-		UUID:        generateUUID(),
+		UUID:        uuid.GenerateUUID(),
 	}
 	sysMount := &MountEntry{
 		Path:        "sys/",
 		Type:        "system",
 		Description: "system endpoints used for control, policy and debugging",
-		UUID:        generateUUID(),
+		UUID:        uuid.GenerateUUID(),
 	}
 	table.Entries = append(table.Entries, genericMount)
 	table.Entries = append(table.Entries, sysMount)

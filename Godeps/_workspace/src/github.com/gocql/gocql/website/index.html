@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>GoCQL</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="GoCQL - Modern Cassandra client for the Go">
+	<meta name="keywords" content="GoCQL, CQL, Cassandra, Go">
+	<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<meta property="og:title" content="GoCQL">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="http://tux21b.org/gocql/">
+	<meta property="og:image" content="http://tux21b.org/gocql/gocql.png">
+	<meta property="og:description" content="GoCQL - Modern Cassandra client for the Go">
+	<style>
+	body { border-top: 4px solid #666; }
+	h1 { font-weight: bold; }
+	h2 { border-bottom: 1px solid #ccc; padding-bottom: .2em; }
+	div.footer { border-top: 1px solid #ccc; padding: 1em 0 .5em; margin-top: 3em; }
+	img.logo { margin-right: 1em; margin-top: 10px;}
+	</style>
+</head>
+<body>
+<div class="container">
+
+<div class="row" style="margin-top: 10px; margin-bottom: 20px;">
+<div class="col-lg-6">
+	<img src="gocql.png" alt="GoCQL logo" class="pull-left logo" />
+	<h1><a href="index.html">GoCQL</a> <small>tux21b.org/v1/gocql</small></h1>
+</div>
+<div class="col-lg-6">
+	<ul class="nav nav-pills pull-right" style="margin-top: 20px">
+		<li><a href="#">Tutorial</a></li>
+		<li><a href="http://godoc.org/tux21b.org/v1/gocql">Reference</a></li>
+		<li><a href="https://groups.google.com/forum/#!forum/gocql">Mailing List</a></li>
+		<li><a href="https://github.com/tux21b/gocql">Source</a></li>
+	</ul>
+</div>
+</div>
+
+<div class="alert alert-warning" style="margin: 1em 0 2em;">
+	<strong>Under Development:</strong> The GoCQL package is currently actively
+	developed and the API may change in the future.
+</div>
+
+
+<h2>Highlights<span class="glyphicon glyphicon-star pull-right"></span></h2>
+
+<div class="row">
+	<div class="col-lg-3">
+		<h3>Cluster Management</h3>
+		<p>GoCQL automatically discovers all data centers, racks and hosts
+		in your cluster, manages a pool of connections to them and distributes
+		queries in a reasonable and efficient way.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Type Conversation</h3>
+		<p>Automatic and safe type conversation between Cassandra and Go without
+		any loss of precision. Basic types, collections and UUIDs are supported
+		by default and custom types can implement their own marshaling logic.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Synchronous and Concurrent</h3>
+		<p>Synchronous API with an asynchronous and concurrent back-end. Each
+		connection can handle up to 128 concurrent queries and may receive
+		server side push events at any time.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Failover Management</h3>
+		<p>TODO :(</p>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-3">
+		<h3>Result Paging</h3>
+		<p>Iterate over large results sets and let GoCQL fetch one page after
+		another. The next page is automatically pre-fetched in the background
+		once the iterator has passed a certain threshold.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Atomic Batches</h3>
+		<p>Execute a batch of related updates in a single query. GoCQL supports
+		logged, unlogged and counter batches.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Query Tracing</h3>
+		<p>Trace queries to obtain a detailed output of all events that
+		happened during the query execution from Cassandra. The output might
+		help to identify bugs and performance bottlenecks in your
+		application.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Frame Compression</h3>
+		<p>Speed up and reduce the network traffic by compressing the frames
+		that are sent to Cassandra.
+		<a href="https://code.google.com/p/snappy/">Snappy</a>, a
+		compression algorithm that aims for very high speeds and reasonable
+		compression, is enabled by default.</p>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-3">
+		<h3>Multiple Cassandra Versions</h3>
+		<p>GoCQL supports multiple Cassandra version. Currently Cassandra 1.2
+		and Cassandra 2.0 are fully supported.</p>
+	</div>
+
+	<div class="col-lg-3">
+		<h3>Thoroughly Tested</h3>
+		<p>TODO :(</p>
+	</div>
+
+	<div class="col-lg-3">
+	<h3>BSD License</h3>
+		<p>Completely open source. Browse the source on
+		<a href="https://github.com/tux21b/gocql">GitHub</a> and start
+		contributing today.</p>
+	</div>
+</div>
+
+<div class="footer">
+	<p>@ 2013 The GoCQL Authors. All rights reserved.</p>
+</div>
+</body>
+</html>

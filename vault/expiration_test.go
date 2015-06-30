@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -21,7 +22,7 @@ func TestExpiration_Restore(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -174,7 +175,7 @@ func TestExpiration_Revoke(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -212,7 +213,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -261,7 +262,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -321,7 +322,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -440,7 +441,7 @@ func TestExpiration_Renew(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -502,7 +503,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -544,7 +545,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", generateUUID(), view)
+	exp.router.Mount(noop, "prod/aws/", uuid.GenerateUUID(), view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -612,7 +613,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "", generateUUID(), view)
+	exp.router.Mount(noop, "", uuid.GenerateUUID(), view)
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -701,7 +702,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "", generateUUID(), view)
+	exp.router.Mount(noop, "", uuid.GenerateUUID(), view)
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -763,7 +764,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "auth/foo/")
-	exp.router.Mount(noop, "auth/foo/", generateUUID(), view)
+	exp.router.Mount(noop, "auth/foo/", uuid.GenerateUUID(), view)
 
 	le := &leaseEntry{
 		LeaseID: "auth/foo/1234",
