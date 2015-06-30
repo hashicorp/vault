@@ -19,7 +19,7 @@ func TestFlagSet(t *testing.T) {
 		},
 		{
 			FlagSetServer,
-			[]string{"address", "ca-cert", "ca-path", "insecure", "tls-skip-verify"},
+			[]string{"address", "ca-cert", "ca-path", "client-cert", "client-key", "insecure", "tls-skip-verify"},
 		},
 	}
 
@@ -44,9 +44,13 @@ func TestFlagSet(t *testing.T) {
 func TestEnvSettings(t *testing.T) {
 	os.Setenv("VAULT_CACERT", "/path/to/fake/cert.crt")
 	os.Setenv("VAULT_CAPATH", "/path/to/fake/certs")
+	os.Setenv("VAULT_CLIENT_CERT", "/path/to/fake/client.crt")
+	os.Setenv("VAULT_CLIENT_KEY", "/path/to/fake/client.key")
 	os.Setenv("VAULT_SKIP_VERIFY", "true")
 	defer os.Setenv("VAULT_CACERT", "")
 	defer os.Setenv("VAULT_CAPATH", "")
+	defer os.Setenv("VAULT_CLIENT_CERT", "")
+	defer os.Setenv("VAULT_CLIENT_KEY", "")
 	defer os.Setenv("VAULT_SKIP_VERIFY", "")
 	var m Meta
 
@@ -58,6 +62,12 @@ func TestEnvSettings(t *testing.T) {
 		t.Fatalf("bad: %s", m.flagAddress)
 	}
 	if m.flagCAPath != "/path/to/fake/certs" {
+		t.Fatalf("bad: %s", m.flagAddress)
+	}
+	if m.flagClientCert != "/path/to/fake/client.crt" {
+		t.Fatalf("bad: %s", m.flagAddress)
+	}
+	if m.flagClientKey != "/path/to/fake/client.key" {
 		t.Fatalf("bad: %s", m.flagAddress)
 	}
 	if m.flagInsecure != true {
