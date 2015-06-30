@@ -43,7 +43,7 @@ with the `oauth2` package.
 		"golang.org/x/oauth2"
 		"golang.org/x/oauth2/google"
 		newappengine "google.golang.org/appengine"
-		newurlftech "google.golang.org/urlfetch"
+		newurlfetch "google.golang.org/appengine/urlfetch"
 
 		"appengine"
 	)

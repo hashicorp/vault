@@ -7,12 +7,12 @@ import (
 
 	"github.com/vaughan0/go-ini"
 
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 var (
 	// ErrSharedCredentialsHomeNotFound is emitted when the user directory cannot be found.
-	ErrSharedCredentialsHomeNotFound = apierr.New("UserHomeNotFound", "user home directory not found.", nil)
+	ErrSharedCredentialsHomeNotFound = awserr.New("UserHomeNotFound", "user home directory not found.", nil)
 )
 
 // A SharedCredentialsProvider retrieves credentials from the current user's home
@@ -72,20 +72,20 @@ func (p *SharedCredentialsProvider) IsExpired() bool {
 func loadProfile(filename, profile string) (Value, error) {
 	config, err := ini.LoadFile(filename)
 	if err != nil {
-		return Value{}, apierr.New("SharedCredsLoad", "failed to load shared credentials file", err)
+		return Value{}, awserr.New("SharedCredsLoad", "failed to load shared credentials file", err)
 	}
 	iniProfile := config.Section(profile)
 
 	id, ok := iniProfile["aws_access_key_id"]
 	if !ok {
-		return Value{}, apierr.New("SharedCredsAccessKey",
+		return Value{}, awserr.New("SharedCredsAccessKey",
 			fmt.Sprintf("shared credentials %s in %s did not contain aws_access_key_id", profile, filename),
 			nil)
 	}
 
 	secret, ok := iniProfile["aws_secret_access_key"]
 	if !ok {
-		return Value{}, apierr.New("SharedCredsSecret",
+		return Value{}, awserr.New("SharedCredsSecret",
 			fmt.Sprintf("shared credentials %s in %s did not contain aws_secret_access_key", profile, filename),
 			nil)
 	}

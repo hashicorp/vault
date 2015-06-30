@@ -192,7 +192,7 @@ func (c *Client) Close() {
 // initHTTPClient initializes a HTTP client for etcd client
 func (c *Client) initHTTPClient() {
 	c.transport = &http.Transport{
-		Dial: c.dial,
+		Dial: c.DefaultDial,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
@@ -218,7 +218,7 @@ func (c *Client) initHTTPSClient(cert, key string) error {
 
 	tr := &http.Transport{
 		TLSClientConfig: tlsConfig,
-		Dial:            c.dial,
+		Dial:            c.DefaultDial,
 	}
 
 	c.httpClient = &http.Client{Transport: tr}
@@ -306,12 +306,16 @@ func (c *Client) GetCluster() []string {
 }
 
 // SyncCluster updates the cluster information using the internal machine list.
+// If no members are found, the intenral machine list is left untouched.
 func (c *Client) SyncCluster() bool {
 	return c.internalSyncCluster(c.cluster.Machines)
 }
 
 // internalSyncCluster syncs cluster information using the given machine list.
 func (c *Client) internalSyncCluster(machines []string) bool {
+	// comma-separated list of machines in the cluster.
+	members := ""
+
 	for _, machine := range machines {
 		httpPath := c.createHttpPath(machine, path.Join(version, "members"))
 		resp, err := c.httpClient.Get(httpPath)
@@ -333,8 +337,7 @@ func (c *Client) internalSyncCluster(machines []string) bool {
 				// try another machine in the cluster
 				continue
 			}
-			// update Machines List
-			c.cluster.updateFromStr(string(b))
+			members = string(b)
 		} else {
 			b, err := ioutil.ReadAll(resp.Body)
 			resp.Body.Close()
@@ -354,10 +357,16 @@ func (c *Client) internalSyncCluster(machines []string) bool {
 				urls = append(urls, m.ClientURLs...)
 			}
 
-			// update Machines List
-			c.cluster.updateFromStr(strings.Join(urls, ","))
+			members = strings.Join(urls, ",")
 		}
 
+		// We should never do an empty cluster update.
+		if members == "" {
+			continue
+		}
+
+		// update Machines List
+		c.cluster.updateFromStr(members)
 		logger.Debug("sync.machines ", c.cluster.Machines)
 		c.saveConfig()
 		return true
@@ -382,9 +391,9 @@ func (c *Client) createHttpPath(serverName string, _path string) string {
 	return u.String()
 }
 
-// dial attempts to open a TCP connection to the provided address, explicitly
+// DefaultDial attempts to open a TCP connection to the provided address, explicitly
 // enabling keep-alives with a one-second interval.
-func (c *Client) dial(network, addr string) (net.Conn, error) {
+func (c *Client) DefaultDial(network, addr string) (net.Conn, error) {
 	conn, err := net.DialTimeout(network, addr, c.config.DialTimeout)
 	if err != nil {
 		return nil, err

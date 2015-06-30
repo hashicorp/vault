@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package vk provides constants for using OAuth2 to access VK.com.
-package vk
+package vk // import "golang.org/x/oauth2/vk"
 
 import (
 	"golang.org/x/oauth2"

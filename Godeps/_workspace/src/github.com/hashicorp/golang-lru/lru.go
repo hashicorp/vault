@@ -49,7 +49,7 @@ func (c *Cache) Purge() {
 
 	if c.onEvicted != nil {
 		for k, v := range c.items {
-			c.onEvicted(k, v.Value)
+			c.onEvicted(k, v.Value.(*entry).value)
 		}
 	}
 
@@ -92,6 +92,27 @@ func (c *Cache) Get(key interface{}) (value interface{}, ok bool) {
 		return ent.Value.(*entry).value, true
 	}
 	return
+}
+
+// Check if a key is in the cache, without updating the recent-ness or deleting it for being stale.
+func (c *Cache) Contains(key interface{}) (ok bool) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	_, ok = c.items[key]
+	return ok
+}
+
+// Returns the key value (or undefined if not found) without updating the "recently used"-ness of the key.
+// (If you find yourself using this a lot, you might be using the wrong sort of data structure, but there are some use cases where it's handy.)
+func (c *Cache) Peek(key interface{}) (value interface{}, ok bool) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if ent, ok := c.items[key]; ok {
+		return ent.Value.(*entry).value, true
+	}
+	return nil, ok
 }
 
 // Remove removes the provided key from the cache.

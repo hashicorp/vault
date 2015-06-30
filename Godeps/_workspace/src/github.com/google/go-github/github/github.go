@@ -37,11 +37,14 @@ const (
 
 	// Media Type values to access preview APIs
 
-	// https://developer.github.com/changes/2014-08-05-team-memberships-api/
-	mediaTypeMembershipPreview = "application/vnd.github.the-wasp-preview+json"
+	// https://developer.github.com/changes/2015-03-09-licenses-api/
+	mediaTypeLicensesPreview = "application/vnd.github.drax-preview+json"
 
-	// https://developer.github.com/changes/2014-01-09-preview-the-new-deployments-api/
-	mediaTypeDeploymentPreview = "application/vnd.github.cannonball-preview+json"
+	// https://developer.github.com/changes/2014-12-09-new-attributes-for-stars-api/
+	mediaTypeStarringPreview = "application/vnd.github.v3.star+json"
+
+	// https://developer.github.com/changes/2014-12-08-organization-permissions-api-preview/
+	mediaTypeOrganizationsPreview = "application/vnd.github.moondragon+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -77,6 +80,7 @@ type Client struct {
 	Repositories  *RepositoriesService
 	Search        *SearchService
 	Users         *UsersService
+	Licenses      *LicensesService
 }
 
 // ListOptions specifies the optional parameters to various List methods that
@@ -138,6 +142,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Repositories = &RepositoriesService{client: c}
 	c.Search = &SearchService{client: c}
 	c.Users = &UsersService{client: c}
+	c.Licenses = &LicensesService{client: c}
 	return c
 }
 
@@ -219,7 +224,7 @@ type Response struct {
 	Rate
 }
 
-// newResponse creats a new Response for the provided http.Response.
+// newResponse creates a new Response for the provided http.Response.
 func newResponse(r *http.Response) *Response {
 	response := &Response{Response: r}
 	response.populatePageValues()
@@ -333,8 +338,22 @@ type ErrorResponse struct {
 
 func (r *ErrorResponse) Error() string {
 	return fmt.Sprintf("%v %v: %d %v %+v",
-		r.Response.Request.Method, r.Response.Request.URL,
+		r.Response.Request.Method, sanitizeURL(r.Response.Request.URL),
 		r.Response.StatusCode, r.Message, r.Errors)
+}
+
+// sanitizeURL redacts the client_id and client_secret tokens from the URL which
+// may be exposed to the user, specifically in the ErrorResponse error message.
+func sanitizeURL(uri *url.URL) *url.URL {
+	if uri == nil {
+		return nil
+	}
+	params := uri.Query()
+	if len(params.Get("client_secret")) > 0 {
+		params.Set("client_secret", "REDACTED")
+		uri.RawQuery = params.Encode()
+	}
+	return uri
 }
 
 /*

@@ -83,7 +83,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		respondStandby(core, w, rawReq.URL)
 		return resp, false
 	}
-	if respondCommon(w, resp) {
+	if respondCommon(w, resp, err) {
 		return resp, false
 	}
 	if err != nil {
@@ -171,14 +171,29 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	enc.Encode(resp)
 }
 
-func respondCommon(w http.ResponseWriter, resp *logical.Response) bool {
+func respondCommon(w http.ResponseWriter, resp *logical.Response, err error) bool {
 	if resp == nil {
 		return false
 	}
 
 	if resp.IsError() {
+		var statusCode int
+
+		switch err {
+		case logical.ErrPermissionDenied:
+			statusCode = http.StatusForbidden
+		case logical.ErrUnsupportedOperation:
+			statusCode = http.StatusMethodNotAllowed
+		case logical.ErrUnsupportedPath:
+			statusCode = http.StatusNotFound
+		case logical.ErrInvalidRequest:
+			statusCode = http.StatusBadRequest
+		default:
+			statusCode = http.StatusBadRequest
+		}
+
 		err := fmt.Errorf("%s", resp.Data["error"].(string))
-		respondError(w, http.StatusBadRequest, err)
+		respondError(w, statusCode, err)
 		return true
 	}
 

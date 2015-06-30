@@ -41,8 +41,8 @@ func TestNoErrors(t *testing.T) {
 	input := &StructShape{
 		RequiredList: []*ConditionalStructShape{},
 		RequiredMap: map[string]*ConditionalStructShape{
-			"key1": &ConditionalStructShape{Name: aws.String("Name")},
-			"key2": &ConditionalStructShape{Name: aws.String("Name")},
+			"key1": {Name: aws.String("Name")},
+			"key2": {Name: aws.String("Name")},
 		},
 		RequiredBool:   aws.Boolean(true),
 		OptionalStruct: &ConditionalStructShape{Name: aws.String("Name")},
@@ -65,10 +65,10 @@ func TestMissingRequiredParameters(t *testing.T) {
 
 func TestNestedMissingRequiredParameters(t *testing.T) {
 	input := &StructShape{
-		RequiredList: []*ConditionalStructShape{&ConditionalStructShape{}},
+		RequiredList: []*ConditionalStructShape{{}},
 		RequiredMap: map[string]*ConditionalStructShape{
-			"key1": &ConditionalStructShape{Name: aws.String("Name")},
-			"key2": &ConditionalStructShape{},
+			"key1": {Name: aws.String("Name")},
+			"key2": {},
 		},
 		RequiredBool:   aws.Boolean(true),
 		OptionalStruct: &ConditionalStructShape{},

@@ -68,6 +68,7 @@ func (c Config) Copy() Config {
 	dst.DisableSSL = c.DisableSSL
 	dst.ManualSend = c.ManualSend
 	dst.HTTPClient = c.HTTPClient
+	dst.LogHTTPBody = c.LogHTTPBody
 	dst.LogLevel = c.LogLevel
 	dst.Logger = c.Logger
 	dst.MaxRetries = c.MaxRetries
@@ -90,79 +91,79 @@ func (c Config) Merge(newcfg *Config) *Config {
 
 	cfg := Config{}
 
-	if newcfg != nil && newcfg.Credentials != nil {
+	if newcfg.Credentials != nil {
 		cfg.Credentials = newcfg.Credentials
 	} else {
 		cfg.Credentials = c.Credentials
 	}
 
-	if newcfg != nil && newcfg.Endpoint != "" {
+	if newcfg.Endpoint != "" {
 		cfg.Endpoint = newcfg.Endpoint
 	} else {
 		cfg.Endpoint = c.Endpoint
 	}
 
-	if newcfg != nil && newcfg.Region != "" {
+	if newcfg.Region != "" {
 		cfg.Region = newcfg.Region
 	} else {
 		cfg.Region = c.Region
 	}
 
-	if newcfg != nil && newcfg.DisableSSL {
+	if newcfg.DisableSSL {
 		cfg.DisableSSL = newcfg.DisableSSL
 	} else {
 		cfg.DisableSSL = c.DisableSSL
 	}
 
-	if newcfg != nil && newcfg.ManualSend {
+	if newcfg.ManualSend {
 		cfg.ManualSend = newcfg.ManualSend
 	} else {
 		cfg.ManualSend = c.ManualSend
 	}
 
-	if newcfg != nil && newcfg.HTTPClient != nil {
+	if newcfg.HTTPClient != nil {
 		cfg.HTTPClient = newcfg.HTTPClient
 	} else {
 		cfg.HTTPClient = c.HTTPClient
 	}
 
-	if newcfg != nil && newcfg.LogHTTPBody {
+	if newcfg.LogHTTPBody {
 		cfg.LogHTTPBody = newcfg.LogHTTPBody
 	} else {
 		cfg.LogHTTPBody = c.LogHTTPBody
 	}
 
-	if newcfg != nil && newcfg.LogLevel != 0 {
+	if newcfg.LogLevel != 0 {
 		cfg.LogLevel = newcfg.LogLevel
 	} else {
 		cfg.LogLevel = c.LogLevel
 	}
 
-	if newcfg != nil && newcfg.Logger != nil {
+	if newcfg.Logger != nil {
 		cfg.Logger = newcfg.Logger
 	} else {
 		cfg.Logger = c.Logger
 	}
 
-	if newcfg != nil && newcfg.MaxRetries != DefaultRetries {
+	if newcfg.MaxRetries != DefaultRetries {
 		cfg.MaxRetries = newcfg.MaxRetries
 	} else {
 		cfg.MaxRetries = c.MaxRetries
 	}
 
-	if newcfg != nil && newcfg.DisableParamValidation {
+	if newcfg.DisableParamValidation {
 		cfg.DisableParamValidation = newcfg.DisableParamValidation
 	} else {
 		cfg.DisableParamValidation = c.DisableParamValidation
 	}
 
-	if newcfg != nil && newcfg.DisableComputeChecksums {
+	if newcfg.DisableComputeChecksums {
 		cfg.DisableComputeChecksums = newcfg.DisableComputeChecksums
 	} else {
 		cfg.DisableComputeChecksums = c.DisableComputeChecksums
 	}
 
-	if newcfg != nil && newcfg.S3ForcePathStyle {
+	if newcfg.S3ForcePathStyle {
 		cfg.S3ForcePathStyle = newcfg.S3ForcePathStyle
 	} else {
 		cfg.S3ForcePathStyle = c.S3ForcePathStyle

@@ -15,7 +15,9 @@ type CLI struct {
 	Args []string
 
 	// Commands is a mapping of subcommand names to a factory function
-	// for creating that Command implementation.
+	// for creating that Command implementation. If there is a command
+	// with a blank string "", then it will be used as the default command
+	// if no subcommand is specified.
 	Commands map[string]CommandFactory
 
 	// Name defines the name of the CLI.
@@ -40,6 +42,7 @@ type CLI struct {
 	isHelp         bool
 	subcommand     string
 	subcommandArgs []string
+	topFlags       []string
 
 	isVersion bool
 }
@@ -78,10 +81,19 @@ func (c *CLI) Run() (int, error) {
 		return 1, nil
 	}
 
+	// If there is an invalid flag, then error
+	if len(c.topFlags) > 0 {
+		c.HelpWriter.Write([]byte(
+			"Invalid flags before the subcommand. If these flags are for\n" +
+				"the subcommand, please put them after the subcommand.\n\n"))
+		c.HelpWriter.Write([]byte(c.HelpFunc(c.Commands) + "\n"))
+		return 1, nil
+	}
+
 	// Attempt to get the factory function for creating the command
 	// implementation. If the command is invalid or blank, it is an error.
 	commandFunc, ok := c.Commands[c.Subcommand()]
-	if !ok || c.Subcommand() == "" {
+	if !ok {
 		c.HelpWriter.Write([]byte(c.HelpFunc(c.Commands) + "\n"))
 		return 1, nil
 	}
@@ -133,7 +145,6 @@ func (c *CLI) init() {
 
 func (c *CLI) processArgs() {
 	for i, arg := range c.Args {
-
 		if c.subcommand == "" {
 			// Check for version and help flags if not in a subcommand
 			if arg == "-v" || arg == "-version" || arg == "--version" {
@@ -144,15 +155,31 @@ func (c *CLI) processArgs() {
 				c.isHelp = true
 				continue
 			}
+
+			if arg != "" && arg[0] == '-' {
+				// Record the arg...
+				c.topFlags = append(c.topFlags, arg)
+			}
 		}
 
 		// If we didn't find a subcommand yet and this is the first non-flag
 		// argument, then this is our subcommand. j
-		if c.subcommand == "" && arg[0] != '-' {
+		if c.subcommand == "" && arg != "" && arg[0] != '-' {
 			c.subcommand = arg
 
 			// The remaining args the subcommand arguments
 			c.subcommandArgs = c.Args[i+1:]
+		}
+	}
+
+	// If we never found a subcommand and support a default command, then
+	// switch to using that.
+	if c.subcommand == "" {
+		if _, ok := c.Commands[""]; ok {
+			args := c.topFlags
+			args = append(args, c.subcommandArgs...)
+			c.topFlags = nil
+			c.subcommandArgs = args
 		}
 	}
 }

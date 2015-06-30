@@ -8,6 +8,7 @@ import (
 )
 
 func TestLock_LockUnlock(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -65,6 +66,7 @@ func TestLock_LockUnlock(t *testing.T) {
 }
 
 func TestLock_ForceInvalidate(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -99,6 +101,7 @@ func TestLock_ForceInvalidate(t *testing.T) {
 }
 
 func TestLock_DeleteKey(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -132,6 +135,7 @@ func TestLock_DeleteKey(t *testing.T) {
 }
 
 func TestLock_Contend(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -184,6 +188,7 @@ func TestLock_Contend(t *testing.T) {
 }
 
 func TestLock_Destroy(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -252,6 +257,7 @@ func TestLock_Destroy(t *testing.T) {
 }
 
 func TestLock_Conflict(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -289,6 +295,7 @@ func TestLock_Conflict(t *testing.T) {
 }
 
 func TestLock_ReclaimLock(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 

@@ -158,32 +158,6 @@ func (s *OrganizationsService) IsTeamMember(team int, user string) (bool, *Respo
 	return member, resp, err
 }
 
-// AddTeamMember adds a user to a team.
-//
-// GitHub API docs: http://developer.github.com/v3/orgs/teams/#add-team-member
-func (s *OrganizationsService) AddTeamMember(team int, user string) (*Response, error) {
-	u := fmt.Sprintf("teams/%v/members/%v", team, user)
-	req, err := s.client.NewRequest("PUT", u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
-}
-
-// RemoveTeamMember removes a user from a team.
-//
-// GitHub API docs: http://developer.github.com/v3/orgs/teams/#remove-team-member
-func (s *OrganizationsService) RemoveTeamMember(team int, user string) (*Response, error) {
-	u := fmt.Sprintf("teams/%v/members/%v", team, user)
-	req, err := s.client.NewRequest("DELETE", u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.Do(req, nil)
-}
-
 // ListTeamRepos lists the repositories that the specified team has access to.
 //
 // GitHub API docs: http://developer.github.com/v3/orgs/teams/#list-team-repos
@@ -286,9 +260,6 @@ func (s *OrganizationsService) GetTeamMembership(team int, user string) (*Member
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeMembershipPreview)
-
 	t := new(Membership)
 	resp, err := s.client.Do(req, t)
 	if err != nil {
@@ -323,9 +294,6 @@ func (s *OrganizationsService) AddTeamMembership(team int, user string) (*Member
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeMembershipPreview)
-
 	t := new(Membership)
 	resp, err := s.client.Do(req, t)
 	if err != nil {
@@ -344,9 +312,6 @@ func (s *OrganizationsService) RemoveTeamMembership(team int, user string) (*Res
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeMembershipPreview)
 
 	return s.client.Do(req, nil)
 }

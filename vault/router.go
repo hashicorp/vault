@@ -158,7 +158,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	r.l.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("no handler for route '%s'", req.Path)
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), logical.ErrUnsupportedPath
 	}
 	defer metrics.MeasureSince([]string{"route", string(req.Operation),
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
@@ -170,7 +170,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return nil, fmt.Errorf("no handler for route '%s'", req.Path)
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), logical.ErrUnsupportedPath
 		}
 	}
 

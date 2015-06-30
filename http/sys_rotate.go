@@ -15,8 +15,9 @@ func handleSysKeyStatus(core *vault.Core) http.Handler {
 		}
 
 		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "sys/key-status",
+			Operation:  logical.ReadOperation,
+			Path:       "sys/key-status",
+			Connection: getConnection(r),
 		}))
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
@@ -37,8 +38,9 @@ func handleSysRotate(core *vault.Core) http.Handler {
 		}
 
 		_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.WriteOperation,
-			Path:      "sys/rotate",
+			Operation:  logical.WriteOperation,
+			Path:       "sys/rotate",
+			Connection: getConnection(r),
 		}))
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)

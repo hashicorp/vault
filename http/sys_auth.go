@@ -30,8 +30,9 @@ func handleSysListAuth(core *vault.Core) http.Handler {
 		}
 
 		resp, err := core.HandleRequest(requestAuth(r, &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "sys/auth",
+			Operation:  logical.ReadOperation,
+			Path:       "sys/auth",
+			Connection: getConnection(r),
 		}))
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
@@ -78,8 +79,9 @@ func handleSysEnableAuth(
 	}
 
 	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-		Operation: logical.WriteOperation,
-		Path:      "sys/auth/" + path,
+		Operation:  logical.WriteOperation,
+		Path:       "sys/auth/" + path,
+		Connection: getConnection(r),
 		Data: map[string]interface{}{
 			"type":        req.Type,
 			"description": req.Description,
@@ -99,8 +101,9 @@ func handleSysDisableAuth(
 	r *http.Request,
 	path string) {
 	_, err := core.HandleRequest(requestAuth(r, &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "sys/auth/" + path,
+		Operation:  logical.DeleteOperation,
+		Path:       "sys/auth/" + path,
+		Connection: getConnection(r),
 	}))
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)

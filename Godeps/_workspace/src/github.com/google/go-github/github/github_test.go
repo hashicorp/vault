@@ -430,6 +430,25 @@ func TestDo_rateLimit_errorResponse(t *testing.T) {
 	}
 }
 
+func TestSanitizeURL(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{"/?a=b", "/?a=b"},
+		{"/?a=b&client_secret=secret", "/?a=b&client_secret=REDACTED"},
+		{"/?a=b&client_id=id&client_secret=secret", "/?a=b&client_id=id&client_secret=REDACTED"},
+	}
+
+	for _, tt := range tests {
+		inURL, _ := url.Parse(tt.in)
+		want, _ := url.Parse(tt.want)
+
+		if got := sanitizeURL(inURL); !reflect.DeepEqual(got, want) {
+			t.Errorf("sanitizeURL(%v) returned %v, want %v", tt.in, got, want)
+		}
+	}
+}
+
 func TestCheckResponse(t *testing.T) {
 	res := &http.Response{
 		Request:    &http.Request{},

@@ -171,9 +171,6 @@ func (s *OrganizationsService) ListOrgMemberships(opt *ListOrgMembershipsOptions
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeMembershipPreview)
-
 	var memberships []Membership
 	resp, err := s.client.Do(req, &memberships)
 	if err != nil {
@@ -194,9 +191,6 @@ func (s *OrganizationsService) GetOrgMembership(org string) (*Membership, *Respo
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeMembershipPreview)
-
 	membership := new(Membership)
 	resp, err := s.client.Do(req, membership)
 	if err != nil {
@@ -216,9 +210,6 @@ func (s *OrganizationsService) EditOrgMembership(org string, membership *Members
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeMembershipPreview)
 
 	m := new(Membership)
 	resp, err := s.client.Do(req, m)

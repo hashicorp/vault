@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 type xmlErrorResponse struct {
@@ -20,8 +20,8 @@ func unmarshalError(r *aws.Request) {
 
 	if r.HTTPResponse.ContentLength == int64(0) {
 		// No body, use status code to generate an awserr.Error
-		r.Error = apierr.NewRequestError(
-			apierr.New(strings.Replace(r.HTTPResponse.Status, " ", "", -1), r.HTTPResponse.Status, nil),
+		r.Error = awserr.NewRequestFailure(
+			awserr.New(strings.Replace(r.HTTPResponse.Status, " ", "", -1), r.HTTPResponse.Status, nil),
 			r.HTTPResponse.StatusCode,
 			"",
 		)
@@ -31,10 +31,10 @@ func unmarshalError(r *aws.Request) {
 	resp := &xmlErrorResponse{}
 	err := xml.NewDecoder(r.HTTPResponse.Body).Decode(resp)
 	if err != nil && err != io.EOF {
-		r.Error = apierr.New("Unmarshal", "failed to decode S3 XML error response", nil)
+		r.Error = awserr.New("SerializationError", "failed to decode S3 XML error response", nil)
 	} else {
-		r.Error = apierr.NewRequestError(
-			apierr.New(resp.Code, resp.Message, nil),
+		r.Error = awserr.NewRequestFailure(
+			awserr.New(resp.Code, resp.Message, nil),
 			r.HTTPResponse.StatusCode,
 			"",
 		)

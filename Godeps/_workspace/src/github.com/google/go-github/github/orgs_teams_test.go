@@ -220,46 +220,6 @@ func TestOrganizationsService_IsTeamMember_invalidUser(t *testing.T) {
 	testURLParseError(t, err)
 }
 
-func TestOrganizationsService_AddTeamMember(t *testing.T) {
-	setup()
-	defer teardown()
-
-	mux.HandleFunc("/teams/1/members/u", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "PUT")
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	_, err := client.Organizations.AddTeamMember(1, "u")
-	if err != nil {
-		t.Errorf("Organizations.AddTeamMember returned error: %v", err)
-	}
-}
-
-func TestOrganizationsService_AddTeamMember_invalidUser(t *testing.T) {
-	_, err := client.Organizations.AddTeamMember(1, "%")
-	testURLParseError(t, err)
-}
-
-func TestOrganizationsService_RemoveTeamMember(t *testing.T) {
-	setup()
-	defer teardown()
-
-	mux.HandleFunc("/teams/1/members/u", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "DELETE")
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	_, err := client.Organizations.RemoveTeamMember(1, "u")
-	if err != nil {
-		t.Errorf("Organizations.RemoveTeamMember returned error: %v", err)
-	}
-}
-
-func TestOrganizationsService_RemoveTeamMember_invalidUser(t *testing.T) {
-	_, err := client.Organizations.RemoveTeamMember(1, "%")
-	testURLParseError(t, err)
-}
-
 func TestOrganizationsService_PublicizeMembership(t *testing.T) {
 	setup()
 	defer teardown()
@@ -442,7 +402,6 @@ func TestOrganizationsService_GetTeamMembership(t *testing.T) {
 
 	mux.HandleFunc("/teams/1/memberships/u", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		testHeader(t, r, "Accept", mediaTypeMembershipPreview)
 		fmt.Fprint(w, `{"url":"u", "state":"active"}`)
 	})
 
@@ -463,7 +422,6 @@ func TestOrganizationsService_AddTeamMembership(t *testing.T) {
 
 	mux.HandleFunc("/teams/1/memberships/u", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "PUT")
-		testHeader(t, r, "Accept", mediaTypeMembershipPreview)
 		fmt.Fprint(w, `{"url":"u", "state":"pending"}`)
 	})
 
@@ -484,7 +442,6 @@ func TestOrganizationsService_RemoveTeamMembership(t *testing.T) {
 
 	mux.HandleFunc("/teams/1/memberships/u", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "DELETE")
-		testHeader(t, r, "Accept", mediaTypeMembershipPreview)
 		w.WriteHeader(http.StatusNoContent)
 	})
 

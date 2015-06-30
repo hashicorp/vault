@@ -72,7 +72,7 @@ func TestAPIMeta(t *testing.T) {
 
 	mux.HandleFunc("/meta", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, `{"hooks":["h"], "git":["g"], "verifiable_password_authentication": true}`)
+		fmt.Fprint(w, `{"hooks":["h"], "git":["g"], "pages":["p"], "verifiable_password_authentication": true}`)
 	})
 
 	meta, _, err := client.APIMeta()
@@ -83,6 +83,7 @@ func TestAPIMeta(t *testing.T) {
 	want := &APIMeta{
 		Hooks: []string{"h"},
 		Git:   []string{"g"},
+		Pages: []string{"p"},
 		VerifiablePasswordAuthentication: Bool(true),
 	}
 	if !reflect.DeepEqual(want, meta) {
@@ -133,5 +134,37 @@ func TestZen(t *testing.T) {
 
 	if want := output; got != want {
 		t.Errorf("Zen returned %+v, want %+v", got, want)
+	}
+}
+
+func TestRepositoriesService_ListServiceHooks(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/hooks", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `[{
+			"name":"n",
+			"events":["e"],
+			"supported_events":["s"],
+			"schema":[
+			  ["a", "b"]
+			]
+		}]`)
+	})
+
+	hooks, _, err := client.Repositories.ListServiceHooks()
+	if err != nil {
+		t.Errorf("Repositories.ListHooks returned error: %v", err)
+	}
+
+	want := []ServiceHook{{
+		Name:            String("n"),
+		Events:          []string{"e"},
+		SupportedEvents: []string{"s"},
+		Schema:          [][]string{{"a", "b"}},
+	}}
+	if !reflect.DeepEqual(hooks, want) {
+		t.Errorf("Repositories.ListServiceHooks returned %+v, want %+v", hooks, want)
 	}
 }

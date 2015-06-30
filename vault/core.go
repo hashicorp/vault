@@ -355,10 +355,11 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return nil, ErrStandby
 	}
 
+	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {
-		resp, err = c.handleLoginRequest(req)
+		resp, auth, err = c.handleLoginRequest(req)
 	} else {
-		resp, err = c.handleRequest(req)
+		resp, auth, err = c.handleRequest(req)
 	}
 
 	// Ensure we don't leak internal data
@@ -370,12 +371,20 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 			resp.Auth.InternalData = nil
 		}
 	}
+
+	// Create an audit trail of the response
+	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit response (request: %#v, response: %#v): %v",
+			req, resp, err)
+		return nil, ErrInternalError
+	}
+
 	return
 }
 
-func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
-	log.Printf("Vishal: vault.core.handleRequest\n")
+func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
+
 	// Validate the token
 	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
 	if err != nil {
@@ -389,17 +398,22 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 			errType = logical.ErrInvalidRequest
 		}
 
-		return logical.ErrorResponse(err.Error()), errType
+		if err := c.auditBroker.LogRequest(auth, req, err); err != nil {
+			c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
+				req, err)
+		}
+
+		return logical.ErrorResponse(err.Error()), nil, errType
 	}
 
 	// Attach the display name
 	req.DisplayName = auth.DisplayName
 
 	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(auth, req); err != nil {
+	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
 			req, err)
-		return nil, ErrInternalError
+		return nil, auth, ErrInternalError
 	}
 
 	// Route the request
@@ -424,7 +438,7 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 			c.logger.Printf(
 				"[ERR] core: failed to register lease "+
 					"(request: %#v, response: %#v): %v", req, resp, err)
-			return nil, ErrInternalError
+			return nil, auth, ErrInternalError
 		}
 		resp.Secret.LeaseID = leaseID
 	}
@@ -437,7 +451,7 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 			c.logger.Printf(
 				"[ERR] core: unexpected Auth response for non-token backend "+
 					"(request: %#v, response: %#v)", req, resp)
-			return nil, ErrInternalError
+			return nil, auth, ErrInternalError
 		}
 
 		// Set the default lease if non-provided, root tokens are exempt
@@ -454,31 +468,24 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, error) {
 		if err := c.expiration.RegisterAuth(req.Path, resp.Auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
 				"(request: %#v, response: %#v): %v", req, resp, err)
-			return nil, ErrInternalError
+			return nil, auth, ErrInternalError
 		}
 	}
 
-	// Create an audit trail of the response
-	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit response (request: %#v, response: %#v): %v",
-			req, resp, err)
-		return nil, ErrInternalError
-	}
-
 	// Return the response and error
-	return resp, err
+	return resp, auth, err
 }
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, error) {
+func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req); err != nil {
+	if err := c.auditBroker.LogRequest(nil, req, nil); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
 			req, err)
-		return nil, ErrInternalError
+		return nil, nil, ErrInternalError
 	}
 
 	// Route the request
@@ -488,7 +495,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 	if resp != nil && resp.Secret != nil {
 		c.logger.Printf("[ERR] core: unexpected Secret response for login path"+
 			"(request: %#v, response: %#v)", req, resp)
-		return nil, ErrInternalError
+		return nil, nil, ErrInternalError
 	}
 
 	// If the response generated an authentication, then generate the token
@@ -513,7 +520,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 		}
 		if err := c.tokenStore.Create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
-			return nil, ErrInternalError
+			return nil, auth, ErrInternalError
 		}
 
 		// Populate the client token
@@ -533,21 +540,14 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, erro
 		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
 				"(request: %#v, response: %#v): %v", req, resp, err)
-			return nil, ErrInternalError
+			return nil, auth, ErrInternalError
 		}
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 	}
 
-	// Create an audit trail of the response
-	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit response (request: %#v, response: %#v): %v",
-			req, resp, err)
-		return nil, ErrInternalError
-	}
-
-	return resp, err
+	return resp, auth, err
 }
 
 func (c *Core) checkToken(

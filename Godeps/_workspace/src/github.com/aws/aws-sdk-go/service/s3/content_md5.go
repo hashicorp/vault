@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/internal/apierr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 // contentMD5 computes and sets the HTTP Content-MD5 header for requests that
@@ -19,12 +19,12 @@ func contentMD5(r *aws.Request) {
 	// body.
 	_, err := io.Copy(h, r.Body)
 	if err != nil {
-		r.Error = apierr.New("ContentMD5", "failed to read body", err)
+		r.Error = awserr.New("ContentMD5", "failed to read body", err)
 		return
 	}
 	_, err = r.Body.Seek(0, 0)
 	if err != nil {
-		r.Error = apierr.New("ContentMD5", "failed to seek body", err)
+		r.Error = awserr.New("ContentMD5", "failed to seek body", err)
 		return
 	}
 

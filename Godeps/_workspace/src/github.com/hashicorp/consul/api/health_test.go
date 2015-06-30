@@ -8,6 +8,7 @@ import (
 )
 
 func TestHealth_Node(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -38,6 +39,7 @@ func TestHealth_Node(t *testing.T) {
 }
 
 func TestHealth_Checks(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -74,6 +76,7 @@ func TestHealth_Checks(t *testing.T) {
 }
 
 func TestHealth_Service(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 
@@ -98,6 +101,7 @@ func TestHealth_Service(t *testing.T) {
 }
 
 func TestHealth_State(t *testing.T) {
+	t.Parallel()
 	c, s := makeClient(t)
 	defer s.Stop()
 

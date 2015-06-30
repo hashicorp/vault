@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package facebook provides constants for using OAuth2 to access Facebook.
-package facebook
+package facebook // import "golang.org/x/oauth2/facebook"
 
 import (
 	"golang.org/x/oauth2"

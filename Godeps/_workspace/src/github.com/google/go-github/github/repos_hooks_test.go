@@ -153,6 +153,20 @@ func TestRepositoriesService_DeleteHook_invalidOwner(t *testing.T) {
 	testURLParseError(t, err)
 }
 
+func TestRepositoriesService_PingHook(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/repos/o/r/hooks/1/pings", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+	})
+
+	_, err := client.Repositories.PingHook("o", "r", 1)
+	if err != nil {
+		t.Errorf("Repositories.PingHook returned error: %v", err)
+	}
+}
+
 func TestRepositoriesService_TestHook(t *testing.T) {
 	setup()
 	defer teardown()
@@ -170,36 +184,4 @@ func TestRepositoriesService_TestHook(t *testing.T) {
 func TestRepositoriesService_TestHook_invalidOwner(t *testing.T) {
 	_, err := client.Repositories.TestHook("%", "%", 1)
 	testURLParseError(t, err)
-}
-
-func TestRepositoriesService_ListServiceHooks(t *testing.T) {
-	setup()
-	defer teardown()
-
-	mux.HandleFunc("/hooks", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
-		fmt.Fprint(w, `[{
-			"name":"n", 
-			"events":["e"],
-			"supported_events":["s"],
-			"schema":[
-			  ["a", "b"]
-			]
-		}]`)
-	})
-
-	hooks, _, err := client.Repositories.ListServiceHooks()
-	if err != nil {
-		t.Errorf("Repositories.ListHooks returned error: %v", err)
-	}
-
-	want := []ServiceHook{{
-		Name:            String("n"),
-		Events:          []string{"e"},
-		SupportedEvents: []string{"s"},
-		Schema:          [][]string{{"a", "b"}},
-	}}
-	if !reflect.DeepEqual(hooks, want) {
-		t.Errorf("Repositories.ListServiceHooks returned %+v, want %+v", hooks, want)
-	}
 }

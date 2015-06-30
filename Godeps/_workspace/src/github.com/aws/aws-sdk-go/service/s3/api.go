@@ -5,32 +5,26 @@ package s3
 
 import (
 	"io"
-	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 )
 
-var oprw sync.Mutex
+const opAbortMultipartUpload = "AbortMultipartUpload"
 
 // AbortMultipartUploadRequest generates a request for the AbortMultipartUpload operation.
 func (c *S3) AbortMultipartUploadRequest(input *AbortMultipartUploadInput) (req *aws.Request, output *AbortMultipartUploadOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opAbortMultipartUpload == nil {
-		opAbortMultipartUpload = &aws.Operation{
-			Name:       "AbortMultipartUpload",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opAbortMultipartUpload,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &AbortMultipartUploadInput{}
 	}
 
-	req = c.newRequest(opAbortMultipartUpload, input, output)
+	req = c.newRequest(op, input, output)
 	output = &AbortMultipartUploadOutput{}
 	req.Data = output
 	return
@@ -47,26 +41,21 @@ func (c *S3) AbortMultipartUpload(input *AbortMultipartUploadInput) (*AbortMulti
 	return out, err
 }
 
-var opAbortMultipartUpload *aws.Operation
+const opCompleteMultipartUpload = "CompleteMultipartUpload"
 
 // CompleteMultipartUploadRequest generates a request for the CompleteMultipartUpload operation.
 func (c *S3) CompleteMultipartUploadRequest(input *CompleteMultipartUploadInput) (req *aws.Request, output *CompleteMultipartUploadOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opCompleteMultipartUpload == nil {
-		opCompleteMultipartUpload = &aws.Operation{
-			Name:       "CompleteMultipartUpload",
-			HTTPMethod: "POST",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opCompleteMultipartUpload,
+		HTTPMethod: "POST",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &CompleteMultipartUploadInput{}
 	}
 
-	req = c.newRequest(opCompleteMultipartUpload, input, output)
+	req = c.newRequest(op, input, output)
 	output = &CompleteMultipartUploadOutput{}
 	req.Data = output
 	return
@@ -79,26 +68,21 @@ func (c *S3) CompleteMultipartUpload(input *CompleteMultipartUploadInput) (*Comp
 	return out, err
 }
 
-var opCompleteMultipartUpload *aws.Operation
+const opCopyObject = "CopyObject"
 
 // CopyObjectRequest generates a request for the CopyObject operation.
 func (c *S3) CopyObjectRequest(input *CopyObjectInput) (req *aws.Request, output *CopyObjectOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opCopyObject == nil {
-		opCopyObject = &aws.Operation{
-			Name:       "CopyObject",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opCopyObject,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &CopyObjectInput{}
 	}
 
-	req = c.newRequest(opCopyObject, input, output)
+	req = c.newRequest(op, input, output)
 	output = &CopyObjectOutput{}
 	req.Data = output
 	return
@@ -111,26 +95,21 @@ func (c *S3) CopyObject(input *CopyObjectInput) (*CopyObjectOutput, error) {
 	return out, err
 }
 
-var opCopyObject *aws.Operation
+const opCreateBucket = "CreateBucket"
 
 // CreateBucketRequest generates a request for the CreateBucket operation.
 func (c *S3) CreateBucketRequest(input *CreateBucketInput) (req *aws.Request, output *CreateBucketOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opCreateBucket == nil {
-		opCreateBucket = &aws.Operation{
-			Name:       "CreateBucket",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}",
-		}
+	op := &aws.Operation{
+		Name:       opCreateBucket,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}",
 	}
 
 	if input == nil {
 		input = &CreateBucketInput{}
 	}
 
-	req = c.newRequest(opCreateBucket, input, output)
+	req = c.newRequest(op, input, output)
 	output = &CreateBucketOutput{}
 	req.Data = output
 	return
@@ -143,26 +122,21 @@ func (c *S3) CreateBucket(input *CreateBucketInput) (*CreateBucketOutput, error)
 	return out, err
 }
 
-var opCreateBucket *aws.Operation
+const opCreateMultipartUpload = "CreateMultipartUpload"
 
 // CreateMultipartUploadRequest generates a request for the CreateMultipartUpload operation.
 func (c *S3) CreateMultipartUploadRequest(input *CreateMultipartUploadInput) (req *aws.Request, output *CreateMultipartUploadOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opCreateMultipartUpload == nil {
-		opCreateMultipartUpload = &aws.Operation{
-			Name:       "CreateMultipartUpload",
-			HTTPMethod: "POST",
-			HTTPPath:   "/{Bucket}/{Key+}?uploads",
-		}
+	op := &aws.Operation{
+		Name:       opCreateMultipartUpload,
+		HTTPMethod: "POST",
+		HTTPPath:   "/{Bucket}/{Key+}?uploads",
 	}
 
 	if input == nil {
 		input = &CreateMultipartUploadInput{}
 	}
 
-	req = c.newRequest(opCreateMultipartUpload, input, output)
+	req = c.newRequest(op, input, output)
 	output = &CreateMultipartUploadOutput{}
 	req.Data = output
 	return
@@ -181,26 +155,21 @@ func (c *S3) CreateMultipartUpload(input *CreateMultipartUploadInput) (*CreateMu
 	return out, err
 }
 
-var opCreateMultipartUpload *aws.Operation
+const opDeleteBucket = "DeleteBucket"
 
 // DeleteBucketRequest generates a request for the DeleteBucket operation.
 func (c *S3) DeleteBucketRequest(input *DeleteBucketInput) (req *aws.Request, output *DeleteBucketOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucket == nil {
-		opDeleteBucket = &aws.Operation{
-			Name:       "DeleteBucket",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucket,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}",
 	}
 
 	if input == nil {
 		input = &DeleteBucketInput{}
 	}
 
-	req = c.newRequest(opDeleteBucket, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketOutput{}
 	req.Data = output
 	return
@@ -214,26 +183,21 @@ func (c *S3) DeleteBucket(input *DeleteBucketInput) (*DeleteBucketOutput, error)
 	return out, err
 }
 
-var opDeleteBucket *aws.Operation
+const opDeleteBucketCORS = "DeleteBucketCors"
 
 // DeleteBucketCORSRequest generates a request for the DeleteBucketCORS operation.
 func (c *S3) DeleteBucketCORSRequest(input *DeleteBucketCORSInput) (req *aws.Request, output *DeleteBucketCORSOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucketCORS == nil {
-		opDeleteBucketCORS = &aws.Operation{
-			Name:       "DeleteBucketCors",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}?cors",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucketCORS,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}?cors",
 	}
 
 	if input == nil {
 		input = &DeleteBucketCORSInput{}
 	}
 
-	req = c.newRequest(opDeleteBucketCORS, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketCORSOutput{}
 	req.Data = output
 	return
@@ -246,26 +210,21 @@ func (c *S3) DeleteBucketCORS(input *DeleteBucketCORSInput) (*DeleteBucketCORSOu
 	return out, err
 }
 
-var opDeleteBucketCORS *aws.Operation
+const opDeleteBucketLifecycle = "DeleteBucketLifecycle"
 
 // DeleteBucketLifecycleRequest generates a request for the DeleteBucketLifecycle operation.
 func (c *S3) DeleteBucketLifecycleRequest(input *DeleteBucketLifecycleInput) (req *aws.Request, output *DeleteBucketLifecycleOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucketLifecycle == nil {
-		opDeleteBucketLifecycle = &aws.Operation{
-			Name:       "DeleteBucketLifecycle",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}?lifecycle",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucketLifecycle,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}?lifecycle",
 	}
 
 	if input == nil {
 		input = &DeleteBucketLifecycleInput{}
 	}
 
-	req = c.newRequest(opDeleteBucketLifecycle, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketLifecycleOutput{}
 	req.Data = output
 	return
@@ -278,26 +237,21 @@ func (c *S3) DeleteBucketLifecycle(input *DeleteBucketLifecycleInput) (*DeleteBu
 	return out, err
 }
 
-var opDeleteBucketLifecycle *aws.Operation
+const opDeleteBucketPolicy = "DeleteBucketPolicy"
 
 // DeleteBucketPolicyRequest generates a request for the DeleteBucketPolicy operation.
 func (c *S3) DeleteBucketPolicyRequest(input *DeleteBucketPolicyInput) (req *aws.Request, output *DeleteBucketPolicyOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucketPolicy == nil {
-		opDeleteBucketPolicy = &aws.Operation{
-			Name:       "DeleteBucketPolicy",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}?policy",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucketPolicy,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}?policy",
 	}
 
 	if input == nil {
 		input = &DeleteBucketPolicyInput{}
 	}
 
-	req = c.newRequest(opDeleteBucketPolicy, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketPolicyOutput{}
 	req.Data = output
 	return
@@ -310,26 +264,21 @@ func (c *S3) DeleteBucketPolicy(input *DeleteBucketPolicyInput) (*DeleteBucketPo
 	return out, err
 }
 
-var opDeleteBucketPolicy *aws.Operation
+const opDeleteBucketReplication = "DeleteBucketReplication"
 
 // DeleteBucketReplicationRequest generates a request for the DeleteBucketReplication operation.
 func (c *S3) DeleteBucketReplicationRequest(input *DeleteBucketReplicationInput) (req *aws.Request, output *DeleteBucketReplicationOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucketReplication == nil {
-		opDeleteBucketReplication = &aws.Operation{
-			Name:       "DeleteBucketReplication",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}?replication",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucketReplication,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}?replication",
 	}
 
 	if input == nil {
 		input = &DeleteBucketReplicationInput{}
 	}
 
-	req = c.newRequest(opDeleteBucketReplication, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketReplicationOutput{}
 	req.Data = output
 	return
@@ -341,26 +290,21 @@ func (c *S3) DeleteBucketReplication(input *DeleteBucketReplicationInput) (*Dele
 	return out, err
 }
 
-var opDeleteBucketReplication *aws.Operation
+const opDeleteBucketTagging = "DeleteBucketTagging"
 
 // DeleteBucketTaggingRequest generates a request for the DeleteBucketTagging operation.
 func (c *S3) DeleteBucketTaggingRequest(input *DeleteBucketTaggingInput) (req *aws.Request, output *DeleteBucketTaggingOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucketTagging == nil {
-		opDeleteBucketTagging = &aws.Operation{
-			Name:       "DeleteBucketTagging",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}?tagging",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucketTagging,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}?tagging",
 	}
 
 	if input == nil {
 		input = &DeleteBucketTaggingInput{}
 	}
 
-	req = c.newRequest(opDeleteBucketTagging, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketTaggingOutput{}
 	req.Data = output
 	return
@@ -373,26 +317,21 @@ func (c *S3) DeleteBucketTagging(input *DeleteBucketTaggingInput) (*DeleteBucket
 	return out, err
 }
 
-var opDeleteBucketTagging *aws.Operation
+const opDeleteBucketWebsite = "DeleteBucketWebsite"
 
 // DeleteBucketWebsiteRequest generates a request for the DeleteBucketWebsite operation.
 func (c *S3) DeleteBucketWebsiteRequest(input *DeleteBucketWebsiteInput) (req *aws.Request, output *DeleteBucketWebsiteOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteBucketWebsite == nil {
-		opDeleteBucketWebsite = &aws.Operation{
-			Name:       "DeleteBucketWebsite",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}?website",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteBucketWebsite,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}?website",
 	}
 
 	if input == nil {
 		input = &DeleteBucketWebsiteInput{}
 	}
 
-	req = c.newRequest(opDeleteBucketWebsite, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteBucketWebsiteOutput{}
 	req.Data = output
 	return
@@ -405,26 +344,21 @@ func (c *S3) DeleteBucketWebsite(input *DeleteBucketWebsiteInput) (*DeleteBucket
 	return out, err
 }
 
-var opDeleteBucketWebsite *aws.Operation
+const opDeleteObject = "DeleteObject"
 
 // DeleteObjectRequest generates a request for the DeleteObject operation.
 func (c *S3) DeleteObjectRequest(input *DeleteObjectInput) (req *aws.Request, output *DeleteObjectOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteObject == nil {
-		opDeleteObject = &aws.Operation{
-			Name:       "DeleteObject",
-			HTTPMethod: "DELETE",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteObject,
+		HTTPMethod: "DELETE",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &DeleteObjectInput{}
 	}
 
-	req = c.newRequest(opDeleteObject, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteObjectOutput{}
 	req.Data = output
 	return
@@ -439,26 +373,21 @@ func (c *S3) DeleteObject(input *DeleteObjectInput) (*DeleteObjectOutput, error)
 	return out, err
 }
 
-var opDeleteObject *aws.Operation
+const opDeleteObjects = "DeleteObjects"
 
 // DeleteObjectsRequest generates a request for the DeleteObjects operation.
 func (c *S3) DeleteObjectsRequest(input *DeleteObjectsInput) (req *aws.Request, output *DeleteObjectsOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opDeleteObjects == nil {
-		opDeleteObjects = &aws.Operation{
-			Name:       "DeleteObjects",
-			HTTPMethod: "POST",
-			HTTPPath:   "/{Bucket}?delete",
-		}
+	op := &aws.Operation{
+		Name:       opDeleteObjects,
+		HTTPMethod: "POST",
+		HTTPPath:   "/{Bucket}?delete",
 	}
 
 	if input == nil {
 		input = &DeleteObjectsInput{}
 	}
 
-	req = c.newRequest(opDeleteObjects, input, output)
+	req = c.newRequest(op, input, output)
 	output = &DeleteObjectsOutput{}
 	req.Data = output
 	return
@@ -472,26 +401,21 @@ func (c *S3) DeleteObjects(input *DeleteObjectsInput) (*DeleteObjectsOutput, err
 	return out, err
 }
 
-var opDeleteObjects *aws.Operation
+const opGetBucketACL = "GetBucketAcl"
 
 // GetBucketACLRequest generates a request for the GetBucketACL operation.
 func (c *S3) GetBucketACLRequest(input *GetBucketACLInput) (req *aws.Request, output *GetBucketACLOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketACL == nil {
-		opGetBucketACL = &aws.Operation{
-			Name:       "GetBucketAcl",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?acl",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketACL,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?acl",
 	}
 
 	if input == nil {
 		input = &GetBucketACLInput{}
 	}
 
-	req = c.newRequest(opGetBucketACL, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketACLOutput{}
 	req.Data = output
 	return
@@ -504,26 +428,21 @@ func (c *S3) GetBucketACL(input *GetBucketACLInput) (*GetBucketACLOutput, error)
 	return out, err
 }
 
-var opGetBucketACL *aws.Operation
+const opGetBucketCORS = "GetBucketCors"
 
 // GetBucketCORSRequest generates a request for the GetBucketCORS operation.
 func (c *S3) GetBucketCORSRequest(input *GetBucketCORSInput) (req *aws.Request, output *GetBucketCORSOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketCORS == nil {
-		opGetBucketCORS = &aws.Operation{
-			Name:       "GetBucketCors",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?cors",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketCORS,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?cors",
 	}
 
 	if input == nil {
 		input = &GetBucketCORSInput{}
 	}
 
-	req = c.newRequest(opGetBucketCORS, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketCORSOutput{}
 	req.Data = output
 	return
@@ -536,26 +455,21 @@ func (c *S3) GetBucketCORS(input *GetBucketCORSInput) (*GetBucketCORSOutput, err
 	return out, err
 }
 
-var opGetBucketCORS *aws.Operation
+const opGetBucketLifecycle = "GetBucketLifecycle"
 
 // GetBucketLifecycleRequest generates a request for the GetBucketLifecycle operation.
 func (c *S3) GetBucketLifecycleRequest(input *GetBucketLifecycleInput) (req *aws.Request, output *GetBucketLifecycleOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketLifecycle == nil {
-		opGetBucketLifecycle = &aws.Operation{
-			Name:       "GetBucketLifecycle",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?lifecycle",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketLifecycle,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?lifecycle",
 	}
 
 	if input == nil {
 		input = &GetBucketLifecycleInput{}
 	}
 
-	req = c.newRequest(opGetBucketLifecycle, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketLifecycleOutput{}
 	req.Data = output
 	return
@@ -568,26 +482,21 @@ func (c *S3) GetBucketLifecycle(input *GetBucketLifecycleInput) (*GetBucketLifec
 	return out, err
 }
 
-var opGetBucketLifecycle *aws.Operation
+const opGetBucketLocation = "GetBucketLocation"
 
 // GetBucketLocationRequest generates a request for the GetBucketLocation operation.
 func (c *S3) GetBucketLocationRequest(input *GetBucketLocationInput) (req *aws.Request, output *GetBucketLocationOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketLocation == nil {
-		opGetBucketLocation = &aws.Operation{
-			Name:       "GetBucketLocation",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?location",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketLocation,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?location",
 	}
 
 	if input == nil {
 		input = &GetBucketLocationInput{}
 	}
 
-	req = c.newRequest(opGetBucketLocation, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketLocationOutput{}
 	req.Data = output
 	return
@@ -600,26 +509,21 @@ func (c *S3) GetBucketLocation(input *GetBucketLocationInput) (*GetBucketLocatio
 	return out, err
 }
 
-var opGetBucketLocation *aws.Operation
+const opGetBucketLogging = "GetBucketLogging"
 
 // GetBucketLoggingRequest generates a request for the GetBucketLogging operation.
 func (c *S3) GetBucketLoggingRequest(input *GetBucketLoggingInput) (req *aws.Request, output *GetBucketLoggingOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketLogging == nil {
-		opGetBucketLogging = &aws.Operation{
-			Name:       "GetBucketLogging",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?logging",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketLogging,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?logging",
 	}
 
 	if input == nil {
 		input = &GetBucketLoggingInput{}
 	}
 
-	req = c.newRequest(opGetBucketLogging, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketLoggingOutput{}
 	req.Data = output
 	return
@@ -633,26 +537,21 @@ func (c *S3) GetBucketLogging(input *GetBucketLoggingInput) (*GetBucketLoggingOu
 	return out, err
 }
 
-var opGetBucketLogging *aws.Operation
+const opGetBucketNotification = "GetBucketNotification"
 
 // GetBucketNotificationRequest generates a request for the GetBucketNotification operation.
 func (c *S3) GetBucketNotificationRequest(input *GetBucketNotificationConfigurationRequest) (req *aws.Request, output *NotificationConfigurationDeprecated) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketNotification == nil {
-		opGetBucketNotification = &aws.Operation{
-			Name:       "GetBucketNotification",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?notification",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketNotification,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?notification",
 	}
 
 	if input == nil {
 		input = &GetBucketNotificationConfigurationRequest{}
 	}
 
-	req = c.newRequest(opGetBucketNotification, input, output)
+	req = c.newRequest(op, input, output)
 	output = &NotificationConfigurationDeprecated{}
 	req.Data = output
 	return
@@ -665,26 +564,21 @@ func (c *S3) GetBucketNotification(input *GetBucketNotificationConfigurationRequ
 	return out, err
 }
 
-var opGetBucketNotification *aws.Operation
+const opGetBucketNotificationConfiguration = "GetBucketNotificationConfiguration"
 
 // GetBucketNotificationConfigurationRequest generates a request for the GetBucketNotificationConfiguration operation.
 func (c *S3) GetBucketNotificationConfigurationRequest(input *GetBucketNotificationConfigurationRequest) (req *aws.Request, output *NotificationConfiguration) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketNotificationConfiguration == nil {
-		opGetBucketNotificationConfiguration = &aws.Operation{
-			Name:       "GetBucketNotificationConfiguration",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?notification",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketNotificationConfiguration,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?notification",
 	}
 
 	if input == nil {
 		input = &GetBucketNotificationConfigurationRequest{}
 	}
 
-	req = c.newRequest(opGetBucketNotificationConfiguration, input, output)
+	req = c.newRequest(op, input, output)
 	output = &NotificationConfiguration{}
 	req.Data = output
 	return
@@ -697,26 +591,21 @@ func (c *S3) GetBucketNotificationConfiguration(input *GetBucketNotificationConf
 	return out, err
 }
 
-var opGetBucketNotificationConfiguration *aws.Operation
+const opGetBucketPolicy = "GetBucketPolicy"
 
 // GetBucketPolicyRequest generates a request for the GetBucketPolicy operation.
 func (c *S3) GetBucketPolicyRequest(input *GetBucketPolicyInput) (req *aws.Request, output *GetBucketPolicyOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketPolicy == nil {
-		opGetBucketPolicy = &aws.Operation{
-			Name:       "GetBucketPolicy",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?policy",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketPolicy,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?policy",
 	}
 
 	if input == nil {
 		input = &GetBucketPolicyInput{}
 	}
 
-	req = c.newRequest(opGetBucketPolicy, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketPolicyOutput{}
 	req.Data = output
 	return
@@ -729,26 +618,21 @@ func (c *S3) GetBucketPolicy(input *GetBucketPolicyInput) (*GetBucketPolicyOutpu
 	return out, err
 }
 
-var opGetBucketPolicy *aws.Operation
+const opGetBucketReplication = "GetBucketReplication"
 
 // GetBucketReplicationRequest generates a request for the GetBucketReplication operation.
 func (c *S3) GetBucketReplicationRequest(input *GetBucketReplicationInput) (req *aws.Request, output *GetBucketReplicationOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketReplication == nil {
-		opGetBucketReplication = &aws.Operation{
-			Name:       "GetBucketReplication",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?replication",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketReplication,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?replication",
 	}
 
 	if input == nil {
 		input = &GetBucketReplicationInput{}
 	}
 
-	req = c.newRequest(opGetBucketReplication, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketReplicationOutput{}
 	req.Data = output
 	return
@@ -760,26 +644,21 @@ func (c *S3) GetBucketReplication(input *GetBucketReplicationInput) (*GetBucketR
 	return out, err
 }
 
-var opGetBucketReplication *aws.Operation
+const opGetBucketRequestPayment = "GetBucketRequestPayment"
 
 // GetBucketRequestPaymentRequest generates a request for the GetBucketRequestPayment operation.
 func (c *S3) GetBucketRequestPaymentRequest(input *GetBucketRequestPaymentInput) (req *aws.Request, output *GetBucketRequestPaymentOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketRequestPayment == nil {
-		opGetBucketRequestPayment = &aws.Operation{
-			Name:       "GetBucketRequestPayment",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?requestPayment",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketRequestPayment,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?requestPayment",
 	}
 
 	if input == nil {
 		input = &GetBucketRequestPaymentInput{}
 	}
 
-	req = c.newRequest(opGetBucketRequestPayment, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketRequestPaymentOutput{}
 	req.Data = output
 	return
@@ -792,26 +671,21 @@ func (c *S3) GetBucketRequestPayment(input *GetBucketRequestPaymentInput) (*GetB
 	return out, err
 }
 
-var opGetBucketRequestPayment *aws.Operation
+const opGetBucketTagging = "GetBucketTagging"
 
 // GetBucketTaggingRequest generates a request for the GetBucketTagging operation.
 func (c *S3) GetBucketTaggingRequest(input *GetBucketTaggingInput) (req *aws.Request, output *GetBucketTaggingOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketTagging == nil {
-		opGetBucketTagging = &aws.Operation{
-			Name:       "GetBucketTagging",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?tagging",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketTagging,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?tagging",
 	}
 
 	if input == nil {
 		input = &GetBucketTaggingInput{}
 	}
 
-	req = c.newRequest(opGetBucketTagging, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketTaggingOutput{}
 	req.Data = output
 	return
@@ -824,26 +698,21 @@ func (c *S3) GetBucketTagging(input *GetBucketTaggingInput) (*GetBucketTaggingOu
 	return out, err
 }
 
-var opGetBucketTagging *aws.Operation
+const opGetBucketVersioning = "GetBucketVersioning"
 
 // GetBucketVersioningRequest generates a request for the GetBucketVersioning operation.
 func (c *S3) GetBucketVersioningRequest(input *GetBucketVersioningInput) (req *aws.Request, output *GetBucketVersioningOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketVersioning == nil {
-		opGetBucketVersioning = &aws.Operation{
-			Name:       "GetBucketVersioning",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?versioning",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketVersioning,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?versioning",
 	}
 
 	if input == nil {
 		input = &GetBucketVersioningInput{}
 	}
 
-	req = c.newRequest(opGetBucketVersioning, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketVersioningOutput{}
 	req.Data = output
 	return
@@ -856,26 +725,21 @@ func (c *S3) GetBucketVersioning(input *GetBucketVersioningInput) (*GetBucketVer
 	return out, err
 }
 
-var opGetBucketVersioning *aws.Operation
+const opGetBucketWebsite = "GetBucketWebsite"
 
 // GetBucketWebsiteRequest generates a request for the GetBucketWebsite operation.
 func (c *S3) GetBucketWebsiteRequest(input *GetBucketWebsiteInput) (req *aws.Request, output *GetBucketWebsiteOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetBucketWebsite == nil {
-		opGetBucketWebsite = &aws.Operation{
-			Name:       "GetBucketWebsite",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?website",
-		}
+	op := &aws.Operation{
+		Name:       opGetBucketWebsite,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?website",
 	}
 
 	if input == nil {
 		input = &GetBucketWebsiteInput{}
 	}
 
-	req = c.newRequest(opGetBucketWebsite, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetBucketWebsiteOutput{}
 	req.Data = output
 	return
@@ -888,26 +752,21 @@ func (c *S3) GetBucketWebsite(input *GetBucketWebsiteInput) (*GetBucketWebsiteOu
 	return out, err
 }
 
-var opGetBucketWebsite *aws.Operation
+const opGetObject = "GetObject"
 
 // GetObjectRequest generates a request for the GetObject operation.
 func (c *S3) GetObjectRequest(input *GetObjectInput) (req *aws.Request, output *GetObjectOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetObject == nil {
-		opGetObject = &aws.Operation{
-			Name:       "GetObject",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opGetObject,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &GetObjectInput{}
 	}
 
-	req = c.newRequest(opGetObject, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetObjectOutput{}
 	req.Data = output
 	return
@@ -920,26 +779,21 @@ func (c *S3) GetObject(input *GetObjectInput) (*GetObjectOutput, error) {
 	return out, err
 }
 
-var opGetObject *aws.Operation
+const opGetObjectACL = "GetObjectAcl"
 
 // GetObjectACLRequest generates a request for the GetObjectACL operation.
 func (c *S3) GetObjectACLRequest(input *GetObjectACLInput) (req *aws.Request, output *GetObjectACLOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetObjectACL == nil {
-		opGetObjectACL = &aws.Operation{
-			Name:       "GetObjectAcl",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}/{Key+}?acl",
-		}
+	op := &aws.Operation{
+		Name:       opGetObjectACL,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}/{Key+}?acl",
 	}
 
 	if input == nil {
 		input = &GetObjectACLInput{}
 	}
 
-	req = c.newRequest(opGetObjectACL, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetObjectACLOutput{}
 	req.Data = output
 	return
@@ -952,26 +806,21 @@ func (c *S3) GetObjectACL(input *GetObjectACLInput) (*GetObjectACLOutput, error)
 	return out, err
 }
 
-var opGetObjectACL *aws.Operation
+const opGetObjectTorrent = "GetObjectTorrent"
 
 // GetObjectTorrentRequest generates a request for the GetObjectTorrent operation.
 func (c *S3) GetObjectTorrentRequest(input *GetObjectTorrentInput) (req *aws.Request, output *GetObjectTorrentOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opGetObjectTorrent == nil {
-		opGetObjectTorrent = &aws.Operation{
-			Name:       "GetObjectTorrent",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}/{Key+}?torrent",
-		}
+	op := &aws.Operation{
+		Name:       opGetObjectTorrent,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}/{Key+}?torrent",
 	}
 
 	if input == nil {
 		input = &GetObjectTorrentInput{}
 	}
 
-	req = c.newRequest(opGetObjectTorrent, input, output)
+	req = c.newRequest(op, input, output)
 	output = &GetObjectTorrentOutput{}
 	req.Data = output
 	return
@@ -984,26 +833,21 @@ func (c *S3) GetObjectTorrent(input *GetObjectTorrentInput) (*GetObjectTorrentOu
 	return out, err
 }
 
-var opGetObjectTorrent *aws.Operation
+const opHeadBucket = "HeadBucket"
 
 // HeadBucketRequest generates a request for the HeadBucket operation.
 func (c *S3) HeadBucketRequest(input *HeadBucketInput) (req *aws.Request, output *HeadBucketOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opHeadBucket == nil {
-		opHeadBucket = &aws.Operation{
-			Name:       "HeadBucket",
-			HTTPMethod: "HEAD",
-			HTTPPath:   "/{Bucket}",
-		}
+	op := &aws.Operation{
+		Name:       opHeadBucket,
+		HTTPMethod: "HEAD",
+		HTTPPath:   "/{Bucket}",
 	}
 
 	if input == nil {
 		input = &HeadBucketInput{}
 	}
 
-	req = c.newRequest(opHeadBucket, input, output)
+	req = c.newRequest(op, input, output)
 	output = &HeadBucketOutput{}
 	req.Data = output
 	return
@@ -1017,26 +861,21 @@ func (c *S3) HeadBucket(input *HeadBucketInput) (*HeadBucketOutput, error) {
 	return out, err
 }
 
-var opHeadBucket *aws.Operation
+const opHeadObject = "HeadObject"
 
 // HeadObjectRequest generates a request for the HeadObject operation.
 func (c *S3) HeadObjectRequest(input *HeadObjectInput) (req *aws.Request, output *HeadObjectOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opHeadObject == nil {
-		opHeadObject = &aws.Operation{
-			Name:       "HeadObject",
-			HTTPMethod: "HEAD",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opHeadObject,
+		HTTPMethod: "HEAD",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &HeadObjectInput{}
 	}
 
-	req = c.newRequest(opHeadObject, input, output)
+	req = c.newRequest(op, input, output)
 	output = &HeadObjectOutput{}
 	req.Data = output
 	return
@@ -1051,26 +890,21 @@ func (c *S3) HeadObject(input *HeadObjectInput) (*HeadObjectOutput, error) {
 	return out, err
 }
 
-var opHeadObject *aws.Operation
+const opListBuckets = "ListBuckets"
 
 // ListBucketsRequest generates a request for the ListBuckets operation.
 func (c *S3) ListBucketsRequest(input *ListBucketsInput) (req *aws.Request, output *ListBucketsOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opListBuckets == nil {
-		opListBuckets = &aws.Operation{
-			Name:       "ListBuckets",
-			HTTPMethod: "GET",
-			HTTPPath:   "/",
-		}
+	op := &aws.Operation{
+		Name:       opListBuckets,
+		HTTPMethod: "GET",
+		HTTPPath:   "/",
 	}
 
 	if input == nil {
 		input = &ListBucketsInput{}
 	}
 
-	req = c.newRequest(opListBuckets, input, output)
+	req = c.newRequest(op, input, output)
 	output = &ListBucketsOutput{}
 	req.Data = output
 	return
@@ -1083,32 +917,27 @@ func (c *S3) ListBuckets(input *ListBucketsInput) (*ListBucketsOutput, error) {
 	return out, err
 }
 
-var opListBuckets *aws.Operation
+const opListMultipartUploads = "ListMultipartUploads"
 
 // ListMultipartUploadsRequest generates a request for the ListMultipartUploads operation.
 func (c *S3) ListMultipartUploadsRequest(input *ListMultipartUploadsInput) (req *aws.Request, output *ListMultipartUploadsOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opListMultipartUploads == nil {
-		opListMultipartUploads = &aws.Operation{
-			Name:       "ListMultipartUploads",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?uploads",
-			Paginator: &aws.Paginator{
-				InputTokens:     []string{"KeyMarker", "UploadIdMarker"},
-				OutputTokens:    []string{"NextKeyMarker", "NextUploadIdMarker"},
-				LimitToken:      "MaxUploads",
-				TruncationToken: "IsTruncated",
-			},
-		}
+	op := &aws.Operation{
+		Name:       opListMultipartUploads,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?uploads",
+		Paginator: &aws.Paginator{
+			InputTokens:     []string{"KeyMarker", "UploadIdMarker"},
+			OutputTokens:    []string{"NextKeyMarker", "NextUploadIdMarker"},
+			LimitToken:      "MaxUploads",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
 		input = &ListMultipartUploadsInput{}
 	}
 
-	req = c.newRequest(opListMultipartUploads, input, output)
+	req = c.newRequest(op, input, output)
 	output = &ListMultipartUploadsOutput{}
 	req.Data = output
 	return
@@ -1128,32 +957,27 @@ func (c *S3) ListMultipartUploadsPages(input *ListMultipartUploadsInput, fn func
 	})
 }
 
-var opListMultipartUploads *aws.Operation
+const opListObjectVersions = "ListObjectVersions"
 
 // ListObjectVersionsRequest generates a request for the ListObjectVersions operation.
 func (c *S3) ListObjectVersionsRequest(input *ListObjectVersionsInput) (req *aws.Request, output *ListObjectVersionsOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opListObjectVersions == nil {
-		opListObjectVersions = &aws.Operation{
-			Name:       "ListObjectVersions",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}?versions",
-			Paginator: &aws.Paginator{
-				InputTokens:     []string{"KeyMarker", "VersionIdMarker"},
-				OutputTokens:    []string{"NextKeyMarker", "NextVersionIdMarker"},
-				LimitToken:      "MaxKeys",
-				TruncationToken: "IsTruncated",
-			},
-		}
+	op := &aws.Operation{
+		Name:       opListObjectVersions,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?versions",
+		Paginator: &aws.Paginator{
+			InputTokens:     []string{"KeyMarker", "VersionIdMarker"},
+			OutputTokens:    []string{"NextKeyMarker", "NextVersionIdMarker"},
+			LimitToken:      "MaxKeys",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
 		input = &ListObjectVersionsInput{}
 	}
 
-	req = c.newRequest(opListObjectVersions, input, output)
+	req = c.newRequest(op, input, output)
 	output = &ListObjectVersionsOutput{}
 	req.Data = output
 	return
@@ -1173,32 +997,27 @@ func (c *S3) ListObjectVersionsPages(input *ListObjectVersionsInput, fn func(p *
 	})
 }
 
-var opListObjectVersions *aws.Operation
+const opListObjects = "ListObjects"
 
 // ListObjectsRequest generates a request for the ListObjects operation.
 func (c *S3) ListObjectsRequest(input *ListObjectsInput) (req *aws.Request, output *ListObjectsOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opListObjects == nil {
-		opListObjects = &aws.Operation{
-			Name:       "ListObjects",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}",
-			Paginator: &aws.Paginator{
-				InputTokens:     []string{"Marker"},
-				OutputTokens:    []string{"NextMarker || Contents[-1].Key"},
-				LimitToken:      "MaxKeys",
-				TruncationToken: "IsTruncated",
-			},
-		}
+	op := &aws.Operation{
+		Name:       opListObjects,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}",
+		Paginator: &aws.Paginator{
+			InputTokens:     []string{"Marker"},
+			OutputTokens:    []string{"NextMarker || Contents[-1].Key"},
+			LimitToken:      "MaxKeys",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
 		input = &ListObjectsInput{}
 	}
 
-	req = c.newRequest(opListObjects, input, output)
+	req = c.newRequest(op, input, output)
 	output = &ListObjectsOutput{}
 	req.Data = output
 	return
@@ -1220,32 +1039,27 @@ func (c *S3) ListObjectsPages(input *ListObjectsInput, fn func(p *ListObjectsOut
 	})
 }
 
-var opListObjects *aws.Operation
+const opListParts = "ListParts"
 
 // ListPartsRequest generates a request for the ListParts operation.
 func (c *S3) ListPartsRequest(input *ListPartsInput) (req *aws.Request, output *ListPartsOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opListParts == nil {
-		opListParts = &aws.Operation{
-			Name:       "ListParts",
-			HTTPMethod: "GET",
-			HTTPPath:   "/{Bucket}/{Key+}",
-			Paginator: &aws.Paginator{
-				InputTokens:     []string{"PartNumberMarker"},
-				OutputTokens:    []string{"NextPartNumberMarker"},
-				LimitToken:      "MaxParts",
-				TruncationToken: "IsTruncated",
-			},
-		}
+	op := &aws.Operation{
+		Name:       opListParts,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}/{Key+}",
+		Paginator: &aws.Paginator{
+			InputTokens:     []string{"PartNumberMarker"},
+			OutputTokens:    []string{"NextPartNumberMarker"},
+			LimitToken:      "MaxParts",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
 		input = &ListPartsInput{}
 	}
 
-	req = c.newRequest(opListParts, input, output)
+	req = c.newRequest(op, input, output)
 	output = &ListPartsOutput{}
 	req.Data = output
 	return
@@ -1265,26 +1079,21 @@ func (c *S3) ListPartsPages(input *ListPartsInput, fn func(p *ListPartsOutput, l
 	})
 }
 
-var opListParts *aws.Operation
+const opPutBucketACL = "PutBucketAcl"
 
 // PutBucketACLRequest generates a request for the PutBucketACL operation.
 func (c *S3) PutBucketACLRequest(input *PutBucketACLInput) (req *aws.Request, output *PutBucketACLOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketACL == nil {
-		opPutBucketACL = &aws.Operation{
-			Name:       "PutBucketAcl",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?acl",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketACL,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?acl",
 	}
 
 	if input == nil {
 		input = &PutBucketACLInput{}
 	}
 
-	req = c.newRequest(opPutBucketACL, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketACLOutput{}
 	req.Data = output
 	return
@@ -1297,26 +1106,21 @@ func (c *S3) PutBucketACL(input *PutBucketACLInput) (*PutBucketACLOutput, error)
 	return out, err
 }
 
-var opPutBucketACL *aws.Operation
+const opPutBucketCORS = "PutBucketCors"
 
 // PutBucketCORSRequest generates a request for the PutBucketCORS operation.
 func (c *S3) PutBucketCORSRequest(input *PutBucketCORSInput) (req *aws.Request, output *PutBucketCORSOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketCORS == nil {
-		opPutBucketCORS = &aws.Operation{
-			Name:       "PutBucketCors",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?cors",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketCORS,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?cors",
 	}
 
 	if input == nil {
 		input = &PutBucketCORSInput{}
 	}
 
-	req = c.newRequest(opPutBucketCORS, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketCORSOutput{}
 	req.Data = output
 	return
@@ -1329,26 +1133,21 @@ func (c *S3) PutBucketCORS(input *PutBucketCORSInput) (*PutBucketCORSOutput, err
 	return out, err
 }
 
-var opPutBucketCORS *aws.Operation
+const opPutBucketLifecycle = "PutBucketLifecycle"
 
 // PutBucketLifecycleRequest generates a request for the PutBucketLifecycle operation.
 func (c *S3) PutBucketLifecycleRequest(input *PutBucketLifecycleInput) (req *aws.Request, output *PutBucketLifecycleOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketLifecycle == nil {
-		opPutBucketLifecycle = &aws.Operation{
-			Name:       "PutBucketLifecycle",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?lifecycle",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketLifecycle,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?lifecycle",
 	}
 
 	if input == nil {
 		input = &PutBucketLifecycleInput{}
 	}
 
-	req = c.newRequest(opPutBucketLifecycle, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketLifecycleOutput{}
 	req.Data = output
 	return
@@ -1362,26 +1161,21 @@ func (c *S3) PutBucketLifecycle(input *PutBucketLifecycleInput) (*PutBucketLifec
 	return out, err
 }
 
-var opPutBucketLifecycle *aws.Operation
+const opPutBucketLogging = "PutBucketLogging"
 
 // PutBucketLoggingRequest generates a request for the PutBucketLogging operation.
 func (c *S3) PutBucketLoggingRequest(input *PutBucketLoggingInput) (req *aws.Request, output *PutBucketLoggingOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketLogging == nil {
-		opPutBucketLogging = &aws.Operation{
-			Name:       "PutBucketLogging",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?logging",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketLogging,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?logging",
 	}
 
 	if input == nil {
 		input = &PutBucketLoggingInput{}
 	}
 
-	req = c.newRequest(opPutBucketLogging, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketLoggingOutput{}
 	req.Data = output
 	return
@@ -1396,26 +1190,21 @@ func (c *S3) PutBucketLogging(input *PutBucketLoggingInput) (*PutBucketLoggingOu
 	return out, err
 }
 
-var opPutBucketLogging *aws.Operation
+const opPutBucketNotification = "PutBucketNotification"
 
 // PutBucketNotificationRequest generates a request for the PutBucketNotification operation.
 func (c *S3) PutBucketNotificationRequest(input *PutBucketNotificationInput) (req *aws.Request, output *PutBucketNotificationOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketNotification == nil {
-		opPutBucketNotification = &aws.Operation{
-			Name:       "PutBucketNotification",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?notification",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketNotification,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?notification",
 	}
 
 	if input == nil {
 		input = &PutBucketNotificationInput{}
 	}
 
-	req = c.newRequest(opPutBucketNotification, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketNotificationOutput{}
 	req.Data = output
 	return
@@ -1428,26 +1217,21 @@ func (c *S3) PutBucketNotification(input *PutBucketNotificationInput) (*PutBucke
 	return out, err
 }
 
-var opPutBucketNotification *aws.Operation
+const opPutBucketNotificationConfiguration = "PutBucketNotificationConfiguration"
 
 // PutBucketNotificationConfigurationRequest generates a request for the PutBucketNotificationConfiguration operation.
 func (c *S3) PutBucketNotificationConfigurationRequest(input *PutBucketNotificationConfigurationInput) (req *aws.Request, output *PutBucketNotificationConfigurationOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketNotificationConfiguration == nil {
-		opPutBucketNotificationConfiguration = &aws.Operation{
-			Name:       "PutBucketNotificationConfiguration",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?notification",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketNotificationConfiguration,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?notification",
 	}
 
 	if input == nil {
 		input = &PutBucketNotificationConfigurationInput{}
 	}
 
-	req = c.newRequest(opPutBucketNotificationConfiguration, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketNotificationConfigurationOutput{}
 	req.Data = output
 	return
@@ -1460,26 +1244,21 @@ func (c *S3) PutBucketNotificationConfiguration(input *PutBucketNotificationConf
 	return out, err
 }
 
-var opPutBucketNotificationConfiguration *aws.Operation
+const opPutBucketPolicy = "PutBucketPolicy"
 
 // PutBucketPolicyRequest generates a request for the PutBucketPolicy operation.
 func (c *S3) PutBucketPolicyRequest(input *PutBucketPolicyInput) (req *aws.Request, output *PutBucketPolicyOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketPolicy == nil {
-		opPutBucketPolicy = &aws.Operation{
-			Name:       "PutBucketPolicy",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?policy",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketPolicy,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?policy",
 	}
 
 	if input == nil {
 		input = &PutBucketPolicyInput{}
 	}
 
-	req = c.newRequest(opPutBucketPolicy, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketPolicyOutput{}
 	req.Data = output
 	return
@@ -1493,26 +1272,21 @@ func (c *S3) PutBucketPolicy(input *PutBucketPolicyInput) (*PutBucketPolicyOutpu
 	return out, err
 }
 
-var opPutBucketPolicy *aws.Operation
+const opPutBucketReplication = "PutBucketReplication"
 
 // PutBucketReplicationRequest generates a request for the PutBucketReplication operation.
 func (c *S3) PutBucketReplicationRequest(input *PutBucketReplicationInput) (req *aws.Request, output *PutBucketReplicationOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketReplication == nil {
-		opPutBucketReplication = &aws.Operation{
-			Name:       "PutBucketReplication",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?replication",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketReplication,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?replication",
 	}
 
 	if input == nil {
 		input = &PutBucketReplicationInput{}
 	}
 
-	req = c.newRequest(opPutBucketReplication, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketReplicationOutput{}
 	req.Data = output
 	return
@@ -1526,26 +1300,21 @@ func (c *S3) PutBucketReplication(input *PutBucketReplicationInput) (*PutBucketR
 	return out, err
 }
 
-var opPutBucketReplication *aws.Operation
+const opPutBucketRequestPayment = "PutBucketRequestPayment"
 
 // PutBucketRequestPaymentRequest generates a request for the PutBucketRequestPayment operation.
 func (c *S3) PutBucketRequestPaymentRequest(input *PutBucketRequestPaymentInput) (req *aws.Request, output *PutBucketRequestPaymentOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketRequestPayment == nil {
-		opPutBucketRequestPayment = &aws.Operation{
-			Name:       "PutBucketRequestPayment",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?requestPayment",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketRequestPayment,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?requestPayment",
 	}
 
 	if input == nil {
 		input = &PutBucketRequestPaymentInput{}
 	}
 
-	req = c.newRequest(opPutBucketRequestPayment, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketRequestPaymentOutput{}
 	req.Data = output
 	return
@@ -1562,26 +1331,21 @@ func (c *S3) PutBucketRequestPayment(input *PutBucketRequestPaymentInput) (*PutB
 	return out, err
 }
 
-var opPutBucketRequestPayment *aws.Operation
+const opPutBucketTagging = "PutBucketTagging"
 
 // PutBucketTaggingRequest generates a request for the PutBucketTagging operation.
 func (c *S3) PutBucketTaggingRequest(input *PutBucketTaggingInput) (req *aws.Request, output *PutBucketTaggingOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketTagging == nil {
-		opPutBucketTagging = &aws.Operation{
-			Name:       "PutBucketTagging",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?tagging",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketTagging,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?tagging",
 	}
 
 	if input == nil {
 		input = &PutBucketTaggingInput{}
 	}
 
-	req = c.newRequest(opPutBucketTagging, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketTaggingOutput{}
 	req.Data = output
 	return
@@ -1594,26 +1358,21 @@ func (c *S3) PutBucketTagging(input *PutBucketTaggingInput) (*PutBucketTaggingOu
 	return out, err
 }
 
-var opPutBucketTagging *aws.Operation
+const opPutBucketVersioning = "PutBucketVersioning"
 
 // PutBucketVersioningRequest generates a request for the PutBucketVersioning operation.
 func (c *S3) PutBucketVersioningRequest(input *PutBucketVersioningInput) (req *aws.Request, output *PutBucketVersioningOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketVersioning == nil {
-		opPutBucketVersioning = &aws.Operation{
-			Name:       "PutBucketVersioning",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?versioning",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketVersioning,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?versioning",
 	}
 
 	if input == nil {
 		input = &PutBucketVersioningInput{}
 	}
 
-	req = c.newRequest(opPutBucketVersioning, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketVersioningOutput{}
 	req.Data = output
 	return
@@ -1627,26 +1386,21 @@ func (c *S3) PutBucketVersioning(input *PutBucketVersioningInput) (*PutBucketVer
 	return out, err
 }
 
-var opPutBucketVersioning *aws.Operation
+const opPutBucketWebsite = "PutBucketWebsite"
 
 // PutBucketWebsiteRequest generates a request for the PutBucketWebsite operation.
 func (c *S3) PutBucketWebsiteRequest(input *PutBucketWebsiteInput) (req *aws.Request, output *PutBucketWebsiteOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutBucketWebsite == nil {
-		opPutBucketWebsite = &aws.Operation{
-			Name:       "PutBucketWebsite",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}?website",
-		}
+	op := &aws.Operation{
+		Name:       opPutBucketWebsite,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}?website",
 	}
 
 	if input == nil {
 		input = &PutBucketWebsiteInput{}
 	}
 
-	req = c.newRequest(opPutBucketWebsite, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutBucketWebsiteOutput{}
 	req.Data = output
 	return
@@ -1659,26 +1413,21 @@ func (c *S3) PutBucketWebsite(input *PutBucketWebsiteInput) (*PutBucketWebsiteOu
 	return out, err
 }
 
-var opPutBucketWebsite *aws.Operation
+const opPutObject = "PutObject"
 
 // PutObjectRequest generates a request for the PutObject operation.
 func (c *S3) PutObjectRequest(input *PutObjectInput) (req *aws.Request, output *PutObjectOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutObject == nil {
-		opPutObject = &aws.Operation{
-			Name:       "PutObject",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opPutObject,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &PutObjectInput{}
 	}
 
-	req = c.newRequest(opPutObject, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutObjectOutput{}
 	req.Data = output
 	return
@@ -1691,26 +1440,21 @@ func (c *S3) PutObject(input *PutObjectInput) (*PutObjectOutput, error) {
 	return out, err
 }
 
-var opPutObject *aws.Operation
+const opPutObjectACL = "PutObjectAcl"
 
 // PutObjectACLRequest generates a request for the PutObjectACL operation.
 func (c *S3) PutObjectACLRequest(input *PutObjectACLInput) (req *aws.Request, output *PutObjectACLOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opPutObjectACL == nil {
-		opPutObjectACL = &aws.Operation{
-			Name:       "PutObjectAcl",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}/{Key+}?acl",
-		}
+	op := &aws.Operation{
+		Name:       opPutObjectACL,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}/{Key+}?acl",
 	}
 
 	if input == nil {
 		input = &PutObjectACLInput{}
 	}
 
-	req = c.newRequest(opPutObjectACL, input, output)
+	req = c.newRequest(op, input, output)
 	output = &PutObjectACLOutput{}
 	req.Data = output
 	return
@@ -1724,26 +1468,21 @@ func (c *S3) PutObjectACL(input *PutObjectACLInput) (*PutObjectACLOutput, error)
 	return out, err
 }
 
-var opPutObjectACL *aws.Operation
+const opRestoreObject = "RestoreObject"
 
 // RestoreObjectRequest generates a request for the RestoreObject operation.
 func (c *S3) RestoreObjectRequest(input *RestoreObjectInput) (req *aws.Request, output *RestoreObjectOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opRestoreObject == nil {
-		opRestoreObject = &aws.Operation{
-			Name:       "RestoreObject",
-			HTTPMethod: "POST",
-			HTTPPath:   "/{Bucket}/{Key+}?restore",
-		}
+	op := &aws.Operation{
+		Name:       opRestoreObject,
+		HTTPMethod: "POST",
+		HTTPPath:   "/{Bucket}/{Key+}?restore",
 	}
 
 	if input == nil {
 		input = &RestoreObjectInput{}
 	}
 
-	req = c.newRequest(opRestoreObject, input, output)
+	req = c.newRequest(op, input, output)
 	output = &RestoreObjectOutput{}
 	req.Data = output
 	return
@@ -1756,26 +1495,21 @@ func (c *S3) RestoreObject(input *RestoreObjectInput) (*RestoreObjectOutput, err
 	return out, err
 }
 
-var opRestoreObject *aws.Operation
+const opUploadPart = "UploadPart"
 
 // UploadPartRequest generates a request for the UploadPart operation.
 func (c *S3) UploadPartRequest(input *UploadPartInput) (req *aws.Request, output *UploadPartOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opUploadPart == nil {
-		opUploadPart = &aws.Operation{
-			Name:       "UploadPart",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opUploadPart,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &UploadPartInput{}
 	}
 
-	req = c.newRequest(opUploadPart, input, output)
+	req = c.newRequest(op, input, output)
 	output = &UploadPartOutput{}
 	req.Data = output
 	return
@@ -1794,26 +1528,21 @@ func (c *S3) UploadPart(input *UploadPartInput) (*UploadPartOutput, error) {
 	return out, err
 }
 
-var opUploadPart *aws.Operation
+const opUploadPartCopy = "UploadPartCopy"
 
 // UploadPartCopyRequest generates a request for the UploadPartCopy operation.
 func (c *S3) UploadPartCopyRequest(input *UploadPartCopyInput) (req *aws.Request, output *UploadPartCopyOutput) {
-	oprw.Lock()
-	defer oprw.Unlock()
-
-	if opUploadPartCopy == nil {
-		opUploadPartCopy = &aws.Operation{
-			Name:       "UploadPartCopy",
-			HTTPMethod: "PUT",
-			HTTPPath:   "/{Bucket}/{Key+}",
-		}
+	op := &aws.Operation{
+		Name:       opUploadPartCopy,
+		HTTPMethod: "PUT",
+		HTTPPath:   "/{Bucket}/{Key+}",
 	}
 
 	if input == nil {
 		input = &UploadPartCopyInput{}
 	}
 
-	req = c.newRequest(opUploadPartCopy, input, output)
+	req = c.newRequest(op, input, output)
 	output = &UploadPartCopyOutput{}
 	req.Data = output
 	return
@@ -1825,8 +1554,6 @@ func (c *S3) UploadPartCopy(input *UploadPartCopyInput) (*UploadPartCopyOutput, 
 	err := req.Send()
 	return out, err
 }
-
-var opUploadPartCopy *aws.Operation
 
 type AbortMultipartUploadInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
