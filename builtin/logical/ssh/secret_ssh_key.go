@@ -126,7 +126,14 @@ func (b *backend) secretSshKeyRevoke(req *logical.Request, d *framework.FieldDat
 	}, "")
 
 	//connect to target machine
-	session := createSSHPublicKeysSession(username, ip, hostKey.Key)
+	session, err := createSSHPublicKeysSession(username, ip, hostKey.Key)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create SSH Session using public keys: %s", err)
+	}
+	if session == nil {
+		return nil, fmt.Errorf("Invalid session object")
+	}
+
 	var buf bytes.Buffer
 	session.Stdout = &buf
 	if err := session.Run(remoteCmdString); err != nil {

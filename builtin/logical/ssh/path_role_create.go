@@ -2,14 +2,10 @@ package ssh
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -72,11 +68,8 @@ func (b *backend) pathRoleCreateWrite(
 	}
 	ip := ipAddr.String()
 
-	var cidrEntry sshCIDR
 	ipMatched := false
-	log.Printf("Vishal: role.CIDR:%v\n", role.CIDR)
-	json.Unmarshal([]byte(role.CIDR), &cidrEntry)
-	for _, item := range cidrEntry.CIDR {
+	for _, item := range strings.Split(role.CIDR, ",") {
 		log.Println(item)
 		_, cidrIPNet, _ := net.ParseCIDR(item)
 		ipMatched = cidrIPNet.Contains(ipAddr)
@@ -113,39 +106,39 @@ func (b *backend) pathRoleCreateWrite(
 	ioutil.WriteFile(otkPrivateKeyFileName, []byte(dynamicPrivateKey), 0600)
 	ioutil.WriteFile(otkPublicKeyFileName, []byte(dynamicPublicKey), 0644)
 
+	uploadFileScp(otkPublicKeyFileName, username, ip, hostKey.Key)
 	/*
-		scpCmd := "scp -i " + hostKeyFileName + " " + otkPublicKeyFileName + " " + username + "@" + ip + ":~;"
-		localCmdString := strings.Join([]string{
-			scpCmd,
-		}, "")
-		//run the commands on vault server
-		err = exec_command(localCmdString)
-		if err != nil {
-			fmt.Errorf("Running command failed " + err.Error())
+		otkPublicKeyFileNameBase := filepath.Base(otkPublicKeyFileName)
+		otkPublicKeyFile, _ := os.Open(otkPublicKeyFileName)
+		otkPublicKeyStat, err := otkPublicKeyFile.Stat()
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("File does not exist")
 		}
+		session := createSSHPublicKeysSession(username, ip, hostKey.Key)
+		if session == nil {
+			return nil, fmt.Errorf("Invalid session object")
+		}
+		go func() {
+			w, _ := session.StdinPipe()
+			fmt.Fprintln(w, "C0644", otkPublicKeyStat.Size(), otkPublicKeyFileNameBase)
+			io.Copy(w, otkPublicKeyFile)
+			fmt.Fprint(w, "\x00")
+			w.Close()
+		}()
+		if err := session.Run(fmt.Sprintf("scp -vt %s", otkPublicKeyFileNameBase)); err != nil {
+			panic("Failed to run: " + err.Error())
+		}
+		session.Close()
 	*/
 
-	otkPublicKeyFileNameBase := filepath.Base(otkPublicKeyFileName)
-	otkPublicKeyFile, _ := os.Open(otkPublicKeyFileName)
-	otkPublicKeyStat, _ := otkPublicKeyFile.Stat()
-	if otkPublicKeyStat.Size() <= 0 {
-		//return
-	}
-	session := createSSHPublicKeysSession(username, ip, hostKey.Key)
-	go func() {
-		w, _ := session.StdinPipe()
-		fmt.Fprintln(w, "C0644", otkPublicKeyStat.Size(), otkPublicKeyFileNameBase)
-		io.Copy(w, otkPublicKeyFile)
-		fmt.Fprint(w, "\x00")
-		w.Close()
-	}()
-	if err := session.Run(fmt.Sprintf("scp -vt %s", otkPublicKeyFileNameBase)); err != nil {
-		panic("Failed to run: " + err.Error())
-	}
-	session.Close()
-
 	//connect to target machine
-	session = createSSHPublicKeysSession(username, ip, hostKey.Key)
+	session, err := createSSHPublicKeysSession(username, ip, hostKey.Key)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create SSH Session using public keys: %s", err)
+	}
+	if session == nil {
+		return nil, fmt.Errorf("Invalid session object")
+	}
 	var buf bytes.Buffer
 	session.Stdout = &buf
 

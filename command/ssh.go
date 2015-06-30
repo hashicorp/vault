@@ -16,59 +16,82 @@ type SshCommand struct {
 }
 
 func (c *SshCommand) Run(args []string) int {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Printf("Vishal: SshCommand.Run: args:%#v len(args):%d\n", args, len(args))
-	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
 	var role string
+	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
 	flags.StringVar(&role, "role", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
-	log.Printf("Vishal: Role:%s\n", role)
 	args = flags.Args()
 	if len(args) < 1 {
 		c.Ui.Error("ssh expects at least one argument")
 		return 2
 	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %s", err))
 		return 2
 	}
-	log.Printf("Vishal: sshCommand.Run: args[0]: %#v\n", args[0])
 	input := strings.Split(args[0], "@")
 	username := input[0]
-	ipAddr, err := net.ResolveIPAddr("ip4", input[1])
-	log.Printf("Vishal: ssh.Ssh ipAddr_resolved: %#v\n", ipAddr.String())
-	data := map[string]interface{}{
-		"username": username,
-		"ip":       ipAddr.String(),
-	}
-
-	keySecret, err := client.Ssh().KeyCreate(data)
+	ip, err := net.ResolveIPAddr("ip4", input[1])
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error getting key for establishing SSH session", err))
+		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %s", err))
 		return 2
 	}
-	sshOneTimeKey := string(keySecret.Data["key"].(string))
-	log.Printf("Vishal: command.ssh.Run returned! len(key):%d\n", len(sshOneTimeKey))
-	ag := strings.Split(args[0], "@")
-	sshOtkFileName := "vault_ssh_otk_" + ag[0] + "_" + ag[1] + ".pem"
-	err = ioutil.WriteFile(sshOtkFileName, []byte(sshOneTimeKey), 0400)
-	//if sshOneTimeKey is empty, fail
-	//Establish a session directly from client to the target using the one time key received without making the vault server the middle guy:w
+
+	if role == "" {
+		data := map[string]interface{}{
+			"ip": ip.String(),
+		}
+		secret, err := client.Logical().Write("ssh/lookup", data)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error finding roles for IP:%s Error:%s", ip.String(), err))
+			return 1
+		}
+
+		if secret.Data["roles"] == nil {
+			c.Ui.Error(fmt.Sprintf("IP '%s' not registered under any role", ip.String()))
+			return 1
+		}
+
+		if len(secret.Data["roles"].([]interface{})) == 1 {
+			role = secret.Data["roles"].([]interface{})[0].(string)
+			c.Ui.Output(fmt.Sprintf("Using role[%s]\n", role))
+		} else {
+			c.Ui.Error(fmt.Sprintf("Multiple roles for IP '%s'. Select one of '%s' using '-role' option", ip, secret.Data["roles"]))
+			return 1
+		}
+	}
+
+	data := map[string]interface{}{
+		"username": username,
+		"ip":       ip.String(),
+	}
+	keySecret, err := client.Ssh().KeyCreate(role, data)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session:%s", err))
+		return 2
+	}
+
+	sshDynamicKey := string(keySecret.Data["key"].(string))
+	if len(sshDynamicKey) == 0 {
+		c.Ui.Error(fmt.Sprintf("Invalid key"))
+		return 2
+	}
+	sshDynamicKeyFileName := "vault_ssh_key_" + username + "_" + ip.String() + ".pem"
+	err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
 	sshBinary, err := exec.LookPath("ssh")
 	if err != nil {
-		log.Printf("ssh binary not found in PATH\n")
+		c.Ui.Error("ssh binary not found in PATH\n")
+		return 2
 	}
 
 	sshEnv := os.Environ()
 
-	sshNew := "ssh -i " + sshOtkFileName + " " + args[0]
-	log.Printf("Vishal: sshNew:%#v\n", sshNew)
-	sshCmdArgs := []string{"ssh", "-i", sshOtkFileName, args[0]}
-	//defer os.Remove("vault_ssh_otk_" + args[0] + ".pem")
+	sshCmdArgs := []string{"ssh", "-i", sshDynamicKeyFileName, args[0]}
 
 	if err := syscall.Exec(sshBinary, sshCmdArgs, sshEnv); err != nil {
 		log.Printf("Execution failed: sshCommand: " + err.Error())

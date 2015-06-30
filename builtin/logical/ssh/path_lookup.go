@@ -1,10 +1,10 @@
 package ssh
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -62,10 +62,8 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	if err := roleEntry.DecodeJSON(&role); err != nil {
 		return false, fmt.Errorf("error decoding role '%s'", roleName)
 	}
-	var cidrEntry sshCIDR
 	ipMatched := false
-	json.Unmarshal([]byte(role.CIDR), &cidrEntry)
-	for _, item := range cidrEntry.CIDR {
+	for _, item := range strings.Split(role.CIDR, ",") {
 		log.Println(item)
 		_, cidrIPNet, _ := net.ParseCIDR(item)
 		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))

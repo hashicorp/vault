@@ -7,9 +7,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -22,10 +24,41 @@ func exec_command(cmdString string) error {
 	return nil
 }
 
-func createSSHPublicKeysSession(username string, ipAddr string, hostKey string) *ssh.Session {
+func uploadFileScp(fileName, username, ip, key string) error {
+	nameBase := filepath.Base(fileName)
+	file, err := os.Open(fileName)
+	if err != nil {
+		return fmt.Errorf("Unable to open file")
+	}
+	stat, err := file.Stat()
+	if os.IsNotExist(err) {
+		return fmt.Errorf("File does not exist")
+	}
+	session, err := createSSHPublicKeysSession(username, ip, key)
+	if err != nil {
+		return fmt.Errorf("Unable to create SSH Session using public keys: %s", err)
+	}
+	if session == nil {
+		return fmt.Errorf("Invalid session object")
+	}
+	defer session.Close()
+	go func() {
+		w, _ := session.StdinPipe()
+		fmt.Fprintln(w, "C0644", stat.Size(), nameBase)
+		io.Copy(w, file)
+		fmt.Fprint(w, "\x00")
+		w.Close()
+	}()
+	if err := session.Run(fmt.Sprintf("scp -vt %s", nameBase)); err != nil {
+		return fmt.Errorf("Failed to run: %s", err)
+	}
+	return nil
+}
+
+func createSSHPublicKeysSession(username string, ipAddr string, hostKey string) (*ssh.Session, error) {
 	signer, err := ssh.ParsePrivateKey([]byte(hostKey))
 	if err != nil {
-		fmt.Errorf("Parsing Private Key failed: " + err.Error())
+		return nil, fmt.Errorf("Parsing Private Key failed: %s", err)
 	}
 
 	config := &ssh.ClientConfig{
@@ -37,17 +70,17 @@ func createSSHPublicKeysSession(username string, ipAddr string, hostKey string) 
 
 	client, err := ssh.Dial("tcp", ipAddr+":22", config)
 	if err != nil {
-		fmt.Errorf("Dial Failed: " + err.Error())
+		return nil, fmt.Errorf("Dial Failed: %s", err)
 	}
 	if client == nil {
-		fmt.Errorf("SSH Dial to target failed: ", err.Error())
+		return nil, fmt.Errorf("Invalid client object: %s", err)
 	}
 
 	session, err := client.NewSession()
 	if err != nil {
-		fmt.Errorf("NewSession failed: " + err.Error())
+		return nil, fmt.Errorf("Creating new client session failed: %s", err)
 	}
-	return session
+	return session, nil
 }
 
 func removeFile(fileName string) {
@@ -63,8 +96,6 @@ func removeFile(fileName string) {
 		if err != nil {
 			log.Printf(fmt.Sprintf("Failed: %s", err))
 			return
-		} else {
-			log.Printf("Successful\n")
 		}
 	}
 }

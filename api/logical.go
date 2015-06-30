@@ -1,7 +1,5 @@
 package api
 
-import "log"
-
 // Logical is used to perform logical backend operations on Vault.
 type Logical struct {
 	c *Client
@@ -27,7 +25,6 @@ func (c *Logical) Read(path string) (*Secret, error) {
 }
 
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
-	log.Printf("Vishal: api.logical.Write(): invoking Put() on %#v\n", path)
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
