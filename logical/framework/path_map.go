@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -19,6 +20,7 @@ type PathMap struct {
 	Name          string
 	Schema        map[string]*FieldSchema
 	CaseSensitive bool
+	Salt          *salt.Salt
 
 	once sync.Once
 }
@@ -45,6 +47,11 @@ func (p *PathMap) pathStruct(k string) *PathStruct {
 	// If we don't care about casing, store everything lowercase
 	if !p.CaseSensitive {
 		k = strings.ToLower(k)
+	}
+
+	// If we have a salt, apply it before lookup
+	if p.Salt != nil {
+		k = p.Salt.SaltID(k)
 	}
 
 	return &PathStruct{
