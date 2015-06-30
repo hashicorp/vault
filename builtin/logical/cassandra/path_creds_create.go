@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -41,8 +42,8 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	displayName := req.DisplayName
-	username := fmt.Sprintf("vault-%s-%s-%s-%d", name, displayName, generateUUID(), time.Now().Unix())
-	password := generateUUID()
+	username := fmt.Sprintf("vault-%s-%s-%s-%d", name, displayName, uuid.GenerateUUID(), time.Now().Unix())
+	password := uuid.GenerateUUID()
 
 	// Get our connection
 	session, err := b.DB(req.Storage)

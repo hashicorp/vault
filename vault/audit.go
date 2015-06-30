@@ -11,6 +11,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -64,7 +65,7 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	entry.UUID = generateUUID()
+	entry.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 	// Update the audit table

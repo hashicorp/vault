@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -76,7 +77,7 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 
 	// Generate a new salt if necessary
 	if t.salt == "" {
-		t.salt = generateUUID()
+		t.salt = uuid.GenerateUUID()
 		raw = &logical.StorageEntry{Key: tokenSaltLocation, Value: []byte(t.salt)}
 		if err := view.Put(raw); err != nil {
 			return nil, fmt.Errorf("failed to persist salt: %v", err)
@@ -273,7 +274,7 @@ func (ts *TokenStore) Create(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
-		entry.ID = generateUUID()
+		entry.ID = uuid.GenerateUUID()
 	}
 	saltedId := ts.SaltID(entry.ID)
 

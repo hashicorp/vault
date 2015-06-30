@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -367,7 +368,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 
 	// Create a lease entry
 	le := leaseEntry{
-		LeaseID:     path.Join(req.Path, generateUUID()),
+		LeaseID:     path.Join(req.Path, uuid.GenerateUUID()),
 		ClientToken: req.ClientToken,
 		Path:        req.Path,
 		Data:        resp.Data,
