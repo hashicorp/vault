@@ -21,8 +21,9 @@ const (
 // using the global salt. Primarily, this allows paths in the storage
 // backend to be obfuscated if they may contain sensitive information.
 type Salt struct {
-	config *Config
-	salt   string
+	config    *Config
+	salt      string
+	generated bool
 }
 
 type HashFunc func([]byte) []byte
@@ -70,6 +71,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 	// Generate a new salt if necessary
 	if s.salt == "" {
 		s.salt = uuid.GenerateUUID()
+		s.generated = true
 		raw = &logical.StorageEntry{
 			Key:   config.Location,
 			Value: []byte(s.salt),
@@ -85,6 +87,12 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 // it is not reversable
 func (s *Salt) SaltID(id string) string {
 	return SaltID(s.salt, id, s.config.HashFunc)
+}
+
+// DidGenerate returns if the underlying salt value was generated
+// on initialization or if an existing salt value was loaded
+func (s *Salt) DidGenerate() bool {
+	return s.generated
 }
 
 // SaltID is used to apply a salt and hash functio to an ID to make sure
