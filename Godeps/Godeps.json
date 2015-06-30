@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.4.2",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -68,14 +65,22 @@
 			"Rev": "406aa05eb8272fb8aa201e410afa6f9fdcb2bf68"
 		},
 		{
-			"ImportPath": "github.com/go-ldap/ldap",
-			"Comment": "v1-14-g406aa05",
-			"Rev": "406aa05eb8272fb8aa201e410afa6f9fdcb2bf68"
-		},
-		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
 			"Comment": "v1.2-112-gfb72997",
 			"Rev": "fb7299726d2e68745a8805b14f2ff44b5c2cfa84"
+		},
+		{
+			"ImportPath": "github.com/gocql/gocql",
+			"Comment": "1st_gen_framing-187-g80e812a",
+			"Rev": "80e812acf0ab386dd34271acc10d22514c0a67ba"
+		},
+		{
+			"ImportPath": "github.com/golang/groupcache/lru",
+			"Rev": "604ed5785183e59ae2789449d89e73f3a2a77987"
+		},
+		{
+			"ImportPath": "github.com/golang/snappy/snappy",
+			"Rev": "eaa750b9bf4dcb7cb20454be850613b66cda3273"
 		},
 		{
 			"ImportPath": "github.com/google/go-github/github",
@@ -196,6 +201,10 @@
 			"ImportPath": "gopkg.in/asn1-ber.v1",
 			"Comment": "v1",
 			"Rev": "9eae18c3681ae3d3c677ac2b80a8fe57de45fc09"
+		},
+		{
+			"ImportPath": "speter.net/go/exp/math/dec/inf",
+			"Rev": "42ca6cd68aa922bc3f32f1e056e61b65945d9ad7"
 		}
 	]
 }
