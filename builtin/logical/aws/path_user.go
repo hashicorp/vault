@@ -2,7 +2,6 @@ package aws
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/aws-sdk-go/aws"
 	"github.com/hashicorp/aws-sdk-go/gen/iam"
@@ -33,8 +32,6 @@ func pathUser(b *backend) *framework.Path {
 func (b *backend) pathUserRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
-	log.Printf("Vishal: policyName: %#v\n", policyName)
-	log.Printf("Vishal: data d: %#v\n", d)
 
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)

@@ -345,7 +345,6 @@ func (c *Core) Shutdown() error {
 
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
-	log.Printf("Vishal: vault.core.HandleRequest: req.Path:%#v\n", req.Path)
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {

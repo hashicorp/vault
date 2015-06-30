@@ -1,10 +1,8 @@
 package ssh
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 	"time"
 
@@ -15,7 +13,6 @@ import (
 const SecretOneTimeKeyType = "secret_one_type_key_type"
 
 func secretSshKey(b *backend) *framework.Secret {
-	log.Printf("Vishal: ssh.secretPrivateKey\n")
 	return &framework.Secret{
 		Type: SecretOneTimeKeyType,
 		Fields: map[string]*framework.FieldSchema{
@@ -28,15 +25,14 @@ func secretSshKey(b *backend) *framework.Secret {
 				Description: "ip address of host",
 			},
 		},
-		DefaultDuration:    10 * time.Second, //TODO: change this
-		DefaultGracePeriod: 10 * time.Second, //TODO: change this
+		DefaultDuration:    5 * time.Second, //TODO: change this
+		DefaultGracePeriod: 1 * time.Second, //TODO: change this
 		Renew:              b.secretSshKeyRenew,
 		Revoke:             b.secretSshKeyRevoke,
 	}
 }
 
 func (b *backend) secretSshKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.secretPrivateKeyRenew\n")
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
 		return nil, err
@@ -49,8 +45,6 @@ func (b *backend) secretSshKeyRenew(req *logical.Request, d *framework.FieldData
 }
 
 func (b *backend) secretSshKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.secretPrivateKeyRevoke req: %#v\n", req)
-	//fetch the values from secret
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -83,7 +77,6 @@ func (b *backend) secretSshKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
-	log.Printf("Vishal: username:%s ip:%s keyName:%s\n", username, ip, hostKeyName)
 
 	//fetch the host key using the key name
 	hostKeyPath := "keys/" + hostKeyName
@@ -101,24 +94,23 @@ func (b *backend) secretSshKeyRevoke(req *logical.Request, d *framework.FieldDat
 	err = ioutil.WriteFile(hostKeyFileName, []byte(hostKey.Key), 0400)
 
 	//write dynamicPublicKey to file and use it as argument to scp command
-	otkPrivateKeyFileName := "vault_ssh_" + username + "_" + ip + "_otk.pem"
-	otkPublicKeyFileName := otkPrivateKeyFileName + ".pub"
-	err = ioutil.WriteFile(otkPublicKeyFileName, []byte(dynamicPublicKey), 0400)
+	dynamicPrivateKeyFileName := "vault_ssh_" + username + "_" + ip + "_otk.pem"
+	dynamicPublicKeyFileName := dynamicPrivateKeyFileName + ".pub"
+	err = ioutil.WriteFile(dynamicPublicKeyFileName, []byte(dynamicPublicKey), 0400)
 
 	//transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
-	scpCmd := "scp -i " + hostKeyFileName + " " + otkPublicKeyFileName + " " + username + "@" + ip + ":~;"
-	err = exec_command(scpCmd)
+	err = uploadFileScp(dynamicPublicKeyFileName, username, ip, hostKey.Key)
 	if err != nil {
-		fmt.Errorf("Running command scp failed " + err.Error())
+		return nil, fmt.Errorf("Public key transfer failed: %s", err)
 	}
 
 	authKeysFileName := "~/.ssh/authorized_keys"
 	tempKeysFileName := "~/temp_authorized_keys"
 
 	//commands to be run on target machine
-	grepCmd := "grep -vFf " + otkPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
+	grepCmd := "grep -vFf " + dynamicPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
 	catCmdRemoveDuplicate := "cat " + tempKeysFileName + " > " + authKeysFileName + ";"
-	rmCmd := "rm -f " + tempKeysFileName + " " + otkPublicKeyFileName + ";"
+	rmCmd := "rm -f " + tempKeysFileName + " " + dynamicPublicKeyFileName + ";"
 	remoteCmdString := strings.Join([]string{
 		grepCmd,
 		catCmdRemoveDuplicate,
@@ -134,12 +126,10 @@ func (b *backend) secretSshKeyRevoke(req *logical.Request, d *framework.FieldDat
 		return nil, fmt.Errorf("Invalid session object")
 	}
 
-	var buf bytes.Buffer
-	session.Stdout = &buf
+	//run the commands in target machine
 	if err := session.Run(remoteCmdString); err != nil {
 		return nil, err
 	}
-	session.Close()
-	fmt.Println(buf.String())
+
 	return nil, nil
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"strings"
 
@@ -13,7 +12,6 @@ import (
 )
 
 func pathRoleCreate(b *backend) *framework.Path {
-	log.Printf("Vishal: ssh.sshConnect\n")
 	return &framework.Path{
 		Pattern: "creds/(?P<name>\\w+)",
 		Fields: map[string]*framework.FieldSchema{
@@ -33,19 +31,22 @@ func pathRoleCreate(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathRoleCreateWrite,
 		},
-		HelpSynopsis:    sshConnectHelpSyn,
-		HelpDescription: sshConnectHelpDesc,
+		HelpSynopsis:    pathRoleCreateHelpSyn,
+		HelpDescription: pathRoleCreateHelpDesc,
 	}
 }
 
 func (b *backend) pathRoleCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.pathRoleCreateWrite\n")
-
-	//fetch the parameters
 	roleName := d.Get("name").(string)
 	username := d.Get("username").(string)
 	ipRaw := d.Get("ip").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("Invalid 'name'"), nil
+	}
+	if ipRaw == "" {
+		return logical.ErrorResponse("Invalid 'ip'"), nil
+	}
 
 	//find the role to be used for installing dynamic key
 	rolePath := "policy/" + roleName
@@ -61,6 +62,10 @@ func (b *backend) pathRoleCreateWrite(
 		return nil, err
 	}
 
+	if username == "" {
+		username = role.DefaultUser
+	}
+
 	//validate the IP address
 	ipAddr := net.ParseIP(ipRaw)
 	if ipAddr == nil {
@@ -70,8 +75,10 @@ func (b *backend) pathRoleCreateWrite(
 
 	ipMatched := false
 	for _, item := range strings.Split(role.CIDR, ",") {
-		log.Println(item)
-		_, cidrIPNet, _ := net.ParseCIDR(item)
+		_, cidrIPNet, err := net.ParseCIDR(item)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid cidr entry '%s'", item)), nil
+		}
 		ipMatched = cidrIPNet.Contains(ipAddr)
 		if ipMatched {
 			break
@@ -96,40 +103,30 @@ func (b *backend) pathRoleCreateWrite(
 	hostKeyFileName := "./vault_ssh_" + username + "_" + ip + "_shared.pem"
 	err = ioutil.WriteFile(hostKeyFileName, []byte(hostKey.Key), 0600)
 
-	otkPrivateKeyFileName := "vault_ssh_" + username + "_" + ip + "_otk.pem"
-	otkPublicKeyFileName := otkPrivateKeyFileName + ".pub"
+	dynamicPrivateKeyFileName := "vault_ssh_" + username + "_" + ip + "_otk.pem"
+	dynamicPublicKeyFileName := dynamicPrivateKeyFileName + ".pub"
 
-	//commands to be run on vault server
-	removeFile(otkPrivateKeyFileName)
-	removeFile(otkPublicKeyFileName)
+	//delete the temporary files if they are already present
+	err = removeFile(dynamicPrivateKeyFileName)
+	if err != nil {
+		return nil, fmt.Errorf(fmt.Sprintf("Error removing dynamic private key file: '%s'", err))
+	}
+	err = removeFile(dynamicPublicKeyFileName)
+	if err != nil {
+		return nil, fmt.Errorf(fmt.Sprintf("Error removing dynamic private key file: '%s'", err))
+	}
+
+	//generate RSA key pair
 	dynamicPublicKey, dynamicPrivateKey, _ := generateRSAKeys()
-	ioutil.WriteFile(otkPrivateKeyFileName, []byte(dynamicPrivateKey), 0600)
-	ioutil.WriteFile(otkPublicKeyFileName, []byte(dynamicPublicKey), 0644)
 
-	uploadFileScp(otkPublicKeyFileName, username, ip, hostKey.Key)
-	/*
-		otkPublicKeyFileNameBase := filepath.Base(otkPublicKeyFileName)
-		otkPublicKeyFile, _ := os.Open(otkPublicKeyFileName)
-		otkPublicKeyStat, err := otkPublicKeyFile.Stat()
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("File does not exist")
-		}
-		session := createSSHPublicKeysSession(username, ip, hostKey.Key)
-		if session == nil {
-			return nil, fmt.Errorf("Invalid session object")
-		}
-		go func() {
-			w, _ := session.StdinPipe()
-			fmt.Fprintln(w, "C0644", otkPublicKeyStat.Size(), otkPublicKeyFileNameBase)
-			io.Copy(w, otkPublicKeyFile)
-			fmt.Fprint(w, "\x00")
-			w.Close()
-		}()
-		if err := session.Run(fmt.Sprintf("scp -vt %s", otkPublicKeyFileNameBase)); err != nil {
-			panic("Failed to run: " + err.Error())
-		}
-		session.Close()
-	*/
+	//save the public key pair to a file
+	ioutil.WriteFile(dynamicPublicKeyFileName, []byte(dynamicPublicKey), 0644)
+
+	//send the public key to target machine
+	err = uploadFileScp(dynamicPublicKeyFileName, username, ip, hostKey.Key)
+	if err != nil {
+		return nil, err
+	}
 
 	//connect to target machine
 	session, err := createSSHPublicKeysSession(username, ip, hostKey.Key)
@@ -142,14 +139,14 @@ func (b *backend) pathRoleCreateWrite(
 	var buf bytes.Buffer
 	session.Stdout = &buf
 
-	authKeysFileName := "~/.ssh/authorized_keys"
-	tempKeysFileName := "~/temp_authorized_keys"
+	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"
+	tempKeysFileName := "/home/" + username + "/temp_authorized_keys"
 
 	//commands to be run on target machine
-	grepCmd := "grep -vFf " + otkPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
+	grepCmd := "grep -vFf " + dynamicPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
 	catCmdRemoveDuplicate := "cat " + tempKeysFileName + " > " + authKeysFileName + ";"
-	catCmdAppendNew := "cat " + otkPublicKeyFileName + " >> " + authKeysFileName + ";"
-	removeCmd := "rm -f " + tempKeysFileName + " " + otkPublicKeyFileName + ";"
+	catCmdAppendNew := "cat " + dynamicPublicKeyFileName + " >> " + authKeysFileName + ";"
+	removeCmd := "rm -f " + tempKeysFileName + " " + dynamicPublicKeyFileName + ";"
 	remoteCmdString := strings.Join([]string{
 		grepCmd,
 		catCmdRemoveDuplicate,
@@ -178,10 +175,17 @@ type sshCIDR struct {
 	CIDR []string
 }
 
-const sshConnectHelpSyn = `
-sshConnectionHelpSyn
+const pathRoleCreateHelpSyn = `
+Creates a dynamic key for the target machine.
 `
 
-const sshConnectHelpDesc = `
-rshConnectionHelpDesc
+const pathRoleCreateHelpDesc = `
+This path will generates a new key for establishing SSH session with
+target host. Previously registered shared key belonging to target
+infrastructure will be used to install the new key at the target. If
+this backend is mounted at 'ssh', then "ssh/creds/role" would generate
+a dynamic key for 'web' role.
+
+The dynamic keys will have a lease associated with them. The access
+keys can be revoked by using the lease ID.
 `

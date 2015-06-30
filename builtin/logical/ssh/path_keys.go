@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/vault/logical"
@@ -8,7 +9,6 @@ import (
 )
 
 func pathKeys(b *backend) *framework.Path {
-	log.Printf("Vishal: ssh.pathConfigAddHostKey\n")
 	return &framework.Path{
 		Pattern: "keys/(?P<name>\\w+)",
 		Fields: map[string]*framework.FieldSchema{
@@ -26,14 +26,13 @@ func pathKeys(b *backend) *framework.Path {
 			logical.WriteOperation:  b.pathKeysWrite,
 			logical.DeleteOperation: b.pathKeysDelete,
 		},
-		HelpSynopsis:    pathConfigAddHostKeySyn,
-		HelpDescription: pathConfigAddHostKeyDesc,
+		HelpSynopsis:    pathKeysSyn,
+		HelpDescription: pathKeysDesc,
 	}
 }
 
 func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("name").(string)
-	log.Printf("Vishal: ssh.pathKeysRead: keyName: %#v\n", keyName)
 	keyPath := "keys/" + keyName
 	entry, err := req.Storage.Get(keyPath)
 	if err != nil {
@@ -52,7 +51,6 @@ func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*l
 
 func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("name").(string)
-	log.Printf("Vishal: ssh.pathKeysDelete: keyName: %#v\n", keyName)
 	keyPath := "keys/" + keyName
 	err := req.Storage.Delete(keyPath)
 	if err != nil {
@@ -63,13 +61,16 @@ func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (
 
 func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Printf("Vishal: ssh.pathKeysWrite\n")
 
 	keyName := d.Get("name").(string)
 	keyString := d.Get("key").(string)
+
+	if keyString == "" {
+		return nil, fmt.Errorf("Invalid 'key'")
+	}
+
 	keyPath := "keys/" + keyName
 
-	log.Printf("Vishal: ssh.path_keys.pathKeysWrite: keyPath: %#v\n", keyPath)
 	entry, err := logical.StorageEntryJSON(keyPath, &sshHostKey{
 		Key: keyString,
 	})
@@ -86,10 +87,11 @@ type sshHostKey struct {
 	Key string
 }
 
-const pathConfigAddHostKeySyn = `
-pathConfigAddHostKeySyn
+const pathKeysSyn = `
+Register a shared key which can be used to install dynamic key in remote machine.
 `
 
-const pathConfigAddHostKeyDesc = `
-pathConfigAddHostKeyDesc
+const pathKeysDesc = `
+The shared key registered will be used to install and uninstall dynamic keys in remote machine.
+This key should have "root" privileges which enables installing keys for unprivileged usernames.
 `

@@ -2,7 +2,6 @@ package http
 
 import (
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -14,7 +13,6 @@ import (
 
 func handleLogical(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Vishal: handleLogical called\n")
 		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			respondError(w, http.StatusNotFound, nil)
@@ -59,7 +57,6 @@ func handleLogical(core *vault.Core) http.Handler {
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
-		log.Printf("Vishal: http.logical.handleLogical: requesting\n")
 		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
 			Operation:  op,
 			Path:       path,

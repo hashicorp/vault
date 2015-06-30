@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"log"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -13,7 +12,6 @@ func Factory(map[string]string) (logical.Backend, error) {
 }
 
 func Backend() *framework.Backend {
-	log.Printf("Vishal: ssh.Backend\n")
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -42,8 +40,12 @@ type backend struct {
 }
 
 const backendHelp = `
-The ssh backend enables secure connections to remote hosts.
+The SSH backend dynamically generates SSH private keys for remote hosts.
+The key generated has a configurable lease set and are automatically 
+revoked at the end of the lease.
 
-After mounting this backend, configure it using the endpoints within
-the "config/" path.
+After mounting this backend, configure the lease using the 'config/lease'
+endpoint. The shared SSH key belonging to any infrastructure should be 
+registered with the 'roles/' endpoint before dynamic keys for remote hosts 
+can be generated.
 `

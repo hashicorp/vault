@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -150,7 +149,6 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
 	if !ok {
-		log.Printf("Vishal: vault.router.Route: here\n")
 		// Re-check for a backend by appending a slash. This lets "foo" mean
 		// "foo/" at the root level which is almost always what we want.
 		req.Path += "/"

@@ -1,14 +1,15 @@
 package ssh
 
 import (
-	"log"
+	"fmt"
+	"net"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func pathRoles(b *backend) *framework.Path {
-	log.Printf("Vishal: ssh.pathRoles\n")
 	return &framework.Path{
 		Pattern: "roles/(?P<name>\\w+)",
 		Fields: map[string]*framework.FieldSchema{
@@ -46,17 +47,37 @@ func pathRoles(b *backend) *framework.Path {
 }
 
 func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.pathRoleWrite\n")
-
 	roleName := d.Get("name").(string)
 	keyName := d.Get("key").(string)
 	adminUser := d.Get("admin_user").(string)
 	defaultUser := d.Get("default_user").(string)
 	cidr := d.Get("cidr").(string)
 
-	log.Printf("Vishal: name[%s] key[%s] admin_user[%s] default_user[%s] cidr[%s]\n", roleName, keyName, adminUser, defaultUser, cidr)
+	//input validations
+	if roleName == "" {
+		return logical.ErrorResponse("Invalid 'roleName'"), nil
+	}
+	if keyName == "" {
+		return logical.ErrorResponse("Invalid 'key'"), nil
+	}
+	if adminUser == "" {
+		return logical.ErrorResponse("Invalid 'admin_user'"), nil
+	}
+	if cidr == "" {
+		return logical.ErrorResponse("Invalid 'cidr'"), nil
+	}
+	for _, item := range strings.Split(cidr, ",") {
+		_, _, err := net.ParseCIDR(item)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid cidr entry '%s'", item)), nil
+		}
+	}
 
 	rolePath := "policy/" + roleName
+
+	if defaultUser == "" {
+		defaultUser = adminUser
+	}
 
 	entry, err := logical.StorageEntryJSON(rolePath, sshRole{
 		KeyName:     keyName,
@@ -69,7 +90,6 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		return nil, err
 	}
 
-	log.Printf("Vishal: entryJSON:%s\n", entry.Value)
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
@@ -78,7 +98,6 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 }
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.pathRoleRead\n")
 	roleName := d.Get("name").(string)
 	rolePath := "policy/" + roleName
 	entry, err := req.Storage.Get(rolePath)
@@ -96,7 +115,6 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 }
 
 func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("Vishal: ssh.pathRoleDelete\n")
 	roleName := d.Get("name").(string)
 	rolePath := "policy/" + roleName
 	err := req.Storage.Delete(rolePath)
@@ -114,9 +132,13 @@ type sshRole struct {
 }
 
 const pathRoleHelpSyn = `
-Manage the roles that can be created with this backend.
+Manage the 'roles' that can be created with this backend.
 `
 
 const pathRoleHelpDesc = `
-This path lets you manage the roles that can be created with this backend.
+This path allows you to manage the roles that are used to create dynamic keys.
+These roles will be having privileged access to all the hosts mentioned by CIDR blocks.
+For example, if the backend is mounted at "ssh" and the role is created at "ssh/roles/web", then a user could request for a new key at "ssh/creds/web" for the supplied username and IP address.
+
+The 'cidr' field takes comma seperated CIDR blocks. The 'admin_user' should have root access in all the hosts represented by the 'cidr' field. When the user requests key for an IP, the key will be installed for the user mentioned by 'default_user' field. The 'key' field takes a named key which can be configured by 'ssh/keys/' endpoint.
 `

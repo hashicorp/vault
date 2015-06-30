@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
 
@@ -11,7 +10,6 @@ import (
 )
 
 func pathLookup(b *backend) *framework.Path {
-	log.Printf("Vishal: ssh.pathLookup\n")
 	return &framework.Path{
 		Pattern: "lookup",
 		Fields: map[string]*framework.FieldSchema{
@@ -29,20 +27,29 @@ func pathLookup(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ip := d.Get("ip").(string)
-	//ip := "127.0.0.1"
-	ipAddr := net.ParseIP(ip)
-	if ipAddr == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ip)), nil
+	ipAddr := d.Get("ip").(string)
+	if ipAddr == "" {
+		return logical.ErrorResponse("Missing 'ip'"), nil
 	}
-	keys, _ := req.Storage.List("policy/")
+	ip := net.ParseIP(ipAddr)
+	if ip == nil {
+		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ip.String())), nil
+	}
+
+	keys, err := req.Storage.List("policy/")
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("No roles registered for IP '%s'", ip.String())
+	}
+
 	var matchingRoles []string
 	for _, item := range keys {
-		if contains, _ := containsIP(req.Storage, item, ip); contains {
+		if contains, _ := containsIP(req.Storage, item, ip.String()); contains {
 			matchingRoles = append(matchingRoles, item)
 		}
 	}
-	log.Printf("Vishal: req.Path: %#v \n Keys:%#v\n", req.Path, keys)
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"roles": matchingRoles,
@@ -51,6 +58,9 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 }
 
 func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
+	if roleName == "" || ip == "" {
+		return false, fmt.Errorf("invalid parameters")
+	}
 	roleEntry, err := s.Get("policy/" + roleName)
 	if err != nil {
 		return false, fmt.Errorf("error retrieving role '%s'", err)
@@ -64,8 +74,10 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	}
 	ipMatched := false
 	for _, item := range strings.Split(role.CIDR, ",") {
-		log.Println(item)
-		_, cidrIPNet, _ := net.ParseCIDR(item)
+		_, cidrIPNet, err := net.ParseCIDR(item)
+		if err != nil {
+			return false, fmt.Errorf(fmt.Sprintf("Invalid cidr entry '%s'", item))
+		}
 		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))
 		if ipMatched {
 			break
@@ -75,9 +87,10 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 }
 
 const pathLookupSyn = `
-pathLookupSyn
+Lists 'roles' that can be used to create a dynamic key.
 `
 
 const pathLookupDesc = `
-pathLoookupDesc
+CIDR blocks will be associated with multiple 'roles'.
+This endpoint lists all the 'roles' that are associated with the supplied IP address.
 `

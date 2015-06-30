@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,7 +21,6 @@ const AuthHeaderName = "X-Vault-Token"
 // its own to mount the Vault API within another web server.
 func Handler(core *vault.Core) http.Handler {
 	// Create the muxer to handle the actual endpoints
-	log.Printf("Vishal: http.handler.Handler\n")
 	mux := http.NewServeMux()
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
@@ -77,7 +75,6 @@ func parseRequest(r *http.Request, out interface{}) error {
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
-	log.Printf("Vishal: http.handler.request: \n")
 	resp, err := core.HandleRequest(r)
 	if err == vault.ErrStandby {
 		respondStandby(core, w, rawReq.URL)
