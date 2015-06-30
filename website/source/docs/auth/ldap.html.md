@@ -90,6 +90,7 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
 		userattr=uid \
         userdn="dc=example,dc=com" \
         groupdn="dc=example,dc=com" \
+        insecure_tls=false \
 ...
 ```
 
