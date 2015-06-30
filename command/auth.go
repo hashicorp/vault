@@ -261,24 +261,7 @@ Usage: vault auth [options] [token or config...]
 
 General Options:
 
-  -address=addr           The address of the Vault server.
-
-  -ca-cert=path           Path to a PEM encoded CA cert file to use to
-                          verify the Vault server SSL certificate.
-
-  -ca-path=path           Path to a directory of PEM encoded CA cert files
-                          to verify the Vault server SSL certificate. If both
-                          -ca-cert and -ca-path are specified, -ca-path is used.
-
-  -client-cert=path       Path to a PEM encoded client certificate for TLS
-                          authentication to the Vault server. Must also specify
-                          -client-key.
-
-  -client-key=path        Path to an unencrypted PEM encoded private key
-                          matching the client certificate from -client-cert.
-
-  -tls-skip-verify        Do not verify TLS certificate. This is highly
-                          not recommended.
+  ` + generalOptionsUsage() + `
 
 Auth Options:
 
