@@ -46,7 +46,7 @@ func (b *backend) pathLogin(
 
 	// If no trusted chain was found, client is not authenticated
 	if len(trustedChains) == 0 {
-		return logical.ErrorResponse("invalid certificate"), nil
+		return logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
 	// Match the trusted chain with the policy

@@ -113,12 +113,14 @@ func (m *Meta) Client() (*api.Client, error) {
 			RootCAs:            certPool,
 		}
 
-		if m.flagClientCert != "" {
+		if m.flagClientCert != "" && m.flagClientKey != "" {
 			tlsCert, err := tls.LoadX509KeyPair(m.flagClientCert, m.flagClientKey)
 			if err != nil {
 				return nil, err
 			}
 			tlsConfig.Certificates = []tls.Certificate{tlsCert}
+		} else if m.flagClientCert != "" || m.flagClientKey != "" {
+			return nil, fmt.Errorf("Both client cert and client key must be provided")
 		}
 
 		client := *http.DefaultClient
