@@ -21,10 +21,10 @@ func TestCore(t *testing.T) *Core {
 		},
 	}
 	noopBackends := make(map[string]logical.Factory)
-	noopBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	noopBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return new(framework.Backend), nil
 	}
-	noopBackends["http"] = func(map[string]string) (logical.Backend, error) {
+	noopBackends["http"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
 

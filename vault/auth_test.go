@@ -36,7 +36,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 
 func TestCore_EnableCredential(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -90,7 +90,7 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 
 func TestCore_DisableCredential(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -153,7 +153,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Login: []string{"login"},
 	}
 	c, _, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 

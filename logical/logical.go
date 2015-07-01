@@ -1,8 +1,6 @@
 package logical
 
-import (
-	"log"
-)
+import "log"
 
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
@@ -34,8 +32,20 @@ type Backend interface {
 	SetLogger(*log.Logger)
 }
 
+// BackendConfig is provided to the factory to initialize the backend
+type BackendConfig struct {
+	// View should not be stored, and should only be used for initialization
+	View Storage
+
+	// The backend should use this logger. The log should not contain any secrets.
+	Logger *log.Logger
+
+	// Config is the opaque user configuration provided when mounting
+	Config map[string]string
+}
+
 // Factory is the factory function to create a logical backend.
-type Factory func(map[string]string) (Backend, error)
+type Factory func(*BackendConfig) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {

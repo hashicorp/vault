@@ -110,7 +110,7 @@ func TestCore_Unmount(t *testing.T) {
 func TestCore_Unmount_Cleanup(t *testing.T) {
 	noop := &NoopBackend{}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -227,7 +227,7 @@ func TestCore_Remount(t *testing.T) {
 func TestCore_Remount_Cleanup(t *testing.T) {
 	noop := &NoopBackend{}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 

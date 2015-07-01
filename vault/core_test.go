@@ -672,7 +672,7 @@ func TestCore_HandleRequest_NoConnection(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -705,7 +705,7 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -740,7 +740,7 @@ func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -781,7 +781,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -914,7 +914,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
 	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
@@ -1221,7 +1221,7 @@ func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
 	}
 
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -1265,7 +1265,7 @@ func TestCore_HandleRequest_InternalData(t *testing.T) {
 	}
 
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -1308,7 +1308,7 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
 
@@ -1440,7 +1440,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
 
@@ -1513,7 +1513,7 @@ func TestCore_HandleRequest_MountPoint(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
