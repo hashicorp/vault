@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"testing"
@@ -19,7 +18,6 @@ type NoopBackend struct {
 	Paths    []string
 	Requests []*logical.Request
 	Response *logical.Response
-	Logger   *log.Logger
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -41,10 +39,6 @@ func (n *NoopBackend) SpecialPaths() *logical.Paths {
 		Root:            n.Root,
 		Unauthenticated: n.Login,
 	}
-}
-
-func (n *NoopBackend) SetLogger(l *log.Logger) {
-	n.Logger = l
 }
 
 func TestRouter_Mount(t *testing.T) {

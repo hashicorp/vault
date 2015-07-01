@@ -22,14 +22,6 @@ type Backend interface {
 	// ends in '*' then it is a prefix-based match. The '*' can only appear
 	// at the end.
 	SpecialPaths() *Paths
-
-	// SetLogger is called to set the logger for the backend. The backend
-	// should use this logger. The log should not contain any secrets.
-	// It should not be assumed that this function will be called every time.
-	//
-	// SetLogger will not be called by Vault core in parallel, and
-	// therefore doesn't need any lock protection.
-	SetLogger(*log.Logger)
 }
 
 // BackendConfig is provided to the factory to initialize the backend

@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"log"
 	"testing"
 
 	"github.com/hashicorp/vault/audit"
@@ -109,5 +108,3 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
 }
-
-func (n *rawHTTP) SetLogger(l *log.Logger) {}
