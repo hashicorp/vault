@@ -18,6 +18,10 @@ func TestSalt(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	if !salt.DidGenerate() {
+		t.Fatalf("expected generation")
+	}
+
 	// Verify the salt exists
 	out, err := inm.Get(DefaultLocation)
 	if err != nil {
@@ -31,6 +35,10 @@ func TestSalt(t *testing.T) {
 	salt2, err := NewSalt(inm, conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	if salt2.DidGenerate() {
+		t.Fatalf("unexpected generation")
 	}
 
 	// Check for a match
