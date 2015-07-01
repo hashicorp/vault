@@ -11,7 +11,7 @@ import (
 )
 
 // Factory creates a new backend
-func Factory(map[string]string) (logical.Backend, error) {
+func Factory(*logical.BackendConfig) (logical.Backend, error) {
 	return Backend(), nil
 }
 

@@ -1,19 +1,22 @@
 package appId
 
 import (
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(map[string]string) (logical.Backend, error) {
+func Factory(*logical.BackendConfig) (logical.Backend, error) {
 	return Backend(), nil
 }
 
 func Backend() *framework.Backend {
+	var salt *salt.Salt
 	var b backend
 	b.MapAppId = &framework.PolicyMap{
 		PathMap: framework.PathMap{
 			Name: "app-id",
+			Salt: salt,
 			Schema: map[string]*framework.FieldSchema{
 				"display_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -31,6 +34,7 @@ func Backend() *framework.Backend {
 
 	b.MapUserId = &framework.PathMap{
 		Name: "user-id",
+		Salt: salt,
 		Schema: map[string]*framework.FieldSchema{
 			"cidr_block": &framework.FieldSchema{
 				Type:        framework.TypeString,

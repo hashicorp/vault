@@ -110,7 +110,7 @@ func Test(t TestT, c TestCase) {
 	core, err := vault.NewCore(&vault.CoreConfig{
 		Physical: physical.NewInmem(),
 		LogicalBackends: map[string]logical.Factory{
-			"test": func(map[string]string) (logical.Backend, error) {
+			"test": func(*logical.BackendConfig) (logical.Backend, error) {
 				return c.Backend, nil
 			},
 		},

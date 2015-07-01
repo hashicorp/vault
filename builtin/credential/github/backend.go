@@ -9,7 +9,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func Factory(map[string]string) (logical.Backend, error) {
+func Factory(*logical.BackendConfig) (logical.Backend, error) {
 	return Backend(), nil
 }
 
