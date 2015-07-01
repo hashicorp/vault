@@ -41,7 +41,11 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 		return nil, err
 	}
 	if len(keys) == 0 {
-		return nil, fmt.Errorf("No roles registered for IP '%s'", ip.String())
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"roles": "",
+			},
+		}, nil
 	}
 
 	var matchingRoles []string
