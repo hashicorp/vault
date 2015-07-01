@@ -29,7 +29,7 @@ func Backend() *framework.Backend {
 		},
 
 		Secrets: []*framework.Secret{
-			secretSshKey(&b),
+			secretSSHKey(&b),
 		},
 	}
 	return b.Backend
@@ -41,7 +41,7 @@ type backend struct {
 
 const backendHelp = `
 The SSH backend dynamically generates SSH private keys for remote hosts.
-The key generated has a configurable lease set and are automatically 
+The generated key has a configurable lease set and are automatically 
 revoked at the end of the lease.
 
 After mounting this backend, configure the lease using the 'config/lease'

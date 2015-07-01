@@ -80,7 +80,7 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	for _, item := range strings.Split(role.CIDR, ",") {
 		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
-			return false, fmt.Errorf(fmt.Sprintf("Invalid cidr entry '%s'", item))
+			return false, fmt.Errorf("Invalid cidr entry '%s'", item)
 		}
 		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))
 		if ipMatched {

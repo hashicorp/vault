@@ -73,12 +73,17 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 	}
 
-	rolePath := "policy/" + roleName
+	keyPath := "keys/" + keyName
+	keyEntry, err := req.Storage.Get(keyPath)
+	if err != nil || keyEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("Invalid 'key': '%s'", keyName)), nil
+	}
 
 	if defaultUser == "" {
 		defaultUser = adminUser
 	}
 
+	rolePath := "policy/" + roleName
 	entry, err := logical.StorageEntryJSON(rolePath, sshRole{
 		KeyName:     keyName,
 		AdminUser:   adminUser,

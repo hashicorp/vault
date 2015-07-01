@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -109,11 +108,11 @@ func (b *backend) pathRoleCreateWrite(
 	//delete the temporary files if they are already present
 	err = removeFile(dynamicPrivateKeyFileName)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("Error removing dynamic private key file: '%s'", err))
+		return nil, fmt.Errorf("Error removing dynamic private key file: '%s'", err)
 	}
 	err = removeFile(dynamicPublicKeyFileName)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("Error removing dynamic private key file: '%s'", err))
+		return nil, fmt.Errorf("Error removing dynamic private key file: '%s'", err)
 	}
 
 	//generate RSA key pair
@@ -136,8 +135,6 @@ func (b *backend) pathRoleCreateWrite(
 	if session == nil {
 		return nil, fmt.Errorf("Invalid session object")
 	}
-	var buf bytes.Buffer
-	session.Stdout = &buf
 
 	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"
 	tempKeysFileName := "/home/" + username + "/temp_authorized_keys"
@@ -159,7 +156,6 @@ func (b *backend) pathRoleCreateWrite(
 		return nil, err
 	}
 	session.Close()
-	fmt.Println(buf.String())
 
 	result := b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
 		"key": dynamicPrivateKey,

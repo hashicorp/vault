@@ -44,12 +44,12 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 	lease, err := time.ParseDuration(leaseRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid lease: %s", err)), nil
+			"Invalid 'lease': %s", err)), nil
 	}
 	leaseMax, err := time.ParseDuration(leaseMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid lease: %s", err)), nil
+			"Invalid 'lease_max': %s", err)), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
@@ -57,10 +57,10 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 		LeaseMax: leaseMax,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not create storage entry JSON: %s", err)
 	}
 	if err := req.Storage.Put(entry); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not store JSON: %s", err)
 	}
 
 	return nil, nil
@@ -89,7 +89,7 @@ type configLease struct {
 }
 
 const pathConfigLeaseHelpSyn = `
-Configure the default lease information for SSH one time keys.
+Configure the default lease information for SSH dynamic keys.
 `
 
 const pathConfigLeaseHelpDesc = `

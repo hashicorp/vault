@@ -11,11 +11,11 @@ import (
 	"syscall"
 )
 
-type SshCommand struct {
+type SSHCommand struct {
 	Meta
 }
 
-func (c *SshCommand) Run(args []string) int {
+func (c *SSHCommand) Run(args []string) int {
 	var role string
 	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
 	flags.StringVar(&role, "role", "", "")
@@ -70,7 +70,7 @@ func (c *SshCommand) Run(args []string) int {
 		"username": username,
 		"ip":       ip.String(),
 	}
-	keySecret, err := client.Ssh().KeyCreate(role, data)
+	keySecret, err := client.SSH().KeyCreate(role, data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session:%s", err))
 		return 2
@@ -103,13 +103,13 @@ type OneTimeKey struct {
 	Key string
 }
 
-func (c *SshCommand) Synopsis() string {
+func (c *SSHCommand) Synopsis() string {
 	return "Initiate a SSH session"
 }
 
-func (c *SshCommand) Help() string {
+func (c *SSHCommand) Help() string {
 	helpText := `
-	SshCommand Help String
+	SSHCommand Help String
 	`
 	return strings.TrimSpace(helpText)
 }

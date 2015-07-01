@@ -5,16 +5,16 @@ import (
 	"fmt"
 )
 
-type Ssh struct {
+type SSH struct {
 	c *Client
 }
 
-func (c *Client) Ssh() *Ssh {
-	return &Ssh{c: c}
+func (c *Client) SSH() *SSH {
+	return &SSH{c: c}
 }
 
-func (c *Ssh) KeyCreate(role string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/ssh/creds/"+role))
+func (c *SSH) KeyCreate(role string, data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/ssh/creds/%s", role))
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (c *Ssh) KeyCreate(role string, data map[string]interface{}) (*Secret, erro
 	return ParseSecret(resp.Body)
 }
 
-func (c *Ssh) Lookup(data map[string]interface{}) (*SshRoles, error) {
+func (c *SSH) Lookup(data map[string]interface{}) (*SSHRoles, error) {
 	r := c.c.NewRequest("PUT", "/v1/ssh/lookup")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (c *Ssh) Lookup(data map[string]interface{}) (*SshRoles, error) {
 	}
 	defer resp.Body.Close()
 
-	var roles SshRoles
+	var roles SSHRoles
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&roles); err != nil {
 		return nil, err
@@ -48,6 +48,6 @@ func (c *Ssh) Lookup(data map[string]interface{}) (*SshRoles, error) {
 	return &roles, nil
 }
 
-type SshRoles struct {
+type SSHRoles struct {
 	Data map[string]interface{} `json:"data"`
 }
