@@ -1,12 +1,59 @@
-## 0.1.3 (unreleased)
+## 0.2.0 (unreleased)
+
+FEATURES:
+
+ * **Key Rotation Support**: The `rotate` command can be used to rotate the
+ master encryption key used to write data to the storage (physical) backend. [GH-277]
+ * **Rekey Support**: Rekey can be used to rotate the master key and change
+ the configuration of the unseal keys (number of shares, threshold required). [GH-277]
+ * **New secret backend: `pki`**: Enable Vault to be a certificate authority and generate
+   signed TLS certificates. [GH-310]
+ * **New secret backend: `cassandra`**: Generate dynamic credentials for Cassandra [GH-363]
+ * **New storage backend: `etcd`**: store physical data in etcd [GH-259] [GH-297]
+ * **New storage backend: `s3`**: store physical data in S3. Does not support HA. [GH-242]
+ * **New storage backend: `MySQL`**: store physical data in MySQL. Does not support HA. [GH-324]
 
 IMPROVEMENTS:
 
-  * core: `/sys/auth` allows for PUT requests as well
+ * cli/auth: Enable `cert` method [GH-380]
+ * cli/auth: read input from stdin [GH-250]
+ * cli/read: Ability to read a single field from a secret [GH-257]
+ * cli/write: Adding a force flag when no input required
+ * core: allow time duration format in place of seconds for some inputs
+ * core: audit log provides more useful information [GH-360]
+ * core: graceful shutdown for faster HA failover
+ * credential/cert: Record the common name in the metadata [GH-342]
+ * credential/ldap: Allow TLS verification to be disabled [GH-372]
+ * credential/ldap: More flexible names allowed [GH-245] [GH-379] [GH-367]
+ * http: response codes improved to reflect error [GH-366]
+ * secret/app-id: Support deleting AppID and UserIDs [GH-200]
+ * secret/consul: Fine grained lease control [GH-261]
+ * secret/transit: Decouple raw key from key management endpoint [GH-355]
+ * secret/transit: Upsert named key when encrypt is used [GH-355]
+ * storage/zk: Support for HA configuration [GH-252]
 
 BUG FIXES:
 
-  * command/*: commands accepting `k=v` allow blank values
+ * command/*: commands accepting `k=v` allow blank values
+ * core: Allow building on FreeBSD [GH-365]
+ * core: Fixed various panics when audit logging enabled
+ * core: Lease renewal does not create redundant lease
+ * core: fixed leases with negative duration [GH-354]
+ * core: token renewal does not create child token
+ * credential/app-id: Salt the paths in storage backend to avoid information leak
+ * credential/cert: Fixing client certificate not being requested
+ * credential/cert: Fixing panic when no certificate match found [GH-361]
+ * http: Accept PUT as POST for sys/auth
+ * http: Accept PUT as POST for sys/mounts [GH-349]
+ * http: Return 503 when sealed [GH-225]
+ * secret/postgres: Username length is capped to exceeding limit
+ * server: Do not panic if backend not configured [GH-222]
+ * server: Explicitly check value of tls_diable [GH-201]
+ * storage/zk: Fixed issues with version conflicts [GH-190]
+
+MISC:
+
+ * cli/path-help: renamed from `help` to avoid confusion
 
 ## 0.1.2 (May 11, 2015)
 
