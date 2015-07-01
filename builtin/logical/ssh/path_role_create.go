@@ -161,14 +161,20 @@ func (b *backend) pathRoleCreateWrite(
 	session.Close()
 	fmt.Println(buf.String())
 
-	return b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
+	result := b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
 		"key": dynamicPrivateKey,
 	}, map[string]interface{}{
 		"username":           username,
 		"ip":                 ip,
 		"host_key_name":      role.KeyName,
 		"dynamic_public_key": dynamicPublicKey,
-	}), nil
+	})
+	lease, _ := b.Lease(req.Storage)
+	if lease != nil {
+		result.Secret.Lease = lease.Lease
+		result.Secret.LeaseGracePeriod = lease.LeaseMax
+	}
+	return result, nil
 }
 
 type sshCIDR struct {

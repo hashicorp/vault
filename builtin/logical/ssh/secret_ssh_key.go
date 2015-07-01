@@ -25,8 +25,8 @@ func secretSshKey(b *backend) *framework.Secret {
 				Description: "ip address of host",
 			},
 		},
-		DefaultDuration:    5 * time.Second, //TODO: change this
-		DefaultGracePeriod: 1 * time.Second, //TODO: change this
+		DefaultDuration:    1 * time.Hour,
+		DefaultGracePeriod: 10 * time.Minute,
 		Renew:              b.secretSshKeyRenew,
 		Revoke:             b.secretSshKeyRevoke,
 	}
