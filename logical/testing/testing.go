@@ -30,6 +30,10 @@ type TestCase struct {
 	// Backend is the backend that will be mounted.
 	Backend logical.Backend
 
+	// Factory can be used instead of Backend if the
+	// backend requires more construction
+	Factory logical.Factory
+
 	// Steps are the set of operations that are run for this test case.
 	Steps []TestStep
 
@@ -106,12 +110,20 @@ func Test(t TestT, c TestCase) {
 		c.PreCheck()
 	}
 
+	// Check that something is provided
+	if c.Backend == nil && c.Factory == nil {
+		t.Fatal("Must provide either Backend or Factory")
+	}
+
 	// Create an in-memory Vault core
 	core, err := vault.NewCore(&vault.CoreConfig{
 		Physical: physical.NewInmem(),
 		LogicalBackends: map[string]logical.Factory{
-			"test": func(map[string]string) (logical.Backend, error) {
-				return c.Backend, nil
+			"test": func(conf *logical.BackendConfig) (logical.Backend, error) {
+				if c.Backend != nil {
+					return c.Backend, nil
+				}
+				return c.Factory(conf)
 			},
 		},
 	})

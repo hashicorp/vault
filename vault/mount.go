@@ -151,15 +151,15 @@ func (c *Core) mount(me *MountEntry) error {
 		return fmt.Errorf("existing mount at '%s'", match)
 	}
 
-	// Lookup the new backend
-	backend, err := c.newLogicalBackend(me.Type, nil)
-	if err != nil {
-		return err
-	}
-
 	// Generate a new UUID and view
 	me.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
+
+	// Create the new backend
+	backend, err := c.newLogicalBackend(me.Type, view, nil)
+	if err != nil {
+		return err
+	}
 
 	// Update the mount table
 	newTable := c.mounts.Clone()
@@ -415,16 +415,17 @@ func (c *Core) setupMounts() error {
 			barrierPath = systemBarrierPrefix
 		}
 
-		backend, err = c.newLogicalBackend(entry.Type, nil)
+		// Create a barrier view using the UUID
+		view = NewBarrierView(c.barrier, barrierPath)
+
+		// Initialize the backend
+		backend, err = c.newLogicalBackend(entry.Type, view, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create mount entry %#v: %v",
 				entry, err)
 			return loadMountsFailed
 		}
-
-		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, barrierPath)
 
 		if entry.Type == "system" {
 			c.systemView = view
@@ -455,18 +456,22 @@ func (c *Core) unloadMounts() error {
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(t string, conf map[string]string) (logical.Backend, error) {
+func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
 
-	b, err := f(conf)
+	config := &logical.BackendConfig{
+		View:   view,
+		Logger: c.logger,
+		Config: conf,
+	}
+
+	b, err := f(config)
 	if err != nil {
 		return nil, err
 	}
-
-	b.SetLogger(c.logger)
 	return b, nil
 }
 

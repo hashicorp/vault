@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"log"
 	"testing"
 
 	"github.com/hashicorp/vault/audit"
@@ -21,10 +20,10 @@ func TestCore(t *testing.T) *Core {
 		},
 	}
 	noopBackends := make(map[string]logical.Factory)
-	noopBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	noopBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return new(framework.Backend), nil
 	}
-	noopBackends["http"] = func(map[string]string) (logical.Backend, error) {
+	noopBackends["http"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
 
@@ -109,5 +108,3 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
 }
-
-func (n *rawHTTP) SetLogger(l *log.Logger) {}

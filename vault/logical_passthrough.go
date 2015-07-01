@@ -11,7 +11,7 @@ import (
 )
 
 // logical.Factory
-func PassthroughBackendFactory(map[string]string) (logical.Backend, error) {
+func PassthroughBackendFactory(*logical.BackendConfig) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),

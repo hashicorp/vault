@@ -338,7 +338,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 
 func TestSystemBackend_enableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -369,7 +369,7 @@ func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 
 func TestSystemBackend_disableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(map[string]string) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 

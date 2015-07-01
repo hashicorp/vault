@@ -10,8 +10,8 @@ import (
 )
 
 // Factory creates a new backend implementing the logical.Backend interface
-func Factory(map[string]string) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 // Backend returns a new Backend framework struct

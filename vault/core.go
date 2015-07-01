@@ -307,7 +307,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends[k] = f
 	}
 	logicalBackends["generic"] = PassthroughBackendFactory
-	logicalBackends["system"] = func(map[string]string) (logical.Backend, error) {
+	logicalBackends["system"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return NewSystemBackend(c), nil
 	}
 	c.logicalBackends = logicalBackends
@@ -316,7 +316,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(map[string]string) (logical.Backend, error) {
+	credentialBackends["token"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return NewTokenStore(c)
 	}
 	c.credentialBackends = credentialBackends

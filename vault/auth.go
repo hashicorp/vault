@@ -61,15 +61,15 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
-	// Lookup the new backend
-	backend, err := c.newCredentialBackend(entry.Type, nil)
-	if err != nil {
-		return err
-	}
-
 	// Generate a new UUID and view
 	entry.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
+
+	// Create the new backend
+	backend, err := c.newCredentialBackend(entry.Type, view, nil)
+	if err != nil {
+		return err
+	}
 
 	// Update the auth table
 	newTable := c.auth.Clone()
@@ -238,17 +238,17 @@ func (c *Core) setupCredentials() error {
 	var view *BarrierView
 	var err error
 	for _, entry := range c.auth.Entries {
+		// Create a barrier view using the UUID
+		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
+
 		// Initialize the backend
-		backend, err = c.newCredentialBackend(entry.Type, nil)
+		backend, err = c.newCredentialBackend(entry.Type, view, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create credential entry %#v: %v",
 				entry, err)
 			return loadAuthFailed
 		}
-
-		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 		// Mount the backend
 		path := credentialRoutePrefix + entry.Path
@@ -281,13 +281,23 @@ func (c *Core) teardownCredentials() error {
 
 // newCredentialBackend is used to create and configure a new credential backend by name
 func (c *Core) newCredentialBackend(
-	t string, conf map[string]string) (logical.Backend, error) {
+	t string, view logical.Storage, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.credentialBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
 
-	return f(conf)
+	config := &logical.BackendConfig{
+		View:   view,
+		Logger: c.logger,
+		Config: conf,
+	}
+
+	b, err := f(config)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // defaultAuthTable creates a default auth table

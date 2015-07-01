@@ -3,13 +3,13 @@ package ldap
 import (
 	"fmt"
 
+	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/go-ldap/ldap"
 )
 
-func Factory(map[string]string) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 func Backend() *framework.Backend {
@@ -92,7 +92,6 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
-
 
 	// Try to authenticate to the server using the provided credentials
 	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)

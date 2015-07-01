@@ -131,9 +131,10 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 	return b.PathsSpecial
 }
 
-// logical.Backend impl.
-func (b *Backend) SetLogger(logger *log.Logger) {
-	b.logger = logger
+// Setup is used to initialize the backend with the initial backend configuration
+func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) {
+	b.logger = config.Logger
+	return b, nil
 }
 
 // Logger can be used to get the logger. If no logger has been set,

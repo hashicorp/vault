@@ -1,8 +1,6 @@
 package logical
 
-import (
-	"log"
-)
+import "log"
 
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
@@ -24,18 +22,22 @@ type Backend interface {
 	// ends in '*' then it is a prefix-based match. The '*' can only appear
 	// at the end.
 	SpecialPaths() *Paths
+}
 
-	// SetLogger is called to set the logger for the backend. The backend
-	// should use this logger. The log should not contain any secrets.
-	// It should not be assumed that this function will be called every time.
-	//
-	// SetLogger will not be called by Vault core in parallel, and
-	// therefore doesn't need any lock protection.
-	SetLogger(*log.Logger)
+// BackendConfig is provided to the factory to initialize the backend
+type BackendConfig struct {
+	// View should not be stored, and should only be used for initialization
+	View Storage
+
+	// The backend should use this logger. The log should not contain any secrets.
+	Logger *log.Logger
+
+	// Config is the opaque user configuration provided when mounting
+	Config map[string]string
 }
 
 // Factory is the factory function to create a logical backend.
-type Factory func(map[string]string) (Backend, error)
+type Factory func(*BackendConfig) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {
