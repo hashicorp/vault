@@ -11,8 +11,8 @@ import (
 )
 
 // Factory creates a new backend
-func Factory(*logical.BackendConfig) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 // Backend contains the base information for the backend's functionality

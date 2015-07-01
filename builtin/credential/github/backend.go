@@ -9,8 +9,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func Factory(*logical.BackendConfig) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 func Backend() *framework.Backend {

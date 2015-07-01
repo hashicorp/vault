@@ -5,8 +5,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(*logical.BackendConfig) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 func Backend() *framework.Backend {
