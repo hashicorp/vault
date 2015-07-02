@@ -12,7 +12,7 @@ import (
 
 func pathRoleCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "creds/(?P<name>\\w+)",
+		Pattern: "creds/(?P<name>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -89,11 +89,11 @@ func (b *backend) pathRoleCreateWrite(
 	//fetch the host key to be used for installation
 	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
-		return nil, fmt.Errorf("Key '%s' not found error:%s", role.KeyName, err)
+		return nil, fmt.Errorf("key '%s' not found error:%s", role.KeyName, err)
 	}
 	var hostKey sshHostKey
 	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
-		return nil, fmt.Errorf("Error reading the host key: %s", err)
+		return nil, fmt.Errorf("error reading the host key: %s", err)
 	}
 
 	//store the host key to file. Use it as parameter for scp command
@@ -106,11 +106,11 @@ func (b *backend) pathRoleCreateWrite(
 	//delete the temporary files if they are already present
 	err = removeFile(dynamicPrivateKeyFileName)
 	if err != nil {
-		return nil, fmt.Errorf("Error removing dynamic private key file: '%s'", err)
+		return nil, fmt.Errorf("error removing dynamic private key file: '%s'", err)
 	}
 	err = removeFile(dynamicPublicKeyFileName)
 	if err != nil {
-		return nil, fmt.Errorf("Error removing dynamic private key file: '%s'", err)
+		return nil, fmt.Errorf("error removing dynamic private key file: '%s'", err)
 	}
 
 	//generate RSA key pair
@@ -128,10 +128,10 @@ func (b *backend) pathRoleCreateWrite(
 	//connect to target machine
 	session, err := createSSHPublicKeysSession(username, ip, hostKey.Key)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create SSH Session using public keys: %s", err)
+		return nil, fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}
 	if session == nil {
-		return nil, fmt.Errorf("Invalid session object")
+		return nil, fmt.Errorf("invalid session object")
 	}
 
 	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)

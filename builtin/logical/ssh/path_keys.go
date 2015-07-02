@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -10,7 +9,7 @@ import (
 
 func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/(?P<name>\\w+)",
+		Pattern: "keys/(?P<name>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -60,13 +59,11 @@ func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (
 }
 
 func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
 	keyName := d.Get("name").(string)
 	keyString := d.Get("key").(string)
 
 	if keyString == "" {
-		return nil, fmt.Errorf("Invalid 'key'")
+		return nil, fmt.Errorf("invalid 'key'")
 	}
 
 	keyPath := fmt.Sprintf("keys/%s", keyName)

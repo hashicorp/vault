@@ -41,14 +41,14 @@ func uploadFileScp(fileName, username, ip, key string) error {
 	}
 	stat, err := file.Stat()
 	if os.IsNotExist(err) {
-		return fmt.Errorf("File does not exist")
+		return fmt.Errorf("file does not exist")
 	}
 	session, err := createSSHPublicKeysSession(username, ip, key)
 	if err != nil {
 		return err
 	}
 	if session == nil {
-		return fmt.Errorf("Invalid session object")
+		return fmt.Errorf("invalid session object")
 	}
 	defer session.Close()
 	go func() {
@@ -70,11 +70,11 @@ The session will use public key authentication method with port 22.
 */
 func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session, error) {
 	if username == "" || ipAddr == "" || hostKey == "" {
-		return nil, fmt.Errorf("Invalid parameters")
+		return nil, fmt.Errorf("invalid parameters")
 	}
 	signer, err := ssh.ParsePrivateKey([]byte(hostKey))
 	if err != nil {
-		return nil, fmt.Errorf("Parsing Private Key failed: %s", err)
+		return nil, fmt.Errorf("parsing Private Key failed: %s", err)
 	}
 
 	config := &ssh.ClientConfig{
@@ -89,7 +89,7 @@ func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session,
 		return nil, err
 	}
 	if client == nil {
-		return nil, fmt.Errorf("Invalid client object: %s", err)
+		return nil, fmt.Errorf("invalid client object: %s", err)
 	}
 
 	session, err := client.NewSession()
@@ -105,7 +105,7 @@ The parameter is just the name of the file and not a path.
 */
 func removeFile(fileName string) error {
 	if fileName == "" {
-		return fmt.Errorf("Invalid file name")
+		return fmt.Errorf("invalid file name")
 	}
 	wd, err := os.Getwd()
 	if err != nil {

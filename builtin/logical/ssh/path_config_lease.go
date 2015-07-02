@@ -57,10 +57,10 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 		LeaseMax: leaseMax,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Could not create storage entry JSON: %s", err)
+		return nil, fmt.Errorf("could not create storage entry JSON: %s", err)
 	}
 	if err := req.Storage.Put(entry); err != nil {
-		return nil, fmt.Errorf("Could not store JSON: %s", err)
+		return nil, fmt.Errorf("could not store JSON: %s", err)
 	}
 
 	return nil, nil

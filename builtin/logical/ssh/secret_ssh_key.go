@@ -80,11 +80,11 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	//fetch the host key using the key name
 	hostKeyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", hostKeyName))
 	if err != nil {
-		return nil, fmt.Errorf("Key '%s' not found error:%s", hostKeyName, err)
+		return nil, fmt.Errorf("key '%s' not found error:%s", hostKeyName, err)
 	}
 	var hostKey sshHostKey
 	if err := hostKeyEntry.DecodeJSON(&hostKey); err != nil {
-		return nil, fmt.Errorf("Error reading the host key: %s", err)
+		return nil, fmt.Errorf("error reading the host key: %s", err)
 	}
 
 	//write host key to file and use it as argument to scp command
@@ -98,16 +98,16 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	//transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
 	err = uploadFileScp(dynamicPublicKeyFileName, username, ip, hostKey.Key)
 	if err != nil {
-		return nil, fmt.Errorf("Public key transfer failed: %s", err)
+		return nil, fmt.Errorf("public key transfer failed: %s", err)
 	}
 
 	//connect to target machine
 	session, err := createSSHPublicKeysSession(username, ip, hostKey.Key)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create SSH Session using public keys: %s", err)
+		return nil, fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}
 	if session == nil {
-		return nil, fmt.Errorf("Invalid session object")
+		return nil, fmt.Errorf("invalid session object")
 	}
 
 	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"

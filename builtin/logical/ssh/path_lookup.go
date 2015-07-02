@@ -29,7 +29,7 @@ func pathLookup(b *backend) *framework.Path {
 func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ipAddr := d.Get("ip").(string)
 	if ipAddr == "" {
-		return logical.ErrorResponse("Missing 'ip'"), nil
+		return logical.ErrorResponse("Invalid 'ip'"), nil
 	}
 	ip := net.ParseIP(ipAddr)
 	if ip == nil {
@@ -80,7 +80,7 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	for _, item := range strings.Split(role.CIDR, ",") {
 		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
-			return false, fmt.Errorf("Invalid cidr entry '%s'", item)
+			return false, fmt.Errorf("invalid cidr entry '%s'", item)
 		}
 		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))
 		if ipMatched {
