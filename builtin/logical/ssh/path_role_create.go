@@ -102,7 +102,7 @@ func (b *backend) pathRoleCreateWrite(
 		return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
 	}
 
-	result := b.Secret(SecretOneTimeKeyType).Response(map[string]interface{}{
+	result := b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
 		"key": dynamicPrivateKey,
 	}, map[string]interface{}{
 		"username":           username,

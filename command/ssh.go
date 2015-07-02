@@ -7,7 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
+
+	"github.com/hashicorp/vault/api"
 )
 
 // SSHCommand is a Command that establishes a SSH connection with target by generating a dynamic key
@@ -43,27 +44,12 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	if role == "" {
-		data := map[string]interface{}{
-			"ip": ip.String(),
-		}
-		secret, err := client.Logical().Write("ssh/lookup", data)
+		role, err = setDefaultRole(client, ip.String())
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error finding roles for IP:%s Error:%s", ip.String(), err))
+			c.Ui.Error(fmt.Sprintf("Error setting default role: %s", err.Error()))
 			return 1
 		}
-
-		if secret.Data["roles"] == nil {
-			c.Ui.Error(fmt.Sprintf("IP '%s' not registered under any role", ip.String()))
-			return 1
-		}
-
-		if len(secret.Data["roles"].([]interface{})) == 1 {
-			role = secret.Data["roles"].([]interface{})[0].(string)
-			c.Ui.Output(fmt.Sprintf("Using role[%s]\n", role))
-		} else {
-			c.Ui.Error(fmt.Sprintf("Multiple roles for IP '%s'. Select one of '%s' using '-role' option", ip, secret.Data["roles"]))
-			return 1
-		}
+		c.Ui.Output(fmt.Sprintf("Using role[%s]\n", role))
 	}
 
 	data := map[string]interface{}{
@@ -81,27 +67,47 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Invalid key"))
 		return 2
 	}
-	sshDynamicKeyFileName := fmt.Sprintf("vault_ssh_key_%s_%s.pem", username, ip.String())
+	sshDynamicKeyFileName := fmt.Sprintf("vault_temp_file_%s_%s", username, ip.String())
 	err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
-	sshBinary, err := exec.LookPath("ssh")
+
+	cmd := exec.Command("ssh", "-i", sshDynamicKeyFileName, args[0])
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
 	if err != nil {
-		c.Ui.Error("ssh binary not found in PATH\n")
-		return 2
+		c.Ui.Error(fmt.Sprintf("Error while running ssh command:%s", err))
 	}
 
-	sshEnv := os.Environ()
-
-	sshCmdArgs := []string{"ssh", "-i", sshDynamicKeyFileName, args[0]}
-
-	if err := syscall.Exec(sshBinary, sshCmdArgs, sshEnv); err != nil {
-		c.Ui.Error(fmt.Sprintf("Could not launch 'ssh' binary:'%s", err))
-		return 2
+	err = os.Remove(sshDynamicKeyFileName)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error deleting temporary file:%s", sshDynamicKeyFileName))
 	}
+
 	return 0
 }
 
-type OneTimeKey struct {
-	Key string
+func setDefaultRole(client *api.Client, ip string) (string, error) {
+	data := map[string]interface{}{
+		"ip": ip,
+	}
+	secret, err := client.Logical().Write("ssh/lookup", data)
+	if err != nil {
+		return "", fmt.Errorf("Error finding roles for IP '%s':%s", ip, err)
+
+	}
+	if secret == nil {
+		return "", fmt.Errorf("Error finding roles for IP '%s':%s", ip, err)
+	}
+
+	if secret.Data["roles"] == nil {
+		return "", fmt.Errorf("IP '%s' not registered under any role", ip)
+	}
+
+	if len(secret.Data["roles"].([]interface{})) == 1 {
+		return secret.Data["roles"].([]interface{})[0].(string), nil
+	} else {
+		return "", fmt.Errorf("Multiple roles for IP '%s'. Select one of '%s' using '-role' option", ip, secret.Data["roles"])
+	}
 }
 
 func (c *SSHCommand) Synopsis() string {
