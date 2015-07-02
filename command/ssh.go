@@ -10,6 +10,7 @@ import (
 	"syscall"
 )
 
+// SSHCommand is a Command that establishes a SSH connection with target by generating a dynamic key
 type SSHCommand struct {
 	Meta
 }
@@ -35,7 +36,7 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 	input := strings.Split(args[0], "@")
 	username := input[0]
-	ip, err := net.ResolveIPAddr("ip4", input[1])
+	ip, err := net.ResolveIPAddr("ip", input[1])
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %s", err))
 		return 2
@@ -109,7 +110,28 @@ func (c *SSHCommand) Synopsis() string {
 
 func (c *SSHCommand) Help() string {
 	helpText := `
-	SSHCommand Help String
-	`
+Usage: vault ssh [options] username@ip
+
+  Establishes an SSH connection with the target machine.
+
+  This command generates a dynamic key and uses it to establish an
+  SSH connection with the target machine. This operation requires
+  that SSH backend is mounted and at least one 'role' be registed
+  with vault at priori.
+
+General Options:
+
+  ` + generalOptionsUsage() + `
+
+SSH Options:
+
+  -role			Mention the role to be used to create dynamic key.
+  			Each IP is associated with a role. To see the associated
+			roles with IP, use "lookup" endpoint. If you are certain that
+			there is only one role associated with the IP, you can
+			skip mentioning the role. It will be chosen by default.
+			If there are no roless associated with the IP, register
+			the CIDR block of that IP using the "roles/" endpoint.
+`
 	return strings.TrimSpace(helpText)
 }

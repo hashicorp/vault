@@ -9,9 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -19,34 +16,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-/*
-Executes the command represented by the input.
-Multiple commands can be run by concatinating strings with ';'.
-Currently, it is supported only for linux platforms and user bash shell.
-*/
-func exec_command(cmdString string) error {
-	cmd := exec.Command("/bin/bash", "-c", cmdString)
-	if _, err := cmd.Output(); err != nil {
-		return err
-	}
-	return nil
-}
-
-/*
-Transfers the file  to the target machine by establishing an SSH session with the target.
-Uses the public key authentication method and hence the parameter 'key' takes in the private key.
-The fileName parameter takes an absolute path.
-*/
-func uploadFileScp(fileName, username, ip, key string) error {
-	nameBase := filepath.Base(fileName)
-	file, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	stat, err := file.Stat()
-	if os.IsNotExist(err) {
-		return fmt.Errorf("file does not exist")
-	}
+// Transfers the file  to the target machine by establishing an SSH session with the target.
+// Uses the public key authentication method and hence the parameter 'key' takes in the private key.
+// The fileName parameter takes an absolute path.
+func uploadPublicKeyScp(publicKey, username, ip, key string) error {
+	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
 	session, err := createSSHPublicKeysSession(username, ip, key)
 	if err != nil {
 		return err
@@ -57,21 +31,19 @@ func uploadFileScp(fileName, username, ip, key string) error {
 	defer session.Close()
 	go func() {
 		w, _ := session.StdinPipe()
-		fmt.Fprintln(w, "C0644", stat.Size(), nameBase)
-		io.Copy(w, file)
+		fmt.Fprintln(w, "C0644", len(publicKey), dynamicPublicKeyFileName)
+		io.Copy(w, strings.NewReader(publicKey))
 		fmt.Fprint(w, "\x00")
 		w.Close()
 	}()
-	if err := session.Run(fmt.Sprintf("scp -vt %s", nameBase)); err != nil {
+	if err := session.Run(fmt.Sprintf("scp -vt %s", dynamicPublicKeyFileName)); err != nil {
 		return err
 	}
 	return nil
 }
 
-/*
-Creates a SSH session object which can be used to run commands in the target machine.
-The session will use public key authentication method with port 22.
-*/
+// Creates a SSH session object which can be used to run commands in the target machine.
+// The session will use public key authentication method with port 22.
 func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session, error) {
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
@@ -109,33 +81,8 @@ func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session,
 	return session, nil
 }
 
-/*
-Deletes the file in the current directory.
-The parameter is just the name of the file and not a path.
-*/
-func removeFile(fileName string) error {
-	if fileName == "" {
-		return fmt.Errorf("missing file name")
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	absFileName := wd + "/" + fileName
-
-	if _, err := os.Stat(absFileName); err == nil {
-		err := os.Remove(absFileName)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-/*
-Creates a new RSA key pair with key length of 2048.
-The private key will be of pem format and the public key will be of OpenSSH format.
-*/
+// Creates a new RSA key pair with key length of 2048.
+// The private key will be of pem format and the public key will be of OpenSSH format.
 func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -155,7 +102,67 @@ func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
 	return
 }
 
-func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
+// Concatenates the public present in that target machine's home folder to ~/.ssh/authorized_keys file
+func installPublicKeyInTarget(username, ip, hostKey string) error {
+	session, err := createSSHPublicKeysSession(username, ip, hostKey)
+	if err != nil {
+		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
+	}
+	if session == nil {
+		return fmt.Errorf("invalid session object")
+	}
+	defer session.Close()
+
+	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
+
+	// Commands to be run on target machine
+	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
+	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
+	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
+	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", dynamicPublicKeyFileName, authKeysFileName)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+
+	targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
+
+	// Run the commands on target machine
+	if err := session.Run(targetCmd); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Removes the installed public key from the authorized_keys file in target machine
+func uninstallPublicKeyInTarget(username, ip, hostKey string) error {
+	session, err := createSSHPublicKeysSession(username, ip, hostKey)
+	if err != nil {
+		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
+	}
+	if session == nil {
+		return fmt.Errorf("invalid session object")
+	}
+	defer session.Close()
+
+	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"
+	tempKeysFileName := "/home/" + username + "/temp_authorized_keys"
+
+	// Commands to be run on target machine
+	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
+	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
+	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+
+	remoteCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, removeCmd)
+
+	// Run the commands in target machine
+	if err := session.Run(remoteCmd); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Takes an IP address and role name and checks if the IP is part of CIDR blocks belonging to the role.
+func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	if roleName == "" {
 		return false, fmt.Errorf("missing role name")
 	}
@@ -173,16 +180,24 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	if err := roleEntry.DecodeJSON(&role); err != nil {
 		return false, fmt.Errorf("error decoding role '%s'", roleName)
 	}
-	ipMatched := false
-	for _, item := range strings.Split(role.CIDR, ",") {
+
+	if matched, err := cidrContainsIP(ip, role.CIDR); err != nil {
+		return false, err
+	} else {
+		return matched, nil
+	}
+}
+
+// Returns true if the IP supplied by the user is part of the comma separated CIDR blocks
+func cidrContainsIP(ip, cidr string) (bool, error) {
+	for _, item := range strings.Split(cidr, ",") {
 		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
 			return false, fmt.Errorf("invalid cidr entry '%s'", item)
 		}
-		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))
-		if ipMatched {
-			break
+		if cidrIPNet.Contains(net.ParseIP(ip)) {
+			return true, nil
 		}
 	}
-	return ipMatched, nil
+	return false, nil
 }

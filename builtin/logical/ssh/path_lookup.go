@@ -39,18 +39,11 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 	if err != nil {
 		return nil, err
 	}
-	if len(keys) == 0 {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"roles": nil,
-			},
-		}, nil
-	}
 
 	var matchingRoles []string
-	for _, item := range keys {
-		if contains, _ := containsIP(req.Storage, item, ip.String()); contains {
-			matchingRoles = append(matchingRoles, item)
+	for _, role := range keys {
+		if contains, _ := roleContainsIP(req.Storage, role, ip.String()); contains {
+			matchingRoles = append(matchingRoles, role)
 		}
 	}
 	return &logical.Response{

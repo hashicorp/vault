@@ -53,7 +53,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	defaultUser := d.Get("default_user").(string)
 	cidr := d.Get("cidr").(string)
 
-	//input validations
+	// Input validations
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role name"), nil
 	}
@@ -102,16 +102,23 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
-	entry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
+	roleEntry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if roleEntry == nil {
 		return nil, nil
+	}
+	var role sshRole
+	if err := roleEntry.DecodeJSON(&role); err != nil {
+		return nil, err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policy": string(entry.Value),
+			"key":          role.KeyName,
+			"admin_user":   role.AdminUser,
+			"default_user": role.DefaultUser,
+			"cidr":         role.CIDR,
 		},
 	}, nil
 }
