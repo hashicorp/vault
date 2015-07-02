@@ -14,7 +14,7 @@ import (
 
 func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `issue/(?P<role>\w+)`,
+		Pattern: `issue/(?P<role>\w[\w-]+\w)`,
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type: framework.TypeString,
