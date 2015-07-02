@@ -11,7 +11,7 @@ import (
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/(?P<name>\\w+)",
+		Pattern: `roles/(?P<name>\w[\w-]+\w)`,
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
