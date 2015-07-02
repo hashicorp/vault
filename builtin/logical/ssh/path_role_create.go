@@ -41,10 +41,10 @@ func (b *backend) pathRoleCreateWrite(
 	username := d.Get("username").(string)
 	ipRaw := d.Get("ip").(string)
 	if roleName == "" {
-		return logical.ErrorResponse("Invalid 'name'"), nil
+		return logical.ErrorResponse("Missing name"), nil
 	}
 	if ipRaw == "" {
-		return logical.ErrorResponse("Invalid 'ip'"), nil
+		return logical.ErrorResponse("Missing ip"), nil
 	}
 
 	//find the role to be used for installing dynamic key

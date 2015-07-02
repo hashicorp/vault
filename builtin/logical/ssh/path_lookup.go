@@ -3,7 +3,6 @@ package ssh
 import (
 	"fmt"
 	"net"
-	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -29,7 +28,7 @@ func pathLookup(b *backend) *framework.Path {
 func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ipAddr := d.Get("ip").(string)
 	if ipAddr == "" {
-		return logical.ErrorResponse("Invalid 'ip'"), nil
+		return logical.ErrorResponse("Missing ip"), nil
 	}
 	ip := net.ParseIP(ipAddr)
 	if ip == nil {
@@ -59,35 +58,6 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 			"roles": matchingRoles,
 		},
 	}, nil
-}
-
-func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
-	if roleName == "" || ip == "" {
-		return false, fmt.Errorf("invalid parameters")
-	}
-	roleEntry, err := s.Get(fmt.Sprintf("policy/%s", roleName))
-	if err != nil {
-		return false, fmt.Errorf("error retrieving role '%s'", err)
-	}
-	if roleEntry == nil {
-		return false, fmt.Errorf("role '%s' not found", roleName)
-	}
-	var role sshRole
-	if err := roleEntry.DecodeJSON(&role); err != nil {
-		return false, fmt.Errorf("error decoding role '%s'", roleName)
-	}
-	ipMatched := false
-	for _, item := range strings.Split(role.CIDR, ",") {
-		_, cidrIPNet, err := net.ParseCIDR(item)
-		if err != nil {
-			return false, fmt.Errorf("invalid cidr entry '%s'", item)
-		}
-		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))
-		if ipMatched {
-			break
-		}
-	}
-	return ipMatched, nil
 }
 
 const pathLookupSyn = `

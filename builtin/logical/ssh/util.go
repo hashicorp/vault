@@ -8,9 +8,13 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"github.com/hashicorp/vault/logical"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -69,8 +73,14 @@ Creates a SSH session object which can be used to run commands in the target mac
 The session will use public key authentication method with port 22.
 */
 func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session, error) {
-	if username == "" || ipAddr == "" || hostKey == "" {
-		return nil, fmt.Errorf("invalid parameters")
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+	if ipAddr == "" {
+		return nil, fmt.Errorf("missing ip address")
+	}
+	if hostKey == "" {
+		return nil, fmt.Errorf("missing host key")
 	}
 	signer, err := ssh.ParsePrivateKey([]byte(hostKey))
 	if err != nil {
@@ -105,7 +115,7 @@ The parameter is just the name of the file and not a path.
 */
 func removeFile(fileName string) error {
 	if fileName == "" {
-		return fmt.Errorf("invalid file name")
+		return fmt.Errorf("missing file name")
 	}
 	wd, err := os.Getwd()
 	if err != nil {
@@ -143,4 +153,36 @@ func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
 	}
 	publicKeyRsa = "ssh-rsa " + base64.StdEncoding.EncodeToString(sshPublicKey.Marshal())
 	return
+}
+
+func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
+	if roleName == "" {
+		return false, fmt.Errorf("missing role name")
+	}
+	if ip == "" {
+		return false, fmt.Errorf("missing ip")
+	}
+	roleEntry, err := s.Get(fmt.Sprintf("policy/%s", roleName))
+	if err != nil {
+		return false, fmt.Errorf("error retrieving role '%s'", err)
+	}
+	if roleEntry == nil {
+		return false, fmt.Errorf("role '%s' not found", roleName)
+	}
+	var role sshRole
+	if err := roleEntry.DecodeJSON(&role); err != nil {
+		return false, fmt.Errorf("error decoding role '%s'", roleName)
+	}
+	ipMatched := false
+	for _, item := range strings.Split(role.CIDR, ",") {
+		_, cidrIPNet, err := net.ParseCIDR(item)
+		if err != nil {
+			return false, fmt.Errorf("invalid cidr entry '%s'", item)
+		}
+		ipMatched = cidrIPNet.Contains(net.ParseIP(ip))
+		if ipMatched {
+			break
+		}
+	}
+	return ipMatched, nil
 }

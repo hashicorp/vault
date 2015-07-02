@@ -40,12 +40,12 @@ type backend struct {
 }
 
 const backendHelp = `
-The SSH backend dynamically generates SSH private keys for remote hosts.
-The generated key has a configurable lease set and are automatically 
-revoked at the end of the lease.
+The SSH backend dynamically generates SSH private keys for 
+remote hosts.The generated key has a configurable lease set
+and are automatically revoked at the end of the lease.
 
-After mounting this backend, configure the lease using the 'config/lease'
-endpoint. The shared SSH key belonging to any infrastructure should be 
-registered with the 'roles/' endpoint before dynamic keys for remote hosts 
-can be generated.
+After mounting this backend, configure the lease using the
+'config/lease' endpoint. The shared SSH key belonging to any
+infrastructure should be registered with the 'roles/' endpoint
+before dynamic keys for remote hosts can be generated.
 `

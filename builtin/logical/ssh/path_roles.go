@@ -55,16 +55,16 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 	//input validations
 	if roleName == "" {
-		return logical.ErrorResponse("Invalid 'roleName'"), nil
+		return logical.ErrorResponse("Missing role name"), nil
 	}
 	if keyName == "" {
-		return logical.ErrorResponse("Invalid 'key'"), nil
+		return logical.ErrorResponse("Missing key name"), nil
 	}
 	if adminUser == "" {
-		return logical.ErrorResponse("Invalid 'admin_user'"), nil
+		return logical.ErrorResponse("Missing admin username"), nil
 	}
 	if cidr == "" {
-		return logical.ErrorResponse("Invalid 'cidr'"), nil
+		return logical.ErrorResponse("Missing cidr blocks"), nil
 	}
 	for _, item := range strings.Split(cidr, ",") {
 		_, _, err := net.ParseCIDR(item)
@@ -137,9 +137,16 @@ Manage the 'roles' that can be created with this backend.
 `
 
 const pathRoleHelpDesc = `
-This path allows you to manage the roles that are used to create dynamic keys.
-These roles will be having privileged access to all the hosts mentioned by CIDR blocks.
-For example, if the backend is mounted at "ssh" and the role is created at "ssh/roles/web", then a user could request for a new key at "ssh/creds/web" for the supplied username and IP address.
+This path allows you to manage the roles that are used to create
+dynamic keys. These roles will be having privileged access to all
+the hosts mentioned by CIDR blocks. For example, if the backend
+is mounted at "ssh" and the role is created at "ssh/roles/web",
+then a user could request for a new key at "ssh/creds/web" for the
+supplied username and IP address.
 
-The 'cidr' field takes comma seperated CIDR blocks. The 'admin_user' should have root access in all the hosts represented by the 'cidr' field. When the user requests key for an IP, the key will be installed for the user mentioned by 'default_user' field. The 'key' field takes a named key which can be configured by 'ssh/keys/' endpoint.
+The 'cidr' field takes comma seperated CIDR blocks. The 'admin_user'
+should have root access in all the hosts represented by the 'cidr'
+field. When the user requests key for an IP, the key will be installed
+for the user mentioned by 'default_user' field. The 'key' field takes
+a named key which can be configured by 'ssh/keys/' endpoint.
 `

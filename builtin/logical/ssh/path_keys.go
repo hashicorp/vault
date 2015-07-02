@@ -63,7 +63,7 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 	keyString := d.Get("key").(string)
 
 	if keyString == "" {
-		return nil, fmt.Errorf("invalid 'key'")
+		return logical.ErrorResponse("Missing key"), nil
 	}
 
 	keyPath := fmt.Sprintf("keys/%s", keyName)

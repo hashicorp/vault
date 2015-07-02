@@ -35,10 +35,10 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 	leaseRaw := d.Get("lease").(string)
 	leaseMaxRaw := d.Get("lease_max").(string)
 	if leaseRaw == "" {
-		return logical.ErrorResponse("Invalid 'lease'"), nil
+		return logical.ErrorResponse("Missing lease"), nil
 	}
 	if leaseMaxRaw == "" {
-		return logical.ErrorResponse("Invalid 'lease_max'"), nil
+		return logical.ErrorResponse("Missing lease_max"), nil
 	}
 
 	lease, err := time.ParseDuration(leaseRaw)
