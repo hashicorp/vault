@@ -43,7 +43,7 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 	if len(keys) == 0 {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"roles": "",
+				"roles": nil,
 			},
 		}, nil
 	}
@@ -65,7 +65,7 @@ func containsIP(s logical.Storage, roleName string, ip string) (bool, error) {
 	if roleName == "" || ip == "" {
 		return false, fmt.Errorf("invalid parameters")
 	}
-	roleEntry, err := s.Get("policy/" + roleName)
+	roleEntry, err := s.Get(fmt.Sprintf("policy/%s", roleName))
 	if err != nil {
 		return false, fmt.Errorf("error retrieving role '%s'", err)
 	}
@@ -95,6 +95,12 @@ Lists 'roles' that can be used to create a dynamic key.
 `
 
 const pathLookupDesc = `
-CIDR blocks will be associated with multiple 'roles'.
-This endpoint lists all the 'roles' that are associated with the supplied IP address.
+The IP address to which the key is requested will be searched in
+the CIDR blocks registered with vault using the 'roles' endpoint.
+Key can be generated only by specifying the 'role' name. The roles
+that can be used to generate the key for a particular IP will be
+listed through this endpoint. For example, if this backend is mounted
+at "ssh" then "ssh/lookup" lists the roles associated with 
+Keys can be generated for a target IP if the CIDR block encompassing
+the IP is registered with vault.
 `

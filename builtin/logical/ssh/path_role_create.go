@@ -48,8 +48,7 @@ func (b *backend) pathRoleCreateWrite(
 	}
 
 	//find the role to be used for installing dynamic key
-	rolePath := "policy/" + roleName
-	roleEntry, err := req.Storage.Get(rolePath)
+	roleEntry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
@@ -88,8 +87,7 @@ func (b *backend) pathRoleCreateWrite(
 	}
 
 	//fetch the host key to be used for installation
-	keyPath := "keys/" + role.KeyName
-	keyEntry, err := req.Storage.Get(keyPath)
+	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
 		return nil, fmt.Errorf("Key '%s' not found error:%s", role.KeyName, err)
 	}
@@ -99,11 +97,11 @@ func (b *backend) pathRoleCreateWrite(
 	}
 
 	//store the host key to file. Use it as parameter for scp command
-	hostKeyFileName := "./vault_ssh_" + username + "_" + ip + "_shared.pem"
+	hostKeyFileName := fmt.Sprintf("./vault_ssh_%s_%s_shared.pem", username, ip)
 	err = ioutil.WriteFile(hostKeyFileName, []byte(hostKey.Key), 0600)
 
-	dynamicPrivateKeyFileName := "vault_ssh_" + username + "_" + ip + "_otk.pem"
-	dynamicPublicKeyFileName := dynamicPrivateKeyFileName + ".pub"
+	dynamicPrivateKeyFileName := fmt.Sprintf("vault_ssh_%s_%s_otk.pem", username, ip)
+	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s_otk.pem.pub", username, ip)
 
 	//delete the temporary files if they are already present
 	err = removeFile(dynamicPrivateKeyFileName)
@@ -136,23 +134,19 @@ func (b *backend) pathRoleCreateWrite(
 		return nil, fmt.Errorf("Invalid session object")
 	}
 
-	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"
-	tempKeysFileName := "/home/" + username + "/temp_authorized_keys"
+	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
 
 	//commands to be run on target machine
-	grepCmd := "grep -vFf " + dynamicPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
-	catCmdRemoveDuplicate := "cat " + tempKeysFileName + " > " + authKeysFileName + ";"
-	catCmdAppendNew := "cat " + dynamicPublicKeyFileName + " >> " + authKeysFileName + ";"
-	removeCmd := "rm -f " + tempKeysFileName + " " + dynamicPublicKeyFileName + ";"
-	remoteCmdString := strings.Join([]string{
-		grepCmd,
-		catCmdRemoveDuplicate,
-		catCmdAppendNew,
-		removeCmd,
-	}, "")
+	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
+	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
+	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", dynamicPublicKeyFileName, authKeysFileName)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+
+	targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
 
 	//run the commands on target machine
-	if err := session.Run(remoteCmdString); err != nil {
+	if err := session.Run(targetCmd); err != nil {
 		return nil, err
 	}
 	session.Close()

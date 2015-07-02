@@ -3,7 +3,6 @@ package ssh
 import (
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -79,8 +78,7 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	}
 
 	//fetch the host key using the key name
-	hostKeyPath := "keys/" + hostKeyName
-	hostKeyEntry, err := req.Storage.Get(hostKeyPath)
+	hostKeyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", hostKeyName))
 	if err != nil {
 		return nil, fmt.Errorf("Key '%s' not found error:%s", hostKeyName, err)
 	}
@@ -90,12 +88,11 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	}
 
 	//write host key to file and use it as argument to scp command
-	hostKeyFileName := "./vault_ssh_" + username + "_" + ip + "_shared.pem"
+	hostKeyFileName := fmt.Sprintf("./vault_ssh_%s_%s_shared.pem", username, ip)
 	err = ioutil.WriteFile(hostKeyFileName, []byte(hostKey.Key), 0400)
 
 	//write dynamicPublicKey to file and use it as argument to scp command
-	dynamicPrivateKeyFileName := "vault_ssh_" + username + "_" + ip + "_otk.pem"
-	dynamicPublicKeyFileName := dynamicPrivateKeyFileName + ".pub"
+	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s_otk.pem.pub", username, ip)
 	err = ioutil.WriteFile(dynamicPublicKeyFileName, []byte(dynamicPublicKey), 0400)
 
 	//transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
@@ -103,19 +100,6 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if err != nil {
 		return nil, fmt.Errorf("Public key transfer failed: %s", err)
 	}
-
-	authKeysFileName := "~/.ssh/authorized_keys"
-	tempKeysFileName := "~/temp_authorized_keys"
-
-	//commands to be run on target machine
-	grepCmd := "grep -vFf " + dynamicPublicKeyFileName + " " + authKeysFileName + " > " + tempKeysFileName + ";"
-	catCmdRemoveDuplicate := "cat " + tempKeysFileName + " > " + authKeysFileName + ";"
-	rmCmd := "rm -f " + tempKeysFileName + " " + dynamicPublicKeyFileName + ";"
-	remoteCmdString := strings.Join([]string{
-		grepCmd,
-		catCmdRemoveDuplicate,
-		rmCmd,
-	}, "")
 
 	//connect to target machine
 	session, err := createSSHPublicKeysSession(username, ip, hostKey.Key)
@@ -126,8 +110,18 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 		return nil, fmt.Errorf("Invalid session object")
 	}
 
+	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"
+	tempKeysFileName := "/home/" + username + "/temp_authorized_keys"
+
+	//commands to be run on target machine
+	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
+	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+
+	remoteCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, removeCmd)
+
 	//run the commands in target machine
-	if err := session.Run(remoteCmdString); err != nil {
+	if err := session.Run(remoteCmd); err != nil {
 		return nil, err
 	}
 

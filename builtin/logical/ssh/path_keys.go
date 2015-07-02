@@ -33,7 +33,7 @@ func pathKeys(b *backend) *framework.Path {
 
 func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("name").(string)
-	keyPath := "keys/" + keyName
+	keyPath := fmt.Sprintf("keys/%s", keyName)
 	entry, err := req.Storage.Get(keyPath)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*l
 
 func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("name").(string)
-	keyPath := "keys/" + keyName
+	keyPath := fmt.Sprintf("keys/%s", keyName)
 	err := req.Storage.Delete(keyPath)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 		return nil, fmt.Errorf("Invalid 'key'")
 	}
 
-	keyPath := "keys/" + keyName
+	keyPath := fmt.Sprintf("keys/%s", keyName)
 
 	entry, err := logical.StorageEntryJSON(keyPath, &sshHostKey{
 		Key: keyString,
@@ -88,10 +88,16 @@ type sshHostKey struct {
 }
 
 const pathKeysSyn = `
-Register a shared key which can be used to install dynamic key in remote machine.
+Register a shared key which can be used to install dynamic key
+in remote machine.
 `
 
 const pathKeysDesc = `
-The shared key registered will be used to install and uninstall dynamic keys in remote machine.
-This key should have "root" privileges which enables installing keys for unprivileged usernames.
+The shared key registered will be used to install and uninstall
+dynamic keys in remote machine. This key should have "root" 
+privileges which enables installing keys for unprivileged usernames.
+If this backend is mounted as "ssh", then the endpoint for registering
+shared key is "ssh/keys/rack1", if "rack1" is the user coined 
+name for the key. The name given here can be associated with any
+number of roles via the endpoint "ssh/roles/".
 `

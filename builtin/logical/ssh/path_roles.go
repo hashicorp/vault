@@ -73,8 +73,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 	}
 
-	keyPath := "keys/" + keyName
-	keyEntry, err := req.Storage.Get(keyPath)
+	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", keyName))
 	if err != nil || keyEntry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Invalid 'key': '%s'", keyName)), nil
 	}
@@ -83,8 +82,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		defaultUser = adminUser
 	}
 
-	rolePath := "policy/" + roleName
-	entry, err := logical.StorageEntryJSON(rolePath, sshRole{
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("policy/%s", roleName), sshRole{
 		KeyName:     keyName,
 		AdminUser:   adminUser,
 		DefaultUser: defaultUser,
@@ -104,8 +102,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
-	rolePath := "policy/" + roleName
-	entry, err := req.Storage.Get(rolePath)
+	entry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +118,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 
 func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
-	rolePath := "policy/" + roleName
-	err := req.Storage.Delete(rolePath)
+	err := req.Storage.Delete(fmt.Sprintf("policy/%s", roleName))
 	if err != nil {
 		return nil, err
 	}

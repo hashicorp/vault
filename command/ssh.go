@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -81,7 +80,7 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Invalid key"))
 		return 2
 	}
-	sshDynamicKeyFileName := "vault_ssh_key_" + username + "_" + ip.String() + ".pem"
+	sshDynamicKeyFileName := fmt.Sprintf("vault_ssh_key_%s_%s.pem", username, ip.String())
 	err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
 	sshBinary, err := exec.LookPath("ssh")
 	if err != nil {
@@ -94,7 +93,8 @@ func (c *SSHCommand) Run(args []string) int {
 	sshCmdArgs := []string{"ssh", "-i", sshDynamicKeyFileName, args[0]}
 
 	if err := syscall.Exec(sshBinary, sshCmdArgs, sshEnv); err != nil {
-		log.Printf("Execution failed: sshCommand: " + err.Error())
+		c.Ui.Error(fmt.Sprintf("Could not launch 'ssh' binary:'%s", err))
+		return 2
 	}
 	return 0
 }
