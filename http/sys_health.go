@@ -19,6 +19,9 @@ func handleSysHealth(core *vault.Core) http.Handler {
 }
 
 func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	// Check if being a standby is allowed for the purpose of a 200 OK
+	_, standbyOK := r.URL.Query()["standbyok"]
+
 	// Check system status
 	sealed, _ := core.Sealed()
 	standby, _ := core.Standby()
@@ -35,7 +38,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 		code = http.StatusInternalServerError
 	case sealed:
 		code = http.StatusInternalServerError
-	case standby:
+	case !standbyOK && standby:
 		code = 429 // Consul warning code
 	}
 
