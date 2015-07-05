@@ -20,7 +20,7 @@ type PRF func([]byte, []byte) ([]byte, error)
 // CounterMode implements the counter mode KDF that uses a psuedo-random-function (PRF)
 // along with a counter to generate derived keys. The KDF takes a base key
 // a derivation context, and the requried number of output bits.
-func CounterMode(prf PRF, prfLen uint32, base []byte, context []byte, bits uint32) ([]byte, error) {
+func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32) ([]byte, error) {
 	// Ensure the PRF is byte aligned
 	if prfLen%8 != 0 {
 		return nil, fmt.Errorf("PRF must be byte aligned")
@@ -50,7 +50,7 @@ func CounterMode(prf PRF, prfLen uint32, base []byte, context []byte, bits uint3
 		binary.BigEndian.PutUint32(input[:4], i)
 
 		// Compute a more key material
-		part, err := prf(base, input)
+		part, err := prf(key, input)
 		if err != nil {
 			return nil, err
 		}
