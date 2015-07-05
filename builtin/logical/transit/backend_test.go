@@ -19,14 +19,14 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: Backend(),
 		Steps: []logicaltest.TestStep{
-			testAccStepWritePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", false),
-			testAccStepReadRaw(t, "test", false),
+			testAccStepWritePolicy(t, "test", false),
+			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadRaw(t, "test", false, false),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true),
-			testAccStepReadRaw(t, "test", true),
+			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepReadRaw(t, "test", true, false),
 		},
 	})
 }
@@ -36,20 +36,40 @@ func TestBackend_upsert(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: Backend(),
 		Steps: []logicaltest.TestStep{
-			testAccStepReadPolicy(t, "test", true),
+			testAccStepReadPolicy(t, "test", true, false),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
-			testAccStepReadPolicy(t, "test", false),
+			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true),
+			testAccStepReadPolicy(t, "test", true, false),
 		},
 	})
 }
 
-func testAccStepWritePolicy(t *testing.T, name string) logicaltest.TestStep {
+func TestBackend_basic_derived(t *testing.T) {
+	decryptData := make(map[string]interface{})
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepWritePolicy(t, "test", true),
+			testAccStepReadPolicy(t, "test", false, true),
+			testAccStepReadRaw(t, "test", false, true),
+			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
+			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadPolicy(t, "test", true, true),
+			testAccStepReadRaw(t, "test", true, true),
+		},
+	})
+}
+
+func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "keys/" + name,
+		Data: map[string]interface{}{
+			"derived": derived,
+		},
 	}
 }
 
@@ -60,7 +80,7 @@ func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadPolicy(t *testing.T, name string, expectNone bool) logicaltest.TestStep {
+func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -77,6 +97,8 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone bool) logicalte
 				Name       string `mapstructure:"name"`
 				Key        []byte `mapstructure:"key"`
 				CipherMode string `mapstructure:"cipher_mode"`
+				Derived    bool   `mapstructure:"derived"`
+				KDFMode    string `mapstructure:"kdf_mode"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -92,12 +114,18 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone bool) logicalte
 			if d.Key != nil {
 				return fmt.Errorf("bad: %#v", d)
 			}
+			if d.Derived != derived {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if derived && d.KDFMode != "hmac-sha256-counter" {
+				return fmt.Errorf("bad: %#v", d)
+			}
 			return nil
 		},
 	}
 }
 
-func testAccStepReadRaw(t *testing.T, name string, expectNone bool) logicaltest.TestStep {
+func testAccStepReadRaw(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "raw/" + name,
@@ -114,6 +142,8 @@ func testAccStepReadRaw(t *testing.T, name string, expectNone bool) logicaltest.
 				Name       string `mapstructure:"name"`
 				Key        []byte `mapstructure:"key"`
 				CipherMode string `mapstructure:"cipher_mode"`
+				Derived    bool   `mapstructure:"derived"`
+				KDFMode    string `mapstructure:"kdf_mode"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -126,6 +156,12 @@ func testAccStepReadRaw(t *testing.T, name string, expectNone bool) logicaltest.
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if len(d.Key) != 32 {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.Derived != derived {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if derived && d.KDFMode != "hmac-sha256-counter" {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			return nil
@@ -152,6 +188,32 @@ func testAccStepEncrypt(
 				return fmt.Errorf("missing ciphertext")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
+			return nil
+		},
+	}
+}
+
+func testAccStepEncryptContext(
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "encrypt/" + name,
+		Data: map[string]interface{}{
+			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
+			"context":   context,
+		},
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Ciphertext string `mapstructure:"ciphertext"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if d.Ciphertext == "" {
+				return fmt.Errorf("missing ciphertext")
+			}
+			decryptData["ciphertext"] = d.Ciphertext
+			decryptData["context"] = context
 			return nil
 		},
 	}
