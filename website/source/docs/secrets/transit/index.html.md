@@ -21,6 +21,11 @@ application developers and pushes the burden onto the operators of Vault.
 Operators of Vault generally include the security team at an organization,
 which means they can ensure that data is encrypted/decrypted properly.
 
+The transit backend also supports doing key derivation. This allows data to be
+encrypted within a context such that the same context must be used for
+decryption. This can be used to enable per transaction unique keys which
+further increase the security of data at rest.
+
 Additionally, since encrypt/decrypt operations must enter the audit log,
 any decryption event is recorded.
 
@@ -42,7 +47,7 @@ many different applications can use the transit backend with independent keys.
 This is done by doing a write against the backend:
 
 ```
-$ vault write transit/keys/foo test=1
+$ vault write -f transit/keys/foo
 Success! Data written to: transit/keys/foo
 ```
 
@@ -54,6 +59,8 @@ $ vault read transit/keys/foo
 Key        	Value
 name       	foo
 cipher_mode	aes-gcm
+derived     false
+kdf_mode
 ````
 
 We can read from the `raw/` endpoint to see the encryption key itself:
@@ -64,6 +71,8 @@ Key        	Value
 name       	foo
 cipher_mode	aes-gcm
 key        	PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8=
+derived     false
+kdf_mode
 ````
 
 Here we can see that the randomly generated encryption key being used, as
@@ -118,7 +127,16 @@ only encrypt or decrypt using the named keys they need access to.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <ul>
+      <li>
+        <span class="param">derived</span>
+        <span class="param-flags">optional</span>
+        Boolean flag indicating if key derivation MUST be used.
+        If enabled, all encrypt/decrypt requests to this named key
+        must provide a context which is used for key derivation.
+        Defaults to false.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -155,6 +173,8 @@ only encrypt or decrypt using the named keys they need access to.
       "data": {
           "name":        "foo",
           "cipher_mode": "aes-gcm",
+          "derived":     "true",
+          "kdf_mode":    "hmac-sha256-counter",
       }
     }
     ```
@@ -213,6 +233,12 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param-flags">required</span>
         The plaintext to encrypt, provided as base64 encoded.
       </li>
+      <li>
+        <span class="param">context</span>
+        <span class="param-flags">optional</span>
+        The key derivation context, provided as base64 encoded.
+        Must be provided if the derivation enabled.
+      </li>
     </ul>
   </dd>
 
@@ -252,6 +278,12 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param">ciphertext</span>
         <span class="param-flags">required</span>
         The ciphertext to decrypt, provided as returned by encrypt.
+      </li>
+      <li>
+        <span class="param">context</span>
+        <span class="param-flags">optional</span>
+        The key derivation context, provided as base64 encoded.
+        Must be provided if the derivation enabled.
       </li>
     </ul>
   </dd>
@@ -300,6 +332,8 @@ only encrypt or decrypt using the named keys they need access to.
           "name":        "foo",
           "cipher_mode": "aes-gcm",
           "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
+          "derived":     "true",
+          "kdf_mode":    "hmac-sha256-counter",
       }
     }
     ```
