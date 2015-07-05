@@ -5,23 +5,34 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// operationPolicyLevel is used to map each logical operation
-// into the minimum required permissions to allow the operation.
-var operationPolicyLevel = map[logical.Operation]int{
-	logical.ReadOperation:   pathPolicyLevel[PathPolicyRead],
-	logical.WriteOperation:  pathPolicyLevel[PathPolicyWrite],
-	logical.DeleteOperation: pathPolicyLevel[PathPolicyWrite],
-	logical.ListOperation:   pathPolicyLevel[PathPolicyRead],
-	logical.RevokeOperation: pathPolicyLevel[PathPolicyWrite],
-	logical.RenewOperation:  pathPolicyLevel[PathPolicyRead],
-	logical.HelpOperation:   pathPolicyLevel[PathPolicyDeny],
-}
+var (
+	// Policy lists are used to restrict what is eligible for an operation
+	anyPolicy     = []string{PathPolicyDeny}
+	readWriteSudo = []string{PathPolicyRead, PathPolicyWrite, PathPolicySudo}
+	writeSudo     = []string{PathPolicyWrite, PathPolicySudo}
+
+	// permittedPolicyLevel is used to map each logical operation
+	// into the set of policies that allow the operation.
+	permittedPolicyLevels = map[logical.Operation][]string{
+		logical.ReadOperation:     readWriteSudo,
+		logical.WriteOperation:    writeSudo,
+		logical.DeleteOperation:   writeSudo,
+		logical.ListOperation:     readWriteSudo,
+		logical.HelpOperation:     anyPolicy,
+		logical.RevokeOperation:   writeSudo,
+		logical.RenewOperation:    writeSudo,
+		logical.RollbackOperation: writeSudo,
+	}
+)
 
 // ACL is used to wrap a set of policies to provide
 // an efficient interface for access control.
 type ACL struct {
-	// pathRules contains the path policies
-	pathRules *radix.Tree
+	// exactRules contains the path policies that are exact
+	exactRules *radix.Tree
+
+	// globRules contains the path policies that glob
+	globRules *radix.Tree
 
 	// root is enabled if the "root" named policy is present.
 	root bool
@@ -31,8 +42,9 @@ type ACL struct {
 func NewACL(policies []*Policy) (*ACL, error) {
 	// Initialize
 	a := &ACL{
-		pathRules: radix.New(),
-		root:      false,
+		exactRules: radix.New(),
+		globRules:  radix.New(),
+		root:       false,
 	}
 
 	// Inject each policy
@@ -46,21 +58,23 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			a.root = true
 		}
 		for _, pp := range policy.Paths {
-			// Convert to a policy level
-			policyLevel := pathPolicyLevel[pp.Policy]
+			// Check which tree to use
+			tree := a.exactRules
+			if pp.Glob {
+				tree = a.globRules
+			}
 
 			// Check for an existing policy
-			raw, ok := a.pathRules.Get(pp.Prefix)
+			raw, ok := tree.Get(pp.Prefix)
 			if !ok {
-				a.pathRules.Insert(pp.Prefix, policyLevel)
+				tree.Insert(pp.Prefix, pp)
 				continue
 			}
-			existing := raw.(int)
+			existing := raw.(*PathPolicy)
 
-			// Check if this policy is a higher access level,
-			// we want to store the highest permission permitted.
-			if policyLevel > existing {
-				a.pathRules.Insert(pp.Prefix, policyLevel)
+			// Check if this policy is takes precedence
+			if pp.TakesPrecedence(existing) {
+				tree.Insert(pp.Prefix, pp)
 			}
 		}
 	}
@@ -74,18 +88,36 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) bool {
 		return true
 	}
 
-	// Find a matching rule, default deny if no match
-	policyLevel := 0
-	_, rule, ok := a.pathRules.LongestPrefix(path)
-	if ok {
-		policyLevel = rule.(int)
+	// Check if any policy level allows this operation
+	permitted := permittedPolicyLevels[op]
+	if permitted[0] == PathPolicyDeny {
+		return true
 	}
 
-	// Convert the operation to a minimum required level
-	requiredLevel := operationPolicyLevel[op]
+	// Find an exact matching rule, look for glob if no match
+	var policy *PathPolicy
+	raw, ok := a.exactRules.Get(path)
+	if ok {
+		policy = raw.(*PathPolicy)
+		goto CHECK
+	}
 
+	// Find a glob rule, default deny if no match
+	_, raw, ok = a.globRules.LongestPrefix(path)
+	if !ok {
+		return false
+	} else {
+		policy = raw.(*PathPolicy)
+	}
+
+CHECK:
 	// Check if the minimum permissions are met
-	return policyLevel >= requiredLevel
+	for _, allowed := range permitted {
+		if allowed == policy.Policy {
+			return true
+		}
+	}
+	return false
 }
 
 // RootPrivilege checks if the user has root level permission
@@ -97,13 +129,23 @@ func (a *ACL) RootPrivilege(path string) bool {
 		return true
 	}
 
-	// Check the rules for a match
-	_, rule, ok := a.pathRules.LongestPrefix(path)
-	if !ok {
-		return false
+	// Find an exact matching rule, look for glob if no match
+	var policy *PathPolicy
+	raw, ok := a.exactRules.Get(path)
+	if ok {
+		policy = raw.(*PathPolicy)
+		goto CHECK
 	}
 
+	// Check the rules for a match, default deny if no match
+	_, raw, ok = a.globRules.LongestPrefix(path)
+	if !ok {
+		return false
+	} else {
+		policy = raw.(*PathPolicy)
+	}
+
+CHECK:
 	// Check the policy level
-	policyLevel := rule.(int)
-	return policyLevel == pathPolicyLevel[PathPolicySudo]
+	return policy.Policy == PathPolicySudo
 }
