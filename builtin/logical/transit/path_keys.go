@@ -3,7 +3,9 @@ package transit
 import (
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 
+	"github.com/hashicorp/vault/helper/kdf"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -22,6 +24,31 @@ type Policy struct {
 
 func (p *Policy) Serialize() ([]byte, error) {
 	return json.Marshal(p)
+}
+
+// DeriveKey is used to derive the encryption key that should
+// be used depending on the policy. If derivation is disabled the
+// raw key is used and no context is required, otherwise the KDF
+// mode is used with the context to derive the proper key.
+func (p *Policy) DeriveKey(context []byte) ([]byte, error) {
+	// Fast-path non-derived keys
+	if !p.Derived {
+		return p.Key, nil
+	}
+
+	// Ensure a context is provided
+	if len(context) == 0 {
+		return nil, fmt.Errorf("missing context for key derivation")
+	}
+
+	switch p.KDFMode {
+	case "hmac-sha256-counter":
+		prf := kdf.HMACSHA256PRF
+		prfLen := kdf.HMACSHA256PRFLen
+		return kdf.CounterMode(prf, prfLen, p.Key, context, 256)
+	default:
+		return nil, fmt.Errorf("unsupported key derivation mode")
+	}
 }
 
 func DeserializePolicy(buf []byte) (*Policy, error) {

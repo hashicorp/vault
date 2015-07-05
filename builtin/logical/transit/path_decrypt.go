@@ -59,9 +59,10 @@ func pathDecryptWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	// Ensure a context for derived keys
-	if p.Derived && len(context) == 0 {
-		return logical.ErrorResponse("missing context for key derivation"), logical.ErrInvalidRequest
+	// Derive the key that should be used
+	key, err := p.DeriveKey([]byte(context))
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Guard against a potentially invalid cipher-mode
@@ -83,7 +84,7 @@ func pathDecryptWrite(
 	}
 
 	// Setup the cipher
-	aesCipher, err := aes.NewCipher(p.Key)
+	aesCipher, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
