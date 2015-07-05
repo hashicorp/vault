@@ -112,6 +112,9 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 		{logical.ReadOperation, "prod/foo", true},
 		{logical.ListOperation, "prod/foo", true},
 		{logical.ReadOperation, "prod/aws/foo", false},
+
+		{logical.ReadOperation, "sys/status", false},
+		{logical.WriteOperation, "sys/seal", true},
 	}
 
 	for _, tc := range tcases {
@@ -142,6 +145,9 @@ path "prod/*" {
 path "prod/aws/*" {
 	policy = "deny"
 }
+path "sys/*" {
+	policy = "deny"
+}
 `
 
 var aclPolicy2 = `
@@ -153,6 +159,9 @@ path "stage/aws/policy/*" {
 	policy = "deny"
 }
 path "prod/*" {
+	policy = "write"
+}
+path "sys/seal" {
 	policy = "write"
 }
 `
