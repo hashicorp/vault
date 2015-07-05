@@ -41,6 +41,8 @@ func pathRawRead(
 			"name":        p.Name,
 			"key":         p.Key,
 			"cipher_mode": p.CipherMode,
+			"derived":     p.Derived,
+			"kdf_mode":    p.KDFMode,
 		},
 	}
 	return resp, nil

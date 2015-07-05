@@ -13,6 +13,11 @@ type Policy struct {
 	Name       string `json:"name"`
 	Key        []byte `json:"key"`
 	CipherMode string `json:"cipher"`
+
+	// Derived keys MUST provide a context and the
+	// master underlying key is never used.
+	Derived bool   `json:"derived"`
+	KDFMode string `json:"kdf_mode"`
 }
 
 func (p *Policy) Serialize() ([]byte, error) {
@@ -47,11 +52,15 @@ func getPolicy(req *logical.Request, name string) (*Policy, error) {
 
 // generatePolicy is used to create a new named policy with
 // a randomly generated key
-func generatePolicy(storage logical.Storage, name string) (*Policy, error) {
+func generatePolicy(storage logical.Storage, name string, derived bool) (*Policy, error) {
 	// Create the policy object
 	p := &Policy{
 		Name:       name,
 		CipherMode: "aes-gcm",
+		Derived:    derived,
+	}
+	if derived {
+		p.KDFMode = "hmac-sha256-counter"
 	}
 
 	// Generate a 256bit key
@@ -88,6 +97,11 @@ func pathKeys() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
+
+			"derived": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Enables key derivation mode. This allows for per-transaction unique keys",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -104,6 +118,7 @@ func pathKeys() *framework.Path {
 func pathPolicyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	derived := d.Get("derived").(bool)
 
 	// Check if the policy already exists
 	existing, err := getPolicy(req, name)
@@ -115,7 +130,7 @@ func pathPolicyWrite(
 	}
 
 	// Generate the policy
-	_, err = generatePolicy(req.Storage, name)
+	_, err = generatePolicy(req.Storage, name, derived)
 	return nil, err
 }
 
@@ -135,6 +150,8 @@ func pathPolicyRead(
 		Data: map[string]interface{}{
 			"name":        p.Name,
 			"cipher_mode": p.CipherMode,
+			"derived":     p.Derived,
+			"kdf_mode":    p.KDFMode,
 		},
 	}
 	return resp, nil
