@@ -23,6 +23,11 @@ func pathDecrypt() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Ciphertext value to decrypt",
 			},
+
+			"context": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Context for key derivation. Required for derived keys.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -41,6 +46,7 @@ func pathDecryptWrite(
 	if len(value) == 0 {
 		return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 	}
+	context := d.Get("context").(string)
 
 	// Get the policy
 	p, err := getPolicy(req, name)
@@ -51,6 +57,11 @@ func pathDecryptWrite(
 	// Error if invalid policy
 	if p == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
+	// Ensure a context for derived keys
+	if p.Derived && len(context) == 0 {
+		return logical.ErrorResponse("missing context for key derivation"), logical.ErrInvalidRequest
 	}
 
 	// Guard against a potentially invalid cipher-mode

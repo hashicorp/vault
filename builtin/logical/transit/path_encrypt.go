@@ -24,6 +24,11 @@ func pathEncrypt() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Plaintext value to encrypt",
 			},
+
+			"context": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Context for key derivation. Required for derived keys.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -42,6 +47,7 @@ func pathEncryptWrite(
 	if len(value) == 0 {
 		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
 	}
+	context := d.Get("context").(string)
 
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
@@ -55,9 +61,14 @@ func pathEncryptWrite(
 		return nil, err
 	}
 
+	// Ensure a context for derived keys
+	if p.Derived && len(context) == 0 {
+		return logical.ErrorResponse("missing context for key derivation"), logical.ErrInvalidRequest
+	}
+
 	// Error if invalid policy
 	if p == nil {
-		p, err = generatePolicy(req.Storage, name)
+		p, err = generatePolicy(req.Storage, name, len(context) != 0)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to upsert policy: %v", err)), logical.ErrInvalidRequest
 		}
