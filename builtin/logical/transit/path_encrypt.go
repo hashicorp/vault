@@ -47,12 +47,22 @@ func pathEncryptWrite(
 	if len(value) == 0 {
 		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
 	}
-	context := d.Get("context").(string)
 
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
 		return logical.ErrorResponse("failed to decode plaintext as base64"), logical.ErrInvalidRequest
+	}
+
+	// Decode the context if any
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		var err error
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to decode context as base64"), logical.ErrInvalidRequest
+		}
 	}
 
 	// Get the policy
@@ -70,7 +80,7 @@ func pathEncryptWrite(
 	}
 
 	// Derive the key that should be used
-	key, err := p.DeriveKey([]byte(context))
+	key, err := p.DeriveKey(context)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

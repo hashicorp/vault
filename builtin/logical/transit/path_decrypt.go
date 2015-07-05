@@ -46,7 +46,17 @@ func pathDecryptWrite(
 	if len(value) == 0 {
 		return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 	}
-	context := d.Get("context").(string)
+
+	// Decode the context if any
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		var err error
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to decode context as base64"), logical.ErrInvalidRequest
+		}
+	}
 
 	// Get the policy
 	p, err := getPolicy(req, name)
@@ -60,7 +70,7 @@ func pathDecryptWrite(
 	}
 
 	// Derive the key that should be used
-	key, err := p.DeriveKey([]byte(context))
+	key, err := p.DeriveKey(context)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

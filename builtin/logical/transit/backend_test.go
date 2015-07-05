@@ -200,7 +200,7 @@ func testAccStepEncryptContext(
 		Path:      "encrypt/" + name,
 		Data: map[string]interface{}{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
-			"context":   context,
+			"context":   base64.StdEncoding.EncodeToString([]byte(context)),
 		},
 		Check: func(resp *logical.Response) error {
 			var d struct {
@@ -213,7 +213,7 @@ func testAccStepEncryptContext(
 				return fmt.Errorf("missing ciphertext")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
-			decryptData["context"] = context
+			decryptData["context"] = base64.StdEncoding.EncodeToString([]byte(context))
 			return nil
 		},
 	}
