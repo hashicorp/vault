@@ -14,15 +14,6 @@ const (
 	PathPolicySudo  = "sudo"
 )
 
-var (
-	pathPolicyLevel = map[string]int{
-		PathPolicyDeny:  0,
-		PathPolicyRead:  1,
-		PathPolicyWrite: 2,
-		PathPolicySudo:  3,
-	}
-)
-
 // Policy is used to represent the policy specified by
 // an ACL configuration.
 type Policy struct {
@@ -36,6 +27,46 @@ type PathPolicy struct {
 	Prefix string `hcl:",key"`
 	Policy string
 	Glob   bool
+}
+
+// TakesPrecedence is used when multiple policies
+// collide on a path to determine which policy takes
+// precendence.
+func (p *PathPolicy) TakesPrecedence(other *PathPolicy) bool {
+	// Handle the full merge matrix
+	switch p.Policy {
+	case PathPolicyDeny:
+		// Deny always takes precendence
+		return true
+
+	case PathPolicyRead:
+		// Read never takes precedence
+		return false
+
+	case PathPolicyWrite:
+		switch other.Policy {
+		case PathPolicyRead:
+			return true
+		case PathPolicyDeny, PathPolicyWrite, PathPolicySudo:
+			return false
+		default:
+			panic("missing case")
+		}
+
+	case PathPolicySudo:
+		switch other.Policy {
+		case PathPolicyRead, PathPolicyWrite:
+			return true
+		case PathPolicyDeny, PathPolicySudo:
+			return false
+		default:
+			panic("missing case")
+		}
+
+	default:
+		panic("missing case")
+	}
+	return false
 }
 
 // Parse is used to parse the specified ACL rules into an
