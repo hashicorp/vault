@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/hcl"
 )
@@ -34,6 +35,7 @@ type Policy struct {
 type PathPolicy struct {
 	Prefix string `hcl:",key"`
 	Policy string
+	Glob   bool
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -48,6 +50,13 @@ func Parse(rules string) (*Policy, error) {
 
 	// Validate the path policy
 	for _, pp := range p.Paths {
+		// Strip the glob character if found
+		if strings.HasSuffix(pp.Prefix, "*") {
+			pp.Prefix = strings.TrimSuffix(pp.Prefix, "*")
+			pp.Glob = true
+		}
+
+		// Check the policy is valid
 		switch pp.Policy {
 		case PathPolicyDeny:
 		case PathPolicyRead:

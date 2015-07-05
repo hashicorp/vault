@@ -16,9 +16,9 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 
 	expect := []*PathPolicy{
-		&PathPolicy{"", "deny"},
-		&PathPolicy{"stage/", "sudo"},
-		&PathPolicy{"prod/", "read"},
+		&PathPolicy{"", "deny", true},
+		&PathPolicy{"stage/", "sudo", true},
+		&PathPolicy{"prod/version", "read", false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
 		t.Fatalf("bad: %#v", p)
@@ -30,17 +30,17 @@ var rawPolicy = `
 name = "dev"
 
 # Deny all paths by default
-path "" {
+path "*" {
 	policy = "deny"
 }
 
 # Allow full access to staging
-path "stage/" {
+path "stage/*" {
 	policy = "sudo"
 }
 
 # Limited read privilege to production
-path "prod/" {
+path "prod/version" {
 	policy = "read"
 }
 `
