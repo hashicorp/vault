@@ -18,40 +18,45 @@ that describe what parts of Vault a user is allowed to access. An example
 of a policy is shown below:
 
 ```javascript
-path "sys" {
+path "sys/*" {
   policy = "deny"
 }
 
-path "secret" {
+path "secret/*" {
   policy = "write"
 }
 
 path "secret/foo" {
   policy = "read"
 }
+
+path "secret/super-secret" {
+  policy = "deny"
+}
 ```
 
-Policies use prefix-based routing to apply rules. They are deny by default,
-so if a path isn't explicitly given, Vault will reject any access to it.
+Policies use path based matching to apply rules. A policy may be an exact
+match, or might be a glob pattern which uses a prefix. The default policy
+is always deny so if a path isn't explicitly allowed, Vault will reject access to it.
 This works well due to Vault's architecture of being like a filesystem:
 everything has a path associated with it, including the core configuration
 mechanism under "sys".
 
-~> Policy paths are matched using a longest-prefix match, which is the most
-specific defined policy. This means if you define a policy for `"secret/foo"`,
-the policy would also match `"secret/foobar"`.
+~> Policy paths are matched using the most specific defined policy. This may
+be an exact match or the longest-prefix match of a glob. This means if you
+define a policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 
 ## Policies
 
 Allowed policies for a path are:
 
+  * `deny` - No access allowed. Highest precedence.
+
+  * `sudo` - Read, write, and root access to a path.
+
   * `write` - Read, write access to a path.
 
   * `read` - Read-only access to a path.
-
-  * `deny` - No access allowed.
-
-  * `sudo` - Read, write, and root access to a path.
 
 The only non-obvious policy is "sudo". Some routes within Vault and mounted
 backends are marked as _root_ paths. Clients aren't allowed to access root
