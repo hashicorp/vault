@@ -23,6 +23,11 @@ func pathDecrypt() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Ciphertext value to decrypt",
 			},
+
+			"context": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Context for key derivation. Required for derived keys.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -42,6 +47,17 @@ func pathDecryptWrite(
 		return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 	}
 
+	// Decode the context if any
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		var err error
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to decode context as base64"), logical.ErrInvalidRequest
+		}
+	}
+
 	// Get the policy
 	p, err := getPolicy(req, name)
 	if err != nil {
@@ -51,6 +67,12 @@ func pathDecryptWrite(
 	// Error if invalid policy
 	if p == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
+	// Derive the key that should be used
+	key, err := p.DeriveKey(context)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Guard against a potentially invalid cipher-mode
@@ -72,7 +94,7 @@ func pathDecryptWrite(
 	}
 
 	// Setup the cipher
-	aesCipher, err := aes.NewCipher(p.Key)
+	aesCipher, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
