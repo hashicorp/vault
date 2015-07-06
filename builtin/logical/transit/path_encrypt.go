@@ -73,7 +73,8 @@ func pathEncryptWrite(
 
 	// Error if invalid policy
 	if p == nil {
-		p, err = generatePolicy(req.Storage, name, len(context) != 0)
+		isDerived := len(context) != 0
+		p, err = generatePolicy(req.Storage, name, isDerived)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to upsert policy: %v", err)), logical.ErrInvalidRequest
 		}

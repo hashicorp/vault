@@ -117,7 +117,7 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 			if d.Derived != derived {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if derived && d.KDFMode != "hmac-sha256-counter" {
+			if derived && d.KDFMode != kdfMode {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			return nil
@@ -161,7 +161,7 @@ func testAccStepReadRaw(t *testing.T, name string, expectNone, derived bool) log
 			if d.Derived != derived {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if derived && d.KDFMode != "hmac-sha256-counter" {
+			if derived && d.KDFMode != kdfMode {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			return nil

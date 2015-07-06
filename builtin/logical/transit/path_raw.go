@@ -42,8 +42,10 @@ func pathRawRead(
 			"key":         p.Key,
 			"cipher_mode": p.CipherMode,
 			"derived":     p.Derived,
-			"kdf_mode":    p.KDFMode,
 		},
+	}
+	if p.Derived {
+		resp.Data["kdf_mode"] = p.KDFMode
 	}
 	return resp, nil
 }

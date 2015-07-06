@@ -10,6 +10,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	// kdfMode is the only KDF mode currently supported
+	kdfMode = "hmac-sha256-counter"
+)
+
 // Policy is the struct used to store metadata
 type Policy struct {
 	Name       string `json:"name"`
@@ -38,11 +43,11 @@ func (p *Policy) DeriveKey(context []byte) ([]byte, error) {
 
 	// Ensure a context is provided
 	if len(context) == 0 {
-		return nil, fmt.Errorf("missing context for key derivation")
+		return nil, fmt.Errorf("missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to encrypt or decrypt information.")
 	}
 
 	switch p.KDFMode {
-	case "hmac-sha256-counter":
+	case kdfMode:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
 		return kdf.CounterMode(prf, prfLen, p.Key, context, 256)
@@ -87,7 +92,7 @@ func generatePolicy(storage logical.Storage, name string, derived bool) (*Policy
 		Derived:    derived,
 	}
 	if derived {
-		p.KDFMode = "hmac-sha256-counter"
+		p.KDFMode = kdfMode
 	}
 
 	// Generate a 256bit key
@@ -178,8 +183,10 @@ func pathPolicyRead(
 			"name":        p.Name,
 			"cipher_mode": p.CipherMode,
 			"derived":     p.Derived,
-			"kdf_mode":    p.KDFMode,
 		},
+	}
+	if p.Derived {
+		resp.Data["kdf_mode"] = p.KDFMode
 	}
 	return resp, nil
 }

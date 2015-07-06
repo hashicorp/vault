@@ -21,9 +21,9 @@ application developers and pushes the burden onto the operators of Vault.
 Operators of Vault generally include the security team at an organization,
 which means they can ensure that data is encrypted/decrypted properly.
 
-The transit backend also supports doing key derivation. This allows data to be
-encrypted within a context such that the same context must be used for
-decryption. This can be used to enable per transaction unique keys which
+As of Vault 0.2, the transit backend also supports doing key derivation. This
+allows data to be encrypted within a context such that the same context must be
+used for decryption. This can be used to enable per transaction unique keys which
 further increase the security of data at rest.
 
 Additionally, since encrypt/decrypt operations must enter the audit log,
@@ -57,10 +57,9 @@ the settings of the "foo" key by reading it:
 ```
 $ vault read transit/keys/foo
 Key        	Value
-name       	foo
-cipher_mode	aes-gcm
+name        foo
+cipher_mode aes-gcm
 derived     false
-kdf_mode
 ````
 
 We can read from the `raw/` endpoint to see the encryption key itself:
@@ -72,7 +71,6 @@ name       	foo
 cipher_mode	aes-gcm
 key        	PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8=
 derived     false
-kdf_mode
 ````
 
 Here we can see that the randomly generated encryption key being used, as
