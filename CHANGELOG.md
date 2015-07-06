@@ -23,7 +23,7 @@ IMPROVEMENTS:
  * core: allow time duration format in place of seconds for some inputs
  * core: audit log provides more useful information [GH-360]
  * core: graceful shutdown for faster HA failover
- * core: *change policy format* to use explicit globbing [GH-400]
+ * core: **change policy format** to use explicit globbing [GH-400]
  Any existing policy in Vault is automatically upgraded to avoid issues.
  All policy files must be updated for future writes. Adding the explicit glob
  character `*` to the path specification is all that is required.
