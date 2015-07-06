@@ -292,11 +292,10 @@ func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, fa
 func (i *ZookeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan struct{}) {
 	for {
 		select {
-		case event := <- lockeventCh:
+		case event := <-lockeventCh:
 			// Lost connection?
 			switch event.State {
 			case zk.StateConnected:
-			case zk.StateSyncConnected:
 			case zk.StateHasSession:
 			default:
 				close(leaderCh)
@@ -332,4 +331,3 @@ func (i *ZookeeperHALock) Value() (bool, string, error) {
 	value, _, err := i.in.client.Get(lockpath)
 	return (value != nil), string(value), err
 }
-

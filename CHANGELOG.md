@@ -26,6 +26,7 @@ IMPROVEMENTS:
  * credential/ldap: Allow TLS verification to be disabled [GH-372]
  * credential/ldap: More flexible names allowed [GH-245] [GH-379] [GH-367]
  * http: response codes improved to reflect error [GH-366]
+ * http: the `sys/health` endpoint supports `?standbyok` to return 200 on standby [GH-389]
  * secret/app-id: Support deleting AppID and UserIDs [GH-200]
  * secret/consul: Fine grained lease control [GH-261]
  * secret/transit: Decouple raw key from key management endpoint [GH-355]

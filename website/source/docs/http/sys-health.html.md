@@ -20,7 +20,14 @@ description: |-
 
 	<dt>Parameters</dt>
 	<dd>
-		None
+        <ul>
+          <li>
+            <span class="param">standbyok</span>
+            <span class="param-flags">optional</span>
+            A query parameter provided to indicate that being a standby should
+            still return a 200 status code instead of the standard 429 status code.
+          </li>
+        </ul>
 	</dd>
 
 	<dt>Returns</dt>
