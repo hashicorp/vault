@@ -15,6 +15,16 @@ func (c *Client) SSH() *SSH {
 	return &SSH{c: c}
 }
 
+// Invokes the SSH backend API to revoke a key identified by its lease ID.
+func (c *SSH) KeyRevoke(id string) error {
+	r := c.c.NewRequest("PUT", "/v1/sys/revoke/"+id)
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
 // Invokes the SSH backend API to create a dynamic key
 func (c *SSH) KeyCreate(role string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/ssh/creds/%s", role))

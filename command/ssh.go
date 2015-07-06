@@ -80,7 +80,12 @@ func (c *SSHCommand) Run(args []string) int {
 
 	err = os.Remove(sshDynamicKeyFileName)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error deleting temporary file:%s", sshDynamicKeyFileName))
+		c.Ui.Error("Error cleaning up") // Intentionally not mentioning the exact error
+	}
+
+	err = client.SSH().KeyRevoke(keySecret.LeaseID)
+	if err != nil {
+		c.Ui.Error("Error cleaning up") // Intentionally not mentioning the exact error
 	}
 
 	return 0
