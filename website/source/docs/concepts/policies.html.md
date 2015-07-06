@@ -45,6 +45,7 @@ mechanism under "sys".
 ~> Policy paths are matched using the most specific defined policy. This may
 be an exact match or the longest-prefix match of a glob. This means if you
 define a policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
+The glob character is only supported at the end of the path specification.
 
 ## Policies
 
@@ -100,3 +101,33 @@ If an _existing_ policy is modified, the modifications propagate
 to all associated users instantly. The above paragraph is more specifically
 stating that you can't add new or remove policies associated with an
 active identity.
+
+## Changes from 0.1
+
+In Vault versions prior to 0.2, the ACL policy language had a slightly
+different specification and semantics. The current specification requires
+that glob behavior explicitly be specified by adding the `*` character to
+the end of a path. Previously, all paths were glob based matches and no
+exact match could be specified.
+
+The other change is that deny had the lowest precedence. This meant if there
+were two policies being merged (e.g. "ops" and "prod") and they had a conflicting
+policy like:
+
+```
+path "sys/seal" {
+    policy = "deny"
+}
+
+path "sys/seal" {
+    policy = "read"
+}
+```
+
+The merge would previously give the "read" higher precedence. The current
+version of Vault prioritizes the explicit deny, so that the "deny" would
+take precedence.
+
+To make all Vault 0.1 policies compatible with Vault 0.2, the explicit
+glob character must be added to all the path prefixes.
+

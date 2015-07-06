@@ -47,7 +47,8 @@ aspect of Vault, including mounting backends, authenticating, as well as secret 
 
 In the policy above, a user could write any secret to `secret/`, except
 to `secret/foo`, where only read access is allowed. Policies default to
-deny, so any access to an unspecified path is not allowed.
+deny, so any access to an unspecified path is not allowed. The policy
+langauge changed slightly in Vault 0.2, [see this page for details](/docs/concepts/policies.html).
 
 Save the above policy as `acl.hcl`.
 
