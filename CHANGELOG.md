@@ -23,6 +23,11 @@ IMPROVEMENTS:
  * core: allow time duration format in place of seconds for some inputs
  * core: audit log provides more useful information [GH-360]
  * core: graceful shutdown for faster HA failover
+ * core: *change policy format* to use explicit globbing [GH-400]
+ Any existing policy in Vault is automatically upgraded to avoid issues.
+ All policy files must be updated for future writes. Adding the explicit glob
+ character `*` to the path specification is all that is required.
+ * core: policy merging to give deny highest precedence [GH-400]
  * credential/cert: Record the common name in the metadata [GH-342]
  * credential/ldap: Allow TLS verification to be disabled [GH-372]
  * credential/ldap: More flexible names allowed [GH-245] [GH-379] [GH-367]
