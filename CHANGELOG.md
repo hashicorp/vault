@@ -12,6 +12,7 @@ FEATURES:
  * **New storage backend: `etcd`**: store physical data in etcd [GH-259] [GH-297]
  * **New storage backend: `s3`**: store physical data in S3. Does not support HA. [GH-242]
  * **New storage backend: `MySQL`**: store physical data in MySQL. Does not support HA. [GH-324]
+ * `transit` secret backend supports derived keys for per-transaction unique keys [GH-399]
 
 IMPROVEMENTS:
 
