@@ -91,13 +91,13 @@ func (b *backend) pathRoleCreateWrite(
 	dynamicPublicKey, dynamicPrivateKey, _ := generateRSAKeys()
 
 	// Transfer the public key to target machine
-	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, hostKey.Key)
+	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, role.Port, hostKey.Key)
 	if err != nil {
 		return nil, err
 	}
 
 	// Add the public key to authorized_keys file in target machine
-	err = installPublicKeyInTarget(username, ip, hostKey.Key)
+	err = installPublicKeyInTarget(username, ip, role.Port, hostKey.Key)
 	if err != nil {
 		return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
 	}
@@ -109,6 +109,7 @@ func (b *backend) pathRoleCreateWrite(
 		"ip":                 ip,
 		"host_key_name":      role.KeyName,
 		"dynamic_public_key": dynamicPublicKey,
+		"port":               role.Port,
 	})
 
 	// Change the lease information to reflect user's choice

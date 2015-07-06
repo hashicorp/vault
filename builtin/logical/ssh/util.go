@@ -19,9 +19,9 @@ import (
 // Transfers the file  to the target machine by establishing an SSH session with the target.
 // Uses the public key authentication method and hence the parameter 'key' takes in the private key.
 // The fileName parameter takes an absolute path.
-func uploadPublicKeyScp(publicKey, username, ip, key string) error {
+func uploadPublicKeyScp(publicKey, username, ip, port, key string) error {
 	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
-	session, err := createSSHPublicKeysSession(username, ip, key)
+	session, err := createSSHPublicKeysSession(username, ip, port, key)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func uploadPublicKeyScp(publicKey, username, ip, key string) error {
 
 // Creates a SSH session object which can be used to run commands in the target machine.
 // The session will use public key authentication method with port 22.
-func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session, error) {
+func createSSHPublicKeysSession(username, ipAddr, port, hostKey string) (*ssh.Session, error) {
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -66,7 +66,7 @@ func createSSHPublicKeysSession(username, ipAddr, hostKey string) (*ssh.Session,
 		},
 	}
 
-	client, err := ssh.Dial("tcp", ipAddr+":22", config)
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", ipAddr, port), config)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,8 @@ func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
 }
 
 // Concatenates the public present in that target machine's home folder to ~/.ssh/authorized_keys file
-func installPublicKeyInTarget(username, ip, hostKey string) error {
-	session, err := createSSHPublicKeysSession(username, ip, hostKey)
+func installPublicKeyInTarget(username, ip, port, hostKey string) error {
+	session, err := createSSHPublicKeysSession(username, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}
@@ -133,8 +133,8 @@ func installPublicKeyInTarget(username, ip, hostKey string) error {
 }
 
 // Removes the installed public key from the authorized_keys file in target machine
-func uninstallPublicKeyInTarget(username, ip, hostKey string) error {
-	session, err := createSSHPublicKeysSession(username, ip, hostKey)
+func uninstallPublicKeyInTarget(username, ip, port, hostKey string) error {
+	session, err := createSSHPublicKeysSession(username, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}

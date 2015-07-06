@@ -75,6 +75,11 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
+	portRaw, ok := req.Secret.InternalData["port"]
+	if !ok {
+		return nil, fmt.Errorf("secret is missing internal data")
+	}
+	port := portRaw.(string)
 
 	// Fetch the host key using the key name
 	hostKeyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", hostKeyName))
@@ -87,13 +92,13 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	}
 
 	// Transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
-	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, hostKey.Key)
+	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, port, hostKey.Key)
 	if err != nil {
 		return nil, fmt.Errorf("public key transfer failed: %s", err)
 	}
 
 	// Remove the public key from authorized_keys file in target machine
-	err = uninstallPublicKeyInTarget(username, ip, hostKey.Key)
+	err = uninstallPublicKeyInTarget(username, ip, port, hostKey.Key)
 	if err != nil {
 		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
 	}

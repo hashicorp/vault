@@ -18,8 +18,10 @@ type SSHCommand struct {
 
 func (c *SSHCommand) Run(args []string) int {
 	var role string
+	var port string
 	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
 	flags.StringVar(&role, "role", "", "")
+	flags.StringVar(&port, "port", "22", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -70,7 +72,7 @@ func (c *SSHCommand) Run(args []string) int {
 	sshDynamicKeyFileName := fmt.Sprintf("vault_temp_file_%s_%s", username, ip.String())
 	err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
 
-	cmd := exec.Command("ssh", "-i", sshDynamicKeyFileName, args[0])
+	cmd := exec.Command("ssh", "-p", port, "-i", sshDynamicKeyFileName, args[0])
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err = cmd.Run()
