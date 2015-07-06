@@ -636,7 +636,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 		Operation: logical.WriteOperation,
 		Path:      "sys/policy/test",
 		Data: map[string]interface{}{
-			"rules": `path "secret/" { policy = "write" }`,
+			"rules": `path "secret/*" { policy = "write" }`,
 		},
 		ClientToken: root,
 	}

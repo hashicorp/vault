@@ -25,6 +25,12 @@ type PolicyStore struct {
 	lru  *lru.Cache
 }
 
+// PolicyEntry is used to store a policy by name
+type PolicyEntry struct {
+	Version int
+	Raw     string
+}
+
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
 func NewPolicyStore(view *BarrierView) *PolicyStore {
@@ -64,9 +70,13 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 		return fmt.Errorf("policy name missing")
 	}
 
-	entry := &logical.StorageEntry{
-		Key:   p.Name,
-		Value: []byte(p.Raw),
+	// Create the entry
+	entry, err := logical.StorageEntryJSON(p.Name, &PolicyEntry{
+		Version: 2,
+		Raw:     p.Raw,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create entry: %v", err)
 	}
 	if err := ps.view.Put(entry); err != nil {
 		return fmt.Errorf("failed to persist policy: %v", err)
@@ -101,16 +111,37 @@ func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 		return nil, nil
 	}
 
-	// Parse into a policy object
-	p, err := Parse(string(out.Value))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse policy: %v", err)
+	// In Vault 0.1.X we stored the raw policy, but in
+	// Vault 0.2 we switch to the PolicyEntry
+	policyEntry := new(PolicyEntry)
+	var policy *Policy
+	if err := out.DecodeJSON(policyEntry); err == nil {
+		// Parse normally
+		p, err := Parse(policyEntry.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse policy: %v", err)
+		}
+		p.Name = name
+		policy = p
+
+	} else {
+		// On error, attempt to use V1 parsing
+		p, err := Parse(string(out.Value))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse policy: %v", err)
+		}
+		p.Name = name
+
+		// V1 used implicit glob, we need to do a fix-up
+		for _, pp := range p.Paths {
+			pp.Glob = true
+		}
+		policy = p
 	}
-	p.Name = name
 
 	// Update the LRU cache
-	ps.lru.Add(p.Name, p)
-	return p, nil
+	ps.lru.Add(name, policy)
+	return policy, nil
 }
 
 // ListPolicies is used to list the available policies

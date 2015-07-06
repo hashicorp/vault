@@ -30,11 +30,7 @@ format that is also JSON-compatible, so you can use JSON as well. An example
 policy is shown below:
 
 ```javascript
-path "sys" {
-  policy = "deny"
-}
-
-path "secret" {
+path "secret/*" {
   policy = "write"
 }
 
@@ -43,14 +39,16 @@ path "secret/foo" {
 }
 ```
 
-The policy format uses a longest matching prefix system on the API path
-to determine access control. Since everything in Vault must be accessed
-via the API, this gives strict control over every aspect of Vault, including
-mounting backends, authenticating, as well as secret access.
+The policy format uses a prefix matching system on the API path
+to determine access control. The most specific defined policy is used,
+either an exact match or the longest-prefix glob match. Since everything
+in Vault must be accessed via the API, this gives strict control over every
+aspect of Vault, including mounting backends, authenticating, as well as secret access.
 
 In the policy above, a user could write any secret to `secret/`, except
 to `secret/foo`, where only read access is allowed. Policies default to
-deny, so any access to an unspecified path is not allowed.
+deny, so any access to an unspecified path is not allowed. The policy
+langauge changed slightly in Vault 0.2, [see this page for details](/docs/concepts/policies.html).
 
 Save the above policy as `acl.hcl`.
 

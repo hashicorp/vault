@@ -105,13 +105,16 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 
 		{logical.DeleteOperation, "stage/foo", true},
 		{logical.WriteOperation, "stage/aws/foo", false},
-		{logical.WriteOperation, "stage/aws/policy/foo", true},
+		{logical.WriteOperation, "stage/aws/policy/foo", false},
 
 		{logical.DeleteOperation, "prod/foo", true},
 		{logical.WriteOperation, "prod/foo", true},
 		{logical.ReadOperation, "prod/foo", true},
 		{logical.ListOperation, "prod/foo", true},
 		{logical.ReadOperation, "prod/aws/foo", false},
+
+		{logical.ReadOperation, "sys/status", false},
+		{logical.WriteOperation, "sys/seal", true},
 	}
 
 	for _, tc := range tcases {
@@ -124,35 +127,41 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 
 var aclPolicy = `
 name = "dev"
-path "dev/" {
+path "dev/*" {
 	policy = "sudo"
 }
-path "stage/" {
+path "stage/*" {
 	policy = "write"
 }
-path "stage/aws/" {
+path "stage/aws/*" {
 	policy = "read"
 }
-path "stage/aws/policy/" {
+path "stage/aws/policy/*" {
 	policy = "sudo"
 }
-path "prod/" {
+path "prod/*" {
 	policy = "read"
 }
-path "prod/aws/" {
+path "prod/aws/*" {
+	policy = "deny"
+}
+path "sys/*" {
 	policy = "deny"
 }
 `
 
 var aclPolicy2 = `
 name = "ops"
-path "dev/hide/" {
+path "dev/hide/*" {
 	policy = "deny"
 }
-path "stage/aws/policy/" {
+path "stage/aws/policy/*" {
 	policy = "deny"
 }
-path "prod/" {
+path "prod/*" {
+	policy = "write"
+}
+path "sys/seal" {
 	policy = "write"
 }
 `
