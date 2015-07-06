@@ -3,6 +3,8 @@ package vault
 import (
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 func mockPolicyStore(t *testing.T) *PolicyStore {
@@ -127,4 +129,27 @@ func TestPolicyStore_ACL(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	testLayeredACL(t, acl)
+}
+
+func TestPolicyStore_v1Upgrade(t *testing.T) {
+	ps := mockPolicyStore(t)
+
+	// Put a V1 record
+	raw := `path "foo" { policy = "read" }`
+	ps.view.Put(&logical.StorageEntry{"old", []byte(raw)})
+
+	// Do a read
+	p, err := ps.GetPolicy("old")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if p == nil || len(p.Paths) != 1 {
+		t.Fatalf("bad policy: %#v", p)
+	}
+
+	// Check that glob is enabled
+	if !p.Paths[0].Glob {
+		t.Fatalf("should enable glob")
+	}
 }

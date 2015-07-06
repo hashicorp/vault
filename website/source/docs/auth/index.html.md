@@ -26,7 +26,7 @@ To learn more about authentication, see the
 
 Auth backends can be enabled/disabled using the CLI or the API.
 
-When enabled, auth backends are similar to [secret backends](/docs/secret/index.html):
+When enabled, auth backends are similar to [secret backends](/docs/secrets/index.html):
 they are mounted within the Vault mount table and can be accessed
 and configured using the standard read/write API. The only difference
 is that all auth backends are mounted underneath the `auth/` prefix.
