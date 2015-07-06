@@ -39,7 +39,7 @@ The client token must be sent as the `token` cookie or the
 `X-Vault-Token` HTTP header.
 
 Otherwise, a client token can be retrieved via
-[authentication backends](#).
+[authentication backends](/docs/auth/index.html).
 
 Each authentication backend will have one or more unauthenticated
 login endpoints. These endpoints can be reached without any authentication,
