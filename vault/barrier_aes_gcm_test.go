@@ -105,6 +105,14 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	}
 	inm.Put(pe)
 
+	// Create a fake key
+	gcm, _ = b.aeadFromKey(encrypt)
+	pe = &physical.Entry{
+		Key:   "test/foo",
+		Value: b.encrypt(initialKeyTerm, gcm, []byte("test")),
+	}
+	inm.Put(pe)
+
 	// Should still be initialized
 	isInit, err := b.Initialized()
 	if err != nil {
@@ -136,6 +144,15 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	}
 	if out == nil {
 		t.Fatalf("should have keyring file")
+	}
+
+	// Attempt to read encrypted key
+	entry, err := b.Get("test/foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if string(entry.Value) != "test" {
+		t.Fatalf("bad: %#v", entry)
 	}
 }
 
