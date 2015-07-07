@@ -112,8 +112,8 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/consul/api",
-			"Comment": "v0.5.2-123-gaddb614",
-			"Rev": "addb6145096bbce6f9dde807a78cad2a4cea3a68"
+			"Comment": "v0.5.2-144-g2783f2b",
+			"Rev": "2783f2bfec1823362602924f5cd3c894743dca08"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/errwrap",
