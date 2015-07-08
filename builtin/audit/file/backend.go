@@ -56,10 +56,11 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
 		if req.Connection != nil && req.Connection.ConnState != nil {
+			origReq := req
 			origState := req.Connection.ConnState
 			req.Connection.ConnState = nil
 			defer func() {
-				req.Connection.ConnState = origState
+				origReq.Connection.ConnState = origState
 			}()
 		}
 
@@ -101,10 +102,11 @@ func (b *Backend) LogResponse(
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
 		if req.Connection != nil && req.Connection.ConnState != nil {
+			origReq := req
 			origState := req.Connection.ConnState
 			req.Connection.ConnState = nil
 			defer func() {
-				req.Connection.ConnState = origState
+				origReq.Connection.ConnState = origState
 			}()
 		}
 
