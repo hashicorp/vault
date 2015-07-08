@@ -41,12 +41,15 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * audit/file: file removing TLS connection state
+ * audit/syslog: fix removing TLS connection state
  * command/*: commands accepting `k=v` allow blank values
  * core: Allow building on FreeBSD [GH-365]
  * core: Fixed various panics when audit logging enabled
  * core: Lease renewal does not create redundant lease
  * core: fixed leases with negative duration [GH-354]
  * core: token renewal does not create child token
+ * core: fixing panic when lease increment is null [GH-408]
  * credential/app-id: Salt the paths in storage backend to avoid information leak
  * credential/cert: Fixing client certificate not being requested
  * credential/cert: Fixing panic when no certificate match found [GH-361]
