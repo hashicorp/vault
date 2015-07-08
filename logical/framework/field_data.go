@@ -115,6 +115,8 @@ func (d *FieldData) getPrimitive(
 	case TypeDurationSecond:
 		var result int
 		switch inp := raw.(type) {
+		case nil:
+			return nil, true, nil
 		case int:
 			result = inp
 		case float32:
