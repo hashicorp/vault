@@ -91,6 +91,7 @@ func TestSSH(t *testing.T) {
 
 	args := []string{"-address", addr, "ssh"}
 
+	// Mount the SSH backend
 	if code := mountCmd.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
@@ -105,6 +106,7 @@ func TestSSH(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Check if SSH backend is mounted or not
 	mount, ok := mounts["ssh/"]
 	if !ok {
 		t.Fatal("should have ssh mount")
@@ -112,12 +114,15 @@ func TestSSH(t *testing.T) {
 	if mount.Type != "ssh" {
 		t.Fatal("should have ssh type")
 	}
+
 	writeCmd := &WriteCommand{
 		Meta: Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
 	}
+
+	// Create a 'named' key in vault
 	args = []string{
 		"-address", addr,
 		"ssh/keys/" + testKey,
@@ -127,6 +132,8 @@ func TestSSH(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
+	// Create a role by supplying the needful along with the
+	// named key created above
 	args = []string{
 		"-address", addr,
 		"ssh/roles/" + testRoleName,
@@ -145,12 +152,20 @@ func TestSSH(t *testing.T) {
 			Ui:          ui,
 		},
 	}
+
+	// Get the dynamic key and establish an SSH connection with target.
+	// Inline command when supplied runs on target and terminates the connection.
+	// Use whoami as the inline command in target and get the result.
+	// Compare the result with the username used to connect to target.
+	// Test succeeds if they match.
 	args = []string{
 		"-address", addr,
 		"-role=" + testRoleName,
 		testUserName + "@" + testIP,
 		"/usr/bin/whoami",
 	}
+
+	// Pipe to get the result of the inline command run in target machine
 	stdout := os.Stdout
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -170,6 +185,9 @@ func TestSSH(t *testing.T) {
 	os.Stdout = stdout
 	userName := <-bufChan
 	userName = strings.TrimSpace(userName)
+	// Comparing the username used to connect to target and
+	// the username on the target, thereby verifying successful
+	// execution
 	if userName != testUserName {
 		t.Fatalf("err: username mismatch")
 	}
