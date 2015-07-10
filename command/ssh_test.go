@@ -55,6 +55,8 @@ var testPort string
 var testUserName string
 var testAdminUser string
 
+// Starts the server and initializes the servers IP address,
+// port and usernames to be used by the test cases.
 func init() {
 	addr, err := vault.StartTestServer()
 	if err != nil {
@@ -73,6 +75,8 @@ func init() {
 }
 
 func TestSSH(t *testing.T) {
+	// Add the SSH backend to the unsealed test core.
+	// This should be done before the unsealed core is created.
 	err := vault.AddTestLogicalBackend("ssh", logicalssh.Factory)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -132,8 +136,7 @@ func TestSSH(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	// Create a role by supplying the needful along with the
-	// named key created above
+	// Create a role using the named key along with cidr, username and port
 	args = []string{
 		"-address", addr,
 		"ssh/roles/" + testRoleName,
@@ -154,10 +157,10 @@ func TestSSH(t *testing.T) {
 	}
 
 	// Get the dynamic key and establish an SSH connection with target.
-	// Inline command when supplied runs on target and terminates the connection.
-	// Use whoami as the inline command in target and get the result.
-	// Compare the result with the username used to connect to target.
-	// Test succeeds if they match.
+	// Inline command when supplied, runs on target and terminates the
+	// connection. Use whoami as the inline command in target and get
+	// the result. Compare the result with the username used to connect
+	// to target. Test succeeds if they match.
 	args = []string{
 		"-address", addr,
 		"-role=" + testRoleName,
@@ -165,7 +168,7 @@ func TestSSH(t *testing.T) {
 		"/usr/bin/whoami",
 	}
 
-	// Pipe to get the result of the inline command run in target machine
+	// Creating pipe to get the result of the inline command run in target machine.
 	stdout := os.Stdout
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -185,6 +188,7 @@ func TestSSH(t *testing.T) {
 	os.Stdout = stdout
 	userName := <-bufChan
 	userName = strings.TrimSpace(userName)
+
 	// Comparing the username used to connect to target and
 	// the username on the target, thereby verifying successful
 	// execution

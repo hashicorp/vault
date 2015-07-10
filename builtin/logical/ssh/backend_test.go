@@ -55,6 +55,8 @@ var testPort string
 var testUserName string
 var testAdminUser string
 
+// Starts the server and initializes the servers IP address,
+// port and usernames to be used by the test cases.
 func init() {
 	addr, err := vault.StartTestServer()
 	if err != nil {
@@ -83,6 +85,29 @@ func TestSSHBackend(t *testing.T) {
 	})
 }
 
+func testNamedKeys(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      fmt.Sprintf("keys/%s", testKey),
+		Data: map[string]interface{}{
+			"key": testSharedPrivateKey,
+		},
+	}
+}
+
+func testNewRole(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      fmt.Sprintf("roles/%s", testRoleName),
+		Data: map[string]interface{}{
+			"key":        testKey,
+			"admin_user": testAdminUser,
+			"cidr":       testCidr,
+			"port":       testPort,
+		},
+	}
+}
+
 func testRoleCreate(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -107,29 +132,6 @@ func testRoleCreate(t *testing.T) logicaltest.TestStep {
 				return fmt.Errorf("Generated key is invalid")
 			}
 			return nil
-		},
-	}
-}
-
-func testNewRole(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("roles/%s", testRoleName),
-		Data: map[string]interface{}{
-			"key":        testKey,
-			"admin_user": testAdminUser,
-			"cidr":       testCidr,
-			"port":       testPort,
-		},
-	}
-}
-
-func testNamedKeys(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("keys/%s", testKey),
-		Data: map[string]interface{}{
-			"key": testSharedPrivateKey,
 		},
 	}
 }
