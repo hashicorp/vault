@@ -362,7 +362,6 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 	if err := json.Unmarshal(plain, &init); err != nil {
 		return fmt.Errorf("failed to unmarshal barrier init file")
 	}
-	defer memzero(init.Key)
 
 	// Setup a new keyring, this is for backwards compatability
 	keyring := NewKeyring()

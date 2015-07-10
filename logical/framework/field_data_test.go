@@ -135,6 +135,17 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			42,
 		},
+
+		"duration type, nil value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeDurationSecond},
+			},
+			map[string]interface{}{
+				"foo": nil,
+			},
+			"foo",
+			0,
+		},
 	}
 
 	for name, tc := range cases {
