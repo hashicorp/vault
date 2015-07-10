@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 
@@ -37,9 +36,7 @@ func uploadPublicKeyScp(publicKey, username, ip, port, key string) error {
 		fmt.Fprint(w, "\x00")
 		w.Close()
 	}()
-	log.Printf("Vishal: uploading now\n")
 	err = session.Run(fmt.Sprintf("scp -vt %s", dynamicPublicKeyFileName))
-	log.Printf("Vishal: upload completed: err:%s\n", err)
 	return nil
 }
 
@@ -114,21 +111,17 @@ func installPublicKeyInTarget(username, ip, port, hostKey string) error {
 	}
 	defer session.Close()
 
-	authKeysFileName := "~/.ssh/authorized_keys"
-	tempKeysFileName := "~/temp_authorized_keys"
+	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
 
 	// Commands to be run on target machine
 	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
 	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
 	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
 	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", dynamicPublicKeyFileName, authKeysFileName)
-	//removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
-	log.Printf(grepCmd)
-	log.Printf(catCmdRemoveDuplicate)
-	log.Printf(catCmdAppendNew)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
 
-	//targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
-	targetCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew)
+	targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
 	session.Run(targetCmd)
 	return nil
 }
@@ -144,8 +137,8 @@ func uninstallPublicKeyInTarget(username, ip, port, hostKey string) error {
 	}
 	defer session.Close()
 
-	authKeysFileName := "~/.ssh/authorized_keys"
-	tempKeysFileName := "~/temp_authorized_keys"
+	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
 
 	// Commands to be run on target machine
 	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
