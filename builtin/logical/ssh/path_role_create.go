@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/hashicorp/vault/logical"
@@ -35,6 +36,7 @@ func pathRoleCreate(b *backend) *framework.Path {
 
 func (b *backend) pathRoleCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("Vishal: pathRoleCreateWrite\n")
 	roleName := d.Get("name").(string)
 	username := d.Get("username").(string)
 	ipRaw := d.Get("ip").(string)
@@ -92,9 +94,11 @@ func (b *backend) pathRoleCreateWrite(
 
 	// Transfer the public key to target machine
 	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, role.Port, hostKey.Key)
+	//return nil, nil  //TODO remove this
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Vishal: uploaded public key file to target\n")
 
 	// Add the public key to authorized_keys file in target machine
 	err = installPublicKeyInTarget(username, ip, role.Port, hostKey.Key)
@@ -102,6 +106,7 @@ func (b *backend) pathRoleCreateWrite(
 		return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
 	}
 
+	log.Printf("Vishal: installed public key file to target\n")
 	result := b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
 		"key": dynamicPrivateKey,
 	}, map[string]interface{}{

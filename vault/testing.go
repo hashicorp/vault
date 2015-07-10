@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/vault/audit"
@@ -26,12 +27,19 @@ func TestCore(t *testing.T) *Core {
 	noopBackends["http"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
+	logicalBackends := make(map[string]logical.Factory)
+	for backendName, backendFactory := range noopBackends {
+		logicalBackends[backendName] = backendFactory
+	}
+	for backendName, backendFactory := range testLogicalBackends {
+		logicalBackends[backendName] = backendFactory
+	}
 
 	physicalBackend := physical.NewInmem()
 	c, err := NewCore(&CoreConfig{
 		Physical:           physicalBackend,
 		AuditBackends:      noopAudits,
-		LogicalBackends:    noopBackends,
+		LogicalBackends:    logicalBackends,
 		CredentialBackends: noopBackends,
 		DisableMlock:       true,
 	})
@@ -81,6 +89,21 @@ func TestKeyCopy(key []byte) []byte {
 	result := make([]byte, len(key))
 	copy(result, key)
 	return result
+}
+
+var testLogicalBackends = map[string]logical.Factory{}
+
+// This adds a logical backend for the test core. This needs to be
+// invoked before the test core is created.
+func AddTestLogicalBackend(name string, factory logical.Factory) error {
+	if name == "" {
+		return fmt.Errorf("Missing backend name")
+	}
+	if factory == nil {
+		return fmt.Errorf("Missing backend factory function")
+	}
+	testLogicalBackends[name] = factory
+	return nil
 }
 
 type noopAudit struct{}

@@ -51,7 +51,7 @@ func (c *SSHCommand) Run(args []string) int {
 			c.Ui.Error(fmt.Sprintf("Error setting default role: %s", err.Error()))
 			return 1
 		}
-		c.Ui.Output(fmt.Sprintf("Using role[%s]\n", role))
+		c.Ui.Output(fmt.Sprintf("Vault SSH: Role:'%s'\n", role))
 	}
 
 	data := map[string]interface{}{
@@ -72,10 +72,14 @@ func (c *SSHCommand) Run(args []string) int {
 	sshDynamicKeyFileName := fmt.Sprintf("vault_temp_file_%s_%s", username, ip.String())
 	err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
 
-	cmd := exec.Command("ssh", "-p", port, "-i", sshDynamicKeyFileName, args[0])
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	err = cmd.Run()
+	sshCmdArgs := []string{"-p", port, "-i", sshDynamicKeyFileName}
+	sshCmdArgs = append(sshCmdArgs, args...)
+
+	sshCmd := exec.Command("ssh", sshCmdArgs...)
+	sshCmd.Stdin = os.Stdin
+	sshCmd.Stdout = os.Stdout
+
+	err = sshCmd.Run()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error while running ssh command:%s", err))
 	}
@@ -138,13 +142,15 @@ General Options:
 
 SSH Options:
 
-  -role			Mention the role to be used to create dynamic key.
+  -role                 Mention the role to be used to create dynamic key.
   			Each IP is associated with a role. To see the associated
 			roles with IP, use "lookup" endpoint. If you are certain that
 			there is only one role associated with the IP, you can
 			skip mentioning the role. It will be chosen by default.
 			If there are no roless associated with the IP, register
 			the CIDR block of that IP using the "roles/" endpoint.
+
+  -port                 Port number to use for SSH connection. This defaults to port 22.
 `
 	return strings.TrimSpace(helpText)
 }

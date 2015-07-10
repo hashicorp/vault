@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"strings"
 
@@ -36,9 +37,9 @@ func uploadPublicKeyScp(publicKey, username, ip, port, key string) error {
 		fmt.Fprint(w, "\x00")
 		w.Close()
 	}()
-	if err := session.Run(fmt.Sprintf("scp -vt %s", dynamicPublicKeyFileName)); err != nil {
-		return err
-	}
+	log.Printf("Vishal: uploading now\n")
+	err = session.Run(fmt.Sprintf("scp -vt %s", dynamicPublicKeyFileName))
+	log.Printf("Vishal: upload completed: err:%s\n", err)
 	return nil
 }
 
@@ -113,22 +114,22 @@ func installPublicKeyInTarget(username, ip, port, hostKey string) error {
 	}
 	defer session.Close()
 
-	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
-	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
+	authKeysFileName := "~/.ssh/authorized_keys"
+	tempKeysFileName := "~/temp_authorized_keys"
 
 	// Commands to be run on target machine
 	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
 	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
 	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
 	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", dynamicPublicKeyFileName, authKeysFileName)
-	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+	//removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+	log.Printf(grepCmd)
+	log.Printf(catCmdRemoveDuplicate)
+	log.Printf(catCmdAppendNew)
 
-	targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
-
-	// Run the commands on target machine
-	if err := session.Run(targetCmd); err != nil {
-		return err
-	}
+	//targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
+	targetCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew)
+	session.Run(targetCmd)
 	return nil
 }
 
@@ -143,8 +144,8 @@ func uninstallPublicKeyInTarget(username, ip, port, hostKey string) error {
 	}
 	defer session.Close()
 
-	authKeysFileName := "/home/" + username + "/.ssh/authorized_keys"
-	tempKeysFileName := "/home/" + username + "/temp_authorized_keys"
+	authKeysFileName := "~/.ssh/authorized_keys"
+	tempKeysFileName := "~/temp_authorized_keys"
 
 	// Commands to be run on target machine
 	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
@@ -153,11 +154,7 @@ func uninstallPublicKeyInTarget(username, ip, port, hostKey string) error {
 	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
 
 	remoteCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, removeCmd)
-
-	// Run the commands in target machine
-	if err := session.Run(remoteCmd); err != nil {
-		return err
-	}
+	session.Run(remoteCmd)
 	return nil
 }
 
