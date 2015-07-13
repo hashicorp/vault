@@ -54,7 +54,7 @@ token/     token     token based credentials
 
 To use the "cert" auth backend, an operator must configure it with
 trusted certificates that are allowed to authenticate. An example is shown below.
-Use `vault help` for more details.
+Use `vault path-help` for more details.
 
 ```
 $ vault write auth/cert/certs/web display_name=web policies=web,prod certificate=@web-cert.pem lease=3600

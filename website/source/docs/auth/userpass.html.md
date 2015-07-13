@@ -80,7 +80,7 @@ userpass/  userpass
 
 To use the "userpass" auth backend, an operator must configure it with
 users that are allowed to authenticate. An example is shown below.
-Use `vault help` for more details.
+Use `vault path-help` for more details.
 
 ```
 $ vault write auth/userpass/users/mitchellh password=foo policies=root

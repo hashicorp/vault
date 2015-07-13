@@ -85,7 +85,7 @@ Demo.DemoStepController = Ember.ObjectController.extend({
           this.set('fullscreen', true);
           break;
         case "help":
-          this.get('controllers.demo').appendLog('You can use `vault help <command>` ' +
+          this.get('controllers.demo').appendLog('You can use `vault path-help <command>` ' +
             'to learn more about specific Vault commands, or `next` ' +
             'and `previous` to navigate. Or, `fu` to go fullscreen.', false);
           break;

@@ -15,7 +15,7 @@ The Consul secret backend for Vault generates
 API tokens dynamically based on Consul ACL policies.
 
 This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault help` after mounting the backend.
+on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 

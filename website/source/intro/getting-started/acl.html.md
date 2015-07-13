@@ -107,7 +107,7 @@ Vault is the single policy authority, unlike auth where you can mount
 multiple backends. Any mounted auth backend must map identities to these
 core policies.
 
-Use the `vault help` system with your auth backend to determine how the
+Use the `vault path-help` system with your auth backend to determine how the
 mapping is done, since it is specific to each backend. For example,
 with GitHub, it is done by team using the `map/teams/<team>` path:
 

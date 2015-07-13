@@ -89,7 +89,7 @@ token/     token     token based credentials
 
 To use the App ID auth backend, an operator must configure it with
 the set of App IDs, user IDs, and the mapping between them. An
-example is shown below, use `vault help` for more details.
+example is shown below, use `vault path-help` for more details.
 
 ```
 $ vault write auth/app-id/map/app-id/foo value=root display_name=foo

@@ -30,7 +30,7 @@ Additionally, since encrypt/decrypt operations must enter the audit log,
 any decryption event is recorded.
 
 This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault help` after mounting the backend.
+on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 

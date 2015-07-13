@@ -16,7 +16,7 @@ be generated on the fly, and are automatically revoked when the Vault
 lease is expired.
 
 This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault help` after mounting the backend.
+on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 
@@ -143,7 +143,7 @@ The root credentials need permission to perform various IAM actions. These are t
 
 Note that this policy example is unrelated to the policy you wrote to `aws/roles/deploy`. This policy example should be applied to the IAM user (or role) associated with the root credentials that you wrote to `aws/config/root`. You have to apply it yourself in IAM. The policy you wrote to `aws/roles/deploy` is the policy you want the AWS secret backend to apply to the temporary credentials it returns from `aws/creds/deploy`.
 
-If you get stuck at any time, simply run `vault help aws` or with a subpath for
+If you get stuck at any time, simply run `vault path-help aws` or with a subpath for
 interactive help output.
 
 ## API

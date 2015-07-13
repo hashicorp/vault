@@ -25,7 +25,7 @@ Vault makes use both of its own internal revocation system as well as the
 become invalid within a reasonable time of the lease expiring.
 
 This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault help` after mounting the backend.
+on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 
@@ -104,7 +104,7 @@ that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
 
-If you get stuck at any time, simply run `vault help postgresql` or with a
+If you get stuck at any time, simply run `vault path-help postgresql` or with a
 subpath for interactive help output.
 
 ## API
