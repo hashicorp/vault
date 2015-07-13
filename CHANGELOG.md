@@ -41,6 +41,7 @@ IMPROVEMENTS:
  * secret/transit: Decouple raw key from key management endpoint [GH-355]
  * secret/transit: Upsert named key when encrypt is used [GH-355]
  * storage/zk: Support for HA configuration [GH-252]
+ * storage/zk: Changing node representation. **Backwards incompatible**. [GH-416]
 
 BUG FIXES:
 
