@@ -71,8 +71,7 @@ durability, etc.
       This backend supports HA.
 
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
-      This backend supports HA. This backend currently has known issues,
-      and is discouraged.
+      This backend supports HA.
 
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
       This backend does not support HA.

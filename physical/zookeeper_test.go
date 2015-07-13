@@ -30,9 +30,9 @@ func TestZookeeperBackend(t *testing.T) {
 	}
 
 	defer func() {
-		client.Delete(randPath + "/foo/bar/baz", -1)
-		client.Delete(randPath + "/foo/bar", -1)
-		client.Delete(randPath + "/foo", -1)
+		client.Delete(randPath+"/foo/bar/baz", -1)
+		client.Delete(randPath+"/foo/bar", -1)
+		client.Delete(randPath+"/foo", -1)
 		client.Delete(randPath, -1)
 		client.Close()
 	}()
@@ -70,7 +70,7 @@ func TestZookeeperHABackend(t *testing.T) {
 	}
 
 	defer func() {
-		client.Delete(randPath + "/foo", -1)
+		client.Delete(randPath+"/foo", -1)
 		client.Delete(randPath, -1)
 		client.Close()
 	}()
@@ -88,10 +88,4 @@ func TestZookeeperHABackend(t *testing.T) {
 		t.Fatalf("zookeeper does not implement HABackend")
 	}
 	testHABackend(t, ha, ha)
-
-	err = client.Delete(randPath + "/foo", -1)
-	if err != nil {
-		t.Fatalf("err: failed to cleanup! %s", err)
-	}
-
 }
