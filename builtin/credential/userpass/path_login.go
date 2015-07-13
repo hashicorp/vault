@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"crypto/subtle"
 	"strings"
 	"time"
 
@@ -35,13 +36,21 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLogin(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("name").(string))
+	password := d.Get("password").(string)
 
 	// Get the user and validate auth
 	user, err := b.User(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || user.Password != d.Get("password").(string) {
+	if user == nil {
+		return logical.ErrorResponse("unknown username or password"), nil
+	}
+
+	// Constant time comparison of password to avoid timing attack
+	passwordBytes := []byte(password)
+	actual := []byte(user.Password)
+	if subtle.ConstantTimeCompare(actual, passwordBytes) != 1 {
 		return logical.ErrorResponse("unknown username or password"), nil
 	}
 
