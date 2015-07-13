@@ -358,6 +358,7 @@ func (c *ServerCommand) setupTelementry(config *server.Config) error {
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 	metricsConf := metrics.DefaultConfig("vault")
+	metricsConf.EnableHostname = false
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
