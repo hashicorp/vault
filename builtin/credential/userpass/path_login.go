@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -47,11 +48,17 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("unknown username or password"), nil
 	}
 
-	// Constant time comparison of password to avoid timing attack
+	// Check for a password match. Check for a hash collision for Vault 0.2+,
+	// but handle the older legacy passwords with a constant time comparison.
 	passwordBytes := []byte(password)
-	actual := []byte(user.Password)
-	if subtle.ConstantTimeCompare(actual, passwordBytes) != 1 {
-		return logical.ErrorResponse("unknown username or password"), nil
+	if user.PasswordHash != nil {
+		if err := bcrypt.CompareHashAndPassword(user.PasswordHash, passwordBytes); err != nil {
+			return logical.ErrorResponse("unknown username or password"), nil
+		}
+	} else {
+		if subtle.ConstantTimeCompare([]byte(user.Password), passwordBytes) != 1 {
+			return logical.ErrorResponse("unknown username or password"), nil
+		}
 	}
 
 	return &logical.Response{

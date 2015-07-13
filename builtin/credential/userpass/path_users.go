@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func pathUsers(b *backend) *framework.Path {
@@ -85,15 +86,22 @@ func (b *backend) pathUserRead(
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
+	password := d.Get("password").(string)
 	policies := strings.Split(d.Get("policies").(string), ",")
 	for i, p := range policies {
 		policies[i] = strings.TrimSpace(p)
 	}
 
+	// Generate a hash of the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
-		Password: d.Get("password").(string),
-		Policies: policies,
+		PasswordHash: hash,
+		Policies:     policies,
 	})
 	if err != nil {
 		return nil, err
@@ -106,7 +114,14 @@ func (b *backend) pathUserWrite(
 }
 
 type UserEntry struct {
+	// Password is deprecated in Vault 0.2 in favor of
+	// PasswordHash, but is retained for backwards compatibilty.
 	Password string
+
+	// PasswordHash is a bcrypt hash of the password. This is
+	// used instead of the actual password in Vault 0.2+.
+	PasswordHash []byte
+
 	Policies []string
 }
 
