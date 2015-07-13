@@ -67,11 +67,12 @@ durability, etc.
       backend supports HA. It is the most recommended backend for Vault
       and has been shown to work at high scale under heavy load.
 
-  * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
-      This backend does not support HA.
-
   * `etcd` - Store data within [etcd](https://coreos.com/etcd/).
-      This backend does not support HA.
+      This backend supports HA.
+
+  * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
+      This backend supports HA. This backend currently has known issues,
+      and is discouraged.
 
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
       This backend does not support HA.
