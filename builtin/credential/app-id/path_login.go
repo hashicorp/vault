@@ -2,6 +2,7 @@ package appId
 
 import (
 	"crypto/sha1"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -82,8 +83,11 @@ func (b *backend) pathLogin(
 
 	// Verify that the app is in the list
 	found := false
+	appIdBytes := []byte(appId)
 	for _, app := range strings.Split(apps, ",") {
-		if strings.TrimSpace(app) == appId {
+		match := []byte(strings.TrimSpace(app))
+		// Protect against a timing attack with the app_id comparison
+		if subtle.ConstantTimeCompare(match, appIdBytes) == 1 {
 			found = true
 		}
 	}
