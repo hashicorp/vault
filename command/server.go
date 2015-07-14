@@ -357,13 +357,21 @@ func (c *ServerCommand) setupTelementry(config *server.Config) error {
 	*/
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
+
+	var telConfig *server.Telemetry
+	if config.Telemetry == nil {
+		telConfig = &server.Telemetry{}
+	} else {
+		telConfig = config.Telemetry
+	}
+
 	metricsConf := metrics.DefaultConfig("vault")
-	metricsConf.EnableHostname = false
+	metricsConf.EnableHostname = !telConfig.DisableHostname
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
-	if config.StatsiteAddr != "" {
-		sink, err := metrics.NewStatsiteSink(config.StatsiteAddr)
+	if telConfig.StatsiteAddr != "" {
+		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
 			return err
 		}
@@ -371,8 +379,8 @@ func (c *ServerCommand) setupTelementry(config *server.Config) error {
 	}
 
 	// Configure the statsd sink
-	if config.StatsdAddr != "" {
-		sink, err := metrics.NewStatsdSink(config.StatsdAddr)
+	if telConfig.StatsdAddr != "" {
+		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
 		if err != nil {
 			return err
 		}

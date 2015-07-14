@@ -9,5 +9,9 @@
         "consul": {
             "foo": "bar"
         }
+    },
+
+    "telemetry": {
+        "statsite_address": "baz"
     }
 }

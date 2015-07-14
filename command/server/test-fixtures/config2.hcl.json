@@ -9,5 +9,11 @@
         "consul": {
             "foo": "bar"
         }
+    },
+
+    "telemetry": {
+        "statsd_address": "bar",
+        "statsite_address": "foo",
+        "disable_hostname": true
     }
 }
