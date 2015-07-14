@@ -16,7 +16,7 @@ into environments using LDAP without duplicating the user/pass configuration
 in multiple places.
 
 The mapping of groups in LDAP to Vault policies is managed by using the
-`groups/` path.
+`users/` and `groups/` paths.
 
 ## Authentication
 
@@ -108,6 +108,14 @@ $ vault write auth/ldap/groups/scientists policies=foo,bar
 
 This maps the LDAP group "scientists" to the "foo" and "bar" Vault policies.
 
+We can also create a mapping from a specific LDAP user to a Vault policy:
+
+```
+$ vault write auth/ldap/users/tesla policies=foobar
+```
+
+This maps the LDAP user "tesla" to the "foobar" Vault policy.
+
 Finally, we can test this by authenticating:
 
 ```
@@ -116,6 +124,6 @@ Password (will be hidden):
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
-bar, foo
+bar, foo, foobar
 ```
 
