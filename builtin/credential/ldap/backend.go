@@ -94,9 +94,32 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Try to authenticate to the server using the provided credentials
-	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
+	binddn := ""
+	if cfg.UPNDomain != "" {
+		binddn = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+	} else {
+		binddn = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
+	}
 	if err = c.Bind(binddn, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
+	}
+
+	userdn := ""
+	if cfg.UPNDomain != "" {
+		// Find the distinguished name for the user if userPrincipalName used for login
+		sresult, err := c.Search(&ldap.SearchRequest{
+			BaseDN: cfg.UserDN,
+			Scope:  2, // subtree
+			Filter: fmt.Sprintf("(userPrincipalName=%s)", binddn),
+		})
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
+		}
+		for _, e := range sresult.Entries {
+			userdn = e.DN
+		}
+	} else {
+		userdn = binddn
 	}
 
 	// Enumerate all groups the user is member of. The search filter should
@@ -104,7 +127,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	sresult, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
-		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", username, binddn, binddn),
+		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", username, userdn, userdn),
 	})
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil

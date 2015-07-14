@@ -29,6 +29,10 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "LDAP domain to use for groups (eg: ou=Groups,dc=example,dc=org)",
 			},
+			"upndomain": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
+			},
 			"userattr": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Attribute used for users (default: cn)",
@@ -89,6 +93,7 @@ func (b *backend) pathConfigRead(
 			"url":          cfg.Url,
 			"userdn":       cfg.UserDN,
 			"groupdn":      cfg.GroupDN,
+			"upndomain":    cfg.UPNDomain,
 			"userattr":     cfg.UserAttr,
 			"certificate":  cfg.Certificate,
 			"insecure_tls": cfg.InsecureTLS,
@@ -116,6 +121,10 @@ func (b *backend) pathConfigWrite(
 	groupdn := d.Get("groupdn").(string)
 	if groupdn != "" {
 		cfg.GroupDN = groupdn
+	}
+	upndomain := d.Get("upndomain").(string)
+	if groupdn != "" {
+		cfg.UPNDomain = upndomain
 	}
 	certificate := d.Get("certificate").(string)
 	if certificate != "" {
@@ -154,6 +163,7 @@ type ConfigEntry struct {
 	Url         string
 	UserDN      string
 	GroupDN     string
+	UPNDomain   string
 	UserAttr    string
 	Certificate string
 	InsecureTLS bool
