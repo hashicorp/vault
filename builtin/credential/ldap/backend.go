@@ -21,6 +21,7 @@ func Backend() *framework.Backend {
 			Root: []string{
 				"config",
 				"groups/*",
+				"users/*",
 			},
 
 			Unauthenticated: []string{
@@ -32,6 +33,7 @@ func Backend() *framework.Backend {
 			pathLogin(&b),
 			pathConfig(&b),
 			pathGroups(&b),
+			pathUsers(&b),
 		}),
 
 		AuthRenew: b.pathLoginRenew,
@@ -135,6 +137,12 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	var allgroups []string
 	var policies []string
+
+	user, err := b.User(req.Storage, username)
+	if err == nil && user != nil {
+		policies = append(policies, user.Policies...)
+	}
+
 	for _, e := range sresult.Entries {
 		dn, err := ldap.ParseDN(e.DN)
 		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
