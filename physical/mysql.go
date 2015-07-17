@@ -1,14 +1,22 @@
 package physical
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	"fmt"
+	"io/ioutil"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
-	_ "github.com/go-sql-driver/mysql"
+	mysql "github.com/go-sql-driver/mysql"
+)
+
+var (
+	tlsKey = "custom"
 )
 
 // MySQLBackend is a physical backend that stores data
@@ -49,8 +57,18 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 	}
 	dbTable := database + "." + table
 
+	dsnParams := url.Values{}
+	sslca, ok := conf["sslca"]
+	if ok {
+		if err := useEncryptedMYSQLConnection(sslca); err != nil {
+			return nil, fmt.Errorf("failed register TLS config: %v", err)
+		}
+
+		dsnParams.Add("tls", tlsKey)
+	}
+
 	// Create MySQL handle for the database.
-	dsn := username + ":" + password + "@tcp(" + address + ")/"
+	dsn := username + ":" + password + "@tcp(" + address + ")/?" + dsnParams.Encode()
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mysql: %v", err)
@@ -172,4 +190,26 @@ func (m *MySQLBackend) List(prefix string) ([]string, error) {
 
 	sort.Strings(keys)
 	return keys, nil
+}
+
+func useEncryptedMYSQLConnection(sslca string) error {
+	rootCertPool := x509.NewCertPool()
+
+	pem, err := ioutil.ReadFile(sslca)
+	if err != nil {
+		return err
+	}
+
+	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+		return err
+	}
+
+	err = mysql.RegisterTLSConfig(tlsKey, &tls.Config{
+		RootCAs: rootCertPool,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
