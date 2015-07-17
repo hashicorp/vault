@@ -16,9 +16,9 @@ func pathUsers(b *backend) *framework.Path {
 				Description: "Name of the LDAP user.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"groups": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Comma-separated list of policies associated to the user.",
+				Description: "Comma-separated list of additional groups associated with the user.",
 			},
 		},
 
@@ -72,7 +72,7 @@ func (b *backend) pathUserRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(user.Policies, ","),
+			"groups": strings.Join(user.Groups, ","),
 		},
 	}, nil
 }
@@ -80,14 +80,14 @@ func (b *backend) pathUserRead(
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
+	groups := strings.Split(d.Get("groups").(string), ",")
+	for i, g := range groups {
+		groups[i] = strings.TrimSpace(g)
 	}
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
-		Policies: policies,
+		Groups: groups,
 	})
 	if err != nil {
 		return nil, err
@@ -100,19 +100,18 @@ func (b *backend) pathUserWrite(
 }
 
 type UserEntry struct {
-	Policies []string
+	Groups []string
 }
 
 const pathUserHelpSyn = `
-Manage users allowed to authenticate.
+Manage additional groups for users allowed to authenticate.
 `
 
 const pathUserHelpDesc = `
 This endpoint allows you to create, read, update, and delete configuration
-for LDAP users that are allowed to authenticate, and associate policies to
-them.
+for LDAP users that are allowed to authenticate, in particular associating
+additional groups to them.
 
-Deleting a user will not revoke auth for prior authenticated users in that
-user. To do this, do a revoke on "login/<username>" for
+Deleting a user will not revoke their auth. To do this, do a revoke on "login/<username>" for
 the usernames you want revoked.
 `

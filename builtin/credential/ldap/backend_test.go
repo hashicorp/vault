@@ -17,7 +17,8 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			testAccStepGroup(t, "scientists", "foo"),
-			testAccStepUser(t, "tesla", "bar"),
+			testAccStepGroup(t, "engineers", "bar"),
+			testAccStepUser(t, "tesla", "engineers"),
 			testAccStepLogin(t, "tesla", "password"),
 		},
 	})
@@ -111,36 +112,36 @@ func TestBackend_userCrud(t *testing.T) {
 	})
 }
 
-func testAccStepUser(t *testing.T, user string, policies string) logicaltest.TestStep {
+func testAccStepUser(t *testing.T, user string, groups string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "users/" + user,
 		Data: map[string]interface{}{
-			"policies": policies,
+			"groups": groups,
 		},
 	}
 }
 
-func testAccStepReadUser(t *testing.T, user string, policies string) logicaltest.TestStep {
+func testAccStepReadUser(t *testing.T, user string, groups string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "users/" + user,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				if policies == "" {
+				if groups == "" {
 					return nil
 				}
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
 			var d struct {
-				Policies string `mapstructure:"policies"`
+				Groups string `mapstructure:"groups"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
 
-			if d.Policies != policies {
+			if d.Groups != groups {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 

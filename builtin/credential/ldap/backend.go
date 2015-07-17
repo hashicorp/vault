@@ -140,7 +140,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	user, err := b.User(req.Storage, username)
 	if err == nil && user != nil {
-		policies = append(policies, user.Policies...)
+		allgroups = append(allgroups, user.Groups...)
 	}
 
 	for _, e := range sresult.Entries {
@@ -150,6 +150,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 		gname := dn.RDNs[0].Attributes[0].Value
 		allgroups = append(allgroups, gname)
+	}
+
+	for _, gname := range allgroups {
 		group, err := b.Group(req.Storage, gname)
 		if err == nil && group != nil {
 			policies = append(policies, group.Policies...)

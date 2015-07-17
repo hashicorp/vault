@@ -108,13 +108,15 @@ $ vault write auth/ldap/groups/scientists policies=foo,bar
 
 This maps the LDAP group "scientists" to the "foo" and "bar" Vault policies.
 
-We can also create a mapping from a specific LDAP user to a Vault policy:
+We can also add specific LDAP users to additional (potentially non-LDAP) groups:
 
 ```
-$ vault write auth/ldap/users/tesla policies=foobar
+$ vault write auth/ldap/groups/engineers policies=foobar
+$ vault write auth/ldap/users/tesla groups=engineers
 ```
 
-This maps the LDAP user "tesla" to the "foobar" Vault policy.
+This adds the LDAP user "tesla" to the "engineers" group, which maps to
+the "foobar" Vault policy.
 
 Finally, we can test this by authenticating:
 
