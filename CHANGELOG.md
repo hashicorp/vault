@@ -1,4 +1,4 @@
-## 0.2.0 (unreleased)
+## 0.2.0 (July 13, 2015)
 
 FEATURES:
 
@@ -28,9 +28,12 @@ IMPROVEMENTS:
  All policy files must be updated for future writes. Adding the explicit glob
  character `*` to the path specification is all that is required.
  * core: policy merging to give deny highest precedence [GH-400]
+ * credential/app-id: Protect against timing attack on app-id
  * credential/cert: Record the common name in the metadata [GH-342]
  * credential/ldap: Allow TLS verification to be disabled [GH-372]
  * credential/ldap: More flexible names allowed [GH-245] [GH-379] [GH-367]
+ * credential/userpass: Protect against timing attack on password
+ * credential/userpass: Use bcrypt for password matching
  * http: response codes improved to reflect error [GH-366]
  * http: the `sys/health` endpoint supports `?standbyok` to return 200 on standby [GH-389]
  * secret/app-id: Support deleting AppID and UserIDs [GH-200]
@@ -38,6 +41,7 @@ IMPROVEMENTS:
  * secret/transit: Decouple raw key from key management endpoint [GH-355]
  * secret/transit: Upsert named key when encrypt is used [GH-355]
  * storage/zk: Support for HA configuration [GH-252]
+ * storage/zk: Changing node representation. **Backwards incompatible**. [GH-416]
 
 BUG FIXES:
 

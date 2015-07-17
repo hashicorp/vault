@@ -16,7 +16,7 @@ By keeping leases relatively short, revocations are less likely to be needed, ke
 
 In addition, by allowing revocation to mostly be forgone, this backend allows for ephemeral certificates; certificates can be fetched and stored in memory upon application startup and discarded upon shutdown, without ever being written to disk.
 
-This page will show a quick start for this backend. For detailed documentation on every path, use `vault help` after mounting the backend.
+This page will show a quick start for this backend. For detailed documentation on every path, use `vault path-help` after mounting the backend.
 
 ## Considerations
 
@@ -127,7 +127,7 @@ Vault has now generated a new set of credentials using the `example-dot-com` rol
 
 Using ACLs, it is possible to restrict using the pki backend such that trusted operators can manage the role definitions, and both users and applications are restricted in the credentials they are allowed to read.
 
-If you get stuck at any time, simply run `vault help pki` or with a subpath for interactive help output.
+If you get stuck at any time, simply run `vault path-help pki` or with a subpath for interactive help output.
 
 ## API
 

@@ -87,7 +87,7 @@ that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
 
-If you get stuck at any time, simply run `vault help cassandra` or with a
+If you get stuck at any time, simply run `vault path-help cassandra` or with a
 subpath for interactive help output.
 
 ## API

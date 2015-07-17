@@ -83,7 +83,7 @@ token/     token     token based credentials
 
 To use the "ldap" auth backend, an operator must configure it with
 the address of the LDAP server that is to be used. An example is shown below.
-Use `vault help` for more details.
+Use `vault path-help` for more details.
 
 ```
 $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \

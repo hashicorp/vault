@@ -125,6 +125,14 @@ func testBackend(t *testing.T, b Backend) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Get should return the child
+	out, err = b.Get("foo/bar")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("missing child")
+	}
 }
 
 func testBackend_ListPrefix(t *testing.T, b Backend) {

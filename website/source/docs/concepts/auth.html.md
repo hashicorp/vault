@@ -21,8 +21,8 @@ organization. For example, you can authenticate using GitHub, certs, etc.
 
 There are many authentication backends available for Vault. They
 are enabled using `vault auth-enable`. After they're enabled, you can
-learn more about them using `vault help auth/<name>`. For example,
-if you enable GitHub, you can use `vault help auth/github` to learn more
+learn more about them using `vault path-help auth/<name>`. For example,
+if you enable GitHub, you can use `vault path-help auth/github` to learn more
 about how to configure it and login.
 
 Multiple authentication backends can be enabled, but only one is required
@@ -76,11 +76,11 @@ must be used.
 #### Via the API
 
 API authentication is generally used for machine authentication. Each
-auth backend implements is own login endpoint. Use the `vault help`
+auth backend implements is own login endpoint. Use the `vault path-help`
 mechanism to find the proper endpoint.
 
 For example, the GitHub login endpoint is located at `auth/github/login`.
-And to determine the arguments needed, `vault help auth/github/login` can
+And to determine the arguments needed, `vault path-help auth/github/login` can
 be used.
 
 ## Auth Leases

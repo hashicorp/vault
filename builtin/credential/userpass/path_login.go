@@ -1,11 +1,13 @@
 package userpass
 
 import (
+	"crypto/subtle"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -35,14 +37,28 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLogin(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("name").(string))
+	password := d.Get("password").(string)
 
 	// Get the user and validate auth
 	user, err := b.User(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || user.Password != d.Get("password").(string) {
+	if user == nil {
 		return logical.ErrorResponse("unknown username or password"), nil
+	}
+
+	// Check for a password match. Check for a hash collision for Vault 0.2+,
+	// but handle the older legacy passwords with a constant time comparison.
+	passwordBytes := []byte(password)
+	if user.PasswordHash != nil {
+		if err := bcrypt.CompareHashAndPassword(user.PasswordHash, passwordBytes); err != nil {
+			return logical.ErrorResponse("unknown username or password"), nil
+		}
+	} else {
+		if subtle.ConstantTimeCompare([]byte(user.Password), passwordBytes) != 1 {
+			return logical.ErrorResponse("unknown username or password"), nil
+		}
 	}
 
 	return &logical.Response{

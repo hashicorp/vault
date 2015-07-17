@@ -236,6 +236,12 @@ func (b *AESGCMBarrier) ReloadKeyring() error {
 		return fmt.Errorf("failed to check for keyring: %v", err)
 	}
 
+	// Ensure that the keyring exists. This should never happen,
+	// and indicates something really bad has happened.
+	if out == nil {
+		return fmt.Errorf("keyring unexpectedly missing")
+	}
+
 	// Decrypt the barrier init key
 	plain, err := b.decrypt(gcm, out.Value)
 	if err != nil {

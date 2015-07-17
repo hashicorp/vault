@@ -56,7 +56,7 @@ with regards to mounting:
     were created at. The data stored for the backend won't be deleted.
 
 Once a secret backend is mounted, you can interact with it directly
-at its mount point according to its own API. You can use the `vault help`
+at its mount point according to its own API. You can use the `vault path-help`
 system to determine the paths it responds to.
 
 ## Barrier View

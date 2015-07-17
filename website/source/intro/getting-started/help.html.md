@@ -28,10 +28,10 @@ For this, we'll assume you have the AWS backend mounted. If not, mount
 it with `vault mount aws`. Even if you don't have an AWS account, you
 can still mount the AWS backend.
 
-With the backend mounted, let's learn about it with `vault help`:
+With the backend mounted, let's learn about it with `vault path-help`:
 
 ```
-$ vault help aws
+$ vault path-help aws
 ## DESCRIPTION
 
 The AWS backend dynamically generates AWS access keys for a set of
@@ -62,7 +62,7 @@ you may or may not be able to access certain paths.
         Read and write IAM policies that access keys can be made for.
 ```
 
-The `vault help` command takes a path. By specifying the root path for
+The `vault path-help` command takes a path. By specifying the root path for
 a mount, it will give us the overview of that mount. Notice how the help
 not only contains a description, but also the exact regular expressions
 used to match routes for this backend along with a brief description
@@ -71,14 +71,14 @@ of what the route is for.
 ## Path Help
 
 After seeing the overview, we can continue to dive deeper by getting
-help for an individual path. For this, just use `vault help` with a path
+help for an individual path. For this, just use `vault path-help` with a path
 that would match the regular expression for that path. Note that the path
 doesn't need to actually _work_. For example, we'll get the help below
 for accessing `aws/creds/operator`, even though we never created the `operator`
 role:
 
 ```
-$ vault help aws/creds/operator
+$ vault path-help aws/creds/operator
 Request:        creds/operator
 Matching Route: ^creds/(?P<name>\w+)$
 

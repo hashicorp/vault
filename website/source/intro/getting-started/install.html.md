@@ -42,7 +42,7 @@ usage: vault [-version] [-help] <command> [args]
 
 Common commands:
     delete           Delete operation on secrets in Vault
-    help             Look up the help for a path
+    path-help        Look up the help for a path
     read             Read data or secrets from Vault
     renew            Renew the lease of a secret
     revoke           Revoke a secret.
@@ -58,12 +58,15 @@ All other commands:
     auth-disable     Disable an auth provider
     auth-enable      Enable a new auth provider
     init             Initialize a new Vault server
+    key-status       Provides information about the active encryption key
     mount            Mount a logical backend
     mounts           Lists mounted backends in Vault
     policies         List the policies on the server
     policy-delete    Delete a policy from the server
     policy-write     Write a policy to the server
+    rekey            Rekeys Vault to generate new unseal keys
     remount          Remount a secret backend to a new path
+    rotate           Rotates the backend encryption key used to persist data
     seal             Seals the vault server
     token-create     Create a new auth token
     token-renew      Renew an auth token
