@@ -41,6 +41,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	if !ok {
 		secret_key = ""
 	}
+    session_token, ok := conf["session_token"]
+    if !ok {
+            session_token = ""
+    }
 	region, ok := conf["region"]
 	if !ok {
 		region = os.Getenv("AWS_DEFAULT_REGION")
@@ -53,6 +57,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 		&credentials.StaticProvider{Value: credentials.Value{
 			AccessKeyID:     access_key,
 			SecretAccessKey: secret_key,
+			SessionToken:    session_token,
 		}},
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
