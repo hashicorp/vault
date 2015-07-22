@@ -29,9 +29,13 @@ func TestLoadConfigFile(t *testing.T) {
 			},
 		},
 
+		Telemetry: &Telemetry{
+			StatsdAddr: "bar",
+			StatsiteAddr: "foo",
+			DisableHostname: false,
+		},
+
 		DisableMlock: true,
-		StatsiteAddr: "foo",
-		StatsdAddr:   "bar",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
@@ -59,6 +63,12 @@ func TestLoadConfigFile_json(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
+		},
+
+		Telemetry: &Telemetry{
+			StatsiteAddr: "baz",
+			StatsdAddr: "",
+			DisableHostname: false,
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
@@ -88,6 +98,12 @@ func TestLoadConfigFile_json2(t *testing.T) {
 				"foo": "bar",
 			},
 		},
+
+		Telemetry: &Telemetry{
+			StatsiteAddr: "foo",
+			StatsdAddr: "bar",
+			DisableHostname: true,
+		},
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
@@ -115,6 +131,12 @@ func TestLoadConfigDir(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
+		},
+
+		Telemetry: &Telemetry{
+			StatsiteAddr: "qux",
+			StatsdAddr: "baz",
+			DisableHostname: true,
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
