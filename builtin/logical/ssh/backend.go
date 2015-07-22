@@ -3,21 +3,33 @@ package ssh
 import (
 	"strings"
 
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b, err := Backend(conf)
+	if err != nil {
+		return nil, err
+	}
+	return b.Setup(conf)
 }
 
-func Backend() *framework.Backend {
+func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
+	salt, err := salt.NewSalt(conf.View, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	var b backend
+	b.salt = salt
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
-			Root: []string{"config/*"},
+			Root:            []string{"config/*"},
+			Unauthenticated: []string{"verify"},
 		},
 
 		Paths: []*framework.Path{
@@ -26,17 +38,20 @@ func Backend() *framework.Backend {
 			pathRoles(&b),
 			pathRoleCreate(&b),
 			pathLookup(&b),
+			pathVerify(&b),
 		},
 
 		Secrets: []*framework.Secret{
 			secretSSHKey(&b),
+			secretOTP(&b),
 		},
 	}
-	return b.Backend
+	return b.Backend, nil
 }
 
 type backend struct {
 	*framework.Backend
+	salt *salt.Salt
 }
 
 const backendHelp = `

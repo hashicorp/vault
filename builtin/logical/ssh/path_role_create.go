@@ -2,8 +2,10 @@ package ssh
 
 import (
 	"fmt"
+	"log"
 	"net"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -77,40 +79,73 @@ func (b *backend) pathRoleCreateWrite(
 		return logical.ErrorResponse(fmt.Sprintf("IP[%s] does not belong to role[%s]", ip, roleName)), nil
 	}
 
-	// Fetch the host key to be used for dynamic key installation
-	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
-	if err != nil {
-		return nil, fmt.Errorf("key '%s' not found error:%s", role.KeyName, err)
-	}
-	var hostKey sshHostKey
-	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
-		return nil, fmt.Errorf("error reading the host key: %s", err)
-	}
+	var result *logical.Response
+	if role.KeyType == KeyTypeOTP {
+		otp := uuid.GenerateUUID()
+		otpSalted := b.salt.SaltID(otp)
+		log.Printf("Vishal: otpPath:%s", "otp/"+otpSalted)
+		entry, err := logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
+			Username: username,
+			IP:       ip,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(entry); err != nil {
+			return nil, err
+		}
+		result = b.Secret(SecretOTPType).Response(map[string]interface{}{
+			"otp": otp,
+		}, map[string]interface{}{
+			"otp": otp,
+		})
+	} else if role.KeyType == KeyTypeDynamic {
+		// Fetch the host key to be used for dynamic key installation
+		keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
+		if err != nil {
+			return nil, fmt.Errorf("key '%s' not found error:%s", role.KeyName, err)
+		}
 
-	// Generate RSA key pair
-	dynamicPublicKey, dynamicPrivateKey, _ := generateRSAKeys()
+		if keyEntry == nil {
+			return nil, fmt.Errorf("key '%s' not found", role.KeyName, err)
+		}
 
-	// Transfer the public key to target machine
-	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, role.Port, hostKey.Key)
-	if err != nil {
-		return nil, err
+		var hostKey sshHostKey
+		if err := keyEntry.DecodeJSON(&hostKey); err != nil {
+			return nil, fmt.Errorf("error reading the host key: %s", err)
+		}
+
+		// Generate RSA key pair
+		dynamicPublicKey, dynamicPrivateKey, _ := generateRSAKeys()
+
+		// Transfer the public key to target machine
+		err = uploadPublicKeyScp(dynamicPublicKey, username, ip, role.Port, hostKey.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add the public key to authorized_keys file in target machine
+		err = installPublicKeyInTarget(username, ip, role.Port, hostKey.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("error creating OTP:'%s'", err)
+		}
+		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
+			"key": dynamicPrivateKey,
+		}, map[string]interface{}{
+			"key_type":           role.KeyType,
+			"username":           username,
+			"ip":                 ip,
+			"host_key_name":      role.KeyName,
+			"dynamic_public_key": dynamicPublicKey,
+			"port":               role.Port,
+		})
+	} else {
+		return nil, fmt.Errorf("key type unknown")
 	}
-
-	// Add the public key to authorized_keys file in target machine
-	err = installPublicKeyInTarget(username, ip, role.Port, hostKey.Key)
-	if err != nil {
-		return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
-	}
-
-	result := b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
-		"key": dynamicPrivateKey,
-	}, map[string]interface{}{
-		"username":           username,
-		"ip":                 ip,
-		"host_key_name":      role.KeyName,
-		"dynamic_public_key": dynamicPublicKey,
-		"port":               role.Port,
-	})
 
 	// Change the lease information to reflect user's choice
 	lease, _ := b.Lease(req.Storage)
@@ -119,6 +154,11 @@ func (b *backend) pathRoleCreateWrite(
 		result.Secret.LeaseGracePeriod = lease.LeaseMax
 	}
 	return result, nil
+}
+
+type sshOTP struct {
+	Username string `json:"username"`
+	IP       string `json:"ip"`
 }
 
 type sshCIDR struct {
