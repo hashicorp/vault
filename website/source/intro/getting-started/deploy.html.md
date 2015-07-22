@@ -219,8 +219,4 @@ This is the basic knowledge necessary to deploy Vault into a real
 environment. Once the Vault is unsealed, you access it as you have
 throughout this getting started guide (which worked with an unsealed Vault).
 
-Congratulations! You now know all the basics to get started with Vault.
-
-Next, we have a page dedicated to
-[next steps](/intro/getting-started/next-steps.html) depending on
-what you'd like to achieve.
+Next, we have a [short tutorial](/intro/getting-started/apis.html) on using the HTTP APIs to authenticate and access secrets.
