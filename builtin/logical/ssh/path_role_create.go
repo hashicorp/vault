@@ -95,7 +95,8 @@ func (b *backend) pathRoleCreateWrite(
 			return nil, err
 		}
 		result = b.Secret(SecretOTPType).Response(map[string]interface{}{
-			"otp": otp,
+			"key_type": role.KeyType,
+			"key":      otp,
 		}, map[string]interface{}{
 			"otp": otp,
 		})
@@ -134,9 +135,9 @@ func (b *backend) pathRoleCreateWrite(
 			return nil, fmt.Errorf("error creating OTP:'%s'", err)
 		}
 		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
-			"key": dynamicPrivateKey,
+			"key":      dynamicPrivateKey,
+			"key_type": role.KeyType,
 		}, map[string]interface{}{
-			"key_type":           role.KeyType,
 			"username":           username,
 			"ip":                 ip,
 			"host_key_name":      role.KeyName,

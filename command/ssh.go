@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/ssh"
 )
 
 // SSHCommand is a Command that establishes a SSH connection with target by generating a dynamic key
@@ -19,6 +20,8 @@ type SSHCommand struct {
 func (c *SSHCommand) Run(args []string) int {
 	var role string
 	var port string
+	var sshCmdArgs []string
+	var sshDynamicKeyFileName string
 	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
 	flags.StringVar(&role, "role", "", "")
 	flags.StringVar(&port, "port", "22", "")
@@ -64,15 +67,22 @@ func (c *SSHCommand) Run(args []string) int {
 		return 2
 	}
 
-	sshDynamicKey := string(keySecret.Data["key"].(string))
-	if len(sshDynamicKey) == 0 {
-		c.Ui.Error(fmt.Sprintf("Invalid key"))
-		return 2
-	}
-	sshDynamicKeyFileName := fmt.Sprintf("vault_temp_file_%s_%s", username, ip.String())
-	err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
+	if keySecret.Data["key_type"].(string) == ssh.KeyTypeDynamic {
+		sshDynamicKey := string(keySecret.Data["key"].(string))
+		if len(sshDynamicKey) == 0 {
+			c.Ui.Error(fmt.Sprintf("Invalid key"))
+			return 2
+		}
+		sshDynamicKeyFileName = fmt.Sprintf("vault_temp_file_%s_%s", username, ip.String())
+		err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
+		sshCmdArgs = append(sshCmdArgs, []string{"-i", sshDynamicKeyFileName}...)
 
-	sshCmdArgs := []string{"-p", port, "-i", sshDynamicKeyFileName}
+	} else if keySecret.Data["key_type"].(string) == ssh.KeyTypeOTP {
+		fmt.Printf("OTP for the session is %s\n", string(keySecret.Data["key"].(string)))
+	} else {
+		c.Ui.Error("Key not present")
+	}
+	sshCmdArgs = append(sshCmdArgs, []string{"-p", port}...)
 	sshCmdArgs = append(sshCmdArgs, args...)
 
 	sshCmd := exec.Command("ssh", sshCmdArgs...)
@@ -84,9 +94,11 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Error while running ssh command:%s", err))
 	}
 
-	err = os.Remove(sshDynamicKeyFileName)
-	if err != nil {
-		c.Ui.Error("Error cleaning up") // Intentionally not mentioning the exact error
+	if keySecret.Data["key_type"].(string) == ssh.KeyTypeDynamic {
+		err = os.Remove(sshDynamicKeyFileName)
+		if err != nil {
+			c.Ui.Error("Error cleaning up") // Intentionally not mentioning the exact error
+		}
 	}
 
 	err = client.SSH().KeyRevoke(keySecret.LeaseID)
