@@ -28,8 +28,13 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
-			Root:            []string{"config/*"},
-			Unauthenticated: []string{"verify"},
+			Root: []string{
+				"config/*",
+				"keys/*",
+			},
+			Unauthenticated: []string{
+				"verify",
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -42,7 +47,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		},
 
 		Secrets: []*framework.Secret{
-			secretSSHKey(&b),
+			secretDynamicKey(&b),
 			secretOTP(&b),
 		},
 	}

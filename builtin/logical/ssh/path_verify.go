@@ -41,7 +41,6 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 		return nil, nil
 	}
 
-	log.Printf("Vishal: key found. Deleting now. Returning valid=yes\n")
 	err = req.Storage.Delete("otp/" + otpSalted)
 	if err != nil {
 		return nil, err

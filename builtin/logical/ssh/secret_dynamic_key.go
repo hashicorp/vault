@@ -10,7 +10,7 @@ import (
 
 const SecretDynamicKeyType = "secret_dynamic_key_type"
 
-func secretSSHKey(b *backend) *framework.Secret {
+func secretDynamicKey(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretDynamicKeyType,
 		Fields: map[string]*framework.FieldSchema{
