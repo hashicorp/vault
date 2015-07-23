@@ -50,10 +50,24 @@ func listenerWrapTLS(
 		return nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
 	}
 
+	tlslookup := map[string]uint16{
+		"tls10": tls.VersionTLS10,
+		"tls11": tls.VersionTLS11,
+		"tls12": tls.VersionTLS12,
+	}
+	
+	tlsvers, ok := config["tls_min_version"]
+	if !ok {
+		tlsvers = "tls12"
+	}
+	
 	tlsConf := &tls.Config{}
 	tlsConf.Certificates = []tls.Certificate{cert}
 	tlsConf.NextProtos = []string{"http/1.1"}
-	tlsConf.MinVersion = tls.VersionTLS12 // Minimum version is TLS 1.2
+	tlsConf.MinVersion, ok = tlslookup[tlsvers]
+	if !ok {
+		return nil, nil, fmt.Errorf("'tls_min_version' value %s not supported, please specify one of [tls10,tls11,tls12]", tlsvers)
+	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
 	ln = tls.NewListener(ln, tlsConf)
