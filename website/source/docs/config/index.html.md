@@ -143,6 +143,8 @@ For S3, the following options are supported:
 
   * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
 
+  * `session_token` - (optional) The AWS session_token. It can also be sourced from the AWS_SESSION_TOKEN environment variable.
+
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
 #### Backend Reference: MySQL
