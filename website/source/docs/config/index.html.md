@@ -193,6 +193,10 @@ The supported options are:
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate.
       
+  * `tls_min_vers` (optional) - If provided, specifies the minimum
+      supported version of TLS. Accepted values are "tls10", "tls11"
+      or "tls12". This defaults to "tls12".
+
 ## Telemetry Reference
 
 For the `telemetry` section, there is no resource name. All configuration
