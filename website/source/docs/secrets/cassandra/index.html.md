@@ -38,7 +38,7 @@ writing one or more hosts, a username, and a password:
 
 ```text
 $ vault write cassandra/config/connection \
-    host=localhost username=cassandra password=cassandra
+    hosts=localhost username=cassandra password=cassandra
 ```
 
 In this case, we've configured Vault with the user "cassandra" and password "cassandra",
