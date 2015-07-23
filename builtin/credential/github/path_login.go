@@ -75,7 +75,8 @@ func (b *backend) pathLogin(
 		}
 
 		// Append the slugs so we can get the policies
-		teamNames = append(teamNames, *t.Slug)
+		teamNames = append(teamNames, *t.Name)
+                teamNames = append(teamNames, *t.Slug)
 	}
 
 	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
