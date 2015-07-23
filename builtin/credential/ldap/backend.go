@@ -95,15 +95,59 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Try to authenticate to the server using the provided credentials
 	binddn := ""
 	if cfg.UPNDomain != "" {
 		binddn = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
 	} else {
 		binddn = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
 	}
-	if err = c.Bind(binddn, password); err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
+
+	var binduser string
+	var bindpassword string
+	configuredBinding := false
+
+	if cfg.BindDN == "" { //Bind with requesting credentials
+		binduser = binddn
+		bindpassword = password
+	} else { //Bind with configured credentials
+		binduser = cfg.BindDN
+		bindpassword = cfg.BindDNPassword
+		configuredBinding = true
+	}
+
+	//Attempt bind
+	if err = c.Bind(binduser, bindpassword); err != nil {
+		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind (%s) failed: %v", binduser, err)), nil
+	}
+
+	//If using cofigured binding credentials, we need to make sure
+	//the requesting credentials are correct
+	if configuredBinding {
+		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, username)
+		//Find the user requesting to login
+		sresult, err := c.Search(&ldap.SearchRequest{
+			BaseDN: cfg.UserDN,
+			Scope:  2, // subtree
+			Filter: filter,
+		})
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP user search (%s) failed: %v", filter, err)), nil
+		}
+
+		//Requesting user wasn't found
+		if len(sresult.Entries) == 0 {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP user search (%s) failed to find user: %s", filter, username)), nil
+		}
+
+		discoveredUserDN := sresult.Entries[0].DN
+
+		//Check requesting credentials
+		if err = c.Bind(discoveredUserDN, password); err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind (%s) failed: %v", discoveredUserDN, err)), nil
+		}
+
+		//User the user dn to perform group searches
+		binddn = discoveredUserDN
 	}
 
 	userdn := ""
@@ -160,7 +204,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if len(policies) == 0 {
-		return nil, logical.ErrorResponse("user is not member of any authorized group"), nil
+		return nil, logical.ErrorResponse(fmt.Sprintf("user (%s) is not member of any authorized group", binddn)), nil
 	}
 
 	return policies, nil, nil
