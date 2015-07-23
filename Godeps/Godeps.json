@@ -213,8 +213,12 @@
 			"Rev": "9eae18c3681ae3d3c677ac2b80a8fe57de45fc09"
 		},
 		{
-			"ImportPath": "gopkg.in/inf.v0",
-			"Rev": "c85f1217d51339c0fa3a498cc8b2075de695dae6"
-		}
+      "ImportPath": "gopkg.in/inf.v0",
+      "Rev": "c85f1217d51339c0fa3a498cc8b2075de695dae6"
+		},
+    {
+      "ImportPath": "github.com/dgrijalva/jwt-go",
+      "Rev": "e5cb38552fb8426fe9f0f2b3bc8408f238b97b87"
+    }
 	]
 }
