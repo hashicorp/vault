@@ -16,7 +16,7 @@ into environments using LDAP without duplicating the user/pass configuration
 in multiple places.
 
 The mapping of groups in LDAP to Vault policies is managed by using the
-`groups/` path.
+`users/` and `groups/` paths.
 
 ## Authentication
 
@@ -90,6 +90,7 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
 		userattr=uid \
         userdn="dc=example,dc=com" \
         groupdn="dc=example,dc=com" \
+        upndomain="forumsys.com" \
         certificate=@ldap_ca_cert.pem \
         insecure_tls=false \
         starttls=true
@@ -107,6 +108,16 @@ $ vault write auth/ldap/groups/scientists policies=foo,bar
 
 This maps the LDAP group "scientists" to the "foo" and "bar" Vault policies.
 
+We can also add specific LDAP users to additional (potentially non-LDAP) groups:
+
+```
+$ vault write auth/ldap/groups/engineers policies=foobar
+$ vault write auth/ldap/users/tesla groups=engineers
+```
+
+This adds the LDAP user "tesla" to the "engineers" group, which maps to
+the "foobar" Vault policy.
+
 Finally, we can test this by authenticating:
 
 ```
@@ -115,6 +126,6 @@ Password (will be hidden):
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
-bar, foo
+bar, foo, foobar
 ```
 

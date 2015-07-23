@@ -17,6 +17,8 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			testAccStepGroup(t, "scientists", "foo"),
+			testAccStepGroup(t, "engineers", "bar"),
+			testAccStepUser(t, "tesla", "engineers"),
 			testAccStepLogin(t, "tesla", "password"),
 		},
 	})
@@ -96,6 +98,65 @@ func testAccStepDeleteGroup(t *testing.T, group string) logicaltest.TestStep {
 	}
 }
 
+func TestBackend_userCrud(t *testing.T) {
+	b := Backend()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepUser(t, "g1", "bar"),
+			testAccStepReadUser(t, "g1", "bar"),
+			testAccStepDeleteUser(t, "g1"),
+			testAccStepReadUser(t, "g1", ""),
+		},
+	})
+}
+
+func testAccStepUser(t *testing.T, user string, groups string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "users/" + user,
+		Data: map[string]interface{}{
+			"groups": groups,
+		},
+	}
+}
+
+func testAccStepReadUser(t *testing.T, user string, groups string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "users/" + user,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if groups == "" {
+					return nil
+				}
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			var d struct {
+				Groups string `mapstructure:"groups"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.Groups != groups {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testAccStepDeleteUser(t *testing.T, user string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "users/" + user,
+	}
+}
+
 func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -105,7 +166,7 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"foo"}),
+		Check: logicaltest.TestCheckAuth([]string{"foo", "bar"}),
 	}
 }
 

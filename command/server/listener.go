@@ -1,6 +1,9 @@
 package server
 
 import (
+	// We must import sha512 so that it registers with the runtime so that
+	// certificates that use it can be parsed.
+	_ "crypto/sha512"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -12,6 +15,13 @@ type ListenerFactory func(map[string]string) (net.Listener, map[string]string, e
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
 	"tcp": tcpListenerFactory,
+}
+
+// tlsLookup maps the tls_min_version configuration to the internal value
+var tlsLookup = map[string]uint16{
+	"tls10": tls.VersionTLS10,
+	"tls11": tls.VersionTLS11,
+	"tls12": tls.VersionTLS12,
 }
 
 // NewListener creates a new listener of the given type with the given
@@ -50,10 +60,18 @@ func listenerWrapTLS(
 		return nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
 	}
 
+	tlsvers, ok := config["tls_min_version"]
+	if !ok {
+		tlsvers = "tls12"
+	}
+
 	tlsConf := &tls.Config{}
 	tlsConf.Certificates = []tls.Certificate{cert}
 	tlsConf.NextProtos = []string{"http/1.1"}
-	tlsConf.MinVersion = tls.VersionTLS12 // Minimum version is TLS 1.2
+	tlsConf.MinVersion, ok = tlsLookup[tlsvers]
+	if !ok {
+		return nil, nil, fmt.Errorf("'tls_min_version' value %s not supported, please specify one of [tls10,tls11,tls12]", tlsvers)
+	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
 	ln = tls.NewListener(ln, tlsConf)

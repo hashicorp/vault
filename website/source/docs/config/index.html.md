@@ -22,6 +22,11 @@ listener "tcp" {
   address = "127.0.0.1:8200"
   tls_disable = 1
 }
+
+telemetry {
+  statsite_address = "127.0.0.1:8125"
+  disable_hostname = true
+}
 ```
 
 After the configuration is written, use the `-config` flag with `vault server`
@@ -41,11 +46,8 @@ to specify where the configuration is.
   server from executing the `mlock` syscall to prevent memory from being
   swapped to disk. This is not recommended in production (see below).
 
-* `statsite_addr` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
-  instances for metrics. This is highly recommended for production usage.
-
-* `statsd_addr` (optional) - This is the same as `statsite_addr` but
-  for StatsD.
+* `telemetry` (optional)  - Configures the telemetry reporting system
+  (see below).
 
 In production, you should only consider setting the `disable_mlock` option
 on Linux systems that only use encrypted swap or do not use swap at all.
@@ -143,6 +145,8 @@ For S3, the following options are supported:
 
   * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
 
+  * `session_token` - (optional) The AWS session_token. It can also be sourced from the AWS_SESSION_TOKEN environment variable.
+
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
 #### Backend Reference: MySQL
@@ -190,3 +194,23 @@ The supported options are:
 
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate.
+      
+  * `tls_min_version` (optional) - If provided, specifies the minimum
+      supported version of TLS. Accepted values are "tls10", "tls11"
+      or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
+      are generally considered less secure; avoid using these if
+      possible.
+
+## Telemetry Reference
+
+For the `telemetry` section, there is no resource name. All configuration
+is within the object itself.
+
+* `statsite_address` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
+  instances for metrics. This is highly recommended for production usage.
+
+* `statsd_address` (optional) - This is the same as `statsite_address` but
+  for StatsD.
+  
+* `disable_hostname` (optional) - Whether or not to prepend runtime telemetry
+  with the machines hostname. This is a global option. Defaults to false.

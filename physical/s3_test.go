@@ -69,6 +69,7 @@ func TestS3Backend(t *testing.T) {
 	b, err := NewBackend("s3", map[string]string{
 		"access_key": creds.AccessKeyID,
 		"secret_key": creds.SecretAccessKey,
+		"session_token": creds.SessionToken,
 		"bucket":     bucket,
 	})
 	if err != nil {

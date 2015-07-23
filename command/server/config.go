@@ -18,8 +18,8 @@ type Config struct {
 	Backend   *Backend    `hcl:"-"`
 
 	DisableMlock bool   `hcl:"disable_mlock"`
-	StatsiteAddr string `hcl:"statsite_addr"`
-	StatsdAddr   string `hcl:"statsd_addr"`
+
+	Telemetry    *Telemetry `hcl:"telemetry"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -39,6 +39,8 @@ func DevConfig() *Config {
 				},
 			},
 		},
+
+		Telemetry: &Telemetry{},
 	}
 }
 
@@ -63,6 +65,18 @@ func (b *Backend) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
+// Telemetry is the telemetry configuration for the server
+type Telemetry struct {
+	StatsiteAddr string `hcl:"statsite_address"`
+	StatsdAddr   string `hcl:"statsd_address"`
+
+	DisableHostname bool `hcl:"disable_hostname"`
+}
+
+func (s *Telemetry) GoString() string {
+	return fmt.Sprintf("*%#v", *s)
+}
+
 // Merge merges two configurations.
 func (c *Config) Merge(c2 *Config) *Config {
 	result := new(Config)
@@ -78,11 +92,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Backend = c2.Backend
 	}
 
-	if c2.StatsiteAddr != "" {
-		result.StatsiteAddr = c2.StatsiteAddr
-	}
-	if c2.StatsdAddr != "" {
-		result.StatsdAddr = c2.StatsdAddr
+	result.Telemetry = c.Telemetry
+	if c2.Telemetry != nil {
+		result.Telemetry = c2.Telemetry
 	}
 
 	return result
@@ -136,7 +148,28 @@ func LoadConfigFile(path string) (*Config, error) {
 		}
 	}
 
+	// A little hacky but upgrades the old stats config directives to the new way
+	if result.Telemetry == nil {
+		statsdAddr := obj.Get("statsd_addr", false)
+		statsiteAddr := obj.Get("statsite_addr", false)
+
+		if statsdAddr != nil || statsiteAddr != nil {
+			result.Telemetry = &Telemetry{
+				StatsdAddr: getString(statsdAddr),
+				StatsiteAddr: getString(statsiteAddr),
+			}
+		}
+	}
+
 	return &result, nil
+}
+
+func getString(o *hclobj.Object) string {
+	if o == nil || o.Type != hclobj.ValueTypeString {
+		return ""
+	}
+
+	return o.Value.(string)
 }
 
 // LoadConfigDir loads all the configurations in the given directory
