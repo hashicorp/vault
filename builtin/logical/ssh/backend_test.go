@@ -74,13 +74,13 @@ func init() {
 	testAdminUser = u.Username
 }
 
-func TestSSHBackend(t *testing.T) {
+func TestSSHDynamicKeyBackend(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeys(t),
-			testNewRole(t),
-			testRoleCreate(t),
+			testNewDynamicKeyRole(t),
+			testDynamicKeyCredsCreate(t),
 		},
 	})
 }
@@ -95,11 +95,12 @@ func testNamedKeys(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testNewRole(t *testing.T) logicaltest.TestStep {
+func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("roles/%s", testRoleName),
 		Data: map[string]interface{}{
+			"key_type":   "dynamic",
 			"key":        testKey,
 			"admin_user": testAdminUser,
 			"cidr":       testCidr,
@@ -108,7 +109,7 @@ func testNewRole(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testRoleCreate(t *testing.T) logicaltest.TestStep {
+func testDynamicKeyCredsCreate(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("creds/%s", testRoleName),

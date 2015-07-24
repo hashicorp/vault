@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathRoleCreate(b *backend) *framework.Path {
+func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/(?P<name>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{

@@ -22,7 +22,7 @@ func (c *SSH) KeyRevoke(id string) error {
 	return err
 }
 
-// Invokes the SSH backend API to create a dynamic key
+// Invokes the SSH backend API to create a dynamic key or an OTP
 func (c *SSH) KeyCreate(role string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/ssh/creds/%s", role))
 	if err := r.SetJSONBody(data); err != nil {

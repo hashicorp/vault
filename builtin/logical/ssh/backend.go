@@ -41,7 +41,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathConfigLease(&b),
 			pathKeys(&b),
 			pathRoles(&b),
-			pathRoleCreate(&b),
+			pathCredsCreate(&b),
 			pathLookup(&b),
 			pathVerify(&b),
 		},

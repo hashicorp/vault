@@ -74,7 +74,7 @@ func init() {
 	testAdminUser = u.Username
 }
 
-func TestSSH(t *testing.T) {
+func testSSH(t *testing.T) {
 	// Add the SSH backend to the unsealed test core.
 	// This should be done before the unsealed core is created.
 	err := vault.AddTestLogicalBackend("ssh", logicalssh.Factory)
