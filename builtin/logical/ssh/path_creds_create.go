@@ -62,6 +62,9 @@ func (b *backend) pathCredsCreateWrite(
 
 	// Set the default username
 	if username == "" {
+		if role.DefaultUser == "" {
+			return logical.ErrorResponse("No default username registered. Use 'username' option"), nil
+		}
 		username = role.DefaultUser
 	}
 
@@ -136,7 +139,7 @@ func (b *backend) pathCredsCreateWrite(
 		}
 
 		// Add the public key to authorized_keys file in target machine
-		err = installPublicKeyInTarget(username, ip, role.Port, hostKey.Key)
+		err = installPublicKeyInTarget(role.AdminUser, username, ip, role.Port, hostKey.Key)
 		if err != nil {
 			return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
 		}
@@ -145,6 +148,7 @@ func (b *backend) pathCredsCreateWrite(
 			"key":      dynamicPrivateKey,
 			"key_type": role.KeyType,
 		}, map[string]interface{}{
+			"admin_user":         role.AdminUser,
 			"username":           username,
 			"ip":                 ip,
 			"host_key_name":      role.KeyName,

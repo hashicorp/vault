@@ -101,8 +101,8 @@ func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
 }
 
 // Concatenates the public present in that target machine's home folder to ~/.ssh/authorized_keys file
-func installPublicKeyInTarget(username, ip, port, hostKey string) error {
-	session, err := createSSHPublicKeysSession(username, ip, port, hostKey)
+func installPublicKeyInTarget(adminUser, username, ip, port, hostKey string) error {
+	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}
@@ -127,8 +127,8 @@ func installPublicKeyInTarget(username, ip, port, hostKey string) error {
 }
 
 // Removes the installed public key from the authorized_keys file in target machine
-func uninstallPublicKeyInTarget(username, ip, port, hostKey string) error {
-	session, err := createSSHPublicKeysSession(username, ip, port, hostKey)
+func uninstallPublicKeyInTarget(adminUser, username, ip, port, hostKey string) error {
+	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}

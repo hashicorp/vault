@@ -43,6 +43,15 @@ func (b *backend) secretSSHKeyRenew(req *logical.Request, d *framework.FieldData
 }
 
 func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	adminUserRaw, ok := req.Secret.InternalData["admin_user"]
+	if !ok {
+		return nil, fmt.Errorf("secret is missing internal data")
+	}
+	adminUser, ok := adminUserRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("secret is missing internal data")
+	}
+
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -51,6 +60,7 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
+
 	ipRaw, ok := req.Secret.InternalData["ip"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -59,6 +69,7 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
+
 	hostKeyNameRaw, ok := req.Secret.InternalData["host_key_name"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -67,6 +78,7 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
+
 	dynamicPublicKeyRaw, ok := req.Secret.InternalData["dynamic_public_key"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -75,6 +87,7 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
+
 	portRaw, ok := req.Secret.InternalData["port"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -98,7 +111,7 @@ func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldDat
 	}
 
 	// Remove the public key from authorized_keys file in target machine
-	err = uninstallPublicKeyInTarget(username, ip, port, hostKey.Key)
+	err = uninstallPublicKeyInTarget(adminUser, username, ip, port, hostKey.Key)
 	if err != nil {
 		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
 	}

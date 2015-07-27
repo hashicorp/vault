@@ -60,11 +60,6 @@ func createOTPRole(req *logical.Request, d *framework.FieldData) (*logical.Respo
 		return logical.ErrorResponse("Missing role name"), nil
 	}
 
-	adminUser := d.Get("admin_user").(string)
-	if adminUser == "" {
-		return logical.ErrorResponse("Missing admin username"), nil
-	}
-
 	cidr := d.Get("cidr").(string)
 	if cidr == "" {
 		return logical.ErrorResponse("Missing cidr blocks"), nil
@@ -76,8 +71,9 @@ func createOTPRole(req *logical.Request, d *framework.FieldData) (*logical.Respo
 		}
 	}
 
+	adminUser := d.Get("admin_user").(string)
 	defaultUser := d.Get("default_user").(string)
-	if defaultUser == "" {
+	if defaultUser == "" && adminUser != "" {
 		defaultUser = adminUser
 	}
 
