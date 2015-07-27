@@ -59,6 +59,6 @@ This path will be used by the vault agent running in the
 target machine to check if the key provided by the client
 to establish the SSH connection is valid or not.
 
-This key will be a one-time-key. The vault server responds
-that the key is valid only once.
+This key will be a one-time-password. The vault server responds
+that the key is valid only once (hence one-time).
 `

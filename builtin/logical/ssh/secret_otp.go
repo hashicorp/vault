@@ -19,8 +19,8 @@ func secretOTP(b *backend) *framework.Secret {
 				Description: "One time password",
 			},
 		},
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
+		DefaultDuration:    10 * time.Minute,
+		DefaultGracePeriod: 5 * time.Minute,
 		Renew:              b.secretOTPRenew,
 		Revoke:             b.secretOTPRevoke,
 	}
@@ -49,8 +49,8 @@ func (b *backend) secretOTPRevoke(req *logical.Request, d *framework.FieldData) 
 	}
 
 	otpSalted := b.salt.SaltID(otp)
-
 	otpPath := fmt.Sprintf("otp/%s", otpSalted)
+
 	err := req.Storage.Delete(otpPath)
 	if err != nil {
 		return nil, err

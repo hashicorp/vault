@@ -20,17 +20,17 @@ func secretDynamicKey(b *backend) *framework.Secret {
 			},
 			"ip": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "ip address of host",
+				Description: "IP address of host",
 			},
 		},
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
-		Renew:              b.secretSSHKeyRenew,
-		Revoke:             b.secretSSHKeyRevoke,
+		DefaultDuration:    10 * time.Minute,
+		DefaultGracePeriod: 5 * time.Minute,
+		Renew:              b.secretDynamicKeyRenew,
+		Revoke:             b.secretDynamicKeyRevoke,
 	}
 }
 
-func (b *backend) secretSSHKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretDynamicKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (b *backend) secretSSHKeyRenew(req *logical.Request, d *framework.FieldData
 	return f(req, d)
 }
 
-func (b *backend) secretSSHKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	adminUserRaw, ok := req.Secret.InternalData["admin_user"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")

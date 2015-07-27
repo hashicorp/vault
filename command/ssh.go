@@ -12,7 +12,8 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 )
 
-// SSHCommand is a Command that establishes a SSH connection with target by generating a dynamic key
+// SSHCommand is a Command that establishes a SSH connection
+// with target by generating a dynamic key
 type SSHCommand struct {
 	Meta
 }
@@ -40,8 +41,15 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %s", err))
 		return 2
 	}
+
 	input := strings.Split(args[0], "@")
+	if len(input) != 2 {
+		c.Ui.Error(fmt.Sprintf("Invalid parameter: %s", args[0]))
+		return 2
+	}
+
 	username := input[0]
+
 	ip, err := net.ResolveIPAddr("ip", input[1])
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %s", err))
@@ -61,6 +69,7 @@ func (c *SSHCommand) Run(args []string) int {
 		"username": username,
 		"ip":       ip.String(),
 	}
+
 	keySecret, err := client.SSH().KeyCreate(role, data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session:%s", err))
@@ -80,7 +89,8 @@ func (c *SSHCommand) Run(args []string) int {
 	} else if keySecret.Data["key_type"].(string) == ssh.KeyTypeOTP {
 		fmt.Printf("OTP for the session is %s\n", string(keySecret.Data["key"].(string)))
 	} else {
-		c.Ui.Error("Key not present")
+		// Intentionally not mentioning the exact error
+		c.Ui.Error("Error creating key")
 	}
 	sshCmdArgs = append(sshCmdArgs, []string{"-p", port}...)
 	sshCmdArgs = append(sshCmdArgs, args...)
@@ -97,13 +107,15 @@ func (c *SSHCommand) Run(args []string) int {
 	if keySecret.Data["key_type"].(string) == ssh.KeyTypeDynamic {
 		err = os.Remove(sshDynamicKeyFileName)
 		if err != nil {
-			c.Ui.Error("Error cleaning up") // Intentionally not mentioning the exact error
+			// Intentionally not mentioning the exact error
+			c.Ui.Error("Error cleaning up")
 		}
 	}
 
 	err = client.SSH().KeyRevoke(keySecret.LeaseID)
 	if err != nil {
-		c.Ui.Error("Error cleaning up") // Intentionally not mentioning the exact error
+		// Intentionally not mentioning the exact error
+		c.Ui.Error("Error cleaning up")
 	}
 
 	return 0
@@ -143,8 +155,8 @@ Usage: vault ssh [options] username@ip
 
   Establishes an SSH connection with the target machine.
 
-  This command generates a dynamic key and uses it to establish an
-  SSH connection with the target machine. This operation requires
+  This command generates a key and uses it to establish an SSH
+  connection with the target machine. This operation requires
   that SSH backend is mounted and at least one 'role' be registed
   with vault at priori.
 
