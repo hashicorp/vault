@@ -58,12 +58,12 @@ Lists 'roles' that can be used to create a dynamic key.
 `
 
 const pathLookupDesc = `
-The IP address to which the key is requested will be searched in
-the CIDR blocks registered with vault using the 'roles' endpoint.
-Key can be generated only by specifying the 'role' name. The roles
-that can be used to generate the key for a particular IP will be
-listed through this endpoint. For example, if this backend is mounted
-at "ssh" then "ssh/lookup" lists the roles associated with 
-Keys can be generated for a target IP if the CIDR block encompassing
-the IP is registered with vault.
+The IP address for which the key is requested, is searched in the
+CIDR blocks registered with vault using the 'roles' endpoint. Keys
+can be generated only by specifying the 'role' name. The roles that
+can be used to generate the key for a particular IP, are listed via
+this endpoint. For example, if this backend is mounted at "ssh", then
+"ssh/lookup" lists the roles associated with keys can be generated
+for a target IP, if the CIDR block encompassing the IP, is registered
+with vault.
 `

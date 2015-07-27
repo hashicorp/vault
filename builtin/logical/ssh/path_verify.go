@@ -1,8 +1,6 @@
 package ssh
 
 import (
-	"log"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -26,9 +24,7 @@ func pathVerify(b *backend) *framework.Path {
 
 func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otp := d.Get("otp").(string)
-	log.Printf("otp received=%s\n", otp)
 	otpSalted := b.salt.SaltID(otp)
-	log.Printf("Fetching path: otp/" + otpSalted)
 	entry, err := req.Storage.Get("otp/" + otpSalted)
 	if err != nil {
 		return nil, err

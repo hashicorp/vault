@@ -60,12 +60,31 @@ type backend struct {
 }
 
 const backendHelp = `
-The SSH backend dynamically generates SSH private keys for 
-remote hosts.The generated key has a configurable lease set
-and are automatically revoked at the end of the lease.
+The SSH backend generates keys to eatablish SSH connection
+with remote hosts. There are two options to create the keys:
+long lived dynamic key, one time password. 
 
-After mounting this backend, configure the lease using the
-'config/lease' endpoint. The shared SSH key belonging to any
-infrastructure should be registered with the 'roles/' endpoint
-before dynamic keys for remote hosts can be generated.
+Long lived dynamic key is a rsa private key which can be used
+to login to remote host using the publickey authentication.
+There is no additional change required in the remote hosts to
+support this type of keys. But the keys generated will be valid
+as long as the lease of the key is valid. Also, logins to remote
+hosts will not be audited in vault server.
+
+One Time Password (OTP), on the other hand is a randomly generated
+UUID that is used to login to remote host using the keyboard-
+interactive challenge response authentication. A vault agent
+has to be installed at the remote host to support OTP. Upon 
+request, vault server generates and provides the key to the
+user. During login, vault agent receives the key and verifies
+the correctness with the vault server (and hence audited). The
+server after verifying the key for the first time, deletes the
+same (and hence one-time).
+
+Both type of keys have a configurable lease set and are automatically
+revoked at the end of the lease.
+
+After mounting this backend, before generating the keys, configure
+the lease using the 'config/lease' endpoint and create roles using
+the 'roles/' endpoint.
 `

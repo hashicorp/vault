@@ -56,16 +56,16 @@ func pathRoles(b *backend) *framework.Path {
 
 func createOTPRole(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
-	adminUser := d.Get("admin_user").(string)
-	defaultUser := d.Get("default_user").(string)
-	cidr := d.Get("cidr").(string)
-	port := d.Get("port").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role name"), nil
 	}
+
+	adminUser := d.Get("admin_user").(string)
 	if adminUser == "" {
 		return logical.ErrorResponse("Missing admin username"), nil
 	}
+
+	cidr := d.Get("cidr").(string)
 	if cidr == "" {
 		return logical.ErrorResponse("Missing cidr blocks"), nil
 	}
@@ -75,12 +75,17 @@ func createOTPRole(req *logical.Request, d *framework.FieldData) (*logical.Respo
 			return logical.ErrorResponse(fmt.Sprintf("Invalid cidr entry '%s'", item)), nil
 		}
 	}
+
+	defaultUser := d.Get("default_user").(string)
 	if defaultUser == "" {
 		defaultUser = adminUser
 	}
+
+	port := d.Get("port").(string)
 	if port == "" {
 		port = "22"
 	}
+
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("policy/%s", roleName), sshRole{
 		AdminUser:   adminUser,
 		DefaultUser: defaultUser,
@@ -101,26 +106,28 @@ func createOTPRole(req *logical.Request, d *framework.FieldData) (*logical.Respo
 
 func createDynamicKeyRole(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
-	keyName := d.Get("key").(string)
-	adminUser := d.Get("admin_user").(string)
-	defaultUser := d.Get("default_user").(string)
-	cidr := d.Get("cidr").(string)
-	port := d.Get("port").(string)
-
-	// Input validations
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role name"), nil
 	}
+
+	keyName := d.Get("key").(string)
 	if keyName == "" {
 		return logical.ErrorResponse("Missing key name"), nil
 	}
+	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", keyName))
+	if err != nil || keyEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("Invalid 'key': '%s'", keyName)), nil
+	}
+
+	adminUser := d.Get("admin_user").(string)
 	if adminUser == "" {
 		return logical.ErrorResponse("Missing admin username"), nil
 	}
+
+	cidr := d.Get("cidr").(string)
 	if cidr == "" {
 		return logical.ErrorResponse("Missing cidr blocks"), nil
 	}
-
 	for _, item := range strings.Split(cidr, ",") {
 		_, _, err := net.ParseCIDR(item)
 		if err != nil {
@@ -128,14 +135,12 @@ func createDynamicKeyRole(req *logical.Request, d *framework.FieldData) (*logica
 		}
 	}
 
-	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", keyName))
-	if err != nil || keyEntry == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Invalid 'key': '%s'", keyName)), nil
-	}
-
+	defaultUser := d.Get("default_user").(string)
 	if defaultUser == "" {
 		defaultUser = adminUser
 	}
+
+	port := d.Get("port").(string)
 	if port == "" {
 		port = "22"
 	}
@@ -166,6 +171,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		return logical.ErrorResponse("Missing key type"), nil
 	}
 	keyType = strings.ToLower(keyType)
+
 	if keyType == KeyTypeOTP {
 		return createOTPRole(req, d)
 	} else if keyType == KeyTypeDynamic {
@@ -184,10 +190,12 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 	if roleEntry == nil {
 		return nil, nil
 	}
+
 	var role sshRole
 	if err := roleEntry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"key":          role.KeyName,
@@ -227,7 +235,7 @@ Manage the 'roles' that can be created with this backend.
 
 const pathRoleHelpDesc = `
 This path allows you to manage the roles that are used to create
-dynamic keys. These roles will be having privileged access to all
+keys. These roles will be having privileged access to all
 the hosts mentioned by CIDR blocks. For example, if the backend
 is mounted at "ssh" and the role is created at "ssh/roles/web",
 then a user could request for a new key at "ssh/creds/web" for the

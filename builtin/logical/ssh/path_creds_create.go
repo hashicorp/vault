@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/hashicorp/vault/helper/uuid"
@@ -28,26 +27,27 @@ func pathCredsCreate(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathRoleCreateWrite,
+			logical.WriteOperation: b.pathCredsCreateWrite,
 		},
-		HelpSynopsis:    pathRoleCreateHelpSyn,
-		HelpDescription: pathRoleCreateHelpDesc,
+		HelpSynopsis:    pathCredsCreateHelpSyn,
+		HelpDescription: pathCredsCreateHelpDesc,
 	}
 }
 
-func (b *backend) pathRoleCreateWrite(
+func (b *backend) pathCredsCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("name").(string)
-	username := d.Get("username").(string)
-	ipRaw := d.Get("ip").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("Missing name"), nil
 	}
+
+	username := d.Get("username").(string)
+
+	ipRaw := d.Get("ip").(string)
 	if ipRaw == "" {
 		return logical.ErrorResponse("Missing ip"), nil
 	}
 
-	// Find the role to be used for installing dynamic key
 	roleEntry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
@@ -81,10 +81,17 @@ func (b *backend) pathRoleCreateWrite(
 
 	var result *logical.Response
 	if role.KeyType == KeyTypeOTP {
+		// Generate salted OTP
 		otp := uuid.GenerateUUID()
 		otpSalted := b.salt.SaltID(otp)
-		log.Printf("Vishal: otpPath:%s", "otp/"+otpSalted)
-		entry, err := logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
+		entry, err := req.Storage.Get("otp/" + otpSalted)
+		// Make sure that new OTP is not replacing an existing one
+		for err == nil && entry != nil {
+			otp := uuid.GenerateUUID()
+			otpSalted := b.salt.SaltID(otp)
+			entry, err = req.Storage.Get("otp/" + otpSalted)
+		}
+		entry, err = logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
 			Username: username,
 			IP:       ip,
 		})
@@ -117,7 +124,10 @@ func (b *backend) pathRoleCreateWrite(
 		}
 
 		// Generate RSA key pair
-		dynamicPublicKey, dynamicPrivateKey, _ := generateRSAKeys()
+		dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys()
+		if err != nil {
+			return nil, fmt.Errorf("error generating key: %s", err)
+		}
 
 		// Transfer the public key to target machine
 		err = uploadPublicKeyScp(dynamicPublicKey, username, ip, role.Port, hostKey.Key)
@@ -131,9 +141,6 @@ func (b *backend) pathRoleCreateWrite(
 			return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
 		}
 
-		if err != nil {
-			return nil, fmt.Errorf("error creating OTP:'%s'", err)
-		}
 		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
 			"key":      dynamicPrivateKey,
 			"key_type": role.KeyType,
@@ -166,17 +173,19 @@ type sshCIDR struct {
 	CIDR []string
 }
 
-const pathRoleCreateHelpSyn = `
+const pathCredsCreateHelpSyn = `
 Creates a dynamic key for the target machine.
 `
 
-const pathRoleCreateHelpDesc = `
-This path will generates a new key for establishing SSH session with
-target host. Previously registered shared key belonging to target
-infrastructure will be used to install the new key at the target. If
-this backend is mounted at 'ssh', then "ssh/creds/role" would generate
-a dynamic key for 'web' role.
+const pathCredsCreateHelpDesc = `
+This path will generate a new key for establishing SSH session with
+target host. The key can either be a long lived dynamic key or a One
+Time Password (OTP), using 'key_type' parameter being 'dynamic' or 
+'otp' respectively. For dynamic keys, a named key should be supplied.
+Create named key using the 'keys/' endpoint, and this represents the
+shared SSH key of target host. If this backend is mounted at 'ssh',
+then "ssh/creds/web" would generate a key for 'web' role.
 
-The dynamic keys will have a lease associated with them. The access
-keys can be revoked by using the lease ID.
+Keys will have a lease associated with them. The access keys can be
+revoked by using the lease ID.
 `

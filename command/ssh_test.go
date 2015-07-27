@@ -74,6 +74,7 @@ func init() {
 	testAdminUser = u.Username
 }
 
+// This test is broken. Hence temporarily disabling it.
 func testSSH(t *testing.T) {
 	// Add the SSH backend to the unsealed test core.
 	// This should be done before the unsealed core is created.

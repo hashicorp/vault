@@ -33,10 +33,11 @@ func pathConfigLease(b *backend) *framework.Path {
 
 func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	leaseRaw := d.Get("lease").(string)
-	leaseMaxRaw := d.Get("lease_max").(string)
 	if leaseRaw == "" {
 		return logical.ErrorResponse("Missing lease"), nil
 	}
+
+	leaseMaxRaw := d.Get("lease_max").(string)
 	if leaseMaxRaw == "" {
 		return logical.ErrorResponse("Missing lease_max"), nil
 	}
@@ -46,6 +47,7 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Invalid 'lease': %s", err)), nil
 	}
+
 	leaseMax, err := time.ParseDuration(leaseMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -56,9 +58,11 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 		Lease:    lease,
 		LeaseMax: leaseMax,
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("could not create storage entry JSON: %s", err)
 	}
+
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, fmt.Errorf("could not store JSON: %s", err)
 	}
@@ -68,9 +72,11 @@ func (b *backend) pathConfigLeaseWrite(req *logical.Request, d *framework.FieldD
 
 func (b *backend) Lease(s logical.Storage) (*configLease, error) {
 	entry, err := s.Get("config/lease")
+
 	if err != nil {
 		return nil, err
 	}
+
 	if entry == nil {
 		return nil, nil
 	}

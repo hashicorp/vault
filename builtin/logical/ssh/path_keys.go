@@ -13,7 +13,7 @@ func pathKeys(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "IP address of host.",
+				Description: "name of the key",
 			},
 			"key": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -91,10 +91,12 @@ in remote machine.
 
 const pathKeysDesc = `
 The shared key registered will be used to install and uninstall
-dynamic keys in remote machine. This key should have "root" 
-privileges which enables installing keys for unprivileged usernames.
+long lived dynamic keys in remote machine. This key should have
+"root" privileges at target machine. This enables installing keys
+for unprivileged usernames.
+
 If this backend is mounted as "ssh", then the endpoint for registering
-shared key is "ssh/keys/rack1", if "rack1" is the user coined 
+shared key is "ssh/keys/webrack", if "webrack" is the user coined 
 name for the key. The name given here can be associated with any
 number of roles via the endpoint "ssh/roles/".
 `
