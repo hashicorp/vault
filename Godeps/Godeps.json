@@ -59,6 +59,10 @@
 			"Rev": "c904d7032a70da6551c43929f199244f6a45f4c1"
 		},
 		{
+			"ImportPath": "github.com/duosecurity/duo_api_golang",
+			"Rev": "16da9e74793f6d9b97b227a0696fe32bcdaecb42"
+		},
+		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "a9f7daa9c2729e97450c2da2feda19130a367d8f"
 		},
