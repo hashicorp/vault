@@ -2,12 +2,18 @@ package duo
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/duosecurity/duo_api_golang"
 	"github.com/duosecurity/duo_api_golang/authapi"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+type AuthClient interface {
+	Preauth(options ...func(*url.Values)) (*authapi.PreauthResult, error)
+	Auth(factor string, options ...func(*url.Values)) (*authapi.AuthResult, error)
+}
 
 func pathDuoAccess() *framework.Path {
 	return &framework.Path{
@@ -36,7 +42,7 @@ func pathDuoAccess() *framework.Path {
 	}
 }
 
-func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (*authapi.AuthApi, error) {
+func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (AuthClient, error) {
 	entry, err := req.Storage.Get("duo/access")
 	if err != nil {
 		return nil, err
@@ -51,21 +57,21 @@ func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (*authapi.AuthApi
 		return nil, err
 	}
 
-	duo_client := duoapi.NewDuoApi(
+	duoClient := duoapi.NewDuoApi(
 		access.IKey,
 		access.SKey,
 		access.Host,
 		config.UserAgent,
 	)
-	duo_auth_client := authapi.NewAuthApi(*duo_client)
-	check, err := duo_auth_client.Check()
+	duoAuthClient := authapi.NewAuthApi(*duoClient)
+	check, err := duoAuthClient.Check()
 	if err != nil {
 		return nil, err
 	}
 	if check.StatResult.Stat != "OK" {
 		return nil, fmt.Errorf("Could not connect to Duo: %s (%s)", *check.StatResult.Message, *check.StatResult.Message_Detail)
 	}
-	return duo_auth_client, nil
+	return duoAuthClient, nil
 }
 
 func pathDuoAccessWrite(

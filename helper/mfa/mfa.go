@@ -16,16 +16,22 @@ func MFAPathsSpecial() []string {
 	return append(duo.DuoPathsSpecial(), "mfa_config")
 }
 
+type HandlerFunc func (*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
+
+var handlers = map[string]HandlerFunc{
+	"duo": duo.DuoHandler,
+}
+
 type backend struct {
 	*framework.Backend
 }
 
 func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
-	(*loginPath).Fields["passcode"] = &framework.FieldSchema{
+	loginPath.Fields["passcode"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: "One time passcode (optional)",
 	}
-	(*loginPath).Fields["method"] = &framework.FieldSchema{
+	loginPath.Fields["method"] = &framework.FieldSchema{
 		Type:      framework.TypeString,
 		Description: "Multi-factor auth method to use (optional)",
 	}
@@ -49,10 +55,10 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 			return resp, nil
 		}
 
-		switch (mfa_config.Type) {
-		case "duo":
-			return duo.DuoHandler(req, d, resp)
-		default:
+		handler, ok := handlers[mfa_config.Type]
+		if ok {
+			return handler(req, d, resp)
+		} else {
 			return resp, err
 		}
 	}
