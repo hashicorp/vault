@@ -104,8 +104,6 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 		}
 
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-	} else {
-		tlsClientConfig.InsecureSkipVerify = true
 	}
 
 	caPool := x509.NewCertPool()
