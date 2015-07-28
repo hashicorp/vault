@@ -59,10 +59,14 @@ func duoHandler(
 	)
 
 	if preauth.StatResult.Stat != "OK" {
-		return logical.ErrorResponse(fmt.Sprintf("Could not look up Duo user information: %v (%v)",
-			preauth.StatResult.Message,
-			preauth.StatResult.Message_Detail,
-		)), nil
+		errorMsg := "Could not look up Duo user information"
+		if preauth.StatResult.Message != nil {
+			errorMsg = errorMsg + ": " + *preauth.StatResult.Message
+		}
+		if preauth.StatResult.Message_Detail != nil {
+			errorMsg = errorMsg + " (" + *preauth.StatResult.Message_Detail + ")"
+		}
+		return logical.ErrorResponse(errorMsg), nil
 	}
 
 	switch preauth.Response.Result {
@@ -94,10 +98,14 @@ func duoHandler(
 	}
 
 	if result.StatResult.Stat != "OK" {
-		return logical.ErrorResponse(fmt.Sprintf("Could not authenticate Duo user: %v (%v)",
-			preauth.StatResult.Message,
-			preauth.StatResult.Message_Detail,
-		)), nil
+		errorMsg := "Could not authenticate Duo user"
+		if result.StatResult.Message != nil {
+			errorMsg = errorMsg + ": " + *result.StatResult.Message
+		}
+		if result.StatResult.Message_Detail != nil {
+			errorMsg = errorMsg + " (" + *result.StatResult.Message_Detail + ")"
+		}
+		return logical.ErrorResponse(errorMsg), nil
 	}
 
 	if result.Response.Result != "allow" {
