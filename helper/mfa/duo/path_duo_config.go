@@ -1,7 +1,7 @@
 package duo
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -51,7 +51,7 @@ func pathDuoConfigWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username_format := d.Get("username_format").(string)
 	if !strings.Contains(username_format, "%s") {
-		return nil, fmt.Errorf("username_format must include username ('%s')")
+		return nil, errors.New("username_format must include username ('%s')")
 	}
 	entry, err := logical.StorageEntryJSON("duo/config", DuoConfig{
 		UsernameFormat: username_format,

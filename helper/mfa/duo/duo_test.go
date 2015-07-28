@@ -37,29 +37,31 @@ func MockGetDuoAuthClient(data *MockClientData) func (*logical.Request, *DuoConf
 
 func getDuoAuthClient(data *MockClientData) AuthClient {
 	var c MockAuthClient
-	// set default response to auth user 
+	// set default response to be successful  
+	preauthSuccessJSON := `
+	{
+	  "Stat": "OK",
+	  "Response": {
+	    "Result": "auth",
+	    "Status_Msg": "Needs authentication",
+	    "Devices": []
+	  }
+	}`
 	if data.PreauthData == nil {
 		data.PreauthData = &authapi.PreauthResult{}
-		json.Unmarshal([]byte(`
-{
-  "Stat": "OK",
-  "Response": {
-    "Result": "auth",
-    "Status_Msg": "Needs authentication",
-    "Devices": []
-  }
-}`), data.PreauthData)
+		json.Unmarshal([]byte(preauthSuccessJSON), data.PreauthData)
 	}
 
+	authSuccessJSON := `
+	{
+	  "Stat": "OK",
+	  "Response": {
+	    "Result": "allow"
+	  }
+	}`
 	if data.AuthData == nil {
 		data.AuthData = &authapi.AuthResult{}
-		json.Unmarshal([]byte(`
-{
-  "Stat": "OK",
-  "Response": {
-    "Result": "allow"
-  }
-}`), data.AuthData)
+		json.Unmarshal([]byte(authSuccessJSON), data.AuthData)
 	}
 
 	c.MockData = data
@@ -74,7 +76,10 @@ func TestDuoHandlerSuccess(t *testing.T) {
 		UsernameFormat: "%s",
 	}
 	duoAuthClient := getDuoAuthClient(&MockClientData{})
-	resp, err := duoHandler(duoConfig, duoAuthClient, successResp, "user", "", "", "")
+	resp, err := duoHandler(duoConfig, duoAuthClient, &duoAuthRequest {
+		successResp: successResp,
+		username: "",
+	})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -85,14 +90,15 @@ func TestDuoHandlerSuccess(t *testing.T) {
 
 func TestDuoHandlerReject(t *testing.T) {
 	AuthData := &authapi.AuthResult{}
-		json.Unmarshal([]byte(`
-{
-  "Stat": "OK",
-  "Response": {
-    "Result": "deny",
-    "Status_Msg": "Invalid auth"
-  }
-}`), AuthData)
+	authRejectJSON := `
+	{
+	  "Stat": "OK",
+	  "Response": {
+	    "Result": "deny",
+	    "Status_Msg": "Invalid auth"
+	  }
+	}`
+	json.Unmarshal([]byte(authRejectJSON), AuthData)
 	successResp := &logical.Response{
 		Auth: &logical.Auth{},
 	}
@@ -103,7 +109,10 @@ func TestDuoHandlerReject(t *testing.T) {
 	duoAuthClient := getDuoAuthClient(&MockClientData{
 		AuthData: AuthData,
 	})
-	resp, err := duoHandler(duoConfig, duoAuthClient, successResp, "user", "", "", "")
+	resp, err := duoHandler(duoConfig, duoAuthClient, &duoAuthRequest {
+		successResp: successResp,
+		username: "user",
+	})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

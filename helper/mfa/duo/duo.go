@@ -40,23 +40,37 @@ func DuoHandler(req *logical.Request, d *framework.FieldData, resp *logical.Resp
 		return logical.ErrorResponse("Could not read username for MFA"), nil
 	}
 
-	method := d.Get("method").(string)
-	passcode := d.Get("passcode").(string)
+	var request *duoAuthRequest = &duoAuthRequest{}
+	request.successResp = resp
+	request.username = username
+	request.method = d.Get("method").(string)
+	request.passcode = d.Get("passcode").(string)
+	request.ipAddr = req.Connection.RemoteAddr
 
-	return duoHandler(duoConfig, duoAuthClient, resp,
-		username, method, passcode, req.Connection.RemoteAddr)
+	return duoHandler(duoConfig, duoAuthClient, request)
 }
 
-func duoHandler(
-	duoConfig *DuoConfig, duoAuthClient AuthClient, successResp *logical.Response,
-	username string, method string, passcode string, ipAddr string) (*logical.Response, error) {
+type duoAuthRequest struct {
+	successResp *logical.Response
+	username string
+	method string
+	passcode string
+	ipAddr string
+}
 
-	duoUser := fmt.Sprintf(duoConfig.UsernameFormat, username)
+func duoHandler(duoConfig *DuoConfig, duoAuthClient AuthClient, request *duoAuthRequest) (
+	*logical.Response, error) {
+
+	duoUser := fmt.Sprintf(duoConfig.UsernameFormat, request.username)
 
 	preauth, err := duoAuthClient.Preauth(
 		authapi.PreauthUsername(duoUser),
-		authapi.PreauthIpAddr(ipAddr),
+		authapi.PreauthIpAddr(request.ipAddr),
 	)
+
+	if err != nil || preauth == nil {
+		return logical.ErrorResponse("Could not call Duo preauth"), nil
+	}
 
 	if preauth.StatResult.Stat != "OK" {
 		errorMsg := "Could not look up Duo user information"
@@ -71,7 +85,7 @@ func duoHandler(
 
 	switch preauth.Response.Result {
 	case "allow":
-		return successResp, err
+		return request.successResp, err
 	case "deny":
 		return logical.ErrorResponse(preauth.Response.Status_Msg), nil
 	case "enroll":
@@ -80,22 +94,25 @@ func duoHandler(
 			preauth.Response.Enroll_Portal_Url)), nil
 	case "auth":
 		break
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("Invalid Duo preauth response: %s",
+			preauth.Response.Result)), nil
 	}
 
 	options := []func(*url.Values){authapi.AuthUsername(duoUser)}
-	if method == "" {
-		method = "auto"
+	if request.method == "" {
+		request.method = "auto"
 	}
-	if passcode != "" {
-		method = "passcode"
-		options = append(options, authapi.AuthPasscode(passcode))
+	if request.passcode != "" {
+		request.method = "passcode"
+		options = append(options, authapi.AuthPasscode(request.passcode))
 	} else {
 		options = append(options, authapi.AuthDevice("auto"))
 	}
 
-	result, err := duoAuthClient.Auth(method, options...)
+	result, err := duoAuthClient.Auth(request.method, options...)
 
-	if err != nil {
+	if err != nil || result == nil {
 		return logical.ErrorResponse("Could not call Duo auth"), nil
 	}
 
@@ -114,5 +131,5 @@ func duoHandler(
 		return logical.ErrorResponse(result.Response.Status_Msg), nil
 	}
 
-	return successResp, err
+	return request.successResp, nil
 }

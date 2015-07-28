@@ -29,12 +29,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	}
 	if data.Password == "" {
 		fmt.Printf("Password (will be hidden): ")
-		var err error
-		data.Password, err = pwd.Read(os.Stdin)
+		password, err := pwd.Read(os.Stdin)
 		fmt.Println()
 		if err != nil {
 			return "", err
 		}
+		data.Password = password
 	}
 	if data.Mount == "" {
 		data.Mount = "userpass"
