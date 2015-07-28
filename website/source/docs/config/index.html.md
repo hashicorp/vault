@@ -113,19 +113,21 @@ For Consul, the following options are supported:
 
   * `token` (optional) - An access token to use to write data to Consul.
 
-  * `tls_ca_file` (optional) - The path to the CA certificate for consul communication.
+  * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
+      will be disabled for Consul communication.
+      Defaults to false.
+
+  The following settings should be set according to your [Consul encryption settings](https://www.consul.io/docs/agent/encryption.html):
+
+  * `tls_ca_file` (optional) - The path to the CA certificate used for Consul communication.
       Defaults to system bundle if not specified.
       Set accordingly to the [ca_file](https://www.consul.io/docs/agent/options.html#ca_file) setting in Consul.
 
-  * `tls_cert_file` (optional) - The path to the certificate for consul communication.
+  * `tls_cert_file` (optional) - The path to the certificate for Consul communication.
       Set accordingly to the [cert_file](https://www.consul.io/docs/agent/options.html#cert_file) setting in Consul.
 
-  * `tls_key_file` (optional) - The path to the private key for consul communication.
+  * `tls_key_file` (optional) - The path to the private key for Consul communication.
       Set accordingly to the [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting in Consul.
-
-  * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
-      will be disabled for consul communication.
-      Defaults to false.
 
 #### Backend Reference: Zookeeper
 
