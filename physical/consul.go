@@ -62,9 +62,9 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 			return nil, err
 		}
 
-	  consulConf.HttpClient.Transport = &http.Transport{
-	    TLSClientConfig: tlsClientConfig,
-	  }
+		consulConf.HttpClient.Transport = &http.Transport{
+			TLSClientConfig: tlsClientConfig,
+		}
 	}
 
 	client, err := api.NewClient(consulConf)
@@ -86,7 +86,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 
 	insecureSkipVerify := false
 	if _, ok := conf["tls_skip_verify"]; ok {
-	  insecureSkipVerify = true
+		insecureSkipVerify = true
 	}
 
 	tlsClientConfig := &tls.Config{
@@ -97,33 +97,33 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	_, okCert := conf["tls_cert_file"]
 	_, okKey  := conf["tls_key_file"]
 
-  if okCert && okKey {
-	  tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
+	if okCert && okKey {
+		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
 		if err != nil {
 			return nil, fmt.Errorf("client tls setup failed: %v", err)
 		}
 
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-  } else {
-    tlsClientConfig.InsecureSkipVerify = true
-  }
+	} else {
+		tlsClientConfig.InsecureSkipVerify = true
+	}
 
-  caPool := x509.NewCertPool()
+	caPool := x509.NewCertPool()
 
-  if tlsCaFile, ok := conf["tls_ca_file"]; ok {
-    data, err := ioutil.ReadFile(tlsCaFile)
-    if err != nil {
-      return nil, fmt.Errorf("failed to read CA file: %v", err)
-    }
+	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
+		data, err := ioutil.ReadFile(tlsCaFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA file: %v", err)
+		}
 
-    if !caPool.AppendCertsFromPEM(data) {
-      return nil, fmt.Errorf("failed to parse any CA certificates")
-    }
-  }
+		if !caPool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("failed to parse any CA certificates")
+		}
+	}
 
-  tlsClientConfig.RootCAs = caPool
+	tlsClientConfig.RootCAs = caPool
 
-  return tlsClientConfig, nil
+	return tlsClientConfig, nil
 }
 
 // Put is used to insert or update an entry
