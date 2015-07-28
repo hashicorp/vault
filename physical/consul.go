@@ -106,20 +106,20 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
 	}
 
-	caPool := x509.NewCertPool()
-
 	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
+		caPool := x509.NewCertPool()
+
 		data, err := ioutil.ReadFile(tlsCaFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA file: %v", err)
 		}
 
 		if !caPool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("failed to parse any CA certificates")
+			return nil, fmt.Errorf("failed to parse CA certificate")
 		}
-	}
 
-	tlsClientConfig.RootCAs = caPool
+		tlsClientConfig.RootCAs = caPool
+	}
 
 	return tlsClientConfig, nil
 }
