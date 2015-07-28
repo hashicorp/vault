@@ -16,15 +16,23 @@ Currently, the "ldap" and "userpass" backends support MFA.
 
 ## Authentication
 
-When authenticating, users still provide the same information as before, as well as
+When authenticating, users still provide the same information as before, in addition to
 MFA verification. Usually this is a passcode, but in other cases, like a Duo Push
 notification, no additional information is needed.
 
 ### Via the CLI
 
 ```shell
-$ vault auth -method=userpass username=user password=test passcode=111111
-$ vault auth -method=userpass username=user password=test method=push  # (default)
+$ vault auth -method=userpass \
+    username=user \
+    password=test \
+    passcode=111111
+```
+```shell
+$ vault auth -method=userpass \
+    username=user \
+    password=test \
+    method=push
 ```
 
 ### Via the API
@@ -53,23 +61,22 @@ This enables the Duo MFA type, which is currently the only MFA type supported.
 
 The Duo MFA type is configured through two paths: `duo/config` and `duo/access`. 
 
-`duo/access` contains connection information for the Duo Auth API. For example:
+`duo/access` contains connection information for the Duo Auth API. To configure:
 
 ```shell
-$ vault write auth/userpass/duo/access \
+$ vault write auth/[mount]/duo/access \
     host=[host] \
     ikey=[integration key] \
     skey=[secret key]
 ```
 
 `duo/config` is an optional path that contains general configuration information
-for Duo authentication. For example:
+for Duo authentication. To configure:
 
 ```shell
-$ vault write auth/userpass/duo/config \
+$ vault write auth/[mount]/duo/config \
     user_agent="" \
     username_format="%s"
 ```
 
-`username_format` is a format string that is formatted with the original backend's
-username as the first argument to produce the Duo username.
+More information can be found through the CLI `path-help` command.
