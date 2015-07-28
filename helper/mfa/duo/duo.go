@@ -75,7 +75,9 @@ func duoHandler(
 	case "deny":
 		return logical.ErrorResponse(preauth.Response.Status_Msg), nil
 	case "enroll":
-		return logical.ErrorResponse(preauth.Response.Status_Msg), nil
+		return logical.ErrorResponse(fmt.Sprintf("%s (%s)",
+			preauth.Response.Status_Msg,
+			preauth.Response.Enroll_Portal_Url)), nil
 	case "auth":
 		break
 	}

@@ -33,16 +33,13 @@ func pathDuoConfig() *framework.Path {
 }
 
 func GetDuoConfig(req *logical.Request) (*DuoConfig, error) {
-	entry, err := req.Storage.Get("duo/config")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
 	var result DuoConfig
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
+	// all config parameters are optional, so path need not exist
+	entry, err := req.Storage.Get("duo/config")
+	if err == nil && entry != nil {
+		if err := entry.DecodeJSON(&result); err != nil {
+			return nil, err
+		}
 	}
 	if result.UsernameFormat == "" {
 		result.UsernameFormat = "%s"
