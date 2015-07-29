@@ -74,8 +74,12 @@ func (b *backend) pathLogin(
 			continue
 		}
 
-		// Append the names so we can get the policies
+		// Append the names AND slug so we can get the policies
+                // Slug is needed for teamnames with whitespaces
 		teamNames = append(teamNames, *t.Name)
+                if *t.Name != *t.Slug {
+                        teamNames = append(teamNames, *t.Slug)
+                }
 	}
 
 	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
