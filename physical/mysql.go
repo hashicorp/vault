@@ -15,9 +15,9 @@ import (
 	mysql "github.com/go-sql-driver/mysql"
 )
 
-var (
-	tlsKey = "custom"
-)
+// Unreserved tls key
+// Reserved values are "true", "false", "skip-verify"
+const mysqlTLSKey = "default"
 
 // MySQLBackend is a physical backend that stores data
 // within MySQL database.
@@ -58,13 +58,13 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 	dbTable := database + "." + table
 
 	dsnParams := url.Values{}
-	sslca, ok := conf["sslca"]
+	tlsCaFile, ok := conf["tls_ca_file"]
 	if ok {
-		if err := useEncryptedMYSQLConnection(sslca); err != nil {
+		if err := setupMySQLTLSConfig(tlsCaFile); err != nil {
 			return nil, fmt.Errorf("failed register TLS config: %v", err)
 		}
 
-		dsnParams.Add("tls", tlsKey)
+		dsnParams.Add("tls", mysqlTLSKey)
 	}
 
 	// Create MySQL handle for the database.
@@ -192,10 +192,13 @@ func (m *MySQLBackend) List(prefix string) ([]string, error) {
 	return keys, nil
 }
 
-func useEncryptedMYSQLConnection(sslca string) error {
+// Establish a TLS connection with a given CA certificate
+// Register a tsl.Config associted with the same key as the dns param from sql.Open
+// foo:bar@tcp(127.0.0.1:3306)/dbname?tls=default
+func setupMySQLTLSConfig(tlsCaFile string) error {
 	rootCertPool := x509.NewCertPool()
 
-	pem, err := ioutil.ReadFile(sslca)
+	pem, err := ioutil.ReadFile(tlsCaFile)
 	if err != nil {
 		return err
 	}
@@ -204,7 +207,7 @@ func useEncryptedMYSQLConnection(sslca string) error {
 		return err
 	}
 
-	err = mysql.RegisterTLSConfig(tlsKey, &tls.Config{
+	err = mysql.RegisterTLSConfig(mysqlTLSKey, &tls.Config{
 		RootCAs: rootCertPool,
 	})
 	if err != nil {
