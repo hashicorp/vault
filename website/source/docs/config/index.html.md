@@ -113,6 +113,22 @@ For Consul, the following options are supported:
 
   * `token` (optional) - An access token to use to write data to Consul.
 
+  * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
+      will be disabled for Consul communication.
+      Defaults to false.
+
+  The following settings should be set according to your [Consul encryption settings](https://www.consul.io/docs/agent/encryption.html):
+
+  * `tls_ca_file` (optional) - The path to the CA certificate used for Consul communication.
+      Defaults to system bundle if not specified.
+      Set accordingly to the [ca_file](https://www.consul.io/docs/agent/options.html#ca_file) setting in Consul.
+
+  * `tls_cert_file` (optional) - The path to the certificate for Consul communication.
+      Set accordingly to the [cert_file](https://www.consul.io/docs/agent/options.html#cert_file) setting in Consul.
+
+  * `tls_key_file` (optional) - The path to the private key for Consul communication.
+      Set accordingly to the [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting in Consul.
+
 #### Backend Reference: Zookeeper
 
 For Zookeeper, the following options are supported:
@@ -194,7 +210,7 @@ The supported options are:
 
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate.
-      
+
   * `tls_min_version` (optional) - If provided, specifies the minimum
       supported version of TLS. Accepted values are "tls10", "tls11"
       or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
@@ -211,6 +227,6 @@ is within the object itself.
 
 * `statsd_address` (optional) - This is the same as `statsite_address` but
   for StatsD.
-  
+
 * `disable_hostname` (optional) - Whether or not to prepend runtime telemetry
   with the machines hostname. This is a global option. Defaults to false.
