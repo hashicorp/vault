@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -24,7 +25,7 @@ func secretDynamicKey(b *backend) *framework.Secret {
 			},
 		},
 		DefaultDuration:    10 * time.Minute,
-		DefaultGracePeriod: 5 * time.Minute,
+		DefaultGracePeriod: 2 * time.Minute,
 		Renew:              b.secretDynamicKeyRenew,
 		Revoke:             b.secretDynamicKeyRevoke,
 	}
@@ -105,13 +106,14 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	}
 
 	// Transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
-	err = uploadPublicKeyScp(dynamicPublicKey, username, ip, port, hostKey.Key)
+	dynamicPublicKeyFileName := uuid.GenerateUUID()
+	err = uploadPublicKeyScp(dynamicPublicKey, dynamicPublicKeyFileName, username, ip, port, hostKey.Key)
 	if err != nil {
 		return nil, fmt.Errorf("public key transfer failed: %s", err)
 	}
 
 	// Remove the public key from authorized_keys file in target machine
-	err = uninstallPublicKeyInTarget(adminUser, username, ip, port, hostKey.Key)
+	err = uninstallPublicKeyInTarget(adminUser, dynamicPublicKeyFileName, username, ip, port, hostKey.Key)
 	if err != nil {
 		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
 	}

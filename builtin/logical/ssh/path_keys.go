@@ -3,9 +3,15 @@ package ssh
 import (
 	"fmt"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+type sshHostKey struct {
+	Key string
+}
 
 func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
@@ -62,6 +68,11 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 	keyName := d.Get("name").(string)
 	keyString := d.Get("key").(string)
 
+	signer, err := ssh.ParsePrivateKey([]byte(keyString))
+	if err != nil || signer == nil {
+		return logical.ErrorResponse("Invalid key"), nil
+	}
+
 	if keyString == "" {
 		return logical.ErrorResponse("Missing key"), nil
 	}
@@ -78,10 +89,6 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 		return nil, err
 	}
 	return nil, nil
-}
-
-type sshHostKey struct {
-	Key string
 }
 
 const pathKeysSyn = `

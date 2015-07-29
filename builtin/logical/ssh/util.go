@@ -20,8 +20,7 @@ import (
 // session with the target. Uses the public key authentication method
 // and hence the parameter 'key' takes in the private key. The fileName
 // parameter takes an absolute path.
-func uploadPublicKeyScp(publicKey, username, ip, port, key string) error {
-	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
+func uploadPublicKeyScp(publicKey, publicKeyFileName, username, ip, port, key string) error {
 	session, err := createSSHPublicKeysSession(username, ip, port, key)
 	if err != nil {
 		return err
@@ -32,12 +31,12 @@ func uploadPublicKeyScp(publicKey, username, ip, port, key string) error {
 	defer session.Close()
 	go func() {
 		w, _ := session.StdinPipe()
-		fmt.Fprintln(w, "C0644", len(publicKey), dynamicPublicKeyFileName)
+		fmt.Fprintln(w, "C0644", len(publicKey), publicKeyFileName)
 		io.Copy(w, strings.NewReader(publicKey))
 		fmt.Fprint(w, "\x00")
 		w.Close()
 	}()
-	err = session.Run(fmt.Sprintf("scp -vt %s", dynamicPublicKeyFileName))
+	err = session.Run(fmt.Sprintf("scp -vt %s", publicKeyFileName))
 	if err != nil {
 		return fmt.Errorf("public key upload failed")
 	}
@@ -87,8 +86,8 @@ func createSSHPublicKeysSession(username, ipAddr, port, hostKey string) (*ssh.Se
 // Creates a new RSA key pair with key length of 2048.
 // The private key will be of pem format and the public key will be
 // of OpenSSH format.
-func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, keyBits)
 	if err != nil {
 		return "", "", fmt.Errorf("error generating RSA key-pair: %s", err)
 	}
@@ -108,7 +107,7 @@ func generateRSAKeys() (publicKeyRsa string, privateKeyRsa string, err error) {
 
 // Concatenates the public present in that target machine's home
 // folder to ~/.ssh/authorized_keys file
-func installPublicKeyInTarget(adminUser, username, ip, port, hostKey string) error {
+func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, hostKey string) error {
 	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
@@ -122,11 +121,10 @@ func installPublicKeyInTarget(adminUser, username, ip, port, hostKey string) err
 	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
 
 	// Commands to be run on target machine
-	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
-	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
+	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", publicKeyFileName, authKeysFileName, tempKeysFileName)
 	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
-	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", dynamicPublicKeyFileName, authKeysFileName)
-	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", publicKeyFileName, authKeysFileName)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, publicKeyFileName)
 
 	targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
 	session.Run(targetCmd)
@@ -135,7 +133,7 @@ func installPublicKeyInTarget(adminUser, username, ip, port, hostKey string) err
 
 // Removes the installed public key from the authorized_keys file
 // in target machine
-func uninstallPublicKeyInTarget(adminUser, username, ip, port, hostKey string) error {
+func uninstallPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, hostKey string) error {
 	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
@@ -149,10 +147,9 @@ func uninstallPublicKeyInTarget(adminUser, username, ip, port, hostKey string) e
 	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
 
 	// Commands to be run on target machine
-	dynamicPublicKeyFileName := fmt.Sprintf("vault_ssh_%s_%s.pub", username, ip)
-	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", dynamicPublicKeyFileName, authKeysFileName, tempKeysFileName)
+	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", publicKeyFileName, authKeysFileName, tempKeysFileName)
 	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
-	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, dynamicPublicKeyFileName)
+	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, publicKeyFileName)
 
 	remoteCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, removeCmd)
 	session.Run(remoteCmd)

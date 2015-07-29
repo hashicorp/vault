@@ -41,11 +41,11 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 	if err != nil {
 		return nil, err
 	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"username": otpEntry.Username,
 			"ip":       otpEntry.IP,
-			"valid":    "yes",
 		},
 	}, nil
 }

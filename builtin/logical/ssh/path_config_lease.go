@@ -8,6 +8,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+type configLease struct {
+	Lease    time.Duration
+	LeaseMax time.Duration
+}
+
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
@@ -87,11 +92,6 @@ func (b *backend) Lease(s logical.Storage) (*configLease, error) {
 	}
 
 	return &result, nil
-}
-
-type configLease struct {
-	Lease    time.Duration
-	LeaseMax time.Duration
 }
 
 const pathConfigLeaseHelpSyn = `

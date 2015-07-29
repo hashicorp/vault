@@ -8,6 +8,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+type backend struct {
+	*framework.Backend
+	salt *salt.Salt
+}
+
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {
@@ -52,11 +57,6 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		},
 	}
 	return b.Backend, nil
-}
-
-type backend struct {
-	*framework.Backend
-	salt *salt.Salt
 }
 
 const backendHelp = `

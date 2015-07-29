@@ -20,22 +20,9 @@ func secretOTP(b *backend) *framework.Secret {
 			},
 		},
 		DefaultDuration:    10 * time.Minute,
-		DefaultGracePeriod: 5 * time.Minute,
-		Renew:              b.secretOTPRenew,
+		DefaultGracePeriod: 2 * time.Minute,
 		Revoke:             b.secretOTPRevoke,
 	}
-}
-
-func (b *backend) secretOTPRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.Lease(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
-	}
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
-	return f(req, d)
 }
 
 func (b *backend) secretOTPRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

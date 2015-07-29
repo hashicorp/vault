@@ -3,11 +3,21 @@ package ssh
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+type sshOTP struct {
+	Username string `json:"username"`
+	IP       string `json:"ip"`
+}
+
+type sshCIDR struct {
+	CIDR []string
+}
 
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
@@ -85,23 +95,8 @@ func (b *backend) pathCredsCreateWrite(
 	var result *logical.Response
 	if role.KeyType == KeyTypeOTP {
 		// Generate salted OTP
-		otp := uuid.GenerateUUID()
-		otpSalted := b.salt.SaltID(otp)
-		entry, err := req.Storage.Get("otp/" + otpSalted)
-		// Make sure that new OTP is not replacing an existing one
-		for err == nil && entry != nil {
-			otp := uuid.GenerateUUID()
-			otpSalted := b.salt.SaltID(otp)
-			entry, err = req.Storage.Get("otp/" + otpSalted)
-		}
-		entry, err = logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
-			Username: username,
-			IP:       ip,
-		})
+		otp, err := b.GenerateOTPCredential(req, username, ip)
 		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(entry); err != nil {
 			return nil, err
 		}
 		result = b.Secret(SecretOTPType).Response(map[string]interface{}{
@@ -111,39 +106,10 @@ func (b *backend) pathCredsCreateWrite(
 			"otp": otp,
 		})
 	} else if role.KeyType == KeyTypeDynamic {
-		// Fetch the host key to be used for dynamic key installation
-		keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
-		if err != nil {
-			return nil, fmt.Errorf("key '%s' not found error:%s", role.KeyName, err)
-		}
-
-		if keyEntry == nil {
-			return nil, fmt.Errorf("key '%s' not found", role.KeyName, err)
-		}
-
-		var hostKey sshHostKey
-		if err := keyEntry.DecodeJSON(&hostKey); err != nil {
-			return nil, fmt.Errorf("error reading the host key: %s", err)
-		}
-
-		// Generate RSA key pair
-		dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys()
-		if err != nil {
-			return nil, fmt.Errorf("error generating key: %s", err)
-		}
-
-		// Transfer the public key to target machine
-		err = uploadPublicKeyScp(dynamicPublicKey, username, ip, role.Port, hostKey.Key)
+		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(req, &role, username, ip)
 		if err != nil {
 			return nil, err
 		}
-
-		// Add the public key to authorized_keys file in target machine
-		err = installPublicKeyInTarget(role.AdminUser, username, ip, role.Port, hostKey.Key)
-		if err != nil {
-			return nil, fmt.Errorf("error adding public key to authorized_keys file in target")
-		}
-
 		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
 			"key":      dynamicPrivateKey,
 			"key_type": role.KeyType,
@@ -168,13 +134,74 @@ func (b *backend) pathCredsCreateWrite(
 	return result, nil
 }
 
-type sshOTP struct {
-	Username string `json:"username"`
-	IP       string `json:"ip"`
+// Generates a RSA key pair and installs it in the remote target
+func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole, username, ip string) (string, string, error) {
+	// Fetch the host key to be used for dynamic key installation
+	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
+	if err != nil {
+		return "", "", fmt.Errorf("key '%s' not found error:%s", role.KeyName, err)
+	}
+
+	if keyEntry == nil {
+		return "", "", fmt.Errorf("key '%s' not found", role.KeyName, err)
+	}
+
+	var hostKey sshHostKey
+	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
+		return "", "", fmt.Errorf("error reading the host key: %s", err)
+	}
+
+	// Generate RSA key pair
+	keyBits, err := strconv.Atoi(role.KeyBits)
+	if err != nil {
+		return "", "", fmt.Errorf("error reading key bit size: %s", err)
+	}
+
+	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(keyBits)
+	if err != nil {
+		return "", "", fmt.Errorf("error generating key: %s", err)
+	}
+
+	// Transfer the public key to target machine
+	publicKeyFileName := uuid.GenerateUUID()
+	err = uploadPublicKeyScp(dynamicPublicKey, publicKeyFileName, username, ip, role.Port, hostKey.Key)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Add the public key to authorized_keys file in target machine
+	err = installPublicKeyInTarget(role.AdminUser, publicKeyFileName, username, ip, role.Port, hostKey.Key)
+	if err != nil {
+		return "", "", fmt.Errorf("error adding public key to authorized_keys file in target")
+	}
+	return dynamicPublicKey, dynamicPrivateKey, nil
 }
 
-type sshCIDR struct {
-	CIDR []string
+// Generates an OTP and creates an entry for the same in storage backend.
+func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
+	otp := uuid.GenerateUUID()
+	otpSalted := b.salt.SaltID(otp)
+	entry, err := req.Storage.Get("otp/" + otpSalted)
+	// Make sure that new OTP is not replacing an existing one
+	for err == nil && entry != nil {
+		otp = uuid.GenerateUUID()
+		otpSalted = b.salt.SaltID(otp)
+		entry, err = req.Storage.Get("otp/" + otpSalted)
+		if err != nil {
+			return "", err
+		}
+	}
+	entry, err = logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
+		Username: username,
+		IP:       ip,
+	})
+	if err != nil {
+		return "", err
+	}
+	if err := req.Storage.Put(entry); err != nil {
+		return "", err
+	}
+	return otp, nil
 }
 
 const pathCredsCreateHelpSyn = `
