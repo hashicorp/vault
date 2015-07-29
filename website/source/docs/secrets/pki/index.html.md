@@ -423,7 +423,7 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
   <dd>
     <ul>
       <li>
-        <span class="param">serial</span>
+        <span class="param">serial_number</span>
         <span class="param-flags">required</span>
         The serial number of the certificate to revoke, in
         hyphen-separated or colon-separated octal.
