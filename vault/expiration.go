@@ -35,10 +35,10 @@ const (
 	// minRevokeDelay is used to prevent an instant revoke on restore
 	minRevokeDelay = 5 * time.Second
 
-	// maxLeaseDuration is the maximum lease duration
+	// maxLeaseDuration is the default maximum lease duration
 	maxLeaseDuration = 30 * 24 * time.Hour
 
-	// defaultLeaseDuration is the lease duration used when no lease is specified
+	// defaultLeaseDuration is the default lease duration used when no lease is specified
 	defaultLeaseDuration = maxLeaseDuration
 )
 

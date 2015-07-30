@@ -13,5 +13,8 @@
 
     "telemetry": {
         "statsite_address": "baz"
-    }
+    },
+
+    "max_lease_duration": 10,
+    "default_lease_duration": 10
 }

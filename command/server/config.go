@@ -14,12 +14,15 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	Listeners []*Listener `hcl:"-"`
-	Backend   *Backend    `hcl:"-"`
+	Listeners []*Listener    `hcl:"-"`
+	Backend   *Backend       `hcl:"-"`
 
-	DisableMlock bool   `hcl:"disable_mlock"`
+	DisableMlock bool        `hcl:"disable_mlock"`
 
-	Telemetry    *Telemetry `hcl:"telemetry"`
+	Telemetry *Telemetry     `hcl:"telemetry"`
+
+	MaxLeaseDuration int     `hcl:"max_lease_duration"`
+	DefaultLeaseDuration int `hcl:"default_lease_duration"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -41,6 +44,9 @@ func DevConfig() *Config {
 		},
 
 		Telemetry: &Telemetry{},
+
+		MaxLeaseDuration: 30 * 24,
+		DefaultLeaseDuration: 30 * 24,
 	}
 }
 
@@ -95,6 +101,23 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.Telemetry = c.Telemetry
 	if c2.Telemetry != nil {
 		result.Telemetry = c2.Telemetry
+	}
+
+	// merging this boolean via an OR operation
+	result.DisableMlock = c.DisableMlock
+	if c2.DisableMlock {
+		result.DisableMlock = c2.DisableMlock
+	}
+
+	// merge these integers via a MAX operation
+	result.MaxLeaseDuration = c.MaxLeaseDuration
+	if c2.MaxLeaseDuration > result.MaxLeaseDuration {
+		result.MaxLeaseDuration = c2.MaxLeaseDuration
+	}
+
+	result.DefaultLeaseDuration = c.DefaultLeaseDuration
+	if c2.DefaultLeaseDuration > result.DefaultLeaseDuration {
+		result.DefaultLeaseDuration = c2.DefaultLeaseDuration
 	}
 
 	return result

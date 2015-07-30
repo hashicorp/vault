@@ -213,23 +213,28 @@ type Core struct {
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
+	defaultLeaseDuration time.Duration
+	maxLeaseDuration time.Duration
+
 	logger *log.Logger
 }
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	LogicalBackends    map[string]logical.Factory
-	CredentialBackends map[string]logical.Factory
-	AuditBackends      map[string]audit.Factory
-	Physical           physical.Backend
-	Logger             *log.Logger
-	DisableCache       bool   // Disables the LRU cache on the physical backend
-	DisableMlock       bool   // Disables mlock syscall
-	CacheSize          int    // Custom cache size of zero for default
-	AdvertiseAddr      string // Set as the leader address for HA
+	LogicalBackends      map[string]logical.Factory
+	CredentialBackends   map[string]logical.Factory
+	AuditBackends        map[string]audit.Factory
+	Physical             physical.Backend
+	Logger               *log.Logger
+	DisableCache         bool   // Disables the LRU cache on the physical backend
+	DisableMlock         bool   // Disables mlock syscall
+	CacheSize            int    // Custom cache size of zero for default
+	AdvertiseAddr        string // Set as the leader address for HA
+	DefaultLeaseDuration time.Duration
+	MaxLeaseDuration     time.Duration
 }
 
-// NewCore isk used to construct a new core
+// NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
 	// Check if this backend supports an HA configuraiton
 	var haBackend physical.HABackend
@@ -240,6 +245,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
+	if conf.DefaultLeaseDuration == 0 {
+		conf.DefaultLeaseDuration = defaultLeaseDuration
+	}
+	if conf.MaxLeaseDuration == 0 {
+		conf.MaxLeaseDuration = maxLeaseDuration
+	}
+	
+	if conf.DefaultLeaseDuration > conf.MaxLeaseDuration {
+		return nil, fmt.Errorf("cannot have DefaultLeaseDuration larger than MaxLeaseDuration")
+	}
+	
 	// Validate the advertise addr if its given to us
 	if conf.AdvertiseAddr != "" {
 		u, err := url.Parse(conf.AdvertiseAddr)
@@ -299,6 +315,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		sealed:        true,
 		standby:       true,
 		logger:        conf.Logger,
+		defaultLeaseDuration: conf.DefaultLeaseDuration,
+		maxLeaseDuration: conf.MaxLeaseDuration,
 	}
 
 	// Setup the backends
@@ -424,12 +442,12 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
 		// Apply the default lease if none given
 		if resp.Secret.Lease == 0 {
-			resp.Secret.Lease = defaultLeaseDuration
+			resp.Secret.Lease = c.defaultLeaseDuration
 		}
 
 		// Limit the lease duration
-		if resp.Secret.Lease > maxLeaseDuration {
-			resp.Secret.Lease = maxLeaseDuration
+		if resp.Secret.Lease > c.maxLeaseDuration {
+			resp.Secret.Lease = c.maxLeaseDuration
 		}
 
 		// Register the lease
@@ -456,12 +474,12 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.
 
 		// Set the default lease if non-provided, root tokens are exempt
 		if resp.Auth.Lease == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.Lease = defaultLeaseDuration
+			resp.Auth.Lease = c.defaultLeaseDuration
 		}
 
 		// Limit the lease duration
-		if resp.Auth.Lease > maxLeaseDuration {
-			resp.Auth.Lease = maxLeaseDuration
+		if resp.Auth.Lease > c.maxLeaseDuration {
+			resp.Auth.Lease = c.maxLeaseDuration
 		}
 
 		// Register with the expiration manager
@@ -528,12 +546,12 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 		// Set the default lease if non-provided, root tokens are exempt
 		if auth.Lease == 0 && !strListContains(auth.Policies, "root") {
-			auth.Lease = defaultLeaseDuration
+			auth.Lease = c.defaultLeaseDuration
 		}
 
 		// Limit the lease duration
-		if resp.Auth.Lease > maxLeaseDuration {
-			resp.Auth.Lease = maxLeaseDuration
+		if resp.Auth.Lease > c.maxLeaseDuration {
+			resp.Auth.Lease = c.maxLeaseDuration
 		}
 
 		// Register with the expiration manager
