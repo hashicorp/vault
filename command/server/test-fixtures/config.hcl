@@ -11,5 +11,5 @@ backend "consul" {
     advertise_addr = "foo"
 }
 
-max_lease_duration = 10
-default_lease_duration = 10
+max_lease_duration = "10h"
+default_lease_duration = "10h"

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/hcl"
 	hclobj "github.com/hashicorp/hcl/hcl"
@@ -21,8 +22,10 @@ type Config struct {
 
 	Telemetry *Telemetry     `hcl:"telemetry"`
 
-	MaxLeaseDuration int     `hcl:"max_lease_duration"`
-	DefaultLeaseDuration int `hcl:"default_lease_duration"`
+	MaxLeaseDuration time.Duration `hcl:"-"`
+	MaxLeaseDurationRaw string     `hcl:"max_lease_duration"`
+	DefaultLeaseDuration time.Duration `hcl:"-"`
+	DefaultLeaseDurationRaw string     `hcl:"default_lease_duration"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -45,8 +48,8 @@ func DevConfig() *Config {
 
 		Telemetry: &Telemetry{},
 
-		MaxLeaseDuration: 30 * 24,
-		DefaultLeaseDuration: 30 * 24,
+		MaxLeaseDuration: 30 * 24 * time.Hour,
+		DefaultLeaseDuration: 30 * 24 * time.Hour,
 	}
 }
 
@@ -156,6 +159,17 @@ func LoadConfigFile(path string) (*Config, error) {
 	var result Config
 	if err := hcl.DecodeObject(&result, obj); err != nil {
 		return nil, err
+	}
+
+	if result.MaxLeaseDurationRaw != "" {
+		if result.MaxLeaseDuration, err = time.ParseDuration(result.MaxLeaseDurationRaw); err != nil {
+			return nil, err
+		}
+	}
+	if result.DefaultLeaseDurationRaw != "" {
+		if result.DefaultLeaseDuration, err = time.ParseDuration(result.DefaultLeaseDurationRaw); err != nil {
+			return nil, err
+		}
 	}
 
 	if objs := obj.Get("listener", false); objs != nil {

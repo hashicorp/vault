@@ -132,8 +132,8 @@ func (c *ServerCommand) Run(args []string) int {
 		LogicalBackends:      c.LogicalBackends,
 		Logger:               logger,
 		DisableMlock:         config.DisableMlock,
-		MaxLeaseDuration:     time.Duration(config.MaxLeaseDuration) * time.Hour,
-		DefaultLeaseDuration: time.Duration(config.DefaultLeaseDuration) * time.Hour,
+		MaxLeaseDuration:     config.MaxLeaseDuration,
+		DefaultLeaseDuration: config.DefaultLeaseDuration,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))

@@ -4,4 +4,4 @@ telemetry {
     disable_hostname = true
 }
 
-default_lease_duration = 10
+default_lease_duration = "10h"

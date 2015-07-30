@@ -5,5 +5,5 @@
         }
     },
 
-    "max_lease_duration": 10
+    "max_lease_duration": "10h"
 }
