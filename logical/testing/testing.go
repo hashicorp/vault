@@ -126,6 +126,7 @@ func Test(t TestT, c TestCase) {
 				return c.Factory(conf)
 			},
 		},
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatal("error initializing core: ", err)
