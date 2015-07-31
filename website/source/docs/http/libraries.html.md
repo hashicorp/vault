@@ -22,3 +22,4 @@ Some are officially maintained while others are provided by the community.
 ## Node.js
 
 * [node-vault](https://github.com/kr1sp1n/node-vault)
+* [vaulted](https://github.com/chiefy/vaulted)
