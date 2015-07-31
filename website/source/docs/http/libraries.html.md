@@ -11,6 +11,10 @@ description: |-
 The programming libraries listed on this page can be used to consume the API more conveniently.
 Some are officially maintained while others are provided by the community.
 
+## Go
+
+* [Vault Go Client](https://github.com/hashicorp/vault/tree/master/api) (official)
+
 ## Ruby
 
 * [Vault Ruby Client](https://github.com/hashicorp/vault-ruby) (official)
