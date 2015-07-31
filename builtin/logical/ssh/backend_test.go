@@ -20,7 +20,7 @@ const (
 	testCidr             = "127.0.0.1/32"
 	testDynamicRoleName  = "testDynamicRoleName"
 	testOTPRoleName      = "testOTPRoleName"
-	testKey              = "testKey"
+	testKeyName          = "testKeyName"
 	testSharedPrivateKey = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAvYvoRcWRxqOim5VZnuM6wHCbLUeiND0yaM1tvOl+Fsrz55DG
@@ -90,32 +90,51 @@ func TestSSHDynamicKeyBackend(t *testing.T) {
 func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 	data := map[string]interface{}{
 		"key_type":     testOTPKeyType,
-		"cidr":         testCidr,
 		"default_user": testUserName,
+		"cidr":         testCidr,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testOTPRoleWrite(t, data),
-			testOTPRoleRead(t, data),
-			testOTPRoleDelete(t),
-			testOTPRoleRead(t, nil),
+			testRoleWrite(t, testOTPRoleName, data),
+			testRoleRead(t, testOTPRoleName, data),
+			testRoleDelete(t, testOTPRoleName),
+			testRoleRead(t, testOTPRoleName, nil),
 		},
 	})
 }
 
-func testOTPRoleWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
+func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
+	data := map[string]interface{}{
+		"key_type":   testDynamicKeyType,
+		"key":        testKeyName,
+		"admin_user": testAdminUser,
+		"cidr":       testCidr,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testNamedKeys(t),
+			testRoleWrite(t, testDynamicRoleName, data),
+			testRoleRead(t, testDynamicRoleName, data),
+			testRoleDelete(t, testDynamicRoleName),
+			testRoleRead(t, testDynamicRoleName, nil),
+		},
+	})
+}
+
+func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "roles/" + testOTPRoleName,
+		Path:      "roles/" + name,
 		Data:      data,
 	}
 }
 
-func testOTPRoleRead(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
+func testRoleRead(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "roles/" + testOTPRoleName,
+		Path:      "roles/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				if data == nil {
@@ -123,34 +142,35 @@ func testOTPRoleRead(t *testing.T, data map[string]interface{}) logicaltest.Test
 				}
 				return fmt.Errorf("bad: %#v", resp)
 			}
-			var d struct {
-				KeyType     string `mapstructure:"key_type"`
-				DefaultUser string `mapstructure:"default_user"`
-				Port        string `mapstructure:"port"`
-				Cidr        string `mapstructure:"cidr"`
-			}
+			var d sshRole
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
-				return err
+				return fmt.Errorf("error decoding response:%s", err)
 			}
-			if d.KeyType != data["key_type"] || d.DefaultUser != data["default_user"] || d.Cidr != data["cidr"] {
-				return fmt.Errorf("bad: %#v", resp)
+			if name == testOTPRoleName {
+				if d.KeyType != data["key_type"] || d.DefaultUser != data["default_user"] || d.CIDR != data["cidr"] {
+					return fmt.Errorf("data mismatch. bad: %#v", resp)
+				}
+			} else {
+				if d.AdminUser != data["admin_user"] || d.CIDR != data["cidr"] || d.KeyName != data["key"] || d.KeyType != data["key_type"] {
+					return fmt.Errorf("data mismatch. bad: %#v", resp)
+				}
 			}
 			return nil
 		},
 	}
 }
 
-func testOTPRoleDelete(t *testing.T) logicaltest.TestStep {
+func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
-		Path:      "roles/" + testOTPRoleName,
+		Path:      "roles/" + name,
 	}
 }
 
 func testNamedKeys(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("keys/%s", testKey),
+		Path:      fmt.Sprintf("keys/%s", testKeyName),
 		Data: map[string]interface{}{
 			"key": testSharedPrivateKey,
 		},
@@ -163,7 +183,7 @@ func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 		Path:      fmt.Sprintf("roles/%s", testDynamicRoleName),
 		Data: map[string]interface{}{
 			"key_type":   "dynamic",
-			"key":        testKey,
+			"key":        testKeyName,
 			"admin_user": testAdminUser,
 			"cidr":       testCidr,
 			"port":       testPort,

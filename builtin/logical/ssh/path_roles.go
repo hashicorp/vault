@@ -212,13 +212,13 @@ func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (
 }
 
 type sshRole struct {
-	KeyType     string `json:"key_type"`
-	KeyName     string `json:"key"`
-	KeyBits     string `json:"key_bits"`
-	AdminUser   string `json:"admin_user"`
-	DefaultUser string `json:"default_user"`
-	CIDR        string `json:"cidr"`
-	Port        string `json:"port"`
+	KeyType     string `mapstructure:"key_type" json:"key_type"`
+	KeyName     string `mapstructure:"key" json:"key"`
+	KeyBits     string `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser   string `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser string `mapstructure:"default_user" json:"default_user"`
+	CIDR        string `mapstructure:"cidr" json:"cidr"`
+	Port        string `mapstructure:"port" json:"port"`
 }
 
 const pathRoleHelpSyn = `
