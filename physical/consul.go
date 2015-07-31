@@ -5,6 +5,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"net/http"
+	"io/ioutil"
+
+	"crypto/tls"
+	"crypto/x509"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
@@ -50,6 +55,18 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
 	}
+
+	if consulConf.Scheme == "https" {
+		tlsClientConfig, err := setupTLSConfig(conf)
+		if err != nil {
+			return nil, err
+		}
+
+		consulConf.HttpClient.Transport = &http.Transport{
+			TLSClientConfig: tlsClientConfig,
+		}
+	}
+
 	client, err := api.NewClient(consulConf)
 	if err != nil {
 		return nil, fmt.Errorf("client setup failed: %v", err)
@@ -62,6 +79,49 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 		kv:     client.KV(),
 	}
 	return c, nil
+}
+
+func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
+	serverName := strings.Split(conf["address"], ":")
+
+	insecureSkipVerify := false
+	if _, ok := conf["tls_skip_verify"]; ok {
+		insecureSkipVerify = true
+	}
+
+	tlsClientConfig := &tls.Config{
+		InsecureSkipVerify: insecureSkipVerify,
+		ServerName:         serverName[0],
+	}
+
+	_, okCert := conf["tls_cert_file"]
+	_, okKey  := conf["tls_key_file"]
+
+	if okCert && okKey {
+		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
+		if err != nil {
+			return nil, fmt.Errorf("client tls setup failed: %v", err)
+		}
+
+		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	}
+
+	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
+		caPool := x509.NewCertPool()
+
+		data, err := ioutil.ReadFile(tlsCaFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA file: %v", err)
+		}
+
+		if !caPool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("failed to parse CA certificate")
+		}
+
+		tlsClientConfig.RootCAs = caPool
+	}
+
+	return tlsClientConfig, nil
 }
 
 // Put is used to insert or update an entry
