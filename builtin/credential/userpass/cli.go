@@ -3,9 +3,11 @@ package userpass
 import (
 	"fmt"
 	"strings"
+	"os"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
+	pwd "github.com/hashicorp/vault/helper/password"
 )
 
 type CLIHandler struct{}
@@ -15,22 +17,41 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		Username string `mapstructure:"username"`
 		Password string `mapstructure:"password"`
 		Mount    string `mapstructure:"mount"`
+		Method   string `mapstructure:"method"`
+		Passcode string `mapstructure:"passcode"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
 		return "", err
 	}
 
-	if data.Username == "" || data.Password == "" {
-		return "", fmt.Errorf("Both 'username' and 'password' must be specified")
+	if data.Username == "" {
+		return "", fmt.Errorf("'username' must be specified")
+	}
+	if data.Password == "" {
+		fmt.Printf("Password (will be hidden): ")
+		password, err := pwd.Read(os.Stdin)
+		fmt.Println()
+		if err != nil {
+			return "", err
+		}
+		data.Password = password
 	}
 	if data.Mount == "" {
 		data.Mount = "userpass"
 	}
 
-	path := fmt.Sprintf("auth/%s/login/%s", data.Mount, data.Username)
-	secret, err := c.Logical().Write(path, map[string]interface{}{
+	options := map[string]interface{}{
 		"password": data.Password,
-	})
+	}
+	if data.Method != "" {
+		options["method"] = data.Method
+	}
+	if data.Passcode != "" {
+		options["passcode"] = data.Passcode
+	}
+
+	path := fmt.Sprintf("auth/%s/login/%s", data.Mount, data.Username)
+	secret, err := c.Logical().Write(path, options)
 	if err != nil {
 		return "", err
 	}
@@ -45,7 +66,12 @@ func (h *CLIHandler) Help() string {
 	help := `
 The "userpass" credential provider allows you to authenticate with
 a username and password. To use it, specify the "username" and "password"
-parameters.
+parameters. If password is not provided on the command line, it will be
+read from stdin.
+
+If multi-factor authentication (MFA) is enabled, a "method" and/or "passcode"
+may be provided depending on the MFA backend enabled. To check
+which MFA backend is in use, read "auth/[mount]/mfa_config".
 
     Example: vault auth -method=userpass \
       username=<user> \

@@ -32,10 +32,21 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		}
 	}
 
-	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
-	secret, err := c.Logical().Write(path, map[string]interface{}{
+	data := map[string]interface{}{
 		"password": password,
-	})
+	}
+
+	mfa_method, ok := m["method"]
+	if ok {
+		data["method"] = mfa_method
+	}
+	mfa_passcode, ok := m["passcode"]
+	if ok {
+		data["passcode"] = mfa_passcode
+	}
+
+	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
+	secret, err := c.Logical().Write(path, data)
 	if err != nil {
 		return "", err
 	}
@@ -52,6 +63,10 @@ The LDAP credential provider allows you to authenticate with LDAP.
 To use it, first configure it through the "config" endpoint, and then
 login by specifying username and password. If password is not provided
 on the command line, it will be read from stdin.
+
+If multi-factor authentication (MFA) is enabled, a "method" and/or "passcode"
+may be provided depending on the MFA backend enabled. To check
+which MFA backend is in use, read "auth/[mount]/mfa_config".
 
     Example: vault auth -method=ldap username=john
 

@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Auth Backend: LDAP"
 sidebar_current: "docs-auth-ldap"
 description: |-
-  The "kdap" auth backend allows users to authenticate with Vault using LDAP credentials.
+  The "ldap" auth backend allows users to authenticate with Vault using LDAP credentials.
 ---
 
 # Auth Backend: LDAP
