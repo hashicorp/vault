@@ -24,7 +24,7 @@ func Backend() *framework.Backend {
 				"groups/*",
 				"users/*",
 			},
-				mfa.MFAPathsSpecial()...,
+				mfa.MFARootPaths()...,
 			),
 
 			Unauthenticated: []string{

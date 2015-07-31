@@ -55,7 +55,9 @@ To enable MFA for a supported backend, the MFA type must be set in `mfa_config`.
 $ vault write auth/userpass/mfa_config type=duo
 ```
 
-This enables the Duo MFA type, which is currently the only MFA type supported.
+This enables the Duo MFA type, which is currently the only MFA type supported. The username
+used for MFA is the same as the login username, unless the backend or MFA type provide
+options to behave differently (see Duo configuration below).
 
 ### Duo
 
@@ -78,5 +80,13 @@ $ vault write auth/[mount]/duo/config \
     user_agent="" \
     username_format="%s"
 ```
+
+`user_agent` is the user agent to use when connecting to Duo.
+
+`username_format` controls how the username used to login is
+transformed before authenticating with Duo. This field is a format string
+that is passed the original username as its first argument and outputs
+the new username. For example "%s@example.com" would append "@example.com"
+to the provided username before connecting to Duo.
 
 More information can be found through the CLI `path-help` command.

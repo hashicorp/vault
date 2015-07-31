@@ -8,13 +8,17 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// MakeTestBackend creates a simple MFA enabled backend.
+// Login (before MFA) always succeeds with policy "foo".
+// An MFA "test" type is added to mfa.handlers that succeeds
+// if MFA method is "accept", otherwise it rejects.
 func MakeTestBackend() *framework.Backend {
 	handlers["test"] = testMFAHandler
 	b := &framework.Backend{
 		Help: "",
 
 		PathsSpecial: &logical.Paths{
-			Root: MFAPathsSpecial(),
+			Root: MFARootPaths(),
 			Unauthenticated: []string{
 				"login",
 			},

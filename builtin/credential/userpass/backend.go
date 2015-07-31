@@ -19,7 +19,7 @@ func Backend() *framework.Backend {
 			Root: append([]string{
 				"users/*",
 			},
-				mfa.MFAPathsSpecial()...,
+				mfa.MFARootPaths()...,
 			),
 
 			Unauthenticated: []string{

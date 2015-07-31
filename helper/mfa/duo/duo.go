@@ -1,3 +1,6 @@
+// Package duo provides a Duo MFA handler to authenticate users
+// with Duo. This handler is registered as the "duo" type in
+// mfa_config.
 package duo
 
 import (
@@ -9,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// DuoPaths returns path functions to configure Duo.
 func DuoPaths() []*framework.Path {
 	return []*framework.Path{
 		pathDuoConfig(),
@@ -16,13 +20,17 @@ func DuoPaths() []*framework.Path {
 	}
 }
 
-func DuoPathsSpecial() []string {
+// DuoRootPaths returns the paths that are used to configure Duo.
+func DuoRootPaths() []string {
 	return []string {
 		"duo/access",
 		"duo/config",
 	}
 }
 
+// DuoHandler interacts with the Duo Auth API to authenticate a user
+// login request. If successful, the original response from the login
+// backend is returned.
 func DuoHandler(req *logical.Request, d *framework.FieldData, resp *logical.Response) (
 	*logical.Response, error) {
 	duoConfig, err := GetDuoConfig(req)
