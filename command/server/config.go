@@ -17,9 +17,9 @@ type Config struct {
 	Listeners []*Listener `hcl:"-"`
 	Backend   *Backend    `hcl:"-"`
 
-	DisableMlock bool   `hcl:"disable_mlock"`
+	DisableMlock bool `hcl:"disable_mlock"`
 
-	Telemetry    *Telemetry `hcl:"telemetry"`
+	Telemetry *Telemetry `hcl:"telemetry"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -155,7 +155,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 		if statsdAddr != nil || statsiteAddr != nil {
 			result.Telemetry = &Telemetry{
-				StatsdAddr: getString(statsdAddr),
+				StatsdAddr:   getString(statsdAddr),
 				StatsiteAddr: getString(statsiteAddr),
 			}
 		}

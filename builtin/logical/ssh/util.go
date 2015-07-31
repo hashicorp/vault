@@ -36,10 +36,7 @@ func uploadPublicKeyScp(publicKey, publicKeyFileName, username, ip, port, key st
 		fmt.Fprint(w, "\x00")
 		w.Close()
 	}()
-	err = session.Run(fmt.Sprintf("scp -vt %s", publicKeyFileName))
-	if err != nil {
-		return fmt.Errorf("public key upload failed")
-	}
+	session.Run(fmt.Sprintf("scp -vt %s", publicKeyFileName))
 	return nil
 }
 

@@ -108,6 +108,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			DefaultUser: defaultUser,
 			CIDR:        cidr,
 			KeyType:     KeyTypeOTP,
+			Port:        port,
 		})
 	} else if keyType == KeyTypeDynamic {
 		keyName := d.Get("key").(string)
@@ -178,16 +179,27 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"key":          role.KeyName,
-			"admin_user":   role.AdminUser,
-			"default_user": role.DefaultUser,
-			"cidr":         role.CIDR,
-			"port":         role.Port,
-			"key_type":     role.KeyType,
-		},
-	}, nil
+	if role.KeyType == KeyTypeOTP {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"default_user": role.DefaultUser,
+				"cidr":         role.CIDR,
+				"port":         role.Port,
+				"key_type":     role.KeyType,
+			},
+		}, nil
+	} else {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"key":          role.KeyName,
+				"admin_user":   role.AdminUser,
+				"default_user": role.DefaultUser,
+				"cidr":         role.CIDR,
+				"port":         role.Port,
+				"key_type":     role.KeyType,
+			},
+		}, nil
+	}
 }
 
 func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -226,4 +238,31 @@ should have root access in all the hosts represented by the 'cidr'
 field. When the user requests key for an IP, the key will be installed
 for the user mentioned by 'default_user' field. The 'key' field takes
 a named key which can be configured by 'ssh/keys/' endpoint.
+
+Role Options:
+
+  -key_type		This can be either 'otp' or 'dynamic'. 'otp' key requires
+  			agent to be installed in target machine. Required field for
+			both types.
+
+  -key			Name of the key registered using 'keys/' endpoint. Required
+  			field for 'dynamic' type. Not applicable for 'otp' type.
+
+  -admin_user		Username at the target which is having root privileges. This
+  			username will be used to install keys for other unprivileged
+			users. Required field for 'dynamic' type. Not applicable for
+			'otp' type.
+
+  -default_user		When keys are created using '/creds' endpoint with only the
+  			IP address, by default, this username is used to create the
+			credentials. Required for 'otp' type. Optional for 'dynamic' type.
+
+  -cidr			CIDR block for which is role is applicable for. Required field
+  			for both types.
+
+  -port			Port number for SSH connections. Default is '22'. Optional for
+  			both types.
+
+  -key_bits		Length of RSa dynamic key in bits. Optional for 'dynamic' type.
+  			Not applicable for 'otp' type.
 `

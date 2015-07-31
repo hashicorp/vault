@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"os/user"
 	"strings"
 	"testing"
@@ -16,8 +15,11 @@ import (
 )
 
 const (
+	testOTPKeyType       = "otp"
+	testDynamicKeyType   = "dynamic"
 	testCidr             = "127.0.0.1/32"
-	testRoleName         = "testRoleName"
+	testDynamicRoleName  = "testDynamicRoleName"
+	testOTPRoleName      = "testOTPRoleName"
 	testKey              = "testKey"
 	testSharedPrivateKey = `
 -----BEGIN RSA PRIVATE KEY-----
@@ -85,6 +87,66 @@ func TestSSHDynamicKeyBackend(t *testing.T) {
 	})
 }
 
+func TestSSHBackend_OTPRoleCrud(t *testing.T) {
+	data := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"cidr":         testCidr,
+		"default_user": testUserName,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testOTPRoleWrite(t, data),
+			testOTPRoleRead(t, data),
+			testOTPRoleDelete(t),
+			testOTPRoleRead(t, nil),
+		},
+	})
+}
+
+func testOTPRoleWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "roles/" + testOTPRoleName,
+		Data:      data,
+	}
+}
+
+func testOTPRoleRead(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + testOTPRoleName,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if data == nil {
+					return nil
+				}
+				return fmt.Errorf("bad: %#v", resp)
+			}
+			var d struct {
+				KeyType     string `mapstructure:"key_type"`
+				DefaultUser string `mapstructure:"default_user"`
+				Port        string `mapstructure:"port"`
+				Cidr        string `mapstructure:"cidr"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if d.KeyType != data["key_type"] || d.DefaultUser != data["default_user"] || d.Cidr != data["cidr"] {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+			return nil
+		},
+	}
+}
+
+func testOTPRoleDelete(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "roles/" + testOTPRoleName,
+	}
+}
+
 func testNamedKeys(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -98,7 +160,7 @@ func testNamedKeys(t *testing.T) logicaltest.TestStep {
 func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("roles/%s", testRoleName),
+		Path:      fmt.Sprintf("roles/%s", testDynamicRoleName),
 		Data: map[string]interface{}{
 			"key_type":   "dynamic",
 			"key":        testKey,
@@ -112,7 +174,7 @@ func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 func testDynamicKeyCredsCreate(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("creds/%s", testRoleName),
+		Path:      fmt.Sprintf("creds/%s", testDynamicRoleName),
 		Data: map[string]interface{}{
 			"username": testUserName,
 			"ip":       testIP,
@@ -124,7 +186,6 @@ func testDynamicKeyCredsCreate(t *testing.T) logicaltest.TestStep {
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
-			log.Printf("[WARN] Generated Key:%s\n", d.Key)
 			if d.Key == "" {
 				return fmt.Errorf("Generated key is an empty string")
 			}

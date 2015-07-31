@@ -94,7 +94,6 @@ func (b *backend) pathCredsCreateWrite(
 
 	var result *logical.Response
 	if role.KeyType == KeyTypeOTP {
-		// Generate salted OTP
 		otp, err := b.GenerateOTPCredential(req, username, ip)
 		if err != nil {
 			return nil, err
@@ -127,10 +126,12 @@ func (b *backend) pathCredsCreateWrite(
 
 	// Change the lease information to reflect user's choice
 	lease, _ := b.Lease(req.Storage)
+
 	if lease != nil {
 		result.Secret.Lease = lease.Lease
 		result.Secret.LeaseGracePeriod = lease.LeaseMax
 	}
+
 	return result, nil
 }
 
@@ -177,7 +178,7 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	return dynamicPublicKey, dynamicPrivateKey, nil
 }
 
-// Generates an OTP and creates an entry for the same in storage backend.
+// Generates a salted OTP and creates an entry for the same in storage backend.
 func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
 	otp := uuid.GenerateUUID()
 	otpSalted := b.salt.SaltID(otp)
