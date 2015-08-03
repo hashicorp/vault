@@ -76,7 +76,7 @@ func init() {
 	testAdminUser = u.Username
 }
 
-func TestSSHDynamicKeyBackend(t *testing.T) {
+func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
@@ -121,6 +121,55 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 			testRoleRead(t, testDynamicRoleName, nil),
 		},
 	})
+}
+
+func TestSSHBackend_Lookup(t *testing.T) {
+	data := map[string]interface{}{
+		"ip": testIP,
+	}
+	otpData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+		"cidr":         testCidr,
+	}
+	dynamicData := map[string]interface{}{
+		"key_type":   testDynamicKeyType,
+		"key":        testKeyName,
+		"admin_user": testAdminUser,
+		"cidr":       testCidr,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testLookupRead(t, data, 0),
+			testRoleWrite(t, testOTPRoleName, otpData),
+			testLookupRead(t, data, 1),
+			testNamedKeys(t),
+			testRoleWrite(t, testDynamicRoleName, dynamicData),
+			testLookupRead(t, data, 2),
+			testRoleDelete(t, testOTPRoleName),
+			testLookupRead(t, data, 1),
+			testRoleDelete(t, testDynamicRoleName),
+			testLookupRead(t, data, 0),
+		},
+	})
+}
+
+func testLookupRead(t *testing.T, data map[string]interface{}, length int) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "lookup",
+		Data:      data,
+		Check: func(resp *logical.Response) error {
+			if resp.Data == nil || resp.Data["roles"] == nil {
+				return fmt.Errorf("Missing roles information")
+			}
+			if len(resp.Data["roles"].([]string)) != length {
+				return fmt.Errorf("Role information incorrect")
+			}
+			return nil
+		},
+	}
 }
 
 func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
