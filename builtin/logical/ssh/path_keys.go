@@ -10,7 +10,7 @@ import (
 )
 
 type sshHostKey struct {
-	Key string
+	Key string `json:"key"`
 }
 
 func pathKeys(b *backend) *framework.Path {
@@ -47,9 +47,14 @@ func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*l
 		return nil, nil
 	}
 
+	var result sshHostKey
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"key": string(entry.Value),
+			"key": result.Key,
 		},
 	}, nil
 }
@@ -79,8 +84,8 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 
 	keyPath := fmt.Sprintf("keys/%s", keyName)
 
-	entry, err := logical.StorageEntryJSON(keyPath, &sshHostKey{
-		Key: keyString,
+	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
+		"key": keyString,
 	})
 	if err != nil {
 		return nil, err
