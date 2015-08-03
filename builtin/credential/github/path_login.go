@@ -122,5 +122,3 @@ func (b *backend) pathLogin(
 		},
 	}, nil
 }
-
-
