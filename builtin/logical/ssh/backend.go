@@ -39,6 +39,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			},
 			Unauthenticated: []string{
 				"verify",
+				"echo",
 			},
 		},
 
@@ -49,6 +50,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathCredsCreate(&b),
 			pathLookup(&b),
 			pathVerify(&b),
+			pathEcho(&b),
 		},
 
 		Secrets: []*framework.Secret{

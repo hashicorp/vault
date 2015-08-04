@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"os/user"
 	"strings"
 	"testing"
@@ -54,6 +53,7 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 var testIP string
+var testOTP string
 var testPort string
 var testUserName string
 var testAdminUser string
@@ -174,17 +174,16 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		"default_user": testUserName,
 		"cidr":         testCidr,
 	}
-	var otp string
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, data),
-			testCredsWrite(t, testOTPRoleName, &otp),
+			testCredsWrite(t, testOTPRoleName),
 		},
 	})
 }
 
-func testCredsWrite(t *testing.T, name string, p_otp *string) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, name string) logicaltest.TestStep {
 	data := map[string]interface{}{
 		"ip": testIP,
 	}
@@ -193,7 +192,6 @@ func testCredsWrite(t *testing.T, name string, p_otp *string) logicaltest.TestSt
 		Path:      fmt.Sprintf("creds/%s", name),
 		Data:      data,
 		Check: func(resp *logical.Response) error {
-			log.Printf("Creds Response: %#v", resp)
 			if resp == nil {
 				return fmt.Errorf("response is nil")
 			}
@@ -206,35 +204,12 @@ func testCredsWrite(t *testing.T, name string, p_otp *string) logicaltest.TestSt
 			if resp.Data["key"] == nil {
 				return fmt.Errorf("Invalid key")
 			}
-			*p_otp = resp.Data["key"].(string)
+			testOTP = resp.Data["key"].(string)
 			return nil
 		},
 	}
 }
 
-/*
-func TestSSHBackend_Verify(t *testing.T) {
-	data := map[string]interface{}{
-		"key_type":     testOTPKeyType,
-		"default_user": testUserName,
-		"cidr":         testCidr,
-	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
-		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, data),
-		},
-	})
-}
-
-func testVerify(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("roles/", testOTPRoleName),
-	}
-}
-
-*/
 func testNamedKeysRead(t *testing.T, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
