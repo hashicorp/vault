@@ -49,6 +49,14 @@ to specify where the configuration is.
 * `telemetry` (optional)  - Configures the telemetry reporting system
   (see below).
 
+* `default_lease_duration` (optional) - Configures the default lease
+  duration for tokens and secrets, specified in hours. Default value
+  is 30 days. This value cannot be larger than `max_lease_duration`.
+
+* `max_lease_duration` (optional) - Configures the maximum possible
+  lease duration for tokens and secrets, specified in hours. Default
+  value is 30 days.
+
 In production, you should only consider setting the `disable_mlock` option
 on Linux systems that only use encrypted swap or do not use swap at all.
 Vault does not currently support memory locking on Mac OS X and Windows
