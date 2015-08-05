@@ -10,23 +10,23 @@ package awserr
 //
 // Example:
 //
-//    output, err := s3manage.Upload(svc, input, opts)
-//    if err != nil {
-//        if awsErr, ok := err.(awserr.Error); ok {
-//            // Get error details
-//            log.Println("Error:", err.Code(), err.Message())
+//     output, err := s3manage.Upload(svc, input, opts)
+//     if err != nil {
+//         if awsErr, ok := err.(awserr.Error); ok {
+//             // Get error details
+//             log.Println("Error:", err.Code(), err.Message())
 //
-//            Prints out full error message, including original error if there was one.
-//            log.Println("Error:", err.Error())
+//             // Prints out full error message, including original error if there was one.
+//             log.Println("Error:", err.Error())
 //
-//            // Get original error
-//            if origErr := err.Err(); origErr != nil {
-//                // operate on original error.
-//            }
-//        } else {
-//            fmt.Println(err.Error())
-//        }
-//    }
+//             // Get original error
+//             if origErr := err.Err(); origErr != nil {
+//                 // operate on original error.
+//             }
+//         } else {
+//             fmt.Println(err.Error())
+//         }
+//     }
 //
 type Error interface {
 	// Satisfy the generic error interface.

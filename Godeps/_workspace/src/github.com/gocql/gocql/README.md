@@ -12,11 +12,6 @@ Project Website: http://gocql.github.io/<br>
 API documentation: http://godoc.org/github.com/gocql/gocql<br>
 Discussions: https://groups.google.com/forum/#!forum/gocql
 
-Production Stability
----------
-The underlying framing code was rewritten as part of [#339](https://github.com/gocql/gocql/pull/339) and as such may have
-unforseen bugs. If you run into a bug related to wire framing, please raise a ticket and we will try to resolve this as soon as we can. If you require a stable version to pin your production app against, we have tagged the previous stable version in source code, so you can build against this. The tag is called 1st_gen_framing ([180456fef0a3c6d02c51dc7211f49b55e9315867](https://github.com/gocql/gocql/commit/180456fef0a3c6d02c51dc7211f49b55e9315867)). This note will be removed as the new generation framing code base matures.
-
 Supported Versions
 ------------------
 

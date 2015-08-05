@@ -1,6 +1,7 @@
 package mapstructure
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -24,6 +25,41 @@ func Benchmark_Decode(b *testing.B) {
 	var result Person
 	for i := 0; i < b.N; i++ {
 		Decode(input, &result)
+	}
+}
+
+// decodeViaJSON takes the map data and passes it through encoding/json to convert it into the
+// given Go native structure pointed to by v. v must be a pointer to a struct.
+func decodeViaJSON(data interface{}, v interface{}) error {
+	// Perform the task by simply marshalling the input into JSON,
+	// then unmarshalling it into target native Go struct.
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, v)
+}
+
+func Benchmark_DecodeViaJSON(b *testing.B) {
+	type Person struct {
+		Name   string
+		Age    int
+		Emails []string
+		Extra  map[string]string
+	}
+
+	input := map[string]interface{}{
+		"name":   "Mitchell",
+		"age":    91,
+		"emails": []string{"one", "two", "three"},
+		"extra": map[string]string{
+			"twitter": "mitchellh",
+		},
+	}
+
+	var result Person
+	for i := 0; i < b.N; i++ {
+		decodeViaJSON(input, &result)
 	}
 }
 

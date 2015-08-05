@@ -82,6 +82,8 @@ func DialTLS(network, addr string, config *tls.Config) (*Conn, error) {
 	c := tls.Client(dc, config)
 	err = c.Handshake()
 	if err != nil {
+		// Handshake error, close the established connection before we return an error
+		dc.Close()
 		return nil, NewError(ErrorNetwork, err)
 	}
 	conn := NewConn(c, true)

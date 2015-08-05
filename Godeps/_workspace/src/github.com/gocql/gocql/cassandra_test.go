@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode"
 
-	"speter.net/go/exp/math/dec/inf"
+	"gopkg.in/inf.v0"
 )
 
 var (
@@ -105,9 +105,7 @@ func createKeyspace(tb testing.TB, cluster *ClusterConfig, keyspace string) {
 	tb.Logf("Created keyspace %s", keyspace)
 }
 
-func createSession(tb testing.TB) *Session {
-	cluster := createCluster()
-
+func createSessionFromCluster(cluster *ClusterConfig, tb testing.TB) *Session {
 	// Drop and re-create the keyspace once. Different tests should use their own
 	// individual tables, but can assume that the table does not exist before.
 	initOnce.Do(func() {
@@ -121,6 +119,11 @@ func createSession(tb testing.TB) *Session {
 	}
 
 	return session
+}
+
+func createSession(tb testing.TB) *Session {
+	cluster := createCluster()
+	return createSessionFromCluster(cluster, tb)
 }
 
 // TestAuthentication verifies that gocql will work with a host configured to only accept authenticated connections
@@ -1978,4 +1981,80 @@ func TestTokenAwareConnPool(t *testing.T) {
 	}
 
 	// TODO add verification that the query went to the correct host
+}
+
+type frameWriterFunc func(framer *framer, streamID int) error
+
+func (f frameWriterFunc) writeFrame(framer *framer, streamID int) error {
+	return f(framer, streamID)
+}
+
+func TestStream0(t *testing.T) {
+	session := createSession(t)
+	defer session.Close()
+
+	var conn *Conn
+	for i := 0; i < 5; i++ {
+		if conn != nil {
+			break
+		}
+
+		conn = session.Pool.Pick(nil)
+	}
+
+	if conn == nil {
+		t.Fatal("no connections available in the pool")
+	}
+
+	writer := frameWriterFunc(func(f *framer, streamID int) error {
+		if streamID == 0 {
+			t.Fatal("should not use stream 0 for requests")
+		}
+		f.writeHeader(0, opError, streamID)
+		f.writeString("i am a bad frame")
+		f.wbuf[0] = 0xFF
+		return f.finishWrite()
+	})
+
+	const expErr = "gocql: error on stream 0:"
+	// need to write out an invalid frame, which we need a connection to do
+	frame, err := conn.exec(writer, nil)
+	if err == nil {
+		t.Fatal("expected to get an error on stream 0")
+	} else if !strings.HasPrefix(err.Error(), expErr) {
+		t.Fatalf("expected to get error prefix %q got %q", expErr, err.Error())
+	} else if frame != nil {
+		t.Fatalf("expected to get nil frame got %+v", frame)
+	}
+}
+
+func TestNegativeStream(t *testing.T) {
+	session := createSession(t)
+	defer session.Close()
+
+	var conn *Conn
+	for i := 0; i < 5; i++ {
+		if conn != nil {
+			break
+		}
+
+		conn = session.Pool.Pick(nil)
+	}
+
+	if conn == nil {
+		t.Fatal("no connections available in the pool")
+	}
+
+	const stream = -50
+	writer := frameWriterFunc(func(f *framer, streamID int) error {
+		f.writeHeader(0, opOptions, stream)
+		return f.finishWrite()
+	})
+
+	frame, err := conn.exec(writer, nil)
+	if err == nil {
+		t.Fatalf("expected to get an error on stream %d", stream)
+	} else if frame != nil {
+		t.Fatalf("expected to get nil frame got %+v", frame)
+	}
 }

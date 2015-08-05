@@ -51,11 +51,11 @@ func TestHostStyleBucketBuild(t *testing.T) {
 }
 
 func TestHostStyleBucketBuildNoSSL(t *testing.T) {
-	s := s3.New(&aws.Config{DisableSSL: true})
+	s := s3.New(&aws.Config{DisableSSL: aws.Bool(true)})
 	runTests(t, s, nosslTests)
 }
 
 func TestPathStyleBucketBuild(t *testing.T) {
-	s := s3.New(&aws.Config{S3ForcePathStyle: true})
+	s := s3.New(&aws.Config{S3ForcePathStyle: aws.Bool(true)})
 	runTests(t, s, forcepathTests)
 }
