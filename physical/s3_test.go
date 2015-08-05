@@ -29,7 +29,7 @@ func TestS3Backend(t *testing.T) {
 
 	s3conn := s3.New(&aws.Config{
 		Credentials: aws.DefaultChainCredentials,
-		Region:      region,
+		Region:      &region,
 	})
 
 	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
@@ -67,10 +67,10 @@ func TestS3Backend(t *testing.T) {
 	}()
 
 	b, err := NewBackend("s3", map[string]string{
-		"access_key": creds.AccessKeyID,
-		"secret_key": creds.SecretAccessKey,
+		"access_key":    creds.AccessKeyID,
+		"secret_key":    creds.SecretAccessKey,
 		"session_token": creds.SessionToken,
-		"bucket":     bucket,
+		"bucket":        bucket,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
