@@ -188,6 +188,8 @@ The MySQL backend has the following options:
 
   * `table` (optional) - The name of the table to use. Defaults to "vault".
 
+  * `tls_ca_file` (optional) - The path to the CA certificate to connect using TLS
+
 #### Backend Reference: Inmem
 
 The in-memory backend has no configuration options.
