@@ -23,7 +23,7 @@ func TestMultipleHandlers(t *testing.T) {
 	r := &Request{}
 	l := HandlerList{}
 	l.PushBack(func(r *Request) { r.Data = nil })
-	l.PushFront(func(r *Request) { r.Data = Boolean(true) })
+	l.PushFront(func(r *Request) { r.Data = Bool(true) })
 	l.Run(r)
 	if r.Data != nil {
 		t.Error("Expected handler to execute")

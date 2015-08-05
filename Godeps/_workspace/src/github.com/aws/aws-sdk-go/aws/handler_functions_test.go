@@ -12,7 +12,7 @@ import (
 
 func TestValidateEndpointHandler(t *testing.T) {
 	os.Clearenv()
-	svc := NewService(&Config{Region: "us-west-2"})
+	svc := NewService(NewConfig().WithRegion("us-west-2"))
 	svc.Handlers.Clear()
 	svc.Handlers.Validate.PushBack(ValidateEndpointHandler)
 
@@ -37,11 +37,11 @@ func TestValidateEndpointHandlerErrorRegion(t *testing.T) {
 
 type mockCredsProvider struct {
 	expired        bool
-	retreiveCalled bool
+	retrieveCalled bool
 }
 
 func (m *mockCredsProvider) Retrieve() (credentials.Value, error) {
-	m.retreiveCalled = true
+	m.retrieveCalled = true
 	return credentials.Value{}, nil
 }
 
@@ -52,7 +52,7 @@ func (m *mockCredsProvider) IsExpired() bool {
 func TestAfterRetryRefreshCreds(t *testing.T) {
 	os.Clearenv()
 	credProvider := &mockCredsProvider{}
-	svc := NewService(&Config{Credentials: credentials.NewCredentials(credProvider), MaxRetries: 1})
+	svc := NewService(&Config{Credentials: credentials.NewCredentials(credProvider), MaxRetries: Int(1)})
 
 	svc.Handlers.Clear()
 	svc.Handlers.ValidateResponse.PushBack(func(r *Request) {
@@ -67,15 +67,15 @@ func TestAfterRetryRefreshCreds(t *testing.T) {
 	})
 
 	assert.True(t, svc.Config.Credentials.IsExpired(), "Expect to start out expired")
-	assert.False(t, credProvider.retreiveCalled)
+	assert.False(t, credProvider.retrieveCalled)
 
 	req := NewRequest(svc, &Operation{Name: "Operation"}, nil, nil)
 	req.Send()
 
 	assert.True(t, svc.Config.Credentials.IsExpired())
-	assert.False(t, credProvider.retreiveCalled)
+	assert.False(t, credProvider.retrieveCalled)
 
 	_, err := svc.Config.Credentials.Get()
 	assert.NoError(t, err)
-	assert.True(t, credProvider.retreiveCalled)
+	assert.True(t, credProvider.retrieveCalled)
 }

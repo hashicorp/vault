@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"speter.net/go/exp/math/dec/inf"
+	"gopkg.in/inf.v0"
 )
 
 type RowData struct {

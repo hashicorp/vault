@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2015 Ugorji Nwoke. All rights reserved.
-// Use of this source code is governed by a BSD-style license found in the LICENSE file.
+// Use of this source code is governed by a MIT license found in the LICENSE file.
 
 package codec
 
@@ -748,8 +748,10 @@ func (f decFnInfo) kSlice(rv reflect.Value) {
 					rvlen = containerLenS
 				}
 			} else if containerLenS != rvlen {
-				rv.SetLen(containerLenS)
-				rvlen = containerLenS
+				if f.seq == seqTypeSlice {
+					rv.SetLen(containerLenS)
+					rvlen = containerLenS
+				}
 			}
 			j := 0
 			for ; j < numToRead; j++ {

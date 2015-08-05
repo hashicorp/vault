@@ -29,7 +29,7 @@ func ExampleS3_AbortMultipartUpload() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -43,7 +43,7 @@ func ExampleS3_AbortMultipartUpload() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_CompleteMultipartUpload() {
@@ -57,7 +57,7 @@ func ExampleS3_CompleteMultipartUpload() {
 			Parts: []*s3.CompletedPart{
 				{ // Required
 					ETag:       aws.String("ETag"),
-					PartNumber: aws.Long(1),
+					PartNumber: aws.Int64(1),
 				},
 				// More values...
 			},
@@ -68,7 +68,7 @@ func ExampleS3_CompleteMultipartUpload() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -82,7 +82,7 @@ func ExampleS3_CompleteMultipartUpload() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_CopyObject() {
@@ -128,7 +128,7 @@ func ExampleS3_CopyObject() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -142,7 +142,7 @@ func ExampleS3_CopyObject() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_CreateBucket() {
@@ -164,7 +164,7 @@ func ExampleS3_CreateBucket() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -178,7 +178,7 @@ func ExampleS3_CreateBucket() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_CreateMultipartUpload() {
@@ -215,7 +215,7 @@ func ExampleS3_CreateMultipartUpload() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -229,7 +229,7 @@ func ExampleS3_CreateMultipartUpload() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucket() {
@@ -242,7 +242,7 @@ func ExampleS3_DeleteBucket() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -256,7 +256,7 @@ func ExampleS3_DeleteBucket() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucketCORS() {
@@ -269,7 +269,7 @@ func ExampleS3_DeleteBucketCORS() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -283,7 +283,7 @@ func ExampleS3_DeleteBucketCORS() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucketLifecycle() {
@@ -296,7 +296,7 @@ func ExampleS3_DeleteBucketLifecycle() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -310,7 +310,7 @@ func ExampleS3_DeleteBucketLifecycle() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucketPolicy() {
@@ -323,7 +323,7 @@ func ExampleS3_DeleteBucketPolicy() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -337,7 +337,7 @@ func ExampleS3_DeleteBucketPolicy() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucketReplication() {
@@ -350,7 +350,7 @@ func ExampleS3_DeleteBucketReplication() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -364,7 +364,7 @@ func ExampleS3_DeleteBucketReplication() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucketTagging() {
@@ -377,7 +377,7 @@ func ExampleS3_DeleteBucketTagging() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -391,7 +391,7 @@ func ExampleS3_DeleteBucketTagging() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteBucketWebsite() {
@@ -404,7 +404,7 @@ func ExampleS3_DeleteBucketWebsite() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -418,7 +418,7 @@ func ExampleS3_DeleteBucketWebsite() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteObject() {
@@ -435,7 +435,7 @@ func ExampleS3_DeleteObject() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -449,7 +449,7 @@ func ExampleS3_DeleteObject() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_DeleteObjects() {
@@ -465,7 +465,7 @@ func ExampleS3_DeleteObjects() {
 				},
 				// More values...
 			},
-			Quiet: aws.Boolean(true),
+			Quiet: aws.Bool(true),
 		},
 		MFA:          aws.String("MFA"),
 		RequestPayer: aws.String("RequestPayer"),
@@ -474,7 +474,7 @@ func ExampleS3_DeleteObjects() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -488,7 +488,7 @@ func ExampleS3_DeleteObjects() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketACL() {
@@ -501,7 +501,7 @@ func ExampleS3_GetBucketACL() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -515,7 +515,7 @@ func ExampleS3_GetBucketACL() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketCORS() {
@@ -528,7 +528,7 @@ func ExampleS3_GetBucketCORS() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -542,7 +542,7 @@ func ExampleS3_GetBucketCORS() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketLifecycle() {
@@ -555,7 +555,7 @@ func ExampleS3_GetBucketLifecycle() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -569,7 +569,7 @@ func ExampleS3_GetBucketLifecycle() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketLocation() {
@@ -582,7 +582,7 @@ func ExampleS3_GetBucketLocation() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -596,7 +596,7 @@ func ExampleS3_GetBucketLocation() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketLogging() {
@@ -609,7 +609,7 @@ func ExampleS3_GetBucketLogging() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -623,7 +623,7 @@ func ExampleS3_GetBucketLogging() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketNotification() {
@@ -636,7 +636,7 @@ func ExampleS3_GetBucketNotification() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -650,7 +650,7 @@ func ExampleS3_GetBucketNotification() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketNotificationConfiguration() {
@@ -663,7 +663,7 @@ func ExampleS3_GetBucketNotificationConfiguration() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -677,7 +677,7 @@ func ExampleS3_GetBucketNotificationConfiguration() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketPolicy() {
@@ -690,7 +690,7 @@ func ExampleS3_GetBucketPolicy() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -704,7 +704,7 @@ func ExampleS3_GetBucketPolicy() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketReplication() {
@@ -717,7 +717,7 @@ func ExampleS3_GetBucketReplication() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -731,7 +731,7 @@ func ExampleS3_GetBucketReplication() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketRequestPayment() {
@@ -744,7 +744,7 @@ func ExampleS3_GetBucketRequestPayment() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -758,7 +758,7 @@ func ExampleS3_GetBucketRequestPayment() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketTagging() {
@@ -771,7 +771,7 @@ func ExampleS3_GetBucketTagging() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -785,7 +785,7 @@ func ExampleS3_GetBucketTagging() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketVersioning() {
@@ -798,7 +798,7 @@ func ExampleS3_GetBucketVersioning() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -812,7 +812,7 @@ func ExampleS3_GetBucketVersioning() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetBucketWebsite() {
@@ -825,7 +825,7 @@ func ExampleS3_GetBucketWebsite() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -839,7 +839,7 @@ func ExampleS3_GetBucketWebsite() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetObject() {
@@ -869,7 +869,7 @@ func ExampleS3_GetObject() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -883,7 +883,7 @@ func ExampleS3_GetObject() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetObjectACL() {
@@ -899,7 +899,7 @@ func ExampleS3_GetObjectACL() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -913,7 +913,7 @@ func ExampleS3_GetObjectACL() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_GetObjectTorrent() {
@@ -928,7 +928,7 @@ func ExampleS3_GetObjectTorrent() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -942,7 +942,7 @@ func ExampleS3_GetObjectTorrent() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_HeadBucket() {
@@ -955,7 +955,7 @@ func ExampleS3_HeadBucket() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -969,7 +969,7 @@ func ExampleS3_HeadBucket() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_HeadObject() {
@@ -993,7 +993,7 @@ func ExampleS3_HeadObject() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1007,7 +1007,7 @@ func ExampleS3_HeadObject() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_ListBuckets() {
@@ -1018,7 +1018,7 @@ func ExampleS3_ListBuckets() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1032,7 +1032,7 @@ func ExampleS3_ListBuckets() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_ListMultipartUploads() {
@@ -1043,7 +1043,7 @@ func ExampleS3_ListMultipartUploads() {
 		Delimiter:      aws.String("Delimiter"),
 		EncodingType:   aws.String("EncodingType"),
 		KeyMarker:      aws.String("KeyMarker"),
-		MaxUploads:     aws.Long(1),
+		MaxUploads:     aws.Int64(1),
 		Prefix:         aws.String("Prefix"),
 		UploadIDMarker: aws.String("UploadIdMarker"),
 	}
@@ -1051,7 +1051,7 @@ func ExampleS3_ListMultipartUploads() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1065,7 +1065,7 @@ func ExampleS3_ListMultipartUploads() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_ListObjectVersions() {
@@ -1076,7 +1076,7 @@ func ExampleS3_ListObjectVersions() {
 		Delimiter:       aws.String("Delimiter"),
 		EncodingType:    aws.String("EncodingType"),
 		KeyMarker:       aws.String("KeyMarker"),
-		MaxKeys:         aws.Long(1),
+		MaxKeys:         aws.Int64(1),
 		Prefix:          aws.String("Prefix"),
 		VersionIDMarker: aws.String("VersionIdMarker"),
 	}
@@ -1084,7 +1084,7 @@ func ExampleS3_ListObjectVersions() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1098,7 +1098,7 @@ func ExampleS3_ListObjectVersions() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_ListObjects() {
@@ -1109,14 +1109,14 @@ func ExampleS3_ListObjects() {
 		Delimiter:    aws.String("Delimiter"),
 		EncodingType: aws.String("EncodingType"),
 		Marker:       aws.String("Marker"),
-		MaxKeys:      aws.Long(1),
+		MaxKeys:      aws.Int64(1),
 		Prefix:       aws.String("Prefix"),
 	}
 	resp, err := svc.ListObjects(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1130,7 +1130,7 @@ func ExampleS3_ListObjects() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_ListParts() {
@@ -1140,15 +1140,15 @@ func ExampleS3_ListParts() {
 		Bucket:           aws.String("BucketName"),        // Required
 		Key:              aws.String("ObjectKey"),         // Required
 		UploadID:         aws.String("MultipartUploadId"), // Required
-		MaxParts:         aws.Long(1),
-		PartNumberMarker: aws.Long(1),
+		MaxParts:         aws.Int64(1),
+		PartNumberMarker: aws.Int64(1),
 		RequestPayer:     aws.String("RequestPayer"),
 	}
 	resp, err := svc.ListParts(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1162,7 +1162,7 @@ func ExampleS3_ListParts() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketACL() {
@@ -1200,7 +1200,7 @@ func ExampleS3_PutBucketACL() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1214,7 +1214,7 @@ func ExampleS3_PutBucketACL() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketCORS() {
@@ -1241,7 +1241,7 @@ func ExampleS3_PutBucketCORS() {
 						aws.String("ExposeHeader"), // Required
 						// More values...
 					},
-					MaxAgeSeconds: aws.Long(1),
+					MaxAgeSeconds: aws.Int64(1),
 				},
 				// More values...
 			},
@@ -1251,7 +1251,7 @@ func ExampleS3_PutBucketCORS() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1265,7 +1265,7 @@ func ExampleS3_PutBucketCORS() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketLifecycle() {
@@ -1280,19 +1280,19 @@ func ExampleS3_PutBucketLifecycle() {
 					Status: aws.String("ExpirationStatus"), // Required
 					Expiration: &s3.LifecycleExpiration{
 						Date: aws.Time(time.Now()),
-						Days: aws.Long(1),
+						Days: aws.Int64(1),
 					},
 					ID: aws.String("ID"),
 					NoncurrentVersionExpiration: &s3.NoncurrentVersionExpiration{
-						NoncurrentDays: aws.Long(1),
+						NoncurrentDays: aws.Int64(1),
 					},
 					NoncurrentVersionTransition: &s3.NoncurrentVersionTransition{
-						NoncurrentDays: aws.Long(1),
+						NoncurrentDays: aws.Int64(1),
 						StorageClass:   aws.String("TransitionStorageClass"),
 					},
 					Transition: &s3.Transition{
 						Date:         aws.Time(time.Now()),
-						Days:         aws.Long(1),
+						Days:         aws.Int64(1),
 						StorageClass: aws.String("TransitionStorageClass"),
 					},
 				},
@@ -1304,7 +1304,7 @@ func ExampleS3_PutBucketLifecycle() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1318,7 +1318,7 @@ func ExampleS3_PutBucketLifecycle() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketLogging() {
@@ -1350,7 +1350,7 @@ func ExampleS3_PutBucketLogging() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1364,7 +1364,7 @@ func ExampleS3_PutBucketLogging() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketNotification() {
@@ -1407,7 +1407,7 @@ func ExampleS3_PutBucketNotification() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1421,7 +1421,7 @@ func ExampleS3_PutBucketNotification() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketNotificationConfiguration() {
@@ -1469,7 +1469,7 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1483,7 +1483,7 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketPolicy() {
@@ -1497,7 +1497,7 @@ func ExampleS3_PutBucketPolicy() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1511,7 +1511,7 @@ func ExampleS3_PutBucketPolicy() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketReplication() {
@@ -1538,7 +1538,7 @@ func ExampleS3_PutBucketReplication() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1552,7 +1552,7 @@ func ExampleS3_PutBucketReplication() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketRequestPayment() {
@@ -1568,7 +1568,7 @@ func ExampleS3_PutBucketRequestPayment() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1582,7 +1582,7 @@ func ExampleS3_PutBucketRequestPayment() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketTagging() {
@@ -1604,7 +1604,7 @@ func ExampleS3_PutBucketTagging() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1618,7 +1618,7 @@ func ExampleS3_PutBucketTagging() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketVersioning() {
@@ -1636,7 +1636,7 @@ func ExampleS3_PutBucketVersioning() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1650,7 +1650,7 @@ func ExampleS3_PutBucketVersioning() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutBucketWebsite() {
@@ -1691,7 +1691,7 @@ func ExampleS3_PutBucketWebsite() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1705,7 +1705,7 @@ func ExampleS3_PutBucketWebsite() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutObject() {
@@ -1720,7 +1720,7 @@ func ExampleS3_PutObject() {
 		ContentDisposition: aws.String("ContentDisposition"),
 		ContentEncoding:    aws.String("ContentEncoding"),
 		ContentLanguage:    aws.String("ContentLanguage"),
-		ContentLength:      aws.Long(1),
+		ContentLength:      aws.Int64(1),
 		ContentType:        aws.String("ContentType"),
 		Expires:            aws.Time(time.Now()),
 		GrantFullControl:   aws.String("GrantFullControl"),
@@ -1744,7 +1744,7 @@ func ExampleS3_PutObject() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1758,7 +1758,7 @@ func ExampleS3_PutObject() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_PutObjectACL() {
@@ -1798,7 +1798,7 @@ func ExampleS3_PutObjectACL() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1812,7 +1812,7 @@ func ExampleS3_PutObjectACL() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_RestoreObject() {
@@ -1823,7 +1823,7 @@ func ExampleS3_RestoreObject() {
 		Key:          aws.String("ObjectKey"),  // Required
 		RequestPayer: aws.String("RequestPayer"),
 		RestoreRequest: &s3.RestoreRequest{
-			Days: aws.Long(1), // Required
+			Days: aws.Int64(1), // Required
 		},
 		VersionID: aws.String("ObjectVersionId"),
 	}
@@ -1831,7 +1831,7 @@ func ExampleS3_RestoreObject() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1845,7 +1845,7 @@ func ExampleS3_RestoreObject() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_UploadPart() {
@@ -1854,10 +1854,10 @@ func ExampleS3_UploadPart() {
 	params := &s3.UploadPartInput{
 		Bucket:               aws.String("BucketName"),        // Required
 		Key:                  aws.String("ObjectKey"),         // Required
-		PartNumber:           aws.Long(1),                     // Required
+		PartNumber:           aws.Int64(1),                    // Required
 		UploadID:             aws.String("MultipartUploadId"), // Required
 		Body:                 bytes.NewReader([]byte("PAYLOAD")),
-		ContentLength:        aws.Long(1),
+		ContentLength:        aws.Int64(1),
 		RequestPayer:         aws.String("RequestPayer"),
 		SSECustomerAlgorithm: aws.String("SSECustomerAlgorithm"),
 		SSECustomerKey:       aws.String("SSECustomerKey"),
@@ -1867,7 +1867,7 @@ func ExampleS3_UploadPart() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1881,7 +1881,7 @@ func ExampleS3_UploadPart() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }
 
 func ExampleS3_UploadPartCopy() {
@@ -1891,7 +1891,7 @@ func ExampleS3_UploadPartCopy() {
 		Bucket:                         aws.String("BucketName"),        // Required
 		CopySource:                     aws.String("CopySource"),        // Required
 		Key:                            aws.String("ObjectKey"),         // Required
-		PartNumber:                     aws.Long(1),                     // Required
+		PartNumber:                     aws.Int64(1),                    // Required
 		UploadID:                       aws.String("MultipartUploadId"), // Required
 		CopySourceIfMatch:              aws.String("CopySourceIfMatch"),
 		CopySourceIfModifiedSince:      aws.Time(time.Now()),
@@ -1910,7 +1910,7 @@ func ExampleS3_UploadPartCopy() {
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
-			// Generic AWS Error with Code, Message, and original error (if any)
+			// Generic AWS error with Code, Message, and original error (if any)
 			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
 			if reqErr, ok := err.(awserr.RequestFailure); ok {
 				// A service error occurred
@@ -1924,5 +1924,5 @@ func ExampleS3_UploadPartCopy() {
 	}
 
 	// Pretty-print the response data.
-	fmt.Println(awsutil.StringValue(resp))
+	fmt.Println(awsutil.Prettify(resp))
 }

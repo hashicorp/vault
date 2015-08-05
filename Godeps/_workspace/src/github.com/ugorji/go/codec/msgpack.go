@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2015 Ugorji Nwoke. All rights reserved.
-// Use of this source code is governed by a BSD-style license found in the LICENSE file.
+// Use of this source code is governed by a MIT license found in the LICENSE file.
 
 /*
 MSGPACK
@@ -781,7 +781,7 @@ func (c *msgpackSpecRpcCodec) ReadRequestBody(body interface{}) error {
 
 func (c *msgpackSpecRpcCodec) parseCustomHeader(expectTypeByte byte, msgid *uint64, methodOrError *string) (err error) {
 
-	if c.cls {
+	if c.isClosed() {
 		return io.EOF
 	}
 

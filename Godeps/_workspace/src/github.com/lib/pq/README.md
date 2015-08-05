@@ -57,6 +57,7 @@ code still exists in here.
 * Brad Fitzpatrick (bradfitz)
 * Charlie Melbye (cmelbye)
 * Chris Bandy (cbandy)
+* Chris Gilling (cgilling)
 * Chris Walsh (cwds)
 * Dan Sosedoff (sosedoff)
 * Daniel Farina (fdr)

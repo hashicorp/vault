@@ -122,11 +122,6 @@ type RepositoryListOptions struct {
 	// Default is "asc" when sort is "full_name", otherwise default is "desc".
 	Direction string `url:"direction,omitempty"`
 
-	// Include orginization repositories the user has access to.
-	// This will become the default behavior in the future, but is opt-in for now.
-	// See https://developer.github.com/changes/2015-01-07-prepare-for-organization-permissions-changes/
-	IncludeOrg bool `url:"-"`
-
 	ListOptions
 }
 
@@ -151,9 +146,8 @@ func (s *RepositoriesService) List(user string, opt *RepositoryListOptions) ([]R
 		return nil, nil, err
 	}
 
-	if opt != nil && opt.IncludeOrg {
-		req.Header.Set("Accept", mediaTypeOrganizationsPreview)
-	}
+	// TODO: remove custom Accept header when license support fully launches
+	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	repos := new([]Repository)
 	resp, err := s.client.Do(req, repos)
@@ -188,6 +182,9 @@ func (s *RepositoriesService) ListByOrg(org string, opt *RepositoryListByOrgOpti
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when license support fully launches
+	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	repos := new([]Repository)
 	resp, err := s.client.Do(req, repos)

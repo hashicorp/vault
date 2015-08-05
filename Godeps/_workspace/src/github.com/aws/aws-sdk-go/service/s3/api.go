@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awsutil"
 )
 
 const opAbortMultipartUpload = "AbortMultipartUpload"
@@ -1564,7 +1565,7 @@ type AbortMultipartUploadInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	UploadID *string `location:"querystring" locationName:"uploadId" type:"string" required:"true"`
 
@@ -1575,16 +1576,36 @@ type metadataAbortMultipartUploadInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s AbortMultipartUploadInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s AbortMultipartUploadInput) GoString() string {
+	return s.String()
+}
+
 type AbortMultipartUploadOutput struct {
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	metadataAbortMultipartUploadOutput `json:"-" xml:"-"`
 }
 
 type metadataAbortMultipartUploadOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s AbortMultipartUploadOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s AbortMultipartUploadOutput) GoString() string {
+	return s.String()
 }
 
 type AccessControlPolicy struct {
@@ -1598,6 +1619,16 @@ type AccessControlPolicy struct {
 
 type metadataAccessControlPolicy struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s AccessControlPolicy) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s AccessControlPolicy) GoString() string {
+	return s.String()
 }
 
 type Bucket struct {
@@ -1614,6 +1645,16 @@ type metadataBucket struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Bucket) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Bucket) GoString() string {
+	return s.String()
+}
+
 type BucketLoggingStatus struct {
 	LoggingEnabled *LoggingEnabled `type:"structure"`
 
@@ -1624,6 +1665,16 @@ type metadataBucketLoggingStatus struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s BucketLoggingStatus) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s BucketLoggingStatus) GoString() string {
+	return s.String()
+}
+
 type CORSConfiguration struct {
 	CORSRules []*CORSRule `locationName:"CORSRule" type:"list" flattened:"true"`
 
@@ -1632,6 +1683,16 @@ type CORSConfiguration struct {
 
 type metadataCORSConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s CORSConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CORSConfiguration) GoString() string {
+	return s.String()
 }
 
 type CORSRule struct {
@@ -1661,11 +1722,21 @@ type metadataCORSRule struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CORSRule) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CORSRule) GoString() string {
+	return s.String()
+}
+
 type CloudFunctionConfiguration struct {
 	CloudFunction *string `type:"string"`
 
 	// Bucket event for which to send notifications.
-	Event *string `type:"string"`
+	Event *string `type:"string" enum:"Event"`
 
 	Events []*string `locationName:"Event" type:"list" flattened:"true"`
 
@@ -1682,6 +1753,16 @@ type metadataCloudFunctionConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CloudFunctionConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CloudFunctionConfiguration) GoString() string {
+	return s.String()
+}
+
 type CommonPrefix struct {
 	Prefix *string `type:"string"`
 
@@ -1690,6 +1771,16 @@ type CommonPrefix struct {
 
 type metadataCommonPrefix struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s CommonPrefix) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CommonPrefix) GoString() string {
+	return s.String()
 }
 
 type CompleteMultipartUploadInput struct {
@@ -1703,7 +1794,7 @@ type CompleteMultipartUploadInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	UploadID *string `location:"querystring" locationName:"uploadId" type:"string" required:"true"`
 
@@ -1712,6 +1803,16 @@ type CompleteMultipartUploadInput struct {
 
 type metadataCompleteMultipartUploadInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"MultipartUpload"`
+}
+
+// String returns the string representation
+func (s CompleteMultipartUploadInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CompleteMultipartUploadInput) GoString() string {
+	return s.String()
 }
 
 type CompleteMultipartUploadOutput struct {
@@ -1730,7 +1831,7 @@ type CompleteMultipartUploadOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// If present, specifies the ID of the AWS Key Management Service (KMS) master
 	// encryption key that was used for the object.
@@ -1738,7 +1839,7 @@ type CompleteMultipartUploadOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	// Version of the object.
 	VersionID *string `location:"header" locationName:"x-amz-version-id" type:"string"`
@@ -1748,6 +1849,16 @@ type CompleteMultipartUploadOutput struct {
 
 type metadataCompleteMultipartUploadOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s CompleteMultipartUploadOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CompleteMultipartUploadOutput) GoString() string {
+	return s.String()
 }
 
 type CompletedMultipartUpload struct {
@@ -1760,11 +1871,22 @@ type metadataCompletedMultipartUpload struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CompletedMultipartUpload) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CompletedMultipartUpload) GoString() string {
+	return s.String()
+}
+
 type CompletedPart struct {
 	// Entity tag returned when the part was uploaded.
 	ETag *string `type:"string"`
 
-	// Part number that identifies the part.
+	// Part number that identifies the part. This is a positive integer between
+	// 1 and 10,000.
 	PartNumber *int64 `type:"integer"`
 
 	metadataCompletedPart `json:"-" xml:"-"`
@@ -1772,6 +1894,16 @@ type CompletedPart struct {
 
 type metadataCompletedPart struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s CompletedPart) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CompletedPart) GoString() string {
+	return s.String()
 }
 
 type Condition struct {
@@ -1798,9 +1930,19 @@ type metadataCondition struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Condition) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Condition) GoString() string {
+	return s.String()
+}
+
 type CopyObjectInput struct {
 	// The canned ACL to apply to the object.
-	ACL *string `location:"header" locationName:"x-amz-acl" type:"string"`
+	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"ObjectCannedACL"`
 
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -1873,16 +2015,15 @@ type CopyObjectInput struct {
 
 	// Specifies whether the metadata is copied from the source object or replaced
 	// with metadata provided in the request.
-	MetadataDirective *string `location:"header" locationName:"x-amz-metadata-directive" type:"string"`
+	MetadataDirective *string `location:"header" locationName:"x-amz-metadata-directive" type:"string" enum:"MetadataDirective"`
 
 	// Confirms that the requester knows that she or he will be charged for the
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -1905,10 +2046,10 @@ type CopyObjectInput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	// The type of storage to use for the object. Defaults to 'STANDARD'.
-	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string"`
+	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
 	// If the bucket is configured as a website, redirects requests for this object
 	// to another object in the same bucket or to an external URL. Amazon S3 stores
@@ -1922,6 +2063,16 @@ type metadataCopyObjectInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CopyObjectInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CopyObjectInput) GoString() string {
+	return s.String()
+}
+
 type CopyObjectOutput struct {
 	CopyObjectResult *CopyObjectResult `type:"structure"`
 
@@ -1932,7 +2083,7 @@ type CopyObjectOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// If server-side encryption with a customer-provided encryption key was requested,
 	// the response will include this header confirming the encryption algorithm
@@ -1950,13 +2101,23 @@ type CopyObjectOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	metadataCopyObjectOutput `json:"-" xml:"-"`
 }
 
 type metadataCopyObjectOutput struct {
 	SDKShapeTraits bool `type:"structure" payload:"CopyObjectResult"`
+}
+
+// String returns the string representation
+func (s CopyObjectOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CopyObjectOutput) GoString() string {
+	return s.String()
 }
 
 type CopyObjectResult struct {
@@ -1969,6 +2130,16 @@ type CopyObjectResult struct {
 
 type metadataCopyObjectResult struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s CopyObjectResult) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CopyObjectResult) GoString() string {
+	return s.String()
 }
 
 type CopyPartResult struct {
@@ -1985,10 +2156,20 @@ type metadataCopyPartResult struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CopyPartResult) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CopyPartResult) GoString() string {
+	return s.String()
+}
+
 type CreateBucketConfiguration struct {
 	// Specifies the region where the bucket will be created. If you don't specify
 	// a region, the bucket will be created in US Standard.
-	LocationConstraint *string `type:"string"`
+	LocationConstraint *string `type:"string" enum:"BucketLocationConstraint"`
 
 	metadataCreateBucketConfiguration `json:"-" xml:"-"`
 }
@@ -1997,9 +2178,19 @@ type metadataCreateBucketConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CreateBucketConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateBucketConfiguration) GoString() string {
+	return s.String()
+}
+
 type CreateBucketInput struct {
 	// The canned ACL to apply to the bucket.
-	ACL *string `location:"header" locationName:"x-amz-acl" type:"string"`
+	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"BucketCannedACL"`
 
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2028,6 +2219,16 @@ type metadataCreateBucketInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"CreateBucketConfiguration"`
 }
 
+// String returns the string representation
+func (s CreateBucketInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateBucketInput) GoString() string {
+	return s.String()
+}
+
 type CreateBucketOutput struct {
 	Location *string `location:"header" locationName:"Location" type:"string"`
 
@@ -2038,9 +2239,19 @@ type metadataCreateBucketOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CreateBucketOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateBucketOutput) GoString() string {
+	return s.String()
+}
+
 type CreateMultipartUploadInput struct {
 	// The canned ACL to apply to the object.
-	ACL *string `location:"header" locationName:"x-amz-acl" type:"string"`
+	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"ObjectCannedACL"`
 
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2085,10 +2296,9 @@ type CreateMultipartUploadInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -2111,10 +2321,10 @@ type CreateMultipartUploadInput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	// The type of storage to use for the object. Defaults to 'STANDARD'.
-	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string"`
+	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
 	// If the bucket is configured as a website, redirects requests for this object
 	// to another object in the same bucket or to an external URL. Amazon S3 stores
@@ -2128,6 +2338,16 @@ type metadataCreateMultipartUploadInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s CreateMultipartUploadInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateMultipartUploadInput) GoString() string {
+	return s.String()
+}
+
 type CreateMultipartUploadOutput struct {
 	// Name of the bucket to which the multipart upload was initiated.
 	Bucket *string `locationName:"Bucket" type:"string"`
@@ -2137,7 +2357,7 @@ type CreateMultipartUploadOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// If server-side encryption with a customer-provided encryption key was requested,
 	// the response will include this header confirming the encryption algorithm
@@ -2155,7 +2375,7 @@ type CreateMultipartUploadOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	// ID for the initiated multipart upload.
 	UploadID *string `locationName:"UploadId" type:"string"`
@@ -2165,6 +2385,16 @@ type CreateMultipartUploadOutput struct {
 
 type metadataCreateMultipartUploadOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s CreateMultipartUploadOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateMultipartUploadOutput) GoString() string {
+	return s.String()
 }
 
 type Delete struct {
@@ -2181,6 +2411,16 @@ type metadataDelete struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Delete) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Delete) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketCORSInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2191,12 +2431,32 @@ type metadataDeleteBucketCORSInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketCORSInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketCORSInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketCORSOutput struct {
 	metadataDeleteBucketCORSOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteBucketCORSOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteBucketCORSOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketCORSOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteBucketInput struct {
@@ -2209,6 +2469,16 @@ type metadataDeleteBucketInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketLifecycleInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2219,6 +2489,16 @@ type metadataDeleteBucketLifecycleInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketLifecycleInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketLifecycleInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketLifecycleOutput struct {
 	metadataDeleteBucketLifecycleOutput `json:"-" xml:"-"`
 }
@@ -2227,12 +2507,32 @@ type metadataDeleteBucketLifecycleOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketLifecycleOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketLifecycleOutput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketOutput struct {
 	metadataDeleteBucketOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteBucketOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteBucketOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteBucketPolicyInput struct {
@@ -2245,12 +2545,32 @@ type metadataDeleteBucketPolicyInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketPolicyInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketPolicyOutput struct {
 	metadataDeleteBucketPolicyOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteBucketPolicyOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteBucketPolicyOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketPolicyOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteBucketReplicationInput struct {
@@ -2263,12 +2583,32 @@ type metadataDeleteBucketReplicationInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketReplicationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketReplicationInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketReplicationOutput struct {
 	metadataDeleteBucketReplicationOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteBucketReplicationOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteBucketReplicationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketReplicationOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteBucketTaggingInput struct {
@@ -2281,12 +2621,32 @@ type metadataDeleteBucketTaggingInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketTaggingInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketTaggingInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketTaggingOutput struct {
 	metadataDeleteBucketTaggingOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteBucketTaggingOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteBucketTaggingOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketTaggingOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteBucketWebsiteInput struct {
@@ -2299,12 +2659,32 @@ type metadataDeleteBucketWebsiteInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteBucketWebsiteInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketWebsiteInput) GoString() string {
+	return s.String()
+}
+
 type DeleteBucketWebsiteOutput struct {
 	metadataDeleteBucketWebsiteOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteBucketWebsiteOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteBucketWebsiteOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteBucketWebsiteOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteMarkerEntry struct {
@@ -2330,6 +2710,16 @@ type metadataDeleteMarkerEntry struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteMarkerEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteMarkerEntry) GoString() string {
+	return s.String()
+}
+
 type DeleteObjectInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2343,7 +2733,7 @@ type DeleteObjectInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	// VersionId used to reference a specific version of the object.
 	VersionID *string `location:"querystring" locationName:"versionId" type:"string"`
@@ -2355,6 +2745,16 @@ type metadataDeleteObjectInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeleteObjectInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteObjectInput) GoString() string {
+	return s.String()
+}
+
 type DeleteObjectOutput struct {
 	// Specifies whether the versioned object that was permanently deleted was (true)
 	// or was not (false) a delete marker.
@@ -2362,7 +2762,7 @@ type DeleteObjectOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// Returns the version ID of the delete marker created as a result of the DELETE
 	// operation.
@@ -2373,6 +2773,16 @@ type DeleteObjectOutput struct {
 
 type metadataDeleteObjectOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteObjectOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteObjectOutput) GoString() string {
+	return s.String()
 }
 
 type DeleteObjectsInput struct {
@@ -2388,13 +2798,23 @@ type DeleteObjectsInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	metadataDeleteObjectsInput `json:"-" xml:"-"`
 }
 
 type metadataDeleteObjectsInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Delete"`
+}
+
+// String returns the string representation
+func (s DeleteObjectsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteObjectsInput) GoString() string {
+	return s.String()
 }
 
 type DeleteObjectsOutput struct {
@@ -2404,13 +2824,23 @@ type DeleteObjectsOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	metadataDeleteObjectsOutput `json:"-" xml:"-"`
 }
 
 type metadataDeleteObjectsOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s DeleteObjectsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteObjectsOutput) GoString() string {
+	return s.String()
 }
 
 type DeletedObject struct {
@@ -2429,6 +2859,16 @@ type metadataDeletedObject struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s DeletedObject) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeletedObject) GoString() string {
+	return s.String()
+}
+
 type Destination struct {
 	// Amazon resource name (ARN) of the bucket where you want Amazon S3 to store
 	// replicas of the object identified by the rule.
@@ -2439,6 +2879,16 @@ type Destination struct {
 
 type metadataDestination struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Destination) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Destination) GoString() string {
+	return s.String()
 }
 
 type Error struct {
@@ -2457,6 +2907,16 @@ type metadataError struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Error) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Error) GoString() string {
+	return s.String()
+}
+
 type ErrorDocument struct {
 	// The object key name to use when a 4XX class error occurs.
 	Key *string `type:"string" required:"true"`
@@ -2468,6 +2928,16 @@ type metadataErrorDocument struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ErrorDocument) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ErrorDocument) GoString() string {
+	return s.String()
+}
+
 type GetBucketACLInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2476,6 +2946,16 @@ type GetBucketACLInput struct {
 
 type metadataGetBucketACLInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketACLInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketACLInput) GoString() string {
+	return s.String()
 }
 
 type GetBucketACLOutput struct {
@@ -2491,6 +2971,16 @@ type metadataGetBucketACLOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketACLOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketACLOutput) GoString() string {
+	return s.String()
+}
+
 type GetBucketCORSInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2499,6 +2989,16 @@ type GetBucketCORSInput struct {
 
 type metadataGetBucketCORSInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketCORSInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketCORSInput) GoString() string {
+	return s.String()
 }
 
 type GetBucketCORSOutput struct {
@@ -2511,6 +3011,16 @@ type metadataGetBucketCORSOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketCORSOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketCORSOutput) GoString() string {
+	return s.String()
+}
+
 type GetBucketLifecycleInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2519,6 +3029,16 @@ type GetBucketLifecycleInput struct {
 
 type metadataGetBucketLifecycleInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketLifecycleInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketLifecycleInput) GoString() string {
+	return s.String()
 }
 
 type GetBucketLifecycleOutput struct {
@@ -2531,6 +3051,16 @@ type metadataGetBucketLifecycleOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketLifecycleOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketLifecycleOutput) GoString() string {
+	return s.String()
+}
+
 type GetBucketLocationInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2541,14 +3071,34 @@ type metadataGetBucketLocationInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketLocationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketLocationInput) GoString() string {
+	return s.String()
+}
+
 type GetBucketLocationOutput struct {
-	LocationConstraint *string `type:"string"`
+	LocationConstraint *string `type:"string" enum:"BucketLocationConstraint"`
 
 	metadataGetBucketLocationOutput `json:"-" xml:"-"`
 }
 
 type metadataGetBucketLocationOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketLocationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketLocationOutput) GoString() string {
+	return s.String()
 }
 
 type GetBucketLoggingInput struct {
@@ -2561,6 +3111,16 @@ type metadataGetBucketLoggingInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketLoggingInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketLoggingInput) GoString() string {
+	return s.String()
+}
+
 type GetBucketLoggingOutput struct {
 	LoggingEnabled *LoggingEnabled `type:"structure"`
 
@@ -2569,6 +3129,16 @@ type GetBucketLoggingOutput struct {
 
 type metadataGetBucketLoggingOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketLoggingOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketLoggingOutput) GoString() string {
+	return s.String()
 }
 
 type GetBucketNotificationConfigurationRequest struct {
@@ -2582,6 +3152,16 @@ type metadataGetBucketNotificationConfigurationRequest struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketNotificationConfigurationRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketNotificationConfigurationRequest) GoString() string {
+	return s.String()
+}
+
 type GetBucketPolicyInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2590,6 +3170,16 @@ type GetBucketPolicyInput struct {
 
 type metadataGetBucketPolicyInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketPolicyInput) GoString() string {
+	return s.String()
 }
 
 type GetBucketPolicyOutput struct {
@@ -2603,6 +3193,16 @@ type metadataGetBucketPolicyOutput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Policy"`
 }
 
+// String returns the string representation
+func (s GetBucketPolicyOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketPolicyOutput) GoString() string {
+	return s.String()
+}
+
 type GetBucketReplicationInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2611,6 +3211,16 @@ type GetBucketReplicationInput struct {
 
 type metadataGetBucketReplicationInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketReplicationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketReplicationInput) GoString() string {
+	return s.String()
 }
 
 type GetBucketReplicationOutput struct {
@@ -2625,6 +3235,16 @@ type metadataGetBucketReplicationOutput struct {
 	SDKShapeTraits bool `type:"structure" payload:"ReplicationConfiguration"`
 }
 
+// String returns the string representation
+func (s GetBucketReplicationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketReplicationOutput) GoString() string {
+	return s.String()
+}
+
 type GetBucketRequestPaymentInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2635,15 +3255,35 @@ type metadataGetBucketRequestPaymentInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketRequestPaymentInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketRequestPaymentInput) GoString() string {
+	return s.String()
+}
+
 type GetBucketRequestPaymentOutput struct {
 	// Specifies who pays for the download and request fees.
-	Payer *string `type:"string"`
+	Payer *string `type:"string" enum:"Payer"`
 
 	metadataGetBucketRequestPaymentOutput `json:"-" xml:"-"`
 }
 
 type metadataGetBucketRequestPaymentOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketRequestPaymentOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketRequestPaymentOutput) GoString() string {
+	return s.String()
 }
 
 type GetBucketTaggingInput struct {
@@ -2656,6 +3296,16 @@ type metadataGetBucketTaggingInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketTaggingInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketTaggingInput) GoString() string {
+	return s.String()
+}
+
 type GetBucketTaggingOutput struct {
 	TagSet []*Tag `locationNameList:"Tag" type:"list" required:"true"`
 
@@ -2664,6 +3314,16 @@ type GetBucketTaggingOutput struct {
 
 type metadataGetBucketTaggingOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketTaggingOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketTaggingOutput) GoString() string {
+	return s.String()
 }
 
 type GetBucketVersioningInput struct {
@@ -2676,20 +3336,40 @@ type metadataGetBucketVersioningInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketVersioningInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketVersioningInput) GoString() string {
+	return s.String()
+}
+
 type GetBucketVersioningOutput struct {
 	// Specifies whether MFA delete is enabled in the bucket versioning configuration.
 	// This element is only returned if the bucket has been configured with MFA
 	// delete. If the bucket has never been so configured, this element is not returned.
-	MFADelete *string `locationName:"MfaDelete" type:"string"`
+	MFADelete *string `locationName:"MfaDelete" type:"string" enum:"MFADeleteStatus"`
 
 	// The versioning state of the bucket.
-	Status *string `type:"string"`
+	Status *string `type:"string" enum:"BucketVersioningStatus"`
 
 	metadataGetBucketVersioningOutput `json:"-" xml:"-"`
 }
 
 type metadataGetBucketVersioningOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketVersioningOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketVersioningOutput) GoString() string {
+	return s.String()
 }
 
 type GetBucketWebsiteInput struct {
@@ -2700,6 +3380,16 @@ type GetBucketWebsiteInput struct {
 
 type metadataGetBucketWebsiteInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetBucketWebsiteInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketWebsiteInput) GoString() string {
+	return s.String()
 }
 
 type GetBucketWebsiteOutput struct {
@@ -2718,6 +3408,16 @@ type metadataGetBucketWebsiteOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetBucketWebsiteOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetBucketWebsiteOutput) GoString() string {
+	return s.String()
+}
+
 type GetObjectACLInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2727,7 +3427,7 @@ type GetObjectACLInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	// VersionId used to reference a specific version of the object.
 	VersionID *string `location:"querystring" locationName:"versionId" type:"string"`
@@ -2739,6 +3439,16 @@ type metadataGetObjectACLInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetObjectACLInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetObjectACLInput) GoString() string {
+	return s.String()
+}
+
 type GetObjectACLOutput struct {
 	// A list of grants.
 	Grants []*Grant `locationName:"AccessControlList" locationNameList:"Grant" type:"list"`
@@ -2747,13 +3457,23 @@ type GetObjectACLOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	metadataGetObjectACLOutput `json:"-" xml:"-"`
 }
 
 type metadataGetObjectACLOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetObjectACLOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetObjectACLOutput) GoString() string {
+	return s.String()
 }
 
 type GetObjectInput struct {
@@ -2785,7 +3505,7 @@ type GetObjectInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	// Sets the Cache-Control header of the response.
 	ResponseCacheControl *string `location:"querystring" locationName:"response-cache-control" type:"string"`
@@ -2805,8 +3525,7 @@ type GetObjectInput struct {
 	// Sets the Expires header of the response.
 	ResponseExpires *time.Time `location:"querystring" locationName:"response-expires" type:"timestamp" timestampFormat:"iso8601"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -2829,6 +3548,16 @@ type GetObjectInput struct {
 
 type metadataGetObjectInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetObjectInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetObjectInput) GoString() string {
+	return s.String()
 }
 
 type GetObjectOutput struct {
@@ -2875,7 +3604,7 @@ type GetObjectOutput struct {
 	Expiration *string `location:"header" locationName:"x-amz-expiration" type:"string"`
 
 	// The date and time at which the object is no longer cacheable.
-	Expires *time.Time `location:"header" locationName:"Expires" type:"timestamp" timestampFormat:"rfc822"`
+	Expires *string `location:"header" locationName:"Expires" type:"string"`
 
 	// Last modified date of the object
 	LastModified *time.Time `location:"header" locationName:"Last-Modified" type:"timestamp" timestampFormat:"rfc822"`
@@ -2889,11 +3618,11 @@ type GetObjectOutput struct {
 	// you can create metadata whose values are not legal HTTP headers.
 	MissingMeta *int64 `location:"header" locationName:"x-amz-missing-meta" type:"integer"`
 
-	ReplicationStatus *string `location:"header" locationName:"x-amz-replication-status" type:"string"`
+	ReplicationStatus *string `location:"header" locationName:"x-amz-replication-status" type:"string" enum:"ReplicationStatus"`
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// Provides information about object restoration operation and expiration time
 	// of the restored object copy.
@@ -2915,7 +3644,9 @@ type GetObjectOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
+
+	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
 	// Version of the object.
 	VersionID *string `location:"header" locationName:"x-amz-version-id" type:"string"`
@@ -2932,6 +3663,16 @@ type metadataGetObjectOutput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Body"`
 }
 
+// String returns the string representation
+func (s GetObjectOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetObjectOutput) GoString() string {
+	return s.String()
+}
+
 type GetObjectTorrentInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -2941,7 +3682,7 @@ type GetObjectTorrentInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	metadataGetObjectTorrentInput `json:"-" xml:"-"`
 }
@@ -2950,12 +3691,22 @@ type metadataGetObjectTorrentInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s GetObjectTorrentInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetObjectTorrentInput) GoString() string {
+	return s.String()
+}
+
 type GetObjectTorrentOutput struct {
 	Body io.ReadCloser `type:"blob"`
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	metadataGetObjectTorrentOutput `json:"-" xml:"-"`
 }
@@ -2964,17 +3715,37 @@ type metadataGetObjectTorrentOutput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Body"`
 }
 
+// String returns the string representation
+func (s GetObjectTorrentOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetObjectTorrentOutput) GoString() string {
+	return s.String()
+}
+
 type Grant struct {
 	Grantee *Grantee `type:"structure"`
 
 	// Specifies the permission given to the grantee.
-	Permission *string `type:"string"`
+	Permission *string `type:"string" enum:"Permission"`
 
 	metadataGrant `json:"-" xml:"-"`
 }
 
 type metadataGrant struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Grant) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Grant) GoString() string {
+	return s.String()
 }
 
 type Grantee struct {
@@ -2988,7 +3759,7 @@ type Grantee struct {
 	ID *string `type:"string"`
 
 	// Type of grantee
-	Type *string `locationName:"xsi:type" type:"string" xmlAttribute:"true" required:"true"`
+	Type *string `locationName:"xsi:type" type:"string" xmlAttribute:"true" required:"true" enum:"Type"`
 
 	// URI of the grantee group.
 	URI *string `type:"string"`
@@ -2998,6 +3769,16 @@ type Grantee struct {
 
 type metadataGrantee struct {
 	SDKShapeTraits bool `type:"structure" xmlPrefix:"xsi" xmlURI:"http://www.w3.org/2001/XMLSchema-instance"`
+}
+
+// String returns the string representation
+func (s Grantee) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Grantee) GoString() string {
+	return s.String()
 }
 
 type HeadBucketInput struct {
@@ -3010,12 +3791,32 @@ type metadataHeadBucketInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s HeadBucketInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s HeadBucketInput) GoString() string {
+	return s.String()
+}
+
 type HeadBucketOutput struct {
 	metadataHeadBucketOutput `json:"-" xml:"-"`
 }
 
 type metadataHeadBucketOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s HeadBucketOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s HeadBucketOutput) GoString() string {
+	return s.String()
 }
 
 type HeadObjectInput struct {
@@ -3047,10 +3848,9 @@ type HeadObjectInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -3073,6 +3873,16 @@ type HeadObjectInput struct {
 
 type metadataHeadObjectInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s HeadObjectInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s HeadObjectInput) GoString() string {
+	return s.String()
 }
 
 type HeadObjectOutput struct {
@@ -3113,7 +3923,7 @@ type HeadObjectOutput struct {
 	Expiration *string `location:"header" locationName:"x-amz-expiration" type:"string"`
 
 	// The date and time at which the object is no longer cacheable.
-	Expires *time.Time `location:"header" locationName:"Expires" type:"timestamp" timestampFormat:"rfc822"`
+	Expires *string `location:"header" locationName:"Expires" type:"string"`
 
 	// Last modified date of the object
 	LastModified *time.Time `location:"header" locationName:"Last-Modified" type:"timestamp" timestampFormat:"rfc822"`
@@ -3127,11 +3937,11 @@ type HeadObjectOutput struct {
 	// you can create metadata whose values are not legal HTTP headers.
 	MissingMeta *int64 `location:"header" locationName:"x-amz-missing-meta" type:"integer"`
 
-	ReplicationStatus *string `location:"header" locationName:"x-amz-replication-status" type:"string"`
+	ReplicationStatus *string `location:"header" locationName:"x-amz-replication-status" type:"string" enum:"ReplicationStatus"`
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// Provides information about object restoration operation and expiration time
 	// of the restored object copy.
@@ -3153,7 +3963,9 @@ type HeadObjectOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
+
+	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
 	// Version of the object.
 	VersionID *string `location:"header" locationName:"x-amz-version-id" type:"string"`
@@ -3170,6 +3982,16 @@ type metadataHeadObjectOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s HeadObjectOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s HeadObjectOutput) GoString() string {
+	return s.String()
+}
+
 type IndexDocument struct {
 	// A suffix that is appended to a request that is for a directory on the website
 	// endpoint (e.g. if the suffix is index.html and you make a request to samplebucket/images/
@@ -3182,6 +4004,16 @@ type IndexDocument struct {
 
 type metadataIndexDocument struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s IndexDocument) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s IndexDocument) GoString() string {
+	return s.String()
 }
 
 type Initiator struct {
@@ -3197,6 +4029,16 @@ type Initiator struct {
 
 type metadataInitiator struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Initiator) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Initiator) GoString() string {
+	return s.String()
 }
 
 // Container for specifying the AWS Lambda notification configuration.
@@ -3218,6 +4060,16 @@ type metadataLambdaFunctionConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s LambdaFunctionConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LambdaFunctionConfiguration) GoString() string {
+	return s.String()
+}
+
 type LifecycleConfiguration struct {
 	Rules []*LifecycleRule `locationName:"Rule" type:"list" flattened:"true" required:"true"`
 
@@ -3226,6 +4078,16 @@ type LifecycleConfiguration struct {
 
 type metadataLifecycleConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s LifecycleConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LifecycleConfiguration) GoString() string {
+	return s.String()
 }
 
 type LifecycleExpiration struct {
@@ -3242,6 +4104,16 @@ type LifecycleExpiration struct {
 
 type metadataLifecycleExpiration struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s LifecycleExpiration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LifecycleExpiration) GoString() string {
+	return s.String()
 }
 
 type LifecycleRule struct {
@@ -3269,7 +4141,7 @@ type LifecycleRule struct {
 
 	// If 'Enabled', the rule is currently being applied. If 'Disabled', the rule
 	// is not currently being applied.
-	Status *string `type:"string" required:"true"`
+	Status *string `type:"string" required:"true" enum:"ExpirationStatus"`
 
 	Transition *Transition `type:"structure"`
 
@@ -3280,12 +4152,32 @@ type metadataLifecycleRule struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s LifecycleRule) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LifecycleRule) GoString() string {
+	return s.String()
+}
+
 type ListBucketsInput struct {
 	metadataListBucketsInput `json:"-" xml:"-"`
 }
 
 type metadataListBucketsInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ListBucketsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListBucketsInput) GoString() string {
+	return s.String()
 }
 
 type ListBucketsOutput struct {
@@ -3300,6 +4192,16 @@ type metadataListBucketsOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListBucketsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListBucketsOutput) GoString() string {
+	return s.String()
+}
+
 type ListMultipartUploadsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -3312,7 +4214,7 @@ type ListMultipartUploadsInput struct {
 	// with an ASCII value from 0 to 10. For characters that are not supported in
 	// XML 1.0, you can add this parameter to request that Amazon S3 encode the
 	// keys in the response.
-	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string"`
+	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string" enum:"EncodingType"`
 
 	// Together with upload-id-marker, this parameter specifies the multipart upload
 	// after which listing should begin.
@@ -3339,6 +4241,16 @@ type metadataListMultipartUploadsInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListMultipartUploadsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListMultipartUploadsInput) GoString() string {
+	return s.String()
+}
+
 type ListMultipartUploadsOutput struct {
 	// Name of the bucket to which the multipart upload was initiated.
 	Bucket *string `type:"string"`
@@ -3348,7 +4260,7 @@ type ListMultipartUploadsOutput struct {
 	Delimiter *string `type:"string"`
 
 	// Encoding type used by Amazon S3 to encode object keys in the response.
-	EncodingType *string `type:"string"`
+	EncodingType *string `type:"string" enum:"EncodingType"`
 
 	// Indicates whether the returned list of multipart uploads is truncated. A
 	// value of true indicates that the list was truncated. The list can be truncated
@@ -3387,6 +4299,16 @@ type metadataListMultipartUploadsOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListMultipartUploadsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListMultipartUploadsOutput) GoString() string {
+	return s.String()
+}
+
 type ListObjectVersionsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -3399,7 +4321,7 @@ type ListObjectVersionsInput struct {
 	// with an ASCII value from 0 to 10. For characters that are not supported in
 	// XML 1.0, you can add this parameter to request that Amazon S3 encode the
 	// keys in the response.
-	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string"`
+	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string" enum:"EncodingType"`
 
 	// Specifies the key to start with when listing objects in a bucket.
 	KeyMarker *string `location:"querystring" locationName:"key-marker" type:"string"`
@@ -3421,6 +4343,16 @@ type metadataListObjectVersionsInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListObjectVersionsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListObjectVersionsInput) GoString() string {
+	return s.String()
+}
+
 type ListObjectVersionsOutput struct {
 	CommonPrefixes []*CommonPrefix `type:"list" flattened:"true"`
 
@@ -3429,7 +4361,7 @@ type ListObjectVersionsOutput struct {
 	Delimiter *string `type:"string"`
 
 	// Encoding type used by Amazon S3 to encode object keys in the response.
-	EncodingType *string `type:"string"`
+	EncodingType *string `type:"string" enum:"EncodingType"`
 
 	// A flag that indicates whether or not Amazon S3 returned all of the results
 	// that satisfied the search criteria. If your results were truncated, you can
@@ -3464,6 +4396,16 @@ type metadataListObjectVersionsOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListObjectVersionsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListObjectVersionsOutput) GoString() string {
+	return s.String()
+}
+
 type ListObjectsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -3476,7 +4418,7 @@ type ListObjectsInput struct {
 	// with an ASCII value from 0 to 10. For characters that are not supported in
 	// XML 1.0, you can add this parameter to request that Amazon S3 encode the
 	// keys in the response.
-	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string"`
+	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string" enum:"EncodingType"`
 
 	// Specifies the key to start with when listing objects in a bucket.
 	Marker *string `location:"querystring" locationName:"marker" type:"string"`
@@ -3495,6 +4437,16 @@ type metadataListObjectsInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListObjectsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListObjectsInput) GoString() string {
+	return s.String()
+}
+
 type ListObjectsOutput struct {
 	CommonPrefixes []*CommonPrefix `type:"list" flattened:"true"`
 
@@ -3503,7 +4455,7 @@ type ListObjectsOutput struct {
 	Delimiter *string `type:"string"`
 
 	// Encoding type used by Amazon S3 to encode object keys in the response.
-	EncodingType *string `type:"string"`
+	EncodingType *string `type:"string" enum:"EncodingType"`
 
 	// A flag that indicates whether or not Amazon S3 returned all of the results
 	// that satisfied the search criteria.
@@ -3533,6 +4485,16 @@ type metadataListObjectsOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ListObjectsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListObjectsOutput) GoString() string {
+	return s.String()
+}
+
 type ListPartsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
@@ -3549,7 +4511,7 @@ type ListPartsInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	// Upload ID identifying the multipart upload whose parts are being listed.
 	UploadID *string `location:"querystring" locationName:"uploadId" type:"string" required:"true"`
@@ -3559,6 +4521,16 @@ type ListPartsInput struct {
 
 type metadataListPartsInput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ListPartsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListPartsInput) GoString() string {
+	return s.String()
 }
 
 type ListPartsOutput struct {
@@ -3591,10 +4563,10 @@ type ListPartsOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// The class of storage used to store the object.
-	StorageClass *string `type:"string"`
+	StorageClass *string `type:"string" enum:"StorageClass"`
 
 	// Upload ID identifying the multipart upload whose parts are being listed.
 	UploadID *string `locationName:"UploadId" type:"string"`
@@ -3604,6 +4576,16 @@ type ListPartsOutput struct {
 
 type metadataListPartsOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ListPartsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListPartsOutput) GoString() string {
+	return s.String()
 }
 
 type LoggingEnabled struct {
@@ -3628,6 +4610,16 @@ type metadataLoggingEnabled struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s LoggingEnabled) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LoggingEnabled) GoString() string {
+	return s.String()
+}
+
 type MultipartUpload struct {
 	// Date and time at which the multipart upload was initiated.
 	Initiated *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -3641,7 +4633,7 @@ type MultipartUpload struct {
 	Owner *Owner `type:"structure"`
 
 	// The class of storage used to store the object.
-	StorageClass *string `type:"string"`
+	StorageClass *string `type:"string" enum:"StorageClass"`
 
 	// Upload ID that identifies the multipart upload.
 	UploadID *string `locationName:"UploadId" type:"string"`
@@ -3651,6 +4643,16 @@ type MultipartUpload struct {
 
 type metadataMultipartUpload struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s MultipartUpload) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s MultipartUpload) GoString() string {
+	return s.String()
 }
 
 // Specifies when noncurrent object versions expire. Upon expiration, Amazon
@@ -3673,6 +4675,16 @@ type metadataNoncurrentVersionExpiration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s NoncurrentVersionExpiration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NoncurrentVersionExpiration) GoString() string {
+	return s.String()
+}
+
 // Container for the transition rule that describes when noncurrent objects
 // transition to the GLACIER storage class. If your bucket is versioning-enabled
 // (or versioning is suspended), you can set this action to request that Amazon
@@ -3687,13 +4699,23 @@ type NoncurrentVersionTransition struct {
 	NoncurrentDays *int64 `type:"integer"`
 
 	// The class of storage used to store the object.
-	StorageClass *string `type:"string"`
+	StorageClass *string `type:"string" enum:"TransitionStorageClass"`
 
 	metadataNoncurrentVersionTransition `json:"-" xml:"-"`
 }
 
 type metadataNoncurrentVersionTransition struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s NoncurrentVersionTransition) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NoncurrentVersionTransition) GoString() string {
+	return s.String()
 }
 
 // Container for specifying the notification configuration of the bucket. If
@@ -3712,6 +4734,16 @@ type metadataNotificationConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s NotificationConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NotificationConfiguration) GoString() string {
+	return s.String()
+}
+
 type NotificationConfigurationDeprecated struct {
 	CloudFunctionConfiguration *CloudFunctionConfiguration `type:"structure"`
 
@@ -3726,6 +4758,16 @@ type metadataNotificationConfigurationDeprecated struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s NotificationConfigurationDeprecated) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NotificationConfigurationDeprecated) GoString() string {
+	return s.String()
+}
+
 type Object struct {
 	ETag *string `type:"string"`
 
@@ -3738,13 +4780,23 @@ type Object struct {
 	Size *int64 `type:"integer"`
 
 	// The class of storage used to store the object.
-	StorageClass *string `type:"string"`
+	StorageClass *string `type:"string" enum:"ObjectStorageClass"`
 
 	metadataObject `json:"-" xml:"-"`
 }
 
 type metadataObject struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Object) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Object) GoString() string {
+	return s.String()
 }
 
 type ObjectIdentifier struct {
@@ -3759,6 +4811,16 @@ type ObjectIdentifier struct {
 
 type metadataObjectIdentifier struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ObjectIdentifier) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ObjectIdentifier) GoString() string {
+	return s.String()
 }
 
 type ObjectVersion struct {
@@ -3780,7 +4842,7 @@ type ObjectVersion struct {
 	Size *int64 `type:"integer"`
 
 	// The class of storage used to store the object.
-	StorageClass *string `type:"string"`
+	StorageClass *string `type:"string" enum:"ObjectVersionStorageClass"`
 
 	// Version ID of an object.
 	VersionID *string `locationName:"VersionId" type:"string"`
@@ -3790,6 +4852,16 @@ type ObjectVersion struct {
 
 type metadataObjectVersion struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ObjectVersion) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ObjectVersion) GoString() string {
+	return s.String()
 }
 
 type Owner struct {
@@ -3804,6 +4876,16 @@ type metadataOwner struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Owner) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Owner) GoString() string {
+	return s.String()
+}
+
 type Part struct {
 	// Entity tag returned when the part was uploaded.
 	ETag *string `type:"string"`
@@ -3811,7 +4893,8 @@ type Part struct {
 	// Date and time at which the part was uploaded.
 	LastModified *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
-	// Part number identifying the part.
+	// Part number identifying the part. This is a positive integer between 1 and
+	// 10,000.
 	PartNumber *int64 `type:"integer"`
 
 	// Size of the uploaded part data.
@@ -3824,9 +4907,19 @@ type metadataPart struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Part) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Part) GoString() string {
+	return s.String()
+}
+
 type PutBucketACLInput struct {
 	// The canned ACL to apply to the bucket.
-	ACL *string `location:"header" locationName:"x-amz-acl" type:"string"`
+	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"BucketCannedACL"`
 
 	AccessControlPolicy *AccessControlPolicy `locationName:"AccessControlPolicy" type:"structure"`
 
@@ -3855,12 +4948,32 @@ type metadataPutBucketACLInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"AccessControlPolicy"`
 }
 
+// String returns the string representation
+func (s PutBucketACLInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketACLInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketACLOutput struct {
 	metadataPutBucketACLOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketACLOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketACLOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketACLOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketCORSInput struct {
@@ -3875,12 +4988,32 @@ type metadataPutBucketCORSInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"CORSConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketCORSInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketCORSInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketCORSOutput struct {
 	metadataPutBucketCORSOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketCORSOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketCORSOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketCORSOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketLifecycleInput struct {
@@ -3895,12 +5028,32 @@ type metadataPutBucketLifecycleInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"LifecycleConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketLifecycleInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketLifecycleInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketLifecycleOutput struct {
 	metadataPutBucketLifecycleOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketLifecycleOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketLifecycleOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketLifecycleOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketLoggingInput struct {
@@ -3915,12 +5068,32 @@ type metadataPutBucketLoggingInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"BucketLoggingStatus"`
 }
 
+// String returns the string representation
+func (s PutBucketLoggingInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketLoggingInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketLoggingOutput struct {
 	metadataPutBucketLoggingOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketLoggingOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketLoggingOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketLoggingOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketNotificationConfigurationInput struct {
@@ -3937,12 +5110,32 @@ type metadataPutBucketNotificationConfigurationInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"NotificationConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketNotificationConfigurationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketNotificationConfigurationInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketNotificationConfigurationOutput struct {
 	metadataPutBucketNotificationConfigurationOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketNotificationConfigurationOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketNotificationConfigurationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketNotificationConfigurationOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketNotificationInput struct {
@@ -3957,12 +5150,32 @@ type metadataPutBucketNotificationInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"NotificationConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketNotificationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketNotificationInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketNotificationOutput struct {
 	metadataPutBucketNotificationOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketNotificationOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketNotificationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketNotificationOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketPolicyInput struct {
@@ -3978,12 +5191,32 @@ type metadataPutBucketPolicyInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Policy"`
 }
 
+// String returns the string representation
+func (s PutBucketPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketPolicyInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketPolicyOutput struct {
 	metadataPutBucketPolicyOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketPolicyOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketPolicyOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketPolicyOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketReplicationInput struct {
@@ -4000,12 +5233,32 @@ type metadataPutBucketReplicationInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"ReplicationConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketReplicationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketReplicationInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketReplicationOutput struct {
 	metadataPutBucketReplicationOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketReplicationOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketReplicationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketReplicationOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketRequestPaymentInput struct {
@@ -4020,12 +5273,32 @@ type metadataPutBucketRequestPaymentInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"RequestPaymentConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketRequestPaymentInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketRequestPaymentInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketRequestPaymentOutput struct {
 	metadataPutBucketRequestPaymentOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketRequestPaymentOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketRequestPaymentOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketRequestPaymentOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketTaggingInput struct {
@@ -4040,12 +5313,32 @@ type metadataPutBucketTaggingInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Tagging"`
 }
 
+// String returns the string representation
+func (s PutBucketTaggingInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketTaggingInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketTaggingOutput struct {
 	metadataPutBucketTaggingOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketTaggingOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketTaggingOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketTaggingOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketVersioningInput struct {
@@ -4064,12 +5357,32 @@ type metadataPutBucketVersioningInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"VersioningConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketVersioningInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketVersioningInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketVersioningOutput struct {
 	metadataPutBucketVersioningOutput `json:"-" xml:"-"`
 }
 
 type metadataPutBucketVersioningOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutBucketVersioningOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketVersioningOutput) GoString() string {
+	return s.String()
 }
 
 type PutBucketWebsiteInput struct {
@@ -4084,6 +5397,16 @@ type metadataPutBucketWebsiteInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"WebsiteConfiguration"`
 }
 
+// String returns the string representation
+func (s PutBucketWebsiteInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketWebsiteInput) GoString() string {
+	return s.String()
+}
+
 type PutBucketWebsiteOutput struct {
 	metadataPutBucketWebsiteOutput `json:"-" xml:"-"`
 }
@@ -4092,9 +5415,19 @@ type metadataPutBucketWebsiteOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s PutBucketWebsiteOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutBucketWebsiteOutput) GoString() string {
+	return s.String()
+}
+
 type PutObjectACLInput struct {
 	// The canned ACL to apply to the object.
-	ACL *string `location:"header" locationName:"x-amz-acl" type:"string"`
+	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"ObjectCannedACL"`
 
 	AccessControlPolicy *AccessControlPolicy `locationName:"AccessControlPolicy" type:"structure"`
 
@@ -4122,7 +5455,7 @@ type PutObjectACLInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	metadataPutObjectACLInput `json:"-" xml:"-"`
 }
@@ -4131,10 +5464,20 @@ type metadataPutObjectACLInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"AccessControlPolicy"`
 }
 
+// String returns the string representation
+func (s PutObjectACLInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutObjectACLInput) GoString() string {
+	return s.String()
+}
+
 type PutObjectACLOutput struct {
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	metadataPutObjectACLOutput `json:"-" xml:"-"`
 }
@@ -4143,9 +5486,19 @@ type metadataPutObjectACLOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s PutObjectACLOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutObjectACLOutput) GoString() string {
+	return s.String()
+}
+
 type PutObjectInput struct {
 	// The canned ACL to apply to the object.
-	ACL *string `location:"header" locationName:"x-amz-acl" type:"string"`
+	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"ObjectCannedACL"`
 
 	// Object data.
 	Body io.ReadSeeker `type:"blob"`
@@ -4197,10 +5550,9 @@ type PutObjectInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -4223,10 +5575,10 @@ type PutObjectInput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	// The type of storage to use for the object. Defaults to 'STANDARD'.
-	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string"`
+	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
 	// If the bucket is configured as a website, redirects requests for this object
 	// to another object in the same bucket or to an external URL. Amazon S3 stores
@@ -4240,6 +5592,16 @@ type metadataPutObjectInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Body"`
 }
 
+// String returns the string representation
+func (s PutObjectInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutObjectInput) GoString() string {
+	return s.String()
+}
+
 type PutObjectOutput struct {
 	// Entity tag for the uploaded object.
 	ETag *string `location:"header" locationName:"ETag" type:"string"`
@@ -4250,7 +5612,7 @@ type PutObjectOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// If server-side encryption with a customer-provided encryption key was requested,
 	// the response will include this header confirming the encryption algorithm
@@ -4268,7 +5630,7 @@ type PutObjectOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	// Version of the object.
 	VersionID *string `location:"header" locationName:"x-amz-version-id" type:"string"`
@@ -4278,6 +5640,16 @@ type PutObjectOutput struct {
 
 type metadataPutObjectOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s PutObjectOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PutObjectOutput) GoString() string {
+	return s.String()
 }
 
 // Container for specifying an configuration when you want Amazon S3 to publish
@@ -4300,9 +5672,19 @@ type metadataQueueConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s QueueConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s QueueConfiguration) GoString() string {
+	return s.String()
+}
+
 type QueueConfigurationDeprecated struct {
 	// Bucket event for which to send notifications.
-	Event *string `type:"string"`
+	Event *string `type:"string" enum:"Event"`
 
 	Events []*string `locationName:"Event" type:"list" flattened:"true"`
 
@@ -4319,6 +5701,16 @@ type metadataQueueConfigurationDeprecated struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s QueueConfigurationDeprecated) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s QueueConfigurationDeprecated) GoString() string {
+	return s.String()
+}
+
 type Redirect struct {
 	// The HTTP redirect code to use on the response. Not required if one of the
 	// siblings is present.
@@ -4329,7 +5721,7 @@ type Redirect struct {
 
 	// Protocol to use (http, https) when redirecting requests. The default is the
 	// protocol that is used in the original request.
-	Protocol *string `type:"string"`
+	Protocol *string `type:"string" enum:"Protocol"`
 
 	// The object key prefix to use in the redirect request. For example, to redirect
 	// requests for all pages with prefix docs/ (objects in the docs/ folder) to
@@ -4351,19 +5743,39 @@ type metadataRedirect struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Redirect) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Redirect) GoString() string {
+	return s.String()
+}
+
 type RedirectAllRequestsTo struct {
 	// Name of the host where requests will be redirected.
 	HostName *string `type:"string" required:"true"`
 
 	// Protocol to use (http, https) when redirecting requests. The default is the
 	// protocol that is used in the original request.
-	Protocol *string `type:"string"`
+	Protocol *string `type:"string" enum:"Protocol"`
 
 	metadataRedirectAllRequestsTo `json:"-" xml:"-"`
 }
 
 type metadataRedirectAllRequestsTo struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s RedirectAllRequestsTo) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RedirectAllRequestsTo) GoString() string {
+	return s.String()
 }
 
 // Container for replication rules. You can add as many as 1,000 rules. Total
@@ -4384,6 +5796,16 @@ type metadataReplicationConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ReplicationConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ReplicationConfiguration) GoString() string {
+	return s.String()
+}
+
 type ReplicationRule struct {
 	Destination *Destination `type:"structure" required:"true"`
 
@@ -4396,7 +5818,7 @@ type ReplicationRule struct {
 	Prefix *string `type:"string" required:"true"`
 
 	// The rule is ignored if status is not Enabled.
-	Status *string `type:"string" required:"true"`
+	Status *string `type:"string" required:"true" enum:"ReplicationRuleStatus"`
 
 	metadataReplicationRule `json:"-" xml:"-"`
 }
@@ -4405,15 +5827,35 @@ type metadataReplicationRule struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s ReplicationRule) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ReplicationRule) GoString() string {
+	return s.String()
+}
+
 type RequestPaymentConfiguration struct {
 	// Specifies who pays for the download and request fees.
-	Payer *string `type:"string" required:"true"`
+	Payer *string `type:"string" required:"true" enum:"Payer"`
 
 	metadataRequestPaymentConfiguration `json:"-" xml:"-"`
 }
 
 type metadataRequestPaymentConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s RequestPaymentConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RequestPaymentConfiguration) GoString() string {
+	return s.String()
 }
 
 type RestoreObjectInput struct {
@@ -4425,7 +5867,7 @@ type RestoreObjectInput struct {
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
 	RestoreRequest *RestoreRequest `locationName:"RestoreRequest" type:"structure"`
 
@@ -4438,16 +5880,36 @@ type metadataRestoreObjectInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"RestoreRequest"`
 }
 
+// String returns the string representation
+func (s RestoreObjectInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RestoreObjectInput) GoString() string {
+	return s.String()
+}
+
 type RestoreObjectOutput struct {
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	metadataRestoreObjectOutput `json:"-" xml:"-"`
 }
 
 type metadataRestoreObjectOutput struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s RestoreObjectOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RestoreObjectOutput) GoString() string {
+	return s.String()
 }
 
 type RestoreRequest struct {
@@ -4459,6 +5921,16 @@ type RestoreRequest struct {
 
 type metadataRestoreRequest struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s RestoreRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RestoreRequest) GoString() string {
+	return s.String()
 }
 
 type RoutingRule struct {
@@ -4480,6 +5952,16 @@ type metadataRoutingRule struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s RoutingRule) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RoutingRule) GoString() string {
+	return s.String()
+}
+
 type Tag struct {
 	// Name of the tag.
 	Key *string `type:"string" required:"true"`
@@ -4494,6 +5976,16 @@ type metadataTag struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Tag) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Tag) GoString() string {
+	return s.String()
+}
+
 type Tagging struct {
 	TagSet []*Tag `locationNameList:"Tag" type:"list" required:"true"`
 
@@ -4504,17 +5996,37 @@ type metadataTagging struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s Tagging) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Tagging) GoString() string {
+	return s.String()
+}
+
 type TargetGrant struct {
 	Grantee *Grantee `type:"structure"`
 
 	// Logging permissions assigned to the Grantee for the bucket.
-	Permission *string `type:"string"`
+	Permission *string `type:"string" enum:"BucketLogsPermission"`
 
 	metadataTargetGrant `json:"-" xml:"-"`
 }
 
 type metadataTargetGrant struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s TargetGrant) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TargetGrant) GoString() string {
+	return s.String()
 }
 
 // Container for specifying the configuration when you want Amazon S3 to publish
@@ -4537,9 +6049,19 @@ type metadataTopicConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s TopicConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TopicConfiguration) GoString() string {
+	return s.String()
+}
+
 type TopicConfigurationDeprecated struct {
 	// Bucket event for which to send notifications.
-	Event *string `type:"string"`
+	Event *string `type:"string" enum:"Event"`
 
 	Events []*string `locationName:"Event" type:"list" flattened:"true"`
 
@@ -4558,6 +6080,16 @@ type metadataTopicConfigurationDeprecated struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s TopicConfigurationDeprecated) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TopicConfigurationDeprecated) GoString() string {
+	return s.String()
+}
+
 type Transition struct {
 	// Indicates at what date the object is to be moved or deleted. Should be in
 	// GMT ISO 8601 Format.
@@ -4568,13 +6100,23 @@ type Transition struct {
 	Days *int64 `type:"integer"`
 
 	// The class of storage used to store the object.
-	StorageClass *string `type:"string"`
+	StorageClass *string `type:"string" enum:"TransitionStorageClass"`
 
 	metadataTransition `json:"-" xml:"-"`
 }
 
 type metadataTransition struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Transition) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Transition) GoString() string {
+	return s.String()
 }
 
 type UploadPartCopyInput struct {
@@ -4619,17 +6161,17 @@ type UploadPartCopyInput struct {
 
 	Key *string `location:"uri" locationName:"Key" type:"string" required:"true"`
 
-	// Part number of part being copied.
+	// Part number of part being copied. This is a positive integer between 1 and
+	// 10,000.
 	PartNumber *int64 `location:"querystring" locationName:"partNumber" type:"integer" required:"true"`
 
 	// Confirms that the requester knows that she or he will be charged for the
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -4655,6 +6197,16 @@ type metadataUploadPartCopyInput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s UploadPartCopyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UploadPartCopyInput) GoString() string {
+	return s.String()
+}
+
 type UploadPartCopyOutput struct {
 	CopyPartResult *CopyPartResult `type:"structure"`
 
@@ -4664,7 +6216,7 @@ type UploadPartCopyOutput struct {
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// If server-side encryption with a customer-provided encryption key was requested,
 	// the response will include this header confirming the encryption algorithm
@@ -4682,13 +6234,23 @@ type UploadPartCopyOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	metadataUploadPartCopyOutput `json:"-" xml:"-"`
 }
 
 type metadataUploadPartCopyOutput struct {
 	SDKShapeTraits bool `type:"structure" payload:"CopyPartResult"`
+}
+
+// String returns the string representation
+func (s UploadPartCopyOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UploadPartCopyOutput) GoString() string {
+	return s.String()
 }
 
 type UploadPartInput struct {
@@ -4702,17 +6264,17 @@ type UploadPartInput struct {
 
 	Key *string `location:"uri" locationName:"Key" type:"string" required:"true"`
 
-	// Part number of part being uploaded.
+	// Part number of part being uploaded. This is a positive integer between 1
+	// and 10,000.
 	PartNumber *int64 `location:"querystring" locationName:"partNumber" type:"integer" required:"true"`
 
 	// Confirms that the requester knows that she or he will be charged for the
 	// request. Bucket owners need not specify this parameter in their requests.
 	// Documentation on downloading objects from requester pays buckets can be found
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
-	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string"`
+	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	// Specifies the algorithm to use to when encrypting the object (e.g., AES256,
-	// aws:kms).
+	// Specifies the algorithm to use to when encrypting the object (e.g., AES256).
 	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
 
 	// Specifies the customer-provided encryption key for Amazon S3 to use in encrypting
@@ -4738,13 +6300,23 @@ type metadataUploadPartInput struct {
 	SDKShapeTraits bool `type:"structure" payload:"Body"`
 }
 
+// String returns the string representation
+func (s UploadPartInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UploadPartInput) GoString() string {
+	return s.String()
+}
+
 type UploadPartOutput struct {
 	// Entity tag for the uploaded object.
 	ETag *string `location:"header" locationName:"ETag" type:"string"`
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
-	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string"`
+	RequestCharged *string `location:"header" locationName:"x-amz-request-charged" type:"string" enum:"RequestCharged"`
 
 	// If server-side encryption with a customer-provided encryption key was requested,
 	// the response will include this header confirming the encryption algorithm
@@ -4762,7 +6334,7 @@ type UploadPartOutput struct {
 
 	// The Server-side encryption algorithm used when storing this object in S3
 	// (e.g., AES256, aws:kms).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string"`
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
 	metadataUploadPartOutput `json:"-" xml:"-"`
 }
@@ -4771,20 +6343,40 @@ type metadataUploadPartOutput struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
+// String returns the string representation
+func (s UploadPartOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UploadPartOutput) GoString() string {
+	return s.String()
+}
+
 type VersioningConfiguration struct {
 	// Specifies whether MFA delete is enabled in the bucket versioning configuration.
 	// This element is only returned if the bucket has been configured with MFA
 	// delete. If the bucket has never been so configured, this element is not returned.
-	MFADelete *string `locationName:"MfaDelete" type:"string"`
+	MFADelete *string `locationName:"MfaDelete" type:"string" enum:"MFADelete"`
 
 	// The versioning state of the bucket.
-	Status *string `type:"string"`
+	Status *string `type:"string" enum:"BucketVersioningStatus"`
 
 	metadataVersioningConfiguration `json:"-" xml:"-"`
 }
 
 type metadataVersioningConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s VersioningConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s VersioningConfiguration) GoString() string {
+	return s.String()
 }
 
 type WebsiteConfiguration struct {
@@ -4802,3 +6394,244 @@ type WebsiteConfiguration struct {
 type metadataWebsiteConfiguration struct {
 	SDKShapeTraits bool `type:"structure"`
 }
+
+// String returns the string representation
+func (s WebsiteConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s WebsiteConfiguration) GoString() string {
+	return s.String()
+}
+
+const (
+	// @enum BucketCannedACL
+	BucketCannedACLPrivate = "private"
+	// @enum BucketCannedACL
+	BucketCannedACLPublicRead = "public-read"
+	// @enum BucketCannedACL
+	BucketCannedACLPublicReadWrite = "public-read-write"
+	// @enum BucketCannedACL
+	BucketCannedACLAuthenticatedRead = "authenticated-read"
+)
+
+const (
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintEu = "EU"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintEuWest1 = "eu-west-1"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintUsWest1 = "us-west-1"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintUsWest2 = "us-west-2"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintApSoutheast1 = "ap-southeast-1"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintApSoutheast2 = "ap-southeast-2"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintApNortheast1 = "ap-northeast-1"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintSaEast1 = "sa-east-1"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintCnNorth1 = "cn-north-1"
+	// @enum BucketLocationConstraint
+	BucketLocationConstraintEuCentral1 = "eu-central-1"
+)
+
+const (
+	// @enum BucketLogsPermission
+	BucketLogsPermissionFullControl = "FULL_CONTROL"
+	// @enum BucketLogsPermission
+	BucketLogsPermissionRead = "READ"
+	// @enum BucketLogsPermission
+	BucketLogsPermissionWrite = "WRITE"
+)
+
+const (
+	// @enum BucketVersioningStatus
+	BucketVersioningStatusEnabled = "Enabled"
+	// @enum BucketVersioningStatus
+	BucketVersioningStatusSuspended = "Suspended"
+)
+
+// Requests Amazon S3 to encode the object keys in the response and specifies
+// the encoding method to use. An object key may contain any Unicode character;
+// however, XML 1.0 parser cannot parse some characters, such as characters
+// with an ASCII value from 0 to 10. For characters that are not supported in
+// XML 1.0, you can add this parameter to request that Amazon S3 encode the
+// keys in the response.
+const (
+	// @enum EncodingType
+	EncodingTypeUrl = "url"
+)
+
+// Bucket event for which to send notifications.
+const (
+	// @enum Event
+	EventS3ReducedRedundancyLostObject = "s3:ReducedRedundancyLostObject"
+	// @enum Event
+	EventS3ObjectCreated = "s3:ObjectCreated:*"
+	// @enum Event
+	EventS3ObjectCreatedPut = "s3:ObjectCreated:Put"
+	// @enum Event
+	EventS3ObjectCreatedPost = "s3:ObjectCreated:Post"
+	// @enum Event
+	EventS3ObjectCreatedCopy = "s3:ObjectCreated:Copy"
+	// @enum Event
+	EventS3ObjectCreatedCompleteMultipartUpload = "s3:ObjectCreated:CompleteMultipartUpload"
+	// @enum Event
+	EventS3ObjectRemoved = "s3:ObjectRemoved:*"
+	// @enum Event
+	EventS3ObjectRemovedDelete = "s3:ObjectRemoved:Delete"
+	// @enum Event
+	EventS3ObjectRemovedDeleteMarkerCreated = "s3:ObjectRemoved:DeleteMarkerCreated"
+)
+
+const (
+	// @enum ExpirationStatus
+	ExpirationStatusEnabled = "Enabled"
+	// @enum ExpirationStatus
+	ExpirationStatusDisabled = "Disabled"
+)
+
+const (
+	// @enum MFADelete
+	MFADeleteEnabled = "Enabled"
+	// @enum MFADelete
+	MFADeleteDisabled = "Disabled"
+)
+
+const (
+	// @enum MFADeleteStatus
+	MFADeleteStatusEnabled = "Enabled"
+	// @enum MFADeleteStatus
+	MFADeleteStatusDisabled = "Disabled"
+)
+
+const (
+	// @enum MetadataDirective
+	MetadataDirectiveCopy = "COPY"
+	// @enum MetadataDirective
+	MetadataDirectiveReplace = "REPLACE"
+)
+
+const (
+	// @enum ObjectCannedACL
+	ObjectCannedACLPrivate = "private"
+	// @enum ObjectCannedACL
+	ObjectCannedACLPublicRead = "public-read"
+	// @enum ObjectCannedACL
+	ObjectCannedACLPublicReadWrite = "public-read-write"
+	// @enum ObjectCannedACL
+	ObjectCannedACLAuthenticatedRead = "authenticated-read"
+	// @enum ObjectCannedACL
+	ObjectCannedACLBucketOwnerRead = "bucket-owner-read"
+	// @enum ObjectCannedACL
+	ObjectCannedACLBucketOwnerFullControl = "bucket-owner-full-control"
+)
+
+const (
+	// @enum ObjectStorageClass
+	ObjectStorageClassStandard = "STANDARD"
+	// @enum ObjectStorageClass
+	ObjectStorageClassReducedRedundancy = "REDUCED_REDUNDANCY"
+	// @enum ObjectStorageClass
+	ObjectStorageClassGlacier = "GLACIER"
+)
+
+const (
+	// @enum ObjectVersionStorageClass
+	ObjectVersionStorageClassStandard = "STANDARD"
+)
+
+const (
+	// @enum Payer
+	PayerRequester = "Requester"
+	// @enum Payer
+	PayerBucketOwner = "BucketOwner"
+)
+
+const (
+	// @enum Permission
+	PermissionFullControl = "FULL_CONTROL"
+	// @enum Permission
+	PermissionWrite = "WRITE"
+	// @enum Permission
+	PermissionWriteAcp = "WRITE_ACP"
+	// @enum Permission
+	PermissionRead = "READ"
+	// @enum Permission
+	PermissionReadAcp = "READ_ACP"
+)
+
+const (
+	// @enum Protocol
+	ProtocolHttp = "http"
+	// @enum Protocol
+	ProtocolHttps = "https"
+)
+
+const (
+	// @enum ReplicationRuleStatus
+	ReplicationRuleStatusEnabled = "Enabled"
+	// @enum ReplicationRuleStatus
+	ReplicationRuleStatusDisabled = "Disabled"
+)
+
+const (
+	// @enum ReplicationStatus
+	ReplicationStatusComplete = "COMPLETE"
+	// @enum ReplicationStatus
+	ReplicationStatusPending = "PENDING"
+	// @enum ReplicationStatus
+	ReplicationStatusFailed = "FAILED"
+	// @enum ReplicationStatus
+	ReplicationStatusReplica = "REPLICA"
+)
+
+// If present, indicates that the requester was successfully charged for the
+// request.
+const (
+	// @enum RequestCharged
+	RequestChargedRequester = "requester"
+)
+
+// Confirms that the requester knows that she or he will be charged for the
+// request. Bucket owners need not specify this parameter in their requests.
+// Documentation on downloading objects from requester pays buckets can be found
+// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
+const (
+	// @enum RequestPayer
+	RequestPayerRequester = "requester"
+)
+
+const (
+	// @enum ServerSideEncryption
+	ServerSideEncryptionAes256 = "AES256"
+	// @enum ServerSideEncryption
+	ServerSideEncryptionAwsKms = "aws:kms"
+)
+
+const (
+	// @enum StorageClass
+	StorageClassStandard = "STANDARD"
+	// @enum StorageClass
+	StorageClassReducedRedundancy = "REDUCED_REDUNDANCY"
+	// @enum StorageClass
+	StorageClassLt = "LT"
+)
+
+const (
+	// @enum TransitionStorageClass
+	TransitionStorageClassGlacier = "GLACIER"
+)
+
+const (
+	// @enum Type
+	TypeCanonicalUser = "CanonicalUser"
+	// @enum Type
+	TypeAmazonCustomerByEmail = "AmazonCustomerByEmail"
+	// @enum Type
+	TypeGroup = "Group"
+)
