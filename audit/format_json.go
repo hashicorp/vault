@@ -3,6 +3,7 @@ package audit
 import (
 	"encoding/json"
 	"io"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -29,6 +30,7 @@ func (f *FormatJSON) FormatRequest(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
+		Time:  time.Now().UTC().Format(time.RFC3339),
 		Type:  "request",
 		Error: errString,
 
@@ -85,6 +87,7 @@ func (f *FormatJSON) FormatResponse(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
+		Time:  time.Now().UTC().Format(time.RFC3339),
 		Type:  "response",
 		Error: errString,
 
@@ -111,14 +114,16 @@ func (f *FormatJSON) FormatResponse(
 
 // JSONRequest is the structure of a request audit log entry in JSON.
 type JSONRequestEntry struct {
-	Type    string      `json:"type"`
-	Auth    JSONAuth    `json:"auth"`
-	Request JSONRequest `json:"request"`
-	Error   string      `json:"error"`
+	Time    string       `json:"time"`
+	Type    string       `json:"type"`
+	Auth    JSONAuth     `json:"auth"`
+	Request JSONRequest  `json:"request"`
+	Error   string       `json:"error"`
 }
 
 // JSONResponseEntry is the structure of a response audit log entry in JSON.
 type JSONResponseEntry struct {
+	Time     string       `json:"time"`
 	Type     string       `json:"type"`
 	Error    string       `json:"error"`
 	Auth     JSONAuth     `json:"auth"`
@@ -158,3 +163,5 @@ func getRemoteAddr(req *logical.Request) string {
 	}
 	return ""
 }
+
+
