@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"speter.net/go/exp/math/dec/inf"
+	"gopkg.in/inf.v0"
 )
 
 var (
@@ -802,7 +802,10 @@ func marshalTimestamp(info TypeInfo, value interface{}) ([]byte, error) {
 	case int64:
 		return encBigInt(v), nil
 	case time.Time:
-		x := v.UnixNano() / int64(1000000)
+		if v.IsZero() {
+			return []byte{}, nil
+		}
+		x := int64(v.UTC().Unix()*1e3) + int64(v.UTC().Nanosecond()/1e6)
 		return encBigInt(x), nil
 	}
 	rv := reflect.ValueOf(value)
