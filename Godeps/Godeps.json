@@ -1,6 +1,9 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.4.2",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -17,6 +20,11 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/endpoints",
+			"Comment": "v0.7.2-4-g5df83ba",
+			"Rev": "5df83ba895b6ba073c0513dddcec6d7473c95592"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/ec2query",
 			"Comment": "v0.7.2-4-g5df83ba",
 			"Rev": "5df83ba895b6ba073c0513dddcec6d7473c95592"
 		},
@@ -42,6 +50,16 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/signer/v4",
+			"Comment": "v0.7.2-4-g5df83ba",
+			"Rev": "5df83ba895b6ba073c0513dddcec6d7473c95592"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
+			"Comment": "v0.7.2-4-g5df83ba",
+			"Rev": "5df83ba895b6ba073c0513dddcec6d7473c95592"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/iam",
 			"Comment": "v0.7.2-4-g5df83ba",
 			"Rev": "5df83ba895b6ba073c0513dddcec6d7473c95592"
 		},
