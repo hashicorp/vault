@@ -276,4 +276,10 @@ Role Options:
 
   -key_bits		Length of RSa dynamic key in bits. Optional for 'dynamic' type.
   			Not applicable for 'otp' type.
+
+  -install_script	Script used to install and uninstall public keys in the target
+  			machine. Required for 'dynamic' type. Not applicable for 'otp'
+			type.
+			[For Linux, refer https://github.com/hashicorp/vault/tree/master/
+			builtin/logical/ssh/scripts/key-install-linux.sh]
 `

@@ -75,7 +75,7 @@ func (c *SSHCommand) Run(args []string) int {
 			c.Ui.Error(fmt.Sprintf("Error setting default role: %s", err))
 			return 1
 		}
-		c.Ui.Output(fmt.Sprintf("Vault SSH: Role: %s\n", role))
+		c.Ui.Output(fmt.Sprintf("Vault SSH: Role: %s", role))
 	}
 
 	data := map[string]interface{}{
@@ -105,7 +105,20 @@ func (c *SSHCommand) Run(args []string) int {
 		sshCmdArgs = append(sshCmdArgs, []string{"-i", sshDynamicKeyFileName}...)
 
 	} else if keySecret.Data["key_type"].(string) == ssh.KeyTypeOTP {
-		c.Ui.Output(fmt.Sprintf("OTP for the session is %s\n", string(keySecret.Data["key"].(string))))
+		sshpassPath, err := exec.LookPath("sshpass")
+		if err == nil {
+			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(keySecret.Data["key"].(string)), "ssh", "-p", port}...)
+			sshCmdArgs = append(sshCmdArgs, args...)
+			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
+			sshCmd.Stdin = os.Stdin
+			sshCmd.Stdout = os.Stdout
+			err = sshCmd.Run()
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf("Error while running ssh command:%s", err))
+			}
+			return 0
+		}
+		c.Ui.Output(fmt.Sprintf("OTP for the session is %s\n[Note: Install 'sshpass' to automate typing in OTP]\n", string(keySecret.Data["key"].(string))))
 	} else {
 		c.Ui.Error("Error creating key")
 	}
