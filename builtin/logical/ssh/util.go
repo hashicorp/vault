@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -10,9 +11,11 @@ import (
 	"io"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 
+	commssh "github.com/mitchellh/packer/communicator/ssh"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -104,8 +107,8 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 
 // Concatenates the public present in that target machine's home
 // folder to ~/.ssh/authorized_keys file
-func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, hostKey string) error {
-	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
+func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, hostkey string) error {
+	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostkey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}
@@ -115,15 +118,14 @@ func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, 
 	defer session.Close()
 
 	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
-	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
 
-	// Commands to be run on target machine
-	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", publicKeyFileName, authKeysFileName, tempKeysFileName)
-	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
-	catCmdAppendNew := fmt.Sprintf("cat %s >> %s", publicKeyFileName, authKeysFileName)
-	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, publicKeyFileName)
+	// Give execute permissions to install script, run and delete it.
+	scriptFileName := publicKeyFileName + ".sh"
+	chmodCmd := fmt.Sprintf("chmod +x %s", scriptFileName)
+	scriptCmd := fmt.Sprintf("./%s %s %s", scriptFileName, publicKeyFileName, authKeysFileName)
+	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
+	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
-	targetCmd := fmt.Sprintf("%s;%s;%s;%s", grepCmd, catCmdRemoveDuplicate, catCmdAppendNew, removeCmd)
 	session.Run(targetCmd)
 	return nil
 }
@@ -197,4 +199,40 @@ func cidrContainsIP(ip, cidr string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func scpUpload(username, ip, port, hostkey, fileName, fileContent string) error {
+	signer, err := ssh.ParsePrivateKey([]byte(hostkey))
+	clientConfig := &ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+	}
+
+	connfunc := func() (net.Conn, error) {
+		c, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", ip, port), 15*time.Second)
+		if err != nil {
+			return nil, err
+		}
+
+		if tcpConn, ok := c.(*net.TCPConn); ok {
+			tcpConn.SetKeepAlive(true)
+			tcpConn.SetKeepAlivePeriod(5 * time.Second)
+		}
+
+		return c, nil
+	}
+	config := &commssh.Config{
+		SSHConfig:    clientConfig,
+		Connection:   connfunc,
+		Pty:          false,
+		DisableAgent: true,
+	}
+	comm, err := commssh.New(fmt.Sprintf("%s:%s", ip, port), config)
+	if err != nil {
+		return fmt.Errorf("error connecting to target: %s", err)
+	}
+	comm.Upload(fileName, bytes.NewBufferString(fileContent), nil)
+	return nil
 }

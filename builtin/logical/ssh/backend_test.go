@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/user"
 	"strings"
 	"testing"
@@ -57,13 +58,14 @@ var testOTP string
 var testPort string
 var testUserName string
 var testAdminUser string
+var testInstallScript string
 
 // Starts the server and initializes the servers IP address,
 // port and usernames to be used by the test cases.
 func init() {
 	addr, err := vault.StartTestServer()
 	if err != nil {
-		panic(fmt.Sprintf("Error starting mock server:%s", err))
+		panic(fmt.Sprintf("error starting mock server:%s", err))
 	}
 	input := strings.Split(addr, ":")
 	testIP = input[0]
@@ -71,10 +73,16 @@ func init() {
 
 	u, err := user.Current()
 	if err != nil {
-		panic(fmt.Sprintf("Error getting current username: '%s'", err))
+		panic(fmt.Sprintf("error getting current username: '%s'", err))
 	}
 	testUserName = u.Username
 	testAdminUser = u.Username
+	scriptBytes, err := ioutil.ReadFile("scripts/key-install-linux.sh")
+	if err != nil {
+		panic(fmt.Sprintf("error reading install script file: '%s'", err))
+	}
+	testInstallScript = string(scriptBytes)
+
 }
 
 func TestSSHBackend_Lookup(t *testing.T) {
@@ -87,10 +95,11 @@ func TestSSHBackend_Lookup(t *testing.T) {
 		"cidr":         testCidr,
 	}
 	dynamicData := map[string]interface{}{
-		"key_type":   testDynamicKeyType,
-		"key":        testKeyName,
-		"admin_user": testAdminUser,
-		"cidr":       testCidr,
+		"key_type":       testDynamicKeyType,
+		"key":            testKeyName,
+		"admin_user":     testAdminUser,
+		"cidr":           testCidr,
+		"install_script": testInstallScript,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
@@ -139,10 +148,11 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 
 func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 	data := map[string]interface{}{
-		"key_type":   testDynamicKeyType,
-		"key":        testKeyName,
-		"admin_user": testAdminUser,
-		"cidr":       testCidr,
+		"key_type":       testDynamicKeyType,
+		"key":            testKeyName,
+		"admin_user":     testAdminUser,
+		"cidr":           testCidr,
+		"install_script": testInstallScript,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
@@ -318,11 +328,12 @@ func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("roles/%s", testDynamicRoleName),
 		Data: map[string]interface{}{
-			"key_type":   "dynamic",
-			"key":        testKeyName,
-			"admin_user": testAdminUser,
-			"cidr":       testCidr,
-			"port":       testPort,
+			"key_type":       "dynamic",
+			"key":            testKeyName,
+			"admin_user":     testAdminUser,
+			"cidr":           testCidr,
+			"port":           testPort,
+			"install_script": testInstallScript,
 		},
 	}
 }

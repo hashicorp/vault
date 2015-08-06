@@ -165,9 +165,14 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 
 	// Transfer the public key to target machine
 	publicKeyFileName := uuid.GenerateUUID()
-	err = uploadPublicKeyScp(dynamicPublicKey, publicKeyFileName, username, ip, role.Port, hostKey.Key)
+	scriptFileName := publicKeyFileName + ".sh"
+	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, publicKeyFileName, dynamicPublicKey)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error uploading public key: %s", err)
+	}
+	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, scriptFileName, role.InstallScript)
+	if err != nil {
+		return "", "", fmt.Errorf("error uploading install script: %s", err)
 	}
 
 	// Add the public key to authorized_keys file in target machine

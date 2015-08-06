@@ -50,6 +50,10 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "number of bits in keys",
 			},
+			"install_script": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "script that installs public key in target",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -120,6 +124,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			return logical.ErrorResponse(fmt.Sprintf("Invalid 'key': '%s'", keyName)), nil
 		}
 
+		installScript := d.Get("install_script").(string)
+		if installScript == "" {
+			return logical.ErrorResponse("Missing install script"), nil
+		}
+
 		adminUser := d.Get("admin_user").(string)
 		if adminUser == "" {
 			return logical.ErrorResponse("Missing admin username"), nil
@@ -142,13 +151,14 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 
 		entry, err = logical.StorageEntryJSON(fmt.Sprintf("policy/%s", roleName), sshRole{
-			KeyName:     keyName,
-			AdminUser:   adminUser,
-			DefaultUser: defaultUser,
-			CIDR:        cidr,
-			Port:        port,
-			KeyType:     KeyTypeDynamic,
-			KeyBits:     keyBits,
+			KeyName:       keyName,
+			AdminUser:     adminUser,
+			DefaultUser:   defaultUser,
+			CIDR:          cidr,
+			Port:          port,
+			KeyType:       KeyTypeDynamic,
+			KeyBits:       keyBits,
+			InstallScript: installScript,
 		})
 	} else {
 		return logical.ErrorResponse("Invalid key type"), nil
@@ -212,13 +222,14 @@ func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (
 }
 
 type sshRole struct {
-	KeyType     string `mapstructure:"key_type" json:"key_type"`
-	KeyName     string `mapstructure:"key" json:"key"`
-	KeyBits     string `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser   string `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser string `mapstructure:"default_user" json:"default_user"`
-	CIDR        string `mapstructure:"cidr" json:"cidr"`
-	Port        string `mapstructure:"port" json:"port"`
+	KeyType       string `mapstructure:"key_type" json:"key_type"`
+	KeyName       string `mapstructure:"key" json:"key"`
+	KeyBits       string `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser     string `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser   string `mapstructure:"default_user" json:"default_user"`
+	CIDR          string `mapstructure:"cidr" json:"cidr"`
+	Port          string `mapstructure:"port" json:"port"`
+	InstallScript string `mapstructure:"install_script" json:"install_script"`
 }
 
 const pathRoleHelpSyn = `
