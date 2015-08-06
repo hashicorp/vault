@@ -12,6 +12,8 @@ import (
 
 var (
 	// ErrSharedCredentialsHomeNotFound is emitted when the user directory cannot be found.
+	//
+	// @readonly
 	ErrSharedCredentialsHomeNotFound = awserr.New("UserHomeNotFound", "user home directory not found.", nil)
 )
 

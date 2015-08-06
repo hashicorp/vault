@@ -31,7 +31,6 @@ const metadataCredentialsEndpoint = "http://169.254.169.254/latest/meta-data/iam
 //         // specified the credentials will be expired early
 //         ExpiryWindow: 0,
 //     }
-//
 type EC2RoleProvider struct {
 	Expiry
 

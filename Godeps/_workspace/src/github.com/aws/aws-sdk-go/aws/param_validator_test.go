@@ -44,7 +44,7 @@ func TestNoErrors(t *testing.T) {
 			"key1": {Name: aws.String("Name")},
 			"key2": {Name: aws.String("Name")},
 		},
-		RequiredBool:   aws.Boolean(true),
+		RequiredBool:   aws.Bool(true),
 		OptionalStruct: &ConditionalStructShape{Name: aws.String("Name")},
 	}
 
@@ -70,7 +70,7 @@ func TestNestedMissingRequiredParameters(t *testing.T) {
 			"key1": {Name: aws.String("Name")},
 			"key2": {},
 		},
-		RequiredBool:   aws.Boolean(true),
+		RequiredBool:   aws.Bool(true),
 		OptionalStruct: &ConditionalStructShape{},
 	}
 

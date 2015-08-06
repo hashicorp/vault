@@ -72,7 +72,7 @@ type ClusterConfig struct {
 	DiscoverHosts     bool              // If set, gocql will attempt to automatically discover other members of the Cassandra cluster (default: false)
 	MaxPreparedStmts  int               // Sets the maximum cache size for prepared statements globally for gocql (default: 1000)
 	MaxRoutingKeyInfo int               // Sets the maximum cache size for query info about statements for each session (default: 1000)
-	PageSize          int               // Default page size to use for created sessions (default: 0)
+	PageSize          int               // Default page size to use for created sessions (default: 5000)
 	SerialConsistency SerialConsistency // Sets the consistency for the serial part of queries, values can be either SERIAL or LOCAL_SERIAL (default: unset)
 	Discovery         DiscoveryConfig
 	SslOpts           *SslOptions
@@ -93,6 +93,7 @@ func NewCluster(hosts ...string) *ClusterConfig {
 		DiscoverHosts:     false,
 		MaxPreparedStmts:  defaultMaxPreparedStmts,
 		MaxRoutingKeyInfo: 1000,
+		PageSize:          5000,
 		DefaultTimestamp:  true,
 	}
 	return cfg

@@ -1,7 +1,7 @@
 package gocql
 
 import (
-	"github.com/golang/snappy/snappy"
+	"github.com/golang/snappy"
 )
 
 type Compressor interface {
@@ -20,7 +20,7 @@ func (s SnappyCompressor) Name() string {
 }
 
 func (s SnappyCompressor) Encode(data []byte) ([]byte, error) {
-	return snappy.Encode(nil, data)
+	return snappy.Encode(nil, data), nil
 }
 
 func (s SnappyCompressor) Decode(data []byte) ([]byte, error) {

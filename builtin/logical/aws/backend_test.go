@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/aws-sdk-go/aws"
-	"github.com/hashicorp/aws-sdk-go/gen/ec2"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -92,11 +93,15 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 			time.Sleep(10 * time.Second)
 
 			// Build a client and verify that the credentials work
-			creds := aws.Creds(d.AccessKey, d.SecretKey, "")
-			client := ec2.New(creds, "us-east-1", nil)
+			creds := credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, "")
+			awsConfig := &aws.Config{
+				Credentials: creds,
+				Region:      aws.String("us-east-1"),
+			}
+			client := ec2.New(awsConfig)
 
 			log.Printf("[WARN] Verifying that the generated credentials work...")
-			_, err := client.DescribeInstances(&ec2.DescribeInstancesRequest{})
+			_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
 			if err != nil {
 				return err
 			}

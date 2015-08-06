@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"speter.net/go/exp/math/dec/inf"
+	"gopkg.in/inf.v0"
 	"testing"
 	"time"
 )

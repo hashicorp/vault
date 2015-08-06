@@ -41,7 +41,7 @@ func TestPagination(t *testing.T) {
 		reqNum++
 	})
 
-	params := &dynamodb.ListTablesInput{Limit: aws.Long(2)}
+	params := &dynamodb.ListTablesInput{Limit: aws.Int64(2)}
 	err := db.ListTablesPages(params, func(p *dynamodb.ListTablesOutput, last bool) bool {
 		numPages++
 		for _, t := range p.TableNames {
@@ -93,7 +93,7 @@ func TestPaginationEachPage(t *testing.T) {
 		reqNum++
 	})
 
-	params := &dynamodb.ListTablesInput{Limit: aws.Long(2)}
+	params := &dynamodb.ListTablesInput{Limit: aws.Int64(2)}
 	req, _ := db.ListTablesRequest(params)
 	err := req.EachPage(func(p interface{}, last bool) bool {
 		numPages++
@@ -138,7 +138,7 @@ func TestPaginationEarlyExit(t *testing.T) {
 		reqNum++
 	})
 
-	params := &dynamodb.ListTablesInput{Limit: aws.Long(2)}
+	params := &dynamodb.ListTablesInput{Limit: aws.Int64(2)}
 	err := db.ListTablesPages(params, func(p *dynamodb.ListTablesOutput, last bool) bool {
 		numPages++
 		if numPages == 2 {
@@ -189,10 +189,10 @@ func TestPaginationTruncation(t *testing.T) {
 
 	reqNum := &count
 	resps := []*s3.ListObjectsOutput{
-		{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{{Key: aws.String("Key1")}}},
-		{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{{Key: aws.String("Key2")}}},
-		{IsTruncated: aws.Boolean(false), Contents: []*s3.Object{{Key: aws.String("Key3")}}},
-		{IsTruncated: aws.Boolean(true), Contents: []*s3.Object{{Key: aws.String("Key4")}}},
+		{IsTruncated: aws.Bool(true), Contents: []*s3.Object{{Key: aws.String("Key1")}}},
+		{IsTruncated: aws.Bool(true), Contents: []*s3.Object{{Key: aws.String("Key2")}}},
+		{IsTruncated: aws.Bool(false), Contents: []*s3.Object{{Key: aws.String("Key3")}}},
+		{IsTruncated: aws.Bool(true), Contents: []*s3.Object{{Key: aws.String("Key4")}}},
 	}
 
 	client.Handlers.Send.Clear() // mock sending
@@ -218,7 +218,7 @@ func TestPaginationTruncation(t *testing.T) {
 	// Try again without truncation token at all
 	count = 0
 	resps[1].IsTruncated = nil
-	resps[2].IsTruncated = aws.Boolean(true)
+	resps[2].IsTruncated = aws.Bool(true)
 	results = []string{}
 	err = client.ListObjectsPages(params, func(p *s3.ListObjectsOutput, last bool) bool {
 		results = append(results, *p.Contents[0].Key)
@@ -265,7 +265,7 @@ func BenchmarkCodegenIterator(b *testing.B) {
 		reqNum++
 	})
 
-	input := &dynamodb.ListTablesInput{Limit: aws.Long(2)}
+	input := &dynamodb.ListTablesInput{Limit: aws.Int64(2)}
 	iter := func(fn func(*dynamodb.ListTablesOutput, bool) bool) error {
 		page, _ := db.ListTablesRequest(input)
 		for ; page != nil; page = page.NextPage() {
@@ -294,7 +294,7 @@ func BenchmarkEachPageIterator(b *testing.B) {
 		reqNum++
 	})
 
-	input := &dynamodb.ListTablesInput{Limit: aws.Long(2)}
+	input := &dynamodb.ListTablesInput{Limit: aws.Int64(2)}
 	for i := 0; i < b.N; i++ {
 		reqNum = 0
 		req, _ := db.ListTablesRequest(input)

@@ -65,7 +65,7 @@ func TestNoPopulateLocationConstraintIfProvided(t *testing.T) {
 }
 
 func TestNoPopulateLocationConstraintIfClassic(t *testing.T) {
-	s := s3.New(&aws.Config{Region: "us-east-1"})
+	s := s3.New(&aws.Config{Region: aws.String("us-east-1")})
 	req, _ := s.CreateBucketRequest(&s3.CreateBucketInput{
 		Bucket: aws.String("bucket"),
 	})

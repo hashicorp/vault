@@ -3,8 +3,9 @@ package aws
 import (
 	"fmt"
 
-	"github.com/hashicorp/aws-sdk-go/aws"
-	"github.com/hashicorp/aws-sdk-go/gen/iam"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -24,6 +25,10 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 		return nil, fmt.Errorf("error reading root configuration: %s", err)
 	}
 
-	creds := aws.Creds(config.AccessKey, config.SecretKey, "")
-	return iam.New(creds, config.Region, nil), nil
+	creds := credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, "")
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String(config.Region),
+	}
+	return iam.New(awsConfig), nil
 }
