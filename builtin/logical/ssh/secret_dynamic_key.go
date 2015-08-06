@@ -89,6 +89,15 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
 
+	installScriptRaw, ok := req.Secret.InternalData["install_script"]
+	if !ok {
+		return nil, fmt.Errorf("secret is missing internal data")
+	}
+	installScript := installScriptRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("secret is missing internal data")
+	}
+
 	portRaw, ok := req.Secret.InternalData["port"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -107,9 +116,15 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 
 	// Transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
 	dynamicPublicKeyFileName := uuid.GenerateUUID()
-	err = uploadPublicKeyScp(dynamicPublicKey, dynamicPublicKeyFileName, username, ip, port, hostKey.Key)
+	err = scpUpload(adminUser, ip, port, hostKey.Key, dynamicPublicKeyFileName, dynamicPublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("public key transfer failed: %s", err)
+		return nil, fmt.Errorf("error uploading pubic key: %s", err)
+	}
+
+	scriptFileName := fmt.Sprintf("%s.sh", dynamicPublicKeyFileName)
+	err = scpUpload(adminUser, ip, port, hostKey.Key, scriptFileName, installScript)
+	if err != nil {
+		return nil, fmt.Errorf("error uploading script file: %s", err)
 	}
 
 	// Remove the public key from authorized_keys file in target machine

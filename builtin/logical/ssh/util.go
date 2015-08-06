@@ -118,11 +118,11 @@ func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, 
 	defer session.Close()
 
 	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 
 	// Give execute permissions to install script, run and delete it.
-	scriptFileName := publicKeyFileName + ".sh"
 	chmodCmd := fmt.Sprintf("chmod +x %s", scriptFileName)
-	scriptCmd := fmt.Sprintf("./%s %s %s", scriptFileName, publicKeyFileName, authKeysFileName)
+	scriptCmd := fmt.Sprintf("./%s install %s %s", scriptFileName, publicKeyFileName, authKeysFileName)
 	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
 	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
@@ -143,15 +143,16 @@ func uninstallPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port
 	defer session.Close()
 
 	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
-	tempKeysFileName := fmt.Sprintf("/home/%s/temp_authorized_keys", username)
+	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 
-	// Commands to be run on target machine
-	grepCmd := fmt.Sprintf("grep -vFf %s %s > %s", publicKeyFileName, authKeysFileName, tempKeysFileName)
-	catCmdRemoveDuplicate := fmt.Sprintf("cat %s > %s", tempKeysFileName, authKeysFileName)
-	removeCmd := fmt.Sprintf("rm -f %s %s", tempKeysFileName, publicKeyFileName)
+	// Give execute permissions to install script, run and delete it.
+	chmodCmd := fmt.Sprintf("chmod +x %s", scriptFileName)
+	scriptCmd := fmt.Sprintf("./%s uninstall %s %s", scriptFileName, publicKeyFileName, authKeysFileName)
+	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
+	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
-	remoteCmd := fmt.Sprintf("%s;%s;%s", grepCmd, catCmdRemoveDuplicate, removeCmd)
-	session.Run(remoteCmd)
+	session.Run(targetCmd)
+
 	return nil
 }
 

@@ -51,7 +51,7 @@ func (c *SSHCommand) Run(args []string) int {
 	if len(input) == 1 {
 		u, err := user.Current()
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error fetching username: '%s'", err))
+			c.Ui.Error(fmt.Sprintf("Error fetching username: %s", err))
 		}
 		username = u.Username
 		ipAddr = input[0]
@@ -72,10 +72,10 @@ func (c *SSHCommand) Run(args []string) int {
 	if role == "" {
 		role, err = c.defaultRole(path, ip.String())
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error setting default role: '%s'", err))
+			c.Ui.Error(fmt.Sprintf("Error setting default role: %s", err))
 			return 1
 		}
-		c.Ui.Output(fmt.Sprintf("Vault SSH: Role:'%s'\n", role))
+		c.Ui.Output(fmt.Sprintf("Vault SSH: Role: %s\n", role))
 	}
 
 	data := map[string]interface{}{
@@ -149,15 +149,15 @@ func (c *SSHCommand) defaultRole(path, ip string) (string, error) {
 	}
 	secret, err := client.Logical().Write(path+"/lookup", data)
 	if err != nil {
-		return "", fmt.Errorf("Error finding roles for IP '%s':%s", ip, err)
+		return "", fmt.Errorf("Error finding roles for IP %s: %s", ip, err)
 
 	}
 	if secret == nil {
-		return "", fmt.Errorf("Error finding roles for IP '%s':%s", ip, err)
+		return "", fmt.Errorf("Error finding roles for IP %s: %s", ip, err)
 	}
 
 	if secret.Data["roles"] == nil {
-		return "", fmt.Errorf("No matching roles found for IP '%s'", ip)
+		return "", fmt.Errorf("No matching roles found for IP %s", ip)
 	}
 
 	if len(secret.Data["roles"].([]interface{})) == 1 {
@@ -168,7 +168,7 @@ func (c *SSHCommand) defaultRole(path, ip string) (string, error) {
 			roleNames += item.(string) + ", "
 		}
 		roleNames = strings.TrimRight(roleNames, ", ")
-		return "", fmt.Errorf("IP '%s' has multiple roles.\nSelect a role using '-role' option.\nPossible roles: [%s]\nNote that all roles may not be permitted, based on ACLs.", ip, roleNames)
+		return "", fmt.Errorf("IP %s has multiple roles.\nSelect a role using '-role' option.\nPossible roles: [%s]\nNote that all roles may not be permitted, based on ACLs.", ip, roleNames)
 	}
 }
 

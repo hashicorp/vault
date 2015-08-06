@@ -119,6 +119,7 @@ func (b *backend) pathCredsCreateWrite(
 			"host_key_name":      role.KeyName,
 			"dynamic_public_key": dynamicPublicKey,
 			"port":               role.Port,
+			"install_script":     role.InstallScript,
 		})
 	} else {
 		return nil, fmt.Errorf("key type unknown")
@@ -165,11 +166,12 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 
 	// Transfer the public key to target machine
 	publicKeyFileName := uuid.GenerateUUID()
-	scriptFileName := publicKeyFileName + ".sh"
 	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, publicKeyFileName, dynamicPublicKey)
 	if err != nil {
 		return "", "", fmt.Errorf("error uploading public key: %s", err)
 	}
+
+	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, scriptFileName, role.InstallScript)
 	if err != nil {
 		return "", "", fmt.Errorf("error uploading install script: %s", err)
