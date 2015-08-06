@@ -62,27 +62,27 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 	}
 
 	// Get information about this user
-	groupsResp, err := client.ListGroupsForUser(&iam.ListGroupsForUserRequest{
+	groupsResp, err := client.ListGroupsForUser(&iam.ListGroupsForUserInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Integer(1000),
+		MaxItems: aws.Int64(1000),
 	})
 	if err != nil {
 		return err
 	}
 	groups := groupsResp.Groups
 
-	policiesResp, err := client.ListUserPolicies(&iam.ListUserPoliciesRequest{
+	policiesResp, err := client.ListUserPolicies(&iam.ListUserPoliciesInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Integer(1000),
+		MaxItems: aws.Int64(1000),
 	})
 	if err != nil {
 		return err
 	}
 	policies := policiesResp.PolicyNames
 
-	keysResp, err := client.ListAccessKeys(&iam.ListAccessKeysRequest{
+	keysResp, err := client.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Integer(1000),
+		MaxItems: aws.Int64(1000),
 	})
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 
 	// Revoke all keys
 	for _, k := range keys {
-		err = client.DeleteAccessKey(&iam.DeleteAccessKeyRequest{
+		_, err = client.DeleteAccessKey(&iam.DeleteAccessKeyInput{
 			AccessKeyID: k.AccessKeyID,
 			UserName:    aws.String(username),
 		})
@@ -102,9 +102,9 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 
 	// Delete any policies
 	for _, p := range policies {
-		err = client.DeleteUserPolicy(&iam.DeleteUserPolicyRequest{
+		_, err = client.DeleteUserPolicy(&iam.DeleteUserPolicyInput{
 			UserName:   aws.String(username),
-			PolicyName: aws.String(p),
+			PolicyName: p,
 		})
 		if err != nil {
 			return err
@@ -113,7 +113,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 
 	// Remove the user from all their groups
 	for _, g := range groups {
-		err = client.RemoveUserFromGroup(&iam.RemoveUserFromGroupRequest{
+		_, err = client.RemoveUserFromGroup(&iam.RemoveUserFromGroupInput{
 			GroupName: g.GroupName,
 			UserName:  aws.String(username),
 		})
@@ -123,7 +123,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 	}
 
 	// Delete the user
-	err = client.DeleteUser(&iam.DeleteUserRequest{
+	_, err = client.DeleteUser(&iam.DeleteUserInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {

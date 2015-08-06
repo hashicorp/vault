@@ -41,10 +41,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	if !ok {
 		secret_key = ""
 	}
-    session_token, ok := conf["session_token"]
-    if !ok {
-            session_token = ""
-    }
+	session_token, ok := conf["session_token"]
+	if !ok {
+		session_token = ""
+	}
 	region, ok := conf["region"]
 	if !ok {
 		region = os.Getenv("AWS_DEFAULT_REGION")
@@ -66,7 +66,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 
 	s3conn := s3.New(&aws.Config{
 		Credentials: creds,
-		Region:      region,
+		Region:      aws.String(region),
 	})
 
 	_, err := s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
