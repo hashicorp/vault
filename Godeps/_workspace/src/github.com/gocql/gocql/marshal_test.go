@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"speter.net/go/exp/math/dec/inf"
+	"gopkg.in/inf.v0"
 )
 
 var marshalTests = []struct {
@@ -792,5 +792,71 @@ func TestMarshalPointer(t *testing.T) {
 	}
 	if len(data) != 1 || data[0] != 42 {
 		t.Errorf("Pointer marshaling failed. Expected %+v, got %+v", []byte{42}, data)
+	}
+}
+
+func TestMarshalTimestamp(t *testing.T) {
+	var marshalTimestampTests = []struct {
+		Info  TypeInfo
+		Data  []byte
+		Value interface{}
+	}{
+		{
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte("\x00\x00\x01\x40\x77\x16\xe1\xb8"),
+			time.Date(2013, time.August, 13, 9, 52, 3, 0, time.UTC),
+		},
+		{
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte("\x00\x00\x01\x40\x77\x16\xe1\xb8"),
+			int64(1376387523000),
+		},
+		{
+			// 9223372036854 is the maximum time representable in ms since the epoch
+			// with int64 if using UnixNano to convert
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte("\x00\x00\x08\x63\x7b\xd0\x5a\xf6"),
+			time.Date(2262, time.April, 11, 23, 47, 16, 854775807, time.UTC),
+		},
+		{
+			// One nanosecond after causes overflow when using UnixNano
+			// Instead it should resolve to the same time in ms
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte("\x00\x00\x08\x63\x7b\xd0\x5a\xf6"),
+			time.Date(2262, time.April, 11, 23, 47, 16, 854775808, time.UTC),
+		},
+		{
+			// -9223372036855 is the minimum time representable in ms since the epoch
+			// with int64 if using UnixNano to convert
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte("\xff\xff\xf7\x9c\x84\x2f\xa5\x09"),
+			time.Date(1677, time.September, 21, 00, 12, 43, 145224192, time.UTC),
+		},
+		{
+			// One nanosecond earlier causes overflow when using UnixNano
+			// it should resolve to the same time in ms
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte("\xff\xff\xf7\x9c\x84\x2f\xa5\x09"),
+			time.Date(1677, time.September, 21, 00, 12, 43, 145224191, time.UTC),
+		},
+		{
+			// Store the zero time as a blank slice
+			NativeType{proto: 2, typ: TypeTimestamp},
+			[]byte{},
+			time.Time{},
+		},
+	}
+
+	for i, test := range marshalTimestampTests {
+		t.Log(i, test)
+		data, err := Marshal(test.Info, test.Value)
+		if err != nil {
+			t.Errorf("marshalTest[%d]: %v", i, err)
+			continue
+		}
+		if !bytes.Equal(data, test.Data) {
+			t.Errorf("marshalTest[%d]: expected %x (%v), got %x (%v) for time %s", i,
+				test.Data, decBigInt(test.Data), data, decBigInt(data), test.Value)
+		}
 	}
 }
