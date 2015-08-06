@@ -14,10 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/internal/protocol/rest"
-
-	"github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -43,8 +42,8 @@ type signer struct {
 	Credentials *credentials.Credentials
 	Query       url.Values
 	Body        io.ReadSeeker
-	Debug       uint
-	Logger      io.Writer
+	Debug       aws.LogLevelType
+	Logger      aws.Logger
 
 	isPresign          bool
 	formattedTime      string
@@ -73,7 +72,7 @@ func Sign(req *aws.Request) {
 
 	region := req.Service.SigningRegion
 	if region == "" {
-		region = req.Service.Config.Region
+		region = aws.StringValue(req.Service.Config.Region)
 	}
 
 	name := req.Service.SigningName
@@ -90,7 +89,7 @@ func Sign(req *aws.Request) {
 		ServiceName: name,
 		Region:      region,
 		Credentials: req.Service.Config.Credentials,
-		Debug:       req.Service.Config.LogLevel,
+		Debug:       req.Service.Config.LogLevel.Value(),
 		Logger:      req.Service.Config.Logger,
 	}
 
@@ -138,28 +137,33 @@ func (v4 *signer) sign() error {
 
 	v4.build()
 
-	if v4.Debug > 0 {
+	if v4.Debug.Matches(aws.LogDebugWithSigning) {
 		v4.logSigningInfo()
 	}
 
 	return nil
 }
 
+const logSignInfoMsg = `DEBUG: Request Signiture:
+---[ CANONICAL STRING  ]-----------------------------
+%s
+---[ STRING TO SIGN ]--------------------------------
+%s%s
+-----------------------------------------------------`
+const logSignedURLMsg = `
+---[ SIGNED URL ]------------------------------------
+%s`
+
 func (v4 *signer) logSigningInfo() {
-	out := v4.Logger
-	fmt.Fprintf(out, "---[ CANONICAL STRING  ]-----------------------------\n")
-	fmt.Fprintln(out, v4.canonicalString)
-	fmt.Fprintf(out, "---[ STRING TO SIGN ]--------------------------------\n")
-	fmt.Fprintln(out, v4.stringToSign)
+	signedURLMsg := ""
 	if v4.isPresign {
-		fmt.Fprintf(out, "---[ SIGNED URL ]--------------------------------\n")
-		fmt.Fprintln(out, v4.Request.URL)
+		signedURLMsg = fmt.Sprintf(logSignedURLMsg, v4.Request.URL.String())
 	}
-	fmt.Fprintf(out, "-----------------------------------------------------\n")
+	msg := fmt.Sprintf(logSignInfoMsg, v4.canonicalString, v4.stringToSign, signedURLMsg)
+	v4.Logger.Log(msg)
 }
 
 func (v4 *signer) build() {
-
 	v4.buildTime()             // no depends
 	v4.buildCredentialString() // no depends
 	if v4.isPresign {

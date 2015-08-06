@@ -29,7 +29,7 @@ type Request struct {
 	Data         interface{}
 	RequestID    string
 	RetryCount   uint
-	Retryable    SettableBool
+	Retryable    *bool
 	RetryDelay   time.Duration
 
 	built bool
@@ -89,7 +89,7 @@ func NewRequest(service *Service, operation *Operation, params interface{}, data
 
 // WillRetry returns if the request's can be retried.
 func (r *Request) WillRetry() bool {
-	return r.Error != nil && r.Retryable.Get() && r.RetryCount < r.Service.MaxRetries()
+	return r.Error != nil && BoolValue(r.Retryable) && r.RetryCount < r.Service.MaxRetries()
 }
 
 // ParamsFilled returns if the request's parameters have been populated
@@ -183,12 +183,12 @@ func (r *Request) Send() error {
 			return r.Error
 		}
 
-		if r.Retryable.Get() {
+		if BoolValue(r.Retryable) {
 			// Re-seek the body back to the original point in for a retry so that
 			// send will send the body's contents again in the upcoming request.
 			r.Body.Seek(r.bodyStart, 0)
 		}
-		r.Retryable.Reset()
+		r.Retryable = nil
 
 		r.Handlers.Send.Run(r)
 		if r.Error != nil {
