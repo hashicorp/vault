@@ -86,8 +86,8 @@
 			"Rev": "604ed5785183e59ae2789449d89e73f3a2a77987"
 		},
 		{
-			"ImportPath": "github.com/golang/snappy/snappy",
-			"Rev": "eaa750b9bf4dcb7cb20454be850613b66cda3273"
+			"ImportPath": "github.com/golang/snappy",
+			"Rev": "723cc1e459b8eea2dea4583200fd60757d40097a"
 		},
 		{
 			"ImportPath": "github.com/google/go-github/github",
