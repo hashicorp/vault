@@ -68,7 +68,7 @@ type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
 type RollbackFunc func(*logical.Request, string, interface{}) error
 
 // logical.Backend impl.
-func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *Backend) HandleRequest(req *logical.Request) (r *logical.Response, e error) {
 	b.once.Do(b.init)
 
 	// Check for special cased global operations. These don't route
@@ -119,11 +119,26 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		return nil, logical.ErrUnsupportedOperation
 	}
 
+	if req.Operation == logical.WriteOperation {
+		defer func() {
+			if rec := recover(); rec != nil {
+				switch rec.(type) {
+				default:
+					panic(rec)
+				case FieldDataPanic:
+					r = logical.ErrorResponse(fmt.Sprintf("Error parsing field: %s", rec.(FieldDataPanic).Field))
+				}
+			}
+		}()
+	}
+
 	// Call the callback with the request and the data
-	return callback(req, &FieldData{
+	r, e = callback(req, &FieldData{
 		Raw:    raw,
 		Schema: path.Fields,
 	})
+
+	return r, e
 }
 
 // logical.Backend impl.
