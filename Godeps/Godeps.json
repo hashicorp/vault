@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.4.2",
-	"Packages": [
-		"."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -99,11 +96,6 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/aws-sdk-go/aws",
-			"Comment": "tf0.4.0-3-ge6ea019",
-			"Rev": "e6ea0192eee4640f32ec73c0cbb71f63e4f2b65a"
-		},
-		{
-			"ImportPath": "github.com/hashicorp/aws-sdk-go/gen/ec2",
 			"Comment": "tf0.4.0-3-ge6ea019",
 			"Rev": "e6ea0192eee4640f32ec73c0cbb71f63e4f2b65a"
 		},
