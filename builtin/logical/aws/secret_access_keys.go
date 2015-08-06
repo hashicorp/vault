@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/hashicorp/aws-sdk-go/aws"
-	"github.com/hashicorp/aws-sdk-go/gen/iam"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -60,7 +60,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = client.CreateUser(&iam.CreateUserRequest{
+	_, err = client.CreateUser(&iam.CreateUserInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
@@ -69,7 +69,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Add the user to all the groups
-	err = client.PutUserPolicy(&iam.PutUserPolicyRequest{
+	_, err = client.PutUserPolicy(&iam.PutUserPolicyInput{
 		UserName:       aws.String(username),
 		PolicyName:     aws.String(policyName),
 		PolicyDocument: aws.String(policy),
@@ -80,7 +80,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the keys
-	keyResp, err := client.CreateAccessKey(&iam.CreateAccessKeyRequest{
+	keyResp, err := client.CreateAccessKey(&iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {

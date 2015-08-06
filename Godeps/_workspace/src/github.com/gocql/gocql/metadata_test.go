@@ -330,6 +330,14 @@ func TestCompileMetadata(t *testing.T) {
 		ColumnMetadata{
 			Keyspace:       "V2Keyspace",
 			Table:          "Table1",
+			Name:           "KEY1",
+			Kind:           PARTITION_KEY,
+			ComponentIndex: 0,
+			Validator:      "org.apache.cassandra.db.marshal.UTF8Type",
+		},
+		ColumnMetadata{
+			Keyspace:       "V2Keyspace",
+			Table:          "Table1",
 			Name:           "Key1",
 			Kind:           PARTITION_KEY,
 			ComponentIndex: 0,
@@ -383,6 +391,11 @@ func TestCompileMetadata(t *testing.T) {
 					},
 					ClusteringColumns: []*ColumnMetadata{},
 					Columns: map[string]*ColumnMetadata{
+						"KEY1": &ColumnMetadata{
+							Name: "KEY1",
+							Type: NativeType{typ: TypeVarchar},
+							Kind: PARTITION_KEY,
+						},
 						"Key1": &ColumnMetadata{
 							Name: "Key1",
 							Type: NativeType{typ: TypeVarchar},

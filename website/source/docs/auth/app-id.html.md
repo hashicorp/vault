@@ -109,3 +109,11 @@ This means that if a client authenticates and provide both "foo" and "bar",
 then the app ID will authenticate that client with the policy "root".
 
 In practice, both the user and app ID are likely hard-to-guess UUID-like values.
+
+Note that it is possible to authorize multiple app IDs with each
+user ID by writing them as comma-separated values to the user ID mapping:
+
+```
+$ vault write auth/app-id/map/user-id/bar value=foo,baz cidr_block=10.0.0.0/16
+...
+```

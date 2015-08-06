@@ -3,6 +3,7 @@ package server
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestLoadConfigFile(t *testing.T) {
@@ -36,6 +37,11 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 
 		DisableMlock: true,
+
+		MaxLeaseDuration: 10 * time.Hour,
+		MaxLeaseDurationRaw: "10h",
+		DefaultLeaseDuration: 10 * time.Hour,
+		DefaultLeaseDurationRaw: "10h",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
@@ -70,6 +76,11 @@ func TestLoadConfigFile_json(t *testing.T) {
 			StatsdAddr: "",
 			DisableHostname: false,
 		},
+
+		MaxLeaseDuration: 10 * time.Hour,
+		MaxLeaseDurationRaw: "10h",
+		DefaultLeaseDuration: 10 * time.Hour,
+		DefaultLeaseDurationRaw: "10h",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
@@ -117,6 +128,8 @@ func TestLoadConfigDir(t *testing.T) {
 	}
 
 	expected := &Config{
+		DisableMlock: true,
+
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
@@ -138,6 +151,9 @@ func TestLoadConfigDir(t *testing.T) {
 			StatsdAddr: "baz",
 			DisableHostname: true,
 		},
+
+		MaxLeaseDuration: 10 * time.Hour,
+		DefaultLeaseDuration: 10 * time.Hour,
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)

@@ -36,6 +36,7 @@ type TableMetadata struct {
 	PartitionKey      []*ColumnMetadata
 	ClusteringColumns []*ColumnMetadata
 	Columns           map[string]*ColumnMetadata
+	OrderedColumns    []string
 }
 
 // schema metadata for a column
@@ -70,6 +71,7 @@ const (
 	PARTITION_KEY  = "partition_key"
 	CLUSTERING_KEY = "clustering_key"
 	REGULAR        = "regular"
+	COMPACT_VALUE  = "compact_value"
 )
 
 // default alias values
@@ -177,6 +179,7 @@ func compileMetadata(
 
 		table := keyspace.Tables[columns[i].Table]
 		table.Columns[columns[i].Name] = &columns[i]
+		table.OrderedColumns = append(table.OrderedColumns, columns[i].Name)
 	}
 
 	if protoVersion == 1 {
@@ -302,13 +305,14 @@ func compileV2Metadata(tables []TableMetadata) {
 	for i := range tables {
 		table := &tables[i]
 
-		partitionColumnCount := countColumnsOfKind(table.Columns, PARTITION_KEY)
-		table.PartitionKey = make([]*ColumnMetadata, partitionColumnCount)
+		keyValidatorParsed := parseType(table.KeyValidator)
+		table.PartitionKey = make([]*ColumnMetadata, len(keyValidatorParsed.types))
 
-		clusteringColumnCount := countColumnsOfKind(table.Columns, CLUSTERING_KEY)
+		clusteringColumnCount := componentColumnCountOfType(table.Columns, CLUSTERING_KEY)
 		table.ClusteringColumns = make([]*ColumnMetadata, clusteringColumnCount)
 
-		for _, column := range table.Columns {
+		for _, columnName := range table.OrderedColumns {
+			column := table.Columns[columnName]
 			if column.Kind == PARTITION_KEY {
 				table.PartitionKey[column.ComponentIndex] = column
 			} else if column.Kind == CLUSTERING_KEY {
@@ -320,14 +324,14 @@ func compileV2Metadata(tables []TableMetadata) {
 }
 
 // returns the count of coluns with the given "kind" value.
-func countColumnsOfKind(columns map[string]*ColumnMetadata, kind string) int {
-	count := 0
+func componentColumnCountOfType(columns map[string]*ColumnMetadata, kind string) int {
+	maxComponentIndex := -1
 	for _, column := range columns {
-		if column.Kind == kind {
-			count++
+		if column.Kind == kind && column.ComponentIndex > maxComponentIndex {
+			maxComponentIndex = column.ComponentIndex
 		}
 	}
-	return count
+	return maxComponentIndex + 1
 }
 
 // query only for the keyspace metadata for the specified keyspace from system.schema_keyspace

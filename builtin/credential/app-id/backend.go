@@ -207,4 +207,8 @@ ID policies.
 The user ID can be any value (just like the app ID), however it is
 generally a value unique to a machine, such as a MAC address or instance ID,
 or a value hashed from these unique values.
+
+(Note that it is also possible to authorize multiple app IDs with each
+user ID by writing them as comma-separated values to the map/user-id/<user-id>
+path.)
 `

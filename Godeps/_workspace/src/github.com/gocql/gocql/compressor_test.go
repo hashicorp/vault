@@ -4,8 +4,9 @@ package gocql
 
 import (
 	"bytes"
-	"github.com/golang/snappy/snappy"
 	"testing"
+
+	"github.com/golang/snappy"
 )
 
 func TestSnappyCompressor(t *testing.T) {
@@ -16,9 +17,8 @@ func TestSnappyCompressor(t *testing.T) {
 
 	str := "My Test String"
 	//Test Encoding
-	if expected, err := snappy.Encode(nil, []byte(str)); err != nil {
-		t.Fatalf("failed to encode '%v' with error %v", str, err)
-	} else if res, err := c.Encode([]byte(str)); err != nil {
+	expected := snappy.Encode(nil, []byte(str))
+	if res, err := c.Encode([]byte(str)); err != nil {
 		t.Fatalf("failed to encode '%v' with error %v", str, err)
 	} else if bytes.Compare(expected, res) != 0 {
 		t.Fatal("failed to match the expected encoded value with the result encoded value.")

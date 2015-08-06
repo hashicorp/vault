@@ -30,7 +30,6 @@ var _ = util.Trim("")
 var _ = url.Values{}
 var _ = io.EOF
 
-// InputService1ProtocolTest is a client for InputService1ProtocolTest.
 type InputService1ProtocolTest struct {
 	*aws.Service
 }
@@ -142,7 +141,6 @@ type metadataInputService1TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService2ProtocolTest is a client for InputService2ProtocolTest.
 type InputService2ProtocolTest struct {
 	*aws.Service
 }
@@ -224,7 +222,6 @@ type metadataInputService2TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService3ProtocolTest is a client for InputService3ProtocolTest.
 type InputService3ProtocolTest struct {
 	*aws.Service
 }
@@ -314,7 +311,6 @@ type metadataInputService3TestShapeSubStructure struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService4ProtocolTest is a client for InputService4ProtocolTest.
 type InputService4ProtocolTest struct {
 	*aws.Service
 }
@@ -404,7 +400,6 @@ type metadataInputService4TestShapeSubStructure struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService5ProtocolTest is a client for InputService5ProtocolTest.
 type InputService5ProtocolTest struct {
 	*aws.Service
 }
@@ -480,7 +475,6 @@ type metadataInputService5TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService6ProtocolTest is a client for InputService6ProtocolTest.
 type InputService6ProtocolTest struct {
 	*aws.Service
 }
@@ -556,7 +550,6 @@ type metadataInputService6TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService7ProtocolTest is a client for InputService7ProtocolTest.
 type InputService7ProtocolTest struct {
 	*aws.Service
 }
@@ -632,7 +625,6 @@ type metadataInputService7TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService8ProtocolTest is a client for InputService8ProtocolTest.
 type InputService8ProtocolTest struct {
 	*aws.Service
 }
@@ -708,7 +700,6 @@ type metadataInputService8TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService9ProtocolTest is a client for InputService9ProtocolTest.
 type InputService9ProtocolTest struct {
 	*aws.Service
 }
@@ -794,7 +785,6 @@ type metadataInputService9TestShapeSingleFieldStruct struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService10ProtocolTest is a client for InputService10ProtocolTest.
 type InputService10ProtocolTest struct {
 	*aws.Service
 }
@@ -882,7 +872,6 @@ type metadataInputService10TestShapeStructureShape struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService11ProtocolTest is a client for InputService11ProtocolTest.
 type InputService11ProtocolTest struct {
 	*aws.Service
 }
@@ -958,7 +947,6 @@ type metadataInputService11TestShapeInputShape struct {
 	SDKShapeTraits bool `locationName:"OperationRequest" type:"structure" xmlURI:"https://foo/"`
 }
 
-// InputService12ProtocolTest is a client for InputService12ProtocolTest.
 type InputService12ProtocolTest struct {
 	*aws.Service
 }
@@ -1034,7 +1022,6 @@ type metadataInputService12TestShapeInputShape struct {
 	SDKShapeTraits bool `type:"structure" payload:"Foo"`
 }
 
-// InputService13ProtocolTest is a client for InputService13ProtocolTest.
 type InputService13ProtocolTest struct {
 	*aws.Service
 }
@@ -1144,7 +1131,6 @@ type metadataInputService13TestShapeInputShape struct {
 	SDKShapeTraits bool `type:"structure" payload:"Foo"`
 }
 
-// InputService14ProtocolTest is a client for InputService14ProtocolTest.
 type InputService14ProtocolTest struct {
 	*aws.Service
 }
@@ -1298,7 +1284,6 @@ type metadataInputService14TestShapeInputShape struct {
 	SDKShapeTraits bool `type:"structure" payload:"Foo"`
 }
 
-// InputService15ProtocolTest is a client for InputService15ProtocolTest.
 type InputService15ProtocolTest struct {
 	*aws.Service
 }
@@ -1396,7 +1381,6 @@ type metadataInputService15TestShapeInputShape struct {
 	SDKShapeTraits bool `type:"structure" payload:"Grant"`
 }
 
-// InputService16ProtocolTest is a client for InputService16ProtocolTest.
 type InputService16ProtocolTest struct {
 	*aws.Service
 }
@@ -1474,7 +1458,6 @@ type metadataInputService16TestShapeInputShape struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService17ProtocolTest is a client for InputService17ProtocolTest.
 type InputService17ProtocolTest struct {
 	*aws.Service
 }
@@ -1584,7 +1567,6 @@ type metadataInputService17TestShapeInputShape struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService18ProtocolTest is a client for InputService18ProtocolTest.
 type InputService18ProtocolTest struct {
 	*aws.Service
 }
@@ -1846,7 +1828,6 @@ type metadataInputService18TestShapeRecursiveStructType struct {
 	SDKShapeTraits bool `type:"structure"`
 }
 
-// InputService19ProtocolTest is a client for InputService19ProtocolTest.
 type InputService19ProtocolTest struct {
 	*aws.Service
 }
@@ -1985,10 +1966,10 @@ func TestInputService2ProtocolTestSerializeOtherScalarTypesCase1(t *testing.T) {
 	svc.Endpoint = "https://test"
 
 	input := &InputService2TestShapeInputShape{
-		First:  aws.Boolean(true),
-		Fourth: aws.Long(3),
-		Second: aws.Boolean(false),
-		Third:  aws.Double(1.2),
+		First:  aws.Bool(true),
+		Fourth: aws.Int64(3),
+		Second: aws.Bool(false),
+		Third:  aws.Float64(1.2),
 	}
 	req, _ := svc.InputService2TestCaseOperation1Request(input)
 	r := req.HTTPRequest

@@ -88,8 +88,9 @@ of the cookie should be "token" and the value should be the token.
         <span class="param">lease</span>
         <span class="param-flags">optional</span>
         The lease period of the token, provided as "1h", where hour is
-        the largest suffix. If not provided, the token is valid for the default
-        lease duration (30 days), or indefinitely if the root policy is used.
+        the largest suffix. If not provided, the token is valid for the
+        [default lease duration](/docs/config/index.html), or
+        indefinitely if the root policy is used.
       </li>
       <li>
         <span class="param">display_name</span>

@@ -156,8 +156,13 @@ func buildQueryString(r *aws.Request, v reflect.Value, name string, query url.Va
 func updatePath(url *url.URL, urlPath string) {
 	scheme, query := url.Scheme, url.RawQuery
 
+	hasSlash := strings.HasSuffix(urlPath, "/")
+
 	// clean up path
 	urlPath = path.Clean(urlPath)
+	if hasSlash && !strings.HasSuffix(urlPath, "/") {
+		urlPath += "/"
+	}
 
 	// get formatted URL minus scheme so we can build this into Opaque
 	url.Scheme, url.Path, url.RawQuery = "", "", ""
