@@ -47,3 +47,6 @@ Vagrantfile
 .DS_Store
 .idea
 
+# Editor backups
+*~
+*.sw[a-z]
