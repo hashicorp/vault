@@ -5,6 +5,28 @@ import (
 	"testing"
 )
 
+func TestFieldDataGetPanic(t *testing.T) {
+	data := &FieldData{
+		Raw:    map[string]interface{}{"foo": "false3"},
+		Schema: map[string]*FieldSchema{"foo": &FieldSchema{Type: TypeBool}},
+	}
+
+	defer func() {
+		r := recover()
+		switch r.(type) {
+		case FieldDataPanic:
+			// Expected
+		case nil:
+			t.Error("Should have gotten a panic.")
+		default:
+			t.Error("Unexpected panic received.")
+		}
+	}()
+
+	// Should panic!
+	data.Get("foo")
+}
+
 func TestFieldDataGet(t *testing.T) {
 	cases := map[string]struct {
 		Schema map[string]*FieldSchema

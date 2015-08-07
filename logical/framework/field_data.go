@@ -18,6 +18,11 @@ type FieldData struct {
 	Schema map[string]*FieldSchema
 }
 
+type FieldDataPanic struct {
+	Field string
+	Error error
+}
+
 // Get gets the value for the given field. If the key is an invalid field,
 // FieldData will panic. If you want a safer version of this method, use
 // GetOk. If the field k is not set, the default value (if set) will be
@@ -46,7 +51,7 @@ func (d *FieldData) GetOk(k string) (interface{}, bool) {
 
 	result, ok, err := d.GetOkErr(k)
 	if err != nil {
-		panic(fmt.Sprintf("error reading %s: %s", k, err))
+		panic(FieldDataPanic{k, err})
 	}
 
 	if ok && result == nil {
