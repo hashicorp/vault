@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"errors"
+        "time"
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
@@ -48,7 +49,8 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			t.Fatalf("bad json: %s", err)
 		}
 
-		expectedjson.Time = actualjson.Time
+		expectedjson.Time = time.Now().Format(time.RFC3339)
+		actualjson.Time = expectedjson.Time
 
 		expectedBytes, err := json.Marshal(expectedjson)
 		if err != nil {
