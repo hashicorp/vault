@@ -131,6 +131,7 @@ func handleSysMount(
 			"description": req.Description,
 		},
 	}))
+
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -149,6 +150,7 @@ func handleSysUnmount(
 		Path:       "sys/mounts/" + path,
 		Connection: getConnection(r),
 	}))
+	
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
