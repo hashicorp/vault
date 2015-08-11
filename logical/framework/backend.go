@@ -118,12 +118,20 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	if !ok {
 		return nil, logical.ErrUnsupportedOperation
 	}
+	
+	fd := FieldData{
+		Raw:    raw,
+		Schema: path.Fields}
+	
+	if req.Operation != logical.HelpOperation {
+	    err := fd.Validate()
+	    if err != nil {
+	        return nil, err
+	    }
+	}
 
 	// Call the callback with the request and the data
-	return callback(req, &FieldData{
-		Raw:    raw,
-		Schema: path.Fields,
-	})
+	return callback(req, &fd)
 }
 
 // logical.Backend impl.
