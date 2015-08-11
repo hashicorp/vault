@@ -371,9 +371,21 @@ func (b *SystemBackend) handleMount(
 	// Attempt mount
 	if err := b.Core.mount(me); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: mount %#v failed: %v", me, err)
+		return handleError(err)
+	}
+
+	return nil, nil
+}
+
+// used to intercept an HTTPCodedError so it goes back to callee
+func handleError(
+	err error) (*logical.Response, error) {
+	switch err.(type) {
+	case logical.HTTPCodedError:
+		return logical.ErrorResponse(err.Error()), err
+	default:
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	return nil, nil
 }
 
 // handleUnmount is used to unmount a path
@@ -387,7 +399,7 @@ func (b *SystemBackend) handleUnmount(
 	// Attempt unmount
 	if err := b.Core.unmount(suffix); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: unmount '%s' failed: %v", suffix, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 
 	return nil, nil
@@ -408,7 +420,7 @@ func (b *SystemBackend) handleRemount(
 	// Attempt remount
 	if err := b.Core.remount(fromPath, toPath); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 
 	return nil, nil
@@ -428,7 +440,7 @@ func (b *SystemBackend) handleRenew(
 	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: renew '%s' failed: %v", leaseID, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return resp, err
 }
@@ -442,7 +454,7 @@ func (b *SystemBackend) handleRevoke(
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: revoke '%s' failed: %v", leaseID, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -456,7 +468,7 @@ func (b *SystemBackend) handleRevokePrefix(
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.RevokePrefix(prefix); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: revoke prefix '%s' failed: %v", prefix, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -504,7 +516,7 @@ func (b *SystemBackend) handleEnableAuth(
 	// Attempt enabling
 	if err := b.Core.enableCredential(me); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: enable auth %#v failed: %v", me, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -520,7 +532,7 @@ func (b *SystemBackend) handleDisableAuth(
 	// Attempt disable
 	if err := b.Core.disableCredential(suffix); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: disable auth '%s' failed: %v", suffix, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -543,7 +555,7 @@ func (b *SystemBackend) handlePolicyRead(
 
 	policy, err := b.Core.policy.GetPolicy(name)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 
 	if policy == nil {
@@ -567,7 +579,7 @@ func (b *SystemBackend) handlePolicySet(
 	// Validate the rules parse
 	parse, err := Parse(rules)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 
 	// Override the name
@@ -575,7 +587,7 @@ func (b *SystemBackend) handlePolicySet(
 
 	// Update the policy
 	if err := b.Core.policy.SetPolicy(parse); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -585,7 +597,7 @@ func (b *SystemBackend) handlePolicyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	if err := b.Core.policy.DeletePolicy(name); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -640,7 +652,7 @@ func (b *SystemBackend) handleEnableAudit(
 	// Attempt enabling
 	if err := b.Core.enableAudit(me); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: enable audit %#v failed: %v", me, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -653,7 +665,7 @@ func (b *SystemBackend) handleDisableAudit(
 	// Attempt disable
 	if err := b.Core.disableAudit(path); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: disable audit '%s' failed: %v", path, err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -673,7 +685,7 @@ func (b *SystemBackend) handleRawRead(
 
 	entry, err := b.Core.barrier.Get(path)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	if entry == nil {
 		return nil, nil
@@ -724,7 +736,7 @@ func (b *SystemBackend) handleRawDelete(
 	}
 
 	if err := b.Core.barrier.Delete(path); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	return nil, nil
 }
@@ -754,7 +766,7 @@ func (b *SystemBackend) handleRotate(
 	newTerm, err := b.Core.barrier.Rotate()
 	if err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: failed to create new encryption key: %v", err)
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return handleError(err)
 	}
 	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
 
