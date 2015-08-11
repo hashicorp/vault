@@ -77,6 +77,42 @@ func TestBackendHandleRequest(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_badwrite(t *testing.T) {
+	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"value": data.Get("value").(bool),
+			},
+		}, nil
+	}
+
+	b := &Backend{
+		Paths: []*Path{
+			&Path{
+				Pattern: "foo/bar",
+				Fields: map[string]*FieldSchema{
+					"value": &FieldSchema{Type: TypeBool},
+				},
+				Callbacks: map[logical.Operation]OperationFunc{
+					logical.WriteOperation: callback,
+				},
+			},
+		},
+	}
+
+	_, err := b.HandleRequest(&logical.Request{
+		Operation: logical.WriteOperation,
+		Path:      "foo/bar",
+		Data:      map[string]interface{}{"value": "3false3"},
+	})
+	
+
+	if err == nil {
+		t.Fatalf("should have thrown a conversion error")
+	}
+
+}
+
 func TestBackendHandleRequest_404(t *testing.T) {
 	callback := func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
