@@ -47,3 +47,4 @@ Vagrantfile
 .DS_Store
 .idea
 
+dist/*
