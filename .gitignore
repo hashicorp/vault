@@ -48,3 +48,7 @@ Vagrantfile
 .idea
 
 dist/*
+
+# Editor backups
+*~
+*.sw[a-z]
