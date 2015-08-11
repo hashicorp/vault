@@ -12,6 +12,9 @@ import (
 // with `sys.Logout()`.
 func (c *Sys) Login(vars map[string]string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/login")
+	if _, ok := vars["app_id"]; ok {
+		r = c.c.NewRequest("POST", "/v1/auth/app-id/login")
+	}
 	if err := r.SetJSONBody(vars); err != nil {
 		return err
 	}
