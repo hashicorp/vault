@@ -5,6 +5,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	VerifyEchoRequest  = "verify-echo-request"
+	VerifyEchoResponse = "verify-echo-response"
+)
+
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "verify",
@@ -24,6 +29,15 @@ func pathVerify(b *backend) *framework.Path {
 
 func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otp := d.Get("otp").(string)
+
+	if otp == VerifyEchoRequest {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"message": VerifyEchoResponse,
+			},
+		}, nil
+	}
+
 	otpSalted := b.salt.SaltID(otp)
 	entry, err := req.Storage.Get("otp/" + otpSalted)
 	if err != nil {
