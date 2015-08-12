@@ -156,6 +156,11 @@ func respondError(w http.ResponseWriter, status int, err error) {
 		status = http.StatusServiceUnavailable
 	}
 
+	// Allow HTTPCoded error passthrough to specify a code
+	if t, ok := err.(logical.HTTPCodedError); ok {
+		status = t.Code()
+	}
+
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
 

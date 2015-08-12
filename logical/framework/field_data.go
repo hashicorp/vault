@@ -18,6 +18,33 @@ type FieldData struct {
 	Schema map[string]*FieldSchema
 }
 
+// Cycle through raw data and validate conversions in
+// the schema, so we don't get an error/panic later when
+// trying to get data out.  Data not in the schema is not
+// an error at this point, so we don't worry about it.
+func (d *FieldData) Validate() error {
+	for field, value := range d.Raw {
+
+		schema, ok := d.Schema[field]
+		if !ok {
+			continue
+		}
+
+		switch schema.Type {
+		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString:
+			_, _, err := d.getPrimitive(field, schema)
+			if err != nil {
+				return fmt.Errorf("Error converting input %v for field %s", value, field)
+			}
+		default:
+			return fmt.Errorf("unknown field type %s for field %s",
+			    schema.Type, field)
+		}
+	}
+
+	return nil
+}
+
 // Get gets the value for the given field. If the key is an invalid field,
 // FieldData will panic. If you want a safer version of this method, use
 // GetOk. If the field k is not set, the default value (if set) will be

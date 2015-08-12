@@ -22,7 +22,7 @@ const (
 	// barrier view for the backends.
 	backendBarrierPrefix = "logical/"
 
-	// systemBarrierPrefix is sthe prefix used for the
+	// systemBarrierPrefix is the prefix used for the
 	// system logical backend.
 	systemBarrierPrefix = "sys/"
 )
@@ -139,16 +139,16 @@ func (c *Core) mount(me *MountEntry) error {
 		me.Path += "/"
 	}
 
-	// Prevent protected paths from being unmounted
+	// Prevent protected paths from being mounted
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(me.Path, p) {
-			return fmt.Errorf("cannot mount '%s'", me.Path)
+			return logical.CodedError(403, fmt.Sprintf("cannot mount '%s'", me.Path))
 		}
 	}
 
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(me.Path); match != "" {
-		return fmt.Errorf("existing mount at '%s'", match)
+		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
 	// Generate a new UUID and view

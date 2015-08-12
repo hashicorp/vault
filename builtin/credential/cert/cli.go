@@ -39,7 +39,9 @@ func (h *CLIHandler) Help() string {
 The "cert" credential provider allows you to authenticate with a
 client certificate. No other authentication materials are needed.
 
-    Example: vault auth -method=cert 
+    Example: vault auth -method=cert \
+                        -client-cert=/path/to/cert.pem \
+                        -client-key=/path/to/key.pem
 
 	`
 

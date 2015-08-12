@@ -13,7 +13,7 @@ const (
 	// avoided like the HTTPContentType. The value must be a byte slice.
 	HTTPRawBody = "http_raw_body"
 
-	// HTTPStatusCode is the response code the HTTP body that goes with the HTTPContentType.
+	// HTTPStatusCode is the response code of the HTTP body that goes with the HTTPContentType.
 	// This can only be specified for non-secrets, and should should be similarly
 	// avoided like the HTTPContentType. The value must be an integer.
 	HTTPStatusCode = "http_status_code"

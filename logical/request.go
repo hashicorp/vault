@@ -145,6 +145,6 @@ var (
 	// ErrInvalidRequest is returned if the request is invalid
 	ErrInvalidRequest = errors.New("invalid request")
 
-	// ErrPermissionDeneid is returned if the client is not authorized
+	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
 )

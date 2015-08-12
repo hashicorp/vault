@@ -16,7 +16,7 @@ type TokenCreateCommand struct {
 
 func (c *TokenCreateCommand) Run(args []string) int {
 	var format string
-	var displayName, lease string
+	var id, displayName, lease string
 	var orphan bool
 	var metadata map[string]string
 	var numUses int
@@ -24,6 +24,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	flags := c.Meta.FlagSet("mount", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&displayName, "display-name", "", "")
+	flags.StringVar(&id, "id", "", "")
 	flags.StringVar(&lease, "lease", "", "")
 	flags.BoolVar(&orphan, "orphan", false, "")
 	flags.IntVar(&numUses, "use-limit", 0, "")
@@ -50,6 +51,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	}
 
 	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		ID:          id,
 		Policies:    policies,
 		Metadata:    metadata,
 		Lease:       lease,
@@ -91,6 +93,11 @@ General Options:
   ` + generalOptionsUsage() + `
 
 Token Options:
+
+  -id="7699125c-d8...."   The token value that clients will use to authenticate
+                          with vault. If not provided this defaults to a 36
+                          character UUID. A root token is required to specify 
+                          the ID of a token.
 
   -display-name="name"    A display name to associate with this token. This
                           is a non-security sensitive value used to help

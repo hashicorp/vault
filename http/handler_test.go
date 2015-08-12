@@ -1,10 +1,13 @@
 package http
 
 import (
+	"errors"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -56,4 +59,35 @@ func TestHandler_sealed(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	testResponseStatus(t, resp, 503)
+}
+
+func TestHandler_error(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	respondError(w, 500, errors.New("Test Error"))
+
+	if w.Code != 500 {
+		t.Fatalf("expected 500, got %d", w.Code)
+	}
+
+	// The code inside of the error should override
+	// the argument to respondError
+	w2 := httptest.NewRecorder()
+	e := logical.CodedError(403, "error text")
+
+	respondError(w2, 500, e)
+
+	if w2.Code != 403 {
+		t.Fatalf("expected 403, got %d", w2.Code)
+	}
+
+	// vault.ErrSealed is a special case
+	w3 := httptest.NewRecorder()
+
+	respondError(w3, 400, vault.ErrSealed)
+
+	if w3.Code != 503 {
+		t.Fatalf("expected 503, got %d", w3.Code)
+	}
+
 }
