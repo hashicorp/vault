@@ -1,13 +1,9 @@
 package ssh
 
 import (
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-)
-
-const (
-	VerifyEchoRequest  = "verify-echo-request"
-	VerifyEchoResponse = "verify-echo-response"
 )
 
 func pathVerify(b *backend) *framework.Path {
@@ -33,10 +29,10 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 	// If OTP is not a UUID and a string matching VerifyEchoRequest, then the
 	// response will be VerifyEchoResponse. This is used by agent to check if
 	// connection to Vault server is proper.
-	if otp == VerifyEchoRequest {
+	if otp == api.VerifyEchoRequest {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"message": VerifyEchoResponse,
+				"message": api.VerifyEchoResponse,
 			},
 		}, nil
 	}

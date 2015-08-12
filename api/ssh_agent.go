@@ -16,8 +16,16 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Default path at which SSH backend will be mounted
-const SSHAgentDefaultMountPoint = "ssh"
+const (
+	// Default path at which SSH backend will be mounted
+	SSHAgentDefaultMountPoint = "ssh"
+
+	// Echo request message sent as OTP by the agent
+	VerifyEchoRequest = "verify-echo-request"
+
+	// Echo response message sent as a response to OTP matching echo request
+	VerifyEchoResponse = "verify-echo-response"
+)
 
 // This is a structure representing an SSH agent which can talk to vault server
 // in order to verify the OTP entered by the user. It contains the path at which
