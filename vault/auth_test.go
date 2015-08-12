@@ -76,6 +76,33 @@ func TestCore_EnableCredential(t *testing.T) {
 	}
 }
 
+func TestCore_EnableCredential_twice_409(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	me := &MountEntry{
+		Path: "foo",
+		Type: "noop",
+	}
+	err := c.enableCredential(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+    // 2nd should be a 409 error
+    err2 := c.enableCredential(me)
+    switch err2.(type) {
+        case logical.HTTPCodedError:
+            if err2.(logical.HTTPCodedError).Code() != 409 {
+                t.Fatalf("invalid code given")
+            }
+        default:
+            t.Fatalf("expected a different error type")
+    }
+}
+
 func TestCore_EnableCredential_Token(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
