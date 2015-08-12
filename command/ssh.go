@@ -83,7 +83,7 @@ func (c *SSHCommand) Run(args []string) int {
 		"ip":       ip.String(),
 	}
 
-	keySecret, err := client.SSH(path).Credential(role, data)
+	keySecret, err := client.SSHWithPath(path).Credential(role, data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session:%s", err))
 		return 2

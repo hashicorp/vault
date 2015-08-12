@@ -2,6 +2,8 @@ package api
 
 import "fmt"
 
+const SSHDefaultPath = "ssh"
+
 // SSH is used to return a client to invoke operations on SSH backend.
 type SSH struct {
 	c    *Client
@@ -9,7 +11,11 @@ type SSH struct {
 }
 
 // SSH is used to return the client for logical-backend API calls.
-func (c *Client) SSH(path string) *SSH {
+func (c *Client) SSH() *SSH {
+	return c.SSHWithPath(SSHDefaultPath)
+}
+
+func (c *Client) SSHWithPath(path string) *SSH {
 	return &SSH{
 		c:    c,
 		Path: path,
