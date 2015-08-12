@@ -19,14 +19,14 @@ type SSHCommand struct {
 }
 
 func (c *SSHCommand) Run(args []string) int {
-	var role, port, path string
+	var role, port, mountPoint string
 	var noExec bool
 	var sshCmdArgs []string
 	var sshDynamicKeyFileName string
 	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
 	flags.StringVar(&role, "role", "", "")
 	flags.StringVar(&port, "port", "22", "")
-	flags.StringVar(&path, "path", "ssh", "")
+	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
 	flags.BoolVar(&noExec, "no-exec", false, "")
 
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -70,7 +70,7 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	if role == "" {
-		role, err = c.defaultRole(path, ip.String())
+		role, err = c.defaultRole(mountPoint, ip.String())
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error setting default role: %s", err))
 			return 1
@@ -83,7 +83,7 @@ func (c *SSHCommand) Run(args []string) int {
 		"ip":       ip.String(),
 	}
 
-	keySecret, err := client.SSHWithPath(path).Credential(role, data)
+	keySecret, err := client.SSHWithMountPoint(mountPoint).Credential(role, data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session:%s", err))
 		return 2
@@ -152,7 +152,7 @@ func (c *SSHCommand) Run(args []string) int {
 // If user did not provide the role with which SSH connection has
 // to be established and if there is only one role associated with
 // the IP, it is used by default.
-func (c *SSHCommand) defaultRole(path, ip string) (string, error) {
+func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	data := map[string]interface{}{
 		"ip": ip,
 	}
@@ -160,7 +160,7 @@ func (c *SSHCommand) defaultRole(path, ip string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	secret, err := client.Logical().Write(path+"/lookup", data)
+	secret, err := client.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
 		return "", fmt.Errorf("Error finding roles for IP %s: %s", ip, err)
 
@@ -222,7 +222,7 @@ SSH Options:
 
   -no-exec		Shows the credentials but does not establish connection.
 
-  -path			Mount point of SSH backend. If the backend is mounted at
+  -mount-point		Mount point of SSH backend. If the backend is mounted at
   			'ssh', which is the default as well, this parameter can
 			be skipped.
 `
