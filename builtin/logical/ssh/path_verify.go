@@ -30,6 +30,9 @@ func pathVerify(b *backend) *framework.Path {
 func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otp := d.Get("otp").(string)
 
+	// If OTP is not a UUID and a string matching VerifyEchoRequest, then the
+	// response will be VerifyEchoResponse. This is used by agent to check if
+	// connection to Vault server is proper.
 	if otp == VerifyEchoRequest {
 		return &logical.Response{
 			Data: map[string]interface{}{
