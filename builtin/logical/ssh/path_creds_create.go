@@ -3,6 +3,7 @@ package ssh
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
@@ -40,14 +41,24 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
+// Checks if the username supplied by the user is present in the list of
+// allowed users registered which creation of role.
+func validateUsername(username, allowedUsers string) error {
+	userList := strings.Split(allowedUsers, ",")
+	for _, user := range userList {
+		if user == username {
+			return nil
+		}
+	}
+	return fmt.Errorf("username not in allowed users list")
+}
+
 func (b *backend) pathCredsCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role"), nil
 	}
-
-	username := d.Get("username").(string)
 
 	ipRaw := d.Get("ip").(string)
 	if ipRaw == "" {
@@ -62,6 +73,7 @@ func (b *backend) pathCredsCreateWrite(
 		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", roleName)), nil
 	}
 
+	username := d.Get("username").(string)
 	// Set the default username
 	if username == "" {
 		if role.DefaultUser == "" {
@@ -70,11 +82,25 @@ func (b *backend) pathCredsCreateWrite(
 		username = role.DefaultUser
 	}
 
+	if role.AllowedUsers != "" {
+		// Check if the username is present in allowed users list.
+		err := validateUsername(username, role.AllowedUsers)
+
+		// If username is not present in allowed users list, check if it
+		// is the default username in the role. If neither is true, then
+		// that username is not allowed to generate a credential.
+		if err != nil && username != role.DefaultUser {
+			return logical.ErrorResponse("Username is not present is allowed users list."), nil
+		}
+	}
+
 	// Validate the IP address
 	ipAddr := net.ParseIP(ipRaw)
 	if ipAddr == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ipRaw)), nil
 	}
+
+	// Check if the IP belongs to the registered list of CIDR blocks under the role
 	ip := ipAddr.String()
 	ipMatched, err := cidrContainsIP(ip, role.CIDRList)
 	if err != nil {
@@ -182,26 +208,26 @@ func (b *backend) GenerateSaltedOTP() (string, string) {
 	return str, b.salt.SaltID(str)
 }
 
-// Generates a salted OTP and creates an entry for the same in storage backend.
+// Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.
 func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
 	otp, otpSalted := b.GenerateSaltedOTP()
-	entry, err := req.Storage.Get("otp/" + otpSalted)
+	entry, err := b.getOTP(req.Storage, otpSalted)
 	// Make sure that new OTP is not replacing an existing one
 	for err == nil && entry != nil {
 		otp, otpSalted = b.GenerateSaltedOTP()
-		entry, err = req.Storage.Get("otp/" + otpSalted)
+		entry, err = b.getOTP(req.Storage, otpSalted)
 		if err != nil {
 			return "", err
 		}
 	}
-	entry, err = logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
+	newEntry, err := logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
 		Username: username,
 		IP:       ip,
 	})
 	if err != nil {
 		return "", err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(newEntry); err != nil {
 		return "", err
 	}
 	return otp, nil

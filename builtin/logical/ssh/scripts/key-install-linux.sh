@@ -25,11 +25,11 @@ fi
 grep -vFf $2 $3 > temp_$2
 
 # Contents of temporary file will be the contents of authorized_keys file.
-cat temp_$2 > $3
+cat temp_$2 | sudo tee $3
 
 if [ $1 == "install" ]; then
 # New public key is appended to authorized_keys file
-cat $2 >> $3
+cat $2 | sudo tee --append $3
 fi
 
 # Auxiliary files are deleted

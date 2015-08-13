@@ -23,6 +23,23 @@ func pathVerify(b *backend) *framework.Path {
 	}
 }
 
+func (b *backend) getOTP(s logical.Storage, n string) (*sshOTP, error) {
+	entry, err := s.Get("otp/" + n)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result sshOTP
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otp := d.Get("otp").(string)
 
@@ -38,23 +55,23 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 	}
 
 	otpSalted := b.salt.SaltID(otp)
-	entry, err := req.Storage.Get("otp/" + otpSalted)
+
+	// Return nil if there is no entry found for the OTP
+	otpEntry, err := b.getOTP(req.Storage, otpSalted)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
-	}
-	var otpEntry sshOTP
-	if err := entry.DecodeJSON(&otpEntry); err != nil {
+	if otpEntry == nil {
 		return nil, nil
 	}
 
+	// Delete the OTP if found. This is what makes the key an OTP.
 	err = req.Storage.Delete("otp/" + otpSalted)
 	if err != nil {
 		return nil, err
 	}
 
+	// Return username and IP only if there were no problems uptill this point.
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"username": otpEntry.Username,

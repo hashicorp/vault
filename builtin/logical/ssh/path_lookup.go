@@ -46,6 +46,15 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 			matchingRoles = append(matchingRoles, role)
 		}
 	}
+
+	// This result may potentially reveal more information than it is supposed to.
+	// The roles for which the client is not authorized to will also be displayed.
+	// However, if the client tries to use the role for which the client is not
+	// authenticated, it will fail. There are no problems there. In a way this can
+	// be viewed as a feature. The client can ask for permissions to be given for
+	// a specific role if things are not working!
+	// Going forward, the role names should be filtered and only the roles which
+	// the client is authorized to see, should be returned.
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"roles": matchingRoles,

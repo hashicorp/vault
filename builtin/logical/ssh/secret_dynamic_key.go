@@ -104,13 +104,12 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	port := int(portRaw.(float64))
 
 	// Fetch the host key using the key name
-	hostKeyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", hostKeyName))
+	hostKey, err := b.getKey(req.Storage, hostKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("key '%s' not found error:%s", hostKeyName, err)
 	}
-	var hostKey sshHostKey
-	if err := hostKeyEntry.DecodeJSON(&hostKey); err != nil {
-		return nil, fmt.Errorf("error reading the host key: %s", err)
+	if hostKey == nil {
+		return nil, fmt.Errorf("key '%s' not found", hostKeyName)
 	}
 
 	// Transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file

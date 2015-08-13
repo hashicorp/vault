@@ -36,10 +36,8 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keyName := d.Get("key_name").(string)
-	keyPath := fmt.Sprintf("keys/%s", keyName)
-	entry, err := req.Storage.Get(keyPath)
+func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
+	entry, err := s.Get("keys/" + n)
 	if err != nil {
 		return nil, err
 	}
@@ -51,10 +49,21 @@ func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*l
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
+	return &result, nil
+}
+
+func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	key, err := b.getKey(req.Storage, d.Get("key_name").(string))
+	if err != nil {
+		return nil, err
+	}
+	if key == nil {
+		return nil, nil
+	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"key": result.Key,
+			"key": key.Key,
 		},
 	}, nil
 }

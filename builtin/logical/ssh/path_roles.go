@@ -9,8 +9,22 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const KeyTypeOTP = "otp"
-const KeyTypeDynamic = "dynamic"
+const (
+	KeyTypeOTP     = "otp"
+	KeyTypeDynamic = "dynamic"
+)
+
+type sshRole struct {
+	KeyType       string `mapstructure:"key_type" json:"key_type"`
+	KeyName       string `mapstructure:"key" json:"key"`
+	KeyBits       int    `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser     string `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser   string `mapstructure:"default_user" json:"default_user"`
+	CIDRList      string `mapstructure:"cidr_list" json:"cidr_list"`
+	Port          int    `mapstructure:"port" json:"port"`
+	InstallScript string `mapstructure:"install_script" json:"install_script"`
+	AllowedUsers  string `mapstructure:"allowed_users" json:"allowed_users"`
+}
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
@@ -81,6 +95,17 @@ func pathRoles(b *backend) *framework.Path {
 				The inbuilt default install script will be for Linux hosts. For sample
 				script, refer the project's documentation website.`,
 			},
+			"allowed_users": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				[Optional for both types]
+				If this option is not specified, client can request for a credential for
+				any valid user at the remote host, including the admin user. If only certain
+				usernames are to be allowed, then this list enforces it. If this field is
+				set, then credentials can only be created for default_user and usernames
+				present in this list.
+				`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -99,6 +124,9 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role name"), nil
 	}
+
+	// Allowed users is an optional field, applicable for both otp and dynamic types.
+	allowedUsers := d.Get("allowed_users").(string)
 
 	defaultUser := d.Get("default_user").(string)
 	if defaultUser == "" {
@@ -136,10 +164,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 
 		roleEntry = sshRole{
-			DefaultUser: defaultUser,
-			CIDRList:    cidrList,
-			KeyType:     KeyTypeOTP,
-			Port:        port,
+			DefaultUser:  defaultUser,
+			CIDRList:     cidrList,
+			KeyType:      KeyTypeOTP,
+			Port:         port,
+			AllowedUsers: allowedUsers,
 		}
 	} else if keyType == KeyTypeDynamic {
 		keyName := d.Get("key").(string)
@@ -178,6 +207,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			KeyType:       KeyTypeDynamic,
 			KeyBits:       keyBits,
 			InstallScript: installScript,
+			AllowedUsers:  allowedUsers,
 		}
 	} else {
 		return logical.ErrorResponse("Invalid key type"), nil
@@ -250,17 +280,6 @@ func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (
 		return nil, err
 	}
 	return nil, nil
-}
-
-type sshRole struct {
-	KeyType       string `mapstructure:"key_type" json:"key_type"`
-	KeyName       string `mapstructure:"key" json:"key"`
-	KeyBits       int    `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser     string `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser   string `mapstructure:"default_user" json:"default_user"`
-	CIDRList      string `mapstructure:"cidr_list" json:"cidr_list"`
-	Port          int    `mapstructure:"port" json:"port"`
-	InstallScript string `mapstructure:"install_script" json:"install_script"`
 }
 
 const pathRoleHelpSyn = `

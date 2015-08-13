@@ -35,10 +35,7 @@ func (b *backend) secretOTPRevoke(req *logical.Request, d *framework.FieldData) 
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
 
-	otpSalted := b.salt.SaltID(otp)
-	otpPath := fmt.Sprintf("otp/%s", otpSalted)
-
-	err := req.Storage.Delete(otpPath)
+	err := req.Storage.Delete("otp/" + b.salt.SaltID(otp))
 	if err != nil {
 		return nil, err
 	}
