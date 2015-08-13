@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/ssh"
@@ -19,13 +20,15 @@ type SSHCommand struct {
 }
 
 func (c *SSHCommand) Run(args []string) int {
-	var role, port, mountPoint string
+	var portNum int
+	var role, mountPoint, format string
 	var noExec bool
 	var sshCmdArgs []string
 	var sshDynamicKeyFileName string
 	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
+	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&role, "role", "", "")
-	flags.StringVar(&port, "port", "22", "")
+	flags.IntVar(&portNum, "port", 22, "")
 	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
 	flags.BoolVar(&noExec, "no-exec", false, "")
 
@@ -39,15 +42,23 @@ func (c *SSHCommand) Run(args []string) int {
 		return 2
 	}
 
+	port := strconv.Itoa(portNum)
+
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %s", err))
 		return 2
 	}
 
+	// split the parameter username@ip
 	input := strings.Split(args[0], "@")
 	var username string
 	var ipAddr string
+
+	// If only IP is mentioned and username is skipped, assume username to
+	// be the current username. Vault SSH role's default username could have
+	// been used, but in order to retain the consistency with SSH command,
+	// current username is employed.
 	if len(input) == 1 {
 		u, err := user.Current()
 		if err != nil {
@@ -63,18 +74,28 @@ func (c *SSHCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Resolving domain names to IP address on the client side.
+	// Vault only deals with IP addressess.
 	ip, err := net.ResolveIPAddr("ip", ipAddr)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %s", err))
 		return 2
 	}
 
+	// Credentials are generated only against a registered role. If user
+	// does not specify a role with the SSH command, then lookup API is used
+	// to fetch all the roles with which this IP is associated. If there is
+	// only one role associated with it, use it to establish the connection.
 	if role == "" {
 		role, err = c.defaultRole(mountPoint, ip.String())
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error setting default role: %s", err))
+			c.Ui.Error(fmt.Sprintf("Error choosing role: %s", err))
 			return 1
 		}
+		// Print the default role chosen so that user knows the role name
+		// if something doesn't work. If the role chosen is not allowed to
+		// be used by the user (ACL enforcement), then user should see an
+		// error message accordingly.
 		c.Ui.Output(fmt.Sprintf("Vault SSH: Role: %s", role))
 	}
 
@@ -89,9 +110,9 @@ func (c *SSHCommand) Run(args []string) int {
 		return 2
 	}
 
+	// if no-exec was chosen, just print out the secret and return.
 	if noExec {
-		c.Ui.Output(fmt.Sprintf("IP:%s\nUsername: %s\nKey:%s\n", ip.String(), username, keySecret.Data["key"]))
-		return 0
+		return OutputSecret(c.Ui, format, keySecret)
 	}
 
 	if keySecret.Data["key_type"].(string) == ssh.KeyTypeDynamic {
@@ -100,11 +121,16 @@ func (c *SSHCommand) Run(args []string) int {
 			c.Ui.Error(fmt.Sprintf("Invalid key"))
 			return 2
 		}
-		sshDynamicKeyFileName = fmt.Sprintf("vault_temp_file_%s_%s", username, ip.String())
+		sshDynamicKeyFileName = fmt.Sprintf("vault_ssh_%s_%s", username, ip.String())
 		err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(sshDynamicKey), 0600)
 		sshCmdArgs = append(sshCmdArgs, []string{"-i", sshDynamicKeyFileName}...)
 
 	} else if keySecret.Data["key_type"].(string) == ssh.KeyTypeOTP {
+		// Check if the application 'sshpass' is installed in the client machine.
+		// If it is then, use it to automate typing in OTP to the prompt. Unfortunately,
+		// it was not possible to automate it without a third-party application, with
+		// only the Go libraries.
+		// Feel free to try and remove this dependency.
 		sshpassPath, err := exec.LookPath("sshpass")
 		if err == nil {
 			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(keySecret.Data["key"].(string)), "ssh", "-p", port}...)
@@ -118,9 +144,8 @@ func (c *SSHCommand) Run(args []string) int {
 			}
 			return 0
 		}
-		c.Ui.Output(fmt.Sprintf("OTP for the session is %s\n[Note: Install 'sshpass' to automate typing in OTP]\n", string(keySecret.Data["key"].(string))))
-	} else {
-		c.Ui.Error("Error creating key")
+		c.Ui.Output("OTP for the session is" + string(keySecret.Data["key"].(string)))
+		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
 	}
 	sshCmdArgs = append(sshCmdArgs, []string{"-p", port}...)
 	sshCmdArgs = append(sshCmdArgs, args...)
@@ -129,18 +154,28 @@ func (c *SSHCommand) Run(args []string) int {
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 
+	// Running the command as a separate command. The reason for using exec.Command instead
+	// of using crypto/ssh package is that, this way, user can have the same feeling of
+	// connecting to remote hosts with the ssh command. Package crypto/ssh did not have a way
+	// to establish an independent session like this.
 	err = sshCmd.Run()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error while running ssh command:%s", err))
 	}
 
+	// Delete the temporary key file generated by the command.
 	if keySecret.Data["key_type"].(string) == ssh.KeyTypeDynamic {
-		err = os.Remove(sshDynamicKeyFileName)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error deleting key file: %s", err))
-		}
+		// Ignoring the error from the below call since it is not a security
+		// issue if the deletion of file is not successful. User is authorized
+		// to have this secret.
+		os.Remove(sshDynamicKeyFileName)
 	}
 
+	// If the session established was longer than the lease expiry, the secret
+	// might have been revoked already. If not, then revoke it. Since the key
+	// file is deleted and since user doesn't know the credential anymore, there
+	// is not point in Vault maintaining this secret anymore. Everytime the command
+	// is run, a fresh credential is generated anyways.
 	err = client.Sys().Revoke(keySecret.LeaseID)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error revoking the key: %s", err))
@@ -181,7 +216,10 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 			roleNames += item.(string) + ", "
 		}
 		roleNames = strings.TrimRight(roleNames, ", ")
-		return "", fmt.Errorf("IP %s has multiple roles.\nSelect a role using '-role' option.\nPossible roles: [%s]\nNote that all roles may not be permitted, based on ACLs.", ip, roleNames)
+		return "", fmt.Errorf("Roles:[%s]"+`
+		Multiple roles are registered for this IP.
+		Select a role using '-role' option.
+		Note that all roles may not be permitted, based on ACLs.`, roleNames)
 	}
 }
 
@@ -225,6 +263,11 @@ SSH Options:
   -mount-point		Mount point of SSH backend. If the backend is mounted at
   			'ssh', which is the default as well, this parameter can
 			be skipped.
+
+  -format		If no-exec option is enabled, then the credentials will be
+  			printed out and SSH connection will not be established. The
+			format of the output can be 'json' or 'table'. JSON output
+			is useful when writing scripts. Default is 'table'.
 `
 	return strings.TrimSpace(helpText)
 }

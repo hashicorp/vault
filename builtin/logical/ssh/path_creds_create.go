@@ -119,6 +119,9 @@ func (b *backend) pathCredsCreateWrite(
 		result = b.Secret(SecretOTPType).Response(map[string]interface{}{
 			"key_type": role.KeyType,
 			"key":      otp,
+			"username": username,
+			"ip":       ip,
+			"port":     role.Port,
 		}, map[string]interface{}{
 			"otp": otp,
 		})
@@ -130,6 +133,9 @@ func (b *backend) pathCredsCreateWrite(
 		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
 			"key":      dynamicPrivateKey,
 			"key_type": role.KeyType,
+			"username": username,
+			"ip":       ip,
+			"port":     role.Port,
 		}, map[string]interface{}{
 			"admin_user":         role.AdminUser,
 			"username":           username,

@@ -72,7 +72,10 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for both types]
-				Port number for SSH connection. Default is '22'.`,
+				Port number for SSH connection. Default is '22'. Port number does not
+				play any role in creation of OTP. For 'otp' type, this is just a way
+				to inform client about the port number to use. Port number will be
+				returned to client by Vault server along with OTP.`,
 			},
 			"key_type": &framework.FieldSchema{
 				Type: framework.TypeString,
