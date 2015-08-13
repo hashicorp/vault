@@ -52,7 +52,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		case strings.HasPrefix(ent.Path, entry.Path):
 			fallthrough
 		case strings.HasPrefix(entry.Path, ent.Path):
-			return logical.CodedError(409, "path already in use")
+			return logical.CodedError(409, "path is already in use")
 		}
 	}
 
