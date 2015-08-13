@@ -221,8 +221,8 @@ The supported options are:
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate.
 
-  * `tls_min_version` (optional) - If provided, specifies the minimum
-      supported version of TLS. Accepted values are "tls10", "tls11"
+  * `tls_min_version` (optional) - **(Vault > 0.2)** If provided, specifies
+      the minimum supported version of TLS. Accepted values are "tls10", "tls11"
       or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
       are generally considered less secure; avoid using these if
       possible.
