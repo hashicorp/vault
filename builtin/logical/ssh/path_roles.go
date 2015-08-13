@@ -16,9 +16,9 @@ const KeyBitsRSA = "2048"
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/(?P<name>[-\\w]+)",
+		Pattern: "roles/(?P<role>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
@@ -68,14 +68,14 @@ func pathRoles(b *backend) *framework.Path {
 }
 
 func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName := d.Get("name").(string)
+	roleName := d.Get("role").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role name"), nil
 	}
 
 	cidr := d.Get("cidr").(string)
 	if cidr == "" {
-		return logical.ErrorResponse("Missing cidr blocks"), nil
+		return logical.ErrorResponse("Missing CIDR blocks"), nil
 	}
 	for _, item := range strings.Split(cidr, ",") {
 		_, _, err := net.ParseCIDR(item)
@@ -108,7 +108,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			return logical.ErrorResponse("Missing default user"), nil
 		}
 
-		entry, err = logical.StorageEntryJSON(fmt.Sprintf("policy/%s", roleName), sshRole{
+		entry, err = logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), sshRole{
 			DefaultUser: defaultUser,
 			CIDR:        cidr,
 			KeyType:     KeyTypeOTP,
@@ -150,7 +150,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			keyBits = KeyBitsRSA
 		}
 
-		entry, err = logical.StorageEntryJSON(fmt.Sprintf("policy/%s", roleName), sshRole{
+		entry, err = logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), sshRole{
 			KeyName:       keyName,
 			AdminUser:     adminUser,
 			DefaultUser:   defaultUser,
@@ -175,8 +175,8 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 }
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName := d.Get("name").(string)
-	roleEntry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
+	roleName := d.Get("role").(string)
+	roleEntry, err := req.Storage.Get(fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +213,8 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 }
 
 func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName := d.Get("name").(string)
-	err := req.Storage.Delete(fmt.Sprintf("policy/%s", roleName))
+	roleName := d.Get("role").(string)
+	err := req.Storage.Delete(fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return nil, err
 	}

@@ -24,15 +24,15 @@ type sshCIDR struct {
 
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "creds/(?P<name>[-\\w]+)",
+		Pattern: "creds/(?P<role>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "name of the policy",
+				Description: "Name of the role",
 			},
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "username in target",
+				Description: "Username in target",
 			},
 			"ip": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -49,9 +49,9 @@ func pathCredsCreate(b *backend) *framework.Path {
 
 func (b *backend) pathCredsCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName := d.Get("name").(string)
+	roleName := d.Get("role").(string)
 	if roleName == "" {
-		return logical.ErrorResponse("Missing name"), nil
+		return logical.ErrorResponse("Missing role"), nil
 	}
 
 	username := d.Get("username").(string)
@@ -61,7 +61,7 @@ func (b *backend) pathCredsCreateWrite(
 		return logical.ErrorResponse("Missing ip"), nil
 	}
 
-	roleEntry, err := req.Storage.Get(fmt.Sprintf("policy/%s", roleName))
+	roleEntry, err := req.Storage.Get(fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
@@ -221,7 +221,7 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 }
 
 const pathCredsCreateHelpSyn = `
-Creates a dynamic key for the target machine.
+Creates a credential for establishing SSH connection with the remote host.
 `
 
 const pathCredsCreateHelpDesc = `

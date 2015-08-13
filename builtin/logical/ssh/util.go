@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net"
 	"strings"
 	"time"
@@ -18,30 +17,6 @@ import (
 	commssh "github.com/mitchellh/packer/communicator/ssh"
 	"golang.org/x/crypto/ssh"
 )
-
-// Transfers the file  to the target machine by establishing an SSH
-// session with the target. Uses the public key authentication method
-// and hence the parameter 'key' takes in the private key. The fileName
-// parameter takes an absolute path.
-func uploadPublicKeyScp(publicKey, publicKeyFileName, username, ip, port, key string) error {
-	session, err := createSSHPublicKeysSession(username, ip, port, key)
-	if err != nil {
-		return err
-	}
-	if session == nil {
-		return fmt.Errorf("invalid session object")
-	}
-	defer session.Close()
-	go func() {
-		w, _ := session.StdinPipe()
-		fmt.Fprintln(w, "C0644", len(publicKey), publicKeyFileName)
-		io.Copy(w, strings.NewReader(publicKey))
-		fmt.Fprint(w, "\x00")
-		w.Close()
-	}()
-	session.Run(fmt.Sprintf("scp -vt %s", publicKeyFileName))
-	return nil
-}
 
 // Creates a SSH session object which can be used to run commands
 // in the target machine. The session will use public key authentication
@@ -167,7 +142,7 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 		return false, fmt.Errorf("missing ip")
 	}
 
-	roleEntry, err := s.Get(fmt.Sprintf("policy/%s", roleName))
+	roleEntry, err := s.Get(fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return false, fmt.Errorf("error retrieving role '%s'", err)
 	}

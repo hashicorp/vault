@@ -15,15 +15,15 @@ type sshHostKey struct {
 
 func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/(?P<name>[-\\w]+)",
+		Pattern: "keys/(?P<key_name>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"key_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "name of the key",
+				Description: "Name of the key",
 			},
 			"key": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "SSH private key for host.",
+				Description: "SSH private key with root privileges for host",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -37,7 +37,7 @@ func pathKeys(b *backend) *framework.Path {
 }
 
 func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keyName := d.Get("name").(string)
+	keyName := d.Get("key_name").(string)
 	keyPath := fmt.Sprintf("keys/%s", keyName)
 	entry, err := req.Storage.Get(keyPath)
 	if err != nil {
@@ -60,7 +60,7 @@ func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*l
 }
 
 func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keyName := d.Get("name").(string)
+	keyName := d.Get("key_name").(string)
 	keyPath := fmt.Sprintf("keys/%s", keyName)
 	err := req.Storage.Delete(keyPath)
 	if err != nil {
@@ -70,7 +70,7 @@ func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (
 }
 
 func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keyName := d.Get("name").(string)
+	keyName := d.Get("key_name").(string)
 	keyString := d.Get("key").(string)
 
 	signer, err := ssh.ParsePrivateKey([]byte(keyString))

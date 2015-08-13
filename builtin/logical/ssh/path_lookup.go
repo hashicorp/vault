@@ -35,7 +35,7 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ip.String())), nil
 	}
 
-	keys, err := req.Storage.List("policy/")
+	keys, err := req.Storage.List("roles/")
 	if err != nil {
 		return nil, err
 	}
