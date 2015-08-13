@@ -11,15 +11,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const defaultSSHLeaseDuration = 5 * time.Minute
-
 type sshOTP struct {
 	Username string `json:"username"`
 	IP       string `json:"ip"`
-}
-
-type sshCIDR struct {
-	CIDR []string
 }
 
 func pathCredsCreate(b *backend) *framework.Path {
@@ -87,7 +81,7 @@ func (b *backend) pathCredsCreateWrite(
 		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ipRaw)), nil
 	}
 	ip := ipAddr.String()
-	ipMatched, err := cidrContainsIP(ip, role.CIDR)
+	ipMatched, err := cidrContainsIP(ip, role.CIDRList)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error validating IP: %s", err)), nil
 	}
@@ -137,8 +131,8 @@ func (b *backend) pathCredsCreateWrite(
 	}
 
 	if lease == nil {
-		result.Secret.Lease = defaultSSHLeaseDuration
-		result.Secret.LeaseGracePeriod = 0
+		result.Secret.Lease = 10 * time.Minute
+		result.Secret.LeaseGracePeriod = 2 * time.Minute
 	}
 
 	return result, nil

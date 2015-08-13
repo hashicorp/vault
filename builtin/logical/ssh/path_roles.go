@@ -34,12 +34,12 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Default user to whom the dynamic key is installed",
 			},
-			"cidr": &framework.FieldSchema{
+			"cidr_list": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "CIDR blocks and IP addresses",
+				Description: "Comma separated CIDR blocks and IP addresses",
 			},
 			"port": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeInt,
 				Description: "Port number for SSH connection",
 			},
 			"key_type": &framework.FieldSchema{
@@ -73,20 +73,20 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		return logical.ErrorResponse("Missing role name"), nil
 	}
 
-	cidr := d.Get("cidr").(string)
-	if cidr == "" {
+	cidrList := d.Get("cidr_list").(string)
+	if cidrList == "" {
 		return logical.ErrorResponse("Missing CIDR blocks"), nil
 	}
-	for _, item := range strings.Split(cidr, ",") {
+	for _, item := range strings.Split(cidrList, ",") {
 		_, _, err := net.ParseCIDR(item)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid cidr entry '%s'", item)), nil
+			return logical.ErrorResponse(fmt.Sprintf("Invalid CIDR list entry '%s'", item)), nil
 		}
 	}
 
-	port := d.Get("port").(string)
-	if port == "" {
-		port = "22"
+	port := d.Get("port").(int)
+	if port == 0 {
+		port = 22
 	}
 
 	keyType := d.Get("key_type").(string)
@@ -110,7 +110,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 		entry, err = logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), sshRole{
 			DefaultUser: defaultUser,
-			CIDR:        cidr,
+			CIDRList:    cidrList,
 			KeyType:     KeyTypeOTP,
 			Port:        port,
 		})
@@ -154,7 +154,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			KeyName:       keyName,
 			AdminUser:     adminUser,
 			DefaultUser:   defaultUser,
-			CIDR:          cidr,
+			CIDRList:      cidrList,
 			Port:          port,
 			KeyType:       KeyTypeDynamic,
 			KeyBits:       keyBits,
@@ -193,7 +193,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"default_user": role.DefaultUser,
-				"cidr":         role.CIDR,
+				"cidr_list":    role.CIDRList,
 				"port":         role.Port,
 				"key_type":     role.KeyType,
 			},
@@ -204,7 +204,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"key":          role.KeyName,
 				"admin_user":   role.AdminUser,
 				"default_user": role.DefaultUser,
-				"cidr":         role.CIDR,
+				"cidr_list":    role.CIDRList,
 				"port":         role.Port,
 				"key_type":     role.KeyType,
 			},
@@ -227,8 +227,8 @@ type sshRole struct {
 	KeyBits       string `mapstructure:"key_bits" json:"key_bits"`
 	AdminUser     string `mapstructure:"admin_user" json:"admin_user"`
 	DefaultUser   string `mapstructure:"default_user" json:"default_user"`
-	CIDR          string `mapstructure:"cidr" json:"cidr"`
-	Port          string `mapstructure:"port" json:"port"`
+	CIDRList      string `mapstructure:"cidr_list" json:"cidr_list"`
+	Port          int    `mapstructure:"port" json:"port"`
 	InstallScript string `mapstructure:"install_script" json:"install_script"`
 }
 
@@ -244,8 +244,8 @@ is mounted at "ssh" and the role is created at "ssh/roles/web",
 then a user could request for a new key at "ssh/creds/web" for the
 supplied username and IP address.
 
-The 'cidr' field takes comma seperated CIDR blocks. The 'admin_user'
-should have root access in all the hosts represented by the 'cidr'
+The 'cidr_list' field takes comma seperated CIDR blocks. The 'admin_user'
+should have root access in all the hosts represented by the 'cidr_list'
 field. When the user requests key for an IP, the key will be installed
 for the user mentioned by 'default_user' field. The 'key' field takes
 a named key which can be configured by 'ssh/keys/' endpoint.
@@ -268,7 +268,7 @@ Role Options:
   			IP address, by default, this username is used to create the
 			credentials. Required for 'otp' type. Optional for 'dynamic' type.
 
-  -cidr			CIDR block for which is role is applicable for. Required field
+  -cidr_list		CIDR block for which is role is applicable for. Required field
   			for both types.
 
   -port			Port number for SSH connections. Default is '22'. Optional for

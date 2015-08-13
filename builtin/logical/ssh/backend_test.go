@@ -18,7 +18,7 @@ import (
 const (
 	testOTPKeyType       = "otp"
 	testDynamicKeyType   = "dynamic"
-	testCidr             = "127.0.0.1/32"
+	testCIDRList         = "127.0.0.1/32"
 	testDynamicRoleName  = "testDynamicRoleName"
 	testOTPRoleName      = "testOTPRoleName"
 	testKeyName          = "testKeyName"
@@ -55,7 +55,7 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 
 var testIP string
 var testOTP string
-var testPort string
+var testPort int
 var testUserName string
 var testAdminUser string
 var testInstallScript string
@@ -92,13 +92,13 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	otpData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
-		"cidr":         testCidr,
+		"cidr_list":    testCIDRList,
 	}
 	dynamicData := map[string]interface{}{
 		"key_type":       testDynamicKeyType,
 		"key":            testKeyName,
 		"admin_user":     testAdminUser,
-		"cidr":           testCidr,
+		"cidr_list":      testCIDRList,
 		"install_script": testInstallScript,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -133,7 +133,7 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 	data := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
-		"cidr":         testCidr,
+		"cidr_list":    testCIDRList,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
@@ -151,7 +151,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 		"key":            testKeyName,
 		"admin_user":     testAdminUser,
-		"cidr":           testCidr,
+		"cidr_list":      testCIDRList,
 		"install_script": testInstallScript,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -182,7 +182,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 	data := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
-		"cidr":         testCidr,
+		"cidr_list":    testCIDRList,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
@@ -303,11 +303,11 @@ func testRoleRead(t *testing.T, name string, data map[string]interface{}) logica
 				return fmt.Errorf("error decoding response:%s", err)
 			}
 			if name == testOTPRoleName {
-				if d.KeyType != data["key_type"] || d.DefaultUser != data["default_user"] || d.CIDR != data["cidr"] {
+				if d.KeyType != data["key_type"] || d.DefaultUser != data["default_user"] || d.CIDRList != data["cidr_list"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
 			} else {
-				if d.AdminUser != data["admin_user"] || d.CIDR != data["cidr"] || d.KeyName != data["key"] || d.KeyType != data["key_type"] {
+				if d.AdminUser != data["admin_user"] || d.CIDRList != data["cidr_list"] || d.KeyName != data["key"] || d.KeyType != data["key_type"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
 			}
@@ -331,7 +331,7 @@ func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 			"key_type":       "dynamic",
 			"key":            testKeyName,
 			"admin_user":     testAdminUser,
-			"cidr":           testCidr,
+			"cidr_list":      testCIDRList,
 			"port":           testPort,
 			"install_script": testInstallScript,
 		},

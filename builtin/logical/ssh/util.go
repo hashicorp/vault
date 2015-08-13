@@ -14,14 +14,13 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 
-	commssh "github.com/mitchellh/packer/communicator/ssh"
 	"golang.org/x/crypto/ssh"
 )
 
 // Creates a SSH session object which can be used to run commands
 // in the target machine. The session will use public key authentication
 // method with port 22.
-func createSSHPublicKeysSession(username, ipAddr, port, hostKey string) (*ssh.Session, error) {
+func createSSHPublicKeysSession(username, ipAddr string, port int, hostKey string) (*ssh.Session, error) {
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -43,7 +42,7 @@ func createSSHPublicKeysSession(username, ipAddr, port, hostKey string) (*ssh.Se
 		},
 	}
 
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", ipAddr, port), config)
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", ipAddr, port), config)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +81,7 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 
 // Concatenates the public present in that target machine's home
 // folder to ~/.ssh/authorized_keys file
-func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, hostkey string) error {
+func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string, port int, hostkey string) error {
 	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostkey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
@@ -107,7 +106,7 @@ func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, 
 
 // Removes the installed public key from the authorized_keys file
 // in target machine
-func uninstallPublicKeyInTarget(adminUser, publicKeyFileName, username, ip, port, hostKey string) error {
+func uninstallPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string, port int, hostKey string) error {
 	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
@@ -155,7 +154,7 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 		return false, fmt.Errorf("error decoding role '%s'", roleName)
 	}
 
-	if matched, err := cidrContainsIP(ip, role.CIDR); err != nil {
+	if matched, err := cidrContainsIP(ip, role.CIDRList); err != nil {
 		return false, err
 	} else {
 		return matched, nil
@@ -164,11 +163,11 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 
 // Returns true if the IP supplied by the user is part of the comma
 // separated CIDR blocks
-func cidrContainsIP(ip, cidr string) (bool, error) {
-	for _, item := range strings.Split(cidr, ",") {
+func cidrContainsIP(ip, cidrList string) (bool, error) {
+	for _, item := range strings.Split(cidrList, ",") {
 		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
-			return false, fmt.Errorf("invalid cidr entry '%s'", item)
+			return false, fmt.Errorf("invalid CIDR entry '%s'", item)
 		}
 		if cidrIPNet.Contains(net.ParseIP(ip)) {
 			return true, nil
@@ -177,7 +176,7 @@ func cidrContainsIP(ip, cidr string) (bool, error) {
 	return false, nil
 }
 
-func scpUpload(username, ip, port, hostkey, fileName, fileContent string) error {
+func scpUpload(username, ip string, port int, hostkey, fileName, fileContent string) error {
 	signer, err := ssh.ParsePrivateKey([]byte(hostkey))
 	clientConfig := &ssh.ClientConfig{
 		User: username,
@@ -187,7 +186,7 @@ func scpUpload(username, ip, port, hostkey, fileName, fileContent string) error 
 	}
 
 	connfunc := func() (net.Conn, error) {
-		c, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", ip, port), 15*time.Second)
+		c, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, port), 15*time.Second)
 		if err != nil {
 			return nil, err
 		}
@@ -199,13 +198,13 @@ func scpUpload(username, ip, port, hostkey, fileName, fileContent string) error 
 
 		return c, nil
 	}
-	config := &commssh.Config{
+	config := &SSHCommConfig{
 		SSHConfig:    clientConfig,
 		Connection:   connfunc,
 		Pty:          false,
 		DisableAgent: true,
 	}
-	comm, err := commssh.New(fmt.Sprintf("%s:%s", ip, port), config)
+	comm, err := SSHCommNew(fmt.Sprintf("%s:%d", ip, port), config)
 	if err != nil {
 		return fmt.Errorf("error connecting to target: %s", err)
 	}

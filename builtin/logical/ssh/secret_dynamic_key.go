@@ -102,7 +102,7 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
-	port := portRaw.(string)
+	port := int(portRaw.(float64))
 
 	// Fetch the host key using the key name
 	hostKeyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", hostKeyName))
