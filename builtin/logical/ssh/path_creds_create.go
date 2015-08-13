@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+const defaultSSHLeaseDuration = 5 * time.Minute
 
 type sshOTP struct {
 	Username string `json:"username"`
@@ -131,6 +134,11 @@ func (b *backend) pathCredsCreateWrite(
 	if lease != nil {
 		result.Secret.Lease = lease.Lease
 		result.Secret.LeaseGracePeriod = lease.LeaseMax
+	}
+
+	if lease == nil {
+		result.Secret.Lease = defaultSSHLeaseDuration
+		result.Secret.LeaseGracePeriod = 0
 	}
 
 	return result, nil

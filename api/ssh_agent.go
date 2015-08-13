@@ -75,10 +75,10 @@ func (c *SSHAgentConfig) TLSClient(certPool *x509.CertPool) *http.Client {
 	return &client
 }
 
-// Returns a new client for the given configuration. This client will be used
-// SSH agent to communicate with Vault server to verify the OTP entered by user.
+// Returns a new client for the configuration. This client will be used by the
+// SSH agent to communicate with Vault server and verify the OTP entered by user.
 // If the configuration supplies Vault SSL certificates, then the client will
-// have tls configured in its transport.
+// have TLS configured in its transport.
 func (c *SSHAgentConfig) NewClient() (*Client, error) {
 	// Creating a default client configuration for communicating with vault server.
 	clientConfig := DefaultConfig()
@@ -86,6 +86,7 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 	// Pointing the client to the actual address of vault server.
 	clientConfig.Address = c.VaultAddr
 
+	// Check if certificates are provided via config file.
 	if c.CACert != "" || c.CAPath != "" || c.TLSSkipVerify {
 		var certPool *x509.CertPool
 		var err error
@@ -97,6 +98,8 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Change the configuration to have an HTTP client with TLS enabled.
 		clientConfig.HttpClient = c.TLSClient(certPool)
 	}
 
@@ -105,11 +108,12 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return client, nil
 }
 
-// Loads agent's configuration from the file and populates the corresponding
-// in memory structure.
+// Load agent's configuration from the file and populate the corresponding
+// in-memory structure. Vault address and SSH mount points required parameters.
 func LoadSSHAgentConfig(path string) (*SSHAgentConfig, error) {
 	var config SSHAgentConfig
 	contents, err := ioutil.ReadFile(path)
@@ -125,6 +129,14 @@ func LoadSSHAgentConfig(path string) (*SSHAgentConfig, error) {
 	} else {
 		return nil, err
 	}
+
+	if config.VaultAddr == "" {
+		return nil, fmt.Errorf("config missing vault_addr")
+	}
+	if config.SSHMountPoint == "" {
+		return nil, fmt.Errorf("config missing ssh_mount_point")
+	}
+
 	return &config, nil
 }
 

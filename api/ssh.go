@@ -10,11 +10,12 @@ type SSH struct {
 	MountPoint string
 }
 
-// SSH is used to return the client for logical-backend API calls.
+// Returns the client for logical-backend API calls.
 func (c *Client) SSH() *SSH {
 	return c.SSHWithMountPoint(SSHDefaultMountPoint)
 }
 
+// Returns the client with specific SSH mount point.
 func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 	return &SSH{
 		c:          c,
@@ -22,7 +23,7 @@ func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 	}
 }
 
-// Invokes the SSH backend API to create a dynamic key or an OTP
+// Invokes the SSH backend API to create a credential to establish an SSH session.
 func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
 	if err := r.SetJSONBody(data); err != nil {
