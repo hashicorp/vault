@@ -194,19 +194,30 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	return nil, nil
 }
 
-func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName := d.Get("role").(string)
-	roleEntry, err := req.Storage.Get(fmt.Sprintf("roles/%s", roleName))
+func (b *backend) getRole(s logical.Storage, n string) (*sshRole, error) {
+	entry, err := s.Get("roles/" + n)
 	if err != nil {
 		return nil, err
 	}
-	if roleEntry == nil {
+	if entry == nil {
 		return nil, nil
 	}
 
-	var role sshRole
-	if err := roleEntry.DecodeJSON(&role); err != nil {
+	var result sshRole
+	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	role, err := b.getRole(req.Storage, d.Get("role").(string))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
 	}
 
 	if role.KeyType == KeyTypeOTP {

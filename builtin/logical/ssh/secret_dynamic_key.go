@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -115,7 +114,7 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	}
 
 	// Transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
-	dynamicPublicKeyFileName := uuid.GenerateUUID()
+	_, dynamicPublicKeyFileName := b.GenerateSaltedOTP()
 	err = scpUpload(adminUser, ip, port, hostKey.Key, dynamicPublicKeyFileName, dynamicPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading pubic key: %s", err)

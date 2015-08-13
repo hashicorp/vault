@@ -54,16 +54,12 @@ func (b *backend) pathCredsCreateWrite(
 		return logical.ErrorResponse("Missing ip"), nil
 	}
 
-	roleEntry, err := req.Storage.Get(fmt.Sprintf("roles/%s", roleName))
+	role, err := b.getRole(req.Storage, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
-	if roleEntry == nil {
+	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", roleName)), nil
-	}
-	var role sshRole
-	if err := roleEntry.DecodeJSON(&role); err != nil {
-		return nil, err
 	}
 
 	// Set the default username
@@ -101,7 +97,7 @@ func (b *backend) pathCredsCreateWrite(
 			"otp": otp,
 		})
 	} else if role.KeyType == KeyTypeDynamic {
-		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(req, &role, username, ip)
+		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(req, role, username, ip)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +156,7 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	}
 
 	// Transfer the public key to target machine
-	publicKeyFileName := uuid.GenerateUUID()
+	_, publicKeyFileName := b.GenerateSaltedOTP()
 	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, publicKeyFileName, dynamicPublicKey)
 	if err != nil {
 		return "", "", fmt.Errorf("error uploading public key: %s", err)
@@ -180,15 +176,19 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	return dynamicPublicKey, dynamicPrivateKey, nil
 }
 
+// Generates a UUID OTP and its salted value based on the salt of the backend.
+func (b *backend) GenerateSaltedOTP() (string, string) {
+	str := uuid.GenerateUUID()
+	return str, b.salt.SaltID(str)
+}
+
 // Generates a salted OTP and creates an entry for the same in storage backend.
 func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
-	otp := uuid.GenerateUUID()
-	otpSalted := b.salt.SaltID(otp)
+	otp, otpSalted := b.GenerateSaltedOTP()
 	entry, err := req.Storage.Get("otp/" + otpSalted)
 	// Make sure that new OTP is not replacing an existing one
 	for err == nil && entry != nil {
-		otp = uuid.GenerateUUID()
-		otpSalted = b.salt.SaltID(otp)
+		otp, otpSalted = b.GenerateSaltedOTP()
 		entry, err = req.Storage.Get("otp/" + otpSalted)
 		if err != nil {
 			return "", err
