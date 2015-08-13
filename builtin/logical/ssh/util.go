@@ -79,9 +79,13 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 	return
 }
 
-// Concatenates the public present in that target machine's home
-// folder to ~/.ssh/authorized_keys file
-func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string, port int, hostkey string) error {
+// Installs or uninstalls the dynamic key in the remote host. The parameterized script
+// will install or uninstall the key. The remote host is assumed to be Linux,
+// and hence the path of the authorized_keys file is hard coded to resemble Linux.
+// Installing and uninstalling the keys means that the public key is appended or
+// removed from authorized_keys file.
+// The param 'install' if false, uninstalls the key.
+func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string, port int, hostkey string, install bool) error {
 	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostkey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
@@ -94,39 +98,19 @@ func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string,
 	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
 	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 
+	var installOption string
+	if install {
+		installOption = "install"
+	} else {
+		installOption = "uninstall"
+	}
 	// Give execute permissions to install script, run and delete it.
 	chmodCmd := fmt.Sprintf("chmod +x %s", scriptFileName)
-	scriptCmd := fmt.Sprintf("./%s install %s %s", scriptFileName, publicKeyFileName, authKeysFileName)
+	scriptCmd := fmt.Sprintf("./%s %s %s %s", scriptFileName, installOption, publicKeyFileName, authKeysFileName)
 	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
 	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
 
 	session.Run(targetCmd)
-	return nil
-}
-
-// Removes the installed public key from the authorized_keys file
-// in target machine
-func uninstallPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string, port int, hostKey string) error {
-	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostKey)
-	if err != nil {
-		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
-	}
-	if session == nil {
-		return fmt.Errorf("invalid session object")
-	}
-	defer session.Close()
-
-	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
-	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
-
-	// Give execute permissions to install script, run and delete it.
-	chmodCmd := fmt.Sprintf("chmod +x %s", scriptFileName)
-	scriptCmd := fmt.Sprintf("./%s uninstall %s %s", scriptFileName, publicKeyFileName, authKeysFileName)
-	rmCmd := fmt.Sprintf("rm -f %s", scriptFileName)
-	targetCmd := fmt.Sprintf("%s;%s;%s", chmodCmd, scriptCmd, rmCmd)
-
-	session.Run(targetCmd)
-
 	return nil
 }
 

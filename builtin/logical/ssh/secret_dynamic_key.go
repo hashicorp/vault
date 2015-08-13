@@ -128,7 +128,8 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	}
 
 	// Remove the public key from authorized_keys file in target machine
-	err = uninstallPublicKeyInTarget(adminUser, dynamicPublicKeyFileName, username, ip, port, hostKey.Key)
+	// The last param 'false' indicates that the key should be uninstalled.
+	err = installPublicKeyInTarget(adminUser, dynamicPublicKeyFileName, username, ip, port, hostKey.Key, false)
 	if err != nil {
 		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
 	}

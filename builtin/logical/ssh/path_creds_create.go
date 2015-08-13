@@ -3,7 +3,6 @@ package ssh
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
@@ -155,13 +154,7 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 		return "", "", fmt.Errorf("error reading the host key: %s", err)
 	}
 
-	// Generate RSA key pair
-	keyBits, err := strconv.Atoi(role.KeyBits)
-	if err != nil {
-		return "", "", fmt.Errorf("error reading key bit size: %s", err)
-	}
-
-	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(keyBits)
+	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(role.KeyBits)
 	if err != nil {
 		return "", "", fmt.Errorf("error generating key: %s", err)
 	}
@@ -180,7 +173,7 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	}
 
 	// Add the public key to authorized_keys file in target machine
-	err = installPublicKeyInTarget(role.AdminUser, publicKeyFileName, username, ip, role.Port, hostKey.Key)
+	err = installPublicKeyInTarget(role.AdminUser, publicKeyFileName, username, ip, role.Port, hostKey.Key, true)
 	if err != nil {
 		return "", "", fmt.Errorf("error adding public key to authorized_keys file in target")
 	}

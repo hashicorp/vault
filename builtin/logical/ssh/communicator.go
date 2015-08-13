@@ -246,8 +246,6 @@ func (c *comm) scpSession(scpCommand string, f func(io.Writer, *bufio.Reader) er
 
 		return err
 	}
-
-	log.Printf("scp stderr (length %d): %s", stderr.Len(), stderr.String())
 	return nil
 }
 
@@ -292,7 +290,6 @@ func scpUploadFile(dst string, src io.Reader, w io.Writer, r *bufio.Reader, fi *
 
 		mode = 0644
 
-		log.Println("Copying input data into temporary file so we can read the length")
 		if _, err := io.Copy(tf, src); err != nil {
 			return err
 		}

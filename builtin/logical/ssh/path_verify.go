@@ -73,5 +73,5 @@ target machine to check if the key provided by the client
 to establish the SSH connection is valid or not.
 
 This key will be a one-time-password. The vault server responds
-that the key is valid only once (hence one-time).
+that the key is valid and then deletes it, hence the key is OTP. 
 `

@@ -3,7 +3,6 @@ package ssh
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -12,47 +11,75 @@ import (
 
 const KeyTypeOTP = "otp"
 const KeyTypeDynamic = "dynamic"
-const KeyBitsRSA = "2048"
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/(?P<role>[-\\w]+)",
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Name of the role",
+				Type: framework.TypeString,
+				Description: `
+				[Required for both types]
+				Name of the role being created.`,
 			},
 			"key": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Named key in Vault",
+				Type: framework.TypeString,
+				Description: `
+				[Required for dynamic type] [Not applicable for otp type]
+				Name of the registered key in Vault. Before creating the role, use the
+				'keys/' endpoint to create a named key.`,
 			},
 			"admin_user": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Admin user at target address",
+				Type: framework.TypeString,
+				Description: `
+				[Required for dynamic type] [Not applicable for otp type]
+				Admin user at remote host. The shared key being registered should be
+				for this user and should have root privileges. Everytime a dynamic 
+				credential is being generated for other users, Vault uses this admin
+				username to login to remote host and install the generated credential
+				for the other user.`,
 			},
 			"default_user": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Default user to whom the dynamic key is installed",
+				Type: framework.TypeString,
+				Description: `
+				[Required for both types]
+				Default username for which a credential will be generated.
+				When the endpoint 'creds/' is used without a username, this
+				value will be used as default username.`,
 			},
 			"cidr_list": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Comma separated CIDR blocks and IP addresses",
+				Type: framework.TypeString,
+				Description: `
+				[Required for both types]
+				Comma separated list of CIDR blocks for which the role is applicable for.
+				CIDR blocks can belong to more than one role.`,
 			},
 			"port": &framework.FieldSchema{
-				Type:        framework.TypeInt,
-				Description: "Port number for SSH connection",
+				Type: framework.TypeInt,
+				Description: `
+				[Optional for both types]
+				Port number for SSH connection. Default is '22'.`,
 			},
 			"key_type": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "one-time-password or dynamic-key",
+				Type: framework.TypeString,
+				Description: `
+				[Required for both types] 
+				Type of key used to login to hosts. It can be either 'otp' or 'dynamic'.
+				'otp' type requires agent to be installed in remote hosts.`,
 			},
 			"key_bits": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "number of bits in keys",
+				Type: framework.TypeInt,
+				Description: `
+				[Optional for dynamic type] [Not applicable for otp type]
+				Length of the RSA dynamic key in bits. It can be one of 1024, 2048 or 4096.`,
 			},
 			"install_script": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "script that installs public key in target",
+				Type: framework.TypeString,
+				Description: `
+				[Optional for dynamic type][Not-applicable for otp type]
+				Script used to install and uninstall public keys in the target machine.
+				The inbuilt default install script will be for Linux hosts. For sample
+				script, refer the project's documentation website.`,
 			},
 		},
 
@@ -71,6 +98,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	roleName := d.Get("role").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role name"), nil
+	}
+
+	defaultUser := d.Get("default_user").(string)
+	if defaultUser == "" {
+		return logical.ErrorResponse("Missing default user"), nil
 	}
 
 	cidrList := d.Get("cidr_list").(string)
@@ -95,25 +127,20 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	}
 	keyType = strings.ToLower(keyType)
 
-	var entry *logical.StorageEntry
 	var err error
+	var roleEntry sshRole
 	if keyType == KeyTypeOTP {
 		adminUser := d.Get("admin_user").(string)
 		if adminUser != "" {
 			return logical.ErrorResponse("Admin user not required for OTP type"), nil
 		}
 
-		defaultUser := d.Get("default_user").(string)
-		if defaultUser == "" {
-			return logical.ErrorResponse("Missing default user"), nil
-		}
-
-		entry, err = logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), sshRole{
+		roleEntry = sshRole{
 			DefaultUser: defaultUser,
 			CIDRList:    cidrList,
 			KeyType:     KeyTypeOTP,
 			Port:        port,
-		})
+		}
 	} else if keyType == KeyTypeDynamic {
 		keyName := d.Get("key").(string)
 		if keyName == "" {
@@ -134,23 +161,15 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			return logical.ErrorResponse("Missing admin username"), nil
 		}
 
-		defaultUser := d.Get("default_user").(string)
-		if defaultUser == "" {
-			defaultUser = adminUser
+		keyBits := d.Get("key_bits").(int)
+		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 && keyBits != 4096 {
+			return logical.ErrorResponse("Invalid key_bits field"), nil
+		}
+		if keyBits == 0 {
+			keyBits = 2048
 		}
 
-		keyBits := d.Get("key_bits").(string)
-		if keyBits != "" {
-			_, err := strconv.Atoi(keyBits)
-			if err != nil {
-				return logical.ErrorResponse("Key bits should be an integer"), nil
-			}
-		}
-		if keyBits == "" {
-			keyBits = KeyBitsRSA
-		}
-
-		entry, err = logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), sshRole{
+		roleEntry = sshRole{
 			KeyName:       keyName,
 			AdminUser:     adminUser,
 			DefaultUser:   defaultUser,
@@ -159,11 +178,12 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			KeyType:       KeyTypeDynamic,
 			KeyBits:       keyBits,
 			InstallScript: installScript,
-		})
+		}
 	} else {
 		return logical.ErrorResponse("Invalid key type"), nil
 	}
 
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), roleEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +244,7 @@ func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (
 type sshRole struct {
 	KeyType       string `mapstructure:"key_type" json:"key_type"`
 	KeyName       string `mapstructure:"key" json:"key"`
-	KeyBits       string `mapstructure:"key_bits" json:"key_bits"`
+	KeyBits       int    `mapstructure:"key_bits" json:"key_bits"`
 	AdminUser     string `mapstructure:"admin_user" json:"admin_user"`
 	DefaultUser   string `mapstructure:"default_user" json:"default_user"`
 	CIDRList      string `mapstructure:"cidr_list" json:"cidr_list"`
@@ -237,8 +257,8 @@ Manage the 'roles' that can be created with this backend.
 `
 
 const pathRoleHelpDesc = `
-This path allows you to manage the roles that are used to create
-keys. These roles will be having privileged access to all
+This path allows you to manage the roles that are used to generate 
+credentials. These roles will be having privileged access to all
 the hosts mentioned by CIDR blocks. For example, if the backend
 is mounted at "ssh" and the role is created at "ssh/roles/web",
 then a user could request for a new key at "ssh/creds/web" for the
@@ -249,37 +269,4 @@ should have root access in all the hosts represented by the 'cidr_list'
 field. When the user requests key for an IP, the key will be installed
 for the user mentioned by 'default_user' field. The 'key' field takes
 a named key which can be configured by 'ssh/keys/' endpoint.
-
-Role Options:
-
-  -key_type		This can be either 'otp' or 'dynamic'. 'otp' key requires
-  			agent to be installed in target machine. Required field for
-			both types.
-
-  -key			Name of the key registered using 'keys/' endpoint. Required
-  			field for 'dynamic' type. Not applicable for 'otp' type.
-
-  -admin_user		Username at the target which is having root privileges. This
-  			username will be used to install keys for other unprivileged
-			users. Required field for 'dynamic' type. Not applicable for
-			'otp' type.
-
-  -default_user		When keys are created using '/creds' endpoint with only the
-  			IP address, by default, this username is used to create the
-			credentials. Required for 'otp' type. Optional for 'dynamic' type.
-
-  -cidr_list		CIDR block for which is role is applicable for. Required field
-  			for both types.
-
-  -port			Port number for SSH connections. Default is '22'. Optional for
-  			both types.
-
-  -key_bits		Length of RSa dynamic key in bits. Optional for 'dynamic' type.
-  			Not applicable for 'otp' type.
-
-  -install_script	Script used to install and uninstall public keys in the target
-  			machine. Required for 'dynamic' type. Not applicable for 'otp'
-			type.
-			[For Linux, refer https://github.com/hashicorp/vault/tree/master/
-			builtin/logical/ssh/scripts/key-install-linux.sh]
 `
