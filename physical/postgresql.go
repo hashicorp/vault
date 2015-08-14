@@ -22,9 +22,9 @@ func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("'url' must be set")
 	}
 
-	table_name, ok := conf["table_name"]
+	tableName, ok := conf["table_name"]
 	if !ok {
-		table_name = "vault"
+		tableName = "vault"
 	}
 
 	db, err := sql.Open("postgres", url)
@@ -36,32 +36,32 @@ func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("Error running ping to postgresql databases: %v", err)
 	}
 
-	sqlStmt = "CREATE TABLE if not exists " + table_name + " ( key TEXT not null, value bytea, created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL);"
+	sqlStmt := "CREATE TABLE if not exists " + tableName + " ( key TEXT not null, value bytea, created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL);"
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating database table: %v", err)
 	}
 
-	b = PostGreSQLBackend{
-		dbTable:    table_name,
+	b := PostGreSQLBackend{
+		dbTable:    tableName,
 		db:         db,
 		statements: make(map[string]*sql.Stmt),
 	}, nil
 
 	statements := map[string]string{
-		"put_update": "update " + table_name + " set value =  $1, updated_at = $2 where key = $3",
-		"put_insert": "insert into  " + table_name + " (key, value, created_at, updated_at) values ($1, $2, $3, $4)",
-		"list":       "SELECT key FROM " + table_name + " WHERE key like ?",
-		"delete":     "DELETE FROM " + table_name + " WHERE key = ?",
-		"get":        "SELECT value FROM " + table_name + " WHERE key = ?",
+		"put_update": "update " + tableName + " set value =  $1, updated_at = $2 where key = $3",
+		"put_insert": "insert into  " + tableName + " (key, value, created_at, updated_at) values ($1, $2, $3, $4)",
+		"list":       "SELECT key FROM " + tableName + " WHERE key like ?",
+		"delete":     "DELETE FROM " + tableName + " WHERE key = ?",
+		"get":        "SELECT value FROM " + tableName + " WHERE key = ?",
 	}
 	for name, query := range statements {
-		if err := m.prepare(name, query); err != nil {
+		if err := b.prepare(name, query); err != nil {
 			return nil, err
 		}
 	}
 
-	return &b
+	return &b, nil
 }
 
 func (b *PostGreSQLBackend) prepare(name, query string) error {
@@ -80,7 +80,7 @@ func (b *PostGreSQLBackend) Delete(k string) error {
 		return fmt.Errorf("Error starting transaction: %v", err)
 	}
 
-	_, err = statements["delete"].Exec(k)
+	_, err = b.statements["delete"].Exec(k)
 	if err != nil {
 		return fmt.Errorf("Error executing delete satement: %v", err)
 	}
@@ -96,7 +96,7 @@ func (b *PostGreSQLBackend) Delete(k string) error {
 // Get - fetch data from tables that match key
 func (b *PostGreSQLBackend) Get(k string) (*Entry, error) {
 	var value []byte
-	row, err := statements["get"].Query(k)
+	row, err := b.statements["get"].Query(k)
 	if err != nil {
 		return nil, fmt.Errorf("Error committing transaction: %v", err)
 	}
@@ -115,7 +115,7 @@ func (b *PostGreSQLBackend) Get(k string) (*Entry, error) {
 func (b *PostGreSQLBackend) Put(entry *Entry) error {
 
 	// TODO: fix me
-	rows, err := statements["get"].Query(entry.Key)
+	rows, err := b.statements["get"].Query(entry.Key)
 	if err != nil {
 		return fmt.Errorf("Error committing transaction: %v", err)
 	}
@@ -130,13 +130,13 @@ func (b *PostGreSQLBackend) Put(entry *Entry) error {
 	// need to update if already there
 	time := time.Now()
 	if next {
-		_, err = statements["put_update"].Exec(entry.Value, time, entry.Key)
+		_, err = b.statements["put_update"].Exec(entry.Value, time, entry.Key)
 		if err != nil {
 			return fmt.Errorf("Error executing update: %v", err)
 		}
 
 	} else {
-		_, err = statements["put_insert"].Exec(entry.Key, entry.Value, time, time)
+		_, err = b.statements["put_insert"].Exec(entry.Key, entry.Value, time, time)
 		if err != nil {
 			return fmt.Errorf("Error executing insert on put: %v", err)
 		}
@@ -158,7 +158,7 @@ func (b *PostGreSQLBackend) List(prefix string) ([]string, error) {
 	query := buffer.String()
 
 	// TODO: fix me
-	rows, err := statements["list"].Query(query)
+	rows, err := b.statements["list"].Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("Error querying during list: %v", err)
 	}
