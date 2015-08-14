@@ -1,146 +1,104 @@
 package physical
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-	"sync"
 	"time"
 )
 
-// PostGresBackend is a physical backend that stores data on postgres database
-type PostGresBackend struct {
-	Url string
-
-	l sync.Mutex
+// PostGreSQLBackend is a physical backend that stores data on postgres database
+type PostGreSQLBackend struct {
+	dbTable    string
+	db         *sql.DB
+	statements map[string]*sql.Stmt
 }
 
-var (
-	Trace   *log.Logger
-	Info    *log.Logger
-	Warning *log.Logger
-	Error   *log.Logger
-)
+// newPostGreSQLBackend constructs a new postgresql backend, opens a pool of connection and prepares sql statements, creates table is not already there
+func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 
-// newFileBackend constructs a Filebackend using the given directory
-func newPostGresBackend(conf map[string]string) (Backend, error) {
-
-	Trace = log.New(ioutil.Discard, "Trace: ", log.Ldate|log.Ltime|log.Lshortfile)
-	Info = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	Warning = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
-	Error = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
-
-	Trace.Println("> newPostGresBackend")
 	url, ok := conf["url"]
 	if !ok {
 		return nil, fmt.Errorf("'url' must be set")
 	}
 
+	table_name, ok := conf["table_name"]
+	if !ok {
+		table_name = "vault"
+	}
+
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		Error.Fatal(err)
+		return nil, fmt.Errorf("Error opening connection to postgresql database: %v", err)
 	}
-	defer db.Close()
-	sqlStmt := "CREATE EXTENSION if not exists \"uuid-ossp\";"
-	_, err = db.Exec(sqlStmt)
+	err = db.Ping()
 	if err != nil {
-		Error.Printf("%q: %s\n", err, sqlStmt)
-		Error.Println("< newPostGresBackend(err)")
-		Error.Panic(err)
+		return nil, fmt.Errorf("Error running ping to postgresql databases: %v", err)
 	}
 
-	sqlStmt = `
-CREATE TABLE if not exists vault (
-  id UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
-  key TEXT not null,
-  value bytea,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);`
+	sqlStmt = "CREATE TABLE if not exists " + table_name + " ( key TEXT not null, value bytea, created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL);"
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
-		Error.Printf("%q: %s\n", err, sqlStmt)
-		Error.Println("< newPostGresBackend(err)")
-		Error.Panic(err)
+		return nil, fmt.Errorf("Error creating database table: %v", err)
 	}
 
-	Trace.Println("< newPostGresBackend")
-	return &PostGresBackend{Url: url}, nil
+	b = PostGreSQLBackend{
+		dbTable:    table_name,
+		db:         db,
+		statements: make(map[string]*sql.Stmt),
+	}, nil
+
+	statements := map[string]string{
+		"put_update": "update " + table_name + " set value =  $1, updated_at = $2 where key = $3",
+		"put_insert": "insert into  " + table_name + " (key, value, created_at, updated_at) values ($1, $2, $3, $4)",
+		"list":       "SELECT key FROM " + table_name + " WHERE key like ?",
+		"delete":     "DELETE FROM " + table_name + " WHERE key = ?",
+		"get":        "SELECT value FROM " + table_name + " WHERE key = ?",
+	}
+	for name, query := range statements {
+		if err := m.prepare(name, query); err != nil {
+			return nil, err
+		}
+	}
+
+	return &b
 }
 
-func (b *PostGresBackend) Delete(k string) error {
-	Trace.Println("> Delete")
-	b.l.Lock()
-	defer b.l.Unlock()
-
-	db, err := sql.Open("postgres", b.Url)
+func (b *PostGreSQLBackend) prepare(name, query string) error {
+	stmt, err := b.db.Prepare(query)
 	if err != nil {
-		Trace.Println("< Delete error db")
-		Error.Fatal(err)
+		return fmt.Errorf("failed to prepare '%s': %v", name, err)
 	}
-	defer db.Close()
+	b.statements[name] = stmt
+	return nil
+}
 
-	txn, err := db.Begin()
+// Delete - Delete rows from table which match key
+func (b *PostGreSQLBackend) Delete(k string) error {
+	txn, err := b.db.Begin()
 	if err != nil {
-		Trace.Println("< Delete error begin")
-		Trace.Fatal(err)
+		return fmt.Errorf("Error starting transaction: %v", err)
 	}
 
-	stmt, err := txn.Prepare("delete from vault where key = $1")
+	_, err = statements["delete"].Exec(k)
 	if err != nil {
-		Trace.Println("< Delete error prepare")
-		Error.Fatal(err)
-	}
-
-	_, err = stmt.Exec(k)
-	if err != nil {
-		Trace.Println("< Delete error exec")
-		Error.Fatal(err)
-	}
-
-	err = stmt.Close()
-	if err != nil {
-		Trace.Println("< Delete error close")
-		Error.Fatal(err)
+		return fmt.Errorf("Error executing delete satement: %v", err)
 	}
 
 	err = txn.Commit()
 	if err != nil {
-		Trace.Println("< Delete error commit")
-		Error.Fatal(err)
+		return fmt.Errorf("Error committing transaction: %v", err)
 	}
 
-	Trace.Println("< Delete")
 	return err
 }
 
-func (b *PostGresBackend) Get(k string) (*Entry, error) {
-	Trace.Println("> Get")
-	b.l.Lock()
-	defer b.l.Unlock()
-
-	db, err := sql.Open("postgres", b.Url)
-	if err != nil {
-		Trace.Println("< Get error db")
-		Error.Fatal(err)
-	}
-	defer db.Close()
-
-	stmt, err := db.Prepare("select value from vault where key = $1")
-	defer stmt.Close()
-	if err != nil {
-		Trace.Println("< Get error select")
-		Error.Fatal(err)
-	}
-
+// Get - fetch data from tables that match key
+func (b *PostGreSQLBackend) Get(k string) (*Entry, error) {
 	var value []byte
-	row, err := stmt.Query(k)
+	row, err := statements["get"].Query(k)
 	if err != nil {
-		Error.Println(err)
-		Trace.Println("< Get error query")
-		return nil, err
+		return nil, fmt.Errorf("Error committing transaction: %v", err)
 	}
 
 	if row.Next() {
@@ -149,108 +107,60 @@ func (b *PostGresBackend) Get(k string) (*Entry, error) {
 
 		return &entry, nil
 	}
-	Trace.Println("< Get")
 	return nil, err
 
 }
 
-func (b *PostGresBackend) Put(entry *Entry) error {
-	Trace.Println("> Put")
-	b.l.Lock()
-	defer b.l.Unlock()
+// Put - Update a row in database
+func (b *PostGreSQLBackend) Put(entry *Entry) error {
 
-	db, err := sql.Open("postgres", b.Url)
+	// TODO: fix me
+	rows, err := statements["get"].Query(entry.Key)
 	if err != nil {
-		Trace.Println("< Put error db")
-		Error.Fatal(err)
-	}
-	defer db.Close()
-
-	rows, err := db.Query("select key from vault where key = $1", entry.Key)
-	if err != nil {
-		Trace.Println("< Put error select")
-		Error.Fatal(err)
+		return fmt.Errorf("Error committing transaction: %v", err)
 	}
 	defer rows.Close()
 
-	txn, err := db.Begin()
+	txn, err := b.db.Begin()
 	if err != nil {
-		Trace.Println("< Put error tran begin")
-		Error.Fatal(err)
+		return fmt.Errorf("Error starting transaction: %v", err)
 	}
 	next := rows.Next()
-	Trace.Printf("D Put - is there next row? %t", next)
 
 	// need to update if already there
+	time := time.Now()
 	if next {
-		stmt, err := txn.Prepare("update vault set value =  $1, updated_at = $2 where key = $3")
+		_, err = statements["put_update"].Exec(entry.Value, time, entry.Key)
 		if err != nil {
-			Trace.Println("< Put error update")
-			Error.Fatal(err)
-		}
-
-		time := time.Now()
-		_, err = stmt.Exec(entry.Value, time, entry.Key)
-		if err != nil {
-			Trace.Println("< Put error exec")
-			Error.Fatal(err)
-		}
-
-		err = stmt.Close()
-		if err != nil {
-			Trace.Println("< Put error close")
-			Error.Fatal(err)
+			return fmt.Errorf("Error executing update: %v", err)
 		}
 
 	} else {
-		stmt, err := txn.Prepare("insert into vault (key, value, created_at, updated_at) values ($1, $2, $3, $4)")
+		_, err = statements["put_insert"].Exec(entry.Key, entry.Value, time, time)
 		if err != nil {
-			Trace.Println("< Put error insert prepare")
-			Error.Fatal(err)
-		}
-
-		time := time.Now()
-		_, err = stmt.Exec(entry.Key, entry.Value, time, time)
-		if err != nil {
-			Trace.Println("< Put error exec")
-			Error.Fatal(err)
-		}
-
-		err = stmt.Close()
-		if err != nil {
-			Trace.Println("< Put error close")
-			Error.Fatal(err)
+			return fmt.Errorf("Error executing insert on put: %v", err)
 		}
 
 	}
 	err = txn.Commit()
 	if err != nil {
-		Trace.Println("< Put error commit")
-		Error.Fatal(err)
+		return fmt.Errorf("Error committing transaction: %v", err)
 	}
-	Trace.Println("< Put")
 
 	return err
 }
 
-func (b *PostGresBackend) List(prefix string) ([]string, error) {
-	Trace.Println("> List")
-	b.l.Lock()
-	defer b.l.Unlock()
+// List - query database for matches
+func (b *PostGreSQLBackend) List(prefix string) ([]string, error) {
 
-	db, err := sql.Open("postgres", b.Url)
+	buffer := bytes.NewBufferString(prefix)
+	buffer.WriteString("%")
+	query := buffer.String()
+
+	// TODO: fix me
+	rows, err := statements["list"].Query(query)
 	if err != nil {
-		Trace.Println("< List error db")
-		Error.Fatal(err)
-	}
-	defer db.Close()
-
-	query := "%" + prefix + "%"
-
-	rows, err := db.Query("select key from vault where key like $1", query)
-	if err != nil {
-		Trace.Println("< List error query")
-		Error.Fatal(err)
+		return nil, fmt.Errorf("Error querying during list: %v", err)
 	}
 	defer rows.Close()
 
@@ -260,9 +170,7 @@ func (b *PostGresBackend) List(prefix string) ([]string, error) {
 		var message string
 		rows.Scan(&message)
 		result = append(result, message)
-		Trace.Println(message)
 	}
 
-	Trace.Println("< List")
 	return result, nil
 }
