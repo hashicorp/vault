@@ -185,7 +185,9 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 		installScript := d.Get("install_script").(string)
 		if installScript == "" {
-			return logical.ErrorResponse("Missing install script"), nil
+			// Setting the default script here. The script will install the generated public key in
+			// the authorized_keys file of linux host.
+			installScript = LinuxInstallScript
 		}
 
 		adminUser := d.Get("admin_user").(string)
