@@ -19,11 +19,11 @@ func pathKeys(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"key_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the key",
+				Description: "[Required] Name of the key",
 			},
 			"key": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "SSH private key with root privileges for host",
+				Description: "[Required] SSH private key with super user privileges in host",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -80,6 +80,10 @@ func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (
 
 func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("key_name").(string)
+	if keyName == "" {
+		return logical.ErrorResponse("Missing key_name"), nil
+	}
+
 	keyString := d.Get("key").(string)
 
 	signer, err := ssh.ParsePrivateKey([]byte(keyString))

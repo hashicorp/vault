@@ -14,7 +14,7 @@ func pathLookup(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"ip": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "IP address of target",
+				Description: "[Required] IP address of remote host",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

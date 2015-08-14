@@ -22,15 +22,15 @@ func pathCredsCreate(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the role",
+				Description: "[Required] Name of the role",
 			},
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Username in target",
+				Description: "[Optional] Username in remote host",
 			},
 			"ip": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "IP of the target machine",
+				Description: "[Required] IP of the remote host",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

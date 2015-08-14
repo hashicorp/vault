@@ -144,7 +144,7 @@ func (c *SSHCommand) Run(args []string) int {
 			}
 			return 0
 		}
-		c.Ui.Output("OTP for the session is" + string(keySecret.Data["key"].(string)))
+		c.Ui.Output("OTP for the session is " + string(keySecret.Data["key"].(string)))
 		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
 	}
 	sshCmdArgs = append(sshCmdArgs, []string{"-p", port}...)

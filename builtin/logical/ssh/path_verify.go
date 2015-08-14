@@ -12,7 +12,7 @@ func pathVerify(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"otp": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "One-time-key for SSH session",
+				Description: "[Required] One-Time-Key that needs to be validated",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

@@ -96,7 +96,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Optional for dynamic type][Not-applicable for otp type]
 				Script used to install and uninstall public keys in the target machine.
 				The inbuilt default install script will be for Linux hosts. For sample
-				script, refer the project's documentation website.`,
+				script, refer the project documentation website.`,
 			},
 			"allowed_users": &framework.FieldSchema{
 				Type: framework.TypeString,
