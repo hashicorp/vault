@@ -46,14 +46,14 @@ func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 		dbTable:    tableName,
 		db:         db,
 		statements: make(map[string]*sql.Stmt),
-	}, nil
+	}
 
 	statements := map[string]string{
 		"put_update": "update " + tableName + " set value =  $1, updated_at = $2 where key = $3",
 		"put_insert": "insert into  " + tableName + " (key, value, created_at, updated_at) values ($1, $2, $3, $4)",
-		"list":       "SELECT key FROM " + tableName + " WHERE key like ?",
-		"delete":     "DELETE FROM " + tableName + " WHERE key = ?",
-		"get":        "SELECT value FROM " + tableName + " WHERE key = ?",
+		"list":       "SELECT key FROM " + tableName + " WHERE key like $1",
+		"delete":     "DELETE FROM " + tableName + " WHERE key = $1",
+		"get":        "SELECT value FROM " + tableName + " WHERE key = $1",
 	}
 	for name, query := range statements {
 		if err := b.prepare(name, query); err != nil {
