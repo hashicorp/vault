@@ -4,18 +4,22 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
-// PostGreSQLBackend is a physical backend that stores data on postgres database
-type PostGreSQLBackend struct {
+// PostgresqlBackend is a physical backend that stores data on postgres database
+type PostgresqlBackend struct {
 	dbTable    string
 	db         *sql.DB
 	statements map[string]*sql.Stmt
 }
 
-// newPostGreSQLBackend constructs a new postgresql backend, opens a pool of connection and prepares sql statements, creates table is not already there
-func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
+// newPostgresqlBackend constructs a new postgresql backend, opens a pool of connection and prepares sql statements, creates table is not already there
+func newPostgresqlBackend(conf map[string]string) (Backend, error) {
 
 	url, ok := conf["url"]
 	if !ok {
@@ -36,13 +40,13 @@ func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("Error running ping to postgresql databases: %v", err)
 	}
 
-	sqlStmt := "CREATE TABLE if not exists " + tableName + " ( key TEXT not null, value bytea, created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL);"
+	sqlStmt := "CREATE TABLE if not exists " + tableName + " ( key TEXT not null PRIMARY KEY, value bytea, created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL default (now() at time zone 'utc'), updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL default (now() at time zone 'utc'));"
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating database table: %v", err)
 	}
 
-	b := PostGreSQLBackend{
+	b := PostgresqlBackend{
 		dbTable:    tableName,
 		db:         db,
 		statements: make(map[string]*sql.Stmt),
@@ -53,7 +57,7 @@ func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 		"put_insert": "insert into  " + tableName + " (key, value, created_at, updated_at) values ($1, $2, $3, $4)",
 		"list":       "SELECT key FROM " + tableName + " WHERE key like $1",
 		"delete":     "DELETE FROM " + tableName + " WHERE key = $1",
-		"get":        "SELECT value FROM " + tableName + " WHERE key = $1",
+		"get":        "SELECT value FROM " + tableName + " WHERE key like $1",
 	}
 	for name, query := range statements {
 		if err := b.prepare(name, query); err != nil {
@@ -64,7 +68,7 @@ func newPostGreSQLBackend(conf map[string]string) (Backend, error) {
 	return &b, nil
 }
 
-func (b *PostGreSQLBackend) prepare(name, query string) error {
+func (b *PostgresqlBackend) prepare(name, query string) error {
 	stmt, err := b.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare '%s': %v", name, err)
@@ -74,7 +78,7 @@ func (b *PostGreSQLBackend) prepare(name, query string) error {
 }
 
 // Delete - Delete rows from table which match key
-func (b *PostGreSQLBackend) Delete(k string) error {
+func (b *PostgresqlBackend) Delete(k string) error {
 	txn, err := b.db.Begin()
 	if err != nil {
 		return fmt.Errorf("Error starting transaction: %v", err)
@@ -94,7 +98,7 @@ func (b *PostGreSQLBackend) Delete(k string) error {
 }
 
 // Get - fetch data from tables that match key
-func (b *PostGreSQLBackend) Get(k string) (*Entry, error) {
+func (b *PostgresqlBackend) Get(k string) (*Entry, error) {
 	var value []byte
 	row, err := b.statements["get"].Query(k)
 	if err != nil {
@@ -112,7 +116,7 @@ func (b *PostGreSQLBackend) Get(k string) (*Entry, error) {
 }
 
 // Put - Update a row in database
-func (b *PostGreSQLBackend) Put(entry *Entry) error {
+func (b *PostgresqlBackend) Put(entry *Entry) error {
 
 	// TODO: fix me
 	rows, err := b.statements["get"].Query(entry.Key)
@@ -128,7 +132,7 @@ func (b *PostGreSQLBackend) Put(entry *Entry) error {
 	next := rows.Next()
 
 	// need to update if already there
-	time := time.Now()
+	time := time.Now().UTC()
 	if next {
 		_, err = b.statements["put_update"].Exec(entry.Value, time, entry.Key)
 		if err != nil {
@@ -151,13 +155,12 @@ func (b *PostGreSQLBackend) Put(entry *Entry) error {
 }
 
 // List - query database for matches
-func (b *PostGreSQLBackend) List(prefix string) ([]string, error) {
+func (b *PostgresqlBackend) List(prefix string) ([]string, error) {
 
 	buffer := bytes.NewBufferString(prefix)
 	buffer.WriteString("%")
 	query := buffer.String()
 
-	// TODO: fix me
 	rows, err := b.statements["list"].Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("Error querying during list: %v", err)
@@ -168,9 +171,21 @@ func (b *PostGreSQLBackend) List(prefix string) ([]string, error) {
 
 	for rows.Next() {
 		var message string
-		rows.Scan(&message)
-		result = append(result, message)
+		err = rows.Scan(&message)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan rows: %v", err)
+		}
+
+		message = strings.TrimPrefix(message, prefix)
+		if i := strings.Index(message, "/"); i == -1 {
+			// Add objects only from the current 'folder'
+			result = append(result, message)
+		} else if i != -1 {
+			// Add truncated 'folder' paths
+			result = appendIfMissing(result, string(message[:i+1]))
+		}
 	}
+	sort.Strings(result)
 
 	return result, nil
 }
