@@ -31,8 +31,6 @@ func newPostgresqlBackend(conf map[string]string) (Backend, error) {
 		tableName = "vault"
 	}
 
-	fmt.Println("ERROR::::::::::::- new backend")
-
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return nil, fmt.Errorf("Error opening connection to postgresql database: %v", err)
