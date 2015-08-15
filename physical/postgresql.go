@@ -14,7 +14,7 @@ import (
 // PostgresqlBackend is a physical backend that stores data on postgres database
 type PostgresqlBackend struct {
 	dbTable    string
-	db         *sql.DB
+	client     *sql.DB
 	statements map[string]*sql.Stmt
 }
 
@@ -31,6 +31,8 @@ func newPostgresqlBackend(conf map[string]string) (Backend, error) {
 		tableName = "vault"
 	}
 
+	fmt.Println("ERROR::::::::::::- new backend")
+
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return nil, fmt.Errorf("Error opening connection to postgresql database: %v", err)
@@ -46,9 +48,9 @@ func newPostgresqlBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("Error creating database table: %v", err)
 	}
 
-	b := PostgresqlBackend{
+	b := &PostgresqlBackend{
 		dbTable:    tableName,
-		db:         db,
+		client:     db,
 		statements: make(map[string]*sql.Stmt),
 	}
 
@@ -57,7 +59,7 @@ func newPostgresqlBackend(conf map[string]string) (Backend, error) {
 		"put_insert": "insert into  " + tableName + " (key, value, created_at, updated_at) values ($1, $2, $3, $4)",
 		"list":       "SELECT key FROM " + tableName + " WHERE key like $1",
 		"delete":     "DELETE FROM " + tableName + " WHERE key = $1",
-		"get":        "SELECT value FROM " + tableName + " WHERE key like $1",
+		"get":        "SELECT value FROM " + tableName + " WHERE key = $1",
 	}
 	for name, query := range statements {
 		if err := b.prepare(name, query); err != nil {
@@ -65,13 +67,13 @@ func newPostgresqlBackend(conf map[string]string) (Backend, error) {
 		}
 	}
 
-	return &b, nil
+	return b, nil
 }
 
 func (b *PostgresqlBackend) prepare(name, query string) error {
-	stmt, err := b.db.Prepare(query)
+	stmt, err := b.client.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("failed to prepare '%s': %v", name, err)
+		return fmt.Errorf("Prepare: failed to prepare '%s': %v", name, err)
 	}
 	b.statements[name] = stmt
 	return nil
@@ -79,19 +81,19 @@ func (b *PostgresqlBackend) prepare(name, query string) error {
 
 // Delete - Delete rows from table which match key
 func (b *PostgresqlBackend) Delete(k string) error {
-	txn, err := b.db.Begin()
+	txn, err := b.client.Begin()
 	if err != nil {
-		return fmt.Errorf("Error starting transaction: %v", err)
+		return fmt.Errorf("DELETE: Error starting transaction: %v", err)
 	}
 
 	_, err = b.statements["delete"].Exec(k)
 	if err != nil {
-		return fmt.Errorf("Error executing delete satement: %v", err)
+		return fmt.Errorf("DELETE: Error executing delete satement: %v", err)
 	}
 
 	err = txn.Commit()
 	if err != nil {
-		return fmt.Errorf("Error committing transaction: %v", err)
+		return fmt.Errorf("DELETE: Error committing transaction: %v", err)
 	}
 
 	return err
@@ -99,20 +101,23 @@ func (b *PostgresqlBackend) Delete(k string) error {
 
 // Get - fetch data from tables that match key
 func (b *PostgresqlBackend) Get(k string) (*Entry, error) {
-	var value []byte
-	row, err := b.statements["get"].Query(k)
-	if err != nil {
-		return nil, fmt.Errorf("Error committing transaction: %v", err)
+	var result []byte
+
+	err := b.statements["get"].QueryRow(k).Scan(&result)
+
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
 	}
 
-	if row.Next() {
-		row.Scan(&value)
-		entry := Entry{k, value}
-
-		return &entry, nil
+	ent := &Entry{
+		Key:   k,
+		Value: result,
 	}
-	return nil, err
 
+	return ent, nil
 }
 
 // Put - Update a row in database
@@ -121,13 +126,13 @@ func (b *PostgresqlBackend) Put(entry *Entry) error {
 	// TODO: fix me
 	rows, err := b.statements["get"].Query(entry.Key)
 	if err != nil {
-		return fmt.Errorf("Error committing transaction: %v", err)
+		return fmt.Errorf("PUT: Error running query: %v", err)
 	}
 	defer rows.Close()
 
-	txn, err := b.db.Begin()
+	txn, err := b.client.Begin()
 	if err != nil {
-		return fmt.Errorf("Error starting transaction: %v", err)
+		return fmt.Errorf("PUT: Error starting transaction: %v", err)
 	}
 	next := rows.Next()
 
@@ -136,19 +141,19 @@ func (b *PostgresqlBackend) Put(entry *Entry) error {
 	if next {
 		_, err = b.statements["put_update"].Exec(entry.Value, time, entry.Key)
 		if err != nil {
-			return fmt.Errorf("Error executing update: %v", err)
+			return fmt.Errorf("PUT: Error executing update: %v", err)
 		}
 
 	} else {
 		_, err = b.statements["put_insert"].Exec(entry.Key, entry.Value, time, time)
 		if err != nil {
-			return fmt.Errorf("Error executing insert on put: %v", err)
+			return fmt.Errorf("PUT: Error executing insert on put: %v", err)
 		}
 
 	}
 	err = txn.Commit()
 	if err != nil {
-		return fmt.Errorf("Error committing transaction: %v", err)
+		return fmt.Errorf("PUT: Error committing transaction: %v", err)
 	}
 
 	return err
@@ -163,7 +168,7 @@ func (b *PostgresqlBackend) List(prefix string) ([]string, error) {
 
 	rows, err := b.statements["list"].Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("Error querying during list: %v", err)
+		return nil, fmt.Errorf("List: Error querying during list: %v", err)
 	}
 	defer rows.Close()
 
@@ -173,7 +178,7 @@ func (b *PostgresqlBackend) List(prefix string) ([]string, error) {
 		var message string
 		err = rows.Scan(&message)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows: %v", err)
+			return nil, fmt.Errorf("List: failed to scan rows: %v", err)
 		}
 
 		message = strings.TrimPrefix(message, prefix)
