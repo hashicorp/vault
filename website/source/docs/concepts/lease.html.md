@@ -34,7 +34,8 @@ keys invalid from that point forward.
 
 Revocation can happen manually via the API or `vault revoke`, or automatically
 by Vault. When a lease is expired, Vault will automatically revoke that
-lease.
+lease.  (NOTE: in paths of type secret, leases are only advisory, items with
+expired leases are not revoked by Vault)
 
 ## Lease IDs
 
