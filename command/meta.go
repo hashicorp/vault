@@ -96,7 +96,7 @@ func (m *Meta) Client() (*api.Client, error) {
 		}
 	}
 	// If we need custom TLS configuration, then set it
-	if m.flagCACert != "" || m.flagCAPath != "" || m.flagInsecure {
+	if m.flagCACert != "" || m.flagCAPath != "" || m.flagClientCert != "" || m.flagClientKey != "" || m.flagInsecure {
 		var certPool *x509.CertPool
 		var err error
 		if m.flagCACert != "" {
