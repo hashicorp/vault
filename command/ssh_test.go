@@ -58,7 +58,7 @@ var testAdminUser string
 // Starts the server and initializes the servers IP address,
 // port and usernames to be used by the test cases.
 func init() {
-	addr, err := vault.StartTestServer()
+	addr, err := vault.StartSSHHostTestServer()
 	if err != nil {
 		panic(fmt.Sprintf("Error starting mock server:%s", err))
 	}

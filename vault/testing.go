@@ -135,7 +135,7 @@ var testLogicalBackends = map[string]logical.Factory{}
 
 // Starts the test server which responds to SSH authentication.
 // Used to test the SSH secret backend.
-func StartTestServer() (string, error) {
+func StartSSHHostTestServer() (string, error) {
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
 	if err != nil {
 		return "", fmt.Errorf("Error parsing public key")

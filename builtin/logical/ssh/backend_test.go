@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/hashicorp/vault/vault"
@@ -63,7 +64,7 @@ var testInstallScript string
 // Starts the server and initializes the servers IP address,
 // port and usernames to be used by the test cases.
 func init() {
-	addr, err := vault.StartTestServer()
+	addr, err := vault.StartSSHHostTestServer()
 	if err != nil {
 		panic(fmt.Sprintf("error starting mock server:%s", err))
 	}
@@ -191,6 +192,44 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 			testCredsWrite(t, testOTPRoleName),
 		},
 	})
+}
+
+func TestSSHBackend_VerifyEcho(t *testing.T) {
+	verifyData := map[string]interface{}{
+		"otp": api.VerifyEchoRequest,
+	}
+	expectedData := map[string]interface{}{
+		"message": api.VerifyEchoResponse,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testVerifyWrite(t, verifyData, expectedData),
+		},
+	})
+}
+
+func testVerifyWrite(t *testing.T, d map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      fmt.Sprintf("verify"),
+		Data:      d,
+		Check: func(resp *logical.Response) error {
+			var ac api.SSHVerifyResponse
+			if err := mapstructure.Decode(resp.Data, &ac); err != nil {
+				return err
+			}
+			var ex api.SSHVerifyResponse
+			if err := mapstructure.Decode(expected, &ex); err != nil {
+				return err
+			}
+
+			if ac.Message != ex.Message || ac.IP != ex.IP || ac.Username != ex.Username {
+				return fmt.Errorf("Invalid response")
+			}
+			return nil
+		},
+	}
 }
 
 func testCredsWrite(t *testing.T, name string) logicaltest.TestStep {
