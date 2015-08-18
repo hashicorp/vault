@@ -54,6 +54,9 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 		}, nil
 	}
 
+	// Create the salt of OTP because entry would have been create with the
+	// salt and not directly of the OTP. Salt will yield the same value which
+	// because the seed is the same, the backend salt.
 	otpSalted := b.salt.SaltID(otp)
 
 	// Return nil if there is no entry found for the OTP
@@ -81,14 +84,13 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 }
 
 const pathVerifyHelpSyn = `
-Tells if the key provided by the client is valid or not.
+Validate the OTP provided by Vault SSH Agent.
 `
 
 const pathVerifyHelpDesc = `
-This path will be used by the vault agent running in the
-target machine to check if the key provided by the client
-to establish the SSH connection is valid or not.
-
-This key will be a one-time-password. The vault server responds
-that the key is valid and then deletes it, hence the key is OTP. 
+This path will be used by Vault SSH Agent runnin in the remote hosts. The OTP
+provided by the client is sent to Vault for validation by the agent. If Vault
+finds an entry for the OTP, it responds with the username and IP it is associated
+with. Agent uses this information to authenticate the client. Vault deletes the
+OTP after validating it once.
 `

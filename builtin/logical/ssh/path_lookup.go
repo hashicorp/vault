@@ -35,11 +35,14 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ip.String())), nil
 	}
 
+	// Get all the roles created in the backend.
 	keys, err := req.Storage.List("roles/")
 	if err != nil {
 		return nil, err
 	}
 
+	// Look for roles which has CIDR blocks that encompasses the given IP
+	// and create a list out of it.
 	var matchingRoles []string
 	for _, role := range keys {
 		if contains, _ := roleContainsIP(req.Storage, role, ip.String()); contains {
@@ -47,13 +50,14 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 		}
 	}
 
-	// This result may potentially reveal more information than it is supposed to.
+	// This list may potentially reveal more information than it is supposed to.
 	// The roles for which the client is not authorized to will also be displayed.
 	// However, if the client tries to use the role for which the client is not
-	// authenticated, it will fail. There are no problems there. In a way this can
-	// be viewed as a feature. The client can ask for permissions to be given for
+	// authenticated, it will fail. It is not a problem. In a way this can be
+	// viewed as a feature. The client can ask for permissions to be given for
 	// a specific role if things are not working!
-	// Going forward, the role names should be filtered and only the roles which
+	//
+	// Ideally, the role names should be filtered and only the roles which
 	// the client is authorized to see, should be returned.
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -63,16 +67,15 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 }
 
 const pathLookupSyn = `
-Lists 'roles' that can be used to create a dynamic key.
+List all the roles associated with the given IP address.
 `
 
 const pathLookupDesc = `
-The IP address for which the key is requested, is searched in the
-CIDR blocks registered with vault using the 'roles' endpoint. Keys
-can be generated only by specifying the 'role' name. The roles that
-can be used to generate the key for a particular IP, are listed via
-this endpoint. For example, if this backend is mounted at "ssh", then
-"ssh/lookup" lists the roles associated with keys can be generated
-for a target IP, if the CIDR block encompassing the IP, is registered
+The IP address for which the key is requested, is searched in the CIDR blocks
+registered with vault using the 'roles' endpoint. Keys can be generated only by
+specifying the 'role' name. The roles that can be used to generate the key for
+a particular IP, are listed via this endpoint. For example, if this backend is
+mounted at "ssh", then "ssh/lookup" lists the roles associated with keys can be
+generated for a target IP, if the CIDR block encompassing the IP is registered
 with vault.
 `

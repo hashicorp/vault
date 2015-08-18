@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	// Default path at which SSH backend will be mounted
+	// Default path at which SSH backend will be mounted in Vault server
 	SSHAgentDefaultMountPoint = "ssh"
 
 	// Echo request message sent as OTP by the agent
@@ -38,9 +38,15 @@ type SSHAgent struct {
 // SSHVerifyResp is a structure representing the fields in Vault server's
 // response.
 type SSHVerifyResponse struct {
-	Message  string `mapstructure:"message"`
+	// Usually empty. If the request OTP is echo request message, this will
+	// be set to the corresponding echo response message.
+	Message string `mapstructure:"message"`
+
+	// Username associated with the OTP
 	Username string `mapstructure:"username"`
-	IP       string `mapstructure:"ip"`
+
+	// IP associated with the OTP
+	IP string `mapstructure:"ip"`
 }
 
 // Structure which represents the entries from the agent's configuration file.
@@ -53,7 +59,7 @@ type SSHAgentConfig struct {
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
 }
 
-// Returns a HTTP client that uses TLS verification (TLS 1.2) with the given
+// Returns a HTTP client that uses TLS verification (TLS 1.2) for a given
 // certificate pool.
 func (c *SSHAgentConfig) TLSClient(certPool *x509.CertPool) *http.Client {
 	tlsConfig := &tls.Config{
@@ -113,7 +119,10 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 }
 
 // Load agent's configuration from the file and populate the corresponding
-// in-memory structure. Vault address and SSH mount points required parameters.
+// in-memory structure.
+//
+// Vault address is a required parameter.
+// Mount point defaults to "ssh".
 func LoadSSHAgentConfig(path string) (*SSHAgentConfig, error) {
 	var config SSHAgentConfig
 	contents, err := ioutil.ReadFile(path)
@@ -134,7 +143,7 @@ func LoadSSHAgentConfig(path string) (*SSHAgentConfig, error) {
 		return nil, fmt.Errorf("config missing vault_addr")
 	}
 	if config.SSHMountPoint == "" {
-		return nil, fmt.Errorf("config missing ssh_mount_point")
+		config.SSHMountPoint = SSHAgentDefaultMountPoint
 	}
 
 	return &config, nil
@@ -155,9 +164,11 @@ func (c *Client) SSHAgentWithMountPoint(mountPoint string) *SSHAgent {
 	}
 }
 
-// Verifies if the key provided by user is present in Vault server. If yes,
-// the response will contain the IP address and username associated with the
-// key.
+// Verifies if the key provided by user is present in Vault server. The response
+// will contain the IP address and username associated with the OTP. In case the
+// OTP matches the echo request message, instead of searching an entry for the OTP,
+// an echo response message is returned. This feature is used by agent to verify if
+// its configured correctly.
 func (c *SSHAgent) Verify(otp string) (*SSHVerifyResponse, error) {
 	data := map[string]interface{}{
 		"otp": otp,

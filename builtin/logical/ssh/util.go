@@ -57,9 +57,8 @@ func createSSHPublicKeysSession(username, ipAddr string, port int, hostKey strin
 	return session, nil
 }
 
-// Creates a new RSA key pair with key length of 2048.
-// The private key will be of pem format and the public key will be
-// of OpenSSH format.
+// Creates a new RSA key pair with the given key length. The private key will be
+// of pem format and the public key will be of OpenSSH format.
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, keyBits)
 	if err != nil {
@@ -79,13 +78,32 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 	return
 }
 
-// Installs or uninstalls the dynamic key in the remote host. The parameterized script
-// will install or uninstall the key. The remote host is assumed to be Linux,
-// and hence the path of the authorized_keys file is hard coded to resemble Linux.
-// Installing and uninstalling the keys means that the public key is appended or
-// removed from authorized_keys file.
-// The param 'install' if false, uninstalls the key.
-func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string, port int, hostkey string, install bool) error {
+// Public key and the script to install the key are uploaded to remote machine.
+// Public key is either added or removed from authorized_keys file using the
+// script. Default script is for a Linux machine and hence the path of the
+// authorized_keys file is hard coded to resemble Linux.
+//
+// The last param 'install' if false, uninstalls the key.
+func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port int, hostkey, dynamicPublicKey, installScript string, install bool) error {
+	// Transfer the newly generated public key to remote host under a random
+	// file name. This is to avoid name collisions from other requests.
+	_, publicKeyFileName := b.GenerateSaltedOTP()
+	err := scpUpload(adminUser, ip, port, hostkey, publicKeyFileName, dynamicPublicKey)
+	if err != nil {
+		return fmt.Errorf("error uploading public key: %s", err)
+	}
+
+	// Transfer the script required to install or uninstall the key to the remote
+	// host under a random file name as well. This is to avoid name collisions
+	// from other requests.
+	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
+	err = scpUpload(adminUser, ip, port, hostkey, scriptFileName, installScript)
+	if err != nil {
+		return fmt.Errorf("error uploading install script: %s", err)
+	}
+
+	// Create a session to run remote command that triggers the script to install
+	// or uninstall the key.
 	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostkey)
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
@@ -96,7 +114,6 @@ func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string,
 	defer session.Close()
 
 	authKeysFileName := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
-	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 
 	var installOption string
 	if install {
@@ -104,6 +121,7 @@ func installPublicKeyInTarget(adminUser, publicKeyFileName, username, ip string,
 	} else {
 		installOption = "uninstall"
 	}
+
 	// Give execute permissions to install script, run and delete it.
 	chmodCmd := fmt.Sprintf("chmod +x %s", scriptFileName)
 	scriptCmd := fmt.Sprintf("./%s %s %s %s", scriptFileName, installOption, publicKeyFileName, authKeysFileName)
@@ -145,6 +163,17 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 	}
 }
 
+// Checks if the comma separated list of CIDR blocks are all valid.
+func validateCIDRList(cidrList string) error {
+	for _, item := range strings.Split(cidrList, ",") {
+		_, _, err := net.ParseCIDR(item)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Returns true if the IP supplied by the user is part of the comma
 // separated CIDR blocks
 func cidrContainsIP(ip, cidrList string) (bool, error) {
@@ -160,6 +189,7 @@ func cidrContainsIP(ip, cidrList string) (bool, error) {
 	return false, nil
 }
 
+// Uploads the file to the remote machine
 func scpUpload(username, ip string, port int, hostkey, fileName, fileContent string) error {
 	signer, err := ssh.ParsePrivateKey([]byte(hostkey))
 	clientConfig := &ssh.ClientConfig{

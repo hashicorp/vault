@@ -86,6 +86,7 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 
 	keyString := d.Get("key").(string)
 
+	// Check if the key provided is infact a private key
 	signer, err := ssh.ParsePrivateKey([]byte(keyString))
 	if err != nil || signer == nil {
 		return logical.ErrorResponse("Invalid key"), nil
@@ -97,6 +98,7 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 
 	keyPath := fmt.Sprintf("keys/%s", keyName)
 
+	// Store the key
 	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
 		"key": keyString,
 	})
@@ -110,18 +112,15 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 }
 
 const pathKeysSyn = `
-Register a shared key which can be used to install dynamic key
-in remote machine.
+Register a shared private key with Vault.
 `
 
 const pathKeysDesc = `
-The shared key registered will be used to install and uninstall
-long lived dynamic keys in remote machine. This key should have
-"root" privileges at target machine. This enables installing keys
+Vault uses this key to install and uninstall dynamic keys in remote hosts. This
+key should have sudoer privileges in remote hosts. This enables installing keys
 for unprivileged usernames.
 
-If this backend is mounted as "ssh", then the endpoint for registering
-shared key is "ssh/keys/webrack", if "webrack" is the user coined 
-name for the key. The name given here can be associated with any
-number of roles via the endpoint "ssh/roles/".
+If this backend is mounted as "ssh", then the endpoint for registering shared key
+is "ssh/keys/webrack", if "webrack" is the user coined name for the key. The name
+given here can be associated with any number of roles via the endpoint "ssh/roles/".
 `

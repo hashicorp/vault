@@ -60,31 +60,30 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 }
 
 const backendHelp = `
-The SSH backend generates keys to eatablish SSH connection
-with remote hosts. There are two options to create the keys:
-long lived dynamic key, one time password. 
+The SSH backend generates credentials to establish SSH connection with remote hosts.
+There are two types of credentials that could be generated: Dynamic and OTP. The
+desired way of key creation should be chosen by using 'key_type' parameter of 'roles/'
+endpoint. When a credential is requested for a particular role, Vault will generate
+a credential accordingly and issue it.
 
-Long lived dynamic key is a rsa private key which can be used
-to login to remote host using the publickey authentication.
-There is no additional change required in the remote hosts to
-support this type of keys. But the keys generated will be valid
-as long as the lease of the key is valid. Also, logins to remote
-hosts will not be audited in vault server.
+Dynamic Key: is a RSA private key which can be used to establish SSH session using
+publickey authentication. When the client receives a key and uses it to establish
+connections with hosts, Vault server will have no way to know when and how many 
+times the key will be used. So, these login attempts will not be audited by Vault.
+To create a dynamic credential, Vault will use the shared private key registered
+with the role. Named key should be created using 'keys/' endpoint and used with
+'roles/' endpoint for Vault to know the shared key to use for installing the newly
+generated key. Since Vault uses the shared key to install keys for other usernames,
+shared key should have sudoer privileges in remote hosts and password prompts for
+sudoers should be disabled. Also, dynamic keys are leased keys and gets revoked
+in remote hosts by Vault after the expiry.
 
-One Time Password (OTP), on the other hand is a randomly generated
-UUID that is used to login to remote host using the keyboard-
-interactive challenge response authentication. A vault agent
-has to be installed at the remote host to support OTP. Upon 
-request, vault server generates and provides the key to the
-user. During login, vault agent receives the key and verifies
-the correctness with the vault server (and hence audited). The
-server after verifying the key for the first time, deletes the
-same (and hence one-time).
+OTP Key: is a UUID which can be used to login using keyboard-interactive authentication.
+All the hosts that intend to support OTP should have Vault SSH Agent installed in
+them. This agent will receive the OTP from client and get it validated by Vault server.
+And since Vault server has a role to play for each successful connection, all the
+events will be audited. Vault server validates a key only once, hence it is a OTP.
 
-Both type of keys have a configurable lease set and are automatically
-revoked at the end of the lease.
-
-After mounting this backend, before generating the keys, configure
-the lease using the 'config/lease' endpoint and create roles using
-the 'roles/' endpoint.
+After mounting this backend, before generating the keys, configure the lease using
+'congig/lease' endpoint and create roles using 'roles/' endpoint.
 `

@@ -41,18 +41,6 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
-// Checks if the username supplied by the user is present in the list of
-// allowed users registered which creation of role.
-func validateUsername(username, allowedUsers string) error {
-	userList := strings.Split(allowedUsers, ",")
-	for _, user := range userList {
-		if user == username {
-			return nil
-		}
-	}
-	return fmt.Errorf("username not in allowed users list")
-}
-
 func (b *backend) pathCredsCreateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
@@ -73,7 +61,9 @@ func (b *backend) pathCredsCreateWrite(
 		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", roleName)), nil
 	}
 
+	// username is an optional parameter.
 	username := d.Get("username").(string)
+
 	// Set the default username
 	if username == "" {
 		if role.DefaultUser == "" {
@@ -112,10 +102,16 @@ func (b *backend) pathCredsCreateWrite(
 
 	var result *logical.Response
 	if role.KeyType == KeyTypeOTP {
+		// Generate an OTP
 		otp, err := b.GenerateOTPCredential(req, username, ip)
 		if err != nil {
 			return nil, err
 		}
+
+		// Return the information relevant to user of OTP type and save
+		// the data required for later use in the internal section of secret.
+		// In this case, saving just the OTP is sufficient since there is
+		// no need to establish connection with the remote host.
 		result = b.Secret(SecretOTPType).Response(map[string]interface{}{
 			"key_type": role.KeyType,
 			"key":      otp,
@@ -126,10 +122,15 @@ func (b *backend) pathCredsCreateWrite(
 			"otp": otp,
 		})
 	} else if role.KeyType == KeyTypeDynamic {
+		// Generate an RSA key pair. This also installs the newly generated
+		// public key in the remote host.
 		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(req, role, username, ip)
 		if err != nil {
 			return nil, err
 		}
+
+		// Return the information relevant to user of dynamic type and save
+		// information required for later use in internal section of secret.
 		result = b.Secret(SecretDynamicKeyType).Response(map[string]interface{}{
 			"key":      dynamicPrivateKey,
 			"key_type": role.KeyType,
@@ -152,11 +153,13 @@ func (b *backend) pathCredsCreateWrite(
 	// Change the lease information to reflect user's choice
 	lease, _ := b.Lease(req.Storage)
 
+	// If the lease information is set, update it in secret.
 	if lease != nil {
 		result.Secret.Lease = lease.Lease
 		result.Secret.LeaseGracePeriod = lease.LeaseMax
 	}
 
+	// If lease information is not set, set it to 10 minutes.
 	if lease == nil {
 		result.Secret.Lease = 10 * time.Minute
 		result.Secret.LeaseGracePeriod = 2 * time.Minute
@@ -170,11 +173,11 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	// Fetch the host key to be used for dynamic key installation
 	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
-		return "", "", fmt.Errorf("key '%s' not found error:%s", role.KeyName, err)
+		return "", "", fmt.Errorf("key '%s' not found. err:%s", role.KeyName, err)
 	}
 
 	if keyEntry == nil {
-		return "", "", fmt.Errorf("key '%s' not found", role.KeyName, err)
+		return "", "", fmt.Errorf("key '%s' not found", role.KeyName)
 	}
 
 	var hostKey sshHostKey
@@ -182,26 +185,14 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 		return "", "", fmt.Errorf("error reading the host key: %s", err)
 	}
 
+	// Generate a new RSA key pair with the given key length.
 	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(role.KeyBits)
 	if err != nil {
 		return "", "", fmt.Errorf("error generating key: %s", err)
 	}
 
-	// Transfer the public key to target machine
-	_, publicKeyFileName := b.GenerateSaltedOTP()
-	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, publicKeyFileName, dynamicPublicKey)
-	if err != nil {
-		return "", "", fmt.Errorf("error uploading public key: %s", err)
-	}
-
-	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
-	err = scpUpload(role.AdminUser, ip, role.Port, hostKey.Key, scriptFileName, role.InstallScript)
-	if err != nil {
-		return "", "", fmt.Errorf("error uploading install script: %s", err)
-	}
-
 	// Add the public key to authorized_keys file in target machine
-	err = installPublicKeyInTarget(role.AdminUser, publicKeyFileName, username, ip, role.Port, hostKey.Key, true)
+	err = b.installPublicKeyInTarget(role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
 	if err != nil {
 		return "", "", fmt.Errorf("error adding public key to authorized_keys file in target")
 	}
@@ -217,8 +208,14 @@ func (b *backend) GenerateSaltedOTP() (string, string) {
 // Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.
 func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
 	otp, otpSalted := b.GenerateSaltedOTP()
+
+	// Check if there is an entry already created for the newly generated OTP.
 	entry, err := b.getOTP(req.Storage, otpSalted)
-	// Make sure that new OTP is not replacing an existing one
+
+	// If entry already exists for the OTP, make sure that new OTP is not
+	// replacing an existing one by recreating new ones until an unused
+	// OTP is generated. It is very unlikely that this is the case and this
+	// code is just for safety.
 	for err == nil && entry != nil {
 		otp, otpSalted = b.GenerateSaltedOTP()
 		entry, err = b.getOTP(req.Storage, otpSalted)
@@ -226,6 +223,8 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 			return "", err
 		}
 	}
+
+	// Store an entry for the salt of OTP.
 	newEntry, err := logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
 		Username: username,
 		IP:       ip,
@@ -237,6 +236,18 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 		return "", err
 	}
 	return otp, nil
+}
+
+// Checks if the username supplied by the user is present in the list of
+// allowed users registered which creation of role.
+func validateUsername(username, allowedUsers string) error {
+	userList := strings.Split(allowedUsers, ",")
+	for _, user := range userList {
+		if user == username {
+			return nil
+		}
+	}
+	return fmt.Errorf("username not in allowed users list")
 }
 
 const pathCredsCreateHelpSyn = `

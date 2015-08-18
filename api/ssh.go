@@ -2,8 +2,6 @@ package api
 
 import "fmt"
 
-const SSHDefaultMountPoint = "ssh"
-
 // SSH is used to return a client to invoke operations on SSH backend.
 type SSH struct {
 	c          *Client
@@ -12,7 +10,7 @@ type SSH struct {
 
 // Returns the client for logical-backend API calls.
 func (c *Client) SSH() *SSH {
-	return c.SSHWithMountPoint(SSHDefaultMountPoint)
+	return c.SSHWithMountPoint(SSHAgentDefaultMountPoint)
 }
 
 // Returns the client with specific SSH mount point.

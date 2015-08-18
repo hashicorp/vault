@@ -1,7 +1,9 @@
 package ssh
 
 const (
-	LinuxInstallScript = `
+	// This is a constant representing a script to install and uninstall public
+	// key in remote hosts.
+	DefaultPublicKeyInstallScript = `
 #!/bin/bash
 #
 # This script file installs or uninstalls an RSA public key to/from authoried_keys
@@ -16,27 +18,29 @@ const (
 # as file name to avoid collisions with public keys generated for requests.
 #
 # $3: Absolute path of the authorized_keys file.
+# Currently, vault uses /home/<username>/.ssh/authorized_keys as the path.
 #
-# [Note: Modify the script if targt machine does not have the commands used in
-# this script]
+# [Note: This is a default script and is written to provide convenience.
+# If the host platform differs, or if the binaries used in this script are not
+# available, write a new script that takes the above parameters and does the
+# same task as this script, and register it Vault while role creation using
+# 'install_script' parameter.
 
 if [ $1 != "install" && $1 != "uninstall" ]; then
 	exit 1
 fi
 
-# If the key being installed is already present in the authorized_keys file, it is
-# removed and the result is stored in a temporary file.
+# Remove the key from authorized_key file if it is already present.
+# This step is common for both installing and uninstalling the key.
 grep -vFf $2 $3 > temp_$2
-
-# Contents of temporary file will be the contents of authorized_keys file.
 cat temp_$2 | sudo tee $3
 
 if [ $1 == "install" ]; then
-# New public key is appended to authorized_keys file
+# Append the new public key to authorized_keys file
 cat $2 | sudo tee --append $3
 fi
 
-# Auxiliary files are deleted
+# Delete the auxiliary files
 rm -f $2 temp_$2
 `
 )

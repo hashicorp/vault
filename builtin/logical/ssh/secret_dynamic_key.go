@@ -112,22 +112,9 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 		return nil, fmt.Errorf("key '%s' not found", hostKeyName)
 	}
 
-	// Transfer the dynamic public key to target machine and use it to remove the entry from authorized_keys file
-	_, dynamicPublicKeyFileName := b.GenerateSaltedOTP()
-	err = scpUpload(adminUser, ip, port, hostKey.Key, dynamicPublicKeyFileName, dynamicPublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("error uploading pubic key: %s", err)
-	}
-
-	scriptFileName := fmt.Sprintf("%s.sh", dynamicPublicKeyFileName)
-	err = scpUpload(adminUser, ip, port, hostKey.Key, scriptFileName, installScript)
-	if err != nil {
-		return nil, fmt.Errorf("error uploading script file: %s", err)
-	}
-
 	// Remove the public key from authorized_keys file in target machine
 	// The last param 'false' indicates that the key should be uninstalled.
-	err = installPublicKeyInTarget(adminUser, dynamicPublicKeyFileName, username, ip, port, hostKey.Key, false)
+	err = b.installPublicKeyInTarget(adminUser, username, ip, port, hostKey.Key, dynamicPublicKey, installScript, false)
 	if err != nil {
 		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
 	}

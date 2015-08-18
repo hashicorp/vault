@@ -10,11 +10,19 @@ description: |-
 
 Name: `ssh`
 
-The SSH secret backend for Vault generates SSH credentials dynamically. This backend
-increases the security and solves the problem of management and distribution of keys
-belonging to remote hosts. This backend provides two ways of credential creation.
-Both of them addresses the problem in different ways. Understand both of them and
-choose the one which best suits your needs.
+Vault SSH backend generates SSH credentials for remote hosts dynamically. This
+backend increases the security by removing the need to share the private key to
+everyone who needs access to infrastructures. It also solves the problem of
+management and distribution of keys belonging to remote hosts.
+
+This backend supports two types of credential creation: Dynamic and OTP. Both of
+them addresses the problems in different ways.
+
+Read and carefully understand both of them and choose the one which best suits
+your needs.
+
+This page will show a quick start for this backend. For detailed documentation
+on every path, use `vault path-help` after mounting the backend.
 
 ----------------------------------------------------
 ## I. Dynamic Type
@@ -23,13 +31,12 @@ Register the shared secret key (having super user privileges) with Vault and let
 Vault take care of issuing a dynamic secret key every time a client wants to SSH
 into the remote host.
 
-When a Vault authenticated client requests for a credential, Vault server creates
-a key-pair, uses the previously shared secret key to login to the remote host and
-appends the newly generated public key to ~/.ssh/authorized_keys file of the desired
-username. Vault uses a install script (configurable) to achieve this.
-
-To run the script without prompts, password requests for sudoers should be disabled at
-remote hosts.
+When a Vault authenticated client requests for a dynamic credential, Vault server
+creates a key-pair, uses the previously shared secret key to login to the remote
+host and appends the newly generated public key to ~/.ssh/authorized_keys file for 
+the desired username. Vault uses an install script (configurable) to achieve this.
+To run this script in super user mode without password prompts, `NOPASSWD` option
+for sudoers should be enabled at all remote hosts.
 
 File: `/etc/sudoers`
 
@@ -38,9 +45,10 @@ File: `/etc/sudoers`
 ```
 
 The private key returned to the user will be leased and can be renewed if desired.
-Once the key is given to the user, Vault has no control on how and when the keys
-will be used. Therefore, Vault **WILL NOT** and cannot audit the SSH session establishments. 
-OTP type audits every SSH request (see below).
+Once the key is given to the user, Vault will not know when the user it or how many
+time it gets used. Therefore, Vault **WILL NOT** and cannot audit the SSH session
+establishments. An alternative is to use OTP type, which audits every SSH request
+(see below).
 
 ### Mounting SSH
 
@@ -74,8 +82,9 @@ Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
 Use the `install_script` option to provide an install script if hosts does not
-resemble typical Linux machine. The default script is very straight forward and
-is shown below. The script takes three arguments which are explained in the comments.
+resemble typical Linux machine. The default script is compiled into the binary.
+It is straight forward and is shown below. The script takes three arguments which
+are explained in the comments.
 
 ```shell
 # This script file installs or uninstalls an RSA public key to/from authoried_keys
@@ -276,13 +285,15 @@ username@ip:~$
       <li>
         <span class="param">lease</span>
         <span class="param-flags">required</span>
-        (String) The lease value provided as a duration
+        (String)
+	The lease value provided as a duration
         with time suffix. Hour is the largest suffix.
       </li>
       <li>
         <span class="param">lease_max</span>
         <span class="param-flags">required</span>
-        (String) The maximum lease value provided as a duration
+        (String)
+	The maximum lease value provided as a duration
         with time suffix. Hour is the largest suffix.
       </li>
     </ul>
@@ -315,7 +326,8 @@ username@ip:~$
       <li>
         <span class="param">key</span>
         <span class="param-flags">required</span>
-        (String) SSH private key with super user privileges in host 
+        (String)
+	SSH private key with super user privileges in host 
       </li>
     </ul>
   </dd>
@@ -396,12 +408,14 @@ username@ip:~$
       <li>
         <span class="param">key</span>
         <span class="param-flags">required for dynamic type, NA for otp type</span>
-	Name of the registered key in Vault. Before creating the role, use the `keys/`
-        endpoint to create a named key.
+	(String)
+        Name of the registered key in Vault. Before creating the role, use
+        the `keys/` endpoint to create a named key.
       </li>
       <li>
         <span class="param">admin_user</span>
         <span class="param-flags">required for dynamic type, NA for otp type</span>
+	(String)
 	Admin user at remote host. The shared key being registered should be
 	for this user and should have root privileges. Everytime a dynamic 
 	credential is being generated for other users, Vault uses this admin
@@ -411,6 +425,7 @@ username@ip:~$
       <li>
         <span class="param">default_user</span>
         <span class="param-flags">required for both types</span>
+	(String)
 	Default username for which a credential will be generated.
 	When the endpoint 'creds/' is used without a username, this
 	value will be used as default username.
@@ -418,12 +433,14 @@ username@ip:~$
       <li>
         <span class="param">cidr_list</span>
         <span class="param-flags">required for both types</span>
+	(String)
 	Comma separated list of CIDR blocks for which the role is applicable for.
 	CIDR blocks can belong to more than one role.
       </li>
       <li>
         <span class="param">port</span>
         <span class="param-flags">optional for both types</span>
+	(Integer)
 	Port number for SSH connection. Default is '22'. Port number does not
 	play any role in creation of OTP. For 'otp' type, this is just a way
 	to inform client about the port number to use. Port number will be
@@ -432,23 +449,27 @@ username@ip:~$
       <li>
         <span class="param">key_type</span>
         <span class="param-flags">required for both types</span>
+	(String)
 	Type of key used to login to hosts. It can be either `otp` or `dynamic`.
 	`otp` type requires agent to be installed in remote hosts.
       </li>
       <li>
         <span class="param">key_bits</span>
         <span class="param-flags">optional for dynamic type, NA for otp type</span>
+	(Integer)
 	Length of the RSA dynamic key in bits. It can be one of 1024, 2048 or 4096.
       </li>
       <li>
         <span class="param">install_script</span>
         <span class="param-flags">optional for dynamic type, NA for otp type</span>
+	(String)
 	Script used to install and uninstall public keys in the target machine.
 	The inbuilt default install script will be for Linux hosts.
       </li>
       <li>
         <span class="param">allowed_users</span>
         <span class="param-flags">optional for both types</span>
+	(String)
 	If this option is not specified, client can request for a credential for
 	any valid user at the remote host, including the admin user. If only certain
 	usernames are to be allowed, then this list enforces it. If this field is
@@ -550,11 +571,13 @@ username@ip:~$
       <li>
         <span class="param">username</span>
         <span class="param-flags">optional</span>
+	(String)
         Username in remote host.
       </li>
       <li>
         <span class="param">ip</span>
         <span class="param-flags">required</span>
+	(String)
         IP of the remote host.
       </li>
     </ul>
@@ -586,6 +609,7 @@ username@ip:~$
       <li>
         <span class="param">ip</span>
         <span class="param-flags">required</span>
+	(String)
         IP of the remote host.
       </li>
     </ul>
@@ -617,6 +641,7 @@ username@ip:~$
       <li>
         <span class="param">otp</span>
         <span class="param-flags">required</span>
+	(String)
         One-Time-Key that needs to be validated.
       </li>
     </ul>

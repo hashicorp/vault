@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -14,6 +13,9 @@ const (
 	KeyTypeDynamic = "dynamic"
 )
 
+// Structure that represents a role in SSH backend. This is a common role structure
+// for both OTP and Dynamic roles. Not all the fields are mandatory for both type.
+// Some are applicable for one and not for other. It doesn't matter.
 type sshRole struct {
 	KeyType       string `mapstructure:"key_type" json:"key_type"`
 	KeyName       string `mapstructure:"key" json:"key"`
@@ -140,11 +142,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	if cidrList == "" {
 		return logical.ErrorResponse("Missing CIDR blocks"), nil
 	}
-	for _, item := range strings.Split(cidrList, ",") {
-		_, _, err := net.ParseCIDR(item)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid CIDR list entry '%s'", item)), nil
-		}
+
+	// Check if all the CIDR entries are infact valid entries
+	err := validateCIDRList(cidrList)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Invalid cidr_list entry. %s", err)), nil
 	}
 
 	port := d.Get("port").(int)
@@ -158,14 +160,16 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	}
 	keyType = strings.ToLower(keyType)
 
-	var err error
 	var roleEntry sshRole
 	if keyType == KeyTypeOTP {
+		// Admin user is not used if OTP key type is used because there is
+		// no need to login to remote machine.
 		adminUser := d.Get("admin_user").(string)
 		if adminUser != "" {
 			return logical.ErrorResponse("Admin user not required for OTP type"), nil
 		}
 
+		// Below are the only fields used from the role structure for OTP type.
 		roleEntry = sshRole{
 			DefaultUser:  defaultUser,
 			CIDRList:     cidrList,
@@ -174,6 +178,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			AllowedUsers: allowedUsers,
 		}
 	} else if keyType == KeyTypeDynamic {
+		// Key name is required by dynamic type and not by OTP type.
 		keyName := d.Get("key").(string)
 		if keyName == "" {
 			return logical.ErrorResponse("Missing key name"), nil
@@ -184,10 +189,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 
 		installScript := d.Get("install_script").(string)
+
+		// Setting the default script here. The script will install the
+		// generated public key in the authorized_keys file of linux host.
 		if installScript == "" {
-			// Setting the default script here. The script will install the generated public key in
-			// the authorized_keys file of linux host.
-			installScript = LinuxInstallScript
+			installScript = DefaultPublicKeyInstallScript
 		}
 
 		adminUser := d.Get("admin_user").(string)
@@ -195,14 +201,18 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			return logical.ErrorResponse("Missing admin username"), nil
 		}
 
+		// Key bits can only be 1024, 2048 or 4096.
 		keyBits := d.Get("key_bits").(int)
 		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 && keyBits != 4096 {
 			return logical.ErrorResponse("Invalid key_bits field"), nil
 		}
+
+		// If user has not set this field, default it to 2048
 		if keyBits == 0 {
 			keyBits = 2048
 		}
 
+		// Store all the fields required by dynamic key type
 		roleEntry = sshRole{
 			KeyName:       keyName,
 			AdminUser:     adminUser,
@@ -255,24 +265,33 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 		return nil, nil
 	}
 
+	// Return information should be based on the key type of the role
 	if role.KeyType == KeyTypeOTP {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"default_user": role.DefaultUser,
-				"cidr_list":    role.CIDRList,
-				"port":         role.Port,
-				"key_type":     role.KeyType,
+				"default_user":  role.DefaultUser,
+				"cidr_list":     role.CIDRList,
+				"key_type":      role.KeyType,
+				"port":          role.Port,
+				"allowed_users": role.AllowedUsers,
 			},
 		}, nil
 	} else {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"key":          role.KeyName,
-				"admin_user":   role.AdminUser,
-				"default_user": role.DefaultUser,
-				"cidr_list":    role.CIDRList,
-				"port":         role.Port,
-				"key_type":     role.KeyType,
+				"key":           role.KeyName,
+				"admin_user":    role.AdminUser,
+				"default_user":  role.DefaultUser,
+				"cidr_list":     role.CIDRList,
+				"port":          role.Port,
+				"key_type":      role.KeyType,
+				"key_bits":      role.KeyBits,
+				"allowed_users": role.AllowedUsers,
+				// Returning install script will make the output look messy.
+				// But this is one way for clients to see the script that is
+				// being used to install the key. If there is some problem,
+				// the script can be modified and configured by clients.
+				"install_script": role.InstallScript,
 			},
 		}, nil
 	}
@@ -292,16 +311,14 @@ Manage the 'roles' that can be created with this backend.
 `
 
 const pathRoleHelpDesc = `
-This path allows you to manage the roles that are used to generate 
-credentials. These roles will be having privileged access to all
-the hosts mentioned by CIDR blocks. For example, if the backend
-is mounted at "ssh" and the role is created at "ssh/roles/web",
-then a user could request for a new key at "ssh/creds/web" for the
-supplied username and IP address.
+This path allows you to manage the roles that are used to generate credentials.
 
-The 'cidr_list' field takes comma seperated CIDR blocks. The 'admin_user'
-should have root access in all the hosts represented by the 'cidr_list'
-field. When the user requests key for an IP, the key will be installed
-for the user mentioned by 'default_user' field. The 'key' field takes
-a named key which can be configured by 'ssh/keys/' endpoint.
+Role takes a 'key_type' parameter that decides what type of credential this role
+can generate. If remote hosts have Vault SSH Agent installed, an 'otp' type can
+be used, otherwise 'dynamic' type can be used.
+
+If the backend is mounted at "ssh" and the role is created at "ssh/roles/web",
+then a user could request for a credential at "ssh/creds/web" for an IP that
+belongs to the role. The credential will be for the 'default_user' registered
+with the role. There is also an optional parameter 'username' for 'creds/' endpoint.
 `
