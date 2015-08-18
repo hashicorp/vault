@@ -2,8 +2,8 @@ package ssh
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os/user"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -69,7 +69,10 @@ func init() {
 	}
 	input := strings.Split(addr, ":")
 	testIP = input[0]
-	testPort = input[1]
+	testPort, err = strconv.Atoi(input[1])
+	if err != nil {
+		panic(fmt.Sprintf("error parsing port number:%s", err))
+	}
 
 	u, err := user.Current()
 	if err != nil {
@@ -77,12 +80,7 @@ func init() {
 	}
 	testUserName = u.Username
 	testAdminUser = u.Username
-	scriptBytes, err := ioutil.ReadFile("scripts/key-install-linux.sh")
-	if err != nil {
-		panic(fmt.Sprintf("error reading install script file: '%s'", err))
-	}
-	testInstallScript = string(scriptBytes)
-
+	testInstallScript = DefaultPublicKeyInstallScript
 }
 
 func TestSSHBackend_Lookup(t *testing.T) {
@@ -98,6 +96,7 @@ func TestSSHBackend_Lookup(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 		"key":            testKeyName,
 		"admin_user":     testAdminUser,
+		"default_user":   testAdminUser,
 		"cidr_list":      testCIDRList,
 		"install_script": testInstallScript,
 	}
@@ -151,6 +150,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 		"key":            testKeyName,
 		"admin_user":     testAdminUser,
+		"default_user":   testAdminUser,
 		"cidr_list":      testCIDRList,
 		"install_script": testInstallScript,
 	}
@@ -331,6 +331,7 @@ func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 			"key_type":       "dynamic",
 			"key":            testKeyName,
 			"admin_user":     testAdminUser,
+			"default_user":   testAdminUser,
 			"cidr_list":      testCIDRList,
 			"port":           testPort,
 			"install_script": testInstallScript,
