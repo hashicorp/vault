@@ -33,7 +33,7 @@ into the remote host.
 
 When a Vault authenticated client requests for a dynamic credential, Vault server
 creates a key-pair, uses the previously shared secret key to login to the remote
-host and appends the newly generated public key to ~/.ssh/authorized_keys file for 
+host and appends the newly generated public key to `~/.ssh/authorized_keys` file for 
 the desired username. Vault uses an install script (configurable) to achieve this.
 To run this script in super user mode without password prompts, `NOPASSWD` option
 for sudoers should be enabled at all remote hosts.
@@ -45,7 +45,7 @@ File: `/etc/sudoers`
 ```
 
 The private key returned to the user will be leased and can be renewed if desired.
-Once the key is given to the user, Vault will not know when the user it or how many
+Once the key is given to the user, Vault will not know when it gets used or how many
 time it gets used. Therefore, Vault **WILL NOT** and cannot audit the SSH session
 establishments. An alternative is to use OTP type, which audits every SSH request
 (see below).
@@ -61,11 +61,13 @@ Successfully mounted 'ssh' at 'ssh'!
 ```
 
 Next, we must register infrastructures with Vault. This is done by writing the role
-information. The type of credentials created are determined by the key_type option.
+information. The type of credentials created are determined by the `key_type` option.
+To do this, first create a named key and then create a role.
 
 ### Registering shared secret key
 
 Create a named key, say `dev_key`, which represents a registered shared private key.
+Remember that this key should be of admin user with super user privileges.
 
 ```shell
 $ vault write ssh/keys/dev_key key=@dev_shared_key.pem
@@ -193,8 +195,8 @@ by the Vault server. Vault server deletes the OTP after validating it once (henc
 Since Vault server is contacted for every successful connection establishment, unlike
 Dynamic type, every login attempt **WILL** be audited.
 
-Agent in remote hosts act as a client authentication PAM module. See [Vault-SSH-Agent]
-(https://github.com/hashicorp/vault-ssh-agent) for configuring agent. 
+See [Vault-SSH-Agent](https://github.com/hashicorp/vault-ssh-agent) for details
+on how to configure the agent.
 
 ### Mounting SSH
 
@@ -407,14 +409,14 @@ username@ip:~$
     <ul>
       <li>
         <span class="param">key</span>
-        <span class="param-flags">required for dynamic type, NA for otp type</span>
+        <span class="param-flags">required for Dynamic type, NA for OTP type</span>
 	(String)
         Name of the registered key in Vault. Before creating the role, use
         the `keys/` endpoint to create a named key.
       </li>
       <li>
         <span class="param">admin_user</span>
-        <span class="param-flags">required for dynamic type, NA for otp type</span>
+        <span class="param-flags">required for Dynamic type, NA for OTP type</span>
 	(String)
 	Admin user at remote host. The shared key being registered should be
 	for this user and should have root privileges. Everytime a dynamic 
@@ -455,13 +457,13 @@ username@ip:~$
       </li>
       <li>
         <span class="param">key_bits</span>
-        <span class="param-flags">optional for dynamic type, NA for otp type</span>
+        <span class="param-flags">optional for Dynamic type, NA for OTP type</span>
 	(Integer)
 	Length of the RSA dynamic key in bits. It can be one of 1024, 2048 or 4096.
       </li>
       <li>
         <span class="param">install_script</span>
-        <span class="param-flags">optional for dynamic type, NA for otp type</span>
+        <span class="param-flags">optional for Dynamic type, NA for OTP type</span>
 	(String)
 	Script used to install and uninstall public keys in the target machine.
 	The inbuilt default install script will be for Linux hosts.
