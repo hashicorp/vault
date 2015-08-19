@@ -90,7 +90,7 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for Dynamic type] [Not applicable for OTP type]
-				Length of the RSA dynamic key in bits. It can be one of 1024, 2048 or 4096.`,
+				Length of the RSA dynamic key in bits. It is 1024 by default or it can be 2048.`,
 			},
 			"install_script": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -201,15 +201,15 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			return logical.ErrorResponse("Missing admin username"), nil
 		}
 
-		// Key bits can only be 1024, 2048 or 4096.
+		// This defaults to 1024 and it can also be 2048.
 		keyBits := d.Get("key_bits").(int)
-		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 && keyBits != 4096 {
+		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 {
 			return logical.ErrorResponse("Invalid key_bits field"), nil
 		}
 
-		// If user has not set this field, default it to 2048
+		// If user has not set this field, default it to 1024
 		if keyBits == 0 {
-			keyBits = 2048
+			keyBits = 1024
 		}
 
 		// Store all the fields required by dynamic key type

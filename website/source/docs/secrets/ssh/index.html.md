@@ -459,7 +459,7 @@ username@ip:~$
         <span class="param">key_bits</span>
         <span class="param-flags">optional for Dynamic type, NA for OTP type</span>
 	(Integer)
-	Length of the RSA dynamic key in bits. It can be one of 1024, 2048 or 4096.
+	Length of the RSA dynamic key in bits. It is 1024 by default or it can be 2048.
       </li>
       <li>
         <span class="param">install_script</span>
