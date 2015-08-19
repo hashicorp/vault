@@ -32,7 +32,7 @@ var ErrNoServer = errors.New("zk: could not connect to a server")
 var ErrInvalidPath = errors.New("zk: invalid path")
 
 // DefaultLogger uses the stdlib log package for logging.
-var DefaultLogger = defaultLogger{}
+var DefaultLogger Logger = defaultLogger{}
 
 const (
 	bufferSize      = 1536 * 1024
@@ -463,9 +463,6 @@ func (c *Conn) authenticate() error {
 		return ErrSessionExpired
 	}
 
-	if c.sessionID != r.SessionID {
-		atomic.StoreUint32(&c.xid, 0)
-	}
 	c.timeout = r.TimeOut
 	c.sessionID = r.SessionID
 	c.passwd = r.Passwd

@@ -111,6 +111,10 @@ type conn struct {
 	// receiving query results from prepared statements.  Only provided for
 	// debugging.
 	disablePreparedBinaryResult bool
+
+	// Whether to always send []byte parameters over as binary.  Enables single
+	// round-trip mode for non-prepared Query calls.
+	binaryParameters bool
 }
 
 // Handle driver-side settings in parsed connection string.
@@ -122,13 +126,17 @@ func (c *conn) handleDriverSettings(o values) (err error) {
 			} else if value == "no" {
 				*val = false
 			} else {
-				return fmt.Errorf("unrecognized value %q for disable_prepared_binary_result", value)
+				return fmt.Errorf("unrecognized value %q for %s", value, key)
 			}
 		}
 		return nil
 	}
 
 	err = boolSetting("disable_prepared_binary_result", &c.disablePreparedBinaryResult)
+	if err != nil {
+		return err
+	}
+	err = boolSetting("binary_parameters", &c.binaryParameters)
 	if err != nil {
 		return err
 	}
@@ -234,6 +242,7 @@ func DialOpen(d Dialer, name string) (_ driver.Conn, err error) {
 	cn.ssl(o)
 	cn.buf = bufio.NewReader(cn.c)
 	cn.startup(o)
+
 	// reset the deadline, in case one was set (see dial)
 	if timeout := o.Get("connect_timeout"); timeout != "" && timeout != "0" {
 		err = cn.c.SetDeadline(time.Time{})
@@ -549,11 +558,11 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 				errorf("unexpected message %q in simple query execution", t)
 			}
 			res = &rows{
-				cn:      cn,
-				cols:    st.cols,
-				rowTyps: st.rowTyps,
-				rowFmts: st.rowFmts,
-				done:    true,
+				cn:       cn,
+				colNames: st.colNames,
+				colTyps:  st.colTyps,
+				colFmts:  st.colFmts,
+				done:     true,
 			}
 		case 'Z':
 			cn.processReadyForQuery(r)
@@ -574,7 +583,7 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 			// res might be non-nil here if we received a previous
 			// CommandComplete, but that's fine; just overwrite it
 			res = &rows{cn: cn}
-			res.cols, res.rowFmts, res.rowTyps = parseMeta(r)
+			res.colNames, res.colFmts, res.colTyps = parsePortalRowDescribe(r)
 
 			// To work around a bug in QueryRow in Go 1.2 and earlier, wait
 			// until the first DataRow has been received.
@@ -587,19 +596,19 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 
 // Decides which column formats to use for a prepared statement.  The input is
 // an array of type oids, one element per result column.
-func decideColumnFormats(rowTyps []oid.Oid, forceText bool) (rowFmts []format, rowFmtData []byte) {
-	if len(rowTyps) == 0 {
-		return nil, rowFmtDataAllText
+func decideColumnFormats(colTyps []oid.Oid, forceText bool) (colFmts []format, colFmtData []byte) {
+	if len(colTyps) == 0 {
+		return nil, colFmtDataAllText
 	}
 
-	rowFmts = make([]format, len(rowTyps))
+	colFmts = make([]format, len(colTyps))
 	if forceText {
-		return rowFmts, rowFmtDataAllText
+		return colFmts, colFmtDataAllText
 	}
 
 	allBinary := true
 	allText := true
-	for i, o := range rowTyps {
+	for i, o := range colTyps {
 		switch o {
 		// This is the list of types to use binary mode for when receiving them
 		// through a prepared statement.  If a type appears in this list, it
@@ -611,7 +620,7 @@ func decideColumnFormats(rowTyps []oid.Oid, forceText bool) (rowFmts []format, r
 		case oid.T_int4:
 			fallthrough
 		case oid.T_int2:
-			rowFmts[i] = formatBinary
+			colFmts[i] = formatBinary
 			allText = false
 
 		default:
@@ -620,20 +629,20 @@ func decideColumnFormats(rowTyps []oid.Oid, forceText bool) (rowFmts []format, r
 	}
 
 	if allBinary {
-		return rowFmts, rowFmtDataAllBinary
+		return colFmts, colFmtDataAllBinary
 	} else if allText {
-		return rowFmts, rowFmtDataAllText
+		return colFmts, colFmtDataAllText
 	} else {
-		rowFmtData = make([]byte, 2+len(rowFmts)*2)
-		binary.BigEndian.PutUint16(rowFmtData, uint16(len(rowFmts)))
-		for i, v := range rowFmts {
-			binary.BigEndian.PutUint16(rowFmtData[2+i*2:], uint16(v))
+		colFmtData = make([]byte, 2+len(colFmts)*2)
+		binary.BigEndian.PutUint16(colFmtData, uint16(len(colFmts)))
+		for i, v := range colFmts {
+			binary.BigEndian.PutUint16(colFmtData[2+i*2:], uint16(v))
 		}
-		return rowFmts, rowFmtData
+		return colFmts, colFmtData
 	}
 }
 
-func (cn *conn) prepareTo(q, stmtName string) (_ *stmt, err error) {
+func (cn *conn) prepareTo(q, stmtName string) *stmt {
 	st := &stmt{cn: cn, name: stmtName}
 
 	b := cn.writeBuf('P')
@@ -648,33 +657,11 @@ func (cn *conn) prepareTo(q, stmtName string) (_ *stmt, err error) {
 	b.next('S')
 	cn.send(b)
 
-	for {
-		t, r := cn.recv1()
-		switch t {
-		case '1':
-		case 't':
-			nparams := r.int16()
-			st.paramTyps = make([]oid.Oid, nparams)
-
-			for i := range st.paramTyps {
-				st.paramTyps[i] = r.oid()
-			}
-		case 'T':
-			st.cols, st.rowTyps = parseStatementRowDescribe(r)
-			st.rowFmts, st.rowFmtData = decideColumnFormats(st.rowTyps, cn.disablePreparedBinaryResult)
-		case 'n':
-			// no data
-			st.rowFmtData = rowFmtDataAllText
-		case 'Z':
-			cn.processReadyForQuery(r)
-			return st, err
-		case 'E':
-			err = parseError(r)
-		default:
-			cn.bad = true
-			errorf("unexpected describe rows response: %q", t)
-		}
-	}
+	cn.readParseResponse()
+	st.paramTyps, st.colNames, st.colTyps = cn.readStatementDescribeResponse()
+	st.colFmts, st.colFmtData = decideColumnFormats(st.colTyps, cn.disablePreparedBinaryResult)
+	cn.readReadyForQuery()
+	return st
 }
 
 func (cn *conn) Prepare(q string) (_ driver.Stmt, err error) {
@@ -686,7 +673,7 @@ func (cn *conn) Prepare(q string) (_ driver.Stmt, err error) {
 	if len(q) >= 4 && strings.EqualFold(q[:4], "COPY") {
 		return cn.prepareCopyIn(q)
 	}
-	return cn.prepareTo(q, cn.gname())
+	return cn.prepareTo(q, cn.gname()), nil
 }
 
 func (cn *conn) Close() (err error) {
@@ -718,22 +705,29 @@ func (cn *conn) Query(query string, args []driver.Value) (_ driver.Rows, err err
 		return cn.simpleQuery(query)
 	}
 
-	st, err := cn.prepareTo(query, "")
-	if err != nil {
-		panic(err)
-	}
+	if cn.binaryParameters {
+		cn.sendBinaryModeQuery(query, args)
 
-	st.exec(args)
-	return &rows{
-		cn:      cn,
-		cols:    st.cols,
-		rowTyps: st.rowTyps,
-		rowFmts: st.rowFmts,
-	}, nil
+		cn.readParseResponse()
+		cn.readBindResponse()
+		rows := &rows{cn: cn}
+		rows.colNames, rows.colFmts, rows.colTyps = cn.readPortalDescribeResponse()
+		cn.postExecuteWorkaround()
+		return rows, nil
+	} else {
+		st := cn.prepareTo(query, "")
+		st.exec(args)
+		return &rows{
+			cn:       cn,
+			colNames: st.colNames,
+			colTyps:  st.colTyps,
+			colFmts:  st.colFmts,
+		}, nil
+	}
 }
 
 // Implement the optional "Execer" interface for one-shot queries
-func (cn *conn) Exec(query string, args []driver.Value) (_ driver.Result, err error) {
+func (cn *conn) Exec(query string, args []driver.Value) (res driver.Result, err error) {
 	if cn.bad {
 		return nil, driver.ErrBadConn
 	}
@@ -747,20 +741,26 @@ func (cn *conn) Exec(query string, args []driver.Value) (_ driver.Result, err er
 		return r, err
 	}
 
-	// Use the unnamed statement to defer planning until bind
-	// time, or else value-based selectivity estimates cannot be
-	// used.
-	st, err := cn.prepareTo(query, "")
-	if err != nil {
-		panic(err)
-	}
+	if cn.binaryParameters {
+		cn.sendBinaryModeQuery(query, args)
 
-	r, err := st.Exec(args)
-	if err != nil {
-		panic(err)
+		cn.readParseResponse()
+		cn.readBindResponse()
+		cn.readPortalDescribeResponse()
+		cn.postExecuteWorkaround()
+		res, _, err = cn.readExecuteResponse("Execute")
+		return res, err
+	} else {
+		// Use the unnamed statement to defer planning until bind
+		// time, or else value-based selectivity estimates cannot be
+		// used.
+		st := cn.prepareTo(query, "")
+		r, err := st.Exec(args)
+		if err != nil {
+			panic(err)
+		}
+		return r, err
 	}
-
-	return r, err
 }
 
 func (cn *conn) send(m *writeBuf) {
@@ -1055,6 +1055,8 @@ func isDriverSetting(key string) bool {
 		return true
 	case "disable_prepared_binary_result":
 		return true
+	case "binary_parameters":
+		return true
 
 	default:
 		return false
@@ -1143,18 +1145,18 @@ const formatText format = 0
 const formatBinary format = 1
 
 // One result-column format code with the value 1 (i.e. all binary).
-var rowFmtDataAllBinary []byte = []byte{0, 1, 0, 1}
+var colFmtDataAllBinary []byte = []byte{0, 1, 0, 1}
 
 // No result-column format codes (i.e. all text).
-var rowFmtDataAllText []byte = []byte{0, 0}
+var colFmtDataAllText []byte = []byte{0, 0}
 
 type stmt struct {
 	cn         *conn
 	name       string
-	cols       []string
-	rowFmts    []format
-	rowFmtData []byte
-	rowTyps    []oid.Oid
+	colNames   []string
+	colFmts    []format
+	colFmtData []byte
+	colTyps    []oid.Oid
 	paramTyps  []oid.Oid
 	closed     bool
 }
@@ -1200,10 +1202,10 @@ func (st *stmt) Query(v []driver.Value) (r driver.Rows, err error) {
 
 	st.exec(v)
 	return &rows{
-		cn:      st.cn,
-		cols:    st.cols,
-		rowTyps: st.rowTyps,
-		rowFmts: st.rowFmts,
+		cn:       st.cn,
+		colNames: st.colNames,
+		colTyps:  st.colTyps,
+		colFmts:  st.colFmts,
 	}, nil
 }
 
@@ -1214,25 +1216,8 @@ func (st *stmt) Exec(v []driver.Value) (res driver.Result, err error) {
 	defer st.cn.errRecover(&err)
 
 	st.exec(v)
-
-	for {
-		t, r := st.cn.recv1()
-		switch t {
-		case 'E':
-			err = parseError(r)
-		case 'C':
-			res, _ = st.cn.parseComplete(r.string())
-		case 'Z':
-			st.cn.processReadyForQuery(r)
-			// done
-			return
-		case 'T', 'D', 'I':
-			// ignore any results
-		default:
-			st.cn.bad = true
-			errorf("unknown exec response: %q", t)
-		}
-	}
+	res, _, err = st.cn.readExecuteResponse("simple query")
+	return res, err
 }
 
 func (st *stmt) exec(v []driver.Value) {
@@ -1243,83 +1228,38 @@ func (st *stmt) exec(v []driver.Value) {
 		errorf("got %d parameters but the statement requires %d", len(v), len(st.paramTyps))
 	}
 
-	w := st.cn.writeBuf('B')
-	w.byte(0)
+	cn := st.cn
+	w := cn.writeBuf('B')
+	w.byte(0) // unnamed portal
 	w.string(st.name)
-	w.int16(0)
-	w.int16(len(v))
-	for i, x := range v {
-		if x == nil {
-			w.int32(-1)
-		} else {
-			b := encode(&st.cn.parameterStatus, x, st.paramTyps[i])
-			w.int32(len(b))
-			w.bytes(b)
+
+	if cn.binaryParameters {
+		cn.sendBinaryParameters(w, v)
+	} else {
+		w.int16(0)
+		w.int16(len(v))
+		for i, x := range v {
+			if x == nil {
+				w.int32(-1)
+			} else {
+				b := encode(&cn.parameterStatus, x, st.paramTyps[i])
+				w.int32(len(b))
+				w.bytes(b)
+			}
 		}
 	}
-	w.bytes(st.rowFmtData)
+	w.bytes(st.colFmtData)
 
 	w.next('E')
 	w.byte(0)
 	w.int32(0)
 
 	w.next('S')
-	st.cn.send(w)
+	cn.send(w)
 
-	var err error
-	for {
-		t, r := st.cn.recv1()
-		switch t {
-		case 'E':
-			err = parseError(r)
-		case '2':
-			if err != nil {
-				panic(err)
-			}
-			goto workaround
-		case 'Z':
-			st.cn.processReadyForQuery(r)
-			if err != nil {
-				panic(err)
-			}
-			return
-		default:
-			st.cn.bad = true
-			errorf("unexpected bind response: %q", t)
-		}
-	}
+	cn.readBindResponse()
+	cn.postExecuteWorkaround()
 
-	// Work around a bug in sql.DB.QueryRow: in Go 1.2 and earlier it ignores
-	// any errors from rows.Next, which masks errors that happened during the
-	// execution of the query.  To avoid the problem in common cases, we wait
-	// here for one more message from the database.  If it's not an error the
-	// query will likely succeed (or perhaps has already, if it's a
-	// CommandComplete), so we push the message into the conn struct; recv1
-	// will return it as the next message for rows.Next or rows.Close.
-	// However, if it's an error, we wait until ReadyForQuery and then return
-	// the error to our caller.
-workaround:
-	for {
-		t, r := st.cn.recv1()
-		switch t {
-		case 'E':
-			err = parseError(r)
-		case 'C', 'D', 'I':
-			// the query didn't fail, but we can't process this message
-			st.cn.saveMessage(t, r)
-			return
-		case 'Z':
-			if err == nil {
-				st.cn.bad = true
-				errorf("unexpected ReadyForQuery during extended query execution")
-			}
-			st.cn.processReadyForQuery(r)
-			panic(err)
-		default:
-			st.cn.bad = true
-			errorf("unexpected message during query execution: %q", t)
-		}
-	}
 }
 
 func (st *stmt) NumInput() int {
@@ -1376,12 +1316,12 @@ func (cn *conn) parseComplete(commandTag string) (driver.Result, string) {
 }
 
 type rows struct {
-	cn      *conn
-	cols    []string
-	rowTyps []oid.Oid
-	rowFmts []format
-	done    bool
-	rb      readBuf
+	cn       *conn
+	colNames []string
+	colTyps  []oid.Oid
+	colFmts  []format
+	done     bool
+	rb       readBuf
 }
 
 func (rs *rows) Close() error {
@@ -1399,7 +1339,7 @@ func (rs *rows) Close() error {
 }
 
 func (rs *rows) Columns() []string {
-	return rs.cols
+	return rs.colNames
 }
 
 func (rs *rows) Next(dest []driver.Value) (err error) {
@@ -1429,6 +1369,10 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 			return io.EOF
 		case 'D':
 			n := rs.rb.int16()
+			if err != nil {
+				conn.bad = true
+				errorf("unexpected DataRow after error %s", err)
+			}
 			if n < len(dest) {
 				dest = dest[:n]
 			}
@@ -1438,7 +1382,7 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 					dest[i] = nil
 					continue
 				}
-				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.rowTyps[i], rs.rowFmts[i])
+				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.colTyps[i], rs.colFmts[i])
 			}
 			return
 		default:
@@ -1471,6 +1415,68 @@ func md5s(s string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+func (cn *conn) sendBinaryParameters(b *writeBuf, args []driver.Value) {
+	// Do one pass over the parameters to see if we're going to send any of
+	// them over in binary.  If we are, create a paramFormats array at the
+	// same time.
+	var paramFormats []int
+	for i, x := range args {
+		_, ok := x.([]byte)
+		if ok {
+			if paramFormats == nil {
+				paramFormats = make([]int, len(args))
+			}
+			paramFormats[i] = 1
+		}
+	}
+	if paramFormats == nil {
+		b.int16(0)
+	} else {
+		b.int16(len(paramFormats))
+		for _, x := range paramFormats {
+			b.int16(x)
+		}
+	}
+
+	b.int16(len(args))
+	for _, x := range args {
+		if x == nil {
+			b.int32(-1)
+		} else {
+			datum := binaryEncode(&cn.parameterStatus, x)
+			b.int32(len(datum))
+			b.bytes(datum)
+		}
+	}
+}
+
+func (cn *conn) sendBinaryModeQuery(query string, args []driver.Value) {
+	if len(args) >= 65536 {
+		errorf("got %d parameters but PostgreSQL only supports 65535 parameters", len(args))
+	}
+
+	b := cn.writeBuf('P')
+	b.byte(0) // unnamed statement
+	b.string(query)
+	b.int16(0)
+
+	b.next('B')
+	b.int16(0) // unnamed portal and statement
+	cn.sendBinaryParameters(b, args)
+	b.bytes(colFmtDataAllText)
+
+	b.next('D')
+	b.byte('P')
+	b.byte(0) // unnamed portal
+
+	b.next('E')
+	b.byte(0)
+	b.int32(0)
+
+	b.next('S')
+	cn.send(b)
+}
+
 func (c *conn) processParameterStatus(r *readBuf) {
 	var err error
 
@@ -1500,32 +1506,175 @@ func (c *conn) processReadyForQuery(r *readBuf) {
 	c.txnStatus = transactionStatus(r.byte())
 }
 
-func parseStatementRowDescribe(r *readBuf) (cols []string, rowTyps []oid.Oid) {
+func (cn *conn) readReadyForQuery() {
+	t, r := cn.recv1()
+	switch t {
+	case 'Z':
+		cn.processReadyForQuery(r)
+		return
+	default:
+		cn.bad = true
+		errorf("unexpected message %q; expected ReadyForQuery", t)
+	}
+}
+
+func (cn *conn) readParseResponse() {
+	t, r := cn.recv1()
+	switch t {
+	case '1':
+		return
+	case 'E':
+		err := parseError(r)
+		cn.readReadyForQuery()
+		panic(err)
+	default:
+		cn.bad = true
+		errorf("unexpected Parse response %q", t)
+	}
+}
+
+func (cn *conn) readStatementDescribeResponse() (paramTyps []oid.Oid, colNames []string, colTyps []oid.Oid) {
+	for {
+		t, r := cn.recv1()
+		switch t {
+		case 't':
+			nparams := r.int16()
+			paramTyps = make([]oid.Oid, nparams)
+			for i := range paramTyps {
+				paramTyps[i] = r.oid()
+			}
+		case 'n':
+			return paramTyps, nil, nil
+		case 'T':
+			colNames, colTyps = parseStatementRowDescribe(r)
+			return paramTyps, colNames, colTyps
+		case 'E':
+			err := parseError(r)
+			cn.readReadyForQuery()
+			panic(err)
+		default:
+			cn.bad = true
+			errorf("unexpected Describe statement response %q", t)
+		}
+	}
+}
+
+func (cn *conn) readPortalDescribeResponse() (colNames []string, colFmts []format, colTyps []oid.Oid) {
+	t, r := cn.recv1()
+	switch t {
+	case 'T':
+		return parsePortalRowDescribe(r)
+	case 'n':
+		return nil, nil, nil
+	case 'E':
+		err := parseError(r)
+		cn.readReadyForQuery()
+		panic(err)
+	default:
+		cn.bad = true
+		errorf("unexpected Describe response %q", t)
+	}
+	panic("not reached")
+}
+
+func (cn *conn) readBindResponse() {
+	t, r := cn.recv1()
+	switch t {
+	case '2':
+		return
+	case 'E':
+		err := parseError(r)
+		cn.readReadyForQuery()
+		panic(err)
+	default:
+		cn.bad = true
+		errorf("unexpected Bind response %q", t)
+	}
+}
+
+func (cn *conn) postExecuteWorkaround() {
+	// Work around a bug in sql.DB.QueryRow: in Go 1.2 and earlier it ignores
+	// any errors from rows.Next, which masks errors that happened during the
+	// execution of the query.  To avoid the problem in common cases, we wait
+	// here for one more message from the database.  If it's not an error the
+	// query will likely succeed (or perhaps has already, if it's a
+	// CommandComplete), so we push the message into the conn struct; recv1
+	// will return it as the next message for rows.Next or rows.Close.
+	// However, if it's an error, we wait until ReadyForQuery and then return
+	// the error to our caller.
+	for {
+		t, r := cn.recv1()
+		switch t {
+		case 'E':
+			err := parseError(r)
+			cn.readReadyForQuery()
+			panic(err)
+		case 'C', 'D', 'I':
+			// the query didn't fail, but we can't process this message
+			cn.saveMessage(t, r)
+			return
+		default:
+			cn.bad = true
+			errorf("unexpected message during extended query execution: %q", t)
+		}
+	}
+}
+
+// Only for Exec(), since we ignore the returned data
+func (cn *conn) readExecuteResponse(protocolState string) (res driver.Result, commandTag string, err error) {
+	for {
+		t, r := cn.recv1()
+		switch t {
+		case 'C':
+			if err != nil {
+				cn.bad = true
+				errorf("unexpected CommandComplete after error %s", err)
+			}
+			res, commandTag = cn.parseComplete(r.string())
+		case 'Z':
+			cn.processReadyForQuery(r)
+			return res, commandTag, err
+		case 'E':
+			err = parseError(r)
+		case 'T', 'D', 'I':
+			if err != nil {
+				cn.bad = true
+				errorf("unexpected %q after error %s", t, err)
+			}
+			// ignore any results
+		default:
+			cn.bad = true
+			errorf("unknown %s response: %q", protocolState, t)
+		}
+	}
+}
+
+func parseStatementRowDescribe(r *readBuf) (colNames []string, colTyps []oid.Oid) {
 	n := r.int16()
-	cols = make([]string, n)
-	rowTyps = make([]oid.Oid, n)
-	for i := range cols {
-		cols[i] = r.string()
+	colNames = make([]string, n)
+	colTyps = make([]oid.Oid, n)
+	for i := range colNames {
+		colNames[i] = r.string()
 		r.next(6)
-		rowTyps[i] = r.oid()
+		colTyps[i] = r.oid()
 		r.next(6)
-		// format code not known; always 0
+		// format code not known when describing a statement; always 0
 		r.next(2)
 	}
 	return
 }
 
-func parseMeta(r *readBuf) (cols []string, rowFmts []format, rowTyps []oid.Oid) {
+func parsePortalRowDescribe(r *readBuf) (colNames []string, colFmts []format, colTyps []oid.Oid) {
 	n := r.int16()
-	cols = make([]string, n)
-	rowFmts = make([]format, n)
-	rowTyps = make([]oid.Oid, n)
-	for i := range cols {
-		cols[i] = r.string()
+	colNames = make([]string, n)
+	colFmts = make([]format, n)
+	colTyps = make([]oid.Oid, n)
+	for i := range colNames {
+		colNames[i] = r.string()
 		r.next(6)
-		rowTyps[i] = r.oid()
+		colTyps[i] = r.oid()
 		r.next(6)
-		rowFmts[i] = format(r.int16())
+		colFmts[i] = format(r.int16())
 	}
 	return
 }

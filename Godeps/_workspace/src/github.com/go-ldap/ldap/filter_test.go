@@ -27,7 +27,13 @@ var testFilters = []compileTest{
 	compileTest{filterStr: "(sn<=Miller)", filterType: FilterLessOrEqual},
 	compileTest{filterStr: "(sn=*)", filterType: FilterPresent},
 	compileTest{filterStr: "(sn~=Miller)", filterType: FilterApproxMatch},
+	compileTest{filterStr: `(objectGUID='\fc\fe\a3\ab\f9\90N\aaGm\d5I~\d12)`, filterType: FilterEqualityMatch},
 	// compileTest{ filterStr: "()", filterType: FilterExtensibleMatch },
+}
+
+var testInvalidFilters = []string{
+	`(objectGUID=\zz)`,
+	`(objectGUID=\a)`,
 }
 
 func TestFilter(t *testing.T) {
@@ -45,6 +51,14 @@ func TestFilter(t *testing.T) {
 			} else if i.filterStr != o {
 				t.Errorf("%q expected, got %q", i.filterStr, o)
 			}
+		}
+	}
+}
+
+func TestInvalidFilter(t *testing.T) {
+	for _, filterStr := range testInvalidFilters {
+		if _, err := CompileFilter(filterStr); err == nil {
+			t.Errorf("Problem compiling %s - expected err", filterStr)
 		}
 	}
 }

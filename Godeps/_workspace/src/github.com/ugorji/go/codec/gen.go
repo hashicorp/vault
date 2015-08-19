@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2015 Ugorji Nwoke. All rights reserved.
-// Use of this source code is governed by a BSD-style license found in the LICENSE file.
+// Use of this source code is governed by a MIT license found in the LICENSE file.
 
 package codec
 
@@ -242,13 +242,13 @@ func Gen(w io.Writer, buildTags, pkgName string, useUnsafe bool, typ ...reflect.
 	for t, _ := range x.ts {
 		rtid := reflect.ValueOf(t).Pointer()
 		// generate enc functions for all these slice/map types.
-		x.linef("func (x %s) enc%s(v %s, e *%sEncoder) {", x.hn, x.genMethodNameT(t), x.genTypeName(t), x.cpfx)
+		x.linef("func (x %s) enc%s(v %s%s, e *%sEncoder) {", x.hn, x.genMethodNameT(t), x.arr2str(t, "*"), x.genTypeName(t), x.cpfx)
 		x.genRequiredMethodVars(true)
 		switch t.Kind() {
 		case reflect.Array, reflect.Slice, reflect.Chan:
-			x.encListFallback("v", rtid, t)
+			x.encListFallback("v", t)
 		case reflect.Map:
-			x.encMapFallback("v", rtid, t)
+			x.encMapFallback("v", t)
 		default:
 			panic(genExpectArrayOrMapErr)
 		}
@@ -271,6 +271,13 @@ func Gen(w io.Writer, buildTags, pkgName string, useUnsafe bool, typ ...reflect.
 	}
 
 	x.line("")
+}
+
+func (x *genRunner) arr2str(t reflect.Type, s string) string {
+	if t.Kind() == reflect.Array {
+		return s
+	}
+	return ""
 }
 
 func (x *genRunner) genRequiredMethodVars(encode bool) {
@@ -413,9 +420,10 @@ func (x *genRunner) selfer(encode bool) {
 
 }
 
+// used for chan, array, slice, map
 func (x *genRunner) xtraSM(varname string, encode bool, t reflect.Type) {
 	if encode {
-		x.linef("h.enc%s(%s(%s), e)", x.genMethodNameT(t), x.genTypeName(t), varname)
+		x.linef("h.enc%s((%s%s)(%s), e)", x.genMethodNameT(t), x.arr2str(t, "*"), x.genTypeName(t), varname)
 		// x.line("h.enc" + x.genMethodNameT(t) + "(" + x.genTypeName(t) + "(" + varname + "), e)")
 	} else {
 		x.linef("h.dec%s((*%s)(%s), d)", x.genMethodNameT(t), x.genTypeName(t), varname)
@@ -424,6 +432,8 @@ func (x *genRunner) xtraSM(varname string, encode bool, t reflect.Type) {
 	x.ts[t] = struct{}{}
 }
 
+// encVar will encode a variable.
+// The parameter, t, is the reflect.Type of the variable itself
 func (x *genRunner) encVar(varname string, t reflect.Type) {
 	var checkNil bool
 	switch t.Kind() {
@@ -435,15 +445,20 @@ func (x *genRunner) encVar(varname string, t reflect.Type) {
 	}
 	switch t.Kind() {
 	case reflect.Ptr:
-		if t.Elem().Kind() == reflect.Struct {
+		switch t.Elem().Kind() {
+		case reflect.Struct, reflect.Array:
 			x.enc(varname, genNonPtr(t))
-		} else {
+		default:
 			i := x.varsfx()
 			x.line(genTempVarPfx + i + " := *" + varname)
 			x.enc(genTempVarPfx+i, genNonPtr(t))
 		}
+	case reflect.Struct, reflect.Array:
+		i := x.varsfx()
+		x.line(genTempVarPfx + i + " := &" + varname)
+		x.enc(genTempVarPfx+i, t)
 	default:
-		x.enc(varname, genNonPtr(t))
+		x.enc(varname, t)
 	}
 
 	if checkNil {
@@ -452,6 +467,8 @@ func (x *genRunner) encVar(varname string, t reflect.Type) {
 
 }
 
+// enc will encode a variable (varname) of type T,
+// except t is of kind reflect.Struct or reflect.Array, wherein varname is of type *T (to prevent copying)
 func (x *genRunner) enc(varname string, t reflect.Type) {
 	// varName here must be to a pointer to a struct, or to a value directly.
 	rtid := reflect.ValueOf(t).Pointer()
@@ -502,9 +519,11 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 		x.line("r.EncodeBool(bool(" + varname + "))")
 	case reflect.String:
 		x.line("r.EncodeString(codecSelferC_UTF8" + x.xs + ", string(" + varname + "))")
-	case reflect.Array, reflect.Chan:
+	case reflect.Chan:
 		x.xtraSM(varname, true, t)
 		// x.encListFallback(varname, rtid, t)
+	case reflect.Array:
+		x.xtraSM(varname, true, t)
 	case reflect.Slice:
 		// if nil, call dedicated function
 		// if a []uint8, call dedicated function
@@ -746,7 +765,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 	x.line("}")
 }
 
-func (x *genRunner) encListFallback(varname string, rtid uintptr, t reflect.Type) {
+func (x *genRunner) encListFallback(varname string, t reflect.Type) {
 	i := x.varsfx()
 	g := genTempVarPfx
 	x.line("r.EncodeArrayStart(len(" + varname + "))")
@@ -774,7 +793,7 @@ func (x *genRunner) encListFallback(varname string, rtid uintptr, t reflect.Type
 	x.line("}")
 }
 
-func (x *genRunner) encMapFallback(varname string, rtid uintptr, t reflect.Type) {
+func (x *genRunner) encMapFallback(varname string, t reflect.Type) {
 	i := x.varsfx()
 	x.line("r.EncodeMapStart(len(" + varname + "))")
 	x.line(genTempVarPfx + "s" + i + " := !z.EncBinary()")

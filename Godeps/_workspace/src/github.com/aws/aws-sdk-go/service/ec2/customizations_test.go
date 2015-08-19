@@ -24,7 +24,7 @@ func TestCopySnapshotPresignedURL(t *testing.T) {
 
 	req, _ := svc.CopySnapshotRequest(&ec2.CopySnapshotInput{
 		SourceRegion:     aws.String("us-west-1"),
-		SourceSnapshotID: aws.String("snap-id"),
+		SourceSnapshotId: aws.String("snap-id"),
 	})
 	req.Sign()
 

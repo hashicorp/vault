@@ -3,7 +3,6 @@ package s3manager_test
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/service"
 	"github.com/aws/aws-sdk-go/internal/test/unit"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -27,7 +27,7 @@ func dlLoggingSvc(data []byte) (*s3.S3, *[]string, *[]string) {
 
 	svc := s3.New(nil)
 	svc.Handlers.Send.Clear()
-	svc.Handlers.Send.PushBack(func(r *aws.Request) {
+	svc.Handlers.Send.PushBack(func(r *service.Request) {
 		m.Lock()
 		defer m.Unlock()
 
@@ -56,36 +56,12 @@ func dlLoggingSvc(data []byte) (*s3.S3, *[]string, *[]string) {
 	return svc, &names, &ranges
 }
 
-type dlwriter struct {
-	buf []byte
-}
-
-func newDLWriter(size int) *dlwriter {
-	return &dlwriter{buf: make([]byte, size)}
-}
-
-func (d dlwriter) WriteAt(p []byte, pos int64) (n int, err error) {
-	if pos > int64(len(d.buf)) {
-		return 0, io.EOF
-	}
-
-	written := 0
-	for i, b := range p {
-		if i >= len(d.buf) {
-			break
-		}
-		d.buf[pos+int64(i)] = b
-		written++
-	}
-	return written, nil
-}
-
 func TestDownloadOrder(t *testing.T) {
 	s, names, ranges := dlLoggingSvc(buf12MB)
 
 	opts := &s3manager.DownloadOptions{S3: s, Concurrency: 1}
 	d := s3manager.NewDownloader(opts)
-	w := newDLWriter(len(buf12MB))
+	w := &aws.WriteAtBuffer{}
 	n, err := d.Download(w, &s3.GetObjectInput{
 		Bucket: aws.String("bucket"),
 		Key:    aws.String("key"),
@@ -97,7 +73,7 @@ func TestDownloadOrder(t *testing.T) {
 	assert.Equal(t, []string{"bytes=0-5242879", "bytes=5242880-10485759", "bytes=10485760-15728639"}, *ranges)
 
 	count := 0
-	for _, b := range w.buf {
+	for _, b := range w.Bytes() {
 		count += int(b)
 	}
 	assert.Equal(t, 0, count)
@@ -108,7 +84,7 @@ func TestDownloadZero(t *testing.T) {
 
 	opts := &s3manager.DownloadOptions{S3: s}
 	d := s3manager.NewDownloader(opts)
-	w := newDLWriter(0)
+	w := &aws.WriteAtBuffer{}
 	n, err := d.Download(w, &s3.GetObjectInput{
 		Bucket: aws.String("bucket"),
 		Key:    aws.String("key"),
@@ -125,7 +101,7 @@ func TestDownloadSetPartSize(t *testing.T) {
 
 	opts := &s3manager.DownloadOptions{S3: s, PartSize: 1, Concurrency: 1}
 	d := s3manager.NewDownloader(opts)
-	w := newDLWriter(3)
+	w := &aws.WriteAtBuffer{}
 	n, err := d.Download(w, &s3.GetObjectInput{
 		Bucket: aws.String("bucket"),
 		Key:    aws.String("key"),
@@ -135,7 +111,7 @@ func TestDownloadSetPartSize(t *testing.T) {
 	assert.Equal(t, int64(3), n)
 	assert.Equal(t, []string{"GetObject", "GetObject", "GetObject"}, *names)
 	assert.Equal(t, []string{"bytes=0-0", "bytes=1-1", "bytes=2-2"}, *ranges)
-	assert.Equal(t, []byte{1, 2, 3}, w.buf)
+	assert.Equal(t, []byte{1, 2, 3}, w.Bytes())
 }
 
 func TestDownloadError(t *testing.T) {
@@ -143,7 +119,7 @@ func TestDownloadError(t *testing.T) {
 	opts := &s3manager.DownloadOptions{S3: s, PartSize: 1, Concurrency: 1}
 
 	num := 0
-	s.Handlers.Send.PushBack(func(r *aws.Request) {
+	s.Handlers.Send.PushBack(func(r *service.Request) {
 		num++
 		if num > 1 {
 			r.HTTPResponse.StatusCode = 400
@@ -152,7 +128,7 @@ func TestDownloadError(t *testing.T) {
 	})
 
 	d := s3manager.NewDownloader(opts)
-	w := newDLWriter(3)
+	w := &aws.WriteAtBuffer{}
 	n, err := d.Download(w, &s3.GetObjectInput{
 		Bucket: aws.String("bucket"),
 		Key:    aws.String("key"),
@@ -161,5 +137,5 @@ func TestDownloadError(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, int64(1), n)
 	assert.Equal(t, []string{"GetObject", "GetObject"}, *names)
-	assert.Equal(t, []byte{1, 0, 0}, w.buf)
+	assert.Equal(t, []byte{1}, w.Bytes())
 }

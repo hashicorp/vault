@@ -2,42 +2,13 @@ package aws
 
 import (
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 )
 
-// DefaultChainCredentials is a Credentials which will find the first available
-// credentials Value from the list of Providers.
-//
-// This should be used in the default case. Once the type of credentials are
-// known switching to the specific Credentials will be more efficient.
-var DefaultChainCredentials = credentials.NewChainCredentials(
-	[]credentials.Provider{
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-		&credentials.EC2RoleProvider{ExpiryWindow: 5 * time.Minute},
-	})
-
 // The default number of retries for a service. The value of -1 indicates that
 // the service specific retry default will be used.
 const DefaultRetries = -1
-
-// DefaultConfig is the default all service configuration will be based off of.
-// By default, all clients use this structure for initialization options unless
-// a custom configuration object is passed in.
-//
-// You may modify this global structure to change all default configuration
-// in the SDK. Note that configuration options are copied by value, so any
-// modifications must happen before constructing a client.
-var DefaultConfig = NewConfig().
-	WithCredentials(DefaultChainCredentials).
-	WithRegion(os.Getenv("AWS_REGION")).
-	WithHTTPClient(http.DefaultClient).
-	WithMaxRetries(DefaultRetries).
-	WithLogger(NewDefaultLogger()).
-	WithLogLevel(LogOff)
 
 // A Config provides service configuration for service clients. By default,
 // all clients will use the {DefaultConfig} structure.

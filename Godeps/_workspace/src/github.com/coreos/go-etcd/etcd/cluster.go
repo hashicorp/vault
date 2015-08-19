@@ -19,6 +19,8 @@ func NewCluster(machines []string) *Cluster {
 		machines = []string{"http://127.0.0.1:4001"}
 	}
 
+	machines = shuffleStringSlice(machines)
+	logger.Debug("Shuffle cluster machines", machines)
 	// default leader and machines
 	return &Cluster{
 		Leader:   "",
@@ -30,7 +32,7 @@ func NewCluster(machines []string) *Cluster {
 func (cl *Cluster) failure() {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
-	cl.picked = rand.Intn(len(cl.Machines))
+	cl.picked = (cl.picked + 1) % len(cl.Machines)
 }
 
 func (cl *Cluster) pick() string {
@@ -47,5 +49,6 @@ func (cl *Cluster) updateFromStr(machines string) {
 	for i := range cl.Machines {
 		cl.Machines[i] = strings.TrimSpace(cl.Machines[i])
 	}
+	cl.Machines = shuffleStringSlice(cl.Machines)
 	cl.picked = rand.Intn(len(cl.Machines))
 }

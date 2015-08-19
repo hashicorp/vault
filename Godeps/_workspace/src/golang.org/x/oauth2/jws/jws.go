@@ -4,7 +4,7 @@
 
 // Package jws provides encoding and decoding utilities for
 // signed JWS messages.
-package jws // import "golang.org/x/oauth2/jws"
+package jws
 
 import (
 	"bytes"
@@ -27,8 +27,8 @@ type ClaimSet struct {
 	Iss   string `json:"iss"`             // email address of the client_id of the application making the access token request
 	Scope string `json:"scope,omitempty"` // space-delimited list of the permissions the application requests
 	Aud   string `json:"aud"`             // descriptor of the intended target of the assertion (Optional).
-	Exp   int64  `json:"exp"`             // the expiration time of the assertion
-	Iat   int64  `json:"iat"`             // the time the assertion was issued.
+	Exp   int64  `json:"exp"`             // the expiration time of the assertion (seconds since Unix epoch)
+	Iat   int64  `json:"iat"`             // the time the assertion was issued (seconds since Unix epoch)
 	Typ   string `json:"typ,omitempty"`   // token type (Optional).
 
 	// Email for which the application is requesting delegated access (Optional).

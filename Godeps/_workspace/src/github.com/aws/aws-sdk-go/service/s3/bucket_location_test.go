@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
+	"github.com/aws/aws-sdk-go/aws/service"
 	"github.com/aws/aws-sdk-go/internal/test/unit"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func TestGetBucketLocation(t *testing.T) {
 	for _, test := range s3LocationTests {
 		s := s3.New(nil)
 		s.Handlers.Send.Clear()
-		s.Handlers.Send.PushBack(func(r *aws.Request) {
+		s.Handlers.Send.PushBack(func(r *service.Request) {
 			reader := ioutil.NopCloser(bytes.NewReader([]byte(test.body)))
 			r.HTTPResponse = &http.Response{StatusCode: 200, Body: reader}
 		})

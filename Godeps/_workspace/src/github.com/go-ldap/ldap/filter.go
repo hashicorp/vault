@@ -5,6 +5,8 @@
 package ldap
 
 import (
+	"bytes"
+	hexpac "encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -116,22 +118,22 @@ func DecompileFilter(packet *ber.Packet) (ret string, err error) {
 	case FilterEqualityMatch:
 		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
 		ret += "="
-		ret += ber.DecodeString(packet.Children[1].Data.Bytes())
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterGreaterOrEqual:
 		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
 		ret += ">="
-		ret += ber.DecodeString(packet.Children[1].Data.Bytes())
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterLessOrEqual:
 		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
 		ret += "<="
-		ret += ber.DecodeString(packet.Children[1].Data.Bytes())
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	case FilterPresent:
 		ret += ber.DecodeString(packet.Data.Bytes())
 		ret += "=*"
 	case FilterApproxMatch:
 		ret += ber.DecodeString(packet.Children[0].Data.Bytes())
 		ret += "~="
-		ret += ber.DecodeString(packet.Children[1].Data.Bytes())
+		ret += EscapeFilter(ber.DecodeString(packet.Children[1].Data.Bytes()))
 	}
 
 	ret += ")"
@@ -242,8 +244,31 @@ func compileFilter(filter string, pos int) (*ber.Packet, int, error) {
 			}
 			packet.AppendChild(seq)
 		default:
+			var buffer bytes.Buffer
+			for i := 0; i < len(condition); i++ {
+				// Check for escaped hex characters and convert them to their literal value for transport.
+				if condition[i] == '\\' {
+					// http://tools.ietf.org/search/rfc4515
+					// \ (%x5C) is not a valid character unless it is followed by two HEX characters due to not
+					// being a member of UTF1SUBSET.
+					if i+2 > len(condition) {
+						err = NewError(ErrorFilterCompile, errors.New("ldap: missing characters for escape in filter"))
+						return packet, newPos, err
+					}
+					if escByte, decodeErr := hexpac.DecodeString(condition[i+1:i+3]); decodeErr != nil {
+						err = NewError(ErrorFilterCompile, errors.New("ldap: invalid characters for escape in filter"))
+						return packet, newPos, err
+					} else {
+						buffer.WriteByte(escByte[0])
+						i += 2 // +1 from end of loop, so 3 total for \xx.
+					}
+				} else {
+					buffer.WriteString(string(condition[i]))
+				}
+			}
+
 			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, attribute, "Attribute"))
-			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, condition, "Condition"))
+			packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, buffer.String(), "Condition"))
 		}
 
 		newPos++

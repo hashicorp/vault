@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/service"
 )
 
 type xmlErrorResponse struct {
@@ -15,7 +15,7 @@ type xmlErrorResponse struct {
 	Message string   `xml:"Message"`
 }
 
-func unmarshalError(r *aws.Request) {
+func unmarshalError(r *service.Request) {
 	defer r.HTTPResponse.Body.Close()
 
 	if r.HTTPResponse.ContentLength == int64(0) {

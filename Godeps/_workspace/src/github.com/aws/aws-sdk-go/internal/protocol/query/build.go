@@ -6,13 +6,13 @@ package query
 import (
 	"net/url"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/service"
 	"github.com/aws/aws-sdk-go/internal/protocol/query/queryutil"
 )
 
 // Build builds a request for an AWS Query service.
-func Build(r *aws.Request) {
+func Build(r *service.Request) {
 	body := url.Values{
 		"Action":  {r.Operation.Name},
 		"Version": {r.Service.APIVersion},
