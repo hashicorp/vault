@@ -51,7 +51,7 @@ a "readonly" role:
 ```text
 $ vault write cassandra/roles/readonly \
     creation_cql="CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER; \
-    GRANT SELECT ON ALL KEYSPACES TO '{{username}}';"
+    GRANT SELECT ON ALL KEYSPACES TO \"{{username}}\";"
 Success! Data written to: cassandra/roles/readonly
 ```
 
