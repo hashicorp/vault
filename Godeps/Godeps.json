@@ -201,7 +201,11 @@
 			"Rev": "81bf7719a6b7ce9b665598222362b50122dfc13b"
 		},
 		{
-			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"ImportPath": "golang.org/x/crypto/curve25519",
+			"Rev": "81bf7719a6b7ce9b665598222362b50122dfc13b"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh",
 			"Rev": "81bf7719a6b7ce9b665598222362b50122dfc13b"
 		},
 		{
