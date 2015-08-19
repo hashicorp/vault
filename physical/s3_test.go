@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -16,7 +17,7 @@ func TestS3Backend(t *testing.T) {
 		t.SkipNow()
 	}
 
-	credentialChain := aws.DefaultChainCredentials
+	credentialChain := defaults.DefaultChainCredentials
 	creds, err := credentialChain.Get()
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -28,7 +29,7 @@ func TestS3Backend(t *testing.T) {
 	}
 
 	s3conn := s3.New(&aws.Config{
-		Credentials: aws.DefaultChainCredentials,
+		Credentials: defaults.DefaultChainCredentials,
 		Region:      aws.String(region),
 	})
 
