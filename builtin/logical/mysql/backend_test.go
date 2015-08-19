@@ -41,6 +41,21 @@ func TestBackend_roleCrud(t *testing.T) {
 	})
 }
 
+func TestBackend_leaseWriteRead(t *testing.T) {
+	b := Backend()
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteLease(t),
+			testAccStepReadLease(t),
+		},
+	})
+
+}
+
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("MYSQL_DSN"); v == "" {
 		t.Fatal("MYSQL_DSN must be set for acceptance tests")
@@ -114,6 +129,31 @@ func testAccStepReadRole(t *testing.T, name string, sql string) logicaltest.Test
 			}
 
 			if d.SQL != sql {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "config/lease",
+		Data: map[string]interface{}{
+			"lease":     "1h5m",
+			"lease_max": "24h",
+		},
+	}
+}
+
+func testAccStepReadLease(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "config/lease",
+		Check: func(resp *logical.Response) error {
+			if resp.Data["lease"] != "1h5m0s" || resp.Data["lease_max"] != "24h0m0s" {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
