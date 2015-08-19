@@ -34,10 +34,11 @@ type AuthCommand struct {
 
 func (c *AuthCommand) Run(args []string) int {
 	var method string
-	var methods, methodHelp bool
+	var methods, methodHelp, noVerify bool
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
 	flags.BoolVar(&methodHelp, "method-help", false, "")
+	flags.BoolVar(&noVerify, "no-verify", false, "")
 	flags.StringVar(&method, "method", "", "method")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -170,6 +171,14 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
+	if noVerify {
+		c.Ui.Output(fmt.Sprintf(
+			"Authenticated - no token verification has been performed.",
+		))
+
+		return 0
+	}
+
 	// Verify the token
 	secret, err := client.Logical().Read("auth/token/lookup-self")
 	if err != nil {
@@ -272,6 +281,9 @@ Auth Options:
   -method-help      If set, the help for the selected method will be shown.
 
   -methods          List the available auth methods.
+
+  -no-verify        Do not verify the token after creation; avoids a use count
+                    decrement.
 
 `
 	return strings.TrimSpace(helpText)

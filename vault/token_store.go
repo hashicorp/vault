@@ -75,10 +75,6 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 			Root: []string{
 				"revoke-prefix/*",
 			},
-
-			Unauthenticated: []string{
-				"lookup-self",
-			},
 		},
 
 		Paths: []*framework.Path{
