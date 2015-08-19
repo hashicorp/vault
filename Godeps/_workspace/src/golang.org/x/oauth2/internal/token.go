@@ -109,6 +109,7 @@ var brokenAuthHeaderProviders = []string{
 	"https://app.box.com/",
 	"https://test-sandbox.auth.corp.google.com",
 	"https://user.gini.net/",
+	"https://api.netatmo.net/",
 }
 
 // providerAuthHeaderWorks reports whether the OAuth2 server identified by the tokenURL

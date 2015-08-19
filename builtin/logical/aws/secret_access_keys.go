@@ -97,7 +97,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Return the info!
 	return b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
-		"access_key": *keyResp.AccessKey.AccessKeyID,
+		"access_key": *keyResp.AccessKey.AccessKeyId,
 		"secret_key": *keyResp.AccessKey.SecretAccessKey,
 	}, map[string]interface{}{
 		"username": username,

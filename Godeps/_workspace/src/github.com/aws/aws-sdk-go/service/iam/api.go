@@ -6,15 +6,15 @@ package iam
 import (
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
+	"github.com/aws/aws-sdk-go/aws/service"
 )
 
 const opAddClientIDToOpenIDConnectProvider = "AddClientIDToOpenIDConnectProvider"
 
 // AddClientIDToOpenIDConnectProviderRequest generates a request for the AddClientIDToOpenIDConnectProvider operation.
-func (c *IAM) AddClientIDToOpenIDConnectProviderRequest(input *AddClientIDToOpenIDConnectProviderInput) (req *aws.Request, output *AddClientIDToOpenIDConnectProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) AddClientIDToOpenIDConnectProviderRequest(input *AddClientIDToOpenIDConnectProviderInput) (req *service.Request, output *AddClientIDToOpenIDConnectProviderOutput) {
+	op := &service.Operation{
 		Name:       opAddClientIDToOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -44,8 +44,8 @@ func (c *IAM) AddClientIDToOpenIDConnectProvider(input *AddClientIDToOpenIDConne
 const opAddRoleToInstanceProfile = "AddRoleToInstanceProfile"
 
 // AddRoleToInstanceProfileRequest generates a request for the AddRoleToInstanceProfile operation.
-func (c *IAM) AddRoleToInstanceProfileRequest(input *AddRoleToInstanceProfileInput) (req *aws.Request, output *AddRoleToInstanceProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) AddRoleToInstanceProfileRequest(input *AddRoleToInstanceProfileInput) (req *service.Request, output *AddRoleToInstanceProfileOutput) {
+	op := &service.Operation{
 		Name:       opAddRoleToInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -74,8 +74,8 @@ func (c *IAM) AddRoleToInstanceProfile(input *AddRoleToInstanceProfileInput) (*A
 const opAddUserToGroup = "AddUserToGroup"
 
 // AddUserToGroupRequest generates a request for the AddUserToGroup operation.
-func (c *IAM) AddUserToGroupRequest(input *AddUserToGroupInput) (req *aws.Request, output *AddUserToGroupOutput) {
-	op := &aws.Operation{
+func (c *IAM) AddUserToGroupRequest(input *AddUserToGroupInput) (req *service.Request, output *AddUserToGroupOutput) {
+	op := &service.Operation{
 		Name:       opAddUserToGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -101,8 +101,8 @@ func (c *IAM) AddUserToGroup(input *AddUserToGroupInput) (*AddUserToGroupOutput,
 const opAttachGroupPolicy = "AttachGroupPolicy"
 
 // AttachGroupPolicyRequest generates a request for the AttachGroupPolicy operation.
-func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *aws.Request, output *AttachGroupPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *service.Request, output *AttachGroupPolicyOutput) {
+	op := &service.Operation{
 		Name:       opAttachGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -135,8 +135,8 @@ func (c *IAM) AttachGroupPolicy(input *AttachGroupPolicyInput) (*AttachGroupPoli
 const opAttachRolePolicy = "AttachRolePolicy"
 
 // AttachRolePolicyRequest generates a request for the AttachRolePolicy operation.
-func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *aws.Request, output *AttachRolePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *service.Request, output *AttachRolePolicyOutput) {
+	op := &service.Operation{
 		Name:       opAttachRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -173,8 +173,8 @@ func (c *IAM) AttachRolePolicy(input *AttachRolePolicyInput) (*AttachRolePolicyO
 const opAttachUserPolicy = "AttachUserPolicy"
 
 // AttachUserPolicyRequest generates a request for the AttachUserPolicy operation.
-func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *aws.Request, output *AttachUserPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *service.Request, output *AttachUserPolicyOutput) {
+	op := &service.Operation{
 		Name:       opAttachUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -207,8 +207,8 @@ func (c *IAM) AttachUserPolicy(input *AttachUserPolicyInput) (*AttachUserPolicyO
 const opChangePassword = "ChangePassword"
 
 // ChangePasswordRequest generates a request for the ChangePassword operation.
-func (c *IAM) ChangePasswordRequest(input *ChangePasswordInput) (req *aws.Request, output *ChangePasswordOutput) {
-	op := &aws.Operation{
+func (c *IAM) ChangePasswordRequest(input *ChangePasswordInput) (req *service.Request, output *ChangePasswordOutput) {
+	op := &service.Operation{
 		Name:       opChangePassword,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -239,8 +239,8 @@ func (c *IAM) ChangePassword(input *ChangePasswordInput) (*ChangePasswordOutput,
 const opCreateAccessKey = "CreateAccessKey"
 
 // CreateAccessKeyRequest generates a request for the CreateAccessKey operation.
-func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *aws.Request, output *CreateAccessKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *service.Request, output *CreateAccessKeyOutput) {
+	op := &service.Operation{
 		Name:       opCreateAccessKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -282,8 +282,8 @@ func (c *IAM) CreateAccessKey(input *CreateAccessKeyInput) (*CreateAccessKeyOutp
 const opCreateAccountAlias = "CreateAccountAlias"
 
 // CreateAccountAliasRequest generates a request for the CreateAccountAlias operation.
-func (c *IAM) CreateAccountAliasRequest(input *CreateAccountAliasInput) (req *aws.Request, output *CreateAccountAliasOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateAccountAliasRequest(input *CreateAccountAliasInput) (req *service.Request, output *CreateAccountAliasOutput) {
+	op := &service.Operation{
 		Name:       opCreateAccountAlias,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -311,8 +311,8 @@ func (c *IAM) CreateAccountAlias(input *CreateAccountAliasInput) (*CreateAccount
 const opCreateGroup = "CreateGroup"
 
 // CreateGroupRequest generates a request for the CreateGroup operation.
-func (c *IAM) CreateGroupRequest(input *CreateGroupInput) (req *aws.Request, output *CreateGroupOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateGroupRequest(input *CreateGroupInput) (req *service.Request, output *CreateGroupOutput) {
+	op := &service.Operation{
 		Name:       opCreateGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -342,8 +342,8 @@ func (c *IAM) CreateGroup(input *CreateGroupInput) (*CreateGroupOutput, error) {
 const opCreateInstanceProfile = "CreateInstanceProfile"
 
 // CreateInstanceProfileRequest generates a request for the CreateInstanceProfile operation.
-func (c *IAM) CreateInstanceProfileRequest(input *CreateInstanceProfileInput) (req *aws.Request, output *CreateInstanceProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateInstanceProfileRequest(input *CreateInstanceProfileInput) (req *service.Request, output *CreateInstanceProfileOutput) {
+	op := &service.Operation{
 		Name:       opCreateInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -374,8 +374,8 @@ func (c *IAM) CreateInstanceProfile(input *CreateInstanceProfileInput) (*CreateI
 const opCreateLoginProfile = "CreateLoginProfile"
 
 // CreateLoginProfileRequest generates a request for the CreateLoginProfile operation.
-func (c *IAM) CreateLoginProfileRequest(input *CreateLoginProfileInput) (req *aws.Request, output *CreateLoginProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateLoginProfileRequest(input *CreateLoginProfileInput) (req *service.Request, output *CreateLoginProfileOutput) {
+	op := &service.Operation{
 		Name:       opCreateLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -404,8 +404,8 @@ func (c *IAM) CreateLoginProfile(input *CreateLoginProfileInput) (*CreateLoginPr
 const opCreateOpenIDConnectProvider = "CreateOpenIDConnectProvider"
 
 // CreateOpenIDConnectProviderRequest generates a request for the CreateOpenIDConnectProvider operation.
-func (c *IAM) CreateOpenIDConnectProviderRequest(input *CreateOpenIDConnectProviderInput) (req *aws.Request, output *CreateOpenIDConnectProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateOpenIDConnectProviderRequest(input *CreateOpenIDConnectProviderInput) (req *service.Request, output *CreateOpenIDConnectProviderOutput) {
+	op := &service.Operation{
 		Name:       opCreateOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -447,8 +447,8 @@ func (c *IAM) CreateOpenIDConnectProvider(input *CreateOpenIDConnectProviderInpu
 const opCreatePolicy = "CreatePolicy"
 
 // CreatePolicyRequest generates a request for the CreatePolicy operation.
-func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *aws.Request, output *CreatePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *service.Request, output *CreatePolicyOutput) {
+	op := &service.Operation{
 		Name:       opCreatePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -483,8 +483,8 @@ func (c *IAM) CreatePolicy(input *CreatePolicyInput) (*CreatePolicyOutput, error
 const opCreatePolicyVersion = "CreatePolicyVersion"
 
 // CreatePolicyVersionRequest generates a request for the CreatePolicyVersion operation.
-func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *aws.Request, output *CreatePolicyVersionOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *service.Request, output *CreatePolicyVersionOutput) {
+	op := &service.Operation{
 		Name:       opCreatePolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -522,8 +522,8 @@ func (c *IAM) CreatePolicyVersion(input *CreatePolicyVersionInput) (*CreatePolic
 const opCreateRole = "CreateRole"
 
 // CreateRoleRequest generates a request for the CreateRole operation.
-func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *aws.Request, output *CreateRoleOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *service.Request, output *CreateRoleOutput) {
+	op := &service.Operation{
 		Name:       opCreateRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -556,8 +556,8 @@ func (c *IAM) CreateRole(input *CreateRoleInput) (*CreateRoleOutput, error) {
 const opCreateSAMLProvider = "CreateSAMLProvider"
 
 // CreateSAMLProviderRequest generates a request for the CreateSAMLProvider operation.
-func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *aws.Request, output *CreateSAMLProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *service.Request, output *CreateSAMLProviderOutput) {
+	op := &service.Operation{
 		Name:       opCreateSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -602,8 +602,8 @@ func (c *IAM) CreateSAMLProvider(input *CreateSAMLProviderInput) (*CreateSAMLPro
 const opCreateUser = "CreateUser"
 
 // CreateUserRequest generates a request for the CreateUser operation.
-func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *aws.Request, output *CreateUserOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *service.Request, output *CreateUserOutput) {
+	op := &service.Operation{
 		Name:       opCreateUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -633,8 +633,8 @@ func (c *IAM) CreateUser(input *CreateUserInput) (*CreateUserOutput, error) {
 const opCreateVirtualMFADevice = "CreateVirtualMFADevice"
 
 // CreateVirtualMFADeviceRequest generates a request for the CreateVirtualMFADevice operation.
-func (c *IAM) CreateVirtualMFADeviceRequest(input *CreateVirtualMFADeviceInput) (req *aws.Request, output *CreateVirtualMFADeviceOutput) {
-	op := &aws.Operation{
+func (c *IAM) CreateVirtualMFADeviceRequest(input *CreateVirtualMFADeviceInput) (req *service.Request, output *CreateVirtualMFADeviceOutput) {
+	op := &service.Operation{
 		Name:       opCreateVirtualMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -673,8 +673,8 @@ func (c *IAM) CreateVirtualMFADevice(input *CreateVirtualMFADeviceInput) (*Creat
 const opDeactivateMFADevice = "DeactivateMFADevice"
 
 // DeactivateMFADeviceRequest generates a request for the DeactivateMFADevice operation.
-func (c *IAM) DeactivateMFADeviceRequest(input *DeactivateMFADeviceInput) (req *aws.Request, output *DeactivateMFADeviceOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeactivateMFADeviceRequest(input *DeactivateMFADeviceInput) (req *service.Request, output *DeactivateMFADeviceOutput) {
+	op := &service.Operation{
 		Name:       opDeactivateMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -705,8 +705,8 @@ func (c *IAM) DeactivateMFADevice(input *DeactivateMFADeviceInput) (*DeactivateM
 const opDeleteAccessKey = "DeleteAccessKey"
 
 // DeleteAccessKeyRequest generates a request for the DeleteAccessKey operation.
-func (c *IAM) DeleteAccessKeyRequest(input *DeleteAccessKeyInput) (req *aws.Request, output *DeleteAccessKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteAccessKeyRequest(input *DeleteAccessKeyInput) (req *service.Request, output *DeleteAccessKeyOutput) {
+	op := &service.Operation{
 		Name:       opDeleteAccessKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -737,8 +737,8 @@ func (c *IAM) DeleteAccessKey(input *DeleteAccessKeyInput) (*DeleteAccessKeyOutp
 const opDeleteAccountAlias = "DeleteAccountAlias"
 
 // DeleteAccountAliasRequest generates a request for the DeleteAccountAlias operation.
-func (c *IAM) DeleteAccountAliasRequest(input *DeleteAccountAliasInput) (req *aws.Request, output *DeleteAccountAliasOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteAccountAliasRequest(input *DeleteAccountAliasInput) (req *service.Request, output *DeleteAccountAliasOutput) {
+	op := &service.Operation{
 		Name:       opDeleteAccountAlias,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -766,8 +766,8 @@ func (c *IAM) DeleteAccountAlias(input *DeleteAccountAliasInput) (*DeleteAccount
 const opDeleteAccountPasswordPolicy = "DeleteAccountPasswordPolicy"
 
 // DeleteAccountPasswordPolicyRequest generates a request for the DeleteAccountPasswordPolicy operation.
-func (c *IAM) DeleteAccountPasswordPolicyRequest(input *DeleteAccountPasswordPolicyInput) (req *aws.Request, output *DeleteAccountPasswordPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteAccountPasswordPolicyRequest(input *DeleteAccountPasswordPolicyInput) (req *service.Request, output *DeleteAccountPasswordPolicyOutput) {
+	op := &service.Operation{
 		Name:       opDeleteAccountPasswordPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -793,8 +793,8 @@ func (c *IAM) DeleteAccountPasswordPolicy(input *DeleteAccountPasswordPolicyInpu
 const opDeleteGroup = "DeleteGroup"
 
 // DeleteGroupRequest generates a request for the DeleteGroup operation.
-func (c *IAM) DeleteGroupRequest(input *DeleteGroupInput) (req *aws.Request, output *DeleteGroupOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteGroupRequest(input *DeleteGroupInput) (req *service.Request, output *DeleteGroupOutput) {
+	op := &service.Operation{
 		Name:       opDeleteGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -821,8 +821,8 @@ func (c *IAM) DeleteGroup(input *DeleteGroupInput) (*DeleteGroupOutput, error) {
 const opDeleteGroupPolicy = "DeleteGroupPolicy"
 
 // DeleteGroupPolicyRequest generates a request for the DeleteGroupPolicy operation.
-func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *aws.Request, output *DeleteGroupPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *service.Request, output *DeleteGroupPolicyOutput) {
+	op := &service.Operation{
 		Name:       opDeleteGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -853,8 +853,8 @@ func (c *IAM) DeleteGroupPolicy(input *DeleteGroupPolicyInput) (*DeleteGroupPoli
 const opDeleteInstanceProfile = "DeleteInstanceProfile"
 
 // DeleteInstanceProfileRequest generates a request for the DeleteInstanceProfile operation.
-func (c *IAM) DeleteInstanceProfileRequest(input *DeleteInstanceProfileInput) (req *aws.Request, output *DeleteInstanceProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteInstanceProfileRequest(input *DeleteInstanceProfileInput) (req *service.Request, output *DeleteInstanceProfileOutput) {
+	op := &service.Operation{
 		Name:       opDeleteInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -887,8 +887,8 @@ func (c *IAM) DeleteInstanceProfile(input *DeleteInstanceProfileInput) (*DeleteI
 const opDeleteLoginProfile = "DeleteLoginProfile"
 
 // DeleteLoginProfileRequest generates a request for the DeleteLoginProfile operation.
-func (c *IAM) DeleteLoginProfileRequest(input *DeleteLoginProfileInput) (req *aws.Request, output *DeleteLoginProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteLoginProfileRequest(input *DeleteLoginProfileInput) (req *service.Request, output *DeleteLoginProfileOutput) {
+	op := &service.Operation{
 		Name:       opDeleteLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -920,8 +920,8 @@ func (c *IAM) DeleteLoginProfile(input *DeleteLoginProfileInput) (*DeleteLoginPr
 const opDeleteOpenIDConnectProvider = "DeleteOpenIDConnectProvider"
 
 // DeleteOpenIDConnectProviderRequest generates a request for the DeleteOpenIDConnectProvider operation.
-func (c *IAM) DeleteOpenIDConnectProviderRequest(input *DeleteOpenIDConnectProviderInput) (req *aws.Request, output *DeleteOpenIDConnectProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteOpenIDConnectProviderRequest(input *DeleteOpenIDConnectProviderInput) (req *service.Request, output *DeleteOpenIDConnectProviderOutput) {
+	op := &service.Operation{
 		Name:       opDeleteOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -954,8 +954,8 @@ func (c *IAM) DeleteOpenIDConnectProvider(input *DeleteOpenIDConnectProviderInpu
 const opDeletePolicy = "DeletePolicy"
 
 // DeletePolicyRequest generates a request for the DeletePolicy operation.
-func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *aws.Request, output *DeletePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *service.Request, output *DeletePolicyOutput) {
+	op := &service.Operation{
 		Name:       opDeletePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -998,8 +998,8 @@ func (c *IAM) DeletePolicy(input *DeletePolicyInput) (*DeletePolicyOutput, error
 const opDeletePolicyVersion = "DeletePolicyVersion"
 
 // DeletePolicyVersionRequest generates a request for the DeletePolicyVersion operation.
-func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *aws.Request, output *DeletePolicyVersionOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *service.Request, output *DeletePolicyVersionOutput) {
+	op := &service.Operation{
 		Name:       opDeletePolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1033,8 +1033,8 @@ func (c *IAM) DeletePolicyVersion(input *DeletePolicyVersionInput) (*DeletePolic
 const opDeleteRole = "DeleteRole"
 
 // DeleteRoleRequest generates a request for the DeleteRole operation.
-func (c *IAM) DeleteRoleRequest(input *DeleteRoleInput) (req *aws.Request, output *DeleteRoleOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteRoleRequest(input *DeleteRoleInput) (req *service.Request, output *DeleteRoleOutput) {
+	op := &service.Operation{
 		Name:       opDeleteRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1065,8 +1065,8 @@ func (c *IAM) DeleteRole(input *DeleteRoleInput) (*DeleteRoleOutput, error) {
 const opDeleteRolePolicy = "DeleteRolePolicy"
 
 // DeleteRolePolicyRequest generates a request for the DeleteRolePolicy operation.
-func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *aws.Request, output *DeleteRolePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *service.Request, output *DeleteRolePolicyOutput) {
+	op := &service.Operation{
 		Name:       opDeleteRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1097,8 +1097,8 @@ func (c *IAM) DeleteRolePolicy(input *DeleteRolePolicyInput) (*DeleteRolePolicyO
 const opDeleteSAMLProvider = "DeleteSAMLProvider"
 
 // DeleteSAMLProviderRequest generates a request for the DeleteSAMLProvider operation.
-func (c *IAM) DeleteSAMLProviderRequest(input *DeleteSAMLProviderInput) (req *aws.Request, output *DeleteSAMLProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteSAMLProviderRequest(input *DeleteSAMLProviderInput) (req *service.Request, output *DeleteSAMLProviderOutput) {
+	op := &service.Operation{
 		Name:       opDeleteSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1130,8 +1130,8 @@ func (c *IAM) DeleteSAMLProvider(input *DeleteSAMLProviderInput) (*DeleteSAMLPro
 const opDeleteSSHPublicKey = "DeleteSSHPublicKey"
 
 // DeleteSSHPublicKeyRequest generates a request for the DeleteSSHPublicKey operation.
-func (c *IAM) DeleteSSHPublicKeyRequest(input *DeleteSSHPublicKeyInput) (req *aws.Request, output *DeleteSSHPublicKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteSSHPublicKeyRequest(input *DeleteSSHPublicKeyInput) (req *service.Request, output *DeleteSSHPublicKeyOutput) {
+	op := &service.Operation{
 		Name:       opDeleteSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1163,8 +1163,8 @@ func (c *IAM) DeleteSSHPublicKey(input *DeleteSSHPublicKeyInput) (*DeleteSSHPubl
 const opDeleteServerCertificate = "DeleteServerCertificate"
 
 // DeleteServerCertificateRequest generates a request for the DeleteServerCertificate operation.
-func (c *IAM) DeleteServerCertificateRequest(input *DeleteServerCertificateInput) (req *aws.Request, output *DeleteServerCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteServerCertificateRequest(input *DeleteServerCertificateInput) (req *service.Request, output *DeleteServerCertificateOutput) {
+	op := &service.Operation{
 		Name:       opDeleteServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1200,8 +1200,8 @@ func (c *IAM) DeleteServerCertificate(input *DeleteServerCertificateInput) (*Del
 const opDeleteSigningCertificate = "DeleteSigningCertificate"
 
 // DeleteSigningCertificateRequest generates a request for the DeleteSigningCertificate operation.
-func (c *IAM) DeleteSigningCertificateRequest(input *DeleteSigningCertificateInput) (req *aws.Request, output *DeleteSigningCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteSigningCertificateRequest(input *DeleteSigningCertificateInput) (req *service.Request, output *DeleteSigningCertificateOutput) {
+	op := &service.Operation{
 		Name:       opDeleteSigningCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1232,8 +1232,8 @@ func (c *IAM) DeleteSigningCertificate(input *DeleteSigningCertificateInput) (*D
 const opDeleteUser = "DeleteUser"
 
 // DeleteUserRequest generates a request for the DeleteUser operation.
-func (c *IAM) DeleteUserRequest(input *DeleteUserInput) (req *aws.Request, output *DeleteUserOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteUserRequest(input *DeleteUserInput) (req *service.Request, output *DeleteUserOutput) {
+	op := &service.Operation{
 		Name:       opDeleteUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1260,8 +1260,8 @@ func (c *IAM) DeleteUser(input *DeleteUserInput) (*DeleteUserOutput, error) {
 const opDeleteUserPolicy = "DeleteUserPolicy"
 
 // DeleteUserPolicyRequest generates a request for the DeleteUserPolicy operation.
-func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *aws.Request, output *DeleteUserPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *service.Request, output *DeleteUserPolicyOutput) {
+	op := &service.Operation{
 		Name:       opDeleteUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1292,8 +1292,8 @@ func (c *IAM) DeleteUserPolicy(input *DeleteUserPolicyInput) (*DeleteUserPolicyO
 const opDeleteVirtualMFADevice = "DeleteVirtualMFADevice"
 
 // DeleteVirtualMFADeviceRequest generates a request for the DeleteVirtualMFADevice operation.
-func (c *IAM) DeleteVirtualMFADeviceRequest(input *DeleteVirtualMFADeviceInput) (req *aws.Request, output *DeleteVirtualMFADeviceOutput) {
-	op := &aws.Operation{
+func (c *IAM) DeleteVirtualMFADeviceRequest(input *DeleteVirtualMFADeviceInput) (req *service.Request, output *DeleteVirtualMFADeviceOutput) {
+	op := &service.Operation{
 		Name:       opDeleteVirtualMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1322,8 +1322,8 @@ func (c *IAM) DeleteVirtualMFADevice(input *DeleteVirtualMFADeviceInput) (*Delet
 const opDetachGroupPolicy = "DetachGroupPolicy"
 
 // DetachGroupPolicyRequest generates a request for the DetachGroupPolicy operation.
-func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *aws.Request, output *DetachGroupPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *service.Request, output *DetachGroupPolicyOutput) {
+	op := &service.Operation{
 		Name:       opDetachGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1354,8 +1354,8 @@ func (c *IAM) DetachGroupPolicy(input *DetachGroupPolicyInput) (*DetachGroupPoli
 const opDetachRolePolicy = "DetachRolePolicy"
 
 // DetachRolePolicyRequest generates a request for the DetachRolePolicy operation.
-func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *aws.Request, output *DetachRolePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *service.Request, output *DetachRolePolicyOutput) {
+	op := &service.Operation{
 		Name:       opDetachRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1386,8 +1386,8 @@ func (c *IAM) DetachRolePolicy(input *DetachRolePolicyInput) (*DetachRolePolicyO
 const opDetachUserPolicy = "DetachUserPolicy"
 
 // DetachUserPolicyRequest generates a request for the DetachUserPolicy operation.
-func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *aws.Request, output *DetachUserPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *service.Request, output *DetachUserPolicyOutput) {
+	op := &service.Operation{
 		Name:       opDetachUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1418,8 +1418,8 @@ func (c *IAM) DetachUserPolicy(input *DetachUserPolicyInput) (*DetachUserPolicyO
 const opEnableMFADevice = "EnableMFADevice"
 
 // EnableMFADeviceRequest generates a request for the EnableMFADevice operation.
-func (c *IAM) EnableMFADeviceRequest(input *EnableMFADeviceInput) (req *aws.Request, output *EnableMFADeviceOutput) {
-	op := &aws.Operation{
+func (c *IAM) EnableMFADeviceRequest(input *EnableMFADeviceInput) (req *service.Request, output *EnableMFADeviceOutput) {
+	op := &service.Operation{
 		Name:       opEnableMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1447,8 +1447,8 @@ func (c *IAM) EnableMFADevice(input *EnableMFADeviceInput) (*EnableMFADeviceOutp
 const opGenerateCredentialReport = "GenerateCredentialReport"
 
 // GenerateCredentialReportRequest generates a request for the GenerateCredentialReport operation.
-func (c *IAM) GenerateCredentialReportRequest(input *GenerateCredentialReportInput) (req *aws.Request, output *GenerateCredentialReportOutput) {
-	op := &aws.Operation{
+func (c *IAM) GenerateCredentialReportRequest(input *GenerateCredentialReportInput) (req *service.Request, output *GenerateCredentialReportOutput) {
+	op := &service.Operation{
 		Name:       opGenerateCredentialReport,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1476,8 +1476,8 @@ func (c *IAM) GenerateCredentialReport(input *GenerateCredentialReportInput) (*G
 const opGetAccessKeyLastUsed = "GetAccessKeyLastUsed"
 
 // GetAccessKeyLastUsedRequest generates a request for the GetAccessKeyLastUsed operation.
-func (c *IAM) GetAccessKeyLastUsedRequest(input *GetAccessKeyLastUsedInput) (req *aws.Request, output *GetAccessKeyLastUsedOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetAccessKeyLastUsedRequest(input *GetAccessKeyLastUsedInput) (req *service.Request, output *GetAccessKeyLastUsedOutput) {
+	op := &service.Operation{
 		Name:       opGetAccessKeyLastUsed,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1506,12 +1506,12 @@ func (c *IAM) GetAccessKeyLastUsed(input *GetAccessKeyLastUsedInput) (*GetAccess
 const opGetAccountAuthorizationDetails = "GetAccountAuthorizationDetails"
 
 // GetAccountAuthorizationDetailsRequest generates a request for the GetAccountAuthorizationDetails operation.
-func (c *IAM) GetAccountAuthorizationDetailsRequest(input *GetAccountAuthorizationDetailsInput) (req *aws.Request, output *GetAccountAuthorizationDetailsOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetAccountAuthorizationDetailsRequest(input *GetAccountAuthorizationDetailsInput) (req *service.Request, output *GetAccountAuthorizationDetailsOutput) {
+	op := &service.Operation{
 		Name:       opGetAccountAuthorizationDetails,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -1552,8 +1552,8 @@ func (c *IAM) GetAccountAuthorizationDetailsPages(input *GetAccountAuthorization
 const opGetAccountPasswordPolicy = "GetAccountPasswordPolicy"
 
 // GetAccountPasswordPolicyRequest generates a request for the GetAccountPasswordPolicy operation.
-func (c *IAM) GetAccountPasswordPolicyRequest(input *GetAccountPasswordPolicyInput) (req *aws.Request, output *GetAccountPasswordPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetAccountPasswordPolicyRequest(input *GetAccountPasswordPolicyInput) (req *service.Request, output *GetAccountPasswordPolicyOutput) {
+	op := &service.Operation{
 		Name:       opGetAccountPasswordPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1580,8 +1580,8 @@ func (c *IAM) GetAccountPasswordPolicy(input *GetAccountPasswordPolicyInput) (*G
 const opGetAccountSummary = "GetAccountSummary"
 
 // GetAccountSummaryRequest generates a request for the GetAccountSummary operation.
-func (c *IAM) GetAccountSummaryRequest(input *GetAccountSummaryInput) (req *aws.Request, output *GetAccountSummaryOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetAccountSummaryRequest(input *GetAccountSummaryInput) (req *service.Request, output *GetAccountSummaryOutput) {
+	op := &service.Operation{
 		Name:       opGetAccountSummary,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1611,8 +1611,8 @@ func (c *IAM) GetAccountSummary(input *GetAccountSummaryInput) (*GetAccountSumma
 const opGetCredentialReport = "GetCredentialReport"
 
 // GetCredentialReportRequest generates a request for the GetCredentialReport operation.
-func (c *IAM) GetCredentialReportRequest(input *GetCredentialReportInput) (req *aws.Request, output *GetCredentialReportOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetCredentialReportRequest(input *GetCredentialReportInput) (req *service.Request, output *GetCredentialReportOutput) {
+	op := &service.Operation{
 		Name:       opGetCredentialReport,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1640,12 +1640,12 @@ func (c *IAM) GetCredentialReport(input *GetCredentialReportInput) (*GetCredenti
 const opGetGroup = "GetGroup"
 
 // GetGroupRequest generates a request for the GetGroup operation.
-func (c *IAM) GetGroupRequest(input *GetGroupInput) (req *aws.Request, output *GetGroupOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetGroupRequest(input *GetGroupInput) (req *service.Request, output *GetGroupOutput) {
+	op := &service.Operation{
 		Name:       opGetGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -1681,8 +1681,8 @@ func (c *IAM) GetGroupPages(input *GetGroupInput, fn func(p *GetGroupOutput, las
 const opGetGroupPolicy = "GetGroupPolicy"
 
 // GetGroupPolicyRequest generates a request for the GetGroupPolicy operation.
-func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *aws.Request, output *GetGroupPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *service.Request, output *GetGroupPolicyOutput) {
+	op := &service.Operation{
 		Name:       opGetGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1718,8 +1718,8 @@ func (c *IAM) GetGroupPolicy(input *GetGroupPolicyInput) (*GetGroupPolicyOutput,
 const opGetInstanceProfile = "GetInstanceProfile"
 
 // GetInstanceProfileRequest generates a request for the GetInstanceProfile operation.
-func (c *IAM) GetInstanceProfileRequest(input *GetInstanceProfileInput) (req *aws.Request, output *GetInstanceProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetInstanceProfileRequest(input *GetInstanceProfileInput) (req *service.Request, output *GetInstanceProfileOutput) {
+	op := &service.Operation{
 		Name:       opGetInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1748,8 +1748,8 @@ func (c *IAM) GetInstanceProfile(input *GetInstanceProfileInput) (*GetInstancePr
 const opGetLoginProfile = "GetLoginProfile"
 
 // GetLoginProfileRequest generates a request for the GetLoginProfile operation.
-func (c *IAM) GetLoginProfileRequest(input *GetLoginProfileInput) (req *aws.Request, output *GetLoginProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetLoginProfileRequest(input *GetLoginProfileInput) (req *service.Request, output *GetLoginProfileOutput) {
+	op := &service.Operation{
 		Name:       opGetLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1777,8 +1777,8 @@ func (c *IAM) GetLoginProfile(input *GetLoginProfileInput) (*GetLoginProfileOutp
 const opGetOpenIDConnectProvider = "GetOpenIDConnectProvider"
 
 // GetOpenIDConnectProviderRequest generates a request for the GetOpenIDConnectProvider operation.
-func (c *IAM) GetOpenIDConnectProviderRequest(input *GetOpenIDConnectProviderInput) (req *aws.Request, output *GetOpenIDConnectProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetOpenIDConnectProviderRequest(input *GetOpenIDConnectProviderInput) (req *service.Request, output *GetOpenIDConnectProviderOutput) {
+	op := &service.Operation{
 		Name:       opGetOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1804,8 +1804,8 @@ func (c *IAM) GetOpenIDConnectProvider(input *GetOpenIDConnectProviderInput) (*G
 const opGetPolicy = "GetPolicy"
 
 // GetPolicyRequest generates a request for the GetPolicy operation.
-func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *aws.Request, output *GetPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *service.Request, output *GetPolicyOutput) {
+	op := &service.Operation{
 		Name:       opGetPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1844,8 +1844,8 @@ func (c *IAM) GetPolicy(input *GetPolicyInput) (*GetPolicyOutput, error) {
 const opGetPolicyVersion = "GetPolicyVersion"
 
 // GetPolicyVersionRequest generates a request for the GetPolicyVersion operation.
-func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *aws.Request, output *GetPolicyVersionOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *service.Request, output *GetPolicyVersionOutput) {
+	op := &service.Operation{
 		Name:       opGetPolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1882,8 +1882,8 @@ func (c *IAM) GetPolicyVersion(input *GetPolicyVersionInput) (*GetPolicyVersionO
 const opGetRole = "GetRole"
 
 // GetRoleRequest generates a request for the GetRole operation.
-func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *aws.Request, output *GetRoleOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *service.Request, output *GetRoleOutput) {
+	op := &service.Operation{
 		Name:       opGetRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1912,8 +1912,8 @@ func (c *IAM) GetRole(input *GetRoleInput) (*GetRoleOutput, error) {
 const opGetRolePolicy = "GetRolePolicy"
 
 // GetRolePolicyRequest generates a request for the GetRolePolicy operation.
-func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *aws.Request, output *GetRolePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *service.Request, output *GetRolePolicyOutput) {
+	op := &service.Operation{
 		Name:       opGetRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1952,8 +1952,8 @@ func (c *IAM) GetRolePolicy(input *GetRolePolicyInput) (*GetRolePolicyOutput, er
 const opGetSAMLProvider = "GetSAMLProvider"
 
 // GetSAMLProviderRequest generates a request for the GetSAMLProvider operation.
-func (c *IAM) GetSAMLProviderRequest(input *GetSAMLProviderInput) (req *aws.Request, output *GetSAMLProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetSAMLProviderRequest(input *GetSAMLProviderInput) (req *service.Request, output *GetSAMLProviderOutput) {
+	op := &service.Operation{
 		Name:       opGetSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1982,8 +1982,8 @@ func (c *IAM) GetSAMLProvider(input *GetSAMLProviderInput) (*GetSAMLProviderOutp
 const opGetSSHPublicKey = "GetSSHPublicKey"
 
 // GetSSHPublicKeyRequest generates a request for the GetSSHPublicKey operation.
-func (c *IAM) GetSSHPublicKeyRequest(input *GetSSHPublicKeyInput) (req *aws.Request, output *GetSSHPublicKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetSSHPublicKeyRequest(input *GetSSHPublicKeyInput) (req *service.Request, output *GetSSHPublicKeyOutput) {
+	op := &service.Operation{
 		Name:       opGetSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2015,8 +2015,8 @@ func (c *IAM) GetSSHPublicKey(input *GetSSHPublicKeyInput) (*GetSSHPublicKeyOutp
 const opGetServerCertificate = "GetServerCertificate"
 
 // GetServerCertificateRequest generates a request for the GetServerCertificate operation.
-func (c *IAM) GetServerCertificateRequest(input *GetServerCertificateInput) (req *aws.Request, output *GetServerCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetServerCertificateRequest(input *GetServerCertificateInput) (req *service.Request, output *GetServerCertificateOutput) {
+	op := &service.Operation{
 		Name:       opGetServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2042,8 +2042,8 @@ func (c *IAM) GetServerCertificate(input *GetServerCertificateInput) (*GetServer
 const opGetUser = "GetUser"
 
 // GetUserRequest generates a request for the GetUser operation.
-func (c *IAM) GetUserRequest(input *GetUserInput) (req *aws.Request, output *GetUserOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetUserRequest(input *GetUserInput) (req *service.Request, output *GetUserOutput) {
+	op := &service.Operation{
 		Name:       opGetUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2073,8 +2073,8 @@ func (c *IAM) GetUser(input *GetUserInput) (*GetUserOutput, error) {
 const opGetUserPolicy = "GetUserPolicy"
 
 // GetUserPolicyRequest generates a request for the GetUserPolicy operation.
-func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *aws.Request, output *GetUserPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *service.Request, output *GetUserPolicyOutput) {
+	op := &service.Operation{
 		Name:       opGetUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2110,12 +2110,12 @@ func (c *IAM) GetUserPolicy(input *GetUserPolicyInput) (*GetUserPolicyOutput, er
 const opListAccessKeys = "ListAccessKeys"
 
 // ListAccessKeysRequest generates a request for the ListAccessKeys operation.
-func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *aws.Request, output *ListAccessKeysOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *service.Request, output *ListAccessKeysOutput) {
+	op := &service.Operation{
 		Name:       opListAccessKeys,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2162,12 +2162,12 @@ func (c *IAM) ListAccessKeysPages(input *ListAccessKeysInput, fn func(p *ListAcc
 const opListAccountAliases = "ListAccountAliases"
 
 // ListAccountAliasesRequest generates a request for the ListAccountAliases operation.
-func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *aws.Request, output *ListAccountAliasesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *service.Request, output *ListAccountAliasesOutput) {
+	op := &service.Operation{
 		Name:       opListAccountAliases,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2206,12 +2206,12 @@ func (c *IAM) ListAccountAliasesPages(input *ListAccountAliasesInput, fn func(p 
 const opListAttachedGroupPolicies = "ListAttachedGroupPolicies"
 
 // ListAttachedGroupPoliciesRequest generates a request for the ListAttachedGroupPolicies operation.
-func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesInput) (req *aws.Request, output *ListAttachedGroupPoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesInput) (req *service.Request, output *ListAttachedGroupPoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListAttachedGroupPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2257,12 +2257,12 @@ func (c *IAM) ListAttachedGroupPoliciesPages(input *ListAttachedGroupPoliciesInp
 const opListAttachedRolePolicies = "ListAttachedRolePolicies"
 
 // ListAttachedRolePoliciesRequest generates a request for the ListAttachedRolePolicies operation.
-func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInput) (req *aws.Request, output *ListAttachedRolePoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInput) (req *service.Request, output *ListAttachedRolePoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListAttachedRolePolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2308,12 +2308,12 @@ func (c *IAM) ListAttachedRolePoliciesPages(input *ListAttachedRolePoliciesInput
 const opListAttachedUserPolicies = "ListAttachedUserPolicies"
 
 // ListAttachedUserPoliciesRequest generates a request for the ListAttachedUserPolicies operation.
-func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInput) (req *aws.Request, output *ListAttachedUserPoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInput) (req *service.Request, output *ListAttachedUserPoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListAttachedUserPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2359,12 +2359,12 @@ func (c *IAM) ListAttachedUserPoliciesPages(input *ListAttachedUserPoliciesInput
 const opListEntitiesForPolicy = "ListEntitiesForPolicy"
 
 // ListEntitiesForPolicyRequest generates a request for the ListEntitiesForPolicy operation.
-func (c *IAM) ListEntitiesForPolicyRequest(input *ListEntitiesForPolicyInput) (req *aws.Request, output *ListEntitiesForPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListEntitiesForPolicyRequest(input *ListEntitiesForPolicyInput) (req *service.Request, output *ListEntitiesForPolicyOutput) {
+	op := &service.Operation{
 		Name:       opListEntitiesForPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2407,12 +2407,12 @@ func (c *IAM) ListEntitiesForPolicyPages(input *ListEntitiesForPolicyInput, fn f
 const opListGroupPolicies = "ListGroupPolicies"
 
 // ListGroupPoliciesRequest generates a request for the ListGroupPolicies operation.
-func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *aws.Request, output *ListGroupPoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *service.Request, output *ListGroupPoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListGroupPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2458,12 +2458,12 @@ func (c *IAM) ListGroupPoliciesPages(input *ListGroupPoliciesInput, fn func(p *L
 const opListGroups = "ListGroups"
 
 // ListGroupsRequest generates a request for the ListGroups operation.
-func (c *IAM) ListGroupsRequest(input *ListGroupsInput) (req *aws.Request, output *ListGroupsOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListGroupsRequest(input *ListGroupsInput) (req *service.Request, output *ListGroupsOutput) {
+	op := &service.Operation{
 		Name:       opListGroups,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2500,12 +2500,12 @@ func (c *IAM) ListGroupsPages(input *ListGroupsInput, fn func(p *ListGroupsOutpu
 const opListGroupsForUser = "ListGroupsForUser"
 
 // ListGroupsForUserRequest generates a request for the ListGroupsForUser operation.
-func (c *IAM) ListGroupsForUserRequest(input *ListGroupsForUserInput) (req *aws.Request, output *ListGroupsForUserOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListGroupsForUserRequest(input *ListGroupsForUserInput) (req *service.Request, output *ListGroupsForUserOutput) {
+	op := &service.Operation{
 		Name:       opListGroupsForUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2542,12 +2542,12 @@ func (c *IAM) ListGroupsForUserPages(input *ListGroupsForUserInput, fn func(p *L
 const opListInstanceProfiles = "ListInstanceProfiles"
 
 // ListInstanceProfilesRequest generates a request for the ListInstanceProfiles operation.
-func (c *IAM) ListInstanceProfilesRequest(input *ListInstanceProfilesInput) (req *aws.Request, output *ListInstanceProfilesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListInstanceProfilesRequest(input *ListInstanceProfilesInput) (req *service.Request, output *ListInstanceProfilesOutput) {
+	op := &service.Operation{
 		Name:       opListInstanceProfiles,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2586,12 +2586,12 @@ func (c *IAM) ListInstanceProfilesPages(input *ListInstanceProfilesInput, fn fun
 const opListInstanceProfilesForRole = "ListInstanceProfilesForRole"
 
 // ListInstanceProfilesForRoleRequest generates a request for the ListInstanceProfilesForRole operation.
-func (c *IAM) ListInstanceProfilesForRoleRequest(input *ListInstanceProfilesForRoleInput) (req *aws.Request, output *ListInstanceProfilesForRoleOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListInstanceProfilesForRoleRequest(input *ListInstanceProfilesForRoleInput) (req *service.Request, output *ListInstanceProfilesForRoleOutput) {
+	op := &service.Operation{
 		Name:       opListInstanceProfilesForRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2630,12 +2630,12 @@ func (c *IAM) ListInstanceProfilesForRolePages(input *ListInstanceProfilesForRol
 const opListMFADevices = "ListMFADevices"
 
 // ListMFADevicesRequest generates a request for the ListMFADevices operation.
-func (c *IAM) ListMFADevicesRequest(input *ListMFADevicesInput) (req *aws.Request, output *ListMFADevicesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListMFADevicesRequest(input *ListMFADevicesInput) (req *service.Request, output *ListMFADevicesOutput) {
+	op := &service.Operation{
 		Name:       opListMFADevices,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2675,8 +2675,8 @@ func (c *IAM) ListMFADevicesPages(input *ListMFADevicesInput, fn func(p *ListMFA
 const opListOpenIDConnectProviders = "ListOpenIDConnectProviders"
 
 // ListOpenIDConnectProvidersRequest generates a request for the ListOpenIDConnectProviders operation.
-func (c *IAM) ListOpenIDConnectProvidersRequest(input *ListOpenIDConnectProvidersInput) (req *aws.Request, output *ListOpenIDConnectProvidersOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListOpenIDConnectProvidersRequest(input *ListOpenIDConnectProvidersInput) (req *service.Request, output *ListOpenIDConnectProvidersOutput) {
+	op := &service.Operation{
 		Name:       opListOpenIDConnectProviders,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2702,12 +2702,12 @@ func (c *IAM) ListOpenIDConnectProviders(input *ListOpenIDConnectProvidersInput)
 const opListPolicies = "ListPolicies"
 
 // ListPoliciesRequest generates a request for the ListPolicies operation.
-func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *aws.Request, output *ListPoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *service.Request, output *ListPoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2754,8 +2754,8 @@ func (c *IAM) ListPoliciesPages(input *ListPoliciesInput, fn func(p *ListPolicie
 const opListPolicyVersions = "ListPolicyVersions"
 
 // ListPolicyVersionsRequest generates a request for the ListPolicyVersions operation.
-func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *aws.Request, output *ListPolicyVersionsOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *service.Request, output *ListPolicyVersionsOutput) {
+	op := &service.Operation{
 		Name:       opListPolicyVersions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2786,12 +2786,12 @@ func (c *IAM) ListPolicyVersions(input *ListPolicyVersionsInput) (*ListPolicyVer
 const opListRolePolicies = "ListRolePolicies"
 
 // ListRolePoliciesRequest generates a request for the ListRolePolicies operation.
-func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *aws.Request, output *ListRolePoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *service.Request, output *ListRolePoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListRolePolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2837,12 +2837,12 @@ func (c *IAM) ListRolePoliciesPages(input *ListRolePoliciesInput, fn func(p *Lis
 const opListRoles = "ListRoles"
 
 // ListRolesRequest generates a request for the ListRoles operation.
-func (c *IAM) ListRolesRequest(input *ListRolesInput) (req *aws.Request, output *ListRolesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListRolesRequest(input *ListRolesInput) (req *service.Request, output *ListRolesOutput) {
+	op := &service.Operation{
 		Name:       opListRoles,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2881,8 +2881,8 @@ func (c *IAM) ListRolesPages(input *ListRolesInput, fn func(p *ListRolesOutput, 
 const opListSAMLProviders = "ListSAMLProviders"
 
 // ListSAMLProvidersRequest generates a request for the ListSAMLProviders operation.
-func (c *IAM) ListSAMLProvidersRequest(input *ListSAMLProvidersInput) (req *aws.Request, output *ListSAMLProvidersOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListSAMLProvidersRequest(input *ListSAMLProvidersInput) (req *service.Request, output *ListSAMLProvidersOutput) {
+	op := &service.Operation{
 		Name:       opListSAMLProviders,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2910,8 +2910,8 @@ func (c *IAM) ListSAMLProviders(input *ListSAMLProvidersInput) (*ListSAMLProvide
 const opListSSHPublicKeys = "ListSSHPublicKeys"
 
 // ListSSHPublicKeysRequest generates a request for the ListSSHPublicKeys operation.
-func (c *IAM) ListSSHPublicKeysRequest(input *ListSSHPublicKeysInput) (req *aws.Request, output *ListSSHPublicKeysOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListSSHPublicKeysRequest(input *ListSSHPublicKeysInput) (req *service.Request, output *ListSSHPublicKeysOutput) {
+	op := &service.Operation{
 		Name:       opListSSHPublicKeys,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2947,12 +2947,12 @@ func (c *IAM) ListSSHPublicKeys(input *ListSSHPublicKeysInput) (*ListSSHPublicKe
 const opListServerCertificates = "ListServerCertificates"
 
 // ListServerCertificatesRequest generates a request for the ListServerCertificates operation.
-func (c *IAM) ListServerCertificatesRequest(input *ListServerCertificatesInput) (req *aws.Request, output *ListServerCertificatesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListServerCertificatesRequest(input *ListServerCertificatesInput) (req *service.Request, output *ListServerCertificatesOutput) {
+	op := &service.Operation{
 		Name:       opListServerCertificates,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2990,12 +2990,12 @@ func (c *IAM) ListServerCertificatesPages(input *ListServerCertificatesInput, fn
 const opListSigningCertificates = "ListSigningCertificates"
 
 // ListSigningCertificatesRequest generates a request for the ListSigningCertificates operation.
-func (c *IAM) ListSigningCertificatesRequest(input *ListSigningCertificatesInput) (req *aws.Request, output *ListSigningCertificatesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListSigningCertificatesRequest(input *ListSigningCertificatesInput) (req *service.Request, output *ListSigningCertificatesOutput) {
+	op := &service.Operation{
 		Name:       opListSigningCertificates,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3039,12 +3039,12 @@ func (c *IAM) ListSigningCertificatesPages(input *ListSigningCertificatesInput, 
 const opListUserPolicies = "ListUserPolicies"
 
 // ListUserPoliciesRequest generates a request for the ListUserPolicies operation.
-func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *aws.Request, output *ListUserPoliciesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *service.Request, output *ListUserPoliciesOutput) {
+	op := &service.Operation{
 		Name:       opListUserPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3089,12 +3089,12 @@ func (c *IAM) ListUserPoliciesPages(input *ListUserPoliciesInput, fn func(p *Lis
 const opListUsers = "ListUsers"
 
 // ListUsersRequest generates a request for the ListUsers operation.
-func (c *IAM) ListUsersRequest(input *ListUsersInput) (req *aws.Request, output *ListUsersOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListUsersRequest(input *ListUsersInput) (req *service.Request, output *ListUsersOutput) {
+	op := &service.Operation{
 		Name:       opListUsers,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3133,12 +3133,12 @@ func (c *IAM) ListUsersPages(input *ListUsersInput, fn func(p *ListUsersOutput, 
 const opListVirtualMFADevices = "ListVirtualMFADevices"
 
 // ListVirtualMFADevicesRequest generates a request for the ListVirtualMFADevices operation.
-func (c *IAM) ListVirtualMFADevicesRequest(input *ListVirtualMFADevicesInput) (req *aws.Request, output *ListVirtualMFADevicesOutput) {
-	op := &aws.Operation{
+func (c *IAM) ListVirtualMFADevicesRequest(input *ListVirtualMFADevicesInput) (req *service.Request, output *ListVirtualMFADevicesOutput) {
+	op := &service.Operation{
 		Name:       opListVirtualMFADevices,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &aws.Paginator{
+		Paginator: &service.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3178,8 +3178,8 @@ func (c *IAM) ListVirtualMFADevicesPages(input *ListVirtualMFADevicesInput, fn f
 const opPutGroupPolicy = "PutGroupPolicy"
 
 // PutGroupPolicyRequest generates a request for the PutGroupPolicy operation.
-func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *aws.Request, output *PutGroupPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *service.Request, output *PutGroupPolicyOutput) {
+	op := &service.Operation{
 		Name:       opPutGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3221,8 +3221,8 @@ func (c *IAM) PutGroupPolicy(input *PutGroupPolicyInput) (*PutGroupPolicyOutput,
 const opPutRolePolicy = "PutRolePolicy"
 
 // PutRolePolicyRequest generates a request for the PutRolePolicy operation.
-func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *aws.Request, output *PutRolePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *service.Request, output *PutRolePolicyOutput) {
+	op := &service.Operation{
 		Name:       opPutRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3270,8 +3270,8 @@ func (c *IAM) PutRolePolicy(input *PutRolePolicyInput) (*PutRolePolicyOutput, er
 const opPutUserPolicy = "PutUserPolicy"
 
 // PutUserPolicyRequest generates a request for the PutUserPolicy operation.
-func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *aws.Request, output *PutUserPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *service.Request, output *PutUserPolicyOutput) {
+	op := &service.Operation{
 		Name:       opPutUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3313,8 +3313,8 @@ func (c *IAM) PutUserPolicy(input *PutUserPolicyInput) (*PutUserPolicyOutput, er
 const opRemoveClientIDFromOpenIDConnectProvider = "RemoveClientIDFromOpenIDConnectProvider"
 
 // RemoveClientIDFromOpenIDConnectProviderRequest generates a request for the RemoveClientIDFromOpenIDConnectProvider operation.
-func (c *IAM) RemoveClientIDFromOpenIDConnectProviderRequest(input *RemoveClientIDFromOpenIDConnectProviderInput) (req *aws.Request, output *RemoveClientIDFromOpenIDConnectProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) RemoveClientIDFromOpenIDConnectProviderRequest(input *RemoveClientIDFromOpenIDConnectProviderInput) (req *service.Request, output *RemoveClientIDFromOpenIDConnectProviderOutput) {
+	op := &service.Operation{
 		Name:       opRemoveClientIDFromOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3344,8 +3344,8 @@ func (c *IAM) RemoveClientIDFromOpenIDConnectProvider(input *RemoveClientIDFromO
 const opRemoveRoleFromInstanceProfile = "RemoveRoleFromInstanceProfile"
 
 // RemoveRoleFromInstanceProfileRequest generates a request for the RemoveRoleFromInstanceProfile operation.
-func (c *IAM) RemoveRoleFromInstanceProfileRequest(input *RemoveRoleFromInstanceProfileInput) (req *aws.Request, output *RemoveRoleFromInstanceProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) RemoveRoleFromInstanceProfileRequest(input *RemoveRoleFromInstanceProfileInput) (req *service.Request, output *RemoveRoleFromInstanceProfileOutput) {
+	op := &service.Operation{
 		Name:       opRemoveRoleFromInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3379,8 +3379,8 @@ func (c *IAM) RemoveRoleFromInstanceProfile(input *RemoveRoleFromInstanceProfile
 const opRemoveUserFromGroup = "RemoveUserFromGroup"
 
 // RemoveUserFromGroupRequest generates a request for the RemoveUserFromGroup operation.
-func (c *IAM) RemoveUserFromGroupRequest(input *RemoveUserFromGroupInput) (req *aws.Request, output *RemoveUserFromGroupOutput) {
-	op := &aws.Operation{
+func (c *IAM) RemoveUserFromGroupRequest(input *RemoveUserFromGroupInput) (req *service.Request, output *RemoveUserFromGroupOutput) {
+	op := &service.Operation{
 		Name:       opRemoveUserFromGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3406,8 +3406,8 @@ func (c *IAM) RemoveUserFromGroup(input *RemoveUserFromGroupInput) (*RemoveUserF
 const opResyncMFADevice = "ResyncMFADevice"
 
 // ResyncMFADeviceRequest generates a request for the ResyncMFADevice operation.
-func (c *IAM) ResyncMFADeviceRequest(input *ResyncMFADeviceInput) (req *aws.Request, output *ResyncMFADeviceOutput) {
-	op := &aws.Operation{
+func (c *IAM) ResyncMFADeviceRequest(input *ResyncMFADeviceInput) (req *service.Request, output *ResyncMFADeviceOutput) {
+	op := &service.Operation{
 		Name:       opResyncMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3437,8 +3437,8 @@ func (c *IAM) ResyncMFADevice(input *ResyncMFADeviceInput) (*ResyncMFADeviceOutp
 const opSetDefaultPolicyVersion = "SetDefaultPolicyVersion"
 
 // SetDefaultPolicyVersionRequest generates a request for the SetDefaultPolicyVersion operation.
-func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput) (req *aws.Request, output *SetDefaultPolicyVersionOutput) {
-	op := &aws.Operation{
+func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput) (req *service.Request, output *SetDefaultPolicyVersionOutput) {
+	op := &service.Operation{
 		Name:       opSetDefaultPolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3473,8 +3473,8 @@ func (c *IAM) SetDefaultPolicyVersion(input *SetDefaultPolicyVersionInput) (*Set
 const opUpdateAccessKey = "UpdateAccessKey"
 
 // UpdateAccessKeyRequest generates a request for the UpdateAccessKey operation.
-func (c *IAM) UpdateAccessKeyRequest(input *UpdateAccessKeyInput) (req *aws.Request, output *UpdateAccessKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateAccessKeyRequest(input *UpdateAccessKeyInput) (req *service.Request, output *UpdateAccessKeyOutput) {
+	op := &service.Operation{
 		Name:       opUpdateAccessKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3511,8 +3511,8 @@ func (c *IAM) UpdateAccessKey(input *UpdateAccessKeyInput) (*UpdateAccessKeyOutp
 const opUpdateAccountPasswordPolicy = "UpdateAccountPasswordPolicy"
 
 // UpdateAccountPasswordPolicyRequest generates a request for the UpdateAccountPasswordPolicy operation.
-func (c *IAM) UpdateAccountPasswordPolicyRequest(input *UpdateAccountPasswordPolicyInput) (req *aws.Request, output *UpdateAccountPasswordPolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateAccountPasswordPolicyRequest(input *UpdateAccountPasswordPolicyInput) (req *service.Request, output *UpdateAccountPasswordPolicyOutput) {
+	op := &service.Operation{
 		Name:       opUpdateAccountPasswordPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3547,8 +3547,8 @@ func (c *IAM) UpdateAccountPasswordPolicy(input *UpdateAccountPasswordPolicyInpu
 const opUpdateAssumeRolePolicy = "UpdateAssumeRolePolicy"
 
 // UpdateAssumeRolePolicyRequest generates a request for the UpdateAssumeRolePolicy operation.
-func (c *IAM) UpdateAssumeRolePolicyRequest(input *UpdateAssumeRolePolicyInput) (req *aws.Request, output *UpdateAssumeRolePolicyOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateAssumeRolePolicyRequest(input *UpdateAssumeRolePolicyInput) (req *service.Request, output *UpdateAssumeRolePolicyOutput) {
+	op := &service.Operation{
 		Name:       opUpdateAssumeRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3576,8 +3576,8 @@ func (c *IAM) UpdateAssumeRolePolicy(input *UpdateAssumeRolePolicyInput) (*Updat
 const opUpdateGroup = "UpdateGroup"
 
 // UpdateGroupRequest generates a request for the UpdateGroup operation.
-func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *aws.Request, output *UpdateGroupOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *service.Request, output *UpdateGroupOutput) {
+	op := &service.Operation{
 		Name:       opUpdateGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3612,8 +3612,8 @@ func (c *IAM) UpdateGroup(input *UpdateGroupInput) (*UpdateGroupOutput, error) {
 const opUpdateLoginProfile = "UpdateLoginProfile"
 
 // UpdateLoginProfileRequest generates a request for the UpdateLoginProfile operation.
-func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *aws.Request, output *UpdateLoginProfileOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *service.Request, output *UpdateLoginProfileOutput) {
+	op := &service.Operation{
 		Name:       opUpdateLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3643,8 +3643,8 @@ func (c *IAM) UpdateLoginProfile(input *UpdateLoginProfileInput) (*UpdateLoginPr
 const opUpdateOpenIDConnectProviderThumbprint = "UpdateOpenIDConnectProviderThumbprint"
 
 // UpdateOpenIDConnectProviderThumbprintRequest generates a request for the UpdateOpenIDConnectProviderThumbprint operation.
-func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDConnectProviderThumbprintInput) (req *aws.Request, output *UpdateOpenIDConnectProviderThumbprintOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDConnectProviderThumbprintInput) (req *service.Request, output *UpdateOpenIDConnectProviderThumbprintOutput) {
+	op := &service.Operation{
 		Name:       opUpdateOpenIDConnectProviderThumbprint,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3683,8 +3683,8 @@ func (c *IAM) UpdateOpenIDConnectProviderThumbprint(input *UpdateOpenIDConnectPr
 const opUpdateSAMLProvider = "UpdateSAMLProvider"
 
 // UpdateSAMLProviderRequest generates a request for the UpdateSAMLProvider operation.
-func (c *IAM) UpdateSAMLProviderRequest(input *UpdateSAMLProviderInput) (req *aws.Request, output *UpdateSAMLProviderOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateSAMLProviderRequest(input *UpdateSAMLProviderInput) (req *service.Request, output *UpdateSAMLProviderOutput) {
+	op := &service.Operation{
 		Name:       opUpdateSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3712,8 +3712,8 @@ func (c *IAM) UpdateSAMLProvider(input *UpdateSAMLProviderInput) (*UpdateSAMLPro
 const opUpdateSSHPublicKey = "UpdateSSHPublicKey"
 
 // UpdateSSHPublicKeyRequest generates a request for the UpdateSSHPublicKey operation.
-func (c *IAM) UpdateSSHPublicKeyRequest(input *UpdateSSHPublicKeyInput) (req *aws.Request, output *UpdateSSHPublicKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateSSHPublicKeyRequest(input *UpdateSSHPublicKeyInput) (req *service.Request, output *UpdateSSHPublicKeyOutput) {
+	op := &service.Operation{
 		Name:       opUpdateSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3748,8 +3748,8 @@ func (c *IAM) UpdateSSHPublicKey(input *UpdateSSHPublicKeyInput) (*UpdateSSHPubl
 const opUpdateServerCertificate = "UpdateServerCertificate"
 
 // UpdateServerCertificateRequest generates a request for the UpdateServerCertificate operation.
-func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput) (req *aws.Request, output *UpdateServerCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput) (req *service.Request, output *UpdateServerCertificateOutput) {
+	op := &service.Operation{
 		Name:       opUpdateServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3785,8 +3785,8 @@ func (c *IAM) UpdateServerCertificate(input *UpdateServerCertificateInput) (*Upd
 const opUpdateSigningCertificate = "UpdateSigningCertificate"
 
 // UpdateSigningCertificateRequest generates a request for the UpdateSigningCertificate operation.
-func (c *IAM) UpdateSigningCertificateRequest(input *UpdateSigningCertificateInput) (req *aws.Request, output *UpdateSigningCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateSigningCertificateRequest(input *UpdateSigningCertificateInput) (req *service.Request, output *UpdateSigningCertificateOutput) {
+	op := &service.Operation{
 		Name:       opUpdateSigningCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3819,8 +3819,8 @@ func (c *IAM) UpdateSigningCertificate(input *UpdateSigningCertificateInput) (*U
 const opUpdateUser = "UpdateUser"
 
 // UpdateUserRequest generates a request for the UpdateUser operation.
-func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *aws.Request, output *UpdateUserOutput) {
-	op := &aws.Operation{
+func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *service.Request, output *UpdateUserOutput) {
+	op := &service.Operation{
 		Name:       opUpdateUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3855,8 +3855,8 @@ func (c *IAM) UpdateUser(input *UpdateUserInput) (*UpdateUserOutput, error) {
 const opUploadSSHPublicKey = "UploadSSHPublicKey"
 
 // UploadSSHPublicKeyRequest generates a request for the UploadSSHPublicKey operation.
-func (c *IAM) UploadSSHPublicKeyRequest(input *UploadSSHPublicKeyInput) (req *aws.Request, output *UploadSSHPublicKeyOutput) {
-	op := &aws.Operation{
+func (c *IAM) UploadSSHPublicKeyRequest(input *UploadSSHPublicKeyInput) (req *service.Request, output *UploadSSHPublicKeyOutput) {
+	op := &service.Operation{
 		Name:       opUploadSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3888,8 +3888,8 @@ func (c *IAM) UploadSSHPublicKey(input *UploadSSHPublicKeyInput) (*UploadSSHPubl
 const opUploadServerCertificate = "UploadServerCertificate"
 
 // UploadServerCertificateRequest generates a request for the UploadServerCertificate operation.
-func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput) (req *aws.Request, output *UploadServerCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput) (req *service.Request, output *UploadServerCertificateOutput) {
+	op := &service.Operation{
 		Name:       opUploadServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3929,8 +3929,8 @@ func (c *IAM) UploadServerCertificate(input *UploadServerCertificateInput) (*Upl
 const opUploadSigningCertificate = "UploadSigningCertificate"
 
 // UploadSigningCertificateRequest generates a request for the UploadSigningCertificate operation.
-func (c *IAM) UploadSigningCertificateRequest(input *UploadSigningCertificateInput) (req *aws.Request, output *UploadSigningCertificateOutput) {
-	op := &aws.Operation{
+func (c *IAM) UploadSigningCertificateRequest(input *UploadSigningCertificateInput) (req *service.Request, output *UploadSigningCertificateOutput) {
+	op := &service.Operation{
 		Name:       opUploadSigningCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3980,7 +3980,7 @@ func (c *IAM) UploadSigningCertificate(input *UploadSigningCertificateInput) (*U
 // key, you must create a new access key.
 type AccessKey struct {
 	// The ID for this access key.
-	AccessKeyID *string `locationName:"AccessKeyId" type:"string" required:"true"`
+	AccessKeyId *string `type:"string" required:"true"`
 
 	// The date when the access key was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -4075,7 +4075,7 @@ func (s AccessKeyLastUsed) GoString() string {
 // This data type is used as a response element in the ListAccessKeys action.
 type AccessKeyMetadata struct {
 	// The ID for this access key.
-	AccessKeyID *string `locationName:"AccessKeyId" type:"string"`
+	AccessKeyId *string `type:"string"`
 
 	// The date when the access key was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -4111,7 +4111,7 @@ type AddClientIDToOpenIDConnectProviderInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to add the client ID to. You can get a list of OIDC provider ARNs by using
 	// the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderARN *string `locationName:"OpenIDConnectProviderArn" type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `type:"string" required:"true"`
 
 	metadataAddClientIDToOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -4241,7 +4241,7 @@ type AttachGroupPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	metadataAttachGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -4284,7 +4284,7 @@ type AttachRolePolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the role to attach the policy to.
 	RoleName *string `type:"string" required:"true"`
@@ -4330,7 +4330,7 @@ type AttachUserPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the user to attach the policy to.
 	UserName *string `type:"string" required:"true"`
@@ -4386,7 +4386,7 @@ type AttachedPolicy struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string"`
+	PolicyArn *string `type:"string"`
 
 	// The friendly name of the attached policy.
 	PolicyName *string `type:"string"`
@@ -4728,7 +4728,7 @@ type CreateOpenIDConnectProviderInput struct {
 	// You cannot register the same provider multiple times in a single AWS account.
 	// If you try to submit a URL that has already been used for an OpenID Connect
 	// provider in the AWS account, you will get an error.
-	URL *string `locationName:"Url" type:"string" required:"true"`
+	Url *string `type:"string" required:"true"`
 
 	metadataCreateOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -4751,7 +4751,7 @@ func (s CreateOpenIDConnectProviderInput) GoString() string {
 type CreateOpenIDConnectProviderOutput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider that was
 	// created. For more information, see OpenIDConnectProviderListEntry.
-	OpenIDConnectProviderARN *string `locationName:"OpenIDConnectProviderArn" type:"string"`
+	OpenIDConnectProviderArn *string `type:"string"`
 
 	metadataCreateOpenIDConnectProviderOutput `json:"-" xml:"-"`
 }
@@ -4840,7 +4840,7 @@ type CreatePolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The policy document.
 	PolicyDocument *string `type:"string" required:"true"`
@@ -4984,7 +4984,7 @@ func (s CreateSAMLProviderInput) GoString() string {
 // Contains the response to a successful CreateSAMLProvider request.
 type CreateSAMLProviderOutput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider.
-	SAMLProviderARN *string `locationName:"SAMLProviderArn" type:"string"`
+	SAMLProviderArn *string `type:"string"`
 
 	metadataCreateSAMLProviderOutput `json:"-" xml:"-"`
 }
@@ -5152,7 +5152,7 @@ func (s DeactivateMFADeviceOutput) GoString() string {
 type DeleteAccessKeyInput struct {
 	// The access key ID for the access key ID and secret access key you want to
 	// delete.
-	AccessKeyID *string `locationName:"AccessKeyId" type:"string" required:"true"`
+	AccessKeyId *string `type:"string" required:"true"`
 
 	// The name of the user whose key you want to delete.
 	UserName *string `type:"string"`
@@ -5431,7 +5431,7 @@ type DeleteOpenIDConnectProviderInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider to delete.
 	// You can get a list of OpenID Connect provider ARNs by using the ListOpenIDConnectProviders
 	// action.
-	OpenIDConnectProviderARN *string `locationName:"OpenIDConnectProviderArn" type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `type:"string" required:"true"`
 
 	metadataDeleteOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -5474,7 +5474,7 @@ type DeletePolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	metadataDeletePolicyInput `json:"-" xml:"-"`
 }
@@ -5517,14 +5517,14 @@ type DeletePolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The policy version to delete.
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
 	// in the Using IAM guide.
-	VersionID *string `locationName:"VersionId" type:"string" required:"true"`
+	VersionId *string `type:"string" required:"true"`
 
 	metadataDeletePolicyVersionInput `json:"-" xml:"-"`
 }
@@ -5645,7 +5645,7 @@ func (s DeleteRolePolicyOutput) GoString() string {
 
 type DeleteSAMLProviderInput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider to delete.
-	SAMLProviderARN *string `locationName:"SAMLProviderArn" type:"string" required:"true"`
+	SAMLProviderArn *string `type:"string" required:"true"`
 
 	metadataDeleteSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -5684,7 +5684,7 @@ func (s DeleteSAMLProviderOutput) GoString() string {
 
 type DeleteSSHPublicKeyInput struct {
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyID *string `locationName:"SSHPublicKeyId" type:"string" required:"true"`
+	SSHPublicKeyId *string `type:"string" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
 	UserName *string `type:"string" required:"true"`
@@ -5765,7 +5765,7 @@ func (s DeleteServerCertificateOutput) GoString() string {
 
 type DeleteSigningCertificateInput struct {
 	// The ID of the signing certificate to delete.
-	CertificateID *string `locationName:"CertificateId" type:"string" required:"true"`
+	CertificateId *string `type:"string" required:"true"`
 
 	// The name of the user the signing certificate belongs to.
 	UserName *string `type:"string"`
@@ -5936,7 +5936,7 @@ type DetachGroupPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	metadataDetachGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -5979,7 +5979,7 @@ type DetachRolePolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the role to detach the policy from.
 	RoleName *string `type:"string" required:"true"`
@@ -6025,7 +6025,7 @@ type DetachUserPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the user to detach the policy from.
 	UserName *string `type:"string" required:"true"`
@@ -6159,7 +6159,7 @@ func (s GenerateCredentialReportOutput) GoString() string {
 
 type GetAccessKeyLastUsedInput struct {
 	// The identifier of an access key.
-	AccessKeyID *string `locationName:"AccessKeyId" type:"string" required:"true"`
+	AccessKeyId *string `type:"string" required:"true"`
 
 	metadataGetAccessKeyLastUsedInput `json:"-" xml:"-"`
 }
@@ -6760,7 +6760,7 @@ type GetOpenIDConnectProviderInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to get information for. You can get a list of OIDC provider ARNs by using
 	// the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderARN *string `locationName:"OpenIDConnectProviderArn" type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `type:"string" required:"true"`
 
 	metadataGetOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -6795,7 +6795,7 @@ type GetOpenIDConnectProviderOutput struct {
 
 	// The URL that the IAM OpenID Connect provider is associated with. For more
 	// information, see CreateOpenIDConnectProvider.
-	URL *string `locationName:"Url" type:"string"`
+	Url *string `type:"string"`
 
 	metadataGetOpenIDConnectProviderOutput `json:"-" xml:"-"`
 }
@@ -6820,7 +6820,7 @@ type GetPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	metadataGetPolicyInput `json:"-" xml:"-"`
 }
@@ -6867,10 +6867,10 @@ type GetPolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// Identifies the policy version to retrieve.
-	VersionID *string `locationName:"VersionId" type:"string" required:"true"`
+	VersionId *string `type:"string" required:"true"`
 
 	metadataGetPolicyVersionInput `json:"-" xml:"-"`
 }
@@ -7012,7 +7012,7 @@ func (s GetRolePolicyOutput) GoString() string {
 
 type GetSAMLProviderInput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider to get information about.
-	SAMLProviderARN *string `locationName:"SAMLProviderArn" type:"string" required:"true"`
+	SAMLProviderArn *string `type:"string" required:"true"`
 
 	metadataGetSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -7066,7 +7066,7 @@ type GetSSHPublicKeyInput struct {
 	Encoding *string `type:"string" required:"true" enum:"encodingType"`
 
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyID *string `locationName:"SSHPublicKeyId" type:"string" required:"true"`
+	SSHPublicKeyId *string `type:"string" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
 	UserName *string `type:"string" required:"true"`
@@ -7260,7 +7260,7 @@ type Group struct {
 	// The Amazon Resource Name (ARN) specifying the group. For more information
 	// about ARNs and how to use them in policies, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ARN *string `locationName:"Arn" type:"string" required:"true"`
+	Arn *string `type:"string" required:"true"`
 
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
 	// when the group was created.
@@ -7269,7 +7269,7 @@ type Group struct {
 	// The stable and unique string identifying the group. For more information
 	// about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	GroupID *string `locationName:"GroupId" type:"string" required:"true"`
+	GroupId *string `type:"string" required:"true"`
 
 	// The friendly name that identifies the group.
 	GroupName *string `type:"string" required:"true"`
@@ -7306,7 +7306,7 @@ type GroupDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	// A list of the managed policies attached to the group.
 	AttachedManagedPolicies []*AttachedPolicy `type:"list"`
@@ -7318,7 +7318,7 @@ type GroupDetail struct {
 	// The stable and unique string identifying the group. For more information
 	// about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	GroupID *string `locationName:"GroupId" type:"string"`
+	GroupId *string `type:"string"`
 
 	// The friendly name that identifies the group.
 	GroupName *string `type:"string"`
@@ -7364,7 +7364,7 @@ type InstanceProfile struct {
 	// information about ARNs and how to use them in policies, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ARN *string `locationName:"Arn" type:"string" required:"true"`
+	Arn *string `type:"string" required:"true"`
 
 	// The date when the instance profile was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601" required:"true"`
@@ -7372,7 +7372,7 @@ type InstanceProfile struct {
 	// The stable and unique string identifying the instance profile. For more information
 	// about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	InstanceProfileID *string `locationName:"InstanceProfileId" type:"string" required:"true"`
+	InstanceProfileId *string `type:"string" required:"true"`
 
 	// The name identifying the instance profile.
 	InstanceProfileName *string `type:"string" required:"true"`
@@ -7761,7 +7761,7 @@ type ListEntitiesForPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	metadataListEntitiesForPolicyInput `json:"-" xml:"-"`
 }
@@ -8348,7 +8348,7 @@ type ListPolicyVersionsInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	metadataListPolicyVersionsInput `json:"-" xml:"-"`
 }
@@ -9050,7 +9050,7 @@ type ManagedPolicyDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	// The number of principal entities (users, groups, and roles) that the policy
 	// is attached to.
@@ -9066,7 +9066,7 @@ type ManagedPolicyDetail struct {
 	// For more information about policy versions, see Versioning for Managed Policies
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
 	// in the Using IAM guide.
-	DefaultVersionID *string `locationName:"DefaultVersionId" type:"string"`
+	DefaultVersionId *string `type:"string"`
 
 	// A friendly description of the policy.
 	Description *string `type:"string"`
@@ -9084,7 +9084,7 @@ type ManagedPolicyDetail struct {
 	//
 	// For more information about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	PolicyID *string `locationName:"PolicyId" type:"string"`
+	PolicyId *string `type:"string"`
 
 	// The friendly name (not ARN) identifying the policy.
 	PolicyName *string `type:"string"`
@@ -9125,7 +9125,7 @@ type OpenIDConnectProviderListEntry struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	metadataOpenIDConnectProviderListEntry `json:"-" xml:"-"`
 }
@@ -9213,7 +9213,7 @@ type Policy struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	// The number of entities (users, groups, and roles) that the policy is attached
 	// to.
@@ -9224,7 +9224,7 @@ type Policy struct {
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	// The identifier for the version of the policy that is set as the default version.
-	DefaultVersionID *string `locationName:"DefaultVersionId" type:"string"`
+	DefaultVersionId *string `type:"string"`
 
 	// A friendly description of the policy.
 	//
@@ -9245,7 +9245,7 @@ type Policy struct {
 	//
 	// For more information about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	PolicyID *string `locationName:"PolicyId" type:"string"`
+	PolicyId *string `type:"string"`
 
 	// The friendly name (not ARN) identifying the policy.
 	PolicyName *string `type:"string"`
@@ -9419,7 +9419,7 @@ type PolicyVersion struct {
 	//
 	// Policy version identifiers always begin with v (always lowercase). When
 	// a policy is created, the first policy version is v1.
-	VersionID *string `locationName:"VersionId" type:"string"`
+	VersionId *string `type:"string"`
 
 	metadataPolicyVersion `json:"-" xml:"-"`
 }
@@ -9581,7 +9581,7 @@ type RemoveClientIDFromOpenIDConnectProviderInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to remove the client ID from. You can get a list of OIDC provider ARNs by
 	// using the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderARN *string `locationName:"OpenIDConnectProviderArn" type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `type:"string" required:"true"`
 
 	metadataRemoveClientIDFromOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -9763,7 +9763,7 @@ type Role struct {
 	// The Amazon Resource Name (ARN) specifying the role. For more information
 	// about ARNs and how to use them in policies, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ARN *string `locationName:"Arn" type:"string" required:"true"`
+	Arn *string `type:"string" required:"true"`
 
 	// The policy that grants an entity permission to assume the role.
 	AssumeRolePolicyDocument *string `type:"string"`
@@ -9780,7 +9780,7 @@ type Role struct {
 	// The stable and unique string identifying the role. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	RoleID *string `locationName:"RoleId" type:"string" required:"true"`
+	RoleId *string `type:"string" required:"true"`
 
 	// The friendly name that identifies the role.
 	RoleName *string `type:"string" required:"true"`
@@ -9812,7 +9812,7 @@ type RoleDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	// The trust policy that grants permission to assume the role.
 	AssumeRolePolicyDocument *string `type:"string"`
@@ -9836,7 +9836,7 @@ type RoleDetail struct {
 	// The stable and unique string identifying the role. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	RoleID *string `locationName:"RoleId" type:"string"`
+	RoleId *string `type:"string"`
 
 	// The friendly name that identifies the role.
 	RoleName *string `type:"string"`
@@ -9865,7 +9865,7 @@ func (s RoleDetail) GoString() string {
 // Contains the list of SAML providers for this account.
 type SAMLProviderListEntry struct {
 	// The Amazon Resource Name (ARN) of the SAML provider.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	// The date and time when the SAML provider was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -9902,7 +9902,7 @@ type SSHPublicKey struct {
 	SSHPublicKeyBody *string `type:"string" required:"true"`
 
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyID *string `locationName:"SSHPublicKeyId" type:"string" required:"true"`
+	SSHPublicKeyId *string `type:"string" required:"true"`
 
 	// The status of the SSH public key. Active means the key can be used for authentication
 	// with an AWS CodeCommit repository. Inactive means the key cannot be used.
@@ -9937,7 +9937,7 @@ func (s SSHPublicKey) GoString() string {
 // This data type is used as a response element in the ListSSHPublicKeys action.
 type SSHPublicKeyMetadata struct {
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyID *string `locationName:"SSHPublicKeyId" type:"string" required:"true"`
+	SSHPublicKeyId *string `type:"string" required:"true"`
 
 	// The status of the SSH public key. Active means the key can be used for authentication
 	// with an AWS CodeCommit repository. Inactive means the key cannot be used.
@@ -10009,7 +10009,7 @@ type ServerCertificateMetadata struct {
 	// information about ARNs and how to use them in policies, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ARN *string `locationName:"Arn" type:"string" required:"true"`
+	Arn *string `type:"string" required:"true"`
 
 	// The date on which the certificate is set to expire.
 	Expiration *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -10022,7 +10022,7 @@ type ServerCertificateMetadata struct {
 	// The stable and unique string identifying the server certificate. For more
 	// information about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ServerCertificateID *string `locationName:"ServerCertificateId" type:"string" required:"true"`
+	ServerCertificateId *string `type:"string" required:"true"`
 
 	// The name that identifies the server certificate.
 	ServerCertificateName *string `type:"string" required:"true"`
@@ -10053,14 +10053,14 @@ type SetDefaultPolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyARN *string `locationName:"PolicyArn" type:"string" required:"true"`
+	PolicyArn *string `type:"string" required:"true"`
 
 	// The version of the policy to set as the default (operative) version.
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
 	// in the Using IAM guide.
-	VersionID *string `locationName:"VersionId" type:"string" required:"true"`
+	VersionId *string `type:"string" required:"true"`
 
 	metadataSetDefaultPolicyVersionInput `json:"-" xml:"-"`
 }
@@ -10106,7 +10106,7 @@ type SigningCertificate struct {
 	CertificateBody *string `type:"string" required:"true"`
 
 	// The ID for the signing certificate.
-	CertificateID *string `locationName:"CertificateId" type:"string" required:"true"`
+	CertificateId *string `type:"string" required:"true"`
 
 	// The status of the signing certificate. Active means the key is valid for
 	// API calls, while Inactive means it is not.
@@ -10137,7 +10137,7 @@ func (s SigningCertificate) GoString() string {
 
 type UpdateAccessKeyInput struct {
 	// The access key ID of the secret access key you want to update.
-	AccessKeyID *string `locationName:"AccessKeyId" type:"string" required:"true"`
+	AccessKeyId *string `type:"string" required:"true"`
 
 	// The status you want to assign to the secret access key. Active means the
 	// key can be used for API calls to AWS, while Inactive means the key cannot
@@ -10412,7 +10412,7 @@ type UpdateOpenIDConnectProviderThumbprintInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to update the thumbprint for. You can get a list of OIDC provider ARNs by
 	// using the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderARN *string `locationName:"OpenIDConnectProviderArn" type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `type:"string" required:"true"`
 
 	// A list of certificate thumbprints that are associated with the specified
 	// IAM OpenID Connect provider. For more information, see CreateOpenIDConnectProvider.
@@ -10462,7 +10462,7 @@ type UpdateSAMLProviderInput struct {
 	SAMLMetadataDocument *string `type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN) of the SAML provider to update.
-	SAMLProviderARN *string `locationName:"SAMLProviderArn" type:"string" required:"true"`
+	SAMLProviderArn *string `type:"string" required:"true"`
 
 	metadataUpdateSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -10484,7 +10484,7 @@ func (s UpdateSAMLProviderInput) GoString() string {
 // Contains the response to a successful UpdateSAMLProvider request.
 type UpdateSAMLProviderOutput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider that was updated.
-	SAMLProviderARN *string `locationName:"SAMLProviderArn" type:"string"`
+	SAMLProviderArn *string `type:"string"`
 
 	metadataUpdateSAMLProviderOutput `json:"-" xml:"-"`
 }
@@ -10505,7 +10505,7 @@ func (s UpdateSAMLProviderOutput) GoString() string {
 
 type UpdateSSHPublicKeyInput struct {
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyID *string `locationName:"SSHPublicKeyId" type:"string" required:"true"`
+	SSHPublicKeyId *string `type:"string" required:"true"`
 
 	// The status to assign to the SSH public key. Active means the key can be used
 	// for authentication with an AWS CodeCommit repository. Inactive means the
@@ -10600,7 +10600,7 @@ func (s UpdateServerCertificateOutput) GoString() string {
 
 type UpdateSigningCertificateInput struct {
 	// The ID of the signing certificate you want to update.
-	CertificateID *string `locationName:"CertificateId" type:"string" required:"true"`
+	CertificateId *string `type:"string" required:"true"`
 
 	// The status you want to assign to the certificate. Active means the certificate
 	// can be used for API calls to AWS, while Inactive means the certificate cannot
@@ -10867,7 +10867,7 @@ type User struct {
 	// The Amazon Resource Name (ARN) that identifies the user. For more information
 	// about ARNs and how to use ARNs in policies, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ARN *string `locationName:"Arn" type:"string" required:"true"`
+	Arn *string `type:"string" required:"true"`
 
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
 	// when the user was created.
@@ -10899,7 +10899,7 @@ type User struct {
 	// The stable and unique string identifying the user. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	UserID *string `locationName:"UserId" type:"string" required:"true"`
+	UserId *string `type:"string" required:"true"`
 
 	// The friendly name identifying the user.
 	UserName *string `type:"string" required:"true"`
@@ -10932,7 +10932,7 @@ type UserDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	ARN *string `locationName:"Arn" type:"string"`
+	Arn *string `type:"string"`
 
 	// A list of the managed policies attached to the user.
 	AttachedManagedPolicies []*AttachedPolicy `type:"list"`
@@ -10952,7 +10952,7 @@ type UserDetail struct {
 	// The stable and unique string identifying the user. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	UserID *string `locationName:"UserId" type:"string"`
+	UserId *string `type:"string"`
 
 	// The friendly name identifying the user.
 	UserName *string `type:"string"`

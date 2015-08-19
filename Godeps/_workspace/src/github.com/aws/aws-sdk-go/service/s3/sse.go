@@ -4,14 +4,14 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
+	"github.com/aws/aws-sdk-go/aws/service"
 )
 
 var errSSERequiresSSL = awserr.New("ConfigError", "cannot send SSE keys over HTTP.", nil)
 
-func validateSSERequiresSSL(r *aws.Request) {
+func validateSSERequiresSSL(r *service.Request) {
 	if r.HTTPRequest.URL.Scheme != "https" {
 		p := awsutil.ValuesAtPath(r.Params, "SSECustomerKey||CopySourceSSECustomerKey")
 		if len(p) > 0 {
@@ -20,7 +20,7 @@ func validateSSERequiresSSL(r *aws.Request) {
 	}
 }
 
-func computeSSEKeys(r *aws.Request) {
+func computeSSEKeys(r *service.Request) {
 	headers := []string{
 		"x-amz-server-side-encryption-customer-key",
 		"x-amz-copy-source-server-side-encryption-customer-key",

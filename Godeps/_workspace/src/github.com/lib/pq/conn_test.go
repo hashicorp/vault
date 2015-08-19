@@ -7,12 +7,24 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
 
 type Fatalistic interface {
 	Fatal(args ...interface{})
+}
+
+func forceBinaryParameters() bool {
+	bp := os.Getenv("PQTEST_BINARY_PARAMETERS")
+	if bp == "yes" {
+		return true
+	} else if bp == "" || bp == "no" {
+		return false
+	} else {
+		panic("unexpected value for PQTEST_BINARY_PARAMETERS")
+	}
 }
 
 func openTestConnConninfo(conninfo string) (*sql.DB, error) {
@@ -24,6 +36,13 @@ func openTestConnConninfo(conninfo string) (*sql.DB, error) {
 	defaultTo("PGDATABASE", "pqgotest")
 	defaultTo("PGSSLMODE", "disable")
 	defaultTo("PGCONNECT_TIMEOUT", "20")
+
+	if forceBinaryParameters() &&
+		!strings.HasPrefix(conninfo, "postgres://") &&
+		!strings.HasPrefix(conninfo, "postgresql://") {
+		conninfo = conninfo + " binary_parameters=yes"
+	}
+
 	return sql.Open("postgres", conninfo)
 }
 

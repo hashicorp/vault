@@ -86,8 +86,10 @@ func (mc *mysqlConn) handleInFileRequest(name string) (err error) {
 	var rdr io.Reader
 	var data []byte
 
-	if strings.HasPrefix(name, "Reader::") { // io.Reader
-		name = name[8:]
+	if idx := strings.Index(name, "Reader::"); idx == 0 || (idx > 0 && name[idx-1] == '/') { // io.Reader
+		// The server might return an an absolute path. See issue #355.
+		name = name[idx+8:]
+
 		if handler, inMap := readerRegister[name]; inMap {
 			rdr = handler()
 			if rdr != nil {

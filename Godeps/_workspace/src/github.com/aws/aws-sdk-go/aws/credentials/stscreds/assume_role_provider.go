@@ -6,10 +6,11 @@ package stscreds
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"time"
 )
 
 // AssumeRoler represents the minimal subset of the STS client API used by this provider.
@@ -101,7 +102,7 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 
 	roleOutput, err := p.Client.AssumeRole(&sts.AssumeRoleInput{
 		DurationSeconds: aws.Int64(int64(p.Duration / time.Second)),
-		RoleARN:         aws.String(p.RoleARN),
+		RoleArn:         aws.String(p.RoleARN),
 		RoleSessionName: aws.String(p.RoleSessionName),
 	})
 
@@ -113,7 +114,7 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 	p.SetExpiration(*roleOutput.Credentials.Expiration, p.ExpiryWindow)
 
 	return credentials.Value{
-		AccessKeyID:     *roleOutput.Credentials.AccessKeyID,
+		AccessKeyID:     *roleOutput.Credentials.AccessKeyId,
 		SecretAccessKey: *roleOutput.Credentials.SecretAccessKey,
 		SessionToken:    *roleOutput.Credentials.SessionToken,
 	}, nil

@@ -92,7 +92,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 	// Revoke all keys
 	for _, k := range keys {
 		_, err = client.DeleteAccessKey(&iam.DeleteAccessKeyInput{
-			AccessKeyID: k.AccessKeyID,
+			AccessKeyId: k.AccessKeyId,
 			UserName:    aws.String(username),
 		})
 		if err != nil {

@@ -82,6 +82,8 @@ func DialTLS(network, addr string, config *tls.Config) (*Conn, error) {
 	c := tls.Client(dc, config)
 	err = c.Handshake()
 	if err != nil {
+		// Handshake error, close the established connection before we return an error
+		dc.Close()
 		return nil, NewError(ErrorNetwork, err)
 	}
 	conn := NewConn(c, true)
@@ -174,7 +176,7 @@ func (l *Conn) StartTLS(config *tls.Config) error {
 		ber.PrintPacket(packet)
 	}
 
-	if packet.Children[1].Children[0].Value.(int64) == 0 {
+	if packet.Children[1].Children[0].Value.(int64) == LDAPResultSuccess {
 		conn := tls.Client(l.conn, config)
 
 		if err := conn.Handshake(); err != nil {
@@ -184,6 +186,12 @@ func (l *Conn) StartTLS(config *tls.Config) error {
 
 		l.isTLS = true
 		l.conn = conn
+	} else {
+		// https://tools.ietf.org/html/rfc4511#section-4.1.9
+		// Children[1].Children[2] is the diagnosticMessage which is guaranteed to exist.
+		return NewError(
+			uint8(packet.Children[1].Children[0].Value.(int64)),
+			fmt.Errorf("ldap: cannot StartTLS (%s)", packet.Children[1].Children[2].Value.(string)))
 	}
 	go l.reader()
 

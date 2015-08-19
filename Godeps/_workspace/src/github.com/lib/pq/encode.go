@@ -15,6 +15,16 @@ import (
 	"github.com/lib/pq/oid"
 )
 
+func binaryEncode(parameterStatus *parameterStatus, x interface{}) []byte {
+	switch v := x.(type) {
+	case []byte:
+		return v
+	default:
+		return encode(parameterStatus, x, oid.T_unknown)
+	}
+	panic("not reached")
+}
+
 func encode(parameterStatus *parameterStatus, x interface{}, pgtypOid oid.Oid) []byte {
 	switch v := x.(type) {
 	case int64:

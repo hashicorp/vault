@@ -4,8 +4,8 @@ import (
 	"encoding/xml"
 	"io"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/service"
 )
 
 type xmlErrorResponse struct {
@@ -16,7 +16,7 @@ type xmlErrorResponse struct {
 }
 
 // UnmarshalError unmarshals an error response for an AWS Query service.
-func UnmarshalError(r *aws.Request) {
+func UnmarshalError(r *service.Request) {
 	defer r.HTTPResponse.Body.Close()
 
 	resp := &xmlErrorResponse{}
