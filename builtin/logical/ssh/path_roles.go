@@ -41,14 +41,14 @@ func pathRoles(b *backend) *framework.Path {
 			"key": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
-				[Required for dynamic type] [Not applicable for otp type]
+				[Required for Dynamic type] [Not applicable for OTP type]
 				Name of the registered key in Vault. Before creating the role, use the
 				'keys/' endpoint to create a named key.`,
 			},
 			"admin_user": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
-				[Required for dynamic type] [Not applicable for otp type]
+				[Required for Dynamic type] [Not applicable for OTP type]
 				Admin user at remote host. The shared key being registered should be
 				for this user and should have root privileges. Everytime a dynamic 
 				credential is being generated for other users, Vault uses this admin
@@ -89,13 +89,13 @@ func pathRoles(b *backend) *framework.Path {
 			"key_bits": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `
-				[Optional for dynamic type] [Not applicable for otp type]
+				[Optional for Dynamic type] [Not applicable for OTP type]
 				Length of the RSA dynamic key in bits. It can be one of 1024, 2048 or 4096.`,
 			},
 			"install_script": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
-				[Optional for dynamic type][Not-applicable for otp type]
+				[Optional for Dynamic type][Not-applicable for OTP type]
 				Script used to install and uninstall public keys in the target machine.
 				The inbuilt default install script will be for Linux hosts. For sample
 				script, refer the project documentation website.`,
@@ -130,7 +130,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		return logical.ErrorResponse("Missing role name"), nil
 	}
 
-	// Allowed users is an optional field, applicable for both otp and dynamic types.
+	// Allowed users is an optional field, applicable for both OTP and Dynamic types.
 	allowedUsers := d.Get("allowed_users").(string)
 
 	defaultUser := d.Get("default_user").(string)

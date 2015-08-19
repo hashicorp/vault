@@ -47,13 +47,13 @@ func (c *SSHCommand) Run(args []string) int {
 	args = flags.Args()
 	if len(args) < 1 {
 		c.Ui.Error("ssh expects at least one argument")
-		return 2
+		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %s", err))
-		return 2
+		return 1
 	}
 
 	// split the parameter username@ip
@@ -77,7 +77,7 @@ func (c *SSHCommand) Run(args []string) int {
 		ipAddr = input[1]
 	} else {
 		c.Ui.Error(fmt.Sprintf("Invalid parameter: %s", args[0]))
-		return 2
+		return 1
 	}
 
 	// Resolving domain names to IP address on the client side.
@@ -85,7 +85,7 @@ func (c *SSHCommand) Run(args []string) int {
 	ip, err := net.ResolveIPAddr("ip", ipAddr)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %s", err))
-		return 2
+		return 1
 	}
 
 	// Credentials are generated only against a registered role. If user
@@ -113,7 +113,7 @@ func (c *SSHCommand) Run(args []string) int {
 	keySecret, err := client.SSHWithMountPoint(mountPoint).Credential(role, data)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session:%s", err))
-		return 2
+		return 1
 	}
 
 	// if no-exec was chosen, just print out the secret and return.
@@ -132,7 +132,7 @@ func (c *SSHCommand) Run(args []string) int {
 	if resp.KeyType == ssh.KeyTypeDynamic {
 		if len(resp.Key) == 0 {
 			c.Ui.Error(fmt.Sprintf("Invalid key"))
-			return 2
+			return 1
 		}
 		sshDynamicKeyFileName = fmt.Sprintf("vault_ssh_%s_%s", username, ip.String())
 		err = ioutil.WriteFile(sshDynamicKeyFileName, []byte(resp.Key), 0600)
