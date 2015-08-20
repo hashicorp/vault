@@ -117,9 +117,13 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 			sanitizedName = name[2:]
 			isWildcard = true
 		}
-		if !hostnameRegex.MatchString(sanitizedName) {
-			return name, nil
+
+		if role.EnforceHostnames {
+			if !hostnameRegex.MatchString(sanitizedName) {
+				return name, nil
+			}
 		}
+
 		if role.AllowAnyName {
 			continue
 		}
