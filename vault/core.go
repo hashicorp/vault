@@ -410,6 +410,8 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			// Attempt to use the token (decrement num_uses)
 			if err := c.tokenStore.UseToken(te); err != nil {
 				c.logger.Printf("[ERR] core: failed to use token: %v", err)
+				retResp = nil
+				retAuth = nil
 				retErr = ErrInternalError
 			}
 		}()
@@ -965,20 +967,25 @@ func (c *Core) Seal(token string) (retErr error) {
 	// Validate the token is a root token
 	_, te, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
 	if te != nil {
-		defer func() {
-			// Attempt to use the token (decrement num_uses)
-			if err := c.tokenStore.UseToken(te); err != nil {
-				c.logger.Printf("[ERR] core: failed to use token: %v", err)
-				retErr = ErrInternalError
-			}
-		}()
+		// Attempt to use the token (decrement num_uses)
+		if err := c.tokenStore.UseToken(te); err != nil {
+			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			retErr = ErrInternalError
+		}
 	}
 	if err != nil {
 		return err
 	}
 
 	// Seal the Vault
-	return c.sealInternal()
+	err = c.sealInternal()
+	if err == nil && retErr == ErrInternalError {
+		c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
+	} else {
+		retErr = err
+	}
+
+	return
 }
 
 // sealInternal is an internal method used to seal the vault.
