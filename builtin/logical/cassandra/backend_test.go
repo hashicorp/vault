@@ -125,4 +125,4 @@ func testAccStepReadRole(t *testing.T, name string, cql string) logicaltest.Test
 }
 
 const testRole = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
-GRANT ALL PERMISSIONS ON ALL KEYSPACES TO '{{username}}';`
+GRANT ALL PERMISSIONS ON ALL KEYSPACES TO {{username}};`
