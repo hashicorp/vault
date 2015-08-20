@@ -15,17 +15,17 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	Listeners []*Listener    `hcl:"-"`
-	Backend   *Backend       `hcl:"-"`
+	Listeners []*Listener `hcl:"-"`
+	Backend   *Backend    `hcl:"-"`
 
-	DisableMlock bool        `hcl:"disable_mlock"`
+	DisableMlock bool `hcl:"disable_mlock"`
 
-	Telemetry *Telemetry     `hcl:"telemetry"`
+	Telemetry *Telemetry `hcl:"telemetry"`
 
-	MaxLeaseDuration time.Duration `hcl:"-"`
-	MaxLeaseDurationRaw string     `hcl:"max_lease_duration"`
-	DefaultLeaseDuration time.Duration `hcl:"-"`
-	DefaultLeaseDurationRaw string     `hcl:"default_lease_duration"`
+	MaxLeaseDuration        time.Duration `hcl:"-"`
+	MaxLeaseDurationRaw     string        `hcl:"max_lease_duration"`
+	DefaultLeaseDuration    time.Duration `hcl:"-"`
+	DefaultLeaseDurationRaw string        `hcl:"default_lease_duration"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -48,7 +48,7 @@ func DevConfig() *Config {
 
 		Telemetry: &Telemetry{},
 
-		MaxLeaseDuration: 30 * 24 * time.Hour,
+		MaxLeaseDuration:     30 * 24 * time.Hour,
 		DefaultLeaseDuration: 30 * 24 * time.Hour,
 	}
 }
@@ -192,7 +192,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 		if statsdAddr != nil || statsiteAddr != nil {
 			result.Telemetry = &Telemetry{
-				StatsdAddr: getString(statsdAddr),
+				StatsdAddr:   getString(statsdAddr),
 				StatsiteAddr: getString(statsiteAddr),
 			}
 		}
