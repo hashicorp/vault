@@ -3,7 +3,8 @@ layout: "docs"
 page_title: "Secret Backend: SSH"
 sidebar_current: "docs-secrets-ssh"
 description: |-
-  The SSH secret backend for Vault generates dynamic SSH keys or One-Time-Passwords. 
+  SSH backend for Vault generates SSH credentials which are either Dynamic private keys
+or One-Time-Passwords. 
 ---
 
 # SSH Secret Backend
@@ -16,7 +17,7 @@ everyone who needs access to infrastructures. It also solves the problem of
 management and distribution of keys belonging to remote hosts.
 
 This backend supports two types of credential creation: Dynamic and OTP. Both of
-them addresses the problems in different ways.
+them address the problems in different ways.
 
 Read and carefully understand both of them and choose the one which best suits
 your needs.
@@ -36,7 +37,10 @@ creates a key-pair, uses the previously shared secret key to login to the remote
 host and appends the newly generated public key to `~/.ssh/authorized_keys` file for 
 the desired username. Vault uses an install script (configurable) to achieve this.
 To run this script in super user mode without password prompts, `NOPASSWD` option
-for sudoers should be enabled at all remote hosts.
+should be enabled for the admin username which is registered with Vault.
+
+One way to do this is to disable password prompts for all the sudoers (shown below). 
+It is also possible to disable password prompt for specific users, if you so wish.
 
 File: `/etc/sudoers`
 
