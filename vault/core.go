@@ -214,7 +214,7 @@ type Core struct {
 	metricsCh chan struct{}
 
 	defaultLeaseDuration time.Duration
-	maxLeaseDuration time.Duration
+	maxLeaseDuration     time.Duration
 
 	logger *log.Logger
 }
@@ -251,11 +251,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.MaxLeaseDuration == 0 {
 		conf.MaxLeaseDuration = maxLeaseDuration
 	}
-	
+
 	if conf.DefaultLeaseDuration > conf.MaxLeaseDuration {
 		return nil, fmt.Errorf("cannot have DefaultLeaseDuration larger than MaxLeaseDuration")
 	}
-	
+
 	// Validate the advertise addr if its given to us
 	if conf.AdvertiseAddr != "" {
 		u, err := url.Parse(conf.AdvertiseAddr)
@@ -307,16 +307,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:            haBackend,
-		advertiseAddr: conf.AdvertiseAddr,
-		physical:      conf.Physical,
-		barrier:       barrier,
-		router:        NewRouter(),
-		sealed:        true,
-		standby:       true,
-		logger:        conf.Logger,
+		ha:                   haBackend,
+		advertiseAddr:        conf.AdvertiseAddr,
+		physical:             conf.Physical,
+		barrier:              barrier,
+		router:               NewRouter(),
+		sealed:               true,
+		standby:              true,
+		logger:               conf.Logger,
 		defaultLeaseDuration: conf.DefaultLeaseDuration,
-		maxLeaseDuration: conf.MaxLeaseDuration,
+		maxLeaseDuration:     conf.MaxLeaseDuration,
 	}
 
 	// Setup the backends
@@ -400,11 +400,20 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	return
 }
 
-func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	auth, te, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	if te != nil {
+		defer func() {
+			// Attempt to use the token (decrement num_uses)
+			if err := c.tokenStore.UseToken(te); err != nil {
+				c.logger.Printf("[ERR] core: failed to use token: %v", err)
+				retErr = ErrInternalError
+			}
+		}()
+	}
 	if err != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
@@ -569,47 +578,41 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 }
 
 func (c *Core) checkToken(
-	op logical.Operation, path string, token string) (*logical.Auth, error) {
+	op logical.Operation, path string, token string) (*logical.Auth, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
 	// Ensure there is a client token
 	if token == "" {
-		return nil, fmt.Errorf("missing client token")
+		return nil, nil, fmt.Errorf("missing client token")
 	}
 
 	// Resolve the token policy
 	te, err := c.tokenStore.Lookup(token)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
-		return nil, ErrInternalError
+		return nil, nil, ErrInternalError
 	}
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, logical.ErrPermissionDenied
-	}
-
-	// Attempt to use the token
-	if err := c.tokenStore.UseToken(te); err != nil {
-		c.logger.Printf("[ERR] core: failed to use token: %v", err)
-		return nil, ErrInternalError
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Construct the corresponding ACL object
 	acl, err := c.policy.ACL(te.Policies...)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
-		return nil, ErrInternalError
+		return nil, nil, ErrInternalError
 	}
 
 	// Check if this is a root protected path
 	if c.router.RootPath(path) && !acl.RootPrivilege(path) {
-		return nil, logical.ErrPermissionDenied
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Check the standard non-root ACLs
 	if !acl.AllowOperation(op, path) {
-		return nil, logical.ErrPermissionDenied
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Create the auth response
@@ -619,7 +622,7 @@ func (c *Core) checkToken(
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
 	}
-	return auth, nil
+	return auth, te, nil
 }
 
 // Initialized checks if the Vault is already initialized
@@ -951,7 +954,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 // Seal is used to re-seal the Vault. This requires the Vault to
 // be unsealed again to perform any further operations.
-func (c *Core) Seal(token string) error {
+func (c *Core) Seal(token string) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
@@ -960,7 +963,16 @@ func (c *Core) Seal(token string) error {
 	}
 
 	// Validate the token is a root token
-	_, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	_, te, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	if te != nil {
+		defer func() {
+			// Attempt to use the token (decrement num_uses)
+			if err := c.tokenStore.UseToken(te); err != nil {
+				c.logger.Printf("[ERR] core: failed to use token: %v", err)
+				retErr = ErrInternalError
+			}
+		}()
+	}
 	if err != nil {
 		return err
 	}
