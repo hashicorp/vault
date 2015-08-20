@@ -20,9 +20,14 @@ func PassthroughBackendFactory(*logical.BackendConfig) (logical.Backend, error) 
 			&framework.Path{
 				Pattern: ".*",
 				Fields: map[string]*framework.FieldSchema{
+					//TODO: Deprecated in 0.3; remove in 0.4
 					"lease": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: "Lease time for this key when read. Ex: 1h",
+					},
+					"ttl": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "TTL time for this key when read. Ex: 1h",
 					},
 				},
 
@@ -52,7 +57,7 @@ func PassthroughBackendFactory(*logical.BackendConfig) (logical.Backend, error) 
 }
 
 // PassthroughBackend is used storing secrets directly into the physical
-// backend. The secrest are encrypted in the durable storage and custom lease
+// backend. The secrest are encrypted in the durable storage and custom TTL
 // information can be specified, but otherwise this backend doesn't do anything
 // fancy.
 type PassthroughBackend struct {
@@ -95,6 +100,17 @@ func (b *PassthroughBackend) handleRead(
 		if err == nil {
 			resp.Secret.Renewable = true
 			resp.Secret.Lease = leaseDuration
+			resp.Secret.TTL = leaseDuration
+		}
+	}
+
+	// Check if there is a ttl key
+	ttlVal, ok := rawData["ttl"].(string)
+	if ok {
+		ttlDuration, err := time.ParseDuration(ttlVal)
+		if err == nil {
+			resp.Secret.Renewable = true
+			resp.Secret.TTL = ttlDuration
 		}
 	}
 
@@ -154,7 +170,7 @@ The secrets are encrypted/decrypted by Vault: they are never stored
 unencrypted in the backend and the backend never has an opportunity to
 see the unencrypted value.
 
-Leases can be set on a per-secret basis. These leases will be sent down
+TTLs can be set on a per-secret basis. These TTLs will be sent down
 when that secret is read, and it is assumed that some outside process will
 revoke and/or replace the secret at that path.
 `
@@ -168,9 +184,9 @@ const passthroughHelpDescription = `
 The pass-through backend reads and writes arbitrary data into secret storage,
 encrypting it along the way.
 
-A lease can be specified when writing with the "lease" field. If given, then
-when the secret is read, Vault will report a lease with that duration. It
-is expected that the consumer of this backend properly writes renewed keys
-before the lease is up. In addition, revocation must be handled by the
-user of this backend.
+A TTL can be specified when writing with the "ttl" field. If given, then
+when the secret is read, the returned lease's duration will be set to
+that value. It is expected that the consumer of this backend properly
+writes renewed keys before the lease is up. In addition, revocation
+must be handled by the user of this backend.
 `

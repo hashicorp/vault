@@ -21,15 +21,22 @@ the sub-fields are not merged together.
 ## Quick Start
 
 The generic backend allows for writing keys with arbitrary values. The
-only value that is special is the `lease` key, which can be provided with
-any key to restrict the lease time of the secret. This is useful to ensure
-clients periodically renew so that key rolling can be time bounded.
+only value that is special is the `ttl` key, which can be provided with
+any key to restrict the lease duration of the secret. This is useful to ensure
+clients periodically renew so that key rolling can be time bounded. Note
+that this does not actually expire the data, it is simply a hint to clients
+that they should not go longer than the `ttl` value before refreshing the
+value locally.
+
+N.B.: Prior to version 0.3, the `ttl` parameter was called `lease`. Both will
+work for 0.3, but in 0.4 `lease` will be removed. When providing a `lease` value
+in 0.3, both `lease` and `ttl` will be returned with the same data.
 
 As an example, we can write a new key "foo" to the generic backend
 mounted at "secret/" by default:
 
 ```
-$ vault write secret/foo zip=zap lease=1h
+$ vault write secret/foo zip=zap ttl=1h
 Success! Data written to: secret/foo
 ```
 
@@ -41,10 +48,9 @@ $ vault read secret/foo
 Key           	Value
 lease_id      	secret/foo/e4514713-d5d9-fb14-4177-97a7f7f64518
 lease_duration	3600
-lease         	1h
+ttl		1h
 zip           	zap
 ```
 
-As expected, we get the value previously set back as well as our custom lease.
-The lease_duration has been set to 3600 seconds, or one hour as specified.
-
+As expected, we get the value previously set back as well as our custom TTL.
+The lease_duration has been set to 3600 seconds (one hour) as specified.
