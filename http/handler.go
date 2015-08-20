@@ -40,11 +40,11 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/audit/", handleSysAudit(core))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/rotate", handleSysRotate(core))
-	mux.Handle("/v1/sys/key-status", handleSysKeyStatus(core))
+	mux.Handle("/v1/sys/rotate", proxySysRequest(core))
+	mux.Handle("/v1/sys/key-status", proxySysRequest(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
-	mux.Handle("/v1/", handleLogical(core))
+	mux.Handle("/v1/", handleLogical(core, false))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
@@ -212,6 +212,10 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
+}
+
+func proxySysRequest(core *vault.Core) http.Handler {
+	return handleLogical(core, true)
 }
 
 type ErrorResponse struct {

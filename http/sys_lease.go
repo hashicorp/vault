@@ -49,7 +49,7 @@ func handleSysRenew(core *vault.Core) http.Handler {
 			return
 		}
 
-		respondLogical(w, r, path, resp)
+		respondLogical(w, r, path, false, resp)
 	})
 }
 

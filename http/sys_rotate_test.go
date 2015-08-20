@@ -30,6 +30,6 @@ func TestSysRotate(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	delete(actual, "install_time")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad:\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 }

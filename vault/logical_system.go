@@ -770,7 +770,7 @@ func (b *SystemBackend) handleRotate(
 	}
 	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
 
-	// In non-HA mode, we need to an upgrade path for the standby instances
+	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
 		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
