@@ -7,7 +7,8 @@ import "time"
 type LeaseOptions struct {
 	// Lease is the duration that this secret is valid for. Vault
 	// will automatically revoke it after the duration + grace period.
-	Lease            time.Duration `json:"lease"`
+	Lease            time.Duration `json:"lease,omitempty"`
+	TTL              time.Duration `json:"ttl,omitempty"`
 	LeaseGracePeriod time.Duration `json:"lease_grace_period"`
 
 	// Renewable, if true, means that this secret can be renewed.
