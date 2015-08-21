@@ -177,7 +177,7 @@ func (b *backend) pathIssueCert(
 			"serial_number": cb.SerialNumber,
 		})
 
-	resp.Secret.Lease = lease
+	resp.Secret.TTL = lease
 
 	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "certs/" + cb.SerialNumber,

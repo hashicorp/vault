@@ -337,7 +337,7 @@ func (m *ExpirationManager) RenewToken(source string, token string,
 
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
-	resp.Auth.LeaseIncrement = 0
+	resp.Auth.Increment = 0
 
 	// Update the lease entry
 	le.Auth = resp.Auth
@@ -492,8 +492,8 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 // renewEntry is used to attempt renew of an internal entry
 func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	secret := *le.Secret
-	secret.LeaseIssue = le.IssueTime
-	secret.LeaseIncrement = increment
+	secret.IssueTime = le.IssueTime
+	secret.Increment = increment
 	secret.LeaseID = ""
 
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
@@ -507,8 +507,8 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 // renewAuthEntry is used to attempt renew of an auth entry
 func (m *ExpirationManager) renewAuthEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
-	auth.LeaseIssue = le.IssueTime
-	auth.LeaseIncrement = increment
+	auth.IssueTime = le.IssueTime
+	auth.Increment = increment
 	auth.ClientToken = ""
 
 	req := logical.RenewAuthRequest(le.Path, &auth, nil)

@@ -64,7 +64,7 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 		Unauthenticated: true,
 		ConnState:       &connState,
 		Check: func(resp *logical.Response) error {
-			if resp.Auth.Lease != 1000*time.Second {
+			if resp.Auth.TTL != 1000*time.Second {
 				t.Fatalf("bad lease length: %#v", resp.Auth)
 			}
 

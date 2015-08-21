@@ -101,7 +101,7 @@ func (b *backend) pathRoleCreateRead(
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.Lease = lease.Lease
+	resp.Secret.TTL = lease.Lease
 	return resp, nil
 }
 

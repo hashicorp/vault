@@ -101,7 +101,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 		if resp.Secret != nil {
 			logicalResp.LeaseID = resp.Secret.LeaseID
 			logicalResp.Renewable = resp.Secret.Renewable
-			logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
+			logicalResp.LeaseDuration = int(resp.Secret.TTL.Seconds())
 		}
 
 		// If we have authentication information, then set the cookie
@@ -129,7 +129,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 				ClientToken:   resp.Auth.ClientToken,
 				Policies:      resp.Auth.Policies,
 				Metadata:      resp.Auth.Metadata,
-				LeaseDuration: int(resp.Auth.Lease.Seconds()),
+				LeaseDuration: int(resp.Auth.TTL.Seconds()),
 				Renewable:     resp.Auth.Renewable,
 			}
 		}

@@ -554,9 +554,9 @@ func (ts *TokenStore) handleCreate(
 			Policies:    te.Policies,
 			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
-				Lease:            leaseDuration,
-				LeaseGracePeriod: leaseDuration / 10,
-				Renewable:        leaseDuration > 0,
+				TTL:         leaseDuration,
+				GracePeriod: leaseDuration / 10,
+				Renewable:   leaseDuration > 0,
 			},
 			ClientToken: te.ID,
 		},
