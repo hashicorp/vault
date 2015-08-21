@@ -187,7 +187,7 @@ func (c *SSHCommand) Run(args []string) int {
 	// If the session established was longer than the lease expiry, the secret
 	// might have been revoked already. If not, then revoke it. Since the key
 	// file is deleted and since user doesn't know the credential anymore, there
-	// is no point in Vault maintaining this secret anymore. Everytime the command
+	// is not point in Vault maintaining this secret anymore. Everytime the command
 	// is run, a fresh credential is generated anyways.
 	err = client.Sys().Revoke(keySecret.LeaseID)
 	if err != nil {
