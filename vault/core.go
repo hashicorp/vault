@@ -452,13 +452,13 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
 		// Apply the default lease if none given
-		if resp.Secret.Lease == 0 {
-			resp.Secret.Lease = c.defaultLeaseDuration
+		if resp.Secret.TTL == 0 {
+			resp.Secret.TTL = c.defaultLeaseDuration
 		}
 
 		// Limit the lease duration
-		if resp.Secret.Lease > c.maxLeaseDuration {
-			resp.Secret.Lease = c.maxLeaseDuration
+		if resp.Secret.TTL > c.maxLeaseDuration {
+			resp.Secret.TTL = c.maxLeaseDuration
 		}
 
 		// Register the lease
@@ -484,13 +484,13 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if resp.Auth.Lease == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.Lease = c.defaultLeaseDuration
+		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
+			resp.Auth.TTL = c.defaultLeaseDuration
 		}
 
 		// Limit the lease duration
-		if resp.Auth.Lease > c.maxLeaseDuration {
-			resp.Auth.Lease = c.maxLeaseDuration
+		if resp.Auth.TTL > c.maxLeaseDuration {
+			resp.Auth.TTL = c.maxLeaseDuration
 		}
 
 		// Register with the expiration manager
@@ -556,13 +556,13 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		resp.Auth.ClientToken = te.ID
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if auth.Lease == 0 && !strListContains(auth.Policies, "root") {
-			auth.Lease = c.defaultLeaseDuration
+		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
+			auth.TTL = c.defaultLeaseDuration
 		}
 
 		// Limit the lease duration
-		if resp.Auth.Lease > c.maxLeaseDuration {
-			resp.Auth.Lease = c.maxLeaseDuration
+		if resp.Auth.TTL > c.maxLeaseDuration {
+			resp.Auth.TTL = c.maxLeaseDuration
 		}
 
 		// Register with the expiration manager

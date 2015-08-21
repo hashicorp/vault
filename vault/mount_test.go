@@ -139,7 +139,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				Lease: time.Hour,
+				TTL: time.Hour,
 			},
 		},
 		Data: map[string]interface{}{
@@ -256,7 +256,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				Lease: time.Hour,
+				TTL: time.Hour,
 			},
 		},
 		Data: map[string]interface{}{

@@ -14,7 +14,7 @@ func TestCopy_auth(t *testing.T) {
 	// Make a non-pointer one so that it can't be modified directly
 	expected := logical.Auth{
 		LeaseOptions: logical.LeaseOptions{
-			Lease:      1 * time.Hour,
+			TTL:        1 * time.Hour,
 			LeaseIssue: time.Now().UTC(),
 		},
 
@@ -121,7 +121,7 @@ func TestHash(t *testing.T) {
 		{
 			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					Lease:      1 * time.Hour,
+					TTL:        1 * time.Hour,
 					LeaseIssue: now,
 				},
 
@@ -129,7 +129,7 @@ func TestHash(t *testing.T) {
 			},
 			&logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					Lease:      1 * time.Hour,
+					TTL:        1 * time.Hour,
 					LeaseIssue: now,
 				},
 

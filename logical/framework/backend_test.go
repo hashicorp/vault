@@ -105,7 +105,6 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
-	
 
 	if err == nil {
 		t.Fatalf("should have thrown a conversion error")
@@ -269,8 +268,8 @@ func TestBackendHandleRequest_renewExtend(t *testing.T) {
 		t.Fatal("should have secret")
 	}
 
-	if resp.Secret.Lease < 60*time.Minute || resp.Secret.Lease > 70*time.Minute {
-		t.Fatalf("bad: %s", resp.Secret.Lease)
+	if resp.Secret.TTL < 60*time.Minute || resp.Secret.TTL > 70*time.Minute {
+		t.Fatalf("bad: %s", resp.Secret.TTL)
 	}
 }
 

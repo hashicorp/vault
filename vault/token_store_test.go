@@ -235,7 +235,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				Lease: 20 * time.Millisecond,
+				TTL: 20 * time.Millisecond,
 			},
 		},
 		Data: map[string]interface{}{
@@ -633,7 +633,7 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Auth.Lease != time.Hour {
+	if resp.Auth.TTL != time.Hour {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if !resp.Auth.Renewable {
@@ -743,7 +743,7 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		LeaseOptions: logical.LeaseOptions{
-			Lease: time.Hour,
+			TTL: time.Hour,
 		},
 	}
 	err = exp.RegisterAuth("auth/github/login", auth)
@@ -808,7 +808,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		LeaseOptions: logical.LeaseOptions{
-			Lease:     time.Hour,
+			TTL:       time.Hour,
 			Renewable: true,
 		},
 	}

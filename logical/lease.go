@@ -7,9 +7,9 @@ import "time"
 type LeaseOptions struct {
 	// Lease is the duration that this secret is valid for. Vault
 	// will automatically revoke it after the duration + grace period.
-	Lease            time.Duration `json:"lease,omitempty"`
-	TTL              time.Duration `json:"ttl,omitempty"`
-	LeaseGracePeriod time.Duration `json:"lease_grace_period"`
+	Lease       time.Duration `json:"lease,omitempty"`
+	TTL         time.Duration `json:"ttl,omitempty"`
+	GracePeriod time.Duration `json:"grace_period"`
 
 	// Renewable, if true, means that this secret can be renewed.
 	Renewable bool `json:"renewable"`
@@ -28,20 +28,20 @@ type LeaseOptions struct {
 
 // LeaseEnabled checks if leasing is enabled
 func (l *LeaseOptions) LeaseEnabled() bool {
-	return l.Lease > 0
+	return l.TTL > 0
 }
 
 // LeaseTotal is the total lease time including the grace period
 func (l *LeaseOptions) LeaseTotal() time.Duration {
-	if l.Lease <= 0 {
+	if l.TTL <= 0 {
 		return 0
 	}
 
-	if l.LeaseGracePeriod < 0 {
-		return l.Lease
+	if l.GracePeriod < 0 {
+		return l.TTL
 	}
 
-	return l.Lease + l.LeaseGracePeriod
+	return l.TTL + l.GracePeriod
 }
 
 // ExpirationTime computes the time until expiration including the grace period

@@ -27,7 +27,7 @@ func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc
 
 		// Check if we should limit max
 		if maxFromLease {
-			max = lease.Lease
+			max = lease.TTL
 		}
 
 		// Sanity check the desired increment
@@ -67,7 +67,12 @@ func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc
 		newLeaseDuration := requestedLease.Sub(now)
 
 		// Set the lease
-		lease.Lease = newLeaseDuration
+		lease.TTL = newLeaseDuration
+		var zeroDur time.Duration
+		if lease.Lease != zeroDur {
+			lease.Lease = newLeaseDuration
+		}
+
 		return &logical.Response{Auth: req.Auth, Secret: req.Secret}, nil
 	}
 }
