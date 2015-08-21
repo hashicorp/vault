@@ -460,7 +460,7 @@ $sidebar-font-weight: 300;
   bottom: 0;
   opacity: 0;
   background: $white;
-  z-index: 2;
+  z-index: $zindex-sidebar-fixed - 1;
 
   -webkit-transition: visibility 0 linear .4s,opacity .4s cubic-bezier(.4,0,.2,1);
   -moz-transition: visibility 0 linear .4s,opacity .4s cubic-bezier(.4,0,.2,1);
