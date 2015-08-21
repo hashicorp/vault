@@ -7,23 +7,22 @@ import "time"
 type LeaseOptions struct {
 	// Lease is the duration that this secret is valid for. Vault
 	// will automatically revoke it after the duration + grace period.
-	Lease       time.Duration `json:"lease,omitempty"`
-	TTL         time.Duration `json:"ttl,omitempty"`
-	GracePeriod time.Duration `json:"grace_period"`
+	TTL         time.Duration `json:"lease"`
+	GracePeriod time.Duration `json:"lease_grace_period"`
 
 	// Renewable, if true, means that this secret can be renewed.
 	Renewable bool `json:"renewable"`
 
-	// LeaseIncrement will be the lease increment that the user requested.
+	// Increment will be the lease increment that the user requested.
 	// This is only available on a Renew operation and has no effect
 	// when returning a response.
-	LeaseIncrement time.Duration `json:"-"`
+	Increment time.Duration `json:"-"`
 
-	// LeaseIssue is the time of issue for the original lease. This is
+	// IssueTime is the time of issue for the original lease. This is
 	// only available on a Renew operation and has no effect when returning
 	// a response. It can be used to enforce maximum lease periods by
 	// a logical backend. This time will always be in UTC.
-	LeaseIssue time.Time `json:"-"`
+	IssueTime time.Time `json:"-"`
 }
 
 // LeaseEnabled checks if leasing is enabled

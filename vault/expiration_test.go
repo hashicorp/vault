@@ -741,10 +741,10 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if !reflect.DeepEqual(req.Data, le.Data) {
 		t.Fatalf("Bad: %v", req)
 	}
-	if req.Secret.LeaseIncrement != time.Second {
+	if req.Secret.Increment != time.Second {
 		t.Fatalf("Bad: %v", req)
 	}
-	if req.Secret.LeaseIssue.IsZero() {
+	if req.Secret.IssueTime.IsZero() {
 		t.Fatalf("Bad: %v", req)
 	}
 }
@@ -801,10 +801,10 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 	if req.Path != "login" {
 		t.Fatalf("Bad: %v", req)
 	}
-	if req.Auth.LeaseIncrement != time.Second {
+	if req.Auth.Increment != time.Second {
 		t.Fatalf("Bad: %v", req)
 	}
-	if req.Auth.LeaseIssue.IsZero() {
+	if req.Auth.IssueTime.IsZero() {
 		t.Fatalf("Bad: %v", req)
 	}
 	if req.Auth.InternalData["MySecret"] != "secret" {

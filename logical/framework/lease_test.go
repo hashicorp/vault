@@ -75,9 +75,9 @@ func TestLeaseExtend(t *testing.T) {
 		req := &logical.Request{
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					TTL:            1 * time.Hour,
-					LeaseIssue:     now,
-					LeaseIncrement: tc.Request,
+					TTL:       1 * time.Hour,
+					IssueTime: now,
+					Increment: tc.Request,
 				},
 			},
 		}

@@ -61,7 +61,6 @@ func TestPassthroughBackend_Read_Lease(t *testing.T) {
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				Lease:     time.Hour,
 				TTL:       time.Hour,
 			},
 		},

@@ -258,8 +258,8 @@ func TestBackendHandleRequest_renewExtend(t *testing.T) {
 	}
 
 	req := logical.RenewRequest("/foo", secret.Response(nil, nil).Secret, nil)
-	req.Secret.LeaseIssue = time.Now().UTC()
-	req.Secret.LeaseIncrement = 1 * time.Hour
+	req.Secret.IssueTime = time.Now().UTC()
+	req.Secret.Increment = 1 * time.Hour
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)

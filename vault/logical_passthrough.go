@@ -93,21 +93,15 @@ func (b *PassthroughBackend) handleRead(
 	resp := b.Secret("generic").Response(rawData, nil)
 	resp.Secret.Renewable = false
 
-	// Check if there is a lease key
-	leaseVal, ok := rawData["lease"].(string)
-	if ok {
-		leaseDuration, err := time.ParseDuration(leaseVal)
-		if err == nil {
-			resp.Secret.Renewable = true
-			resp.Secret.Lease = leaseDuration
-			resp.Secret.TTL = leaseDuration
-		}
+	// Check if there is a ttl key
+	var ttl string
+	ttl, _ = rawData["lease"].(string)
+	if len(ttl) == 0 {
+		ttl, _ = rawData["ttl"].(string)
 	}
 
-	// Check if there is a ttl key
-	ttlVal, ok := rawData["ttl"].(string)
-	if ok {
-		ttlDuration, err := time.ParseDuration(ttlVal)
+	if len(ttl) != 0 {
+		ttlDuration, err := time.ParseDuration(ttl)
 		if err == nil {
 			resp.Secret.Renewable = true
 			resp.Secret.TTL = ttlDuration

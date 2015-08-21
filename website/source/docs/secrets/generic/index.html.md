@@ -32,8 +32,7 @@ Also note that setting `ttl` does not actually expire the data; it is
 informational only.
 
 N.B.: Prior to version 0.3, the `ttl` parameter was called `lease`. Both will
-work for 0.3, but in 0.4 `lease` will be removed. When providing a `lease` value
-in 0.3, both `lease` and `ttl` will be returned with the same data.
+work for 0.3, but in 0.4 `lease` will be removed.
 
 As an example, we can write a new key "foo" to the generic backend
 mounted at "secret/" by default:
