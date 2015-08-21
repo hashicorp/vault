@@ -184,9 +184,10 @@ const passthroughHelpDescription = `
 The pass-through backend reads and writes arbitrary data into secret storage,
 encrypting it along the way.
 
-A TTL can be specified when writing with the "ttl" field. If given, then
-when the secret is read, the returned lease's duration will be set to
-that value. It is expected that the consumer of this backend properly
-writes renewed keys before the lease is up. In addition, revocation
-must be handled by the user of this backend.
+A TTL can be specified when writing with the "ttl" field. If given, the
+duration of leases returned by this backend will be set to this value. This
+can be used as a hint from the writer of a secret to the consumer of a secret
+that the consumer should re-read the value before the TTL has expired.
+However, any revocation must be handled by the user of this backend; the lease
+duration does not affect the provided data in any way.
 `
