@@ -123,7 +123,7 @@ func generatePolicy(storage logical.Storage, name string, derived bool) (*Policy
 
 func pathKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: `keys/(?P<name>\w+)`,
+		Pattern: "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

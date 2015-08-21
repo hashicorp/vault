@@ -7,7 +7,7 @@ import (
 
 func pathRaw() *framework.Path {
 	return &framework.Path{
-		Pattern: `raw/(?P<name>\w+)`,
+		Pattern: "raw/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

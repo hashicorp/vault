@@ -1,13 +1,13 @@
 package jwt
 
 import (
-	"fmt"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"strings"
 
-	"github.com/fatih/structs"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/fatih/structs"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -15,7 +15,7 @@ import (
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `roles/(?P<name>\w+)`,
+		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -106,9 +106,9 @@ func (b *backend) pathRoleRead(
 func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	key  := data.Get("key").(string)
-	alg  := data.Get("algorithm").(string)
-	
+	key := data.Get("key").(string)
+	alg := data.Get("algorithm").(string)
+
 	signingMethod := jwt.GetSigningMethod(data.Get("algorithm").(string))
 	if signingMethod == nil {
 		return nil, fmt.Errorf("Invalid Signing Algorithm")
@@ -148,15 +148,15 @@ func (b *backend) pathRoleCreate(
 	}
 
 	entry := &roleEntry{
-		Algorithm:    alg,
-		Key:          key,
-		Issuer:       data.Get("default_issuer").(string),
-		Subject:      data.Get("default_subject").(string),
-		Audience:     data.Get("default_audience").(string),
+		Algorithm: alg,
+		Key:       key,
+		Issuer:    data.Get("default_issuer").(string),
+		Subject:   data.Get("default_subject").(string),
+		Audience:  data.Get("default_audience").(string),
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/" + name, entry)
+	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -168,11 +168,11 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	Algorithm      string        `json:"algorithm" structs:"algorithm" mapstructure:"algorithm"`
-	Key            string        `json:"key" structs:"key" mapstructure:"key"`
-	Issuer         string        `json:"iss" structs:"iss" mapstructure:"iss"`
-	Subject        string        `json:"sub" structs:"sub" mapstructure:"sub"`
-	Audience       string        `json:"aud" structs:"aud" mapstructure:"aud"`
+	Algorithm string `json:"algorithm" structs:"algorithm" mapstructure:"algorithm"`
+	Key       string `json:"key" structs:"key" mapstructure:"key"`
+	Issuer    string `json:"iss" structs:"iss" mapstructure:"iss"`
+	Subject   string `json:"sub" structs:"sub" mapstructure:"sub"`
+	Audience  string `json:"aud" structs:"aud" mapstructure:"aud"`
 }
 
 const pathRolesHelpSyn = `
