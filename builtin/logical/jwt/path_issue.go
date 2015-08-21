@@ -1,9 +1,9 @@
 package jwt
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-	"encoding/json"
 
 	jwt "github.com/dgrijalva/jwt-go"
 
@@ -14,10 +14,10 @@ import (
 
 func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `issue/(?P<role>\w[\w-]+\w)`,
+		Pattern: "issue/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type:        framework.TypeString,
 				Description: "The desired role with configuration for this request",
 			},
 			"issuer": &framework.FieldSchema{
@@ -63,7 +63,7 @@ func pathIssue(b *backend) *framework.Path {
 func (b *backend) pathIssueWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
-	
+
 	// Get the role
 	role, err := b.getRole(req.Storage, roleName)
 	if err != nil {
@@ -126,7 +126,7 @@ func (b *backend) pathIssueWrite(
 		if err != nil {
 			return nil, err
 		}
-		
+
 		for k, v := range uc {
 			claims[k] = v
 		}
@@ -144,10 +144,10 @@ func (b *backend) pathIssueWrite(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"jti": claims["jti"].(string),
+			"jti":   claims["jti"].(string),
 			"token": tokenString,
 		},
 	}
-	
+
 	return resp, nil
 }

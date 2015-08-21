@@ -15,7 +15,7 @@ type sshHostKey struct {
 
 func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/(?P<key_name>[-\\w]+)",
+		Pattern: "keys/" + framework.GenericNameRegex("key_name"),
 		Fields: map[string]*framework.FieldSchema{
 			"key_name": &framework.FieldSchema{
 				Type:        framework.TypeString,

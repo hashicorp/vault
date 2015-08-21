@@ -10,7 +10,7 @@ import (
 
 func pathCerts(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `certs/(?P<name>\w+)`,
+		Pattern: "certs/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

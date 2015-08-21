@@ -13,7 +13,7 @@ import (
 
 func pathEncrypt() *framework.Path {
 	return &framework.Path{
-		Pattern: `encrypt/(?P<name>\w+)`,
+		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
