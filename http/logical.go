@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -104,27 +103,9 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 			logicalResp.LeaseDuration = int(resp.Secret.TTL.Seconds())
 		}
 
-		// If we have authentication information, then set the cookie
-		// and setup the result structure.
+		// If we have authentication information, then
+		// set up the result structure.
 		if resp.Auth != nil {
-			expireDuration := 365 * 24 * time.Hour
-			if logicalResp.LeaseDuration != 0 {
-				expireDuration =
-					time.Duration(logicalResp.LeaseDuration) * time.Second
-			}
-
-			// Do not set the token as the auth cookie if the endpoint
-			// is the token store. Otherwise, attempting to create a token
-			// will cause the client to be authenticated as that token.
-			if !strings.HasPrefix(path, "auth/token/") {
-				http.SetCookie(w, &http.Cookie{
-					Name:    AuthCookieName,
-					Value:   resp.Auth.ClientToken,
-					Path:    "/",
-					Expires: time.Now().UTC().Add(expireDuration),
-				})
-			}
-
 			logicalResp.Auth = &Auth{
 				ClientToken:   resp.Auth.ClientToken,
 				Policies:      resp.Auth.Policies,

@@ -11,9 +11,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// AuthCookieName is the name of the cookie containing the token.
-const AuthCookieName = "token"
-
 // AuthHeaderName is the name of the header containing the token.
 const AuthHeaderName = "X-Vault-Token"
 
@@ -135,12 +132,6 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
-	// Attach the cookie value as the token if we have it
-	cookie, err := r.Cookie(AuthCookieName)
-	if err == nil {
-		req.ClientToken = cookie.Value
-	}
-
 	// Attach the header value if we have it
 	if v := r.Header.Get(AuthHeaderName); v != "" {
 		req.ClientToken = v

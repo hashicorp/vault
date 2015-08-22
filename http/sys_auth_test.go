@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 
@@ -14,10 +13,7 @@ func TestSysAuth(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp, err := http.Get(addr + "/v1/sys/auth")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp := testHttpGet(t, token, addr+"/v1/sys/auth")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -39,16 +35,13 @@ func TestSysEnableAuth(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/auth/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]interface{}{
 		"type":        "noop",
 		"description": "foo",
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/auth")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/auth")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -74,19 +67,16 @@ func TestSysDisableAuth(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/auth/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]interface{}{
 		"type":        "noop",
 		"description": "foo",
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpDelete(t, addr+"/v1/sys/auth/foo")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/auth/foo")
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/auth")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/auth")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{

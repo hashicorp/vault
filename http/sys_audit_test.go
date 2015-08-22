@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 
@@ -14,15 +13,12 @@ func TestSysAudit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/audit/noop", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/audit/noop", map[string]interface{}{
 		"type": "noop",
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/audit")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/audit")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -45,18 +41,15 @@ func TestSysDisableAudit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/audit/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/audit/foo", map[string]interface{}{
 		"type": "noop",
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpDelete(t, addr+"/v1/sys/audit/foo")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/audit/foo")
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/audit")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/audit")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{}
