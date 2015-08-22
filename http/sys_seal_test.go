@@ -52,7 +52,7 @@ func TestSysSeal(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, addr+"/v1/sys/seal", nil)
+	resp := testHttpPut(t, token, addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, resp, 204)
 
 	check, err := core.Sealed()
@@ -70,7 +70,7 @@ func TestSysSeal_unsealed(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, addr+"/v1/sys/seal", nil)
+	resp := testHttpPut(t, token, addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, resp, 204)
 
 	check, err := core.Sealed()
@@ -88,7 +88,7 @@ func TestSysUnseal(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, addr+"/v1/sys/unseal", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
 		"key": hex.EncodeToString(key),
 	})
 
@@ -112,7 +112,7 @@ func TestSysUnseal_badKey(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, addr+"/v1/sys/unseal", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
 		"key": "0123",
 	})
 
