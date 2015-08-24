@@ -18,7 +18,7 @@ type sshOTP struct {
 
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "creds/(?P<role>[-\\w]+)",
+		Pattern: "creds/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -155,14 +155,14 @@ func (b *backend) pathCredsCreateWrite(
 
 	// If the lease information is set, update it in secret.
 	if lease != nil {
-		result.Secret.Lease = lease.Lease
-		result.Secret.LeaseGracePeriod = lease.LeaseMax
+		result.Secret.TTL = lease.Lease
+		result.Secret.GracePeriod = lease.LeaseMax
 	}
 
 	// If lease information is not set, set it to 10 minutes.
 	if lease == nil {
-		result.Secret.Lease = 10 * time.Minute
-		result.Secret.LeaseGracePeriod = 2 * time.Minute
+		result.Secret.TTL = 10 * time.Minute
+		result.Secret.GracePeriod = 2 * time.Minute
 	}
 
 	return result, nil
@@ -257,7 +257,7 @@ Creates a credential for establishing SSH connection with the remote host.
 const pathCredsCreateHelpDesc = `
 This path will generate a new key for establishing SSH session with
 target host. The key can either be a long lived dynamic key or a One
-Time Password (OTP), using 'key_type' parameter being 'dynamic' or 
+Time Password (OTP), using 'key_type' parameter being 'dynamic' or
 'otp' respectively. For dynamic keys, a named key should be supplied.
 Create named key using the 'keys/' endpoint, and this represents the
 shared SSH key of target host. If this backend is mounted at 'ssh',

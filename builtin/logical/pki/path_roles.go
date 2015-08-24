@@ -11,7 +11,7 @@ import (
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `roles/(?P<name>\w[\w-]+\w)`,
+		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -72,6 +72,13 @@ more information.`,
 				Description: `If set, clients can request certificates for
 any CN they like. See the documentation for more
 information.`,
+			},
+
+			"enforce_hostnames": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, only valid host names are allowed for
+CN and SANs.`,
 			},
 
 			"allow_ip_sans": &framework.FieldSchema{
@@ -185,6 +192,7 @@ func (b *backend) pathRoleCreate(
 		AllowTokenDisplayName: data.Get("allow_token_displayname").(bool),
 		AllowSubdomains:       data.Get("allow_subdomains").(bool),
 		AllowAnyName:          data.Get("allow_any_name").(bool),
+		EnforceHostnames:      data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:           data.Get("allow_ip_sans").(bool),
 		ServerFlag:            data.Get("server_flag").(bool),
 		ClientFlag:            data.Get("client_flag").(bool),
@@ -259,6 +267,7 @@ type roleEntry struct {
 	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
 	AllowSubdomains       bool   `json:"allow_subdomains" structs:"allow_subdomains" mapstructure:"allow_subdomains"`
 	AllowAnyName          bool   `json:"allow_any_name" structs:"allow_any_name" mapstructure:"allow_any_name"`
+	EnforceHostnames      bool   `json:"enforce_hostnames" structs:"enforce_hostnames" mapstructure:"enforce_hostnames"`
 	AllowIPSANs           bool   `json:"allow_ip_sans" structs:"allow_ip_sans" mapstructure:"allow_ip_sans"`
 	ServerFlag            bool   `json:"server_flag" structs:"server_flag" mapstructure:"server_flag"`
 	ClientFlag            bool   `json:"client_flag" structs:"client_flag" mapstructure:"client_flag"`

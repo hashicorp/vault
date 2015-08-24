@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 
@@ -14,10 +13,7 @@ func TestSysPolicies(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp, err := http.Get(addr + "/v1/sys/policy")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp := testHttpGet(t, token, addr+"/v1/sys/policy")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -36,10 +32,7 @@ func TestSysReadPolicy(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp, err := http.Get(addr + "/v1/sys/policy/root")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp := testHttpGet(t, token, addr+"/v1/sys/policy/root")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -59,15 +52,12 @@ func TestSysWritePolicy(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/policy/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]interface{}{
 		"rules": ``,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/policy")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/policy")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -86,18 +76,15 @@ func TestSysDeletePolicy(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/policy/foo", map[string]interface{}{
+	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]interface{}{
 		"rules": ``,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpDelete(t, addr+"/v1/sys/policy/foo")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/policy/foo")
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/policy")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/policy")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{

@@ -20,26 +20,26 @@ import (
 // lease duration.
 func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc {
 	return func(req *logical.Request, data *FieldData) (*logical.Response, error) {
-		lease := detectLease(req)
-		if lease == nil {
+		leaseOpts := detectLease(req)
+		if leaseOpts == nil {
 			return nil, fmt.Errorf("no lease options for request")
 		}
 
 		// Check if we should limit max
 		if maxFromLease {
-			max = lease.Lease
+			max = leaseOpts.TTL
 		}
 
 		// Sanity check the desired increment
 		switch {
 		// Protect against negative leases
-		case lease.LeaseIncrement < 0:
+		case leaseOpts.Increment < 0:
 			return logical.ErrorResponse(
 				"increment must be greater than 0"), logical.ErrInvalidRequest
 
-		// If no lease increment, or too large of an increment, use the max
-		case max > 0 && lease.LeaseIncrement == 0, max > 0 && lease.LeaseIncrement > max:
-			lease.LeaseIncrement = max
+			// If no lease increment, or too large of an increment, use the max
+		case max > 0 && leaseOpts.Increment == 0, max > 0 && leaseOpts.Increment > max:
+			leaseOpts.Increment = max
 		}
 
 		// Get the current time
@@ -48,7 +48,7 @@ func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc
 		// Check if we're passed the issue limit
 		var maxSessionTime time.Time
 		if maxSession > 0 {
-			maxSessionTime = lease.LeaseIssue.Add(maxSession)
+			maxSessionTime = leaseOpts.IssueTime.Add(maxSession)
 			if maxSessionTime.Before(now) {
 				return logical.ErrorResponse(fmt.Sprintf(
 					"lease can only be renewed up to %s past original issue",
@@ -56,9 +56,9 @@ func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc
 			}
 		}
 
-		// The new lease is the minimum of the requested LeaseIncrement
+		// The new lease is the minimum of the requested Increment
 		// or the maxSessionTime
-		requestedLease := now.Add(lease.LeaseIncrement)
+		requestedLease := now.Add(leaseOpts.Increment)
 		if !maxSessionTime.IsZero() && requestedLease.After(maxSessionTime) {
 			requestedLease = maxSessionTime
 		}
@@ -67,7 +67,8 @@ func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc
 		newLeaseDuration := requestedLease.Sub(now)
 
 		// Set the lease
-		lease.Lease = newLeaseDuration
+		leaseOpts.TTL = newLeaseDuration
+
 		return &logical.Response{Auth: req.Auth, Secret: req.Secret}, nil
 	}
 }

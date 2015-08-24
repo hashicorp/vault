@@ -38,7 +38,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 	}
 }
 
-func TestPassthroughBackend_Read(t *testing.T) {
+func TestPassthroughBackend_Read_Lease(t *testing.T) {
 	b := testPassthroughBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
@@ -61,12 +61,51 @@ func TestPassthroughBackend_Read(t *testing.T) {
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				Lease:     time.Hour,
+				TTL:       time.Hour,
 			},
 		},
 		Data: map[string]interface{}{
 			"raw":   "test",
 			"lease": "1h",
+		},
+	}
+
+	resp.Secret.InternalData = nil
+	resp.Secret.LeaseID = ""
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
+	}
+}
+
+func TestPassthroughBackend_Read_TTL(t *testing.T) {
+	b := testPassthroughBackend()
+	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req.Data["raw"] = "test"
+	req.Data["ttl"] = "1h"
+	storage := req.Storage
+
+	if _, err := b.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "foo")
+	req.Storage = storage
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+				TTL:       time.Hour,
+			},
+		},
+		Data: map[string]interface{}{
+			"raw": "test",
+			"ttl": "1h",
 		},
 	}
 

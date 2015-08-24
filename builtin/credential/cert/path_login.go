@@ -66,7 +66,7 @@ func (b *backend) pathLogin(
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				Lease:     matched.Entry.Lease,
+				TTL:       matched.Entry.TTL,
 			},
 		},
 	}
@@ -187,5 +187,5 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	return framework.LeaseExtend(cert.Lease, 0, false)(req, d)
+	return framework.LeaseExtend(cert.TTL, 0, false)(req, d)
 }

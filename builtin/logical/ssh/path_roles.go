@@ -30,7 +30,7 @@ type sshRole struct {
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/(?P<role>[-\\w]+)",
+		Pattern: "roles/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type: framework.TypeString,

@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"errors"
+
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
-	"errors"
 )
 
 type NoopAudit struct {
@@ -261,7 +262,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				Lease: 1 * time.Hour,
+				TTL: 1 * time.Hour,
 			},
 		},
 		Data: map[string]interface{}{

@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Secret Backend: SSH"
 sidebar_current: "docs-secrets-ssh"
 description: |-
-  SSH backend for Vault generates SSH credentials which are either Dynamic private keys or One-Time-Passwords. 
+  The SSH secret backend for Vault generates dynamic SSH keys or One-Time-Passwords. 
 ---
 
 # SSH Secret Backend
@@ -16,7 +16,7 @@ everyone who needs access to infrastructures. It also solves the problem of
 management and distribution of keys belonging to remote hosts.
 
 This backend supports two types of credential creation: Dynamic and OTP. Both of
-them address the problems in different ways.
+them addresses the problems in different ways.
 
 Read and carefully understand both of them and choose the one which best suits
 your needs.
@@ -36,10 +36,7 @@ creates a key-pair, uses the previously shared secret key to login to the remote
 host and appends the newly generated public key to `~/.ssh/authorized_keys` file for 
 the desired username. Vault uses an install script (configurable) to achieve this.
 To run this script in super user mode without password prompts, `NOPASSWD` option
-should be enabled for the admin username which is registered with Vault.
-
-One way to do this is to disable password prompts for all the sudoers (shown below). 
-It is also possible to disable password prompt for specific users, if you so wish.
+for sudoers should be enabled at all remote hosts.
 
 File: `/etc/sudoers`
 
@@ -86,11 +83,42 @@ $ vault write ssh/roles/dynamic_key_role key_type=dynamic key=dev_key admin_user
 Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
-Creation of role uses a [default install script](https://github.com/hashicorp/vault/
-blob/master/builtin/logical/ssh/linux_install_script.go) which is compiled into the
-binary.  Understand the parameters required by the script and register a custom `install_script`
-if hosts does not resemble a typical Linux machine or if the binaries used in the
-default script are not present in hosts.
+Use the `install_script` option to provide an install script if hosts does not
+resemble typical Linux machine. The default script is compiled into the binary.
+It is straight forward and is shown below. The script takes three arguments which
+are explained in the comments.
+
+```shell
+# This script file installs or uninstalls an RSA public key to/from authoried_keys
+# file in a typical linux machine. This script should be registered with vault
+# server while creating a role for key type 'dynamic'.
+
+# $1: "install" or "uninstall"
+#
+# $2: File name containing public key to be installed. Vault server uses UUID
+# as file name to avoid collisions with public keys generated for requests.
+#
+# $3: Absolute path of the authorized_keys file.
+
+if [ $1 != "install" && $1 != "uninstall" ]; then
+	exit 1
+fi
+
+# If the key being installed is already present in the authorized_keys file, it is
+# removed and the result is stored in a temporary file.
+grep -vFf $2 $3 > temp_$2
+
+# Contents of temporary file will be the contents of authorized_keys file.
+cat temp_$2 | sudo tee $3
+
+if [ $1 == "install" ]; then
+# New public key is appended to authorized_keys file
+cat $2 | sudo tee --append $3
+fi
+
+# Auxiliary files are deleted
+rm -f $2 temp_$2
+```
 
 ### Create a credential
 

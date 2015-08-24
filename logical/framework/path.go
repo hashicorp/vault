@@ -8,6 +8,12 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+// Helper which returns a generic regex string for creating endpoint patterns
+// that are identified by the given name in the backends
+func GenericNameRegex(name string) string {
+	return fmt.Sprintf("(?P<%s>\\w[\\w-]+\\w)", name)
+}
+
 // PathAppend is a helper for appending lists of paths into a single
 // list.
 func PathAppend(paths ...[]*Path) []*Path {

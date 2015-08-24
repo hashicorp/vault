@@ -14,7 +14,7 @@ import (
 
 func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `issue/(?P<role>\w[\w-]+\w)`,
+		Pattern: "issue/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
 			"role": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -177,7 +177,7 @@ func (b *backend) pathIssueCert(
 			"serial_number": cb.SerialNumber,
 		})
 
-	resp.Secret.Lease = lease
+	resp.Secret.TTL = lease
 
 	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "certs/" + cb.SerialNumber,

@@ -41,16 +41,13 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, addr+"/v1/sys/rekey/init", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/rekey/init")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -73,13 +70,13 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, addr+"/v1/sys/rekey/init", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpDelete(t, addr+"/v1/sys/rekey/init")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/rekey/init")
 	testResponseStatus(t, resp, 204)
 
 	resp, err := http.Get(addr + "/v1/sys/rekey/init")
@@ -108,7 +105,7 @@ func TestSysRekey_badKey(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, addr+"/v1/sys/rekey/update", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
 		"key": "0123",
 	})
 	testResponseStatus(t, resp, 400)
@@ -120,13 +117,13 @@ func TestSysRekey_Update(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, addr+"/v1/sys/rekey/init", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpPut(t, addr+"/v1/sys/rekey/update", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
 		"key": hex.EncodeToString(master),
 	})
 

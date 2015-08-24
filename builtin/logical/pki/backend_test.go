@@ -277,6 +277,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		Wildcard          bool `structs:"*.example.com"`
 		Subdomain         bool `structs:"foo.bar.example.com"`
 		SubdomainWildcard bool `structs:"*.bar.example.com"`
+		NonHostname       bool `structs:"daɪˈɛrɨsɨs"`
 		AnyHost           bool `structs:"porkslap.beer"`
 	}
 
@@ -356,7 +357,12 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		addCnTests()
 
 		roleVals.AllowAnyName = true
+		roleVals.EnforceHostnames = true
 		commonNames.AnyHost = true
+		addCnTests()
+
+		roleVals.EnforceHostnames = false
+		commonNames.NonHostname = true
 		addCnTests()
 	}
 

@@ -11,12 +11,13 @@ import (
 // Request is a raw request configuration structure used to initiate
 // API requests to the Vault server.
 type Request struct {
-	Method   string
-	URL      *url.URL
-	Params   url.Values
-	Obj      interface{}
-	Body     io.Reader
-	BodySize int64
+	Method      string
+	URL         *url.URL
+	Params      url.Values
+	ClientToken string
+	Obj         interface{}
+	Body        io.Reader
+	BodySize    int64
 }
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
@@ -56,6 +57,10 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 	req.URL.Scheme = r.URL.Scheme
 	req.URL.Host = r.URL.Host
 	req.Host = r.URL.Host
+
+	if len(r.ClientToken) != 0 {
+		req.Header.Set("X-Vault-Token", r.ClientToken)
+	}
 
 	return req, nil
 }
