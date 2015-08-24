@@ -3,6 +3,7 @@ package aws
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -46,7 +47,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Generate a random username. We don't put the policy names in the
 	// username because the AWS console makes it pretty easy to see that.
-	username := fmt.Sprintf("vault-%s-%d-%d", displayName, time.Now().Unix(), rand.Int31n(10000))
+	username := fmt.Sprintf("vault-%s-%d-%d", normalizeDisplayName(displayName), time.Now().Unix(), rand.Int31n(10000))
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -140,4 +141,8 @@ func secretAccessKeysRevoke(
 	}
 
 	return nil, nil
+}
+
+func normalizeDisplayName(displayName string) string {
+	return strings.Replace(displayName, " ", "_", -1)
 }
