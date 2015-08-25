@@ -206,11 +206,6 @@ func TestInit_PGP(t *testing.T) {
 	expected := &vault.SealConfig{
 		SecretShares:    3,
 		SecretThreshold: 2,
-		SecretPGPKeys: []string{
-			strings.Replace(pubKey1, "\n", "", -1),
-			strings.Replace(pubKey2, "\n", "", -1),
-			strings.Replace(pubKey3, "\n", "", -1),
-		},
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
 		t.Fatalf("bad:\nexpected: %#v\ngot: %#v", expected, sealConf)

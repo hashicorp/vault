@@ -89,7 +89,7 @@ type SealConfig struct {
 	// if requested, to encrypt the output unseal tokens. If
 	// provided, it sets the value of SecretShares. Ordering
 	// is important.
-	SecretPGPKeys []string `json:"secret_pgp_keys"`
+	SecretPGPKeys []string `json:"-"`
 
 	// SecretThreshold is the number of parts required
 	// to open the vault. This is the T value of Shamir
