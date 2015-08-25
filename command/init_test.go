@@ -169,7 +169,7 @@ func TestInit_PGP(t *testing.T) {
 	args := []string{
 		"-address", addr,
 		"-key-shares", "2",
-		"-pgp-keys", tempDir + "/pubkey1," + tempDir + "/pubkey2," + tempDir + "/pubkey3",
+		"-pgp-keys", tempDir + "/pubkey1,@" + tempDir + "/pubkey2," + tempDir + "/pubkey3",
 		"-key-threshold", "2",
 	}
 

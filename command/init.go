@@ -27,6 +27,9 @@ func (g *pgpkeys) Set(value string) error {
 		return errors.New("pgp-keys can only be specified once")
 	}
 	for _, keyfile := range strings.Split(value, ",") {
+		if keyfile[0] == '@' {
+			keyfile = keyfile[1:]
+		}
 		f, err := os.Open(keyfile)
 		if err != nil {
 			return err
