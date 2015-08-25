@@ -77,6 +77,14 @@ description: |-
         The number of shares required to reconstruct the master key.
         This must be less than or equal to <code>secret_shares</code>.
       </li>
+      <li>
+        <spam class="param">secret_pgp_keys</span>
+        <span class="param-flags">optional</spam>
+        An array of PGP public keys used to encrypt the output unseal keys.
+        Ordering is preserved. The keys must be base64-encoded from their
+        original binary representation. The size of this array must be the
+        same as <code>secret_shares</code>.
+      </li>
     </ul>
   </dd>
 
@@ -152,4 +160,3 @@ description: |-
 
   </dd>
 </dl>
-
