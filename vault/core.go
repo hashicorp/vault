@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
@@ -78,8 +82,14 @@ var (
 // SealConfig is used to describe the seal configuration
 type SealConfig struct {
 	// SecretShares is the number of shares the secret is
-	// split into. This is the N value of Shamir
+	// split into. This is the N value of Shamir.
 	SecretShares int `json:"secret_shares"`
+
+	// SecretPGPKeys is the array of public PGP keys used,
+	// if requested, to encrypt the output unseal tokens. If
+	// provided, it sets the value of SecretShares. Ordering
+	// is important.
+	SecretPGPKeys []string `json:"secret_pgp_keys"`
 
 	// SecretThreshold is the number of parts required
 	// to open the vault. This is the T value of Shamir
@@ -105,6 +115,21 @@ func (s *SealConfig) Validate() error {
 	}
 	if s.SecretThreshold > s.SecretShares {
 		return fmt.Errorf("secret threshold cannot be larger than secret shares")
+	}
+	if len(s.SecretPGPKeys) > 0 && len(s.SecretPGPKeys) != s.SecretShares {
+		return fmt.Errorf("count mismatch between number of provided PGP keys and number of shares")
+	}
+	if len(s.SecretPGPKeys) > 0 {
+		for _, keystring := range s.SecretPGPKeys {
+			data, err := base64.StdEncoding.DecodeString(keystring)
+			if err != nil {
+				return fmt.Errorf("Error decoding given PGP key: %s", err)
+			}
+			_, err = openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
+			if err != nil {
+				return fmt.Errorf("Error parsing given PGP key: %s", err)
+			}
+		}
 	}
 	return nil
 }
@@ -703,7 +728,6 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	results := new(InitResult)
 	if config.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, masterKey)
-
 	} else {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(masterKey, config.SecretShares, config.SecretThreshold)
@@ -712,6 +736,33 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
+	}
+
+	if len(config.SecretPGPKeys) > 0 {
+		if len(results.SecretShares) != len(config.SecretPGPKeys) {
+			return nil, fmt.Errorf("Mismatch between number of generated shares and number of PGP keys")
+		}
+		for i, keystring := range config.SecretPGPKeys {
+			data, err := base64.StdEncoding.DecodeString(keystring)
+			if err != nil {
+				return nil, fmt.Errorf("Error decoding given PGP key: %s", err)
+			}
+			entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
+			if err != nil {
+				return nil, fmt.Errorf("Error parsing given PGP key: %s", err)
+			}
+			ctBuf := bytes.NewBuffer(nil)
+			pt, err := openpgp.Encrypt(ctBuf, []*openpgp.Entity{entity}, nil, nil, nil)
+			if err != nil {
+				return nil, fmt.Errorf("Error setting up encryption for PGP message: %s", err)
+			}
+			_, err = pt.Write(results.SecretShares[i])
+			if err != nil {
+				return nil, fmt.Errorf("Error encrypting PGP message: %s", err)
+			}
+			pt.Close()
+			results.SecretShares[i] = ctBuf.Bytes()
+		}
 	}
 
 	// Initialize the barrier
@@ -849,6 +900,7 @@ func (c *Core) SealConfig() (*SealConfig, error) {
 		c.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
 		return nil, fmt.Errorf("seal validation failed: %v", err)
 	}
+
 	return &conf, nil
 }
 

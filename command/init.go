@@ -1,7 +1,11 @@
 package command
 
 import (
+	"bytes"
+	"encoding/base64"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -12,12 +16,41 @@ type InitCommand struct {
 	Meta
 }
 
+type pgpkeys []string
+
+func (g *pgpkeys) String() string {
+	return fmt.Sprint(*g)
+}
+
+func (g *pgpkeys) Set(value string) error {
+	if len(*g) > 0 {
+		return errors.New("pgp-keys can only be specified once")
+	}
+	for _, keyfile := range strings.Split(value, ",") {
+		f, err := os.Open(keyfile)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		buf := bytes.NewBuffer(nil)
+		_, err = buf.ReadFrom(f)
+		if err != nil {
+			return err
+		}
+
+		*g = append(*g, base64.StdEncoding.EncodeToString(buf.Bytes()))
+	}
+	return nil
+}
+
 func (c *InitCommand) Run(args []string) int {
-	var shares, threshold int
+	var threshold, shares int
+	var pgpKeys pgpkeys
 	flags := c.Meta.FlagSet("init", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	flags.IntVar(&shares, "key-shares", 5, "")
+	flags.IntVar(&shares, "key-shares", 0, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
+	flags.Var(&pgpKeys, "pgp-keys", "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
@@ -29,9 +62,16 @@ func (c *InitCommand) Run(args []string) int {
 		return 1
 	}
 
+	if shares == 0 && len(pgpKeys) == 0 {
+		shares = 5
+	}
+
+	c.Ui.Warn(fmt.Sprintf("Number of shares: %d, length of pgp-keys: %d", shares, len(pgpKeys)))
+
 	resp, err := client.Sys().Init(&api.InitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
+		SecretPGPKeys:   pgpKeys,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -90,6 +130,16 @@ Init Options:
   -key-threshold=3        The number of key shares required to reconstruct
                           the master key.
 
+  -pgp-keys               If provided, must be a comma-separated list of
+                          files on disk containing binary-format public PGP
+                          keys. The number of files must match 'key-shares',
+                          or you can omit 'key-shares' if using this option.
+                          The output unseal keys will be hex-encoded and
+                          encrypted, in order, with the given public keys.
+                          If you want to use them with the 'vault unseal'
+                          command, you will need to hex decode, decrypt, and
+                          hex encode the result; this will be the plaintext
+                          unseal key.
 `
 	return strings.TrimSpace(helpText)
 }

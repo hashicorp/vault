@@ -19,6 +19,10 @@ func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
 		"secret_threshold": opts.SecretThreshold,
 	}
 
+	if len(opts.SecretPGPKeys) != 0 {
+		body["secret_pgp_keys"] = opts.SecretPGPKeys
+	}
+
 	r := c.c.NewRequest("PUT", "/v1/sys/init")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
@@ -38,6 +42,7 @@ func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
 type InitRequest struct {
 	SecretShares    int
 	SecretThreshold int
+	SecretPGPKeys   []string
 }
 
 type InitStatusResponse struct {
