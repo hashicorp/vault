@@ -176,8 +176,9 @@ func TestRekey_init_pgp(t *testing.T) {
 	args := []string{
 		"-address", addr,
 		"-init",
+		"-key-shares", "3",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
-		"-key-threshold=2",
+		"-key-threshold", "2",
 	}
 
 	if code := c.Run(args); code != 0 {

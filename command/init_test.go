@@ -147,6 +147,7 @@ func TestInit_PGP(t *testing.T) {
 
 	args = []string{
 		"-address", addr,
+		"-key-shares", "3",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
 		"-key-threshold", "2",
 	}
@@ -177,7 +178,7 @@ func TestInit_PGP(t *testing.T) {
 	if !reflect.DeepEqual(expected, sealConf) {
 		t.Fatalf("bad:\nexpected: %#v\ngot: %#v", expected, sealConf)
 	}
-	
+
 	re, err := regexp.Compile("\\s+Initial Root Token:\\s+(.*)")
 	if err != nil {
 		t.Fatalf("Error compiling regex: %s", err)

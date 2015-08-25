@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/hex"
-	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/vault/vault"
@@ -41,19 +40,11 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	switch {
-	case req.SecretShares > 0 && len(req.SecretPGPKeys) > 0 && len(req.SecretPGPKeys) != req.SecretShares:
-		respondError(w, http.StatusBadRequest, fmt.Errorf("Mismatch between key-shares and length of pgp-keys (you can specify pgp-keys alone)"))
-		return
-	case req.SecretShares == 0 && len(req.SecretPGPKeys) > 0:
-		req.SecretShares = len(req.SecretPGPKeys)
-	}
-
 	// Initialize
 	result, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
-		SecretPGPKeys:   req.SecretPGPKeys,
+		PGPKeys:         req.PGPKeys,
 	})
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
@@ -75,7 +66,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 type InitRequest struct {
 	SecretShares    int      `json:"secret_shares"`
 	SecretThreshold int      `json:"secret_threshold"`
-	SecretPGPKeys   []string `json:"secret_pgp_keys"`
+	PGPKeys         []string `json:"pgp_keys"`
 }
 
 type InitResponse struct {

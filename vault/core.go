@@ -86,11 +86,11 @@ type SealConfig struct {
 	// split into. This is the N value of Shamir.
 	SecretShares int `json:"secret_shares"`
 
-	// SecretPGPKeys is the array of public PGP keys used,
+	// PGPKeys is the array of public PGP keys used,
 	// if requested, to encrypt the output unseal tokens. If
 	// provided, it sets the value of SecretShares. Ordering
 	// is important.
-	SecretPGPKeys []string `json:"-"`
+	PGPKeys []string `json:"-"`
 
 	// SecretThreshold is the number of parts required
 	// to open the vault. This is the T value of Shamir
@@ -117,11 +117,11 @@ func (s *SealConfig) Validate() error {
 	if s.SecretThreshold > s.SecretShares {
 		return fmt.Errorf("secret threshold cannot be larger than secret shares")
 	}
-	if len(s.SecretPGPKeys) > 0 && len(s.SecretPGPKeys) != s.SecretShares {
+	if len(s.PGPKeys) > 0 && len(s.PGPKeys) != s.SecretShares {
 		return fmt.Errorf("count mismatch between number of provided PGP keys and number of shares")
 	}
-	if len(s.SecretPGPKeys) > 0 {
-		for _, keystring := range s.SecretPGPKeys {
+	if len(s.PGPKeys) > 0 {
+		for _, keystring := range s.PGPKeys {
 			data, err := base64.StdEncoding.DecodeString(keystring)
 			if err != nil {
 				return fmt.Errorf("Error decoding given PGP key: %s", err)
@@ -739,10 +739,12 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 		results.SecretShares = shares
 	}
 
-	if len(config.SecretPGPKeys) > 0 {
-		if err := pgpkeys.EncryptShares(&results.SecretShares, &config.SecretPGPKeys); err != nil {
+	if len(config.PGPKeys) > 0 {
+		encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, config.PGPKeys)
+		if err != nil {
 			return nil, err
 		}
+		results.SecretShares = encryptedShares
 	}
 
 	// Initialize the barrier
@@ -1217,10 +1219,12 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 		results.SecretShares = shares
 	}
 
-	if len(c.rekeyConfig.SecretPGPKeys) > 0 {
-		if err := pgpkeys.EncryptShares(&results.SecretShares, &c.rekeyConfig.SecretPGPKeys); err != nil {
+	if len(c.rekeyConfig.PGPKeys) > 0 {
+		encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, c.rekeyConfig.PGPKeys)
+		if err != nil {
 			return nil, err
 		}
+		results.SecretShares = encryptedShares
 	}
 
 	// Encode the seal configuration

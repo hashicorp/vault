@@ -18,7 +18,7 @@ func (c *InitCommand) Run(args []string) int {
 	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("init", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	flags.IntVar(&shares, "key-shares", 0, "")
+	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
 	if err := flags.Parse(args); err != nil {
@@ -32,18 +32,10 @@ func (c *InitCommand) Run(args []string) int {
 		return 1
 	}
 
-	if shares == 0 {
-		if pgpKeys == nil {
-			shares = 5
-		} else {
-			shares = len(pgpKeys)
-		}
-	}
-
 	resp, err := client.Sys().Init(&api.InitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
-		SecretPGPKeys:   pgpKeys,
+		PGPKeys:         pgpKeys,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -104,8 +96,7 @@ Init Options:
 
   -pgp-keys               If provided, must be a comma-separated list of
                           files on disk containing binary-format public PGP
-                          keys. The number of files must match 'key-shares',
-                          or you can omit 'key-shares' if using this option.
+                          keys. The number of files must match 'key-shares'.
                           The output unseal keys will be hex-encoded and
                           encrypted, in order, with the given public keys.
                           If you want to use them with the 'vault unseal'

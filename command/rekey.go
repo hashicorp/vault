@@ -27,7 +27,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	flags.BoolVar(&init, "init", false, "")
 	flags.BoolVar(&cancel, "cancel", false, "")
 	flags.BoolVar(&status, "status", false, "")
-	flags.IntVar(&shares, "key-shares", 0, "")
+	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -40,14 +40,6 @@ func (c *RekeyCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing client: %s", err))
 		return 2
-	}
-
-	if shares == 0 {
-		if pgpKeys == nil {
-			shares = 5
-		} else {
-			shares = len(pgpKeys)
-		}
 	}
 
 	// Check if we are running doing any restricted variants
@@ -71,7 +63,7 @@ func (c *RekeyCommand) Run(args []string) int {
 		err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    shares,
 			SecretThreshold: threshold,
-			SecretPGPKeys:   pgpKeys,
+			PGPKeys:         pgpKeys,
 		})
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -153,7 +145,7 @@ func (c *RekeyCommand) initRekey(client *api.Client, shares, threshold int, pgpK
 	err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
-		SecretPGPKeys:   pgpKeys,
+		PGPKeys:         pgpKeys,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -241,8 +233,7 @@ Unseal Options:
 
   -pgp-keys               If provided, must be a comma-separated list of
                           files on disk containing binary-format public PGP
-                          keys. The number of files must match 'key-shares',
-                          or you can omit 'key-shares' if using this option.
+                          keys. The number of files must match 'key-shares'.
                           The output unseal keys will be hex-encoded and
                           encrypted, in order, with the given public keys.
                           If you want to use them with the 'vault unseal'
