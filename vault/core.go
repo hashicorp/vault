@@ -19,6 +19,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -739,29 +740,8 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	if len(config.SecretPGPKeys) > 0 {
-		if len(results.SecretShares) != len(config.SecretPGPKeys) {
-			return nil, fmt.Errorf("Mismatch between number of generated shares and number of PGP keys")
-		}
-		for i, keystring := range config.SecretPGPKeys {
-			data, err := base64.StdEncoding.DecodeString(keystring)
-			if err != nil {
-				return nil, fmt.Errorf("Error decoding given PGP key: %s", err)
-			}
-			entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
-			if err != nil {
-				return nil, fmt.Errorf("Error parsing given PGP key: %s", err)
-			}
-			ctBuf := bytes.NewBuffer(nil)
-			pt, err := openpgp.Encrypt(ctBuf, []*openpgp.Entity{entity}, nil, nil, nil)
-			if err != nil {
-				return nil, fmt.Errorf("Error setting up encryption for PGP message: %s", err)
-			}
-			_, err = pt.Write(results.SecretShares[i])
-			if err != nil {
-				return nil, fmt.Errorf("Error encrypting PGP message: %s", err)
-			}
-			pt.Close()
-			results.SecretShares[i] = ctBuf.Bytes()
+		if err := pgpkeys.EncryptShares(&results.SecretShares, &config.SecretPGPKeys); err != nil {
+			return nil, err
 		}
 	}
 
@@ -1227,7 +1207,6 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 	results := new(RekeyResult)
 	if c.rekeyConfig.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, newMasterKey)
-
 	} else {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(newMasterKey, c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
@@ -1236,6 +1215,12 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
+	}
+
+	if len(c.rekeyConfig.SecretPGPKeys) > 0 {
+		if err := pgpkeys.EncryptShares(&results.SecretShares, &c.rekeyConfig.SecretPGPKeys); err != nil {
+			return nil, err
+		}
 	}
 
 	// Encode the seal configuration

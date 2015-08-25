@@ -2,6 +2,7 @@ package command
 
 import (
 	"encoding/hex"
+	"os"
 	"strings"
 	"testing"
 
@@ -151,4 +152,55 @@ func TestRekey_status(t *testing.T) {
 	if !strings.Contains(string(ui.OutputWriter.Bytes()), "Started: true") {
 		t.Fatalf("bad: %s", ui.OutputWriter.String())
 	}
+}
+
+func TestRekey_init_pgp(t *testing.T) {
+	core, key, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	ui := new(cli.MockUi)
+	c := &RekeyCommand{
+		Key: hex.EncodeToString(key),
+		Meta: Meta{
+			Ui: ui,
+		},
+	}
+
+	tempDir, pubFiles, err := getPubKeyFiles(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	args := []string{
+		"-address", addr,
+		"-init",
+		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
+		"-key-threshold=2",
+	}
+
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	config, err := core.RekeyConfig()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if config.SecretShares != 3 {
+		t.Fatal("should rekey")
+	}
+	if config.SecretThreshold != 2 {
+		t.Fatal("should rekey")
+	}
+
+	args = []string{
+		"-address", addr,
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), token, core)
 }

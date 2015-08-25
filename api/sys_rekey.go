@@ -55,8 +55,9 @@ func (c *Sys) RekeyUpdate(shard string) (*RekeyUpdateResponse, error) {
 }
 
 type RekeyInitRequest struct {
-	SecretShares    int `json:"secret_shares"`
-	SecretThreshold int `json:"secret_threshold"`
+	SecretShares    int      `json:"secret_shares"`
+	SecretThreshold int      `json:"secret_threshold"`
+	SecretPGPKeys   []string `json:"secret_pgp_keys"`
 }
 
 type RekeyStatusResponse struct {

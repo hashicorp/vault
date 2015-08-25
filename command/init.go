@@ -1,14 +1,11 @@
 package command
 
 import (
-	"bytes"
-	"encoding/base64"
-	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
@@ -16,39 +13,9 @@ type InitCommand struct {
 	Meta
 }
 
-type pgpkeys []string
-
-func (g *pgpkeys) String() string {
-	return fmt.Sprint(*g)
-}
-
-func (g *pgpkeys) Set(value string) error {
-	if len(*g) > 0 {
-		return errors.New("pgp-keys can only be specified once")
-	}
-	for _, keyfile := range strings.Split(value, ",") {
-		if keyfile[0] == '@' {
-			keyfile = keyfile[1:]
-		}
-		f, err := os.Open(keyfile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		buf := bytes.NewBuffer(nil)
-		_, err = buf.ReadFrom(f)
-		if err != nil {
-			return err
-		}
-
-		*g = append(*g, base64.StdEncoding.EncodeToString(buf.Bytes()))
-	}
-	return nil
-}
-
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares int
-	var pgpKeys pgpkeys
+	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("init", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 0, "")
@@ -65,11 +32,13 @@ func (c *InitCommand) Run(args []string) int {
 		return 1
 	}
 
-	if shares == 0 && len(pgpKeys) == 0 {
-		shares = 5
+	if shares == 0 {
+		if pgpKeys == nil {
+			shares = 5
+		} else {
+			shares = len(pgpKeys)
+		}
 	}
-
-	c.Ui.Warn(fmt.Sprintf("Number of shares: %d, length of pgp-keys: %d", shares, len(pgpKeys)))
 
 	resp, err := client.Sys().Init(&api.InitRequest{
 		SecretShares:    shares,
