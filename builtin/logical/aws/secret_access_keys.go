@@ -3,7 +3,7 @@ package aws
 import (
 	"fmt"
 	"math/rand"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -144,5 +144,6 @@ func secretAccessKeysRevoke(
 }
 
 func normalizeDisplayName(displayName string) string {
-	return strings.Replace(displayName, " ", "_", -1)
+	re := regexp.MustCompile("[^a-zA-Z+=,.@_-]")
+	return re.ReplaceAllString(displayName, "_")
 }
