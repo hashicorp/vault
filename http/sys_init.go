@@ -44,6 +44,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	result, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
+		PGPKeys:         req.PGPKeys,
 	})
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
@@ -63,8 +64,9 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 }
 
 type InitRequest struct {
-	SecretShares    int `json:"secret_shares"`
-	SecretThreshold int `json:"secret_threshold"`
+	SecretShares    int      `json:"secret_shares"`
+	SecretThreshold int      `json:"secret_threshold"`
+	PGPKeys         []string `json:"pgp_keys"`
 }
 
 type InitResponse struct {

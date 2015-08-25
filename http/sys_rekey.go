@@ -79,6 +79,7 @@ func handleSysRekeyInitPut(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	err := core.RekeyInit(&vault.SealConfig{
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
+		PGPKeys:         req.PGPKeys,
 	})
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
@@ -149,8 +150,9 @@ func handleSysRekeyUpdate(core *vault.Core) http.Handler {
 }
 
 type RekeyRequest struct {
-	SecretShares    int `json:"secret_shares"`
-	SecretThreshold int `json:"secret_threshold"`
+	SecretShares    int      `json:"secret_shares"`
+	SecretThreshold int      `json:"secret_threshold"`
+	PGPKeys         []string `json:"pgp_keys"`
 }
 
 type RekeyStatusResponse struct {
