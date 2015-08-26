@@ -28,7 +28,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/remount", proxySysRequest(core))
 	mux.Handle("/v1/sys/policy", handleSysListPolicies(core))
 	mux.Handle("/v1/sys/policy/", handleSysPolicy(core))
-	mux.Handle("/v1/sys/renew/", handleSysRenew(core))
+	mux.Handle("/v1/sys/renew/", proxySysRequest(core))
 	mux.Handle("/v1/sys/revoke/", handleSysRevoke(core))
 	mux.Handle("/v1/sys/revoke-prefix/", handleSysRevokePrefix(core))
 	mux.Handle("/v1/sys/auth", handleSysListAuth(core))
