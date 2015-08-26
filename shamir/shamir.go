@@ -194,9 +194,16 @@ func Combine(parts [][]byte) ([]byte, error) {
 	x_samples := make([]uint8, len(parts))
 	y_samples := make([]uint8, len(parts))
 
-	// Set the x value for each sample
+	// Set the x value for each sample and ensure no x_sample values are the same,
+	// otherwise div() can be unhappy
+	checkMap := map[byte]bool{}
 	for i, part := range parts {
-		x_samples[i] = part[firstPartLen-1]
+		samp := part[firstPartLen-1]
+		if exists := checkMap[samp]; exists {
+			return nil, fmt.Errorf("duplicte part detected")
+		}
+		checkMap[samp] = true
+		x_samples[i] = samp
 	}
 
 	// Reconstruct each byte
