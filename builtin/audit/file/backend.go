@@ -32,6 +32,14 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 		Path:   path,
 		LogRaw: logRaw,
 	}
+
+	// Ensure that the file can be successfully opened for writing;
+	// otherwise it will be too late to catch later without problems
+	// (ref: https://github.com/hashicorp/vault/issues/550)
+	if err := b.open(); err != nil {
+		return nil, fmt.Errorf("sanity check failed; unable to open given path for writing")
+	}
+
 	return b, nil
 }
 
