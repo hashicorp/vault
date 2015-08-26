@@ -43,12 +43,8 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 	req.Header.Set("Content-Type", "application/json")
 
 	if len(token) != 0 {
-		t.Logf("Setting token %s", token)
 		req.Header.Set("X-Vault-Token", token)
-	} else {
-		t.Log("No token set")
 	}
-	t.Logf("Request in http_test.go: %#v", req)
 
 	client := http.DefaultClient
 

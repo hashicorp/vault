@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -65,7 +66,11 @@ func stripPrefix(prefix, path string) (string, bool) {
 
 func parseRequest(r *http.Request, out interface{}) error {
 	dec := json.NewDecoder(r.Body)
-	return dec.Decode(out)
+	err := dec.Decode(out)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("Failed to parse JSON input: %s", err)
+	}
+	return err
 }
 
 // request is a helper to perform a request and properly exit in the
