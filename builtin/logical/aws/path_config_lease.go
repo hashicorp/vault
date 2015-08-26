@@ -24,7 +24,7 @@ func pathConfigLease(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-		    logical.ReadOperation: b.pathLeaseRead,
+			logical.ReadOperation:  b.pathLeaseRead,
 			logical.WriteOperation: b.pathLeaseWrite,
 		},
 
@@ -56,6 +56,13 @@ func (b *backend) pathLeaseWrite(
 	leaseRaw := d.Get("lease").(string)
 	leaseMaxRaw := d.Get("lease_max").(string)
 
+	if len(leaseRaw) == 0 {
+		return logical.ErrorResponse("'lease' is a required parameter"), nil
+	}
+	if len(leaseMaxRaw) == 0 {
+		return logical.ErrorResponse("'lease_max' is a required parameter"), nil
+	}
+
 	lease, err := time.ParseDuration(leaseRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -64,7 +71,7 @@ func (b *backend) pathLeaseWrite(
 	leaseMax, err := time.ParseDuration(leaseMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid lease: %s", err)), nil
+			"Invalid lease_max: %s", err)), nil
 	}
 
 	// Store it
