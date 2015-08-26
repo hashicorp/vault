@@ -173,6 +173,13 @@ For S3, the following options are supported:
 
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
+If you are running your Vault server on an EC2 instance, you can also make use
+of the EC2 instance profile service to provide the credentials Vault will use to
+make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
+will cause Vault to attempt to retrieve credentials from the metadata service.
+You are responsible for ensuring your instance is launched with the appropriate
+profile enabled. Vault will handle renewing profile credentials as they rotate.
+
 #### Backend Reference: MySQL
 
 The MySQL backend has the following options:
