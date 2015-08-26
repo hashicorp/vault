@@ -3,6 +3,7 @@ package pgpkeys
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 
 	"golang.org/x/crypto/openpgp"
@@ -34,7 +35,7 @@ func EncryptShares(secretShares [][]byte, pgpKeys []string) ([][]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Error setting up encryption for PGP message: %s", err)
 		}
-		_, err = pt.Write(secretShares[i])
+		_, err = pt.Write([]byte(hex.EncodeToString(secretShares[i])))
 		if err != nil {
 			return nil, fmt.Errorf("Error encrypting PGP message: %s", err)
 		}

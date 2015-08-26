@@ -113,7 +113,7 @@ func parseDecryptAndTestUnsealKeys(t *testing.T, input, rootToken string, core *
 			t.Fatalf("Error decrypting with key %d (%s): %s", i, encodedKeys[i], err)
 		}
 		ptBuf.ReadFrom(md.UnverifiedBody)
-		unsealKeys = append(unsealKeys, hex.EncodeToString(ptBuf.Bytes()))
+		unsealKeys = append(unsealKeys, ptBuf.String())
 	}
 
 	err = core.Seal(rootToken)
@@ -124,7 +124,7 @@ func parseDecryptAndTestUnsealKeys(t *testing.T, input, rootToken string, core *
 	for i, unsealKey := range unsealKeys {
 		unsealBytes, err := hex.DecodeString(unsealKey)
 		if err != nil {
-			t.Fatalf("Error decoding hex string %s: %s", unsealKey, err)
+			t.Fatalf("Error hex decoding unseal key %s: %s", unsealKey, err)
 		}
 		unsealed, err := core.Unseal(unsealBytes)
 		if err != nil {

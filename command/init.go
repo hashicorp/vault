@@ -97,12 +97,11 @@ Init Options:
   -pgp-keys               If provided, must be a comma-separated list of
                           files on disk containing binary-format public PGP
                           keys. The number of files must match 'key-shares'.
-                          The output unseal keys will be hex-encoded and
-                          encrypted, in order, with the given public keys.
+                          The output unseal keys will encrypted and hex-encoded,
+                          in order, with the given public keys.
                           If you want to use them with the 'vault unseal'
-                          command, you will need to hex decode, decrypt, and
-                          hex encode the result; this will be the plaintext
-                          unseal key.
+                          command, you will need to hex decode and decrypt;
+                          this will be the plaintext unseal key.
 `
 	return strings.TrimSpace(helpText)
 }

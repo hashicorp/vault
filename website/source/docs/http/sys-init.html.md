@@ -73,7 +73,8 @@ description: |-
 
   <dt>Returns</dt>
   <dd>
-    A JSON-encoded object including the master keys and initial root token:
+    A JSON-encoded object including the (possibly encrypted, if
+    <code>pgp_keys</code> was provided) master keys and initial root token:
 
     ```javascript
     {

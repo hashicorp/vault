@@ -149,7 +149,8 @@ description: |-
 
   <dt>Returns</dt>
   <dd>
-    A JSON-encoded object indicating completion and if so with the new master keys:
+    A JSON-encoded object indicating completion and if so with the (possibly
+    encrypted, if <code>pgp_keys</code> was provided) new master keys:
 
     ```javascript
     {
