@@ -5,7 +5,6 @@ import "time"
 // SystemView exposes system configuration information in a safe way
 // for logical backends to consume
 type SystemView interface {
-
 	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	DefaultLeaseTTL() time.Duration
 
