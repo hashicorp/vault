@@ -59,7 +59,7 @@ type Backend struct {
 	logger    *log.Logger
 	once      sync.Once
 	pathsRe   []*regexp.Regexp
-	sysconfig *logical.SystemConfig
+	sysconfig logical.SystemView
 }
 
 // OperationFunc is the callback called for an operation on a path.
@@ -143,7 +143,7 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 // Setup is used to initialize the backend with the initial backend configuration
 func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) {
 	b.logger = config.Logger
-	b.sysconfig = config.SystemConfig
+	b.sysconfig = config.System
 	return b, nil
 }
 
@@ -160,7 +160,7 @@ func (b *Backend) Logger() *log.Logger {
 // SystemConfig can be used to get an object that provides methods for
 // looking up some system configuration information, such as the global
 // max lease.
-func (b *Backend) SystemConfig() *logical.SystemConfig {
+func (b *Backend) SystemConfig() logical.SystemView {
 	return b.sysconfig
 }
 

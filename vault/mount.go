@@ -466,9 +466,9 @@ func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string
 		View:   view,
 		Logger: c.logger,
 		Config: conf,
-		SystemConfig: &logical.SystemConfig{
-			DefaultLeaseTTL: c.DefaultLeaseTTL,
-			MaxLeaseTTL:     c.MaxLeaseTTL,
+		System: &logical.DefaultSystemView{
+			DefaultLeaseTTLFunc: c.DefaultLeaseTTL,
+			MaxLeaseTTLFunc:     c.MaxLeaseTTL,
 		},
 	}
 
