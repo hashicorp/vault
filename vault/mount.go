@@ -466,6 +466,10 @@ func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string
 		View:   view,
 		Logger: c.logger,
 		Config: conf,
+		System: &logical.SystemConfig{
+			DefaultLeaseTTL: c.DefaultLeaseTTL,
+			MaxLeaseTTL:     c.MaxLeaseTTL,
+		},
 	}
 
 	b, err := f(config)

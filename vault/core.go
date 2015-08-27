@@ -1577,3 +1577,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 		}
 	}
 }
+
+func (c *Core) DefaultLeaseTTL() time.Duration {
+	return c.defaultLeaseTTL
+}
+
+func (c *Core) MaxLeaseTTL() time.Duration {
+	return c.maxLeaseTTL
+}
