@@ -153,7 +153,7 @@ func (c *SSHCommand) Run(args []string) int {
 			sshCmd.Stdout = os.Stdout
 			err = sshCmd.Run()
 			if err != nil {
-				c.Ui.Error(fmt.Sprintf("Error while running ssh command:%s", err))
+				c.Ui.Error(fmt.Sprintf("Failed to establish SSH connection:%s", err))
 			}
 			return 0
 		}

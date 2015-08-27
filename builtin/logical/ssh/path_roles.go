@@ -150,7 +150,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 	cidrList := d.Get("cidr_list").(string)
 	if cidrList == "" {
-		return logical.ErrorResponse("Missing CIDR blocks"), nil
+		cidrList = "0.0.0.0/0"
 	}
 
 	// Check if all the CIDR entries are infact valid entries
