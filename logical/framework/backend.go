@@ -56,9 +56,10 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
-	logger  *log.Logger
-	once    sync.Once
-	pathsRe []*regexp.Regexp
+	logger    *log.Logger
+	once      sync.Once
+	pathsRe   []*regexp.Regexp
+	sysconfig *logical.SystemConfig
 }
 
 // OperationFunc is the callback called for an operation on a path.
@@ -118,16 +119,16 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	if !ok {
 		return nil, logical.ErrUnsupportedOperation
 	}
-	
+
 	fd := FieldData{
 		Raw:    raw,
 		Schema: path.Fields}
-	
+
 	if req.Operation != logical.HelpOperation {
-	    err := fd.Validate()
-	    if err != nil {
-	        return nil, err
-	    }
+		err := fd.Validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Call the callback with the request and the data
@@ -142,6 +143,7 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 // Setup is used to initialize the backend with the initial backend configuration
 func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) {
 	b.logger = config.Logger
+	b.sysconfig = config.SystemConfig
 	return b, nil
 }
 
@@ -153,6 +155,13 @@ func (b *Backend) Logger() *log.Logger {
 	}
 
 	return log.New(ioutil.Discard, "", 0)
+}
+
+// SystemConfig can be used to get an object that provides methods for
+// looking up some system configuration information, such as the global
+// max lease.
+func (b *Backend) SystemConfig() *logical.SystemConfig {
+	return b.sysconfig
 }
 
 // Route looks up the path that would be used for a given path string.

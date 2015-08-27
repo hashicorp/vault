@@ -34,7 +34,7 @@ type BackendConfig struct {
 
 	// System provides a view into a subset of safe system information that
 	// is useful for backends, such as the default/max lease TTLs
-	System *SystemConfig
+	SystemConfig *SystemConfig
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
