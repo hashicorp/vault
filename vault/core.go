@@ -239,25 +239,25 @@ type Core struct {
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
-	defaultLeaseDuration time.Duration
-	maxLeaseDuration     time.Duration
+	defaultLeaseTTL time.Duration
+	maxLeaseTTL     time.Duration
 
 	logger *log.Logger
 }
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	LogicalBackends      map[string]logical.Factory
-	CredentialBackends   map[string]logical.Factory
-	AuditBackends        map[string]audit.Factory
-	Physical             physical.Backend
-	Logger               *log.Logger
-	DisableCache         bool   // Disables the LRU cache on the physical backend
-	DisableMlock         bool   // Disables mlock syscall
-	CacheSize            int    // Custom cache size of zero for default
-	AdvertiseAddr        string // Set as the leader address for HA
-	DefaultLeaseDuration time.Duration
-	MaxLeaseDuration     time.Duration
+	LogicalBackends    map[string]logical.Factory
+	CredentialBackends map[string]logical.Factory
+	AuditBackends      map[string]audit.Factory
+	Physical           physical.Backend
+	Logger             *log.Logger
+	DisableCache       bool   // Disables the LRU cache on the physical backend
+	DisableMlock       bool   // Disables mlock syscall
+	CacheSize          int    // Custom cache size of zero for default
+	AdvertiseAddr      string // Set as the leader address for HA
+	DefaultLeaseTTL    time.Duration
+	MaxLeaseTTL        time.Duration
 }
 
 // NewCore is used to construct a new core
@@ -271,15 +271,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
-	if conf.DefaultLeaseDuration == 0 {
-		conf.DefaultLeaseDuration = defaultLeaseDuration
+	if conf.DefaultLeaseTTL == 0 {
+		conf.DefaultLeaseTTL = defaultLeaseTTL
 	}
-	if conf.MaxLeaseDuration == 0 {
-		conf.MaxLeaseDuration = maxLeaseDuration
+	if conf.MaxLeaseTTL == 0 {
+		conf.MaxLeaseTTL = maxLeaseTTL
 	}
 
-	if conf.DefaultLeaseDuration > conf.MaxLeaseDuration {
-		return nil, fmt.Errorf("cannot have DefaultLeaseDuration larger than MaxLeaseDuration")
+	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
+		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
 	}
 
 	// Validate the advertise addr if its given to us
@@ -333,16 +333,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:                   haBackend,
-		advertiseAddr:        conf.AdvertiseAddr,
-		physical:             conf.Physical,
-		barrier:              barrier,
-		router:               NewRouter(),
-		sealed:               true,
-		standby:              true,
-		logger:               conf.Logger,
-		defaultLeaseDuration: conf.DefaultLeaseDuration,
-		maxLeaseDuration:     conf.MaxLeaseDuration,
+		ha:              haBackend,
+		advertiseAddr:   conf.AdvertiseAddr,
+		physical:        conf.Physical,
+		barrier:         barrier,
+		router:          NewRouter(),
+		sealed:          true,
+		standby:         true,
+		logger:          conf.Logger,
+		defaultLeaseTTL: conf.DefaultLeaseTTL,
+		maxLeaseTTL:     conf.MaxLeaseTTL,
 	}
 
 	// Setup the backends
@@ -479,12 +479,12 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = c.defaultLeaseDuration
+			resp.Secret.TTL = c.defaultLeaseTTL
 		}
 
 		// Limit the lease duration
-		if resp.Secret.TTL > c.maxLeaseDuration {
-			resp.Secret.TTL = c.maxLeaseDuration
+		if resp.Secret.TTL > c.maxLeaseTTL {
+			resp.Secret.TTL = c.maxLeaseTTL
 		}
 
 		// Register the lease
@@ -511,12 +511,12 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 		// Set the default lease if non-provided, root tokens are exempt
 		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.TTL = c.defaultLeaseDuration
+			resp.Auth.TTL = c.defaultLeaseTTL
 		}
 
 		// Limit the lease duration
-		if resp.Auth.TTL > c.maxLeaseDuration {
-			resp.Auth.TTL = c.maxLeaseDuration
+		if resp.Auth.TTL > c.maxLeaseTTL {
+			resp.Auth.TTL = c.maxLeaseTTL
 		}
 
 		// Register with the expiration manager
@@ -583,12 +583,12 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 		// Set the default lease if non-provided, root tokens are exempt
 		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
-			auth.TTL = c.defaultLeaseDuration
+			auth.TTL = c.defaultLeaseTTL
 		}
 
 		// Limit the lease duration
-		if resp.Auth.TTL > c.maxLeaseDuration {
-			resp.Auth.TTL = c.maxLeaseDuration
+		if resp.Auth.TTL > c.maxLeaseTTL {
+			resp.Auth.TTL = c.maxLeaseTTL
 		}
 
 		// Register with the expiration manager

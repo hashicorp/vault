@@ -125,15 +125,15 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the core
 	core, err := vault.NewCore(&vault.CoreConfig{
-		AdvertiseAddr:        config.Backend.AdvertiseAddr,
-		Physical:             backend,
-		AuditBackends:        c.AuditBackends,
-		CredentialBackends:   c.CredentialBackends,
-		LogicalBackends:      c.LogicalBackends,
-		Logger:               logger,
-		DisableMlock:         config.DisableMlock,
-		MaxLeaseDuration:     config.MaxLeaseDuration,
-		DefaultLeaseDuration: config.DefaultLeaseDuration,
+		AdvertiseAddr:      config.Backend.AdvertiseAddr,
+		Physical:           backend,
+		AuditBackends:      c.AuditBackends,
+		CredentialBackends: c.CredentialBackends,
+		LogicalBackends:    c.LogicalBackends,
+		Logger:             logger,
+		DisableMlock:       config.DisableMlock,
+		MaxLeaseTTL:        config.MaxLeaseTTL,
+		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))

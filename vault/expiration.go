@@ -36,10 +36,10 @@ const (
 	minRevokeDelay = 5 * time.Second
 
 	// maxLeaseDuration is the default maximum lease duration
-	maxLeaseDuration = 30 * 24 * time.Hour
+	maxLeaseTTL = 30 * 24 * time.Hour
 
 	// defaultLeaseDuration is the default lease duration used when no lease is specified
-	defaultLeaseDuration = maxLeaseDuration
+	defaultLeaseTTL = maxLeaseTTL
 )
 
 // ExpirationManager is used by the Core to manage leases. Secrets

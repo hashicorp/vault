@@ -31,17 +31,17 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsdAddr: "bar",
-			StatsiteAddr: "foo",
+			StatsdAddr:      "bar",
+			StatsiteAddr:    "foo",
 			DisableHostname: false,
 		},
 
 		DisableMlock: true,
 
-		MaxLeaseDuration: 10 * time.Hour,
-		MaxLeaseDurationRaw: "10h",
-		DefaultLeaseDuration: 10 * time.Hour,
-		DefaultLeaseDurationRaw: "10h",
+		MaxLeaseTTL:        10 * time.Hour,
+		MaxLeaseTTLRaw:     "10h",
+		DefaultLeaseTTL:    10 * time.Hour,
+		DefaultLeaseTTLRaw: "10h",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
@@ -72,15 +72,15 @@ func TestLoadConfigFile_json(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsiteAddr: "baz",
-			StatsdAddr: "",
+			StatsiteAddr:    "baz",
+			StatsdAddr:      "",
 			DisableHostname: false,
 		},
 
-		MaxLeaseDuration: 10 * time.Hour,
-		MaxLeaseDurationRaw: "10h",
-		DefaultLeaseDuration: 10 * time.Hour,
-		DefaultLeaseDurationRaw: "10h",
+		MaxLeaseTTL:        10 * time.Hour,
+		MaxLeaseTTLRaw:     "10h",
+		DefaultLeaseTTL:    10 * time.Hour,
+		DefaultLeaseTTLRaw: "10h",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
@@ -111,8 +111,8 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsiteAddr: "foo",
-			StatsdAddr: "bar",
+			StatsiteAddr:    "foo",
+			StatsdAddr:      "bar",
 			DisableHostname: true,
 		},
 	}
@@ -147,13 +147,13 @@ func TestLoadConfigDir(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsiteAddr: "qux",
-			StatsdAddr: "baz",
+			StatsiteAddr:    "qux",
+			StatsdAddr:      "baz",
 			DisableHostname: true,
 		},
 
-		MaxLeaseDuration: 10 * time.Hour,
-		DefaultLeaseDuration: 10 * time.Hour,
+		MaxLeaseTTL:     10 * time.Hour,
+		DefaultLeaseTTL: 10 * time.Hour,
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("bad: %#v", config)
