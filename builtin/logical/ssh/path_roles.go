@@ -67,9 +67,9 @@ func pathRoles(b *backend) *framework.Path {
 			"cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
-				[Required for both types]
+				[Optional for both types]
 				Comma separated list of CIDR blocks for which the role is applicable for.
-				CIDR blocks can belong to more than one role.`,
+				CIDR blocks can belong to more than one role. Defaults to zero-address (0.0.0.0/0)`,
 			},
 			"port": &framework.FieldSchema{
 				Type: framework.TypeInt,
@@ -150,7 +150,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 	cidrList := d.Get("cidr_list").(string)
 	if cidrList == "" {
-		return logical.ErrorResponse("Missing CIDR blocks"), nil
+		cidrList = "0.0.0.0/0"
 	}
 
 	// Check if all the CIDR entries are infact valid entries
