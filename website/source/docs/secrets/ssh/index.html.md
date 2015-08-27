@@ -83,6 +83,8 @@ $ vault write ssh/roles/dynamic_key_role key_type=dynamic key=dev_key admin_user
 Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
+Option `cidr_list` is optional and defaults to zero-address (0.0.0.0/0).
+
 Use the `install_script` option to provide an install script if hosts does not
 resemble typical Linux machine. The default script is compiled into the binary.
 It is straight forward and is shown below. The script takes three arguments which
@@ -434,10 +436,10 @@ username@ip:~$
       </li>
       <li>
         <span class="param">cidr_list</span>
-        <span class="param-flags">required for both types</span>
+        <span class="param-flags">optional for both types</span>
 	(String)
 	Comma separated list of CIDR blocks for which the role is applicable for.
-	CIDR blocks can belong to more than one role.
+	CIDR blocks can belong to more than one role. Defaults to zero-address (0.0.0.0/0).
       </li>
       <li>
         <span class="param">port</span>
