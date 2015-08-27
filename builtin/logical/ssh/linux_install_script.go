@@ -45,13 +45,18 @@ function cleanup
 trap cleanup EXIT
 
 # Return if the option is anything other than 'install' or 'uninstall'.
-if [ "$INSTALL_OPTION" != "install" && "$INSTALL_OPTION" != "uninstall" ]; then
+if [ "$INSTALL_OPTION" != "install" ] && [ "$INSTALL_OPTION" != "uninstall" ]; then
 	exit 1
 fi
 
+# Create the .ssh directory and authorized_keys file if it does not exist
+SSH_DIR=$(dirname $AUTH_KEYS_FILE)
+sudo mkdir -p "$SSH_DIR"                                                            
+sudo touch "$AUTH_KEYS_FILE"
+
 # Remove the key from authorized_keys file if it is already present.
 # This step is common for both install and uninstall.
-grep -vFf "$PUBLIC_KEY_FILE" "$AUTH_KEYS_FILE" > temp_$PUBLIC_KEY_FILE
+grep -vFf "$PUBLIC_KEY_FILE" "$AUTH_KEYS_FILE" > temp_$PUBLIC_KEY_FILE || true
 cat temp_$PUBLIC_KEY_FILE | sudo tee "$AUTH_KEYS_FILE"
 
 # Append the new public key to authorized_keys file
