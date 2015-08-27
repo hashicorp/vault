@@ -23,7 +23,16 @@ var (
 
 // Performs basic tests on CA functionality
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 
 	testCase := logicaltest.TestCase{
 		Backend: b,
@@ -40,7 +49,16 @@ func TestBackend_basic(t *testing.T) {
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 func TestBackend_roles(t *testing.T) {
-	b := Backend()
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 
 	testCase := logicaltest.TestCase{
 		Backend: b,
@@ -111,7 +129,7 @@ func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Dura
 	}
 
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
-		return nil, fmt.Errorf("Validity period too large")
+		return nil, fmt.Errorf("Validity period of %d too large vs max of 10", cert.NotAfter.Unix())
 	}
 
 	return parsedCertBundle, nil
@@ -204,7 +222,7 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		LeaseMax: "12h",
+		MaxTTL: "12h",
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -324,7 +342,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 				issueTestStep.ErrorOk = true
 			}
 
-			validity, _ := time.ParseDuration(roleVals.LeaseMax)
+			validity, _ := time.ParseDuration(roleVals.MaxTTL)
 			addTests(getCnCheck(name, roleVals.KeyType, usage, validity))
 		}
 	}
@@ -388,11 +406,11 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 	{
 		roleTestStep.ErrorOk = true
 		roleVals.Lease = ""
-		roleVals.LeaseMax = ""
+		roleVals.MaxTTL = ""
 		addTests(nil)
 
 		roleVals.Lease = "12h"
-		roleVals.LeaseMax = "6h"
+		roleVals.MaxTTL = "6h"
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false

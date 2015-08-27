@@ -39,7 +39,14 @@ common-delimited list`,
 			},
 			"lease": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The requested lease",
+				Description: `The requested lease. DEPRECATED: use "ttl" instead.`,
+			},
+			"ttl": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `The requested Time To Live for the certificate;
+sets the expiration date. If not specified
+the role default TTL it used. Cannot be larer
+than the role max TTL.`,
 			},
 		},
 
@@ -97,24 +104,44 @@ func (b *backend) pathIssueCert(
 		}
 	}
 
-	leaseField := data.Get("lease").(string)
-	if len(leaseField) == 0 {
-		leaseField = role.Lease
+	ttlField := data.Get("ttl").(string)
+	if len(ttlField) == 0 {
+		ttlField = data.Get("lease").(string)
+		if len(ttlField) == 0 {
+			ttlField = role.TTL
+		}
 	}
 
-	lease, err := time.ParseDuration(leaseField)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid requested lease: %s", err)), nil
-	}
-	leaseMax, err := time.ParseDuration(role.LeaseMax)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid lease: %s", err)), nil
+	var ttl time.Duration
+	if len(ttlField) == 0 {
+		ttl = b.System.DefaultLeaseTTL()
+	} else {
+		ttl, err = time.ParseDuration(ttlField)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Invalid requested ttl: %s", err)), nil
+		}
 	}
 
-	if lease > leaseMax {
-		return logical.ErrorResponse("Lease expires after maximum allowed by this role"), nil
+	var maxTTL time.Duration
+	if len(role.MaxTTL) == 0 {
+		maxTTL = b.System.MaxLeaseTTL()
+	} else {
+		maxTTL, err = time.ParseDuration(role.MaxTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Invalid ttl: %s", err)), nil
+		}
+	}
+
+	if ttl > maxTTL {
+		// Don't error if they were using system defaults, only error if
+		// they specifically chose a bad TTL
+		if len(ttlField) == 0 {
+			ttl = maxTTL
+		} else {
+			return logical.ErrorResponse("TTL is larger than maximum allowed by this role"), nil
+		}
 	}
 
 	badName, err := validateCommonNames(req, commonNames, role)
@@ -132,8 +159,8 @@ func (b *backend) pathIssueCert(
 		return nil, fmt.Errorf("Error fetching CA certificate: %s", caErr)
 	}
 
-	if time.Now().Add(lease).After(signingBundle.Certificate.NotAfter) {
-		return logical.ErrorResponse(fmt.Sprintf("Cannot satisfy request, as maximum lease is beyond the expiration of the CA certificate")), nil
+	if time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
+		return logical.ErrorResponse(fmt.Sprintf("Cannot satisfy request, as TTL is beyond the expiration of the CA certificate")), nil
 	}
 
 	var usage certUsage
@@ -154,7 +181,7 @@ func (b *backend) pathIssueCert(
 		IPSANs:        ipSANs,
 		KeyType:       role.KeyType,
 		KeyBits:       role.KeyBits,
-		Lease:         lease,
+		TTL:           ttl,
 		Usage:         usage,
 	}
 
@@ -177,7 +204,7 @@ func (b *backend) pathIssueCert(
 			"serial_number": cb.SerialNumber,
 		})
 
-	resp.Secret.TTL = lease
+	resp.Secret.TTL = ttl
 
 	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "certs/" + cb.SerialNumber,

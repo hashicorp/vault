@@ -24,13 +24,29 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `The lease length if no specific lease length is
 requested. The lease length controls the expiration
 of certificates issued by this backend. Defaults to
-the value of lease_max.`,
+the value of lease_max. DEPRECATED: use "ttl" instead.`,
 			},
 
 			"lease_max": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `The maximum allowed lease length.
+DEPRECATED: use "ttl" instead.`,
+			},
+
+			"ttl": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `The lease duration if no specific lease duration is
+requested. The lease duration controls the expiration
+of certificates issued by this backend. Defaults to
+the value of max_ttl.`,
+			},
+
+			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "The maximum allowed lease length",
+				Description: "The maximum allowed lease duration",
 			},
 
 			"allow_localhost": &framework.FieldSchema{
@@ -150,6 +166,28 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		return nil, err
 	}
 
+	// Migrate existing saved entries and save back if changed
+	modified := false
+	if len(result.TTL) == 0 && len(result.Lease) != 0 {
+		result.TTL = result.Lease
+		result.Lease = ""
+		modified = true
+	}
+	if len(result.MaxTTL) == 0 && len(result.LeaseMax) != 0 {
+		result.MaxTTL = result.LeaseMax
+		result.LeaseMax = ""
+		modified = true
+	}
+	if modified {
+		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.Put(jsonEntry); err != nil {
+			return nil, err
+		}
+	}
+
 	return &result, nil
 }
 
@@ -173,6 +211,19 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
+	hasMax := true
+	if len(role.MaxTTL) == 0 {
+		role.MaxTTL = "(system default)"
+		hasMax = false
+	}
+	if len(role.TTL) == 0 {
+		if hasMax {
+			role.TTL = "(system default, capped to role max)"
+		} else {
+			role.TTL = "(system default)"
+		}
+	}
+
 	resp := &logical.Response{
 		Data: structs.New(role).Map(),
 	}
@@ -182,11 +233,12 @@ func (b *backend) pathRoleRead(
 
 func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var err error
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		LeaseMax:              data.Get("lease_max").(string),
-		Lease:                 data.Get("lease").(string),
+		MaxTTL:                data.Get("max_ttl").(string),
+		TTL:                   data.Get("ttl").(string),
 		AllowLocalhost:        data.Get("allow_localhost").(bool),
 		AllowedBaseDomain:     data.Get("allowed_base_domain").(string),
 		AllowTokenDisplayName: data.Get("allow_token_displayname").(bool),
@@ -201,27 +253,45 @@ func (b *backend) pathRoleCreate(
 		KeyBits:               data.Get("key_bits").(int),
 	}
 
-	if len(entry.LeaseMax) == 0 {
-		return logical.ErrorResponse("\"lease_max\" value must be supplied"), nil
+	if len(entry.MaxTTL) == 0 {
+		entry.MaxTTL = data.Get("lease_max").(string)
 	}
 
-	leaseMax, err := time.ParseDuration(entry.LeaseMax)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid lease: %s", err)), nil
-	}
-
-	switch len(entry.Lease) {
-	case 0:
-		entry.Lease = entry.LeaseMax
-	default:
-		lease, err := time.ParseDuration(entry.Lease)
+	var maxTTL time.Duration
+	if len(entry.MaxTTL) == 0 {
+		maxTTL = b.System.MaxLeaseTTL()
+	} else {
+		maxTTL, err = time.ParseDuration(entry.MaxTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid lease: %s", err)), nil
+				"Invalid ttl: %s", err)), nil
 		}
-		if lease > leaseMax {
-			return logical.ErrorResponse("\"lease\" value must be less than \"lease_max\" value"), nil
+	}
+	if maxTTL > b.System.MaxLeaseTTL() {
+		return logical.ErrorResponse("Requested max TTL is higher than system maximum"), nil
+	}
+
+	var ttl time.Duration
+	if len(entry.TTL) == 0 {
+		entry.TTL = data.Get("lease").(string)
+	}
+	switch len(entry.TTL) {
+	case 0:
+		ttl = b.System.DefaultLeaseTTL()
+	default:
+		ttl, err = time.ParseDuration(entry.TTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Invalid ttl: %s", err)), nil
+		}
+	}
+	if ttl > maxTTL {
+		// If they are using the system default, cap it to the role max;
+		// if it was specified on the command line, make it an error
+		if len(entry.TTL) == 0 {
+			ttl = maxTTL
+		} else {
+			return logical.ErrorResponse("\"ttl\" value must be less than \"max_ttl\" and/or system default max lease TTL value"), nil
 		}
 	}
 
@@ -262,6 +332,8 @@ func (b *backend) pathRoleCreate(
 type roleEntry struct {
 	LeaseMax              string `json:"lease_max" structs:"lease_max" mapstructure:"lease_max"`
 	Lease                 string `json:"lease" structs:"lease" mapstructure:"lease"`
+	MaxTTL                string `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	TTL                   string `json:"ttl" structs:"ttl" mapstructure:"ttl"`
 	AllowLocalhost        bool   `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain     string `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
 	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`

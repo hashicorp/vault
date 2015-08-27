@@ -34,7 +34,7 @@ type certCreationBundle struct {
 	IPSANs        []net.IP
 	KeyType       string
 	KeyBits       int
-	Lease         time.Duration
+	TTL           time.Duration
 	Usage         certUsage
 }
 
@@ -234,7 +234,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		SerialNumber:          serialNumber,
 		Subject:               subject,
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(creationInfo.Lease),
+		NotAfter:              time.Now().Add(creationInfo.TTL),
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		BasicConstraintsValid: true,
 		IsCA:                        false,
