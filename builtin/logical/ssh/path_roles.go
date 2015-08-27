@@ -17,15 +17,16 @@ const (
 // for both OTP and Dynamic roles. Not all the fields are mandatory for both type.
 // Some are applicable for one and not for other. It doesn't matter.
 type sshRole struct {
-	KeyType       string `mapstructure:"key_type" json:"key_type"`
-	KeyName       string `mapstructure:"key" json:"key"`
-	KeyBits       int    `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser     string `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser   string `mapstructure:"default_user" json:"default_user"`
-	CIDRList      string `mapstructure:"cidr_list" json:"cidr_list"`
-	Port          int    `mapstructure:"port" json:"port"`
-	InstallScript string `mapstructure:"install_script" json:"install_script"`
-	AllowedUsers  string `mapstructure:"allowed_users" json:"allowed_users"`
+	KeyType        string `mapstructure:"key_type" json:"key_type"`
+	KeyName        string `mapstructure:"key" json:"key"`
+	KeyBits        int    `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser      string `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser    string `mapstructure:"default_user" json:"default_user"`
+	CIDRList       string `mapstructure:"cidr_list" json:"cidr_list"`
+	Port           int    `mapstructure:"port" json:"port"`
+	InstallScript  string `mapstructure:"install_script" json:"install_script"`
+	AllowedUsers   string `mapstructure:"allowed_users" json:"allowed_users"`
+	KeyOptionSpecs string `mapstructure:"key_option_specs" json:"key_option_specs"`
 }
 
 func pathRoles(b *backend) *framework.Path {
@@ -95,7 +96,7 @@ func pathRoles(b *backend) *framework.Path {
 			"install_script": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
-				[Optional for Dynamic type][Not-applicable for OTP type]
+				[Optional for Dynamic type] [Not-applicable for OTP type]
 				Script used to install and uninstall public keys in the target machine.
 				The inbuilt default install script will be for Linux hosts. For sample
 				script, refer the project documentation website.`,
@@ -109,6 +110,15 @@ func pathRoles(b *backend) *framework.Path {
 				usernames are to be allowed, then this list enforces it. If this field is
 				set, then credentials can only be created for default_user and usernames
 				present in this list.
+				`,
+			},
+			"key_option_specs": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				[Optional for Dynamic type] [Not applicable for OTP type]
+				Comma separated option specifications which will be prefixed to RSA key in
+				authorized_keys file. Options should be valid and comply with authorized_keys
+				file format and should not contain spaces.
 				`,
 			},
 		},
@@ -189,6 +199,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 
 		installScript := d.Get("install_script").(string)
+		keyOptionSpecs := d.Get("key_option_specs").(string)
 
 		// Setting the default script here. The script will install the
 		// generated public key in the authorized_keys file of linux host.
@@ -214,15 +225,16 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 		// Store all the fields required by dynamic key type
 		roleEntry = sshRole{
-			KeyName:       keyName,
-			AdminUser:     adminUser,
-			DefaultUser:   defaultUser,
-			CIDRList:      cidrList,
-			Port:          port,
-			KeyType:       KeyTypeDynamic,
-			KeyBits:       keyBits,
-			InstallScript: installScript,
-			AllowedUsers:  allowedUsers,
+			KeyName:        keyName,
+			AdminUser:      adminUser,
+			DefaultUser:    defaultUser,
+			CIDRList:       cidrList,
+			Port:           port,
+			KeyType:        KeyTypeDynamic,
+			KeyBits:        keyBits,
+			InstallScript:  installScript,
+			AllowedUsers:   allowedUsers,
+			KeyOptionSpecs: keyOptionSpecs,
 		}
 	} else {
 		return logical.ErrorResponse("Invalid key type"), nil

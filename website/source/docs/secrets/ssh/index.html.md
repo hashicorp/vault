@@ -478,6 +478,14 @@ username@ip:~$
 	set, then credentials can only be created for default_user and usernames
 	present in this list.
       </li>
+      <li>
+        <span class="param">key_option_specs</span>
+        <span class="param-flags">optional for Dynamic type, NA for OTP type</span>
+	(String)
+	Comma separated option specifications which will be prefixed to RSA key in
+	authorized_keys file. Options should be valid and comply with authorized_keys
+	file format and should not contain spaces.
+      </li>
     </ul>
   </dd>
 

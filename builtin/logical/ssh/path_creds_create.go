@@ -191,6 +191,10 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 		return "", "", fmt.Errorf("error generating key: %s", err)
 	}
 
+	if len(role.KeyOptionSpecs) != 0 {
+		dynamicPublicKey = fmt.Sprintf("%s %s", role.KeyOptionSpecs, dynamicPublicKey)
+	}
+
 	// Add the public key to authorized_keys file in target machine
 	err = b.installPublicKeyInTarget(role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
 	if err != nil {
