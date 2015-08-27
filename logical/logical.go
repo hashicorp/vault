@@ -32,6 +32,10 @@ type BackendConfig struct {
 	// The backend should use this logger. The log should not contain any secrets.
 	Logger *log.Logger
 
+	// System provides a view into a subset of safe system information that
+	// is useful for backends, such as the default/max lease TTLs
+	System SystemView
+
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
 }

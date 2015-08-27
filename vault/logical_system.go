@@ -19,7 +19,9 @@ var (
 )
 
 func NewSystemBackend(core *Core) logical.Backend {
-	b := &SystemBackend{Core: core}
+	b := &SystemBackend{
+		Core: core,
+	}
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
 
