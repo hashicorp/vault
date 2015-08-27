@@ -15,15 +15,15 @@ type SystemView interface {
 	MaxLeaseTTL() time.Duration
 }
 
-type DefaultSystemView struct {
-	DefaultLeaseTTLFunc func() time.Duration
-	MaxLeaseTTLFunc     func() time.Duration
+type StaticSystemView struct {
+	DefaultLeaseTTLVal time.Duration
+	MaxLeaseTTLVal     time.Duration
 }
 
-func (d *DefaultSystemView) DefaultLeaseTTL() time.Duration {
-	return d.DefaultLeaseTTLFunc()
+func (d *StaticSystemView) DefaultLeaseTTL() time.Duration {
+	return d.DefaultLeaseTTLVal
 }
 
-func (d *DefaultSystemView) MaxLeaseTTL() time.Duration {
-	return d.MaxLeaseTTLFunc()
+func (d *StaticSystemView) MaxLeaseTTL() time.Duration {
+	return d.MaxLeaseTTLVal
 }
