@@ -156,7 +156,7 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 		return false, fmt.Errorf("error decoding role '%s'", roleName)
 	}
 
-	if matched, err := cidrContainsIP(ip, role.CIDRList); err != nil {
+	if matched, err := cidrListContainsIP(ip, role.CIDRList); err != nil {
 		return false, err
 	} else {
 		return matched, nil
@@ -176,7 +176,7 @@ func validateCIDRList(cidrList string) error {
 
 // Returns true if the IP supplied by the user is part of the comma
 // separated CIDR blocks
-func cidrContainsIP(ip, cidrList string) (bool, error) {
+func cidrListContainsIP(ip, cidrList string) (bool, error) {
 	for _, item := range strings.Split(cidrList, ",") {
 		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
