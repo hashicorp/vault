@@ -92,12 +92,9 @@ func (b *backend) pathCredsCreateWrite(
 
 	// Check if the IP belongs to the registered list of CIDR blocks under the role
 	ip := ipAddr.String()
-	ipMatched, err := cidrContainsIP(ip, role.CIDRList)
+	err = validateIP(ip, role.CIDRList, role.ExcludeCIDRList)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error validating IP: %s", err)), nil
-	}
-	if !ipMatched {
-		return logical.ErrorResponse(fmt.Sprintf("IP[%s] does not belong to role[%s]", ip, roleName)), nil
 	}
 
 	var result *logical.Response
@@ -240,6 +237,35 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 		return "", err
 	}
 	return otp, nil
+}
+
+// Validates the IP address by first searching the IP in the allowed CIDR
+// blocks registered with the role. If there is found, then it is searched
+// in the excluded CIDR blocks and if there is a match there, an error is
+// returned. IP is valid only if it is encompassed by allowed CIDR blocks
+// and not by excluded CIDR blocks.
+func validateIP(ip, cidrList, excludeCidrList string) error {
+	ipMatched, err := cidrListContainsIP(ip, cidrList)
+	if err != nil {
+		return err
+	}
+	if !ipMatched {
+		return fmt.Errorf("IP does not belong to role")
+	}
+
+	if len(excludeCidrList) == 0 {
+		return nil
+	}
+
+	ipMatched, err = cidrListContainsIP(ip, excludeCidrList)
+	if err != nil {
+		return err
+	}
+	if ipMatched {
+		return fmt.Errorf("IP does not belong to role")
+	}
+
+	return nil
 }
 
 // Checks if the username supplied by the user is present in the list of

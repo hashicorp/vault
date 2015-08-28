@@ -17,16 +17,17 @@ const (
 // for both OTP and Dynamic roles. Not all the fields are mandatory for both type.
 // Some are applicable for one and not for other. It doesn't matter.
 type sshRole struct {
-	KeyType        string `mapstructure:"key_type" json:"key_type"`
-	KeyName        string `mapstructure:"key" json:"key"`
-	KeyBits        int    `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser      string `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser    string `mapstructure:"default_user" json:"default_user"`
-	CIDRList       string `mapstructure:"cidr_list" json:"cidr_list"`
-	Port           int    `mapstructure:"port" json:"port"`
-	InstallScript  string `mapstructure:"install_script" json:"install_script"`
-	AllowedUsers   string `mapstructure:"allowed_users" json:"allowed_users"`
-	KeyOptionSpecs string `mapstructure:"key_option_specs" json:"key_option_specs"`
+	KeyType         string `mapstructure:"key_type" json:"key_type"`
+	KeyName         string `mapstructure:"key" json:"key"`
+	KeyBits         int    `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser       string `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser     string `mapstructure:"default_user" json:"default_user"`
+	CIDRList        string `mapstructure:"cidr_list" json:"cidr_list"`
+	ExcludeCIDRList string `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
+	Port            int    `mapstructure:"port" json:"port"`
+	InstallScript   string `mapstructure:"install_script" json:"install_script"`
+	AllowedUsers    string `mapstructure:"allowed_users" json:"allowed_users"`
+	KeyOptionSpecs  string `mapstructure:"key_option_specs" json:"key_option_specs"`
 }
 
 func pathRoles(b *backend) *framework.Path {
@@ -70,6 +71,14 @@ func pathRoles(b *backend) *framework.Path {
 				[Optional for both types]
 				Comma separated list of CIDR blocks for which the role is applicable for.
 				CIDR blocks can belong to more than one role. Defaults to zero-address (0.0.0.0/0)`,
+			},
+			"exclude_cidr_list": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				[Optional for both types]
+				Comma separated list of CIDR blocks. IP addresses belonging to these blocks are not
+				accepted by the role. This is particularly useful when big CIDR blocks are being used
+				by the role and certain parts of it needs to be kept out.`,
 			},
 			"port": &framework.FieldSchema{
 				Type: framework.TypeInt,
@@ -153,6 +162,8 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		cidrList = "0.0.0.0/0"
 	}
 
+	excludeCidrList := d.Get("exclude_cidr_list").(string)
+
 	// Check if all the CIDR entries are infact valid entries
 	err := validateCIDRList(cidrList)
 	if err != nil {
@@ -181,11 +192,12 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 		// Below are the only fields used from the role structure for OTP type.
 		roleEntry = sshRole{
-			DefaultUser:  defaultUser,
-			CIDRList:     cidrList,
-			KeyType:      KeyTypeOTP,
-			Port:         port,
-			AllowedUsers: allowedUsers,
+			DefaultUser:     defaultUser,
+			CIDRList:        cidrList,
+			ExcludeCIDRList: excludeCidrList,
+			KeyType:         KeyTypeOTP,
+			Port:            port,
+			AllowedUsers:    allowedUsers,
 		}
 	} else if keyType == KeyTypeDynamic {
 		// Key name is required by dynamic type and not by OTP type.
@@ -225,16 +237,17 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 		// Store all the fields required by dynamic key type
 		roleEntry = sshRole{
-			KeyName:        keyName,
-			AdminUser:      adminUser,
-			DefaultUser:    defaultUser,
-			CIDRList:       cidrList,
-			Port:           port,
-			KeyType:        KeyTypeDynamic,
-			KeyBits:        keyBits,
-			InstallScript:  installScript,
-			AllowedUsers:   allowedUsers,
-			KeyOptionSpecs: keyOptionSpecs,
+			KeyName:         keyName,
+			AdminUser:       adminUser,
+			DefaultUser:     defaultUser,
+			CIDRList:        cidrList,
+			ExcludeCIDRList: excludeCidrList,
+			Port:            port,
+			KeyType:         KeyTypeDynamic,
+			KeyBits:         keyBits,
+			InstallScript:   installScript,
+			AllowedUsers:    allowedUsers,
+			KeyOptionSpecs:  keyOptionSpecs,
 		}
 	} else {
 		return logical.ErrorResponse("Invalid key type"), nil
@@ -281,24 +294,27 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 	if role.KeyType == KeyTypeOTP {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"default_user":  role.DefaultUser,
-				"cidr_list":     role.CIDRList,
-				"key_type":      role.KeyType,
-				"port":          role.Port,
-				"allowed_users": role.AllowedUsers,
+				"default_user":      role.DefaultUser,
+				"cidr_list":         role.CIDRList,
+				"exclude_cidr_list": role.ExcludeCIDRList,
+				"key_type":          role.KeyType,
+				"port":              role.Port,
+				"allowed_users":     role.AllowedUsers,
 			},
 		}, nil
 	} else {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"key":           role.KeyName,
-				"admin_user":    role.AdminUser,
-				"default_user":  role.DefaultUser,
-				"cidr_list":     role.CIDRList,
-				"port":          role.Port,
-				"key_type":      role.KeyType,
-				"key_bits":      role.KeyBits,
-				"allowed_users": role.AllowedUsers,
+				"key":               role.KeyName,
+				"admin_user":        role.AdminUser,
+				"default_user":      role.DefaultUser,
+				"cidr_list":         role.CIDRList,
+				"exclude_cidr_list": role.ExcludeCIDRList,
+				"port":              role.Port,
+				"key_type":          role.KeyType,
+				"key_bits":          role.KeyBits,
+				"allowed_users":     role.AllowedUsers,
+				"key_option_specs":  role.KeyOptionSpecs,
 				// Returning install script will make the output look messy.
 				// But this is one way for clients to see the script that is
 				// being used to install the key. If there is some problem,

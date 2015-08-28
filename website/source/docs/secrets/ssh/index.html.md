@@ -442,6 +442,14 @@ username@ip:~$
 	CIDR blocks can belong to more than one role. Defaults to zero-address (0.0.0.0/0).
       </li>
       <li>
+        <span class="param">exclude_cidr_list</span>
+        <span class="param-flags">optional for both types</span>
+	(String)
+	Comma separated list of CIDR blocks. IP addresses belonging to these blocks are not
+	accepted by the role. This is particularly useful when big CIDR blocks are being used
+	by the role and certain parts of it needs to be kept out.
+      </li>
+      <li>
         <span class="param">port</span>
         <span class="param-flags">optional for both types</span>
 	(Integer)
