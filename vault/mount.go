@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -29,7 +30,7 @@ const (
 
 var (
 	// loadMountsFailed if loadMounts encounters an error
-	loadMountsFailed = errors.New("failed to setup mount table")
+	errLoadMountsFailed = errors.New("failed to setup mount table")
 
 	// protectedMounts cannot be remounted
 	protectedMounts = []string{
@@ -110,8 +111,15 @@ type MountEntry struct {
 	Type        string            `json:"type"`              // Logical backend Type
 	Description string            `json:"description"`       // User-provided description
 	UUID        string            `json:"uuid"`              // Barrier view UUID
-	Options     map[string]string `json:"options"`           // Backend configuration
+	Config      MountOptions      `json:"config"`            // Configuration related to this mount (but not backend-derived)
+	Options     map[string]string `json:"options"`           // Backend options
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
+}
+
+// MountOptions is used to hold settable options
+type MountOptions struct {
+	DefaultLeaseTTL time.Duration `json:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL     time.Duration `json:"max_lease_ttl"`     // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -125,6 +133,7 @@ func (e *MountEntry) Clone() *MountEntry {
 		Type:        e.Type,
 		Description: e.Description,
 		UUID:        e.UUID,
+		Config:      e.Config,
 		Options:     optClone,
 	}
 }
@@ -156,7 +165,11 @@ func (c *Core) mount(me *MountEntry) error {
 	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
 
 	// Create the new backend
-	backend, err := c.newLogicalBackend(me.Type, view, nil)
+	sysView, err := c.MountEntrySysView(me)
+	if err != nil {
+		return err
+	}
+	backend, err := c.newLogicalBackend(me.Type, sysView, view, nil)
 	if err != nil {
 		return err
 	}
@@ -356,13 +369,13 @@ func (c *Core) loadMounts() error {
 	raw, err := c.barrier.Get(coreMountConfigPath)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to read mount table: %v", err)
-		return loadMountsFailed
+		return errLoadMountsFailed
 	}
 	if raw != nil {
 		c.mounts = &MountTable{}
 		if err := json.Unmarshal(raw.Value, c.mounts); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode mount table: %v", err)
-			return loadMountsFailed
+			return errLoadMountsFailed
 		}
 	}
 
@@ -374,7 +387,7 @@ func (c *Core) loadMounts() error {
 	// Create and persist the default mount table
 	c.mounts = defaultMountTable()
 	if err := c.persistMounts(c.mounts); err != nil {
-		return loadMountsFailed
+		return errLoadMountsFailed
 	}
 	return nil
 }
@@ -407,7 +420,6 @@ func (c *Core) persistMounts(table *MountTable) error {
 func (c *Core) setupMounts() error {
 	var backend logical.Backend
 	var view *BarrierView
-	var err error
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
@@ -419,12 +431,17 @@ func (c *Core) setupMounts() error {
 		view = NewBarrierView(c.barrier, barrierPath)
 
 		// Initialize the backend
-		backend, err = c.newLogicalBackend(entry.Type, view, nil)
+		// Create the new backend
+		sysView, err := c.MountEntrySysView(entry)
+		if err != nil {
+			return err
+		}
+		backend, err = c.newLogicalBackend(entry.Type, sysView, view, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create mount entry %#v: %v",
 				entry, err)
-			return loadMountsFailed
+			return errLoadMountsFailed
 		}
 
 		if entry.Type == "system" {
@@ -435,7 +452,7 @@ func (c *Core) setupMounts() error {
 		err = c.router.Mount(backend, entry.Path, entry.UUID, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
-			return loadMountsFailed
+			return errLoadMountsFailed
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -456,7 +473,7 @@ func (c *Core) unloadMounts() error {
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
@@ -466,10 +483,7 @@ func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string
 		View:   view,
 		Logger: c.logger,
 		Config: conf,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: c.defaultLeaseTTL,
-			MaxLeaseTTLVal:     c.maxLeaseTTL,
-		},
+		System: sysView,
 	}
 
 	b, err := f(config)
@@ -477,6 +491,51 @@ func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string
 		return nil, err
 	}
 	return b, nil
+}
+
+// MountEntrySysView creates a logical.SystemView from global and
+// mount-specific entries
+func (c *Core) MountEntrySysView(me *MountEntry) (logical.SystemView, error) {
+	if me == nil {
+		return nil, fmt.Errorf("Error: nil MountEntry when generating SystemView")
+	}
+
+	sysView := &logical.StaticSystemView{
+		DefaultLeaseTTLVal: c.defaultLeaseTTL,
+		MaxLeaseTTLVal:     c.maxLeaseTTL,
+	}
+
+	if me.Config.DefaultLeaseTTL != 0 {
+		sysView.DefaultLeaseTTLVal = me.Config.DefaultLeaseTTL
+	}
+	if me.Config.MaxLeaseTTL != 0 {
+		sysView.MaxLeaseTTLVal = me.Config.MaxLeaseTTL
+	}
+
+	return sysView, nil
+}
+
+// PathSysView is a simple helper for MountEntrySysView
+func (c *Core) PathSysView(path string) (logical.SystemView, error) {
+	pathSep := strings.IndexRune(path, '/')
+	if pathSep == -1 {
+		return nil, fmt.Errorf("[ERR] core: failed to find separator for path %s", path)
+	}
+	me := c.mounts.Find(path[0 : pathSep+1])
+	if me == nil {
+		me = c.auth.Find(path[0 : pathSep+1])
+	}
+	if me == nil {
+		me = c.audit.Find(path[0 : pathSep+1])
+	}
+	if me == nil {
+		return nil, fmt.Errorf("[ERR] core: failed to find mount entry for path %s", path)
+	}
+	sysView, err := c.MountEntrySysView(me)
+	if err != nil {
+		return nil, fmt.Errorf("[ERR] core: failed to get system view for path %s", path)
+	}
+	return sysView, nil
 }
 
 // defaultMountTable creates a default mount table

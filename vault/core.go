@@ -477,14 +477,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
+		// Get the SystemView for the mount
+		sysView, err := c.PathSysView(req.Path)
+		if err != nil {
+			c.logger.Println(err)
+			return nil, auth, ErrInternalError
+		}
+
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = c.defaultLeaseTTL
+			resp.Secret.TTL = sysView.DefaultLeaseTTL()
 		}
 
 		// Limit the lease duration
-		if resp.Secret.TTL > c.maxLeaseTTL {
-			resp.Secret.TTL = c.maxLeaseTTL
+		if resp.Secret.TTL > sysView.MaxLeaseTTL() {
+			resp.Secret.TTL = sysView.MaxLeaseTTL()
 		}
 
 		// Register the lease
