@@ -2,6 +2,7 @@ package github
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -15,6 +16,13 @@ func pathConfig() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The organization users must be part of",
 			},
+
+			"base_url": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `The API endpoint to use. Useful if you
+are running GitHub Enterprise or an
+API-compatible authentication server.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -25,9 +33,19 @@ func pathConfig() *framework.Path {
 
 func pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := logical.StorageEntryJSON("config", config{
+	conf := config{
 		Org: data.Get("organization").(string),
-	})
+	}
+	baseURL := data.Get("base_url").(string)
+	if len(baseURL) != 0 {
+		_, err := url.Parse(baseURL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
+		}
+		conf.BaseURL = baseURL
+	}
+
+	entry, err := logical.StorageEntryJSON("config", conf)
 	if err != nil {
 		return nil, err
 	}
@@ -57,5 +75,6 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	Org string `json:"organization"`
+	Org     string `json:"organization"`
+	BaseURL string `json:"base_url"`
 }
