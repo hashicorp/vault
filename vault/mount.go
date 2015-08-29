@@ -111,13 +111,13 @@ type MountEntry struct {
 	Type        string            `json:"type"`              // Logical backend Type
 	Description string            `json:"description"`       // User-provided description
 	UUID        string            `json:"uuid"`              // Barrier view UUID
-	Config      MountOptions      `json:"config"`            // Configuration related to this mount (but not backend-derived)
+	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
 	Options     map[string]string `json:"options"`           // Backend options
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
 }
 
-// MountOptions is used to hold settable options
-type MountOptions struct {
+// MountConfig is used to hold settable options
+type MountConfig struct {
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl"`     // Override for global default
 }
@@ -497,7 +497,7 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 // mount-specific entries
 func (c *Core) MountEntrySysView(me *MountEntry) (logical.SystemView, error) {
 	if me == nil {
-		return nil, fmt.Errorf("Error: nil MountEntry when generating SystemView")
+		return nil, fmt.Errorf("[ERR] core: nil MountEntry when generating SystemView")
 	}
 
 	sysView := &logical.StaticSystemView{
@@ -531,11 +531,7 @@ func (c *Core) PathSysView(path string) (logical.SystemView, error) {
 	if me == nil {
 		return nil, fmt.Errorf("[ERR] core: failed to find mount entry for path %s", path)
 	}
-	sysView, err := c.MountEntrySysView(me)
-	if err != nil {
-		return nil, fmt.Errorf("[ERR] core: failed to get system view for path %s", path)
-	}
-	return sysView, nil
+	return c.MountEntrySysView(me)
 }
 
 // defaultMountTable creates a default mount table
