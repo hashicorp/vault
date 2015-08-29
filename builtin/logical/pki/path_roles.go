@@ -18,22 +18,6 @@ func pathRoles(b *backend) *framework.Path {
 				Description: "Name of the role",
 			},
 
-			"lease": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
-				Description: `The lease length if no specific lease length is
-requested. The lease length controls the expiration
-of certificates issued by this backend. Defaults to
-the value of lease_max. DEPRECATED: use "ttl" instead.`,
-			},
-
-			"lease_max": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
-				Description: `The maximum allowed lease length.
-DEPRECATED: use "ttl" instead.`,
-			},
-
 			"ttl": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
@@ -107,14 +91,14 @@ Any valid IP is accepted.`,
 			"server_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
-				Description: `If set, certificates are flagged for server use.
+				Description: `If set, certificates are flagged for server auth use.
 Defaults to true.`,
 			},
 
 			"client_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
-				Description: `If set, certificates are flagged for client use.
+				Description: `If set, certificates are flagged for client auth use.
 Defaults to true.`,
 			},
 
@@ -123,6 +107,13 @@ Defaults to true.`,
 				Default: false,
 				Description: `If set, certificates are flagged for code signing
 use. Defaults to false.`,
+			},
+
+			"email_flag": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, certificates are flagged for email
+protection use. Defaults to false.`,
 			},
 
 			"key_type": &framework.FieldSchema{
@@ -249,13 +240,11 @@ func (b *backend) pathRoleCreate(
 		ServerFlag:            data.Get("server_flag").(bool),
 		ClientFlag:            data.Get("client_flag").(bool),
 		CodeSigningFlag:       data.Get("code_signing_flag").(bool),
+		EmailFlag:             data.Get("email_flag").(bool),
 		KeyType:               data.Get("key_type").(string),
 		KeyBits:               data.Get("key_bits").(int),
 	}
 
-	if len(entry.MaxTTL) == 0 {
-		entry.MaxTTL = data.Get("lease_max").(string)
-	}
 	var maxTTL time.Duration
 	maxSystemTTL := b.System().MaxLeaseTTL()
 	if len(entry.MaxTTL) == 0 {
@@ -271,9 +260,6 @@ func (b *backend) pathRoleCreate(
 		return logical.ErrorResponse("Requested max TTL is higher than backend maximum"), nil
 	}
 
-	if len(entry.TTL) == 0 {
-		entry.TTL = data.Get("lease").(string)
-	}
 	ttl := b.System().DefaultLeaseTTL()
 	if len(entry.TTL) != 0 {
 		ttl, err = time.ParseDuration(entry.TTL)
@@ -341,6 +327,7 @@ type roleEntry struct {
 	ServerFlag            bool   `json:"server_flag" structs:"server_flag" mapstructure:"server_flag"`
 	ClientFlag            bool   `json:"client_flag" structs:"client_flag" mapstructure:"client_flag"`
 	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
+	EmailFlag             bool   `json:"email_flag" structs:"email_flag" mapstructure:"email_flag"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 }

@@ -72,7 +72,7 @@ type CertBundle struct {
 }
 
 // ParsedCertBundle contains a key type, a DER-encoded private key,
-// a DER-encoded certificate, and a big.Int serial number
+// and a DER-encoded certificate
 type ParsedCertBundle struct {
 	PrivateKeyType   int
 	PrivateKeyBytes  []byte
@@ -81,6 +81,24 @@ type ParsedCertBundle struct {
 	IssuingCA        *x509.Certificate
 	CertificateBytes []byte
 	Certificate      *x509.Certificate
+}
+
+// CSRBundle contains a key type, a PEM-encoded private key,
+// and a PEM-encoded CSR
+type CSRBundle struct {
+	PrivateKeyType string `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
+	CSR            string `json:"csr" structs:"csr" mapstructure:"csr"`
+	PrivateKey     string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
+}
+
+// ParsedCSRBundle contains a key type, a DER-encoded private key,
+// and a DER-encoded certificate request
+type ParsedCSRBundle struct {
+	PrivateKeyType  int
+	PrivateKeyBytes []byte
+	PrivateKey      crypto.Signer
+	CSRBytes        []byte
+	CSR             *x509.CertificateRequest
 }
 
 // ToParsedCertBundle converts a string-based certificate bundle
@@ -223,6 +241,121 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 	return signer, nil
 }
 
+// ToParsedCSRBundle converts a string-based CSR bundle
+// to a byte-based raw CSR bundle
+func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
+	result := &ParsedCSRBundle{}
+	var err error
+	var pemBlock *pem.Block
+
+	if len(c.PrivateKey) > 0 {
+		pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
+		if pemBlock == nil {
+			return nil, UserError{"Error decoding private key from cert bundle"}
+		}
+		result.PrivateKeyBytes = pemBlock.Bytes
+
+		switch c.PrivateKeyType {
+		case "ec":
+			result.PrivateKeyType = ECPrivateKey
+		case "rsa":
+			result.PrivateKeyType = RSAPrivateKey
+		default:
+			// Try to figure it out and correct
+			if _, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
+				result.PrivateKeyType = ECPrivateKey
+				c.PrivateKeyType = "ec"
+			} else if _, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
+				result.PrivateKeyType = RSAPrivateKey
+				c.PrivateKeyType = "rsa"
+			} else {
+				return nil, UserError{fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
+			}
+		}
+
+		result.PrivateKey, err = result.getSigner()
+		if err != nil {
+			return nil, UserError{fmt.Sprintf("Error getting signer: %s", err)}
+		}
+	}
+
+	if len(c.CSR) > 0 {
+		pemBlock, _ = pem.Decode([]byte(c.CSR))
+		if pemBlock == nil {
+			return nil, UserError{"Error decoding certificate from cert bundle"}
+		}
+		result.CSRBytes = pemBlock.Bytes
+		result.CSR, err = x509.ParseCertificateRequest(result.CSRBytes)
+		if err != nil {
+			return nil, UserError{"Error encountered parsing certificate bytes from raw bundle"}
+		}
+	}
+
+	return result, nil
+}
+
+// ToCSRBundle converts a byte-based raw DER certificate bundle
+// to a PEM-based string certificate bundle
+func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
+	result := &CSRBundle{}
+	block := pem.Block{
+		Type: "CERTIFICATE REQUEST",
+	}
+
+	if p.CSRBytes != nil && len(p.CSRBytes) > 0 {
+		block.Bytes = p.CSRBytes
+		result.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+	}
+
+	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
+		block.Bytes = p.PrivateKeyBytes
+		switch p.PrivateKeyType {
+		case RSAPrivateKey:
+			result.PrivateKeyType = "rsa"
+			block.Type = "RSA PRIVATE KEY"
+		case ECPrivateKey:
+			result.PrivateKeyType = "ec"
+			block.Type = "EC PRIVATE KEY"
+		default:
+			return nil, InternalError{"Could not determine private key type when creating block"}
+		}
+		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+	}
+
+	return result, nil
+}
+
+// GetSigner returns a crypto.Signer corresponding to the private key
+// contained in this ParsedCSRBundle. The Signer contains a Public() function
+// for getting the corresponding public. The Signer can also be
+// type-converted to private keys
+func (p *ParsedCSRBundle) getSigner() (crypto.Signer, error) {
+	var signer crypto.Signer
+	var err error
+
+	if p.PrivateKeyBytes == nil || len(p.PrivateKeyBytes) == 0 {
+		return nil, UserError{"Given parsed cert bundle does not have private key information"}
+	}
+
+	switch p.PrivateKeyType {
+	case ECPrivateKey:
+		signer, err = x509.ParseECPrivateKey(p.PrivateKeyBytes)
+		if err != nil {
+			return nil, UserError{fmt.Sprintf("Unable to parse CA's private EC key: %s", err)}
+		}
+
+	case RSAPrivateKey:
+		signer, err = x509.ParsePKCS1PrivateKey(p.PrivateKeyBytes)
+		if err != nil {
+			return nil, UserError{fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
+		}
+
+	default:
+		return nil, UserError{"Unable to determine type of private key; only RSA and EC are supported"}
+	}
+	return signer, nil
+}
+
 // GetTLSConfig returns a TLS config generally suitable for client
 // authentiation. The returned TLS config can be modified slightly
 // to be made suitable for a server requiring client authentication;
@@ -284,7 +417,7 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 // IssueData is a structure that is suitable for marshaling into a request;
 // either via JSON, or into a map[string]interface{} via the structs package
 type IssueData struct {
-	Lease      string `json:"lease" structs:"lease" mapstructure:"lease"`
+	TTL        string `json:"ttl" structs:"ttl" mapstructure:"ttl"`
 	CommonName string `json:"common_name" structs:"common_name" mapstructure:"common_name"`
 	AltNames   string `json:"alt_names" structs:"alt_names" mapstructure:"alt_names"`
 	IPSANs     string `json:"ip_sans" structs:"ip_sans" mapstructure:"ip_sans"`

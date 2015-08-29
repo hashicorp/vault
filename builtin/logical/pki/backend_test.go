@@ -145,7 +145,7 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca",
+			Path:      "config/ca/set",
 			Data: map[string]interface{}{
 				"pem_bundle": caKey + caCert,
 			},
@@ -214,6 +214,65 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 			Check: func(resp *logical.Response) error {
 				if resp.Data["expiry"].(string) != "16h" {
 					return fmt.Errorf("CRL lifetimes do not match (got %s)", resp.Data["expiry"].(string))
+				}
+				return nil
+			},
+		},
+
+		// Now test uploading when the private key is already stored, such
+		// as when uploading a CA signed as the result of a generated CSR
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data: map[string]interface{}{
+				"pem_bundle": caCert,
+			},
+		},
+
+		// Ensure we can fetch it back via unauthenticated means, in various formats
+		logicaltest.TestStep{
+			Operation:       logical.ReadOperation,
+			Path:            "cert/ca",
+			Unauthenticated: true,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["certificate"].(string) != caCert {
+					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", resp.Data["certificate"].(string), caCert)
+				}
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation:       logical.ReadOperation,
+			Path:            "ca/pem",
+			Unauthenticated: true,
+			Check: func(resp *logical.Response) error {
+				rawBytes := resp.Data["http_raw_body"].([]byte)
+				if string(rawBytes) != caCert {
+					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", string(rawBytes), caCert)
+				}
+				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
+					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
+				}
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation:       logical.ReadOperation,
+			Path:            "ca",
+			Unauthenticated: true,
+			Check: func(resp *logical.Response) error {
+				rawBytes := resp.Data["http_raw_body"].([]byte)
+				pemBytes := pem.EncodeToMemory(&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: rawBytes,
+				})
+				if string(pemBytes) != caCert {
+					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", string(pemBytes), caCert)
+				}
+				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
+					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
 				}
 				return nil
 			},

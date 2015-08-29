@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 type certUsage int
@@ -25,15 +27,18 @@ const (
 	serverUsage certUsage = 1 << iota
 	clientUsage
 	codeSigningUsage
+	emailProtectionUsage
+	caUsage
 )
 
 type certCreationBundle struct {
-	SigningBundle *certutil.ParsedCertBundle
-	CACert        *x509.Certificate
+	CAType        string
 	CommonNames   []string
+	PKIAddress    string
 	IPSANs        []net.IP
 	KeyType       string
 	KeyBits       int
+	SigningBundle *certutil.ParsedCertBundle
 	TTL           time.Duration
 	Usage         certUsage
 }
@@ -162,6 +167,189 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 	return "", nil
 }
 
+func generateCert(b *backend,
+	role *roleEntry,
+	signingBundle *certutil.ParsedCertBundle,
+	req *logical.Request,
+	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
+
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, req, data)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedBundle, err := createCertificate(creationBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedBundle, nil
+}
+
+func generateCSR(b *backend,
+	role *roleEntry,
+	signingBundle *certutil.ParsedCertBundle,
+	req *logical.Request,
+	data *framework.FieldData) (*certutil.ParsedCSRBundle, error) {
+
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, req, data)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedBundle, err := createCSR(creationBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedBundle, nil
+}
+
+func signCert(b *backend,
+	role *roleEntry,
+	signingBundle *certutil.ParsedCertBundle,
+	csr *x509.CertificateRequest,
+	req *logical.Request,
+	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
+
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, req, data)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedBundle, err := signCertificate(creationBundle, csr)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedBundle, nil
+}
+
+func generateCreationBundle(b *backend,
+	role *roleEntry,
+	signingBundle *certutil.ParsedCertBundle,
+	req *logical.Request,
+	data *framework.FieldData) (*certCreationBundle, error) {
+	var err error
+
+	// Get the common name(s)
+	var commonNames []string
+	cn := data.Get("common_name").(string)
+	if len(cn) == 0 {
+		return nil, certutil.UserError{Err: "The common_name field is required"}
+	}
+	commonNames = []string{cn}
+
+	cnAlt := data.Get("alt_names").(string)
+	if len(cnAlt) != 0 {
+		for _, v := range strings.Split(cnAlt, ",") {
+			commonNames = append(commonNames, v)
+		}
+	}
+
+	// Get any IP SANs
+	ipSANs := []net.IP{}
+
+	ipAlt := data.Get("ip_sans").(string)
+	if len(ipAlt) != 0 {
+		if !role.AllowIPSANs {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+		}
+		for _, v := range strings.Split(ipAlt, ",") {
+			parsedIP := net.ParseIP(v)
+			if parsedIP == nil {
+				return nil, certutil.UserError{Err: fmt.Sprintf(
+					"the value '%s' is not a valid IP address", v)}
+			}
+			ipSANs = append(ipSANs, parsedIP)
+		}
+	}
+
+	ttlField := data.Get("ttl").(string)
+	if len(ttlField) == 0 {
+		ttlField = role.TTL
+	}
+
+	var ttl time.Duration
+	if len(ttlField) == 0 {
+		ttl = b.System().DefaultLeaseTTL()
+	} else {
+		ttl, err = time.ParseDuration(ttlField)
+		if err != nil {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"invalid requested ttl: %s", err)}
+		}
+	}
+
+	var maxTTL time.Duration
+	if len(role.MaxTTL) == 0 {
+		maxTTL = b.System().MaxLeaseTTL()
+	} else {
+		maxTTL, err = time.ParseDuration(role.MaxTTL)
+		if err != nil {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"invalid ttl: %s", err)}
+		}
+	}
+
+	if ttl > maxTTL {
+		// Don't error if they were using system defaults, only error if
+		// they specifically chose a bad TTL
+		if len(ttlField) == 0 {
+			ttl = maxTTL
+		} else {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"ttl is larger than maximum allowed by this role")}
+		}
+	}
+
+	badName, err := validateCommonNames(req, commonNames, role)
+	if len(badName) != 0 {
+		return nil, certutil.UserError{Err: fmt.Sprintf(
+			"name %s not allowed by this role", badName)}
+	} else if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf(
+			"error validating name %s: %s", badName, err)}
+	}
+
+	if signingBundle != nil &&
+		time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
+		return nil, certutil.UserError{Err: fmt.Sprintf(
+			"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
+	}
+
+	var usage certUsage
+	if role.ServerFlag {
+		usage = usage | serverUsage
+	}
+	if role.ClientFlag {
+		usage = usage | clientUsage
+	}
+	if role.CodeSigningFlag {
+		usage = usage | codeSigningUsage
+	}
+
+	creationBundle := &certCreationBundle{
+		CommonNames:   commonNames,
+		IPSANs:        ipSANs,
+		KeyType:       role.KeyType,
+		KeyBits:       role.KeyBits,
+		SigningBundle: signingBundle,
+		TTL:           ttl,
+		Usage:         usage,
+	}
+
+	if _, ok := req.Data["ca_type"]; ok {
+		creationBundle.CAType = req.Data["ca_type"].(string)
+	}
+	if _, ok := req.Data["pki_address"]; ok {
+		creationBundle.PKIAddress = req.Data["pki_address"].(string)
+	}
+
+	return creationBundle, nil
+}
+
 // Performs the heavy lifting of creating a certificate. Returns
 // a fully-filled-in ParsedCertBundle.
 func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBundle, error) {
@@ -172,7 +360,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 	var serialNumber *big.Int
 	serialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Error getting random serial number")}
+		return nil, certutil.InternalError{Err: fmt.Sprintf("error getting random serial number")}
 	}
 
 	switch creationInfo.KeyType {
@@ -180,7 +368,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		result.PrivateKeyType = certutil.RSAPrivateKey
 		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
 		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("Error generating RSA private key")}
+			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating RSA private key")}
 		}
 		result.PrivateKey = clientPrivKey
 		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
@@ -197,36 +385,29 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		case 521:
 			curve = elliptic.P521()
 		default:
-			return nil, certutil.UserError{Err: fmt.Sprintf("Unsupported bit length for EC key: %d", creationInfo.KeyBits)}
+			return nil, certutil.UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", creationInfo.KeyBits)}
 		}
 		clientPrivKey, err = ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("Error generating EC private key")}
+			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating EC private key")}
 		}
 		result.PrivateKey = clientPrivKey
 		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
 		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("Error marshalling EC private key")}
+			return nil, certutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key")}
 		}
 	default:
-		return nil, certutil.UserError{Err: fmt.Sprintf("Unknown key type: %s", creationInfo.KeyType)}
+		return nil, certutil.UserError{Err: fmt.Sprintf("unknown key type: %s", creationInfo.KeyType)}
 	}
 
 	subjKeyID, err := certutil.GetSubjKeyID(result.PrivateKey)
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Error getting subject key ID: %s", err)}
+		return nil, certutil.InternalError{Err: fmt.Sprintf("error getting subject key ID: %s", err)}
 	}
 
 	subject := pkix.Name{
-		Country:            creationInfo.CACert.Subject.Country,
-		Organization:       creationInfo.CACert.Subject.Organization,
-		OrganizationalUnit: creationInfo.CACert.Subject.OrganizationalUnit,
-		Locality:           creationInfo.CACert.Subject.Locality,
-		Province:           creationInfo.CACert.Subject.Province,
-		StreetAddress:      creationInfo.CACert.Subject.StreetAddress,
-		PostalCode:         creationInfo.CACert.Subject.PostalCode,
-		SerialNumber:       serialNumber.String(),
-		CommonName:         creationInfo.CommonNames[0],
+		SerialNumber: serialNumber.String(),
+		CommonName:   creationInfo.CommonNames[0],
 	}
 
 	certTemplate := &x509.Certificate{
@@ -237,13 +418,10 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		NotAfter:              time.Now().Add(creationInfo.TTL),
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		BasicConstraintsValid: true,
-		IsCA:                        false,
-		SubjectKeyId:                subjKeyID,
-		DNSNames:                    creationInfo.CommonNames,
-		IPAddresses:                 creationInfo.IPSANs,
-		PermittedDNSDomainsCritical: false,
-		PermittedDNSDomains:         nil,
-		CRLDistributionPoints:       creationInfo.CACert.CRLDistributionPoints,
+		IsCA:         false,
+		SubjectKeyId: subjKeyID,
+		DNSNames:     creationInfo.CommonNames,
+		IPAddresses:  creationInfo.IPSANs,
 	}
 
 	if creationInfo.Usage&serverUsage != 0 {
@@ -255,16 +433,201 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 	if creationInfo.Usage&codeSigningUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
 	}
-
-	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, creationInfo.CACert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
-	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to create certificate: %s", err)}
+	if creationInfo.Usage&emailProtectionUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
 	}
 
-	result.CertificateBytes = cert
-	result.Certificate, err = x509.ParseCertificate(cert)
+	var certBytes []byte
+	if creationInfo.SigningBundle != nil {
+		caCert := creationInfo.SigningBundle.Certificate
+		subject.Country = caCert.Subject.Country
+		subject.Organization = caCert.Subject.Organization
+		subject.OrganizationalUnit = caCert.Subject.OrganizationalUnit
+		subject.Locality = caCert.Subject.Locality
+		subject.Province = caCert.Subject.Province
+		subject.StreetAddress = caCert.Subject.StreetAddress
+		subject.PostalCode = caCert.Subject.PostalCode
+		certTemplate.CRLDistributionPoints = caCert.CRLDistributionPoints
+		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
+	} else {
+		certTemplate.CRLDistributionPoints = []string{
+			creationInfo.PKIAddress + "/crl",
+		}
+		certTemplate.IssuingCertificateURL = []string{
+			creationInfo.PKIAddress + "/ca",
+		}
+		certTemplate.IsCA = true
+		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, clientPrivKey.Public(), clientPrivKey)
+	}
+
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to parse created certificate: %s", err)}
+		return nil, certutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
+	}
+
+	result.CertificateBytes = certBytes
+	result.Certificate, err = x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+	}
+
+	if creationInfo.SigningBundle != nil {
+		result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
+		result.IssuingCA = creationInfo.SigningBundle.Certificate
+	} else {
+		result.IssuingCABytes = result.CertificateBytes
+		result.IssuingCA = result.Certificate
+	}
+
+	return result, nil
+}
+
+// Creates a CSR. This is currently only meant for use when
+// generating an intermediate certificate.
+func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, error) {
+	var clientPrivKey crypto.Signer
+	var err error
+	result := &certutil.ParsedCSRBundle{}
+
+	switch creationInfo.KeyType {
+	case "rsa":
+		result.PrivateKeyType = certutil.RSAPrivateKey
+		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
+		if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating RSA private key")}
+		}
+		result.PrivateKey = clientPrivKey
+		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
+	default:
+		return nil, certutil.UserError{Err: fmt.Sprintf("unsupported key type for CA generation: %s", creationInfo.KeyType)}
+	}
+
+	// Like many root CAs, other information is ignored
+	subject := pkix.Name{
+		CommonName: creationInfo.CommonNames[0],
+	}
+
+	csrTemplate := &x509.CertificateRequest{
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		Subject:            subject,
+		DNSNames:           creationInfo.CommonNames,
+		IPAddresses:        creationInfo.IPSANs,
+	}
+
+	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, result.PrivateKey)
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
+	}
+
+	result.CSRBytes = csr
+	result.CSR, err = x509.ParseCertificateRequest(csr)
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+	}
+
+	return result, nil
+}
+
+// Performs the heavy lifting of generating a certificate from a CSR.
+// Returns a ParsedCertBundle sans private keys.
+func signCertificate(creationInfo *certCreationBundle,
+	csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, error) {
+	switch {
+	case creationInfo == nil:
+		return nil, certutil.UserError{Err: "nil creation info given to signCertificate"}
+	case creationInfo.SigningBundle == nil:
+		return nil, certutil.UserError{Err: "nil signing bundle given to signCertificate"}
+	case csr == nil:
+		return nil, certutil.UserError{Err: "nil csr given to signCertificate"}
+	case creationInfo.CAType != "" && creationInfo.PKIAddress == "":
+		return nil, certutil.UserError{Err: "ca cert to sign but no PKI address given to signCertificate"}
+	}
+
+	err := csr.CheckSignature()
+	if err != nil {
+		return nil, certutil.UserError{Err: "request signature invalid"}
+	}
+
+	result := &certutil.ParsedCertBundle{}
+
+	var serialNumber *big.Int
+	serialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("error getting random serial number")}
+	}
+
+	subject := pkix.Name{
+		SerialNumber: serialNumber.String(),
+		CommonName:   creationInfo.CommonNames[0],
+	}
+
+	marshaledKey, err := x509.MarshalPKIXPublicKey(csr.PublicKey)
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
+	}
+	subjKeyID := sha1.Sum(marshaledKey)
+
+	certTemplate := &x509.Certificate{
+		SignatureAlgorithm:    x509.SHA256WithRSA,
+		SerialNumber:          serialNumber,
+		Subject:               subject,
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(creationInfo.TTL),
+		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
+		BasicConstraintsValid: true,
+		IsCA:         false,
+		SubjectKeyId: subjKeyID[:],
+		DNSNames:     creationInfo.CommonNames,
+		IPAddresses:  creationInfo.IPSANs,
+	}
+
+	if creationInfo.Usage&serverUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+	}
+	if creationInfo.Usage&clientUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+	}
+	if creationInfo.Usage&codeSigningUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+	}
+	if creationInfo.Usage&emailProtectionUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	}
+
+	var certBytes []byte
+	caCert := creationInfo.SigningBundle.Certificate
+	subject.Country = caCert.Subject.Country
+	subject.Organization = caCert.Subject.Organization
+	subject.OrganizationalUnit = caCert.Subject.OrganizationalUnit
+	subject.Locality = caCert.Subject.Locality
+	subject.Province = caCert.Subject.Province
+	subject.StreetAddress = caCert.Subject.StreetAddress
+	subject.PostalCode = caCert.Subject.PostalCode
+
+	certTemplate.IssuingCertificateURL = caCert.IssuingCertificateURL
+
+	if creationInfo.CAType != "" && creationInfo.PKIAddress != "" {
+		certTemplate.CRLDistributionPoints = []string{
+			creationInfo.PKIAddress + "/crl",
+		}
+		certTemplate.IsCA = true
+		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+	} else {
+		certTemplate.CRLDistributionPoints = caCert.CRLDistributionPoints
+	}
+
+	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)
+
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
+	}
+
+	result.CertificateBytes = certBytes
+	result.Certificate, err = x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
 	}
 
 	result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
