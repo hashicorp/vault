@@ -60,6 +60,8 @@ var testOTP string
 var testPort int
 var testUserName string
 var testAdminUser string
+var testOTPRoleData map[string]interface{}
+var testDynamicRoleData map[string]interface{}
 
 // Starts the server and initializes the servers IP address,
 // port and usernames to be used by the test cases.
@@ -81,32 +83,33 @@ func init() {
 	}
 	testUserName = u.Username
 	testAdminUser = u.Username
-}
 
-func TestSSHBackend_Lookup(t *testing.T) {
-	data := map[string]interface{}{
-		"ip": testIP,
-	}
-	otpData := map[string]interface{}{
+	testOTPRoleData = map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	dynamicData := map[string]interface{}{
+	testDynamicRoleData = map[string]interface{}{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"cidr_list":    testCIDRList,
 	}
+}
+
+func TestSSHBackend_Lookup(t *testing.T) {
+	data := map[string]interface{}{
+		"ip": testIP,
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, 0),
-			testRoleWrite(t, testOTPRoleName, otpData),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testLookupRead(t, data, 1),
 			testNamedKeysWrite(t),
-			testRoleWrite(t, testDynamicRoleName, dynamicData),
+			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testLookupRead(t, data, 2),
 			testRoleDelete(t, testOTPRoleName),
 			testLookupRead(t, data, 1),
@@ -128,16 +131,11 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 }
 
 func TestSSHBackend_OTPRoleCrud(t *testing.T) {
-	data := map[string]interface{}{
-		"key_type":     testOTPKeyType,
-		"default_user": testUserName,
-		"cidr_list":    testCIDRList,
-	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, data),
-			testRoleRead(t, testOTPRoleName, data),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
+			testRoleRead(t, testOTPRoleName, testOTPRoleData),
 			testRoleDelete(t, testOTPRoleName),
 			testRoleRead(t, testOTPRoleName, nil),
 		},
@@ -145,19 +143,12 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
-	data := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
-	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t),
-			testRoleWrite(t, testDynamicRoleName, data),
-			testRoleRead(t, testDynamicRoleName, data),
+			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
+			testRoleRead(t, testDynamicRoleName, testDynamicRoleData),
 			testRoleDelete(t, testDynamicRoleName),
 			testRoleRead(t, testDynamicRoleName, nil),
 		},
@@ -177,15 +168,10 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 }
 
 func TestSSHBackend_OTPCreate(t *testing.T) {
-	data := map[string]interface{}{
-		"key_type":     testOTPKeyType,
-		"default_user": testUserName,
-		"cidr_list":    testCIDRList,
-	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, data),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName),
 		},
 	})
@@ -207,16 +193,6 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 }
 
 func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
-	otpRoleData := map[string]interface{}{
-		"key_type":     testOTPKeyType,
-		"default_user": testUserName,
-	}
-	dynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"default_user": testUserName,
-		"admin_user":   testUserName,
-		"key":          testKeyName,
-	}
 	zeroAddressData1 := map[string]interface{}{
 		"roles": testOTPRoleName,
 	}
@@ -230,11 +206,11 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testRoleWrite(t, testOTPRoleName, otpRoleData),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, zeroAddressData1),
 			testConfigZeroAddressRead(t, zeroAddressData1),
 			testNamedKeysWrite(t),
-			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
+			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testConfigZeroAddressWrite(t, zeroAddressData2),
 			testConfigZeroAddressRead(t, zeroAddressData2),
 			testRoleDelete(t, testDynamicRoleName),
@@ -442,14 +418,7 @@ func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("roles/%s", testDynamicRoleName),
-		Data: map[string]interface{}{
-			"key_type":     "dynamic",
-			"key":          testKeyName,
-			"admin_user":   testAdminUser,
-			"default_user": testAdminUser,
-			"cidr_list":    testCIDRList,
-			"port":         testPort,
-		},
+		Data:      testDynamicRoleData,
 	}
 }
 
