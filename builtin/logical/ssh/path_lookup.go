@@ -3,6 +3,7 @@ package ssh
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -56,7 +57,7 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 		return nil, err
 	}
 	if zeroAddressEntry != nil {
-		matchingRoles = append(matchingRoles, zeroAddressEntry.Roles...)
+		matchingRoles = append(matchingRoles, strings.Split(zeroAddressEntry.Roles, ",")...)
 	}
 
 	// This list may potentially reveal more information than it is supposed to.

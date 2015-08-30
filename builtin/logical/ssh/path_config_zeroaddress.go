@@ -10,7 +10,7 @@ import (
 
 // Structure to hold roles that are allowed to accept any IP address.
 type zeroAddressRoles struct {
-	Roles []string `json:"roles" mapstructure:"roles"`
+	Roles string `json:"roles" mapstructure:"roles"`
 }
 
 func pathConfigZeroAddress(b *backend) *framework.Path {
@@ -76,7 +76,7 @@ func (b *backend) pathConfigZeroAddressWrite(req *logical.Request, d *framework.
 		}
 	}
 
-	err := b.putZeroAddressRoles(req.Storage, roles)
+	err := b.putZeroAddressRoles(req.Storage, roleNames)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (b *backend) pathConfigZeroAddressWrite(req *logical.Request, d *framework.
 }
 
 // Stores the given list of roles at zeroaddress endpoint
-func (b *backend) putZeroAddressRoles(s logical.Storage, roles []string) error {
+func (b *backend) putZeroAddressRoles(s logical.Storage, roles string) error {
 	entry, err := logical.StorageEntryJSON("config/zeroaddress", &zeroAddressRoles{
 		Roles: roles,
 	})
@@ -135,30 +135,31 @@ func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) erro
 
 func (r *zeroAddressRoles) Remove(roleName string) error {
 	var index int
-	for i, role := range r.Roles {
+	roles := strings.Split(r.Roles, ",")
+	for i, role := range roles {
 		if role == roleName {
 			index = i
 			break
 		}
 	}
-	length := len(r.Roles)
+	length := len(roles)
 	if index >= length || index < 0 {
 		return fmt.Errorf("invalid index [%d]", index)
 	}
 	// If slice has zero or one item, remove the item by setting slice to nil.
 	if length < 2 {
-		r.Roles = nil
+		r.Roles = ""
 		return nil
 	}
 
 	// Last item to be deleted
 	if length-1 == index {
-		r.Roles = r.Roles[:length-1]
+		r.Roles = strings.Join(roles[:length-1], ",")
 		return nil
 	}
 
 	// Delete the item by appending all items except the one at index
-	r.Roles = append(r.Roles[:index], r.Roles[index+1:]...)
+	r.Roles = strings.Join(append(roles[:index], roles[index+1:]...), ",")
 	return nil
 }
 
