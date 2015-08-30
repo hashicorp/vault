@@ -10,7 +10,7 @@ import (
 
 // Structure to hold roles that are allowed to accept any IP address.
 type zeroAddressRoles struct {
-	Roles []string `json:"roles"`
+	Roles []string `json:"roles" mapstructure:"roles"`
 }
 
 func pathConfigZeroAddress(b *backend) *framework.Path {
@@ -25,12 +25,21 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathConfigZeroAddressWrite,
-			logical.ReadOperation:  b.pathConfigZeroAddressRead,
+			logical.WriteOperation:  b.pathConfigZeroAddressWrite,
+			logical.ReadOperation:   b.pathConfigZeroAddressRead,
+			logical.DeleteOperation: b.pathConfigZeroAddressDelete,
 		},
 		HelpSynopsis:    pathConfigZeroAddressSyn,
 		HelpDescription: pathConfigZeroAddressDesc,
 	}
+}
+
+func (b *backend) pathConfigZeroAddressDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete("config/zeroaddress")
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 func (b *backend) pathConfigZeroAddressRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
