@@ -126,7 +126,7 @@ func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) erro
 		return nil
 	}
 
-	err = zeroAddressEntry.Remove(roleName)
+	err = zeroAddressEntry.remove(roleName)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) erro
 }
 
 // Removes a given role from the comma separated string
-func (r *zeroAddressRoles) Remove(roleName string) error {
+func (r *zeroAddressRoles) remove(roleName string) error {
 	var index int
 	for i, role := range r.Roles {
 		if role == roleName {
