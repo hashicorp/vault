@@ -97,7 +97,7 @@ func (b *backend) pathCredsCreateWrite(
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving zero-address roles: %s", err)
 	}
-	var zeroAddressRoles string
+	var zeroAddressRoles []string
 	if zeroAddressEntry != nil {
 		zeroAddressRoles = zeroAddressEntry.Roles
 	}
@@ -256,10 +256,9 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 // excluded CIDR blocks and if IP is found there as well, an error is returned.
 // IP is valid only if it is encompassed by allowed CIDR blocks and not by
 // excluded CIDR blocks.
-func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles string) error {
+func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles []string) error {
 	// Search IP in the zero-address list
-	roles := strings.Split(zeroAddressRoles, ",")
-	for _, role := range roles {
+	for _, role := range zeroAddressRoles {
 		if roleName == role {
 			return nil
 		}

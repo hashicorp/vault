@@ -193,30 +193,36 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 }
 
 func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
-	zeroAddressData1 := map[string]interface{}{
+	req1 := map[string]interface{}{
 		"roles": testOTPRoleName,
 	}
-	zeroAddressData2 := map[string]interface{}{
+	resp1 := map[string]interface{}{
+		"roles": []string{testOTPRoleName},
+	}
+	req2 := map[string]interface{}{
 		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
 	}
-	zeroAddressData3 := map[string]interface{}{
-		"roles": "",
+	resp2 := map[string]interface{}{
+		"roles": []string{testOTPRoleName, testDynamicRoleName},
+	}
+	resp3 := map[string]interface{}{
+		"roles": []string{},
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testConfigZeroAddressWrite(t, zeroAddressData1),
-			testConfigZeroAddressRead(t, zeroAddressData1),
+			testConfigZeroAddressWrite(t, req1),
+			testConfigZeroAddressRead(t, resp1),
 			testNamedKeysWrite(t),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testConfigZeroAddressWrite(t, zeroAddressData2),
-			testConfigZeroAddressRead(t, zeroAddressData2),
+			testConfigZeroAddressWrite(t, req2),
+			testConfigZeroAddressRead(t, resp2),
 			testRoleDelete(t, testDynamicRoleName),
-			testConfigZeroAddressRead(t, zeroAddressData1),
+			testConfigZeroAddressRead(t, resp1),
 			testRoleDelete(t, testOTPRoleName),
-			testConfigZeroAddressRead(t, zeroAddressData3),
+			testConfigZeroAddressRead(t, resp3),
 			testConfigZeroAddressDelete(t),
 		},
 	})
