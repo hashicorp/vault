@@ -116,6 +116,7 @@ func (b *backend) getZeroAddressRoles(s logical.Storage) (*zeroAddressRoles, err
 	return &result, nil
 }
 
+// Removes a role from the list of roles present in config/zeroaddress path
 func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) error {
 	zeroAddressEntry, err := b.getZeroAddressRoles(s)
 	if err != nil {
@@ -133,6 +134,7 @@ func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) erro
 	return b.putZeroAddressRoles(s, zeroAddressEntry.Roles)
 }
 
+// Removes a given role from the comma separated string
 func (r *zeroAddressRoles) Remove(roleName string) error {
 	var index int
 	roles := strings.Split(r.Roles, ",")
