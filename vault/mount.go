@@ -118,8 +118,8 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL time.Duration `json:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL     time.Duration `json:"max_lease_ttl"`     // Override for global default
+	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl"`         // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -283,7 +283,7 @@ func (c *Core) taintMountEntry(path string) error {
 }
 
 // Remount is used to remount a path at a new mount point.
-func (c *Core) remount(src, dst string) error {
+func (c *Core) remount(src, dst string, config *MountConfig) error {
 	c.mounts.Lock()
 	defer c.mounts.Unlock()
 
@@ -339,6 +339,9 @@ func (c *Core) remount(src, dst string) error {
 		if ent.Path == src {
 			ent.Path = dst
 			ent.Tainted = false
+			if config != nil {
+				ent.Config = *config
+			}
 			break
 		}
 	}

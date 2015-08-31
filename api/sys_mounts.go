@@ -2,6 +2,9 @@ package api
 
 import (
 	"fmt"
+
+	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/vault"
 )
 
 func (c *Sys) ListMounts() (map[string]*Mount, error) {
@@ -17,15 +20,12 @@ func (c *Sys) ListMounts() (map[string]*Mount, error) {
 	return result, err
 }
 
-func (c *Sys) Mount(path, mountType, description string) error {
+func (c *Sys) Mount(path string, mountInfo *Mount) error {
 	if err := c.checkMountPath(path); err != nil {
 		return err
 	}
 
-	body := map[string]string{
-		"type":        mountType,
-		"description": description,
-	}
+	body := structs.Map(mountInfo)
 
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
@@ -54,7 +54,7 @@ func (c *Sys) Unmount(path string) error {
 	return err
 }
 
-func (c *Sys) Remount(from, to string) error {
+func (c *Sys) Remount(from, to string, config *vault.MountConfig) error {
 	if err := c.checkMountPath(from); err != nil {
 		return err
 	}
@@ -62,9 +62,12 @@ func (c *Sys) Remount(from, to string) error {
 		return err
 	}
 
-	body := map[string]string{
+	body := map[string]interface{}{
 		"from": from,
 		"to":   to,
+	}
+	if config != nil {
+		body["config"] = *config
 	}
 
 	r := c.c.NewRequest("POST", "/v1/sys/remount")
@@ -88,6 +91,7 @@ func (c *Sys) checkMountPath(path string) error {
 }
 
 type Mount struct {
-	Type        string
-	Description string
+	Type        string             `json:"type" structs:"type"`
+	Description string             `json:"description" structs:"description"`
+	Config      *vault.MountConfig `json:"config" structs:"config"`
 }

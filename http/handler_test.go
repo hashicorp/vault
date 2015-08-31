@@ -34,16 +34,24 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
 	}
 }
 

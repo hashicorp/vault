@@ -5,8 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/mitchellh/mapstructure"
 )
 
 var (
@@ -69,6 +71,10 @@ func NewSystemBackend(core *Core) logical.Backend {
 					"description": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_desc"][0]),
+					},
+					"config": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
 					},
 				},
 
@@ -339,9 +345,10 @@ func (b *SystemBackend) handleMountTable(
 		Data: make(map[string]interface{}),
 	}
 	for _, entry := range b.Core.mounts.Entries {
-		info := map[string]string{
+		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
+			"config":      structs.Map(entry.Config),
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -356,6 +363,24 @@ func (b *SystemBackend) handleMount(
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
+	var config *MountConfig
+	configInt, ok := data.GetOk("config")
+	if ok {
+		configMap, ok := configInt.(map[string]interface{})
+		if !ok {
+			return logical.ErrorResponse(
+					"cannot convert mount config information into proper values"),
+				logical.ErrInvalidRequest
+		}
+		if configMap != nil && len(configMap) != 0 {
+			err := mapstructure.Decode(configMap, config)
+			if err != nil {
+				return logical.ErrorResponse(
+						"unable to convert given mount config information"),
+					logical.ErrInvalidRequest
+			}
+		}
+	}
 
 	if logicalType == "" {
 		return logical.ErrorResponse(
@@ -368,6 +393,9 @@ func (b *SystemBackend) handleMount(
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
+	}
+	if config != nil {
+		me.Config = *config
 	}
 
 	// Attempt mount
@@ -418,9 +446,27 @@ func (b *SystemBackend) handleRemount(
 				"both 'from' and 'to' path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
+	var config *MountConfig
+	configInt, ok := data.GetOk("config")
+	if ok {
+		configMap, ok := configInt.(map[string]interface{})
+		if !ok {
+			return logical.ErrorResponse(
+					"cannot convert mount config information into proper values"),
+				logical.ErrInvalidRequest
+		}
+		if configMap != nil && len(configMap) != 0 {
+			err := mapstructure.Decode(configMap, config)
+			if err != nil {
+				return logical.ErrorResponse(
+						"unable to convert given mount config information"),
+					logical.ErrInvalidRequest
+			}
+		}
+	}
 
 	// Attempt remount
-	if err := b.Core.remount(fromPath, toPath); err != nil {
+	if err := b.Core.remount(fromPath, toPath, config); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
 		return handleError(err)
 	}
@@ -828,6 +874,11 @@ west coast.
 	"mount_desc": {
 		`User-friendly description for this mount.`,
 		"",
+	},
+
+	"mount_config": {
+		`Configuration for this mount, such as default_lease_ttl
+and max_lease_ttl.`,
 	},
 
 	"remount": {

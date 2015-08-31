@@ -3,6 +3,7 @@ package vault
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
@@ -39,17 +40,25 @@ func TestSystemBackend_mounts(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"secret/": map[string]string{
+		"secret/": map[string]interface{}{
 			"type":        "generic",
 			"description": "generic secret storage",
+			"config": map[string]interface{}{
+				"default_lease_ttl": time.Duration(0),
+				"max_lease_ttl":     time.Duration(0),
+			},
 		},
-		"sys/": map[string]string{
+		"sys/": map[string]interface{}{
 			"type":        "system",
 			"description": "system endpoints used for control, policy and debugging",
+			"config": map[string]interface{}{
+				"default_lease_ttl": time.Duration(0),
+				"max_lease_ttl":     time.Duration(0),
+			},
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)
 	}
 }
 

@@ -20,10 +20,18 @@ func TestSysMounts(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -52,14 +60,26 @@ func TestSysMount(t *testing.T) {
 		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -110,14 +130,26 @@ func TestSysRemount(t *testing.T) {
 		"bar/": map[string]interface{}{
 			"description": "foo",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -149,10 +181,18 @@ func TestSysUnmount(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
