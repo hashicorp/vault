@@ -54,7 +54,7 @@ func (c *Sys) Unmount(path string) error {
 	return err
 }
 
-func (c *Sys) Remount(from, to string, config *vault.MountConfig) error {
+func (c *Sys) Remount(from, to string, config vault.MountConfig) error {
 	if err := c.checkMountPath(from); err != nil {
 		return err
 	}
@@ -63,11 +63,9 @@ func (c *Sys) Remount(from, to string, config *vault.MountConfig) error {
 	}
 
 	body := map[string]interface{}{
-		"from": from,
-		"to":   to,
-	}
-	if config != nil {
-		body["config"] = *config
+		"from":   from,
+		"to":     to,
+		"config": config,
 	}
 
 	r := c.c.NewRequest("POST", "/v1/sys/remount")
@@ -91,7 +89,7 @@ func (c *Sys) checkMountPath(path string) error {
 }
 
 type Mount struct {
-	Type        string             `json:"type" structs:"type"`
-	Description string             `json:"description" structs:"description"`
-	Config      *vault.MountConfig `json:"config" structs:"config"`
+	Type        string            `json:"type" structs:"type"`
+	Description string            `json:"description" structs:"description"`
+	Config      vault.MountConfig `json:"config" structs:"config"`
 }

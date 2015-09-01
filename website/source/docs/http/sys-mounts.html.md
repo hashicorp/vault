@@ -13,7 +13,9 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Lists all the mounted secret backends.
+    Lists all the mounted secret backends. `default_lease_ttl`
+    or `max_lease_ttl` values of `0` mean that the system
+    defaults are used by this backend.
   </dd>
 
   <dt>Method</dt>
@@ -31,12 +33,20 @@ description: |-
     {
       "aws": {
         "type": "aws",
-        "description": "AWS keys"
+        "description": "AWS keys",
+        "config": {
+          "default_lease_ttl": 0,
+          "max_lease_ttl": 0
+        }
       },
 
       "sys": {
         "type": "system",
-        "description": "system endpoint"
+        "description": "system endpoint",
+        "config": {
+          "default_lease_ttl": 0,
+          "max_lease_ttl": 0
+        }
       }
     }
     ```
@@ -70,6 +80,16 @@ description: |-
         <span class="param">description</span>
         <span class="param-flags">optional</span>
         A human-friendly description of the mount.
+      </li>
+      <li>
+        <span class="param">config</span>
+        <span class="param-flags">optional</span>
+        Config options for this mount. This is an object with
+        two possible values: `default_lease_ttl` and
+        `max_lease_ttl`. These control the default and
+        maximum lease time-to-live, respectively. If set
+        on a specific mount, this overrides the global
+        defaults.
       </li>
     </ul>
   </dd>

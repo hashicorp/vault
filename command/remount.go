@@ -17,8 +17,8 @@ type RemountCommand struct {
 func (c *RemountCommand) Run(args []string) int {
 	var defaultLeaseTTL, maxLeaseTTL string
 	flags := c.Meta.FlagSet("remount", FlagSetDefault)
-	flags.StringVar(&defaultLeaseTTL, "default_lease_ttl", "", "")
-	flags.StringVar(&maxLeaseTTL, "max_lease_ttl", "", "")
+	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
+	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -35,30 +35,24 @@ func (c *RemountCommand) Run(args []string) int {
 	from := args[0]
 	to := args[1]
 
-	mountConfig := &vault.MountConfig{}
-	var err error
-	var passConfig bool
+	mountConfig := vault.MountConfig{}
 	if defaultLeaseTTL != "" {
-		mountConfig.DefaultLeaseTTL, err = time.ParseDuration(defaultLeaseTTL)
+		defTTL, err := time.ParseDuration(defaultLeaseTTL)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error parsing default lease TTL duration: %s", err))
-			return 1
+			return 2
 		}
-		passConfig = true
+		mountConfig.DefaultLeaseTTL = &defTTL
 	}
 	if maxLeaseTTL != "" {
-		mountConfig.MaxLeaseTTL, err = time.ParseDuration(maxLeaseTTL)
+		maxTTL, err := time.ParseDuration(maxLeaseTTL)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error parsing max lease TTL duration: %s", err))
-			return 1
+			return 2
 		}
-		passConfig = true
-	}
-
-	if !passConfig {
-		mountConfig = nil
+		mountConfig.MaxLeaseTTL = &maxTTL
 	}
 
 	client, err := c.Client()
@@ -95,10 +89,27 @@ Usage: vault remount [options] from to
   the Vault data associated with the backend will be preserved (such
   as configuration data).
 
+  If the 'from' and 'to' values of the same, performs an in-place
+  remount. This allows you to change mount options.
+
   Example: vault remount secret/ generic/
 
 General Options:
 
-  ` + generalOptionsUsage()
+  ` + generalOptionsUsage() + `
+
+Mount Options:
+
+  -default-lease-ttl=<duration>  Default lease time-to-live for this backend.
+                                 If not specified, uses the global default, or
+                                 the previously set value. Set to '0' to
+                                 explicitly set it to use the global default.
+
+  -max-lease-ttl=<duration>      Max lease time-to-live for this backend.
+                                 If not specified, uses the global default, or
+                                 the previously set value. Set to '0' to
+                                 explicitly set it to use the global default.
+
+`
 	return strings.TrimSpace(helpText)
 }

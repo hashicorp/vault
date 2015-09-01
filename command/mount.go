@@ -19,8 +19,8 @@ func (c *MountCommand) Run(args []string) int {
 	flags := c.Meta.FlagSet("mount", FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
-	flags.StringVar(&defaultLeaseTTL, "default_lease_ttl", "", "")
-	flags.StringVar(&maxLeaseTTL, "max_lease_ttl", "", "")
+	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
+	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -51,31 +51,26 @@ func (c *MountCommand) Run(args []string) int {
 	mountInfo := &api.Mount{
 		Type:        mountType,
 		Description: description,
-		Config:      &vault.MountConfig{},
+		Config:      vault.MountConfig{},
 	}
 
-	var passConfig bool
 	if defaultLeaseTTL != "" {
-		mountInfo.Config.DefaultLeaseTTL, err = time.ParseDuration(defaultLeaseTTL)
+		defTTL, err := time.ParseDuration(defaultLeaseTTL)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error parsing default lease TTL duration: %s", err))
 			return 2
 		}
-		passConfig = true
+		mountInfo.Config.DefaultLeaseTTL = &defTTL
 	}
 	if maxLeaseTTL != "" {
-		mountInfo.Config.MaxLeaseTTL, err = time.ParseDuration(maxLeaseTTL)
+		maxTTL, err := time.ParseDuration(maxLeaseTTL)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error parsing max lease TTL duration: %s", err))
 			return 2
 		}
-		passConfig = true
-	}
-
-	if !passConfig {
-		mountInfo.Config = nil
+		mountInfo.Config.MaxLeaseTTL = &maxTTL
 	}
 
 	if err := client.Sys().Mount(path, mountInfo); err != nil {
@@ -110,11 +105,21 @@ General Options:
 
 Mount Options:
 
-  -description=<desc>     Human-friendly description of the purpose for the
-                          mount. This shows up in the mounts command.
+  -description=<desc>            Human-friendly description of the purpose for
+                                 the mount. This shows up in the mounts command.
 
-  -path=<path>            Mount point for the logical backend. This defaults
-                          to the type of the mount.
+  -path=<path>                   Mount point for the logical backend. This
+                                 defauls to the type of the mount.
+
+  -default-lease-ttl=<duration>  Default lease time-to-live for this backend.
+                                 If not specified, uses the global default, or
+                                 the previously set value. Set to '0' to
+                                 explicitly set it to use the global default.
+
+  -max-lease-ttl=<duration>      Max lease time-to-live for this backend.
+                                 If not specified, uses the global default, or
+                                 the previously set value. Set to '0' to
+                                 explicitly set it to use the global default.
 
 `
 	return strings.TrimSpace(helpText)

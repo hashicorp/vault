@@ -192,7 +192,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 
 func TestCore_Remount(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	err := c.remount("secret", "foo", nil)
+	err := c.remount("secret", "foo", MountConfig{})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Remount, this should cleanup
-	if err := c.remount("test/", "new/", nil); err != nil {
+	if err := c.remount("test/", "new/", MountConfig{}); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -309,7 +309,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.remount("sys", "foo", nil)
+	err := c.remount("sys", "foo", MountConfig{})
 	if err.Error() != "cannot remount 'sys/'" {
 		t.Fatalf("err: %v", err)
 	}

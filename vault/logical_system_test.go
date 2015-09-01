@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 )
@@ -39,21 +40,23 @@ func TestSystemBackend_mounts(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// We can't know the pointer address ahead of time so simply
+	// copy what's given
 	exp := map[string]interface{}{
 		"secret/": map[string]interface{}{
 			"type":        "generic",
 			"description": "generic secret storage",
 			"config": map[string]interface{}{
-				"default_lease_ttl": time.Duration(0),
-				"max_lease_ttl":     time.Duration(0),
+				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(*time.Duration),
+				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(*time.Duration),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"type":        "system",
 			"description": "system endpoints used for control, policy and debugging",
 			"config": map[string]interface{}{
-				"default_lease_ttl": time.Duration(0),
-				"max_lease_ttl":     time.Duration(0),
+				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(*time.Duration),
+				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(*time.Duration),
 			},
 		},
 	}
@@ -123,6 +126,7 @@ func TestSystemBackend_remount(t *testing.T) {
 	req := logical.TestRequest(t, logical.WriteOperation, "remount")
 	req.Data["from"] = "secret"
 	req.Data["to"] = "foo"
+	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -138,6 +142,7 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 	req := logical.TestRequest(t, logical.WriteOperation, "remount")
 	req.Data["from"] = "unknown"
 	req.Data["to"] = "foo"
+	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)

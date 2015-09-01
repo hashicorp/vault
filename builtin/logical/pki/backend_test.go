@@ -28,8 +28,8 @@ func TestBackend_basic(t *testing.T) {
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: &defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     &maxLeaseTTLVal,
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
 		},
 	})
 	if err != nil {
@@ -56,8 +56,8 @@ func TestBackend_roles(t *testing.T) {
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: &defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     &maxLeaseTTLVal,
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
 		},
 	})
 	if err != nil {

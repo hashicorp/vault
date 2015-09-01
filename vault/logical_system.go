@@ -99,6 +99,10 @@ func NewSystemBackend(core *Core) logical.Backend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["remount_to"][0]),
 					},
+					"config": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -363,22 +367,15 @@ func (b *SystemBackend) handleMount(
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
-	var config *MountConfig
-	configInt, ok := data.GetOk("config")
-	if ok {
-		configMap, ok := configInt.(map[string]interface{})
-		if !ok {
+
+	var config MountConfig
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &config)
+		if err != nil {
 			return logical.ErrorResponse(
-					"cannot convert mount config information into proper values"),
+					"unable to convert given mount config information"),
 				logical.ErrInvalidRequest
-		}
-		if configMap != nil && len(configMap) != 0 {
-			err := mapstructure.Decode(configMap, config)
-			if err != nil {
-				return logical.ErrorResponse(
-						"unable to convert given mount config information"),
-					logical.ErrInvalidRequest
-			}
 		}
 	}
 
@@ -393,9 +390,14 @@ func (b *SystemBackend) handleMount(
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
+		Config:      config,
 	}
-	if config != nil {
-		me.Config = *config
+
+	if me.Config.DefaultLeaseTTL == nil {
+		me.Config.DefaultLeaseTTL = new(time.Duration)
+	}
+	if me.Config.MaxLeaseTTL == nil {
+		me.Config.MaxLeaseTTL = new(time.Duration)
 	}
 
 	// Attempt mount
@@ -446,22 +448,15 @@ func (b *SystemBackend) handleRemount(
 				"both 'from' and 'to' path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
-	var config *MountConfig
-	configInt, ok := data.GetOk("config")
-	if ok {
-		configMap, ok := configInt.(map[string]interface{})
-		if !ok {
-			return logical.ErrorResponse(
-					"cannot convert mount config information into proper values"),
+
+	var config MountConfig
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &config)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to convert given mount config information: %s", err)),
 				logical.ErrInvalidRequest
-		}
-		if configMap != nil && len(configMap) != 0 {
-			err := mapstructure.Decode(configMap, config)
-			if err != nil {
-				return logical.ErrorResponse(
-						"unable to convert given mount config information"),
-					logical.ErrInvalidRequest
-			}
 		}
 	}
 

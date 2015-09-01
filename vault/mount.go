@@ -118,8 +118,8 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl"`         // Override for global default
+	DefaultLeaseTTL *time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL     *time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl"`         // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -283,7 +283,7 @@ func (c *Core) taintMountEntry(path string) error {
 }
 
 // Remount is used to remount a path at a new mount point.
-func (c *Core) remount(src, dst string, config *MountConfig) error {
+func (c *Core) remount(src, dst string, config MountConfig) error {
 	c.mounts.Lock()
 	defer c.mounts.Unlock()
 
@@ -302,6 +302,11 @@ func (c *Core) remount(src, dst string, config *MountConfig) error {
 		}
 	}
 
+	inPlace := false
+	if src == dst {
+		inPlace = true
+	}
+
 	// Verify exact match of the route
 	match := c.router.MatchingMount(src)
 	if match == "" || src != match {
@@ -309,6 +314,36 @@ func (c *Core) remount(src, dst string, config *MountConfig) error {
 	}
 
 	// Verify there is no conflicting mount
+	if inPlace {
+		for _, ent := range c.mounts.Entries {
+			if ent.Path == src {
+				if config.DefaultLeaseTTL != nil {
+					if *config.DefaultLeaseTTL == 0 {
+						ent.Config.DefaultLeaseTTL = &c.defaultLeaseTTL
+					} else {
+						ent.Config.DefaultLeaseTTL = config.DefaultLeaseTTL
+					}
+				}
+				if config.MaxLeaseTTL != nil {
+					if *config.MaxLeaseTTL == 0 {
+						ent.Config.MaxLeaseTTL = &c.maxLeaseTTL
+					} else {
+						ent.Config.MaxLeaseTTL = config.MaxLeaseTTL
+					}
+				}
+				break
+			}
+		}
+
+		// Update the mount table
+		if err := c.persistMounts(c.mounts); err != nil {
+			return errors.New("failed to update mount table")
+		}
+
+		c.logger.Printf("[INFO] core: remounted '%s' in-place", src)
+		return nil
+	}
+
 	if match := c.router.MatchingMount(dst); match != "" {
 		return fmt.Errorf("existing mount at '%s'", match)
 	}
@@ -339,8 +374,19 @@ func (c *Core) remount(src, dst string, config *MountConfig) error {
 		if ent.Path == src {
 			ent.Path = dst
 			ent.Tainted = false
-			if config != nil {
-				ent.Config = *config
+			if config.DefaultLeaseTTL != nil {
+				if *config.DefaultLeaseTTL == 0 {
+					ent.Config.DefaultLeaseTTL = &c.defaultLeaseTTL
+				} else {
+					ent.Config.DefaultLeaseTTL = config.DefaultLeaseTTL
+				}
+			}
+			if config.MaxLeaseTTL != nil {
+				if *config.MaxLeaseTTL == 0 {
+					ent.Config.MaxLeaseTTL = &c.maxLeaseTTL
+				} else {
+					ent.Config.MaxLeaseTTL = config.MaxLeaseTTL
+				}
 			}
 			break
 		}
@@ -503,15 +549,17 @@ func (c *Core) MountEntrySysView(me *MountEntry) (logical.SystemView, error) {
 		return nil, fmt.Errorf("[ERR] core: nil MountEntry when generating SystemView")
 	}
 
-	sysView := &logical.StaticSystemView{
-		DefaultLeaseTTLVal: &c.defaultLeaseTTL,
-		MaxLeaseTTLVal:     &c.maxLeaseTTL,
+	sysDefaultLeaseTTLPtr := &c.defaultLeaseTTL
+	sysMaxLeaseTTLPtr := &c.maxLeaseTTL
+	sysView := &logical.DynamicSystemView{
+		DefaultLeaseTTLVal: &sysDefaultLeaseTTLPtr,
+		MaxLeaseTTLVal:     &sysMaxLeaseTTLPtr,
 	}
 
-	if me.Config.DefaultLeaseTTL != 0 {
+	if me.Config.DefaultLeaseTTL != nil && *me.Config.DefaultLeaseTTL != 0 {
 		sysView.DefaultLeaseTTLVal = &me.Config.DefaultLeaseTTL
 	}
-	if me.Config.MaxLeaseTTL != 0 {
+	if me.Config.MaxLeaseTTL != nil && *me.Config.MaxLeaseTTL != 0 {
 		sysView.MaxLeaseTTLVal = &me.Config.MaxLeaseTTL
 	}
 
@@ -545,12 +593,20 @@ func defaultMountTable() *MountTable {
 		Type:        "generic",
 		Description: "generic secret storage",
 		UUID:        uuid.GenerateUUID(),
+		Config: MountConfig{
+			DefaultLeaseTTL: new(time.Duration),
+			MaxLeaseTTL:     new(time.Duration),
+		},
 	}
 	sysMount := &MountEntry{
 		Path:        "sys/",
 		Type:        "system",
 		Description: "system endpoints used for control, policy and debugging",
 		UUID:        uuid.GenerateUUID(),
+		Config: MountConfig{
+			DefaultLeaseTTL: new(time.Duration),
+			MaxLeaseTTL:     new(time.Duration),
+		},
 	}
 	table.Entries = append(table.Entries, genericMount)
 	table.Entries = append(table.Entries, sysMount)

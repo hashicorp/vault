@@ -28,8 +28,21 @@ description: |-
       <li>
         <span class="param">to</span>
         <span class="param-flags">required</span>
-        The new mount point.
+        The new mount point. This can be the same
+        as `from` if you simply want to change
+        backend configuration with the `config`
+        parameter.
       </li>
+      <li>
+        <span class="param">config</span>
+        <span class="param-flags">optional</span>
+        Config options for this mount. This is an object with
+        two possible values: `default_lease_ttl` and
+        `max_lease_ttl`. These control the default and
+        maximum lease time-to-live, respectively. If set
+        on a specific mount, this overrides the global
+        defaults.
+    </li>
     </ul>
   </dd>
 
