@@ -614,6 +614,11 @@ func (c *Core) checkToken(
 		return nil, nil, fmt.Errorf("missing client token")
 	}
 
+	if c.tokenStore == nil {
+		c.logger.Printf("[ERR] core: token store is unavailable")
+		return nil, nil, ErrInternalError
+	}
+
 	// Resolve the token policy
 	te, err := c.tokenStore.Lookup(token)
 	if err != nil {
