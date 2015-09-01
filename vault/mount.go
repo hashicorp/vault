@@ -504,15 +504,15 @@ func (c *Core) MountEntrySysView(me *MountEntry) (logical.SystemView, error) {
 	}
 
 	sysView := &logical.StaticSystemView{
-		DefaultLeaseTTLVal: c.defaultLeaseTTL,
-		MaxLeaseTTLVal:     c.maxLeaseTTL,
+		DefaultLeaseTTLVal: &c.defaultLeaseTTL,
+		MaxLeaseTTLVal:     &c.maxLeaseTTL,
 	}
 
 	if me.Config.DefaultLeaseTTL != 0 {
-		sysView.DefaultLeaseTTLVal = me.Config.DefaultLeaseTTL
+		sysView.DefaultLeaseTTLVal = &me.Config.DefaultLeaseTTL
 	}
 	if me.Config.MaxLeaseTTL != 0 {
-		sysView.MaxLeaseTTLVal = me.Config.MaxLeaseTTL
+		sysView.MaxLeaseTTLVal = &me.Config.MaxLeaseTTL
 	}
 
 	return sysView, nil

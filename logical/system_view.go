@@ -15,14 +15,14 @@ type SystemView interface {
 }
 
 type StaticSystemView struct {
-	DefaultLeaseTTLVal time.Duration
-	MaxLeaseTTLVal     time.Duration
+	DefaultLeaseTTLVal *time.Duration
+	MaxLeaseTTLVal     *time.Duration
 }
 
 func (d *StaticSystemView) DefaultLeaseTTL() time.Duration {
-	return d.DefaultLeaseTTLVal
+	return *d.DefaultLeaseTTLVal
 }
 
 func (d *StaticSystemView) MaxLeaseTTL() time.Duration {
-	return d.MaxLeaseTTLVal
+	return *d.MaxLeaseTTLVal
 }

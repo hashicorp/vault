@@ -23,11 +23,13 @@ var (
 
 // Performs basic tests on CA functionality
 func TestBackend_basic(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+			DefaultLeaseTTLVal: &defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     &maxLeaseTTLVal,
 		},
 	})
 	if err != nil {
@@ -49,11 +51,13 @@ func TestBackend_basic(t *testing.T) {
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 func TestBackend_roles(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+			DefaultLeaseTTLVal: &defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     &maxLeaseTTLVal,
 		},
 	})
 	if err != nil {
