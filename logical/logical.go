@@ -22,6 +22,10 @@ type Backend interface {
 	// ends in '*' then it is a prefix-based match. The '*' can only appear
 	// at the end.
 	SpecialPaths() *Paths
+
+	// System provides an interface to access certain system configuration
+	// information, such as globally configured default and max lease TTLs.
+	System() SystemView
 }
 
 // BackendConfig is provided to the factory to initialize the backend

@@ -114,7 +114,10 @@ func (b *backend) pathIssueCert(
 
 	var ttl time.Duration
 	if len(ttlField) == 0 {
-		ttl = b.System.DefaultLeaseTTL()
+		ttl, err = b.System().DefaultLeaseTTL()
+		if err != nil {
+			return nil, fmt.Errorf("Error fetching default TTL: %s", err)
+		}
 	} else {
 		ttl, err = time.ParseDuration(ttlField)
 		if err != nil {
@@ -125,7 +128,10 @@ func (b *backend) pathIssueCert(
 
 	var maxTTL time.Duration
 	if len(role.MaxTTL) == 0 {
-		maxTTL = b.System.MaxLeaseTTL()
+		maxTTL, err = b.System().MaxLeaseTTL()
+		if err != nil {
+			return nil, fmt.Errorf("Error fetching max TTL: %s", err)
+		}
 	} else {
 		maxTTL, err = time.ParseDuration(role.MaxTTL)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -38,6 +39,13 @@ func (n *NoopBackend) SpecialPaths() *logical.Paths {
 	return &logical.Paths{
 		Root:            n.Root,
 		Unauthenticated: n.Login,
+	}
+}
+
+func (n *NoopBackend) System() logical.SystemView {
+	return logical.StaticSystemView{
+		DefaultLeaseTTLVal: time.Hour * 24,
+		MaxLeaseTTLVal:     time.Hour * 24 * 30,
 	}
 }
 

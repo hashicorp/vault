@@ -35,17 +35,17 @@ func (c *MountsCommand) Run(args []string) int {
 	}
 
 	paths := make([]string, 0, len(mounts))
-	for path, _ := range mounts {
+	for path := range mounts {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Description"}
+	columns := []string{"Path | Type | Default TTL | Max TTL | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s", path, mount.Type, mount.Description))
+			"%s | %s | %s | %s | %s", path, mount.Type, mount.Config.DefaultLeaseTTL, mount.Config.MaxLeaseTTL, mount.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))
@@ -62,8 +62,9 @@ Usage: vault mounts [options]
 
   Outputs information about the mounted backends.
 
-  This command lists the mounted backends, their mount points, and
-  a human-friendly description of the mount point.
+  This command lists the mounted backends, their mount points, the
+  configured TTLs, and a human-friendly description of the mount point.
+  A TTL of '0' indicates that the system default is being used.
 
 General Options:
 

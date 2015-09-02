@@ -56,11 +56,8 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
-	// System provides an interface to access certain system configuration
-	// information, such as globally configured default and max lease TTLs.
-	System logical.SystemView
-
 	logger  *log.Logger
+	system  logical.SystemView
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
@@ -146,7 +143,7 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 // Setup is used to initialize the backend with the initial backend configuration
 func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) {
 	b.logger = config.Logger
-	b.System = config.System
+	b.system = config.System
 	return b, nil
 }
 
@@ -158,6 +155,10 @@ func (b *Backend) Logger() *log.Logger {
 	}
 
 	return log.New(ioutil.Discard, "", 0)
+}
+
+func (b *Backend) System() logical.SystemView {
+	return b.system
 }
 
 // Route looks up the path that would be used for a given path string.

@@ -6,12 +6,12 @@ import "time"
 // for logical backends to consume
 type SystemView interface {
 	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
-	DefaultLeaseTTL() time.Duration
+	DefaultLeaseTTL() (time.Duration, error)
 
 	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
-	MaxLeaseTTL() time.Duration
+	MaxLeaseTTL() (time.Duration, error)
 }
 
 type StaticSystemView struct {
@@ -19,29 +19,10 @@ type StaticSystemView struct {
 	MaxLeaseTTLVal     time.Duration
 }
 
-func (d *StaticSystemView) DefaultLeaseTTL() time.Duration {
-	return d.DefaultLeaseTTLVal
+func (d StaticSystemView) DefaultLeaseTTL() (time.Duration, error) {
+	return d.DefaultLeaseTTLVal, nil
 }
 
-func (d *StaticSystemView) MaxLeaseTTL() time.Duration {
-	return d.MaxLeaseTTLVal
-}
-
-type DynamicSystemView struct {
-	DefaultLeaseTTLVal **time.Duration
-	MaxLeaseTTLVal     **time.Duration
-}
-
-func (d *DynamicSystemView) DefaultLeaseTTL() time.Duration {
-	if *d.DefaultLeaseTTLVal == nil {
-		return 0
-	}
-	return **d.DefaultLeaseTTLVal
-}
-
-func (d *DynamicSystemView) MaxLeaseTTL() time.Duration {
-	if *d.MaxLeaseTTLVal == nil {
-		return 0
-	}
-	return **d.MaxLeaseTTLVal
+func (d StaticSystemView) MaxLeaseTTL() (time.Duration, error) {
+	return d.MaxLeaseTTLVal, nil
 }

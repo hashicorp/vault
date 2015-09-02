@@ -54,7 +54,7 @@ func (c *Sys) Unmount(path string) error {
 	return err
 }
 
-func (c *Sys) Remount(from, to string, config vault.MountConfig) error {
+func (c *Sys) Remount(from, to string) error {
 	if err := c.checkMountPath(from); err != nil {
 		return err
 	}
@@ -63,15 +63,49 @@ func (c *Sys) Remount(from, to string, config vault.MountConfig) error {
 	}
 
 	body := map[string]interface{}{
-		"from":   from,
-		"to":     to,
-		"config": config,
+		"from": from,
+		"to":   to,
 	}
 
 	r := c.c.NewRequest("POST", "/v1/sys/remount")
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
+
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
+func (c *Sys) TuneMount(path string, config vault.MountConfig) error {
+	if err := c.checkMountPath(path); err != nil {
+		return err
+	}
+
+	body := map[string]interface{}{
+		"config": config,
+	}
+
+	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
+	if err := r.SetJSONBody(body); err != nil {
+		return err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
+func (c *Sys) MountConfig(path string) error {
+	if err := c.checkMountPath(path); err != nil {
+		return err
+	}
+
+	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 
 	resp, err := c.c.RawRequest(r)
 	if err == nil {

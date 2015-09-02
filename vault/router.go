@@ -91,6 +91,15 @@ func (r *Router) Remount(src, dst string) error {
 
 	// Update the mount point
 	r.root.Delete(src)
+	mountEntry, ok := raw.(*mountEntry)
+	if !ok {
+		return fmt.Errorf("Unable to retrieve mount entry at '%s'", src)
+	}
+	sysView := mountEntry.backend.System()
+	dynSysView, ok := sysView.(dynamicSystemView)
+	if ok {
+		dynSysView.path = dst
+	}
 	r.root.Insert(dst, raw)
 	return nil
 }

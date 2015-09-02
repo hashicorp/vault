@@ -478,7 +478,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
 		// Get the SystemView for the mount
-		sysView, err := c.PathSysView(req.Path)
+		sysView, err := c.sysViewByPath(req.Path)
 		if err != nil {
 			c.logger.Println(err)
 			return nil, auth, ErrInternalError
@@ -486,12 +486,22 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = sysView.DefaultLeaseTTL()
+			ttl, err := sysView.DefaultLeaseTTL()
+			if err != nil {
+				c.logger.Println(err)
+				return nil, auth, ErrInternalError
+			}
+			resp.Secret.TTL = ttl
 		}
 
 		// Limit the lease duration
-		if resp.Secret.TTL > sysView.MaxLeaseTTL() {
-			resp.Secret.TTL = sysView.MaxLeaseTTL()
+		maxTTL, err := sysView.MaxLeaseTTL()
+		if err != nil {
+			c.logger.Println(err)
+			return nil, auth, ErrInternalError
+		}
+		if resp.Secret.TTL > maxTTL {
+			resp.Secret.TTL = maxTTL
 		}
 
 		// Register the lease

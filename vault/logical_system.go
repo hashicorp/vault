@@ -56,14 +56,36 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 
 			&framework.Path{
-				Pattern: "mounts/(?P<path>.+)",
+				Pattern: "mounts/(?P<path>.+?)/tune$",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
 					},
+					"config": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
+					},
+				},
 
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:  b.handleMountConfig,
+					logical.WriteOperation: b.handleMountTune,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["mount_tune"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "mounts/(?P<path>.+?)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
+					},
 					"type": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_type"][0]),
@@ -98,10 +120,6 @@ func NewSystemBackend(core *Core) logical.Backend {
 					"to": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["remount_to"][0]),
-					},
-					"config": &framework.FieldSchema{
-						Type:        framework.TypeMap,
-						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
 					},
 				},
 
@@ -449,20 +467,73 @@ func (b *SystemBackend) handleRemount(
 			logical.ErrInvalidRequest
 	}
 
-	var config MountConfig
-	configMap := data.Get("config").(map[string]interface{})
-	if configMap != nil && len(configMap) != 0 {
-		err := mapstructure.Decode(configMap, &config)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to convert given mount config information: %s", err)),
-				logical.ErrInvalidRequest
-		}
+	// Attempt remount
+	if err := b.Core.remount(fromPath, toPath); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
+		return handleError(err)
 	}
 
-	// Attempt remount
-	if err := b.Core.remount(fromPath, toPath, config); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
+	return nil, nil
+}
+
+// handleMountConfig is used to get config settings on a backend
+func (b *SystemBackend) handleMountConfig(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	def, max, err := b.Core.TTLsByPath(path)
+	if err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: fetching config of path '%s' failed: %v", path, err)
+		return handleError(err)
+	}
+
+	config := MountConfig{
+		DefaultLeaseTTL: &def,
+		MaxLeaseTTL:     &max,
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"config": config,
+		},
+	}
+
+	return resp, nil
+}
+
+// handleMountTune is used to set config settings on a backend
+func (b *SystemBackend) handleMountTune(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	var config MountConfig
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap == nil || len(configMap) == 0 {
+		return logical.ErrorResponse(
+				"invalid parameters; 'config' empty or not supplied"),
+			logical.ErrInvalidRequest
+	}
+
+	err := mapstructure.Decode(configMap, &config)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"unable to convert given mount config information: %s", err)),
+			logical.ErrInvalidRequest
+	}
+	
+	// Attempt tune
+	if err := b.Core.tuneMount(path, config); err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
 		return handleError(err)
 	}
 
@@ -891,6 +962,10 @@ Change the mount point of an already-mounted backend.
 	"remount_to": {
 		"",
 		"",
+	},
+
+	"mount_tune": {
+		"Tune backend configuration parameters for this mount.",
 	},
 
 	"renew": {

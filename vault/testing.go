@@ -6,6 +6,7 @@ import (
 	"net"
 	"os/exec"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
@@ -261,4 +262,11 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
+}
+
+func (n *rawHTTP) System() logical.SystemView {
+	return logical.StaticSystemView{
+		DefaultLeaseTTLVal: time.Hour * 24,
+		MaxLeaseTTLVal:     time.Hour * 24 * 30,
+	}
 }
