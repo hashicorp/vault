@@ -592,6 +592,11 @@ func (c *Core) mountEntrySysView(me *MountEntry) (logical.SystemView, error) {
 
 // sysViewByPath is a simple helper for MountEntrySysView
 func (c *Core) sysViewByPath(path string) (logical.SystemView, error) {
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
 	me, err := c.mountEntryByPath(path)
 	if err != nil {
 		return nil, err
@@ -601,6 +606,11 @@ func (c *Core) sysViewByPath(path string) (logical.SystemView, error) {
 
 // mountEntryByPath searches across all tables to find the MountEntry
 func (c *Core) mountEntryByPath(path string) (*MountEntry, error) {
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
 	pathSep := strings.IndexRune(path, '/')
 	if pathSep == -1 {
 		return nil, fmt.Errorf("[ERR] core: failed to find separator for path %s", path)
@@ -621,6 +631,11 @@ func (c *Core) mountEntryByPath(path string) (*MountEntry, error) {
 // TTLsByPath returns the default and max TTLs corresponding to a particular
 // mount point, or the system default
 func (c *Core) TTLsByPath(path string) (def, max time.Duration, retErr error) {
+	// Ensure we end the path in a slash
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
 	me, err := c.mountEntryByPath(path)
 	if err != nil {
 		return 0, 0, err
