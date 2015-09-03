@@ -81,7 +81,7 @@ func (c *MountTuneCommand) Help() string {
 	helpText := `
   Usage: vault mount-tune [options] path
 
-  Tune configuration options fro a mounted secret backend.
+  Tune configuration options for a mounted secret backend.
 
   Example: vault tune-mount -default-lease-ttl="24h" secret/
 
