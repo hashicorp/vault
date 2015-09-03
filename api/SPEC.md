@@ -54,7 +54,7 @@ that can be enabled (see
 [authentication](#reference/authentication)).
 
 Authentication is done with the login endpoint. The login endpoint
-returns an access token that is set as the `token` cookie.
+returns an access token that is set as the `X-Vault-Token` header.
 
 ## Help
 

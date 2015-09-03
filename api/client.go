@@ -105,12 +105,12 @@ func (c *Client) Token() string {
 }
 
 // SetToken sets the token directly. This won't perform any auth
-// verification, it simply sets the cookie properly for future requests.
+// verification, it simply sets the token properly for future requests.
 func (c *Client) SetToken(v string) {
 	c.token = v
 }
 
-// ClearToken deletes the token cookie if it is set or does nothing otherwise.
+// ClearToken deletes the token if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
 	c.token = ""
 }
