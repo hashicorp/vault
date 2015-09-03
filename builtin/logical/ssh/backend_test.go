@@ -111,7 +111,7 @@ func TestSSHBackend_Lookup(t *testing.T) {
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testLookupRead(t, data, resp2),
-			testNamedKeysWrite(t),
+			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testLookupRead(t, data, resp3),
 			testRoleDelete(t, testOTPRoleName),
@@ -130,7 +130,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testNamedKeysWrite(t),
+			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testCredsWrite(t, testDynamicRoleName, data),
 		},
@@ -153,7 +153,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testNamedKeysWrite(t),
+			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testRoleRead(t, testDynamicRoleName, testDynamicRoleData),
 			testRoleDelete(t, testDynamicRoleName),
@@ -167,7 +167,7 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysRead(t, ""),
-			testNamedKeysWrite(t),
+			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testNamedKeysRead(t, testSharedPrivateKey),
 			testNamedKeysDelete(t),
 		},
@@ -226,7 +226,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
 			testConfigZeroAddressRead(t, resp1),
-			testNamedKeysWrite(t),
+			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
 			testConfigZeroAddressWrite(t, req2),
 			testConfigZeroAddressRead(t, resp2),
@@ -258,11 +258,11 @@ func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testConfigZeroAddressWrite(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "config/zeroaddress",
-		Data:      d,
+		Data:      data,
 	}
 }
 
@@ -290,11 +290,11 @@ func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) lo
 	}
 }
 
-func testVerifyWrite(t *testing.T, d map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
+func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("verify"),
-		Data:      d,
+		Data:      data,
 		Check: func(resp *logical.Response) error {
 			var ac api.SSHVerifyResponse
 			if err := mapstructure.Decode(resp.Data, &ac); err != nil {
@@ -338,12 +338,12 @@ func testNamedKeysRead(t *testing.T, key string) logicaltest.TestStep {
 	}
 }
 
-func testNamedKeysWrite(t *testing.T) logicaltest.TestStep {
+func testNamedKeysWrite(t *testing.T, name, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("keys/%s", testKeyName),
+		Path:      fmt.Sprintf("keys/%s", name),
 		Data: map[string]interface{}{
-			"key": testSharedPrivateKey,
+			"key": key,
 		},
 	}
 }
@@ -416,11 +416,11 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testCredsWrite(t *testing.T, roleName string, d map[string]interface{}) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
-		Data:      d,
+		Data:      data,
 		Check: func(resp *logical.Response) error {
 			if roleName == testDynamicRoleName {
 				var d struct {
