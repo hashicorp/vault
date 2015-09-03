@@ -13,6 +13,7 @@ import (
 var (
 	errRedirect            = errors.New("redirect")
 	defaultHTTPClientSetup sync.Once
+	defaultHTTPClient      = &http.Client{}
 )
 
 // Config is used to configure the creation of the client.
@@ -23,8 +24,8 @@ type Config struct {
 	// HttpClient.
 	Address string
 
-	// HttpClient is the HTTP client to use, which will currently always be
-	// http.DefaultClient. This is used to control redirect behavior.
+	// HttpClient is the HTTP client to use, which will currently always have the
+	// same values as http.DefaultClient. This is used to control redirect behavior.
 	HttpClient *http.Client
 }
 
@@ -36,7 +37,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
-		HttpClient: http.DefaultClient,
+		HttpClient: defaultHTTPClient,
 	}
 
 	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
@@ -65,7 +66,7 @@ func NewClient(c *Config) (*Client, error) {
 		return nil, err
 	}
 
-	if c.HttpClient == http.DefaultClient {
+	if c.HttpClient == defaultHTTPClient {
 		defaultHTTPClientSetup.Do(func() {
 			// Ensure redirects are not automatically followed
 			c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
