@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"os/user"
 	"reflect"
 	"strconv"
@@ -102,19 +101,23 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	data := map[string]interface{}{
 		"ip": testIP,
 	}
+	resp1 := []string(nil)
+	resp2 := []string{testOTPRoleName}
+	resp3 := []string{testDynamicRoleName, testOTPRoleName}
+	resp4 := []string{testDynamicRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
-			testLookupRead(t, data, 0),
+			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testLookupRead(t, data, 1),
+			testLookupRead(t, data, resp2),
 			testNamedKeysWrite(t),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testLookupRead(t, data, 2),
+			testLookupRead(t, data, resp3),
 			testRoleDelete(t, testOTPRoleName),
-			testLookupRead(t, data, 1),
+			testLookupRead(t, data, resp4),
 			testRoleDelete(t, testDynamicRoleName),
-			testLookupRead(t, data, 0),
+			testLookupRead(t, data, resp1),
 		},
 	})
 }
@@ -352,18 +355,17 @@ func testNamedKeysDelete(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testLookupRead(t *testing.T, data map[string]interface{}, length int) logicaltest.TestStep {
+func testLookupRead(t *testing.T, data map[string]interface{}, expected []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "lookup",
 		Data:      data,
 		Check: func(resp *logical.Response) error {
-			log.Printf("Lookup Read Response: %#v", resp)
 			if resp.Data == nil || resp.Data["roles"] == nil {
 				return fmt.Errorf("Missing roles information")
 			}
-			if len(resp.Data["roles"].([]string)) != length {
-				return fmt.Errorf("Role information incorrect")
+			if !reflect.DeepEqual(resp.Data["roles"].([]string), expected) {
+				return fmt.Errorf("Invalid response: \nactual:%#v\nexpected:%#v", resp.Data["roles"].([]string), expected)
 			}
 			return nil
 		},
