@@ -81,7 +81,7 @@ func TestClientRedirect(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Set the cookie manually
+	// Set the token manually
 	client.SetToken("foo")
 
 	// Do a raw "/" request

@@ -35,8 +35,8 @@ $ vault auth <token>
 
 #### Via the API
 
-The token is set directly as a cookie for the HTTP API. The name
-of the cookie should be "token" and the value should be the token.
+The token is set directly as a header for the HTTP API. The name
+of the header should be "X-Vault-Token" and the value should be the token.
 
 ## API
 
