@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	errRedirect         = errors.New("redirect")
-	defaultHandlerSetup sync.Once
+	errRedirect            = errors.New("redirect")
+	defaultHTTPClientSetup sync.Once
 )
 
 // Config is used to configure the creation of the client.
@@ -66,7 +66,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	if c.HttpClient == http.DefaultClient {
-		defaultHandlerSetup.Do(func() {
+		defaultHTTPClientSetup.Do(func() {
 			// Ensure redirects are not automatically followed
 			c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 				return errRedirect
