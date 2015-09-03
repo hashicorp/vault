@@ -317,6 +317,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 		},
 	}
+
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 
@@ -325,14 +326,14 @@ func TestSysTuneMount(t *testing.T) {
 	}
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/foo/tune")
+	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"foo/": map[string]interface{}{
-			"config": map[string]interface{}{
-				"default_lease_ttl": float64(time.Duration(time.Hour * 71999)),
-				"max_lease_ttl":     float64(time.Duration(time.Hour * 72000)),
-			},
+		"config": map[string]interface{}{
+			"default_lease_ttl": float64(time.Duration(time.Hour * 71999)),
+			"max_lease_ttl":     float64(time.Duration(time.Hour * 72000)),
 		},
 	}
+
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 

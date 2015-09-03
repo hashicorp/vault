@@ -45,17 +45,6 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 		Paths: []*framework.Path{
 			&framework.Path{
-				Pattern: "mounts$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleMountTable,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
-			},
-
-			&framework.Path{
 				Pattern: "mounts/(?P<path>.+?)/tune$",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -107,6 +96,17 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["mount"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "mounts$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleMountTable,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
 			},
 
 			&framework.Path{
@@ -530,7 +530,7 @@ func (b *SystemBackend) handleMountTune(
 				"unable to convert given mount config information: %s", err)),
 			logical.ErrInvalidRequest
 	}
-	
+
 	// Attempt tune
 	if err := b.Core.tuneMount(path, config); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
