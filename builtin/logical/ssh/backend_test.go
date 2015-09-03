@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"log"
 	"os/user"
 	"reflect"
 	"strconv"
@@ -56,7 +57,6 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 var testIP string
-var testOTP string
 var testPort int
 var testUserName string
 var testAdminUser string
@@ -120,12 +120,16 @@ func TestSSHBackend_Lookup(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
+	data := map[string]interface{}{
+		"username": testUserName,
+		"ip":       testIP,
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t),
-			testNewDynamicKeyRole(t),
-			testDynamicKeyCredsCreate(t),
+			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
+			testCredsWrite(t, testDynamicRoleName, data),
 		},
 	})
 }
@@ -168,11 +172,15 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 }
 
 func TestSSHBackend_OTPCreate(t *testing.T) {
+	data := map[string]interface{}{
+		"username": testUserName,
+		"ip":       testIP,
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testCredsWrite(t, testOTPRoleName),
+			testCredsWrite(t, testOTPRoleName, data),
 		},
 	})
 }
@@ -227,6 +235,18 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 		},
 	})
 }
+
+/*
+func TestSSHBackend_CredsForZeroAddressRole(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testRoleWrite(t, testOTPRoleName, otpRoleData),
+			testCredsWrite(t, testOTPRoleName),
+		},
+	})
+}
+*/
 
 func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
@@ -290,33 +310,6 @@ func testVerifyWrite(t *testing.T, d map[string]interface{}, expected map[string
 	}
 }
 
-func testCredsWrite(t *testing.T, name string) logicaltest.TestStep {
-	data := map[string]interface{}{
-		"ip": testIP,
-	}
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("creds/%s", name),
-		Data:      data,
-		Check: func(resp *logical.Response) error {
-			if resp == nil {
-				return fmt.Errorf("response is nil")
-			}
-			if resp.Data == nil {
-				return fmt.Errorf("data is nil")
-			}
-			if resp.Data["key_type"] != KeyTypeOTP {
-				return fmt.Errorf("Incorrect key_type")
-			}
-			if resp.Data["key"] == nil {
-				return fmt.Errorf("Invalid key")
-			}
-			testOTP = resp.Data["key"].(string)
-			return nil
-		},
-	}
-}
-
 func testNamedKeysRead(t *testing.T, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
@@ -365,6 +358,7 @@ func testLookupRead(t *testing.T, data map[string]interface{}, length int) logic
 		Path:      "lookup",
 		Data:      data,
 		Check: func(resp *logical.Response) error {
+			log.Printf("Lookup Read Response: %#v", resp)
 			if resp.Data == nil || resp.Data["roles"] == nil {
 				return fmt.Errorf("Missing roles information")
 			}
@@ -420,35 +414,40 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testNewDynamicKeyRole(t *testing.T) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, roleName string, d map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("roles/%s", testDynamicRoleName),
-		Data:      testDynamicRoleData,
-	}
-}
-
-func testDynamicKeyCredsCreate(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      fmt.Sprintf("creds/%s", testDynamicRoleName),
-		Data: map[string]interface{}{
-			"username": testUserName,
-			"ip":       testIP,
-		},
+		Path:      fmt.Sprintf("creds/%s", roleName),
+		Data:      d,
 		Check: func(resp *logical.Response) error {
-			var d struct {
-				Key string `mapstructure:"key"`
-			}
-			if err := mapstructure.Decode(resp.Data, &d); err != nil {
-				return err
-			}
-			if d.Key == "" {
-				return fmt.Errorf("Generated key is an empty string")
-			}
-			_, err := ssh.ParsePrivateKey([]byte(d.Key))
-			if err != nil {
-				return fmt.Errorf("Generated key is invalid")
+			if roleName == testDynamicRoleName {
+				var d struct {
+					Key string `mapstructure:"key"`
+				}
+				if err := mapstructure.Decode(resp.Data, &d); err != nil {
+					return err
+				}
+				if d.Key == "" {
+					return fmt.Errorf("Generated key is an empty string")
+				}
+				// Checking only for a parsable key
+				_, err := ssh.ParsePrivateKey([]byte(d.Key))
+				if err != nil {
+					return fmt.Errorf("Generated key is invalid")
+				}
+			} else {
+				if resp == nil {
+					return fmt.Errorf("response is nil")
+				}
+				if resp.Data == nil {
+					return fmt.Errorf("data is nil")
+				}
+				if resp.Data["key_type"] != KeyTypeOTP {
+					return fmt.Errorf("Incorrect key_type")
+				}
+				if resp.Data["key"] == nil {
+					return fmt.Errorf("Invalid key")
+				}
 			}
 			return nil
 		},
