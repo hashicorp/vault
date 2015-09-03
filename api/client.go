@@ -7,10 +7,12 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 )
 
 var (
-	errRedirect = errors.New("redirect")
+	errRedirect         = errors.New("redirect")
+	defaultHandlerSetup sync.Once
 )
 
 // Config is used to configure the creation of the client.
@@ -35,24 +37,6 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: http.DefaultClient,
-	}
-
-	// From https://github.com/michiwend/gomusicbrainz/pull/4/files
-	defaultRedirectLimit := 30
-
-	config.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		if len(via) > defaultRedirectLimit {
-			return fmt.Errorf("%d consecutive requests(redirects)", len(via))
-		}
-		if len(via) == 0 {
-			// No redirects
-			return nil
-		}
-		// mutate the subsequent redirect requests with the first Header
-		if token := via[0].Header.Get("X-Vault-Token"); len(token) != 0 {
-			req.Header.Set("X-Vault-Token", token)
-		}
-		return nil
 	}
 
 	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
@@ -81,9 +65,13 @@ func NewClient(c *Config) (*Client, error) {
 		return nil, err
 	}
 
-	// Ensure redirects are not automatically followed
-	c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		return errRedirect
+	if c.HttpClient == http.DefaultClient {
+		defaultHandlerSetup.Do(func() {
+			// Ensure redirects are not automatically followed
+			c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				return errRedirect
+			}
+		})
 	}
 
 	client := &Client{
