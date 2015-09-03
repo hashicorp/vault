@@ -109,12 +109,14 @@ func testConnState(t *testing.T, certPath, keyPath string) tls.ConnectionState {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	conf := &tls.Config{
+	listenConf := &tls.Config{
 		Certificates:       []tls.Certificate{cert},
 		ClientAuth:         tls.RequestClientCert,
 		InsecureSkipVerify: true,
 	}
-	list, err := tls.Listen("tcp", "127.0.0.1:0", conf)
+	dialConf := new(tls.Config)
+	*dialConf = *listenConf
+	list, err := tls.Listen("tcp", "127.0.0.1:0", listenConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -122,7 +124,7 @@ func testConnState(t *testing.T, certPath, keyPath string) tls.ConnectionState {
 
 	go func() {
 		addr := list.Addr().String()
-		conn, err := tls.Dial("tcp", addr, conf)
+		conn, err := tls.Dial("tcp", addr, dialConf)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
