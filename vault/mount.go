@@ -54,11 +54,11 @@ func (d dynamicSystemView) DefaultLeaseTTL() (time.Duration, error) {
 }
 
 func (d dynamicSystemView) MaxLeaseTTL() (time.Duration, error) {
-	def, _, err := d.core.TTLsByPath(d.path)
+	_, max, err := d.core.TTLsByPath(d.path)
 	if err != nil {
 		return 0, err
 	}
-	return def, nil
+	return max, nil
 }
 
 // MountTable is used to represent the internal mount table
@@ -408,6 +408,12 @@ func (c *Core) tuneMount(path string, config MountConfig) error {
 	for _, ent := range c.mounts.Entries {
 		if ent.Path == path {
 			if config.MaxLeaseTTL != nil {
+				if *ent.Config.DefaultLeaseTTL != 0 {
+					if *config.MaxLeaseTTL < *ent.Config.DefaultLeaseTTL {
+						return fmt.Errorf("Given backend max lease TTL of %d less than backend default lease TTL of %d",
+							*config.MaxLeaseTTL, *ent.Config.DefaultLeaseTTL)
+					}
+				}
 				if *config.MaxLeaseTTL == 0 {
 					*ent.Config.MaxLeaseTTL = 0
 				} else {

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -282,6 +283,14 @@ func TestSysTuneMount(t *testing.T) {
 	})
 	testResponseStatus(t, resp, 400)
 
+	// Shorter than backend default
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
+		"config": map[string]interface{}{
+			"max_lease_ttl": time.Duration(time.Hour * 1),
+		},
+	})
+	testResponseStatus(t, resp, 400)
+
 	// Shorter than backend max, longer than system max
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
 		"config": map[string]interface{}{
@@ -325,6 +334,7 @@ func TestSysTuneMount(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
+	// Check simple configuration endpoint
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/foo/tune")
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
@@ -336,8 +346,76 @@ func TestSysTuneMount(t *testing.T) {
 
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
+	// Set a low max
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
+		"config": map[string]interface{}{
+			"default_lease_ttl": time.Duration(time.Second * 40),
+			"max_lease_ttl":     time.Duration(time.Second * 80),
+		},
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"config": map[string]interface{}{
+			"default_lease_ttl": float64(time.Duration(time.Second * 40)),
+			"max_lease_ttl":     float64(time.Duration(time.Second * 80)),
+		},
+	}
+
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
+	// First try with lease above backend max
+	resp = testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": "bar",
+		"ttl":  "28347h",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// read secret
+	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
+	var result struct {
+		LeaseID       string `json:"lease_id" structs:"lease_id"`
+		LeaseDuration int    `json:"lease_duration" structs:"lease_duration"`
+	}
+
+	testResponseBody(t, resp, &result)
+
+	expected = map[string]interface{}{
+		"lease_duration": int(time.Duration(time.Second * 80).Seconds()),
+		"lease_id":       result.LeaseID,
+	}
+
+	if !reflect.DeepEqual(structs.Map(result), expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, structs.Map(result))
+	}
+
+	// Now with lease TTL unspecified
+	resp = testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": "bar",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// read secret
+	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
+
+	testResponseBody(t, resp, &result)
+
+	expected = map[string]interface{}{
+		"lease_duration": int(time.Duration(time.Second * 40).Seconds()),
+		"lease_id":       result.LeaseID,
+	}
+
+	if !reflect.DeepEqual(structs.Map(result), expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, structs.Map(result))
 	}
 }
