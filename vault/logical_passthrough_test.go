@@ -176,6 +176,12 @@ func TestPassthroughBackend_List(t *testing.T) {
 }
 
 func testPassthroughBackend() logical.Backend {
-	b, _ := PassthroughBackendFactory(nil)
+	b, _ := PassthroughBackendFactory(&logical.BackendConfig{
+		Logger: nil,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	})
 	return b
 }

@@ -20,10 +20,11 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core) logical.Backend {
+func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend {
 	b := &SystemBackend{
 		Core: core,
 	}
+
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
 
@@ -346,6 +347,9 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 		},
 	}
+
+	b.Backend.Setup(config)
+
 	return b.Backend
 }
 
@@ -486,9 +490,26 @@ func (b *SystemBackend) handleMountConfig(
 			logical.ErrInvalidRequest
 	}
 
-	def, max, err := b.Core.TTLsByPath(path)
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	sysView := b.Core.router.MatchingSystemView(path)
+	if sysView == nil {
+		err := fmt.Errorf("[ERR] sys: cannot fetch sysview for path %s", path)
+		b.Backend.Logger().Print(err)
+		return handleError(err)
+	}
+
+	def, err := sysView.DefaultLeaseTTL()
 	if err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: fetching config of path '%s' failed: %v", path, err)
+		b.Backend.Logger().Printf("[ERR] sys: fetching config default TTL of path '%s' failed: %v", path, err)
+		return handleError(err)
+	}
+
+	max, err := sysView.MaxLeaseTTL()
+	if err != nil {
+		b.Backend.Logger().Printf("[ERR] sys: fetching config max TTL of path '%s' failed: %v", path, err)
 		return handleError(err)
 	}
 
@@ -514,6 +535,10 @@ func (b *SystemBackend) handleMountTune(
 		return logical.ErrorResponse(
 				"path must be specified as a string"),
 			logical.ErrInvalidRequest
+	}
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
 	}
 
 	var config MountConfig

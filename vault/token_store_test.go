@@ -10,19 +10,30 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func getBackendConfig(c *Core) *logical.BackendConfig {
+	return &logical.BackendConfig{
+		Logger: c.logger,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	}
+}
+
 func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 
 	c, _, root := TestCoreUnsealed(t)
-	ts, err := NewTokenStore(c)
+
+	ts, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	router := NewRouter()
-	router.Mount(ts, "auth/token/", "", ts.view)
+	router.Mount(ts, "auth/token/", &MountEntry{UUID: ""}, ts.view)
 
-	view := c.systemView.SubView(expirationSubPath)
+	view := c.systemBarrierView.SubView(expirationSubPath)
 	exp := NewExpirationManager(router, view, ts, logger)
 	ts.SetExpirationManager(exp)
 	return c, ts, root
@@ -68,7 +79,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(c)
+	ts2, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -107,7 +118,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(c)
+	ts2, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -219,7 +230,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	ts.expiration.router.Mount(noop, "", "", nil)
+	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, nil)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {

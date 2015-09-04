@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// RemountCommand is a Command that remounts a mounted secret backend
+// MountTuneCommand is a Command that remounts a mounted secret backend
 // to a new endpoint.
 type MountTuneCommand struct {
 	Meta

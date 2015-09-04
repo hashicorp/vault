@@ -26,24 +26,24 @@ func NewRouter() *Router {
 	return r
 }
 
-// mountEntry is used to represent a mount point
-type mountEntry struct {
+// routeEntry is used to represent a mount point in the router
+type routeEntry struct {
 	tainted    bool
-	salt       string
 	backend    logical.Backend
+	mountEntry *MountEntry
 	view       *BarrierView
 	rootPaths  *radix.Tree
 	loginPaths *radix.Tree
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversable
-func (me *mountEntry) SaltID(id string) string {
-	return salt.SaltID(me.salt, id, salt.SHA1Hash)
+func (re *routeEntry) SaltID(id string) string {
+	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
 }
 
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,
 // and the barrier view for that path.
-func (r *Router) Mount(backend logical.Backend, prefix, salt string, view *BarrierView) error {
+func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, view *BarrierView) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -59,14 +59,15 @@ func (r *Router) Mount(backend logical.Backend, prefix, salt string, view *Barri
 	}
 
 	// Create a mount entry
-	me := &mountEntry{
+	re := &routeEntry{
 		tainted:    false,
 		backend:    backend,
+		mountEntry: mountEntry,
 		view:       view,
 		rootPaths:  pathsToRadix(paths.Root),
 		loginPaths: pathsToRadix(paths.Unauthenticated),
 	}
-	r.root.Insert(prefix, me)
+	r.root.Insert(prefix, re)
 	return nil
 }
 
@@ -91,12 +92,8 @@ func (r *Router) Remount(src, dst string) error {
 
 	// Update the mount point
 	r.root.Delete(src)
-	mountEntry, ok := raw.(*mountEntry)
-	if !ok {
-		return fmt.Errorf("Unable to retrieve mount entry at '%s'", src)
-	}
-	sysView := mountEntry.backend.System()
-	dynSysView, ok := sysView.(dynamicSystemView)
+	routeEntry := raw.(*routeEntry)
+	dynSysView, ok := routeEntry.backend.System().(dynamicSystemView)
 	if ok {
 		dynSysView.path = dst
 	}
@@ -111,7 +108,7 @@ func (r *Router) Taint(path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*mountEntry).tainted = true
+		raw.(*routeEntry).tainted = true
 	}
 	return nil
 }
@@ -122,7 +119,7 @@ func (r *Router) Untaint(path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*mountEntry).tainted = false
+		raw.(*routeEntry).tainted = false
 	}
 	return nil
 }
@@ -146,7 +143,29 @@ func (r *Router) MatchingView(path string) *BarrierView {
 	if !ok {
 		return nil
 	}
-	return raw.(*mountEntry).view
+	return raw.(*routeEntry).view
+}
+
+// MatchingMountEntry returns the MountEntry used for a path
+func (r *Router) MatchingMountEntry(path string) *MountEntry {
+	r.l.RLock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return nil
+	}
+	return raw.(*routeEntry).mountEntry
+}
+
+// MatchingSystemView returns the SystemView used for a path
+func (r *Router) MatchingSystemView(path string) logical.SystemView {
+	r.l.RLock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return nil
+	}
+	return raw.(*routeEntry).backend.System()
 }
 
 // Route is used to route a given request
@@ -166,11 +185,11 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	defer metrics.MeasureSince([]string{"route", string(req.Operation),
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
-	me := raw.(*mountEntry)
+	re := raw.(*routeEntry)
 
 	// If the path is tainted, we reject any operation except for
 	// Rollback and Revoke
-	if me.tainted {
+	if re.tainted {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
@@ -190,12 +209,12 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 
 	// Attach the storage view for the request
-	req.Storage = me.view
+	req.Storage = re.view
 
 	// Hash the request token unless this is the token backend
 	clientToken := req.ClientToken
 	if !strings.HasPrefix(original, "auth/token/") {
-		req.ClientToken = me.SaltID(req.ClientToken)
+		req.ClientToken = re.SaltID(req.ClientToken)
 	}
 
 	// If the request is not a login path, then clear the connection
@@ -214,7 +233,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}()
 
 	// Invoke the backend
-	return me.backend.HandleRequest(req)
+	return re.backend.HandleRequest(req)
 }
 
 // RootPath checks if the given path requires root privileges
@@ -225,13 +244,13 @@ func (r *Router) RootPath(path string) bool {
 	if !ok {
 		return false
 	}
-	me := raw.(*mountEntry)
+	re := raw.(*routeEntry)
 
 	// Trim to get remaining path
 	remain := strings.TrimPrefix(path, mount)
 
 	// Check the rootPaths of this backend
-	match, raw, ok := me.rootPaths.LongestPrefix(remain)
+	match, raw, ok := re.rootPaths.LongestPrefix(remain)
 	if !ok {
 		return false
 	}
@@ -254,13 +273,13 @@ func (r *Router) LoginPath(path string) bool {
 	if !ok {
 		return false
 	}
-	me := raw.(*mountEntry)
+	re := raw.(*routeEntry)
 
 	// Trim to get remaining path
 	remain := strings.TrimPrefix(path, mount)
 
 	// Check the loginPaths of this backend
-	match, raw, ok := me.loginPaths.LongestPrefix(remain)
+	match, raw, ok := re.loginPaths.LongestPrefix(remain)
 	if !ok {
 		return false
 	}

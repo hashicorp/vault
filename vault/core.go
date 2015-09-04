@@ -220,8 +220,8 @@ type Core struct {
 	// out into the configured audit backends
 	auditBroker *AuditBroker
 
-	// systemView is the barrier view for the system backend
-	systemView *BarrierView
+	// systemBarrierView is the barrier view for the system backend
+	systemBarrierView *BarrierView
 
 	// expiration manager is used for managing LeaseIDs,
 	// renewal, expiration and revocation
@@ -351,8 +351,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends[k] = f
 	}
 	logicalBackends["generic"] = PassthroughBackendFactory
-	logicalBackends["system"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c), nil
+	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewSystemBackend(c, config), nil
 	}
 	c.logicalBackends = logicalBackends
 
@@ -360,8 +360,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(c)
+	credentialBackends["token"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewTokenStore(c, config)
 	}
 	c.credentialBackends = credentialBackends
 
@@ -478,9 +478,9 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
 		// Get the SystemView for the mount
-		sysView, err := c.sysViewByPath(req.Path)
-		if err != nil {
-			c.logger.Println(err)
+		sysView := c.router.MatchingSystemView(req.Path)
+		if sysView == nil {
+			c.logger.Println("[ERR] core: unable to retrieve system view from router")
 			return nil, auth, ErrInternalError
 		}
 

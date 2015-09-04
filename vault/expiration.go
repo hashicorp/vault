@@ -78,7 +78,7 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 // initialize the expiration manager
 func (c *Core) setupExpiration() error {
 	// Create a sub-view
-	view := c.systemView.SubView(expirationSubPath)
+	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
 	mgr := NewExpirationManager(c.router, view, c.tokenStore, c.logger)

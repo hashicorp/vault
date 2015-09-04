@@ -40,27 +40,6 @@ var (
 	}
 )
 
-type dynamicSystemView struct {
-	core *Core
-	path string
-}
-
-func (d dynamicSystemView) DefaultLeaseTTL() (time.Duration, error) {
-	def, _, err := d.core.TTLsByPath(d.path)
-	if err != nil {
-		return 0, err
-	}
-	return def, nil
-}
-
-func (d dynamicSystemView) MaxLeaseTTL() (time.Duration, error) {
-	_, max, err := d.core.TTLsByPath(d.path)
-	if err != nil {
-		return 0, err
-	}
-	return max, nil
-}
-
 // MountTable is used to represent the internal mount table
 type MountTable struct {
 	// This lock should be held whenever modifying the Entries field.
@@ -185,12 +164,7 @@ func (c *Core) mount(me *MountEntry) error {
 	me.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
 
-	// Create the new backend
-	sysView, err := c.mountEntrySysView(me)
-	if err != nil {
-		return err
-	}
-	backend, err := c.newLogicalBackend(me.Type, sysView, view, nil)
+	backend, err := c.newLogicalBackend(me.Type, c.mountEntrySysView(me), view, nil)
 	if err != nil {
 		return err
 	}
@@ -204,7 +178,7 @@ func (c *Core) mount(me *MountEntry) error {
 	c.mounts = newTable
 
 	// Mount the backend
-	if err := c.router.Mount(backend, me.Path, me.UUID, view); err != nil {
+	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
 		return err
 	}
 	c.logger.Printf("[INFO] core: mounted '%s' type: %s", me.Path, me.Type)
@@ -394,51 +368,44 @@ func (c *Core) tuneMount(path string, config MountConfig) error {
 	// Prevent protected paths from being changed
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(path, p) {
-			return fmt.Errorf("cannot tune '%s'", path)
+			return fmt.Errorf("[ERR] core: cannot tune '%s'", path)
 		}
 	}
 
-	// Verify exact match of the route
-	match := c.router.MatchingMount(path)
-	if match == "" || path != match {
-		return fmt.Errorf("no matching mount at '%s'", path)
+	me := c.router.MatchingMountEntry(path)
+	if me == nil {
+		return fmt.Errorf("[ERR] core: no matching mount at '%s'", path)
 	}
 
-	// Find and modify mount
-	for _, ent := range c.mounts.Entries {
-		if ent.Path == path {
-			if config.MaxLeaseTTL != nil {
-				if *ent.Config.DefaultLeaseTTL != 0 {
-					if *config.MaxLeaseTTL < *ent.Config.DefaultLeaseTTL {
-						return fmt.Errorf("Given backend max lease TTL of %d less than backend default lease TTL of %d",
-							*config.MaxLeaseTTL, *ent.Config.DefaultLeaseTTL)
-					}
-				}
-				if *config.MaxLeaseTTL == 0 {
-					*ent.Config.MaxLeaseTTL = 0
-				} else {
-					ent.Config.MaxLeaseTTL = config.MaxLeaseTTL
-				}
+	if config.MaxLeaseTTL != nil {
+		if *me.Config.DefaultLeaseTTL != 0 {
+			if *config.MaxLeaseTTL < *me.Config.DefaultLeaseTTL {
+				return fmt.Errorf("Given backend max lease TTL of %d less than backend default lease TTL of %d",
+					*config.MaxLeaseTTL, *me.Config.DefaultLeaseTTL)
 			}
-			if config.DefaultLeaseTTL != nil {
-				if *ent.Config.MaxLeaseTTL == 0 {
-					if *config.DefaultLeaseTTL > c.maxLeaseTTL {
-						return fmt.Errorf("Given default lease TTL of %d greater than system default lease TTL of %d",
-							*config.DefaultLeaseTTL, c.maxLeaseTTL)
-					}
-				} else {
-					if *ent.Config.MaxLeaseTTL != 0 && *ent.Config.MaxLeaseTTL < *config.DefaultLeaseTTL {
-						return fmt.Errorf("Given default lease TTL of %d greater than backend max lease TTL of %d",
-							*config.DefaultLeaseTTL, *ent.Config.MaxLeaseTTL)
-					}
-				}
-				if *config.DefaultLeaseTTL == 0 {
-					*ent.Config.DefaultLeaseTTL = 0
-				} else {
-					ent.Config.DefaultLeaseTTL = config.DefaultLeaseTTL
-				}
+		}
+		if *config.MaxLeaseTTL == 0 {
+			*me.Config.MaxLeaseTTL = 0
+		} else {
+			me.Config.MaxLeaseTTL = config.MaxLeaseTTL
+		}
+	}
+	if config.DefaultLeaseTTL != nil {
+		if *me.Config.MaxLeaseTTL == 0 {
+			if *config.DefaultLeaseTTL > c.maxLeaseTTL {
+				return fmt.Errorf("Given default lease TTL of %d greater than system default lease TTL of %d",
+					*config.DefaultLeaseTTL, c.maxLeaseTTL)
 			}
-			break
+		} else {
+			if *me.Config.MaxLeaseTTL != 0 && *me.Config.MaxLeaseTTL < *config.DefaultLeaseTTL {
+				return fmt.Errorf("Given default lease TTL of %d greater than backend max lease TTL of %d",
+					*config.DefaultLeaseTTL, *me.Config.MaxLeaseTTL)
+			}
+		}
+		if *config.DefaultLeaseTTL == 0 {
+			*me.Config.DefaultLeaseTTL = 0
+		} else {
+			me.Config.DefaultLeaseTTL = config.DefaultLeaseTTL
 		}
 	}
 
@@ -508,6 +475,7 @@ func (c *Core) persistMounts(table *MountTable) error {
 func (c *Core) setupMounts() error {
 	var backend logical.Backend
 	var view *BarrierView
+	var err error
 	for _, entry := range c.mounts.Entries {
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
@@ -520,11 +488,7 @@ func (c *Core) setupMounts() error {
 
 		// Initialize the backend
 		// Create the new backend
-		sysView, err := c.mountEntrySysView(entry)
-		if err != nil {
-			return err
-		}
-		backend, err = c.newLogicalBackend(entry.Type, sysView, view, nil)
+		backend, err = c.newLogicalBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create mount entry %#v: %v",
@@ -533,11 +497,11 @@ func (c *Core) setupMounts() error {
 		}
 
 		if entry.Type == "system" {
-			c.systemView = view
+			c.systemBarrierView = view
 		}
 
 		// Mount the backend
-		err = c.router.Mount(backend, entry.Path, entry.UUID, view)
+		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
 			return errLoadMountsFailed
@@ -556,7 +520,7 @@ func (c *Core) setupMounts() error {
 func (c *Core) unloadMounts() error {
 	c.mounts = nil
 	c.router = NewRouter()
-	c.systemView = nil
+	c.systemBarrierView = nil
 	return nil
 }
 
@@ -582,82 +546,13 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 }
 
 // mountEntrySysView creates a logical.SystemView from global and
-// mount-specific entries
-func (c *Core) mountEntrySysView(me *MountEntry) (logical.SystemView, error) {
-	if me == nil {
-		return nil, fmt.Errorf("[ERR] core: nil MountEntry when generating SystemView")
-	}
-
-	sysView := dynamicSystemView{
+// mount-specific entries; because this should be called when setting
+// up a mountEntry, it doesn't check to ensure that me is not nil
+func (c *Core) mountEntrySysView(me *MountEntry) logical.SystemView {
+	return dynamicSystemView{
 		core: c,
 		path: me.Path,
 	}
-
-	return sysView, nil
-}
-
-// sysViewByPath is a simple helper for MountEntrySysView
-func (c *Core) sysViewByPath(path string) (logical.SystemView, error) {
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	me, err := c.mountEntryByPath(path)
-	if err != nil {
-		return nil, err
-	}
-	return c.mountEntrySysView(me)
-}
-
-// mountEntryByPath searches across all tables to find the MountEntry
-func (c *Core) mountEntryByPath(path string) (*MountEntry, error) {
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	pathSep := strings.IndexRune(path, '/')
-	if pathSep == -1 {
-		return nil, fmt.Errorf("[ERR] core: failed to find separator for path %s", path)
-	}
-	me := c.mounts.Find(path[0 : pathSep+1])
-	if me == nil {
-		me = c.auth.Find(path[0 : pathSep+1])
-	}
-	if me == nil {
-		me = c.audit.Find(path[0 : pathSep+1])
-	}
-	if me == nil {
-		return nil, fmt.Errorf("[ERR] core: failed to find mount entry for path %s", path)
-	}
-	return me, nil
-}
-
-// TTLsByPath returns the default and max TTLs corresponding to a particular
-// mount point, or the system default
-func (c *Core) TTLsByPath(path string) (def, max time.Duration, retErr error) {
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	me, err := c.mountEntryByPath(path)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	def = c.defaultLeaseTTL
-	max = c.maxLeaseTTL
-
-	if me.Config.DefaultLeaseTTL != nil && *me.Config.DefaultLeaseTTL != 0 {
-		def = *me.Config.DefaultLeaseTTL
-	}
-	if me.Config.MaxLeaseTTL != nil && *me.Config.MaxLeaseTTL != 0 {
-		max = *me.Config.MaxLeaseTTL
-	}
-
-	return
 }
 
 // defaultMountTable creates a default mount table

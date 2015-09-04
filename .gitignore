@@ -49,6 +49,8 @@ Vagrantfile
 
 dist/*
 
+tags
+
 # Editor backups
 *~
 *.sw[a-z]

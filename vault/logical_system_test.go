@@ -760,10 +760,24 @@ func TestSystemBackend_rotate(t *testing.T) {
 
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _, _ := TestCoreUnsealed(t)
-	return NewSystemBackend(c)
+	bc := &logical.BackendConfig{
+		Logger: c.logger,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	}
+	return NewSystemBackend(c, bc)
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 	c, _, root := TestCoreUnsealed(t)
-	return c, NewSystemBackend(c), root
+	bc := &logical.BackendConfig{
+		Logger: c.logger,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	}
+	return c, NewSystemBackend(c, bc), root
 }

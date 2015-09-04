@@ -66,7 +66,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 	// Create the new backend
-	backend, err := c.newCredentialBackend(entry.Type, view, nil)
+	backend, err := c.newCredentialBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 	// Mount the backend
 	path := credentialRoutePrefix + entry.Path
-	if err := c.router.Mount(backend, path, entry.UUID, view); err != nil {
+	if err := c.router.Mount(backend, path, entry, view); err != nil {
 		return err
 	}
 	c.logger.Printf("[INFO] core: enabled credential backend '%s' type: %s",
@@ -242,7 +242,7 @@ func (c *Core) setupCredentials() error {
 		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 		// Initialize the backend
-		backend, err = c.newCredentialBackend(entry.Type, view, nil)
+		backend, err = c.newCredentialBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create credential entry %#v: %v",
@@ -252,7 +252,7 @@ func (c *Core) setupCredentials() error {
 
 		// Mount the backend
 		path := credentialRoutePrefix + entry.Path
-		err = c.router.Mount(backend, path, entry.UUID, view)
+		err = c.router.Mount(backend, path, entry, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
 			return loadAuthFailed
@@ -281,7 +281,7 @@ func (c *Core) teardownCredentials() error {
 
 // newCredentialBackend is used to create and configure a new credential backend by name
 func (c *Core) newCredentialBackend(
-	t string, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+	t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.credentialBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
@@ -291,12 +291,14 @@ func (c *Core) newCredentialBackend(
 		View:   view,
 		Logger: c.logger,
 		Config: conf,
+		System: sysView,
 	}
 
 	b, err := f(config)
 	if err != nil {
 		return nil, err
 	}
+
 	return b, nil
 }
 
