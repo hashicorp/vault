@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/vault"
 )
 
 // MountCommand is a Command that mounts a new mount.
@@ -51,7 +50,7 @@ func (c *MountCommand) Run(args []string) int {
 	mountInfo := &api.Mount{
 		Type:        mountType,
 		Description: description,
-		Config:      vault.MountConfig{},
+		Config:      api.APIMountConfig{},
 	}
 
 	if defaultLeaseTTL != "" {

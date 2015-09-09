@@ -53,9 +53,13 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
 					},
-					"config": &framework.FieldSchema{
-						Type:        framework.TypeMap,
-						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
+					"default_lease_ttl": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+					},
+					"max_lease_ttl": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
 					},
 				},
 
@@ -415,13 +419,6 @@ func (b *SystemBackend) handleMount(
 		Config:      config,
 	}
 
-	if me.Config.DefaultLeaseTTL == nil {
-		me.Config.DefaultLeaseTTL = new(time.Duration)
-	}
-	if me.Config.MaxLeaseTTL == nil {
-		me.Config.MaxLeaseTTL = new(time.Duration)
-	}
-
 	// Attempt mount
 	if err := b.Core.mount(me); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: mount %#v failed: %v", me, err)
@@ -513,14 +510,10 @@ func (b *SystemBackend) handleMountConfig(
 		return handleError(err)
 	}
 
-	config := MountConfig{
-		DefaultLeaseTTL: &def,
-		MaxLeaseTTL:     &max,
-	}
-
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"config": config,
+			"default_lease_ttl": def,
+			"max_lease_ttl":     max,
 		},
 	}
 
@@ -541,25 +534,43 @@ func (b *SystemBackend) handleMountTune(
 		path += "/"
 	}
 
-	var config MountConfig
-	configMap := data.Get("config").(map[string]interface{})
-	if configMap == nil || len(configMap) == 0 {
-		return logical.ErrorResponse(
-				"invalid parameters; 'config' empty or not supplied"),
-			logical.ErrInvalidRequest
+	// Prevent protected paths from being changed
+	for _, p := range protectedMounts {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Errorf("[ERR] core: cannot tune '%s'", path)
+			b.Backend.Logger().Print(err)
+			return handleError(err)
+		}
 	}
 
-	err := mapstructure.Decode(configMap, &config)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-				"unable to convert given mount config information: %s", err)),
-			logical.ErrInvalidRequest
-	}
-
-	// Attempt tune
-	if err := b.Core.tuneMount(path, config); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
+	mountEntry := b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		err := fmt.Errorf("[ERR] sys: tune of path '%s' failed: no mount entry found", path)
+		b.Backend.Logger().Print(err)
 		return handleError(err)
+	}
+
+	newMountConfig := mountEntry.Config
+
+	// Timing configuration parameters
+	{
+		var needTTLTune bool
+		defTTLInt, ok := data.GetOk("default_lease_ttl")
+		if ok {
+			newMountConfig.DefaultLeaseTTL = time.Duration(defTTLInt.(int))
+			needTTLTune = true
+		}
+		maxTTLInt, ok := data.GetOk("max_lease_ttl")
+		if ok {
+			newMountConfig.MaxLeaseTTL = time.Duration(maxTTLInt.(int))
+			needTTLTune = true
+		}
+		if needTTLTune {
+			if err := b.tuneMountTTLs(path, &mountEntry.Config, &newMountConfig); err != nil {
+				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
+				return handleError(err)
+			}
+		}
 	}
 
 	return nil, nil
@@ -970,6 +981,14 @@ west coast.
 	"mount_config": {
 		`Configuration for this mount, such as default_lease_ttl
 and max_lease_ttl.`,
+	},
+
+	"tune_default_lease_ttl": {
+		`The default lease TTL for this mount.`,
+	},
+
+	"tune_max_lease_ttl": {
+		`The max lease TTL for this mount.`,
 	},
 
 	"remount": {

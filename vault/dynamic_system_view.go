@@ -43,11 +43,11 @@ func (d dynamicSystemView) fetchTTLs() (def, max time.Duration, retErr error) {
 	def = d.core.defaultLeaseTTL
 	max = d.core.maxLeaseTTL
 
-	if me.Config.DefaultLeaseTTL != nil && *me.Config.DefaultLeaseTTL != 0 {
-		def = *me.Config.DefaultLeaseTTL
+	if me.Config.DefaultLeaseTTL != 0 {
+		def = me.Config.DefaultLeaseTTL
 	}
-	if me.Config.MaxLeaseTTL != nil && *me.Config.MaxLeaseTTL != 0 {
-		max = *me.Config.MaxLeaseTTL
+	if me.Config.MaxLeaseTTL != 0 {
+		max = me.Config.MaxLeaseTTL
 	}
 
 	return

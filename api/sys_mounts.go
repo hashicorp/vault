@@ -2,9 +2,9 @@ package api
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/vault"
 )
 
 func (c *Sys) ListMounts() (map[string]*Mount, error) {
@@ -79,15 +79,12 @@ func (c *Sys) Remount(from, to string) error {
 	return err
 }
 
-func (c *Sys) TuneMount(path string, config vault.MountConfig) error {
+func (c *Sys) TuneMount(path string, config APIMountConfig) error {
 	if err := c.checkMountPath(path); err != nil {
 		return err
 	}
 
-	body := map[string]interface{}{
-		"config": config,
-	}
-
+	body := structs.Map(config)
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
@@ -123,7 +120,12 @@ func (c *Sys) checkMountPath(path string) error {
 }
 
 type Mount struct {
-	Type        string            `json:"type" structs:"type"`
-	Description string            `json:"description" structs:"description"`
-	Config      vault.MountConfig `json:"config" structs:"config"`
+	Type        string         `json:"type" structs:"type"`
+	Description string         `json:"description" structs:"description"`
+	Config      APIMountConfig `json:"config" structs:"config"`
+}
+
+type APIMountConfig struct {
+	DefaultLeaseTTL *time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     *time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 }

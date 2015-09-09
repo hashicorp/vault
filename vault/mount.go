@@ -118,8 +118,8 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL *time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL     *time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -330,7 +330,6 @@ func (c *Core) remount(src, dst string) error {
 	// Update the entry in the mount table
 	newTable := c.mounts.Clone()
 	for _, ent := range newTable.Entries {
-		//FIXME: Update systemview in each logical backend
 		if ent.Path == src {
 			ent.Path = dst
 			ent.Tainted = false
@@ -355,66 +354,6 @@ func (c *Core) remount(src, dst string) error {
 	}
 
 	c.logger.Printf("[INFO] core: remounted '%s' to '%s'", src, dst)
-	return nil
-}
-
-// tuneMount is used to set config on a mount point
-func (c *Core) tuneMount(path string, config MountConfig) error {
-	// Ensure we end the path in a slash
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
-
-	// Prevent protected paths from being changed
-	for _, p := range protectedMounts {
-		if strings.HasPrefix(path, p) {
-			return fmt.Errorf("[ERR] core: cannot tune '%s'", path)
-		}
-	}
-
-	me := c.router.MatchingMountEntry(path)
-	if me == nil {
-		return fmt.Errorf("[ERR] core: no matching mount at '%s'", path)
-	}
-
-	if config.MaxLeaseTTL != nil {
-		if *me.Config.DefaultLeaseTTL != 0 {
-			if *config.MaxLeaseTTL < *me.Config.DefaultLeaseTTL {
-				return fmt.Errorf("Given backend max lease TTL of %d less than backend default lease TTL of %d",
-					*config.MaxLeaseTTL, *me.Config.DefaultLeaseTTL)
-			}
-		}
-		if *config.MaxLeaseTTL == 0 {
-			*me.Config.MaxLeaseTTL = 0
-		} else {
-			me.Config.MaxLeaseTTL = config.MaxLeaseTTL
-		}
-	}
-	if config.DefaultLeaseTTL != nil {
-		if *me.Config.MaxLeaseTTL == 0 {
-			if *config.DefaultLeaseTTL > c.maxLeaseTTL {
-				return fmt.Errorf("Given default lease TTL of %d greater than system default lease TTL of %d",
-					*config.DefaultLeaseTTL, c.maxLeaseTTL)
-			}
-		} else {
-			if *me.Config.MaxLeaseTTL != 0 && *me.Config.MaxLeaseTTL < *config.DefaultLeaseTTL {
-				return fmt.Errorf("Given default lease TTL of %d greater than backend max lease TTL of %d",
-					*config.DefaultLeaseTTL, *me.Config.MaxLeaseTTL)
-			}
-		}
-		if *config.DefaultLeaseTTL == 0 {
-			*me.Config.DefaultLeaseTTL = 0
-		} else {
-			me.Config.DefaultLeaseTTL = config.DefaultLeaseTTL
-		}
-	}
-
-	// Update the mount table
-	if err := c.persistMounts(c.mounts); err != nil {
-		return errors.New("failed to update mount table")
-	}
-
-	c.logger.Printf("[INFO] core: tuned '%s'", path)
 	return nil
 }
 
@@ -563,20 +502,12 @@ func defaultMountTable() *MountTable {
 		Type:        "generic",
 		Description: "generic secret storage",
 		UUID:        uuid.GenerateUUID(),
-		Config: MountConfig{
-			DefaultLeaseTTL: new(time.Duration),
-			MaxLeaseTTL:     new(time.Duration),
-		},
 	}
 	sysMount := &MountEntry{
 		Path:        "sys/",
 		Type:        "system",
 		Description: "system endpoints used for control, policy and debugging",
 		UUID:        uuid.GenerateUUID(),
-		Config: MountConfig{
-			DefaultLeaseTTL: new(time.Duration),
-			MaxLeaseTTL:     new(time.Duration),
-		},
 	}
 	table.Entries = append(table.Entries, genericMount)
 	table.Entries = append(table.Entries, sysMount)

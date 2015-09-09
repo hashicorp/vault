@@ -253,49 +253,37 @@ func TestSysTuneMount(t *testing.T) {
 
 	// Shorter than system default
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": time.Duration(time.Hour * 72),
-		},
+		"default_lease_ttl": time.Duration(time.Hour * 72),
 	})
 	testResponseStatus(t, resp, 204)
 
-	// Longer than system default
+	// Longer than system max
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": time.Duration(time.Hour * 72000),
-		},
+		"default_lease_ttl": time.Duration(time.Hour * 72000),
 	})
 	testResponseStatus(t, resp, 400)
 
 	// Longer than system default
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"max_lease_ttl": time.Duration(time.Hour * 72000),
-		},
+		"max_lease_ttl": time.Duration(time.Hour * 72000),
 	})
 	testResponseStatus(t, resp, 204)
 
 	// Longer than backend max
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": time.Duration(time.Hour * 72001),
-		},
+		"default_lease_ttl": time.Duration(time.Hour * 72001),
 	})
 	testResponseStatus(t, resp, 400)
 
 	// Shorter than backend default
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"max_lease_ttl": time.Duration(time.Hour * 1),
-		},
+		"max_lease_ttl": time.Duration(time.Hour * 1),
 	})
 	testResponseStatus(t, resp, 400)
 
 	// Shorter than backend max, longer than system max
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": time.Duration(time.Hour * 71999),
-		},
+		"default_lease_ttl": time.Duration(time.Hour * 71999),
 	})
 	testResponseStatus(t, resp, 204)
 
@@ -338,10 +326,8 @@ func TestSysTuneMount(t *testing.T) {
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/foo/tune")
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": float64(time.Duration(time.Hour * 71999)),
-			"max_lease_ttl":     float64(time.Duration(time.Hour * 72000)),
-		},
+		"default_lease_ttl": float64(time.Duration(time.Hour * 71999)),
+		"max_lease_ttl":     float64(time.Duration(time.Hour * 72000)),
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -352,20 +338,16 @@ func TestSysTuneMount(t *testing.T) {
 
 	// Set a low max
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": time.Duration(time.Second * 40),
-			"max_lease_ttl":     time.Duration(time.Second * 80),
-		},
+		"default_lease_ttl": time.Duration(time.Second * 40),
+		"max_lease_ttl":     time.Duration(time.Second * 80),
 	})
 	testResponseStatus(t, resp, 204)
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"config": map[string]interface{}{
-			"default_lease_ttl": float64(time.Duration(time.Second * 40)),
-			"max_lease_ttl":     float64(time.Duration(time.Second * 80)),
-		},
+		"default_lease_ttl": float64(time.Duration(time.Second * 40)),
+		"max_lease_ttl":     float64(time.Duration(time.Second * 80)),
 	}
 
 	testResponseStatus(t, resp, 200)

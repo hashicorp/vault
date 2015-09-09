@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/api"
 )
 
 // MountTuneCommand is a Command that remounts a mounted secret backend
@@ -34,7 +34,7 @@ func (c *MountTuneCommand) Run(args []string) int {
 
 	path := args[0]
 
-	mountConfig := vault.MountConfig{}
+	mountConfig := api.APIMountConfig{}
 	if defaultLeaseTTL != "" {
 		defTTL, err := time.ParseDuration(defaultLeaseTTL)
 		if err != nil {

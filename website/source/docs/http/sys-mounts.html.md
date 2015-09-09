@@ -81,10 +81,8 @@ description: |-
 
     ```javascript
     {
-      "config": {
-          "default_lease_ttl": 0,
-          "max_lease_ttl": 0
-      }
+      "default_lease_ttl": 0,
+      "max_lease_ttl": 0
     }
     ```
 
@@ -152,14 +150,16 @@ description: |-
   <dd>
     <ul>
       <li>
-        <span class="param">config</span>
-        <span class="param-flags">required</span>
-        Config options for this mount. This is an object with
-        two possible values: `default_lease_ttl` and
-        `max_lease_ttl`. These control the default and
-        maximum lease time-to-live, respectively. If set
-        on a specific mount, this overrides the global
-        defaults.
+        <span class="param">default_lease_ttl</span>
+        <span class="param-flags">optional</span>
+        The default time-to-live. If set on a specific mount,
+        overrides the global default.
+      </li>
+      <li>
+        <span class="param">max_lease_ttl</span>
+        <span class="param-flags">optional</span>
+        The maximum time-to-live. If set on a specific mount,
+        overrides the global default.
       </li>
     </ul>
   </dd>
