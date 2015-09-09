@@ -25,8 +25,8 @@ const (
 )
 
 var (
-	// loadAuthFailed if loadCreddentials encounters an error
-	loadAuthFailed = errors.New("failed to setup auth table")
+	// errLoadAuthFailed if loadCreddentials encounters an error
+	errLoadAuthFailed = errors.New("failed to setup auth table")
 )
 
 // enableCredential is used to enable a new credential backend
@@ -185,13 +185,13 @@ func (c *Core) loadCredentials() error {
 	raw, err := c.barrier.Get(coreAuthConfigPath)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to read auth table: %v", err)
-		return loadAuthFailed
+		return errLoadAuthFailed
 	}
 	if raw != nil {
 		c.auth = &MountTable{}
 		if err := json.Unmarshal(raw.Value, c.auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode auth table: %v", err)
-			return loadAuthFailed
+			return errLoadAuthFailed
 		}
 	}
 
@@ -203,7 +203,7 @@ func (c *Core) loadCredentials() error {
 	// Create and persist the default auth table
 	c.auth = defaultAuthTable()
 	if err := c.persistAuth(c.auth); err != nil {
-		return loadAuthFailed
+		return errLoadAuthFailed
 	}
 	return nil
 }
@@ -247,7 +247,7 @@ func (c *Core) setupCredentials() error {
 			c.logger.Printf(
 				"[ERR] core: failed to create credential entry %#v: %v",
 				entry, err)
-			return loadAuthFailed
+			return errLoadAuthFailed
 		}
 
 		// Mount the backend
@@ -255,7 +255,7 @@ func (c *Core) setupCredentials() error {
 		err = c.router.Mount(backend, path, entry, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
-			return loadAuthFailed
+			return errLoadAuthFailed
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -288,10 +288,9 @@ func (c *Core) newCredentialBackend(
 	}
 
 	config := &logical.BackendConfig{
-		View:   view,
-		Logger: c.logger,
-		Config: conf,
-		System: sysView,
+		StorageView: view,
+		Logger:      c.logger,
+		Config:      conf,
 	}
 
 	b, err := f(config)

@@ -486,10 +486,13 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 	}
 
 	config := &logical.BackendConfig{
-		View:   view,
-		Logger: c.logger,
-		Config: conf,
-		System: sysView,
+		StorageView: view,
+		Logger:      c.logger,
+		Config:      conf,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: c.defaultLeaseTTL,
+			MaxLeaseTTLVal:     c.maxLeaseTTL,
+		},
 	}
 
 	b, err := f(config)
