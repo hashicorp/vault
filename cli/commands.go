@@ -226,6 +226,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"mount-tune": func() (cli.Command, error) {
+			return &command.MountTuneCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"remount": func() (cli.Command, error) {
 			return &command.RemountCommand{
 				Meta: meta,

@@ -68,5 +68,6 @@ Usage: vault remount [options] from to
 General Options:
 
   ` + generalOptionsUsage()
+
 	return strings.TrimSpace(helpText)
 }

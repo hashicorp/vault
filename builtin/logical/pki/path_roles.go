@@ -256,10 +256,10 @@ func (b *backend) pathRoleCreate(
 	if len(entry.MaxTTL) == 0 {
 		entry.MaxTTL = data.Get("lease_max").(string)
 	}
-
 	var maxTTL time.Duration
+	maxSystemTTL := b.System().MaxLeaseTTL()
 	if len(entry.MaxTTL) == 0 {
-		maxTTL = b.System.MaxLeaseTTL()
+		maxTTL = maxSystemTTL
 	} else {
 		maxTTL, err = time.ParseDuration(entry.MaxTTL)
 		if err != nil {
@@ -267,18 +267,15 @@ func (b *backend) pathRoleCreate(
 				"Invalid ttl: %s", err)), nil
 		}
 	}
-	if maxTTL > b.System.MaxLeaseTTL() {
-		return logical.ErrorResponse("Requested max TTL is higher than system maximum"), nil
+	if maxTTL > maxSystemTTL {
+		return logical.ErrorResponse("Requested max TTL is higher than backend maximum"), nil
 	}
 
-	var ttl time.Duration
 	if len(entry.TTL) == 0 {
 		entry.TTL = data.Get("lease").(string)
 	}
-	switch len(entry.TTL) {
-	case 0:
-		ttl = b.System.DefaultLeaseTTL()
-	default:
+	ttl := b.System().DefaultLeaseTTL()
+	if len(entry.TTL) != 0 {
 		ttl, err = time.ParseDuration(entry.TTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
@@ -291,7 +288,7 @@ func (b *backend) pathRoleCreate(
 		if len(entry.TTL) == 0 {
 			ttl = maxTTL
 		} else {
-			return logical.ErrorResponse("\"ttl\" value must be less than \"max_ttl\" and/or system default max lease TTL value"), nil
+			return logical.ErrorResponse("\"ttl\" value must be less than \"max_ttl\" and/or backend default max lease TTL value"), nil
 		}
 	}
 

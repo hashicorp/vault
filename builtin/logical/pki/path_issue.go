@@ -45,8 +45,9 @@ common-delimited list`,
 				Type: framework.TypeString,
 				Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
-the role default TTL it used. Cannot be larer
-than the role max TTL.`,
+the role default, backend default, or system
+default TTL is used, in that order. Cannot
+be later than the role max TTL.`,
 			},
 		},
 
@@ -114,7 +115,7 @@ func (b *backend) pathIssueCert(
 
 	var ttl time.Duration
 	if len(ttlField) == 0 {
-		ttl = b.System.DefaultLeaseTTL()
+		ttl = b.System().DefaultLeaseTTL()
 	} else {
 		ttl, err = time.ParseDuration(ttlField)
 		if err != nil {
@@ -125,7 +126,7 @@ func (b *backend) pathIssueCert(
 
 	var maxTTL time.Duration
 	if len(role.MaxTTL) == 0 {
-		maxTTL = b.System.MaxLeaseTTL()
+		maxTTL = b.System().MaxLeaseTTL()
 	} else {
 		maxTTL, err = time.ParseDuration(role.MaxTTL)
 		if err != nil {

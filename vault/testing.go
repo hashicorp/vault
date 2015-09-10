@@ -6,6 +6,7 @@ import (
 	"net"
 	"os/exec"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
@@ -61,10 +62,12 @@ func TestCore(t *testing.T) *Core {
 		},
 	}
 	noopBackends := make(map[string]logical.Factory)
-	noopBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return new(framework.Backend), nil
+	noopBackends["noop"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		b := new(framework.Backend)
+		b.Setup(config)
+		return b, nil
 	}
-	noopBackends["http"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	noopBackends["http"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
 	logicalBackends := make(map[string]logical.Factory)
@@ -261,4 +264,11 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
+}
+
+func (n *rawHTTP) System() logical.SystemView {
+	return logical.StaticSystemView{
+		DefaultLeaseTTLVal: time.Hour * 24,
+		MaxLeaseTTLVal:     time.Hour * 24 * 30,
+	}
 }

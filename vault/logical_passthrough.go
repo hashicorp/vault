@@ -11,7 +11,7 @@ import (
 )
 
 // logical.Factory
-func PassthroughBackendFactory(*logical.BackendConfig) (logical.Backend, error) {
+func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
@@ -52,6 +52,11 @@ func PassthroughBackendFactory(*logical.BackendConfig) (logical.Backend, error) 
 			},
 		},
 	}
+
+	if conf == nil {
+		return nil, fmt.Errorf("Configuation passed into backend is nil")
+	}
+	b.Backend.Setup(conf)
 
 	return b, nil
 }

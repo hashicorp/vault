@@ -48,9 +48,9 @@ type TokenStore struct {
 
 // NewTokenStore is used to construct a token store that is
 // backed by the given barrier view.
-func NewTokenStore(c *Core) (*TokenStore, error) {
+func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
-	view := c.systemView.SubView(tokenSubPath)
+	view := c.systemBarrierView.SubView(tokenSubPath)
 
 	// Initialize the store
 	t := &TokenStore{
@@ -202,6 +202,8 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 			},
 		},
 	}
+
+	t.Backend.Setup(config)
 
 	return t, nil
 }

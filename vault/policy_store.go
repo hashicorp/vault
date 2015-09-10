@@ -46,7 +46,7 @@ func NewPolicyStore(view *BarrierView) *PolicyStore {
 // when the vault is being unsealed.
 func (c *Core) setupPolicyStore() error {
 	// Create a sub-view
-	view := c.systemView.SubView(policySubPath)
+	view := c.systemBarrierView.SubView(policySubPath)
 
 	// Create the policy store
 	c.policy = NewPolicyStore(view)

@@ -220,8 +220,8 @@ type Core struct {
 	// out into the configured audit backends
 	auditBroker *AuditBroker
 
-	// systemView is the barrier view for the system backend
-	systemView *BarrierView
+	// systemBarrierView is the barrier view for the system backend
+	systemBarrierView *BarrierView
 
 	// expiration manager is used for managing LeaseIDs,
 	// renewal, expiration and revocation
@@ -351,8 +351,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends[k] = f
 	}
 	logicalBackends["generic"] = PassthroughBackendFactory
-	logicalBackends["system"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c), nil
+	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewSystemBackend(c, config), nil
 	}
 	c.logicalBackends = logicalBackends
 
@@ -360,8 +360,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(c)
+	credentialBackends["token"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewTokenStore(c, config)
 	}
 	c.credentialBackends = credentialBackends
 
@@ -477,14 +477,23 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
+		// Get the SystemView for the mount
+		sysView := c.router.MatchingSystemView(req.Path)
+		if sysView == nil {
+			c.logger.Println("[ERR] core: unable to retrieve system view from router")
+			return nil, auth, ErrInternalError
+		}
+
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = c.defaultLeaseTTL
+			ttl := sysView.DefaultLeaseTTL()
+			resp.Secret.TTL = ttl
 		}
 
 		// Limit the lease duration
-		if resp.Secret.TTL > c.maxLeaseTTL {
-			resp.Secret.TTL = c.maxLeaseTTL
+		maxTTL := sysView.MaxLeaseTTL()
+		if resp.Secret.TTL > maxTTL {
+			resp.Secret.TTL = maxTTL
 		}
 
 		// Register the lease
@@ -579,7 +588,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Populate the client token
-		resp.Auth.ClientToken = te.ID
+		auth.ClientToken = te.ID
 
 		// Set the default lease if non-provided, root tokens are exempt
 		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
@@ -587,8 +596,8 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Limit the lease duration
-		if resp.Auth.TTL > c.maxLeaseTTL {
-			resp.Auth.TTL = c.maxLeaseTTL
+		if auth.TTL > c.maxLeaseTTL {
+			auth.TTL = c.maxLeaseTTL
 		}
 
 		// Register with the expiration manager

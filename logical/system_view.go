@@ -19,10 +19,10 @@ type StaticSystemView struct {
 	MaxLeaseTTLVal     time.Duration
 }
 
-func (d *StaticSystemView) DefaultLeaseTTL() time.Duration {
+func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
 	return d.DefaultLeaseTTLVal
 }
 
-func (d *StaticSystemView) MaxLeaseTTL() time.Duration {
+func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 	return d.MaxLeaseTTLVal
 }
