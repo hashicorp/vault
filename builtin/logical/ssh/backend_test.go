@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"log"
 	"os/user"
 	"reflect"
 	"strings"
@@ -128,7 +127,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testCredsWrite(t, testDynamicRoleName, data),
+			testCredsWrite(t, testDynamicRoleName, data, false),
 		},
 	})
 }
@@ -195,7 +194,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testCredsWrite(t, testOTPRoleName, data),
+			testCredsWrite(t, testOTPRoleName, data, false),
 		},
 	})
 }
@@ -251,17 +250,45 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	})
 }
 
-/*
-func TestSSHBackend_CredsForZeroAddressRole(t *testing.T) {
+func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
+	dynamicRoleData := map[string]interface{}{
+		"key_type":     testDynamicKeyType,
+		"key":          testKeyName,
+		"admin_user":   testAdminUser,
+		"default_user": testAdminUser,
+	}
+	otpRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+	}
+	data := map[string]interface{}{
+		"username": testUserName,
+		"ip":       testIP,
+	}
+	req1 := map[string]interface{}{
+		"roles": testOTPRoleName,
+	}
+	req2 := map[string]interface{}{
+		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
-			testCredsWrite(t, testOTPRoleName),
+			testCredsWrite(t, testOTPRoleName, data, true),
+			testConfigZeroAddressWrite(t, req1),
+			testCredsWrite(t, testOTPRoleName, data, false),
+			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
+			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
+			testCredsWrite(t, testDynamicRoleName, data, true),
+			testConfigZeroAddressWrite(t, req2),
+			testCredsWrite(t, testDynamicRoleName, data, false),
+			testConfigZeroAddressDelete(t),
+			testCredsWrite(t, testOTPRoleName, data, true),
+			testCredsWrite(t, testDynamicRoleName, data, true),
 		},
 	})
 }
-*/
 
 func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
@@ -408,7 +435,6 @@ func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}
 				return fmt.Errorf("error decoding response:%s", err)
 			}
 			if roleName == testOTPRoleName {
-				log.Printf("expected: %#v\n actual:%#v", expected, resp.Data)
 				if d.KeyType != expected["key_type"] || d.DefaultUser != expected["default_user"] || d.CIDRList != expected["cidr_list"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
@@ -429,12 +455,31 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}) logicaltest.TestStep {
+func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
 		Data:      data,
+		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("response is nil")
+			}
+			if resp.Data == nil {
+				return fmt.Errorf("data is nil")
+			}
+			if expectError {
+				var e struct {
+					Error string `mapstructure:"error"`
+				}
+				if err := mapstructure.Decode(resp.Data, &e); err != nil {
+					return err
+				}
+				if len(e.Error) == 0 {
+					return fmt.Errorf("expected error, but write succeeded.")
+				}
+				return nil
+			}
 			if roleName == testDynamicRoleName {
 				var d struct {
 					Key string `mapstructure:"key"`
@@ -451,12 +496,6 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}) 
 					return fmt.Errorf("Generated key is invalid")
 				}
 			} else {
-				if resp == nil {
-					return fmt.Errorf("response is nil")
-				}
-				if resp.Data == nil {
-					return fmt.Errorf("data is nil")
-				}
 				if resp.Data["key_type"] != KeyTypeOTP {
 					return fmt.Errorf("Incorrect key_type")
 				}
