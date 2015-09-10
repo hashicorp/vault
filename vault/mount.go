@@ -48,13 +48,16 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
-// Returns a deep copy of the mount table
-func (t *MountTable) Clone() *MountTable {
+// ShallowClone returns a copy of the mount table that
+// keeps the MountEntry locations, so as not to invalidate
+// other locations holding pointers. Care needs to be taken
+// if modifying entries rather than modifying the table itself
+func (t *MountTable) ShallowClone() *MountTable {
 	mt := &MountTable{
 		Entries: make([]*MountEntry, len(t.Entries)),
 	}
 	for i, e := range t.Entries {
-		mt.Entries[i] = e.Clone()
+		mt.Entries[i] = e
 	}
 	return mt
 }
@@ -170,7 +173,7 @@ func (c *Core) mount(me *MountEntry) error {
 	}
 
 	// Update the mount table
-	newTable := c.mounts.Clone()
+	newTable := c.mounts.ShallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
 		return errors.New("failed to update mount table")
@@ -252,7 +255,7 @@ func (c *Core) unmount(path string) error {
 // removeMountEntry is used to remove an entry from the mount table
 func (c *Core) removeMountEntry(path string) error {
 	// Remove the entry from the mount table
-	newTable := c.mounts.Clone()
+	newTable := c.mounts.ShallowClone()
 	newTable.Remove(path)
 
 	// Update the mount table
@@ -266,7 +269,7 @@ func (c *Core) removeMountEntry(path string) error {
 // taintMountEntry is used to mark an entry in the mount table as tainted
 func (c *Core) taintMountEntry(path string) error {
 	// Remove the entry from the mount table
-	newTable := c.mounts.Clone()
+	newTable := c.mounts.ShallowClone()
 	newTable.SetTaint(path, true)
 
 	// Update the mount table
@@ -328,8 +331,9 @@ func (c *Core) remount(src, dst string) error {
 	}
 
 	// Update the entry in the mount table
-	newTable := c.mounts.Clone()
-	for _, ent := range newTable.Entries {
+	newTable := c.mounts.ShallowClone()
+	var ent *MountEntry
+	for _, ent = range newTable.Entries {
 		if ent.Path == src {
 			ent.Path = dst
 			ent.Tainted = false
@@ -339,6 +343,8 @@ func (c *Core) remount(src, dst string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
+		ent.Path = src
+		ent.Tainted = true
 		return errors.New("failed to update mount table")
 	}
 	c.mounts = newTable
@@ -489,8 +495,8 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 // up a mountEntry, it doesn't check to ensure that me is not nil
 func (c *Core) mountEntrySysView(me *MountEntry) logical.SystemView {
 	return dynamicSystemView{
-		core: c,
-		path: me.Path,
+		core:       c,
+		mountEntry: me,
 	}
 }
 

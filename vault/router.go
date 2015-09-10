@@ -92,11 +92,6 @@ func (r *Router) Remount(src, dst string) error {
 
 	// Update the mount point
 	r.root.Delete(src)
-	routeEntry := raw.(*routeEntry)
-	dynSysView, ok := routeEntry.backend.System().(dynamicSystemView)
-	if ok {
-		dynSysView.path = dst
-	}
 	r.root.Insert(dst, raw)
 	return nil
 }

@@ -69,7 +69,7 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 	// Update the audit table
-	newTable := c.audit.Clone()
+	newTable := c.audit.ShallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistAudit(newTable); err != nil {
 		return errors.New("failed to update audit table")
@@ -94,7 +94,7 @@ func (c *Core) disableAudit(path string) error {
 	}
 
 	// Remove the entry from the mount table
-	newTable := c.audit.Clone()
+	newTable := c.audit.ShallowClone()
 	found := newTable.Remove(path)
 
 	// Ensure there was a match

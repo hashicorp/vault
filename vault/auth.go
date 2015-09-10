@@ -72,7 +72,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	}
 
 	// Update the auth table
-	newTable := c.auth.Clone()
+	newTable := c.auth.ShallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistAuth(newTable); err != nil {
 		return errors.New("failed to update auth table")
@@ -149,7 +149,7 @@ func (c *Core) disableCredential(path string) error {
 // removeCredEntry is used to remove an entry in the auth table
 func (c *Core) removeCredEntry(path string) error {
 	// Taint the entry from the auth table
-	newTable := c.auth.Clone()
+	newTable := c.auth.ShallowClone()
 	newTable.Remove(path)
 
 	// Update the auth table
@@ -163,7 +163,7 @@ func (c *Core) removeCredEntry(path string) error {
 // taintCredEntry is used to mark an entry in the auth table as tainted
 func (c *Core) taintCredEntry(path string) error {
 	// Taint the entry from the auth table
-	newTable := c.auth.Clone()
+	newTable := c.auth.ShallowClone()
 	found := newTable.SetTaint(path, true)
 
 	// Ensure there was a match
