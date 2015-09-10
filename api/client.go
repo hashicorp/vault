@@ -7,10 +7,13 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 )
 
 var (
-	errRedirect = errors.New("redirect")
+	errRedirect            = errors.New("redirect")
+	defaultHTTPClientSetup sync.Once
+	defaultHTTPClient      = &http.Client{}
 )
 
 // Config is used to configure the creation of the client.
@@ -21,8 +24,8 @@ type Config struct {
 	// HttpClient.
 	Address string
 
-	// HttpClient is the HTTP client to use, which will currently always be
-	// http.DefaultClient. This is used to control redirect behavior.
+	// HttpClient is the HTTP client to use, which will currently always have the
+	// same values as http.DefaultClient. This is used to control redirect behavior.
 	HttpClient *http.Client
 }
 
@@ -34,25 +37,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
-		HttpClient: http.DefaultClient,
-	}
-
-	// From https://github.com/michiwend/gomusicbrainz/pull/4/files
-	defaultRedirectLimit := 30
-
-	config.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		if len(via) > defaultRedirectLimit {
-			return fmt.Errorf("%d consecutive requests(redirects)", len(via))
-		}
-		if len(via) == 0 {
-			// No redirects
-			return nil
-		}
-		// mutate the subsequent redirect requests with the first Header
-		if token := via[0].Header.Get("X-Vault-Token"); len(token) != 0 {
-			req.Header.Set("X-Vault-Token", token)
-		}
-		return nil
+		HttpClient: defaultHTTPClient,
 	}
 
 	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
@@ -81,9 +66,13 @@ func NewClient(c *Config) (*Client, error) {
 		return nil, err
 	}
 
-	// Ensure redirects are not automatically followed
-	c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		return errRedirect
+	if c.HttpClient == defaultHTTPClient {
+		defaultHTTPClientSetup.Do(func() {
+			// Ensure redirects are not automatically followed
+			c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				return errRedirect
+			}
+		})
 	}
 
 	client := &Client{
@@ -105,12 +94,12 @@ func (c *Client) Token() string {
 }
 
 // SetToken sets the token directly. This won't perform any auth
-// verification, it simply sets the cookie properly for future requests.
+// verification, it simply sets the token properly for future requests.
 func (c *Client) SetToken(v string) {
 	c.token = v
 }
 
-// ClearToken deletes the token cookie if it is set or does nothing otherwise.
+// ClearToken deletes the token if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
 	c.token = ""
 }

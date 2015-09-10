@@ -100,7 +100,7 @@ mounted can be accessed at `auth/github`. You can use `vault path-help` to
 learn more about it.
 
 With the backend enabled, we first have to configure it. For GitHub,
-we tell it what organization users must part of, and map a team to a policy:
+we tell it what organization users must be a part of, and map a team to a policy:
 
 ```
 $ vault write auth/github/config organization=hashicorp
