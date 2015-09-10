@@ -49,6 +49,10 @@ func (n *NoopBackend) System() logical.SystemView {
 	}
 }
 
+func (n *NoopBackend) Cleanup() {
+	// noop
+}
+
 func TestRouter_Mount(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)

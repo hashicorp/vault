@@ -51,6 +51,10 @@ type Backend struct {
 	Rollback       RollbackFunc
 	RollbackMinAge time.Duration
 
+	// Clean is called on unload to clean up e.g any existing connections
+	// to the backend, if required.
+	Clean          CleanupFunc
+
 	// AuthRenew is the callback to call when a RenewRequest for an
 	// authentication comes in. By default, renewal won't be allowed.
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
@@ -67,6 +71,9 @@ type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
 
 // RollbackFunc is the callback for rollbacks.
 type RollbackFunc func(*logical.Request, string, interface{}) error
+
+// CleanupFunc is the callback for backend unload.
+type CleanupFunc func()
 
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -147,6 +154,11 @@ func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) 
 	return b, nil
 }
 
+func (b *Backend) Cleanup() {
+	if b.Clean != nil {
+		b.Clean()
+	}
+}
 // Logger can be used to get the logger. If no logger has been set,
 // the logs will be discarded.
 func (b *Backend) Logger() *log.Logger {

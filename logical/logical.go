@@ -26,6 +26,8 @@ type Backend interface {
 	// System provides an interface to access certain system configuration
 	// information, such as globally configured default and max lease TTLs.
 	System() SystemView
+
+	Cleanup()
 }
 
 // BackendConfig is provided to the factory to initialize the backend
