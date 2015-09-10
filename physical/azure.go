@@ -49,18 +49,8 @@ func newAzureBackend(conf map[string]string) (Backend, error) {
 	return backend, nil
 }
 
-//Delete removes the blob {key} from the container (recursively)
+//Delete removes the blob {key} from the container
 func (a AzureBackend) Delete(key string) error {
-	//
-	// list, err := a.List(key)
-	//
-	// for _, item := range list {
-	// 	_, err = a.client.DeleteBlobIfExists(a.container, item)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	_, err := a.client.DeleteBlobIfExists(a.container, key)
 	return err
 }
