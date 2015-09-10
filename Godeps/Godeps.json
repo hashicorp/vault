@@ -232,6 +232,10 @@
 		{
 			"ImportPath": "gopkg.in/inf.v0",
 			"Rev": "c85f1217d51339c0fa3a498cc8b2075de695dae6"
+		},
+		{
+			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
+			"Rev": "0fbd37144de3adc2aef74db867c0e15e41c7f74a"
 		}
 	]
 }
