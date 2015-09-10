@@ -63,7 +63,7 @@ func (b *backend) pathRoleCreateRead(
 	password := uuid.GenerateUUID()
 	expiration := time.Now().UTC().
 		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
-		Format("2006-01-02 15:04:05")
+		Format("2006-01-02 15:04:05-0700")
 
 	// Get our connection
 	db, err := b.DB(req.Storage)
