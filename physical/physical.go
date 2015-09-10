@@ -40,6 +40,7 @@ type AdvertiseDetect interface {
 	DetectHostAddr() (string, error)
 }
 
+// Lock is used to acquire the given lock
 type Lock interface {
 	// Lock is used to acquire the given lock
 	// The stopCh is optional and if closed should interrupt the lock
@@ -85,4 +86,5 @@ var BuiltinBackends = map[string]Factory{
 	"s3":        newS3Backend,
 	"etcd":      newEtcdBackend,
 	"mysql":     newMySQLBackend,
+	"azure":     newAzureBackend,
 }
