@@ -7,25 +7,19 @@ type dynamicSystemView struct {
 	mountEntry *MountEntry
 }
 
-func (d dynamicSystemView) DefaultLeaseTTL() (time.Duration, error) {
-	def, _, err := d.fetchTTLs()
-	if err != nil {
-		return 0, err
-	}
-	return def, nil
+func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
+	def, _ := d.fetchTTLs()
+	return def
 }
 
-func (d dynamicSystemView) MaxLeaseTTL() (time.Duration, error) {
-	_, max, err := d.fetchTTLs()
-	if err != nil {
-		return 0, err
-	}
-	return max, nil
+func (d dynamicSystemView) MaxLeaseTTL() time.Duration {
+	_, max := d.fetchTTLs()
+	return max
 }
 
 // TTLsByPath returns the default and max TTLs corresponding to a particular
 // mount point, or the system default
-func (d dynamicSystemView) fetchTTLs() (def, max time.Duration, retErr error) {
+func (d dynamicSystemView) fetchTTLs() (def, max time.Duration) {
 	def = d.core.defaultLeaseTTL
 	max = d.core.maxLeaseTTL
 

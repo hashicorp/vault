@@ -486,20 +486,12 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			ttl, err := sysView.DefaultLeaseTTL()
-			if err != nil {
-				c.logger.Println(err)
-				return nil, auth, ErrInternalError
-			}
+			ttl := sysView.DefaultLeaseTTL()
 			resp.Secret.TTL = ttl
 		}
 
 		// Limit the lease duration
-		maxTTL, err := sysView.MaxLeaseTTL()
-		if err != nil {
-			c.logger.Println(err)
-			return nil, auth, ErrInternalError
-		}
+		maxTTL := sysView.MaxLeaseTTL()
 		if resp.Secret.TTL > maxTTL {
 			resp.Secret.TTL = maxTTL
 		}

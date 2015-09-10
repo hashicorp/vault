@@ -498,17 +498,9 @@ func (b *SystemBackend) handleMountConfig(
 		return handleError(err)
 	}
 
-	def, err := sysView.DefaultLeaseTTL()
-	if err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: fetching config default TTL of path '%s' failed: %v", path, err)
-		return handleError(err)
-	}
+	def := sysView.DefaultLeaseTTL()
 
-	max, err := sysView.MaxLeaseTTL()
-	if err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: fetching config max TTL of path '%s' failed: %v", path, err)
-		return handleError(err)
-	}
+	max := sysView.MaxLeaseTTL()
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
