@@ -50,6 +50,15 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 		}
 	}
 
+	// Add roles that are allowed to accept any IP address.
+	zeroAddressEntry, err := b.getZeroAddressRoles(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if zeroAddressEntry != nil {
+		matchingRoles = append(matchingRoles, zeroAddressEntry.Roles...)
+	}
+
 	// This list may potentially reveal more information than it is supposed to.
 	// The roles for which the client is not authorized to will also be displayed.
 	// However, if the client tries to use the role for which the client is not

@@ -92,7 +92,17 @@ func (b *backend) pathCredsCreateWrite(
 
 	// Check if the IP belongs to the registered list of CIDR blocks under the role
 	ip := ipAddr.String()
-	err = validateIP(ip, role.CIDRList, role.ExcludeCIDRList)
+
+	zeroAddressEntry, err := b.getZeroAddressRoles(req.Storage)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving zero-address roles: %s", err)
+	}
+	var zeroAddressRoles []string
+	if zeroAddressEntry != nil {
+		zeroAddressRoles = zeroAddressEntry.Roles
+	}
+
+	err = validateIP(ip, roleName, role.CIDRList, role.ExcludeCIDRList, zeroAddressRoles)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error validating IP: %s", err)), nil
 	}
@@ -239,12 +249,22 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 	return otp, nil
 }
 
-// Validates the IP address by first searching the IP in the allowed CIDR
-// blocks registered with the role. If there is found, then it is searched
-// in the excluded CIDR blocks and if there is a match there, an error is
-// returned. IP is valid only if it is encompassed by allowed CIDR blocks
-// and not by excluded CIDR blocks.
-func validateIP(ip, cidrList, excludeCidrList string) error {
+// ValidateIP first checks if the role belongs to the list of privileged
+// roles that could allow any IP address and if there is a match, IP is
+// accepted immediately. If not, IP is searched in the allowed CIDR blocks
+// registered with the role. If there is a match, then it is searched in the
+// excluded CIDR blocks and if IP is found there as well, an error is returned.
+// IP is valid only if it is encompassed by allowed CIDR blocks and not by
+// excluded CIDR blocks.
+func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles []string) error {
+	// Search IP in the zero-address list
+	for _, role := range zeroAddressRoles {
+		if roleName == role {
+			return nil
+		}
+	}
+
+	// Search IP in allowed CIDR blocks
 	ipMatched, err := cidrListContainsIP(ip, cidrList)
 	if err != nil {
 		return err
@@ -257,6 +277,7 @@ func validateIP(ip, cidrList, excludeCidrList string) error {
 		return nil
 	}
 
+	// Search IP in exclude list
 	ipMatched, err = cidrListContainsIP(ip, excludeCidrList)
 	if err != nil {
 		return err

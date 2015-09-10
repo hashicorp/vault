@@ -158,16 +158,27 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 	}
 
 	cidrList := d.Get("cidr_list").(string)
-	if cidrList == "" {
-		cidrList = "0.0.0.0/0"
+
+	// Check if all the CIDR blocks are infact valid entries and they don't conflict
+	// with each other
+	if len(cidrList) != 0 {
+		overlaps, err := validateCIDRList(cidrList)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid cidr_list entry. %s", err)), nil
+		}
+		if len(overlaps) != 0 {
+			return logical.ErrorResponse(fmt.Sprintf("CIDR blocks conflicting: %s", overlaps)), nil
+		}
 	}
 
 	excludeCidrList := d.Get("exclude_cidr_list").(string)
 
-	// Check if all the CIDR entries are infact valid entries
-	err := validateCIDRList(cidrList)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Invalid cidr_list entry. %s", err)), nil
+	// Check if all the CIDR blocks are infact valid entries
+	if len(excludeCidrList) != 0 {
+		_, err := validateCIDRList(excludeCidrList)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid exclude_cidr_list entry. %s", err)), nil
+		}
 	}
 
 	port := d.Get("port").(int)
@@ -327,7 +338,16 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 
 func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
-	err := req.Storage.Delete(fmt.Sprintf("roles/%s", roleName))
+
+	// If the role was given privilege to accept any IP address, there will
+	// be an entry for this role in zero-address roles list. Before the role
+	// is removed, the entry in the list has to be removed.
+	err := b.removeZeroAddressRole(req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = req.Storage.Delete(fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return nil, err
 	}
