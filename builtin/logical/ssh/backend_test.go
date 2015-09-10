@@ -2,9 +2,9 @@ package ssh
 
 import (
 	"fmt"
+	"log"
 	"os/user"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -56,7 +56,7 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 var testIP string
-var testPort int
+
 var testUserName string
 var testAdminUser string
 var testOTPRoleData map[string]interface{}
@@ -71,10 +71,6 @@ func init() {
 	}
 	input := strings.Split(addr, ":")
 	testIP = input[0]
-	testPort, err = strconv.Atoi(input[1])
-	if err != nil {
-		panic(fmt.Sprintf("error parsing port number:%s", err))
-	}
 
 	u, err := user.Current()
 	if err != nil {
@@ -138,11 +134,17 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 }
 
 func TestSSHBackend_OTPRoleCrud(t *testing.T) {
+	respOTPRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"port":         22,
+		"default_user": testUserName,
+		"cidr_list":    testCIDRList,
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
-			testRoleRead(t, testOTPRoleName, testOTPRoleData),
+			testRoleRead(t, testOTPRoleName, respOTPRoleData),
 			testRoleDelete(t, testOTPRoleName),
 			testRoleRead(t, testOTPRoleName, nil),
 		},
@@ -150,12 +152,22 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
+	respDynamicRoleData := map[string]interface{}{
+		"cidr_list":      testCIDRList,
+		"port":           22,
+		"install_script": DefaultPublicKeyInstallScript,
+		"key_bits":       1024,
+		"key":            testKeyName,
+		"admin_user":     testUserName,
+		"default_user":   testUserName,
+		"key_type":       testDynamicKeyType,
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testRoleRead(t, testDynamicRoleName, testDynamicRoleData),
+			testRoleRead(t, testDynamicRoleName, respDynamicRoleData),
 			testRoleDelete(t, testDynamicRoleName),
 			testRoleRead(t, testDynamicRoleName, nil),
 		},
@@ -380,13 +392,13 @@ func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logic
 	}
 }
 
-func testRoleRead(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
+func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "roles/" + name,
+		Path:      "roles/" + roleName,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				if data == nil {
+				if expected == nil {
 					return nil
 				}
 				return fmt.Errorf("bad: %#v", resp)
@@ -395,12 +407,13 @@ func testRoleRead(t *testing.T, name string, data map[string]interface{}) logica
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return fmt.Errorf("error decoding response:%s", err)
 			}
-			if name == testOTPRoleName {
-				if d.KeyType != data["key_type"] || d.DefaultUser != data["default_user"] || d.CIDRList != data["cidr_list"] {
+			if roleName == testOTPRoleName {
+				log.Printf("expected: %#v\n actual:%#v", expected, resp.Data)
+				if d.KeyType != expected["key_type"] || d.DefaultUser != expected["default_user"] || d.CIDRList != expected["cidr_list"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
 			} else {
-				if d.AdminUser != data["admin_user"] || d.CIDRList != data["cidr_list"] || d.KeyName != data["key"] || d.KeyType != data["key_type"] {
+				if d.AdminUser != expected["admin_user"] || d.CIDRList != expected["cidr_list"] || d.KeyName != expected["key"] || d.KeyType != expected["key_type"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
 			}
