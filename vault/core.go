@@ -596,7 +596,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Populate the client token
-		resp.Auth.ClientToken = te.ID
+		auth.ClientToken = te.ID
 
 		// Set the default lease if non-provided, root tokens are exempt
 		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
@@ -604,8 +604,8 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Limit the lease duration
-		if resp.Auth.TTL > c.maxLeaseTTL {
-			resp.Auth.TTL = c.maxLeaseTTL
+		if auth.TTL > c.maxLeaseTTL {
+			auth.TTL = c.maxLeaseTTL
 		}
 
 		// Register with the expiration manager
