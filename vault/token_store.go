@@ -44,6 +44,8 @@ type TokenStore struct {
 	salt *salt.Salt
 
 	expiration *ExpirationManager
+
+	router *Router
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -54,7 +56,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Initialize the store
 	t := &TokenStore{
-		view: view,
+		view:   view,
+		router: c.router,
 	}
 
 	// Setup the salt
@@ -63,6 +66,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		return nil, err
 	}
 	t.salt = salt
+	t.router.tokenStoreSalt = salt
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -366,6 +370,7 @@ func (ts *TokenStore) Revoke(id string) error {
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
 	}
+
 	return ts.revokeSalted(ts.SaltID(id))
 }
 
@@ -398,6 +403,13 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 			return err
 		}
 	}
+
+	// Destroy the cubby space
+	err = ts.router.destroyCubbyhole(saltedId)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

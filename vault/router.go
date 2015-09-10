@@ -14,8 +14,11 @@ import (
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
-	l    sync.RWMutex
-	root *radix.Tree
+	l                    sync.RWMutex
+	root                 *radix.Tree
+	cubbyholeEntry       *routeEntry
+	cubbyholeDestroyFunc func(string, logical.Storage) error
+	tokenStoreSalt       *salt.Salt
 }
 
 // NewRouter returns a new router
@@ -68,7 +71,17 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		loginPaths: pathsToRadix(paths.Unauthenticated),
 	}
 	r.root.Insert(prefix, re)
+
+	if mountEntry.Type == "cubbyhole" {
+		r.cubbyholeEntry = re
+		be := backend.(CubbyholeBackend)
+		r.cubbyholeDestroyFunc = be.revoke
+	}
 	return nil
+}
+
+func (r *Router) destroyCubbyhole(saltedID string) error {
+	return r.cubbyholeDestroyFunc(r.cubbyholeEntry.SaltID(saltedID), r.cubbyholeEntry.view)
 }
 
 // Unmount is used to remove a logical backend from a given prefix
@@ -214,7 +227,13 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 
 	// Hash the request token unless this is the token backend
 	clientToken := req.ClientToken
-	if !strings.HasPrefix(original, "auth/token/") {
+	switch {
+	case strings.HasPrefix(original, "auth/token/"):
+	case strings.HasPrefix(original, "cubbyhole/"):
+		// In order for the token store to revoke later, we need to have the same
+		// salted ID, so we double-salt what's going to the cubbyhole backend
+		req.ClientToken = re.SaltID(r.tokenStoreSalt.SaltID(req.ClientToken))
+	default:
 		req.ClientToken = re.SaltID(req.ClientToken)
 	}
 

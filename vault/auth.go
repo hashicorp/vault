@@ -291,6 +291,7 @@ func (c *Core) newCredentialBackend(
 		StorageView: view,
 		Logger:      c.logger,
 		Config:      conf,
+		System:      sysView,
 	}
 
 	b, err := f(config)

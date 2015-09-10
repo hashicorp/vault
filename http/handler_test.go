@@ -47,6 +47,14 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     float64(0),
 			},
 		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

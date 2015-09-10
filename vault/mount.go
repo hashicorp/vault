@@ -37,6 +37,14 @@ var (
 		"audit/",
 		"auth/",
 		"sys/",
+		"cubbyhole/",
+	}
+
+	// singletonMounts can only exist in one location and are
+	// loaded by default. These are types, not paths.
+	singletonMounts = []string{
+		"cubbyhole",
+		"system",
 	}
 )
 
@@ -158,6 +166,13 @@ func (c *Core) mount(me *MountEntry) error {
 		}
 	}
 
+	// Do not allow more than one instance of a singleton mount
+	for _, p := range singletonMounts {
+		if me.Type == p {
+			return logical.CodedError(403, fmt.Sprintf("Cannot mount more than one instance of '%s'", me.Type))
+		}
+	}
+
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(me.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
@@ -206,9 +221,16 @@ func (c *Core) unmount(path string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMount(path)
-	if match == "" || path != match {
+	match := c.router.MatchingMountEntry(path)
+	if match == nil || path != match.Path {
 		return fmt.Errorf("no matching mount")
+	}
+
+	// Do not allow singleton mounts to be removed
+	for _, p := range singletonMounts {
+		if match.Type == p {
+			return logical.CodedError(403, fmt.Sprintf("Cannot unmount backend of type '%s'", match.Type))
+		}
 	}
 
 	// Store the view for this backend
@@ -301,9 +323,16 @@ func (c *Core) remount(src, dst string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMount(src)
-	if match == "" || src != match {
+	match := c.router.MatchingMountEntry(src)
+	if match == nil || src != match.Path {
 		return fmt.Errorf("no matching mount at '%s'", src)
+	}
+
+	// Do not allow singleton mounts to be removed
+	for _, p := range singletonMounts {
+		if match.Type == p {
+			return logical.CodedError(403, fmt.Sprintf("Cannot remount backend of type '%s'", match.Type))
+		}
 	}
 
 	if match := c.router.MatchingMount(dst); match != "" {
@@ -489,10 +518,7 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 		StorageView: view,
 		Logger:      c.logger,
 		Config:      conf,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: c.defaultLeaseTTL,
-			MaxLeaseTTLVal:     c.maxLeaseTTL,
-		},
+		System:      sysView,
 	}
 
 	b, err := f(config)
@@ -521,6 +547,12 @@ func defaultMountTable() *MountTable {
 		Description: "generic secret storage",
 		UUID:        uuid.GenerateUUID(),
 	}
+	cubbyholeMount := &MountEntry{
+		Path:        "cubbyhole/",
+		Type:        "cubbyhole",
+		Description: "per-token private secret storage",
+		UUID:        uuid.GenerateUUID(),
+	}
 	sysMount := &MountEntry{
 		Path:        "sys/",
 		Type:        "system",
@@ -528,6 +560,7 @@ func defaultMountTable() *MountTable {
 		UUID:        uuid.GenerateUUID(),
 	}
 	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
 }

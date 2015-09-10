@@ -351,6 +351,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends[k] = f
 	}
 	logicalBackends["generic"] = PassthroughBackendFactory
+	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return NewSystemBackend(c, config), nil
 	}

@@ -35,6 +35,14 @@ func TestSysMounts(t *testing.T) {
 				"max_lease_ttl":     float64(0),
 			},
 		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -78,6 +86,14 @@ func TestSysMount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
 			"config": map[string]interface{}{
 				"default_lease_ttl": float64(0),
 				"max_lease_ttl":     float64(0),
@@ -153,6 +169,14 @@ func TestSysRemount(t *testing.T) {
 				"max_lease_ttl":     float64(0),
 			},
 		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -191,6 +215,14 @@ func TestSysUnmount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
 			"config": map[string]interface{}{
 				"default_lease_ttl": float64(0),
 				"max_lease_ttl":     float64(0),
@@ -239,6 +271,14 @@ func TestSysTuneMount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
 			"config": map[string]interface{}{
 				"default_lease_ttl": float64(0),
 				"max_lease_ttl":     float64(0),
@@ -308,6 +348,14 @@ func TestSysTuneMount(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
 			"config": map[string]interface{}{
 				"default_lease_ttl": float64(0),
 				"max_lease_ttl":     float64(0),
