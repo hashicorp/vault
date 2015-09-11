@@ -221,16 +221,9 @@ func (c *Core) unmount(path string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMountEntry(path)
-	if match == nil || path != match.Path {
+	match := c.router.MatchingMount(path)
+	if match == "" || path != match {
 		return fmt.Errorf("no matching mount")
-	}
-
-	// Do not allow singleton mounts to be removed
-	for _, p := range singletonMounts {
-		if match.Type == p {
-			return logical.CodedError(403, fmt.Sprintf("Cannot unmount backend of type '%s'", match.Type))
-		}
 	}
 
 	// Store the view for this backend
@@ -323,16 +316,9 @@ func (c *Core) remount(src, dst string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMountEntry(src)
-	if match == nil || src != match.Path {
+	match := c.router.MatchingMount(src)
+	if match == "" || src != match {
 		return fmt.Errorf("no matching mount at '%s'", src)
-	}
-
-	// Do not allow singleton mounts to be removed
-	for _, p := range singletonMounts {
-		if match.Type == p {
-			return logical.CodedError(403, fmt.Sprintf("Cannot remount backend of type '%s'", match.Type))
-		}
 	}
 
 	if match := c.router.MatchingMount(dst); match != "" {
