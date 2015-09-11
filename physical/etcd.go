@@ -385,11 +385,11 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Create a channel to signal when we lose the semaphore key.
 	done := make(chan struct{})
-	defer func(err *error) {
-		if *err != nil {
+	defer func() {
+		if err != nil {
 			close(done)
 		}
-	}(&err)
+	}()
 
 	go c.periodicallyRenewSemaphoreKey(done)
 
