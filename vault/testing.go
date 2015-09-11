@@ -272,3 +272,7 @@ func (n *rawHTTP) System() logical.SystemView {
 		MaxLeaseTTLVal:     time.Hour * 24 * 30,
 	}
 }
+
+func (n *rawHTTP) Cleanup() {
+	// noop
+}

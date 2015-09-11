@@ -461,8 +461,17 @@ func (c *Core) setupMounts() error {
 }
 
 // unloadMounts is used before we seal the vault to reset the mounts to
-// their unloaded state. This is reversed by load and setup mounts.
+// their unloaded state, calling Cleanup if defined. This is reversed by load and setup mounts.
 func (c *Core) unloadMounts() error {
+	if c.mounts != nil {
+		for _, e := range c.mounts.Entries {
+			prefix := e.Path
+			b, ok := c.router.root.Get(prefix)
+			if ok {
+				b.(*routeEntry).backend.Cleanup()
+			}
+		}
+	}
 	c.mounts = nil
 	c.router = NewRouter()
 	c.systemBarrierView = nil

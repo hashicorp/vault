@@ -75,6 +75,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 func (r *Router) Unmount(prefix string) error {
 	r.l.Lock()
 	defer r.l.Unlock()
+
+	// Call backend's Cleanup routine
+	re, ok := r.root.Get(prefix)
+	if ok {
+		re.(*routeEntry).backend.Cleanup()
+	}
 	r.root.Delete(prefix)
 	return nil
 }
