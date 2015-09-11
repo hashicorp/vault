@@ -468,7 +468,7 @@ func (c *Core) unloadMounts() error {
 			prefix := e.Path
 			b, ok := c.router.root.Get(prefix)
 			if ok {
-				b.(*mountEntry).backend.Cleanup()
+				b.(*routeEntry).backend.Cleanup()
 			}
 		}
 	}

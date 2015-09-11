@@ -77,9 +77,9 @@ func (r *Router) Unmount(prefix string) error {
 	defer r.l.Unlock()
 
 	// Call backend's Cleanup routine
-	me, ok := r.root.Get(prefix)
+	re, ok := r.root.Get(prefix)
 	if ok {
-		me.(*mountEntry).backend.Cleanup()
+		re.(*routeEntry).backend.Cleanup()
 	}
 	r.root.Delete(prefix)
 	return nil
