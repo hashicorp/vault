@@ -82,8 +82,9 @@ Usage: vault token-create [options]
   This token will be created as a child of your token. The created token
   will inherit your policies, or can be assigned a subset of your policies.
 
-  A lease can also be associated with the token. If a lease is associated,
-  it will expire after that amount of time unless it is renewed.
+  A lease can also be associated with the token. If a lease is not associated
+  with the token, then it cannot be renewed. And if a lease is associated with
+  the token, it will expire after that amount of time unless it is renewed.
 
   Metadata associated with the token (specified with "-metadata") is
   written to the audit log when the token is used.
@@ -103,7 +104,8 @@ Token Options:
                           is a non-security sensitive value used to help
                           identify created secrets, i.e. prefixes.
 
-  -lease="1h"             Lease to associate with the token.
+  -lease="1h"             Lease to associate with the token. This option enables
+                          the tokens to be renewable.
 
   -metadata="key=value"   Metadata to associate with the token. This shows
                           up in the audit log. This can be specified multiple

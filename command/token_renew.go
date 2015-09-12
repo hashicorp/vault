@@ -58,7 +58,7 @@ func (c *TokenRenewCommand) Run(args []string) int {
 }
 
 func (c *TokenRenewCommand) Synopsis() string {
-	return "Renew an auth token"
+	return "Renew an auth token if there is an associated lease"
 }
 
 func (c *TokenRenewCommand) Help() string {
@@ -66,6 +66,7 @@ func (c *TokenRenewCommand) Help() string {
 Usage: vault token-renew [options] token [increment]
 
   Renew an auth token, extending the amount of time it can be used.
+  Token is renewable only if there is a lease associated with it.
 
   This command is similar to "renew", but "renew" is only for lease IDs.
   This command is only for tokens.

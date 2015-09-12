@@ -60,6 +60,7 @@ All other commands:
     init             Initialize a new Vault server
     key-status       Provides information about the active encryption key
     mount            Mount a logical backend
+    mount-tune       Tune mount configuration parameters
     mounts           Lists mounted backends in Vault
     policies         List the policies on the server
     policy-delete    Delete a policy from the server
@@ -68,8 +69,9 @@ All other commands:
     remount          Remount a secret backend to a new path
     rotate           Rotates the backend encryption key used to persist data
     seal             Seals the vault server
+    ssh              Initiate a SSH session
     token-create     Create a new auth token
-    token-renew      Renew an auth token
+    token-renew      Renew an auth token if there is an associated lease
     token-revoke     Revoke one or more auth tokens
     unmount          Unmount a secret backend
     unseal           Unseals the vault server

@@ -49,8 +49,9 @@ the same way as [leases for secrets](/docs/concepts/lease.html). After
 the lease period is up, the token will no longer function. In addition
 to no longer functioning, Vault will revoke it.
 
-In order to avoid your token being revoked, the `vault token-renew`
-command should be used to renew the lease on the token periodically.
+If a lease is associated with the token, in order to avoid your token being
+revoked, the `vault token-renew` command should be periodically used to renew
+the lease.
 
 After a token is revoked, all of the secrets in use by that token will
 also be revoked. Therefore, if a user requests AWS access keys, for example,
