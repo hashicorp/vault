@@ -96,4 +96,4 @@ how leasing is implemented.
 
 And just like secrets, identities can be renewed without having to
 completely reauthenticate. Just use `vault token-renew <token>` with the
-token associated with your identity to renew it.
+leased token associated with your identity to renew it.
