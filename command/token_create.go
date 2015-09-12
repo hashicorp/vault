@@ -83,7 +83,7 @@ Usage: vault token-create [options]
   will inherit your policies, or can be assigned a subset of your policies.
 
   A lease can also be associated with the token. If a lease is not associated
-  with the token, then it cannot be renewed. And if a lease is associated with
+  with the token, then it cannot be renewed. If a lease is associated with
   the token, it will expire after that amount of time unless it is renewed.
 
   Metadata associated with the token (specified with "-metadata") is
