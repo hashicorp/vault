@@ -29,13 +29,15 @@ func (c *Logical) Read(path string) (*Secret, error) {
 func (c *Logical) List(path string) (*Secret, error) {
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	resp, err := c.c.RawRequest(r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	if resp != nil && resp.StatusCode == 404 {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	return ParseSecret(resp.Body)
 }
