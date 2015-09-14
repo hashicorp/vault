@@ -24,6 +24,7 @@ func pathConfigLease(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:  b.pathLeaseRead,
 			logical.WriteOperation: b.pathLeaseWrite,
 		},
 
@@ -35,7 +36,7 @@ func pathConfigLease(b *backend) *framework.Path {
 func (b *backend) pathLeaseWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	leaseRaw := d.Get("lease").(string)
-	leaseMaxRaw := d.Get("lease").(string)
+	leaseMaxRaw := d.Get("lease_max").(string)
 
 	lease, err := time.ParseDuration(leaseRaw)
 	if err != nil {
@@ -61,6 +62,25 @@ func (b *backend) pathLeaseWrite(
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathLeaseRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	lease, err := b.Lease(req.Storage)
+
+	if err != nil {
+		return nil, err
+	}
+	if lease == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"lease":     lease.Lease.String(),
+			"lease_max": lease.LeaseMax.String(),
+		},
+	}, nil
 }
 
 type configLease struct {

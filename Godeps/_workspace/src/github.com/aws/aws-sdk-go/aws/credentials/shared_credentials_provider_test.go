@@ -31,6 +31,19 @@ func TestSharedCredentialsProviderIsExpired(t *testing.T) {
 	assert.False(t, p.IsExpired(), "Expect creds to not be expired after retrieve")
 }
 
+func TestSharedCredentialsProviderWithAWS_SHARED_CREDENTIALS_FILE(t *testing.T) {
+	os.Clearenv()
+	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", "example.ini")
+	p := SharedCredentialsProvider{}
+	creds, err := p.Retrieve()
+
+	assert.Nil(t, err, "Expect no error")
+
+	assert.Equal(t, "accessKey", creds.AccessKeyID, "Expect access key ID to match")
+	assert.Equal(t, "secret", creds.SecretAccessKey, "Expect secret access key to match")
+	assert.Equal(t, "token", creds.SessionToken, "Expect session token to match")
+}
+
 func TestSharedCredentialsProviderWithAWS_PROFILE(t *testing.T) {
 	os.Clearenv()
 	os.Setenv("AWS_PROFILE", "no_token")

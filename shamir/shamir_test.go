@@ -71,6 +71,14 @@ func TestCombine_invalid(t *testing.T) {
 	if _, err := Combine(parts); err == nil {
 		t.Fatalf("should err")
 	}
+
+	parts = [][]byte{
+		[]byte("foo"),
+		[]byte("foo"),
+	}
+	if _, err := Combine(parts); err == nil {
+		t.Fatalf("should err")
+	}
 }
 
 func TestCombine(t *testing.T) {

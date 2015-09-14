@@ -5,13 +5,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleLogical(core *vault.Core) http.Handler {
+func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
@@ -72,17 +71,22 @@ func handleLogical(core *vault.Core) http.Handler {
 		}
 
 		// Build the proper response
-		respondLogical(w, r, path, resp)
+		respondLogical(w, r, path, dataOnly, resp)
 	})
 }
 
-func respondLogical(w http.ResponseWriter, r *http.Request, path string, resp *logical.Response) {
+func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnly bool, resp *logical.Response) {
 	var httpResp interface{}
 	if resp != nil {
 		if resp.Redirect != "" {
-			// If we have a redirect, redirect! We use a 302 code
+			// If we have a redirect, redirect! We use a 307 code
 			// because we don't actually know if its permanent.
-			http.Redirect(w, r, resp.Redirect, 302)
+			http.Redirect(w, r, resp.Redirect, 307)
+			return
+		}
+
+		if dataOnly {
+			respondOk(w, resp.Data)
 			return
 		}
 
@@ -96,35 +100,17 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, resp *l
 		if resp.Secret != nil {
 			logicalResp.LeaseID = resp.Secret.LeaseID
 			logicalResp.Renewable = resp.Secret.Renewable
-			logicalResp.LeaseDuration = int(resp.Secret.Lease.Seconds())
+			logicalResp.LeaseDuration = int(resp.Secret.TTL.Seconds())
 		}
 
-		// If we have authentication information, then set the cookie
-		// and setup the result structure.
+		// If we have authentication information, then
+		// set up the result structure.
 		if resp.Auth != nil {
-			expireDuration := 365 * 24 * time.Hour
-			if logicalResp.LeaseDuration != 0 {
-				expireDuration =
-					time.Duration(logicalResp.LeaseDuration) * time.Second
-			}
-
-			// Do not set the token as the auth cookie if the endpoint
-			// is the token store. Otherwise, attempting to create a token
-			// will cause the client to be authenticated as that token.
-			if !strings.HasPrefix(path, "auth/token/") {
-				http.SetCookie(w, &http.Cookie{
-					Name:    AuthCookieName,
-					Value:   resp.Auth.ClientToken,
-					Path:    "/",
-					Expires: time.Now().UTC().Add(expireDuration),
-				})
-			}
-
 			logicalResp.Auth = &Auth{
 				ClientToken:   resp.Auth.ClientToken,
 				Policies:      resp.Auth.Policies,
 				Metadata:      resp.Auth.Metadata,
-				LeaseDuration: int(resp.Auth.Lease.Seconds()),
+				LeaseDuration: int(resp.Auth.TTL.Seconds()),
 				Renewable:     resp.Auth.Renewable,
 			}
 		}

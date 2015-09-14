@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -41,18 +42,29 @@ func (n *NoopBackend) SpecialPaths() *logical.Paths {
 	}
 }
 
+func (n *NoopBackend) System() logical.SystemView {
+	return logical.StaticSystemView{
+		DefaultLeaseTTLVal: time.Hour * 24,
+		MaxLeaseTTLVal:     time.Hour * 24 * 30,
+	}
+}
+
+func (n *NoopBackend) Cleanup() {
+	// noop
+}
+
 func TestRouter_Mount(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
 		t.Fatalf("err: %v", err)
 	}
@@ -96,7 +108,7 @@ func TestRouter_Unmount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -121,7 +133,7 @@ func TestRouter_Remount(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -169,7 +181,7 @@ func TestRouter_RootPath(t *testing.T) {
 			"policy/*",
 		},
 	}
-	err := r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -207,7 +219,7 @@ func TestRouter_LoginPath(t *testing.T) {
 			"oauth/*",
 		},
 	}
-	err := r.Mount(n, "auth/foo/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "auth/foo/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -238,7 +250,7 @@ func TestRouter_Taint(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -277,7 +289,7 @@ func TestRouter_Untaint(t *testing.T) {
 	view := NewBarrierView(barrier, "logical/")
 
 	n := &NoopBackend{}
-	err := r.Mount(n, "prod/aws/", uuid.GenerateUUID(), view)
+	err := r.Mount(n, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

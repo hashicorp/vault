@@ -15,17 +15,17 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	Listeners []*Listener    `hcl:"-"`
-	Backend   *Backend       `hcl:"-"`
+	Listeners []*Listener `hcl:"-"`
+	Backend   *Backend    `hcl:"-"`
 
-	DisableMlock bool        `hcl:"disable_mlock"`
+	DisableMlock bool `hcl:"disable_mlock"`
 
-	Telemetry *Telemetry     `hcl:"telemetry"`
+	Telemetry *Telemetry `hcl:"telemetry"`
 
-	MaxLeaseDuration time.Duration `hcl:"-"`
-	MaxLeaseDurationRaw string     `hcl:"max_lease_duration"`
-	DefaultLeaseDuration time.Duration `hcl:"-"`
-	DefaultLeaseDurationRaw string     `hcl:"default_lease_duration"`
+	MaxLeaseTTL        time.Duration `hcl:"-"`
+	MaxLeaseTTLRaw     string        `hcl:"max_lease_ttl"`
+	DefaultLeaseTTL    time.Duration `hcl:"-"`
+	DefaultLeaseTTLRaw string        `hcl:"default_lease_ttl"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -48,8 +48,8 @@ func DevConfig() *Config {
 
 		Telemetry: &Telemetry{},
 
-		MaxLeaseDuration: 30 * 24 * time.Hour,
-		DefaultLeaseDuration: 30 * 24 * time.Hour,
+		MaxLeaseTTL:     30 * 24 * time.Hour,
+		DefaultLeaseTTL: 30 * 24 * time.Hour,
 	}
 }
 
@@ -113,14 +113,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 	}
 
 	// merge these integers via a MAX operation
-	result.MaxLeaseDuration = c.MaxLeaseDuration
-	if c2.MaxLeaseDuration > result.MaxLeaseDuration {
-		result.MaxLeaseDuration = c2.MaxLeaseDuration
+	result.MaxLeaseTTL = c.MaxLeaseTTL
+	if c2.MaxLeaseTTL > result.MaxLeaseTTL {
+		result.MaxLeaseTTL = c2.MaxLeaseTTL
 	}
 
-	result.DefaultLeaseDuration = c.DefaultLeaseDuration
-	if c2.DefaultLeaseDuration > result.DefaultLeaseDuration {
-		result.DefaultLeaseDuration = c2.DefaultLeaseDuration
+	result.DefaultLeaseTTL = c.DefaultLeaseTTL
+	if c2.DefaultLeaseTTL > result.DefaultLeaseTTL {
+		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
 	return result
@@ -161,13 +161,13 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	if result.MaxLeaseDurationRaw != "" {
-		if result.MaxLeaseDuration, err = time.ParseDuration(result.MaxLeaseDurationRaw); err != nil {
+	if result.MaxLeaseTTLRaw != "" {
+		if result.MaxLeaseTTL, err = time.ParseDuration(result.MaxLeaseTTLRaw); err != nil {
 			return nil, err
 		}
 	}
-	if result.DefaultLeaseDurationRaw != "" {
-		if result.DefaultLeaseDuration, err = time.ParseDuration(result.DefaultLeaseDurationRaw); err != nil {
+	if result.DefaultLeaseTTLRaw != "" {
+		if result.DefaultLeaseTTL, err = time.ParseDuration(result.DefaultLeaseTTLRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -192,7 +192,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 		if statsdAddr != nil || statsiteAddr != nil {
 			result.Telemetry = &Telemetry{
-				StatsdAddr: getString(statsdAddr),
+				StatsdAddr:   getString(statsdAddr),
 				StatsiteAddr: getString(statsiteAddr),
 			}
 		}

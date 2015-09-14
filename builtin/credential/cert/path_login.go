@@ -66,7 +66,7 @@ func (b *backend) pathLogin(
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				Lease:     matched.Entry.Lease,
+				TTL:       matched.Entry.TTL,
 			},
 		},
 	}
@@ -152,7 +152,7 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 	opts := x509.VerifyOptions{
 		Roots:         roots,
 		Intermediates: x509.NewCertPool(),
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 	certs := cs.PeerCertificates
 	if len(certs) == 0 {
@@ -187,5 +187,5 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	return framework.LeaseExtend(cert.Lease, 0, false)(req, d)
+	return framework.LeaseExtend(cert.TTL, 0, false)(req, d)
 }

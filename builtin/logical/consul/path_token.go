@@ -11,7 +11,7 @@ import (
 
 func pathToken(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `creds/(?P<name>\w+)`,
+		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

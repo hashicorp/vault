@@ -5,8 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/mitchellh/mapstructure"
 )
 
 var (
@@ -18,8 +20,11 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core) logical.Backend {
-	b := &SystemBackend{Core: core}
+func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend {
+	b := &SystemBackend{
+		Core: core,
+	}
+
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(sysHelpRoot),
 
@@ -41,25 +46,40 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 		Paths: []*framework.Path{
 			&framework.Path{
-				Pattern: "mounts$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleMountTable,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "mounts/(?P<path>.+)",
+				Pattern: "mounts/(?P<path>.+?)/tune$",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
 					},
+					"default_lease_ttl": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+					},
+					"max_lease_ttl": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
+					},
+				},
 
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:  b.handleMountConfig,
+					logical.WriteOperation: b.handleMountTune,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["mount_tune"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "mounts/(?P<path>.+?)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
+					},
 					"type": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_type"][0]),
@@ -67,6 +87,10 @@ func NewSystemBackend(core *Core) logical.Backend {
 					"description": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_desc"][0]),
+					},
+					"config": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
 					},
 				},
 
@@ -77,6 +101,17 @@ func NewSystemBackend(core *Core) logical.Backend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["mount"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "mounts$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleMountTable,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
 			},
 
 			&framework.Path{
@@ -316,6 +351,9 @@ func NewSystemBackend(core *Core) logical.Backend {
 			},
 		},
 	}
+
+	b.Backend.Setup(config)
+
 	return b.Backend
 }
 
@@ -337,9 +375,10 @@ func (b *SystemBackend) handleMountTable(
 		Data: make(map[string]interface{}),
 	}
 	for _, entry := range b.Core.mounts.Entries {
-		info := map[string]string{
+		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
+			"config":      structs.Map(entry.Config),
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -355,6 +394,17 @@ func (b *SystemBackend) handleMount(
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 
+	var config MountConfig
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &config)
+		if err != nil {
+			return logical.ErrorResponse(
+					"unable to convert given mount config information"),
+				logical.ErrInvalidRequest
+		}
+	}
+
 	if logicalType == "" {
 		return logical.ErrorResponse(
 				"backend type must be specified as a string"),
@@ -366,6 +416,7 @@ func (b *SystemBackend) handleMount(
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
+		Config:      config,
 	}
 
 	// Attempt mount
@@ -421,6 +472,97 @@ func (b *SystemBackend) handleRemount(
 	if err := b.Core.remount(fromPath, toPath); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
 		return handleError(err)
+	}
+
+	return nil, nil
+}
+
+// handleMountConfig is used to get config settings on a backend
+func (b *SystemBackend) handleMountConfig(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	sysView := b.Core.router.MatchingSystemView(path)
+	if sysView == nil {
+		err := fmt.Errorf("[ERR] sys: cannot fetch sysview for path %s", path)
+		b.Backend.Logger().Print(err)
+		return handleError(err)
+	}
+
+	def := sysView.DefaultLeaseTTL()
+
+	max := sysView.MaxLeaseTTL()
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"default_lease_ttl": def,
+			"max_lease_ttl":     max,
+		},
+	}
+
+	return resp, nil
+}
+
+// handleMountTune is used to set config settings on a backend
+func (b *SystemBackend) handleMountTune(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	// Prevent protected paths from being changed
+	for _, p := range protectedMounts {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Errorf("[ERR] core: cannot tune '%s'", path)
+			b.Backend.Logger().Print(err)
+			return handleError(err)
+		}
+	}
+
+	mountEntry := b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		err := fmt.Errorf("[ERR] sys: tune of path '%s' failed: no mount entry found", path)
+		b.Backend.Logger().Print(err)
+		return handleError(err)
+	}
+
+	newMountConfig := mountEntry.Config
+
+	// Timing configuration parameters
+	{
+		var needTTLTune bool
+		defTTLInt, ok := data.GetOk("default_lease_ttl")
+		if ok {
+			newMountConfig.DefaultLeaseTTL = time.Duration(defTTLInt.(int))
+			needTTLTune = true
+		}
+		maxTTLInt, ok := data.GetOk("max_lease_ttl")
+		if ok {
+			newMountConfig.MaxLeaseTTL = time.Duration(maxTTLInt.(int))
+			needTTLTune = true
+		}
+		if needTTLTune {
+			if err := b.tuneMountTTLs(path, &mountEntry.Config, &newMountConfig); err != nil {
+				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
+				return handleError(err)
+			}
+		}
 	}
 
 	return nil, nil
@@ -770,7 +912,7 @@ func (b *SystemBackend) handleRotate(
 	}
 	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
 
-	// In non-HA mode, we need to an upgrade path for the standby instances
+	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
 		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
@@ -828,6 +970,19 @@ west coast.
 		"",
 	},
 
+	"mount_config": {
+		`Configuration for this mount, such as default_lease_ttl
+and max_lease_ttl.`,
+	},
+
+	"tune_default_lease_ttl": {
+		`The default lease TTL for this mount.`,
+	},
+
+	"tune_max_lease_ttl": {
+		`The max lease TTL for this mount.`,
+	},
+
 	"remount": {
 		"Move the mount point of an already-mounted backend.",
 		`
@@ -843,6 +998,10 @@ Change the mount point of an already-mounted backend.
 	"remount_to": {
 		"",
 		"",
+	},
+
+	"mount_tune": {
+		"Tune backend configuration parameters for this mount.",
 	},
 
 	"renew": {

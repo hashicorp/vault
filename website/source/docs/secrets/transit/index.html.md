@@ -10,9 +10,9 @@ description: |-
 
 Name: `transit`
 
-The transit secret backend is used to encrypt/data in-transit. Vault doesn't
-store the data sent to the backend. It can also be viewed as "encryption as
-a service."
+The transit secret backend is used to encrypt/decrypt data in-transit. Vault
+doesn't store the data sent to the backend. It can also be viewed as "encryption
+as a service."
 
 The primary use case for the transit backend is to encrypt data from
 applications while still storing that encrypted data in some primary data

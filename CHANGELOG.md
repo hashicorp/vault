@@ -1,3 +1,9 @@
+## 0.3.0 (Unreleased)
+
+BUG FIXES:
+
+* cli: Fixed missing setup of client TLS certificates if no custom CA was provided
+
 ## 0.2.0 (July 13, 2015)
 
 FEATURES:

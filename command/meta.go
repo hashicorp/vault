@@ -96,7 +96,7 @@ func (m *Meta) Client() (*api.Client, error) {
 		}
 	}
 	// If we need custom TLS configuration, then set it
-	if m.flagCACert != "" || m.flagCAPath != "" || m.flagInsecure {
+	if m.flagCACert != "" || m.flagCAPath != "" || m.flagClientCert != "" || m.flagClientKey != "" || m.flagInsecure {
 		var certPool *x509.CertPool
 		var err error
 		if m.flagCACert != "" {
@@ -133,6 +133,24 @@ func (m *Meta) Client() (*api.Client, error) {
 			}).Dial,
 			TLSClientConfig:     tlsConfig,
 			TLSHandshakeTimeout: 10 * time.Second,
+		}
+
+		// From https://github.com/michiwend/gomusicbrainz/pull/4/files
+		defaultRedirectLimit := 30
+
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) > defaultRedirectLimit {
+				return fmt.Errorf("%d consecutive requests(redirects)", len(via))
+			}
+			if len(via) == 0 {
+				// No redirects
+				return nil
+			}
+			// mutate the subsequent redirect requests with the first Header
+			if token := via[0].Header.Get("X-Vault-Token"); len(token) != 0 {
+				req.Header.Set("X-Vault-Token", token)
+			}
+			return nil
 		}
 
 		config.HttpClient = &client

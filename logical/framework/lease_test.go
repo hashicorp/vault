@@ -75,9 +75,9 @@ func TestLeaseExtend(t *testing.T) {
 		req := &logical.Request{
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					Lease:          1 * time.Hour,
-					LeaseIssue:     now,
-					LeaseIncrement: tc.Request,
+					TTL:       1 * time.Hour,
+					IssueTime: now,
+					Increment: tc.Request,
 				},
 			},
 		}
@@ -92,7 +92,7 @@ func TestLeaseExtend(t *testing.T) {
 		}
 
 		// Round it to the nearest hour
-		lease := now.Add(resp.Auth.Lease).Round(time.Hour).Sub(now)
+		lease := now.Add(resp.Auth.TTL).Round(time.Hour).Sub(now)
 		if lease != tc.Result {
 			t.Fatalf("bad: %s\nlease: %s", name, lease)
 		}

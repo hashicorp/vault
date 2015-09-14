@@ -173,6 +173,13 @@ For S3, the following options are supported:
 
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
+If you are running your Vault server on an EC2 instance, you can also make use
+of the EC2 instance profile service to provide the credentials Vault will use to
+make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
+will cause Vault to attempt to retrieve credentials from the metadata service.
+You are responsible for ensuring your instance is launched with the appropriate
+profile enabled. Vault will handle renewing profile credentials as they rotate.
+
 #### Backend Reference: MySQL
 
 The MySQL backend has the following options:
@@ -221,8 +228,8 @@ The supported options are:
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate.
 
-  * `tls_min_version` (optional) - If provided, specifies the minimum
-      supported version of TLS. Accepted values are "tls10", "tls11"
+  * `tls_min_version` (optional) - **(Vault > 0.2)** If provided, specifies
+      the minimum supported version of TLS. Accepted values are "tls10", "tls11"
       or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
       are generally considered less secure; avoid using these if
       possible.

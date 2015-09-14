@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -29,7 +30,7 @@ const (
 
 var (
 	// loadMountsFailed if loadMounts encounters an error
-	loadMountsFailed = errors.New("failed to setup mount table")
+	errLoadMountsFailed = errors.New("failed to setup mount table")
 
 	// protectedMounts cannot be remounted
 	protectedMounts = []string{
@@ -47,13 +48,16 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
-// Returns a deep copy of the mount table
-func (t *MountTable) Clone() *MountTable {
+// ShallowClone returns a copy of the mount table that
+// keeps the MountEntry locations, so as not to invalidate
+// other locations holding pointers. Care needs to be taken
+// if modifying entries rather than modifying the table itself
+func (t *MountTable) ShallowClone() *MountTable {
 	mt := &MountTable{
 		Entries: make([]*MountEntry, len(t.Entries)),
 	}
 	for i, e := range t.Entries {
-		mt.Entries[i] = e.Clone()
+		mt.Entries[i] = e
 	}
 	return mt
 }
@@ -110,8 +114,15 @@ type MountEntry struct {
 	Type        string            `json:"type"`              // Logical backend Type
 	Description string            `json:"description"`       // User-provided description
 	UUID        string            `json:"uuid"`              // Barrier view UUID
-	Options     map[string]string `json:"options"`           // Backend configuration
+	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
+	Options     map[string]string `json:"options"`           // Backend options
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
+}
+
+// MountConfig is used to hold settable options
+type MountConfig struct {
+	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -125,6 +136,7 @@ func (e *MountEntry) Clone() *MountEntry {
 		Type:        e.Type,
 		Description: e.Description,
 		UUID:        e.UUID,
+		Config:      e.Config,
 		Options:     optClone,
 	}
 }
@@ -155,14 +167,13 @@ func (c *Core) mount(me *MountEntry) error {
 	me.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
 
-	// Create the new backend
-	backend, err := c.newLogicalBackend(me.Type, view, nil)
+	backend, err := c.newLogicalBackend(me.Type, c.mountEntrySysView(me), view, nil)
 	if err != nil {
 		return err
 	}
 
 	// Update the mount table
-	newTable := c.mounts.Clone()
+	newTable := c.mounts.ShallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
 		return errors.New("failed to update mount table")
@@ -170,7 +181,7 @@ func (c *Core) mount(me *MountEntry) error {
 	c.mounts = newTable
 
 	// Mount the backend
-	if err := c.router.Mount(backend, me.Path, me.UUID, view); err != nil {
+	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
 		return err
 	}
 	c.logger.Printf("[INFO] core: mounted '%s' type: %s", me.Path, me.Type)
@@ -244,7 +255,7 @@ func (c *Core) unmount(path string) error {
 // removeMountEntry is used to remove an entry from the mount table
 func (c *Core) removeMountEntry(path string) error {
 	// Remove the entry from the mount table
-	newTable := c.mounts.Clone()
+	newTable := c.mounts.ShallowClone()
 	newTable.Remove(path)
 
 	// Update the mount table
@@ -258,7 +269,7 @@ func (c *Core) removeMountEntry(path string) error {
 // taintMountEntry is used to mark an entry in the mount table as tainted
 func (c *Core) taintMountEntry(path string) error {
 	// Remove the entry from the mount table
-	newTable := c.mounts.Clone()
+	newTable := c.mounts.ShallowClone()
 	newTable.SetTaint(path, true)
 
 	// Update the mount table
@@ -295,7 +306,6 @@ func (c *Core) remount(src, dst string) error {
 		return fmt.Errorf("no matching mount at '%s'", src)
 	}
 
-	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(dst); match != "" {
 		return fmt.Errorf("existing mount at '%s'", match)
 	}
@@ -321,8 +331,9 @@ func (c *Core) remount(src, dst string) error {
 	}
 
 	// Update the entry in the mount table
-	newTable := c.mounts.Clone()
-	for _, ent := range newTable.Entries {
+	newTable := c.mounts.ShallowClone()
+	var ent *MountEntry
+	for _, ent = range newTable.Entries {
 		if ent.Path == src {
 			ent.Path = dst
 			ent.Tainted = false
@@ -332,6 +343,8 @@ func (c *Core) remount(src, dst string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
+		ent.Path = src
+		ent.Tainted = true
 		return errors.New("failed to update mount table")
 	}
 	c.mounts = newTable
@@ -356,13 +369,13 @@ func (c *Core) loadMounts() error {
 	raw, err := c.barrier.Get(coreMountConfigPath)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to read mount table: %v", err)
-		return loadMountsFailed
+		return errLoadMountsFailed
 	}
 	if raw != nil {
 		c.mounts = &MountTable{}
 		if err := json.Unmarshal(raw.Value, c.mounts); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode mount table: %v", err)
-			return loadMountsFailed
+			return errLoadMountsFailed
 		}
 	}
 
@@ -374,7 +387,7 @@ func (c *Core) loadMounts() error {
 	// Create and persist the default mount table
 	c.mounts = defaultMountTable()
 	if err := c.persistMounts(c.mounts); err != nil {
-		return loadMountsFailed
+		return errLoadMountsFailed
 	}
 	return nil
 }
@@ -419,23 +432,24 @@ func (c *Core) setupMounts() error {
 		view = NewBarrierView(c.barrier, barrierPath)
 
 		// Initialize the backend
-		backend, err = c.newLogicalBackend(entry.Type, view, nil)
+		// Create the new backend
+		backend, err = c.newLogicalBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create mount entry %#v: %v",
 				entry, err)
-			return loadMountsFailed
+			return errLoadMountsFailed
 		}
 
 		if entry.Type == "system" {
-			c.systemView = view
+			c.systemBarrierView = view
 		}
 
 		// Mount the backend
-		err = c.router.Mount(backend, entry.Path, entry.UUID, view)
+		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
-			return loadMountsFailed
+			return errLoadMountsFailed
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -447,16 +461,25 @@ func (c *Core) setupMounts() error {
 }
 
 // unloadMounts is used before we seal the vault to reset the mounts to
-// their unloaded state. This is reversed by load and setup mounts.
+// their unloaded state, calling Cleanup if defined. This is reversed by load and setup mounts.
 func (c *Core) unloadMounts() error {
+	if c.mounts != nil {
+		for _, e := range c.mounts.Entries {
+			prefix := e.Path
+			b, ok := c.router.root.Get(prefix)
+			if ok {
+				b.(*routeEntry).backend.Cleanup()
+			}
+		}
+	}
 	c.mounts = nil
 	c.router = NewRouter()
-	c.systemView = nil
+	c.systemBarrierView = nil
 	return nil
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
@@ -466,6 +489,7 @@ func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string
 		View:   view,
 		Logger: c.logger,
 		Config: conf,
+		System: sysView,
 	}
 
 	b, err := f(config)
@@ -473,6 +497,16 @@ func (c *Core) newLogicalBackend(t string, view logical.Storage, conf map[string
 		return nil, err
 	}
 	return b, nil
+}
+
+// mountEntrySysView creates a logical.SystemView from global and
+// mount-specific entries; because this should be called when setting
+// up a mountEntry, it doesn't check to ensure that me is not nil
+func (c *Core) mountEntrySysView(me *MountEntry) logical.SystemView {
+	return dynamicSystemView{
+		core:       c,
+		mountEntry: me,
+	}
 }
 
 // defaultMountTable creates a default mount table

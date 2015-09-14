@@ -12,7 +12,7 @@ import (
 
 func pathRoleCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `creds/(?P<name>\w+)`,
+		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -101,7 +101,7 @@ func (b *backend) pathRoleCreateRead(
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.Lease = lease.Lease
+	resp.Secret.TTL = lease.Lease
 	return resp, nil
 }
 

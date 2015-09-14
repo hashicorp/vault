@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,9 +11,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
-
-// AuthCookieName is the name of the cookie containing the token.
-const AuthCookieName = "token"
 
 // AuthHeaderName is the name of the header containing the token.
 const AuthHeaderName = "X-Vault-Token"
@@ -26,25 +24,25 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/mounts", handleSysListMounts(core))
-	mux.Handle("/v1/sys/mounts/", handleSysMounts(core))
-	mux.Handle("/v1/sys/remount", handleSysRemount(core))
+	mux.Handle("/v1/sys/mounts", proxySysRequest(core))
+	mux.Handle("/v1/sys/mounts/", proxySysRequest(core))
+	mux.Handle("/v1/sys/remount", proxySysRequest(core))
 	mux.Handle("/v1/sys/policy", handleSysListPolicies(core))
 	mux.Handle("/v1/sys/policy/", handleSysPolicy(core))
-	mux.Handle("/v1/sys/renew/", handleSysRenew(core))
+	mux.Handle("/v1/sys/renew/", proxySysRequest(core))
 	mux.Handle("/v1/sys/revoke/", handleSysRevoke(core))
 	mux.Handle("/v1/sys/revoke-prefix/", handleSysRevokePrefix(core))
-	mux.Handle("/v1/sys/auth", handleSysListAuth(core))
-	mux.Handle("/v1/sys/auth/", handleSysAuth(core))
+	mux.Handle("/v1/sys/auth", proxySysRequest(core))
+	mux.Handle("/v1/sys/auth/", proxySysRequest(core))
 	mux.Handle("/v1/sys/audit", handleSysListAudit(core))
 	mux.Handle("/v1/sys/audit/", handleSysAudit(core))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/rotate", handleSysRotate(core))
-	mux.Handle("/v1/sys/key-status", handleSysKeyStatus(core))
+	mux.Handle("/v1/sys/rotate", proxySysRequest(core))
+	mux.Handle("/v1/sys/key-status", proxySysRequest(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
-	mux.Handle("/v1/", handleLogical(core))
+	mux.Handle("/v1/", handleLogical(core, false))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
@@ -69,7 +67,11 @@ func stripPrefix(prefix, path string) (string, bool) {
 
 func parseRequest(r *http.Request, out interface{}) error {
 	dec := json.NewDecoder(r.Body)
-	return dec.Decode(out)
+	err := dec.Decode(out)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("Failed to parse JSON input: %s", err)
+	}
+	return err
 }
 
 // request is a helper to perform a request and properly exit in the
@@ -136,12 +138,6 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
-	// Attach the cookie value as the token if we have it
-	cookie, err := r.Cookie(AuthCookieName)
-	if err == nil {
-		req.ClientToken = cookie.Value
-	}
-
 	// Attach the header value if we have it
 	if v := r.Header.Get(AuthHeaderName); v != "" {
 		req.ClientToken = v
@@ -212,6 +208,10 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
+}
+
+func proxySysRequest(core *vault.Core) http.Handler {
+	return handleLogical(core, true)
 }
 
 type ErrorResponse struct {

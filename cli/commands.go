@@ -17,11 +17,12 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/cassandra"
 	"github.com/hashicorp/vault/builtin/logical/consul"
+	"github.com/hashicorp/vault/builtin/logical/jwt"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
+	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/builtin/logical/jwt"
 
 	"github.com/hashicorp/vault/audit"
 	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
@@ -74,9 +75,16 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"pki":        pki.Factory,
 					"transit":    transit.Factory,
 					"mysql":      mysql.Factory,
+					"ssh":        ssh.Factory,
 					"jwt":        jwt.Factory,
 				},
 				ShutdownCh: makeShutdownCh(),
+			}, nil
+		},
+
+		"ssh": func() (cli.Command, error) {
+			return &command.SSHCommand{
+				Meta: meta,
 			}, nil
 		},
 
@@ -214,6 +222,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 
 		"mounts": func() (cli.Command, error) {
 			return &command.MountsCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"mount-tune": func() (cli.Command, error) {
+			return &command.MountTuneCommand{
 				Meta: meta,
 			}, nil
 		},

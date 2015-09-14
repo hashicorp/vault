@@ -22,7 +22,7 @@ func ExampleS3_AbortMultipartUpload() {
 	params := &s3.AbortMultipartUploadInput{
 		Bucket:       aws.String("BucketName"),        // Required
 		Key:          aws.String("ObjectKey"),         // Required
-		UploadID:     aws.String("MultipartUploadId"), // Required
+		UploadId:     aws.String("MultipartUploadId"), // Required
 		RequestPayer: aws.String("RequestPayer"),
 	}
 	resp, err := svc.AbortMultipartUpload(params)
@@ -52,7 +52,7 @@ func ExampleS3_CompleteMultipartUpload() {
 	params := &s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String("BucketName"),        // Required
 		Key:      aws.String("ObjectKey"),         // Required
-		UploadID: aws.String("MultipartUploadId"), // Required
+		UploadId: aws.String("MultipartUploadId"), // Required
 		MultipartUpload: &s3.CompletedMultipartUpload{
 			Parts: []*s3.CompletedPart{
 				{ // Required
@@ -119,7 +119,7 @@ func ExampleS3_CopyObject() {
 		SSECustomerAlgorithm:    aws.String("SSECustomerAlgorithm"),
 		SSECustomerKey:          aws.String("SSECustomerKey"),
 		SSECustomerKeyMD5:       aws.String("SSECustomerKeyMD5"),
-		SSEKMSKeyID:             aws.String("SSEKMSKeyId"),
+		SSEKMSKeyId:             aws.String("SSEKMSKeyId"),
 		ServerSideEncryption:    aws.String("ServerSideEncryption"),
 		StorageClass:            aws.String("StorageClass"),
 		WebsiteRedirectLocation: aws.String("WebsiteRedirectLocation"),
@@ -206,7 +206,7 @@ func ExampleS3_CreateMultipartUpload() {
 		SSECustomerAlgorithm:    aws.String("SSECustomerAlgorithm"),
 		SSECustomerKey:          aws.String("SSECustomerKey"),
 		SSECustomerKeyMD5:       aws.String("SSECustomerKeyMD5"),
-		SSEKMSKeyID:             aws.String("SSEKMSKeyId"),
+		SSEKMSKeyId:             aws.String("SSEKMSKeyId"),
 		ServerSideEncryption:    aws.String("ServerSideEncryption"),
 		StorageClass:            aws.String("StorageClass"),
 		WebsiteRedirectLocation: aws.String("WebsiteRedirectLocation"),
@@ -259,13 +259,13 @@ func ExampleS3_DeleteBucket() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_DeleteBucketCORS() {
+func ExampleS3_DeleteBucketCors() {
 	svc := s3.New(nil)
 
-	params := &s3.DeleteBucketCORSInput{
+	params := &s3.DeleteBucketCorsInput{
 		Bucket: aws.String("BucketName"), // Required
 	}
-	resp, err := svc.DeleteBucketCORS(params)
+	resp, err := svc.DeleteBucketCors(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -429,7 +429,7 @@ func ExampleS3_DeleteObject() {
 		Key:          aws.String("ObjectKey"),  // Required
 		MFA:          aws.String("MFA"),
 		RequestPayer: aws.String("RequestPayer"),
-		VersionID:    aws.String("ObjectVersionId"),
+		VersionId:    aws.String("ObjectVersionId"),
 	}
 	resp, err := svc.DeleteObject(params)
 
@@ -461,7 +461,7 @@ func ExampleS3_DeleteObjects() {
 			Objects: []*s3.ObjectIdentifier{ // Required
 				{ // Required
 					Key:       aws.String("ObjectKey"), // Required
-					VersionID: aws.String("ObjectVersionId"),
+					VersionId: aws.String("ObjectVersionId"),
 				},
 				// More values...
 			},
@@ -491,13 +491,13 @@ func ExampleS3_DeleteObjects() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_GetBucketACL() {
+func ExampleS3_GetBucketAcl() {
 	svc := s3.New(nil)
 
-	params := &s3.GetBucketACLInput{
+	params := &s3.GetBucketAclInput{
 		Bucket: aws.String("BucketName"), // Required
 	}
-	resp, err := svc.GetBucketACL(params)
+	resp, err := svc.GetBucketAcl(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -518,13 +518,13 @@ func ExampleS3_GetBucketACL() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_GetBucketCORS() {
+func ExampleS3_GetBucketCors() {
 	svc := s3.New(nil)
 
-	params := &s3.GetBucketCORSInput{
+	params := &s3.GetBucketCorsInput{
 		Bucket: aws.String("BucketName"), // Required
 	}
-	resp, err := svc.GetBucketCORS(params)
+	resp, err := svc.GetBucketCors(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -863,7 +863,7 @@ func ExampleS3_GetObject() {
 		SSECustomerAlgorithm:       aws.String("SSECustomerAlgorithm"),
 		SSECustomerKey:             aws.String("SSECustomerKey"),
 		SSECustomerKeyMD5:          aws.String("SSECustomerKeyMD5"),
-		VersionID:                  aws.String("ObjectVersionId"),
+		VersionId:                  aws.String("ObjectVersionId"),
 	}
 	resp, err := svc.GetObject(params)
 
@@ -886,16 +886,16 @@ func ExampleS3_GetObject() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_GetObjectACL() {
+func ExampleS3_GetObjectAcl() {
 	svc := s3.New(nil)
 
-	params := &s3.GetObjectACLInput{
+	params := &s3.GetObjectAclInput{
 		Bucket:       aws.String("BucketName"), // Required
 		Key:          aws.String("ObjectKey"),  // Required
 		RequestPayer: aws.String("RequestPayer"),
-		VersionID:    aws.String("ObjectVersionId"),
+		VersionId:    aws.String("ObjectVersionId"),
 	}
-	resp, err := svc.GetObjectACL(params)
+	resp, err := svc.GetObjectAcl(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -987,7 +987,7 @@ func ExampleS3_HeadObject() {
 		SSECustomerAlgorithm: aws.String("SSECustomerAlgorithm"),
 		SSECustomerKey:       aws.String("SSECustomerKey"),
 		SSECustomerKeyMD5:    aws.String("SSECustomerKeyMD5"),
-		VersionID:            aws.String("ObjectVersionId"),
+		VersionId:            aws.String("ObjectVersionId"),
 	}
 	resp, err := svc.HeadObject(params)
 
@@ -1045,7 +1045,7 @@ func ExampleS3_ListMultipartUploads() {
 		KeyMarker:      aws.String("KeyMarker"),
 		MaxUploads:     aws.Int64(1),
 		Prefix:         aws.String("Prefix"),
-		UploadIDMarker: aws.String("UploadIdMarker"),
+		UploadIdMarker: aws.String("UploadIdMarker"),
 	}
 	resp, err := svc.ListMultipartUploads(params)
 
@@ -1078,7 +1078,7 @@ func ExampleS3_ListObjectVersions() {
 		KeyMarker:       aws.String("KeyMarker"),
 		MaxKeys:         aws.Int64(1),
 		Prefix:          aws.String("Prefix"),
-		VersionIDMarker: aws.String("VersionIdMarker"),
+		VersionIdMarker: aws.String("VersionIdMarker"),
 	}
 	resp, err := svc.ListObjectVersions(params)
 
@@ -1139,7 +1139,7 @@ func ExampleS3_ListParts() {
 	params := &s3.ListPartsInput{
 		Bucket:           aws.String("BucketName"),        // Required
 		Key:              aws.String("ObjectKey"),         // Required
-		UploadID:         aws.String("MultipartUploadId"), // Required
+		UploadId:         aws.String("MultipartUploadId"), // Required
 		MaxParts:         aws.Int64(1),
 		PartNumberMarker: aws.Int64(1),
 		RequestPayer:     aws.String("RequestPayer"),
@@ -1165,10 +1165,10 @@ func ExampleS3_ListParts() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_PutBucketACL() {
+func ExampleS3_PutBucketAcl() {
 	svc := s3.New(nil)
 
-	params := &s3.PutBucketACLInput{
+	params := &s3.PutBucketAclInput{
 		Bucket: aws.String("BucketName"), // Required
 		ACL:    aws.String("BucketCannedACL"),
 		AccessControlPolicy: &s3.AccessControlPolicy{
@@ -1196,7 +1196,7 @@ func ExampleS3_PutBucketACL() {
 		GrantWrite:       aws.String("GrantWrite"),
 		GrantWriteACP:    aws.String("GrantWriteACP"),
 	}
-	resp, err := svc.PutBucketACL(params)
+	resp, err := svc.PutBucketAcl(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -1217,10 +1217,10 @@ func ExampleS3_PutBucketACL() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_PutBucketCORS() {
+func ExampleS3_PutBucketCors() {
 	svc := s3.New(nil)
 
-	params := &s3.PutBucketCORSInput{
+	params := &s3.PutBucketCorsInput{
 		Bucket: aws.String("BucketName"), // Required
 		CORSConfiguration: &s3.CORSConfiguration{
 			CORSRules: []*s3.CORSRule{
@@ -1247,7 +1247,7 @@ func ExampleS3_PutBucketCORS() {
 			},
 		},
 	}
-	resp, err := svc.PutBucketCORS(params)
+	resp, err := svc.PutBucketCors(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -1380,7 +1380,7 @@ func ExampleS3_PutBucketNotification() {
 					aws.String("Event"), // Required
 					// More values...
 				},
-				ID:             aws.String("NotificationId"),
+				Id:             aws.String("NotificationId"),
 				InvocationRole: aws.String("CloudFunctionInvocationRole"),
 			},
 			QueueConfiguration: &s3.QueueConfigurationDeprecated{
@@ -1389,7 +1389,7 @@ func ExampleS3_PutBucketNotification() {
 					aws.String("Event"), // Required
 					// More values...
 				},
-				ID:    aws.String("NotificationId"),
+				Id:    aws.String("NotificationId"),
 				Queue: aws.String("QueueArn"),
 			},
 			TopicConfiguration: &s3.TopicConfigurationDeprecated{
@@ -1398,7 +1398,7 @@ func ExampleS3_PutBucketNotification() {
 					aws.String("Event"), // Required
 					// More values...
 				},
-				ID:    aws.String("NotificationId"),
+				Id:    aws.String("NotificationId"),
 				Topic: aws.String("TopicArn"),
 			},
 		},
@@ -1436,8 +1436,8 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 						aws.String("Event"), // Required
 						// More values...
 					},
-					LambdaFunctionARN: aws.String("LambdaFunctionArn"), // Required
-					ID:                aws.String("NotificationId"),
+					LambdaFunctionArn: aws.String("LambdaFunctionArn"), // Required
+					Id:                aws.String("NotificationId"),
 				},
 				// More values...
 			},
@@ -1447,8 +1447,8 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 						aws.String("Event"), // Required
 						// More values...
 					},
-					QueueARN: aws.String("QueueArn"), // Required
-					ID:       aws.String("NotificationId"),
+					QueueArn: aws.String("QueueArn"), // Required
+					Id:       aws.String("NotificationId"),
 				},
 				// More values...
 			},
@@ -1458,8 +1458,8 @@ func ExampleS3_PutBucketNotificationConfiguration() {
 						aws.String("Event"), // Required
 						// More values...
 					},
-					TopicARN: aws.String("TopicArn"), // Required
-					ID:       aws.String("NotificationId"),
+					TopicArn: aws.String("TopicArn"), // Required
+					Id:       aws.String("NotificationId"),
 				},
 				// More values...
 			},
@@ -1672,14 +1672,14 @@ func ExampleS3_PutBucketWebsite() {
 			RoutingRules: []*s3.RoutingRule{
 				{ // Required
 					Redirect: &s3.Redirect{ // Required
-						HTTPRedirectCode:     aws.String("HttpRedirectCode"),
 						HostName:             aws.String("HostName"),
+						HttpRedirectCode:     aws.String("HttpRedirectCode"),
 						Protocol:             aws.String("Protocol"),
 						ReplaceKeyPrefixWith: aws.String("ReplaceKeyPrefixWith"),
 						ReplaceKeyWith:       aws.String("ReplaceKeyWith"),
 					},
 					Condition: &s3.Condition{
-						HTTPErrorCodeReturnedEquals: aws.String("HttpErrorCodeReturnedEquals"),
+						HttpErrorCodeReturnedEquals: aws.String("HttpErrorCodeReturnedEquals"),
 						KeyPrefixEquals:             aws.String("KeyPrefixEquals"),
 					},
 				},
@@ -1735,7 +1735,7 @@ func ExampleS3_PutObject() {
 		SSECustomerAlgorithm:    aws.String("SSECustomerAlgorithm"),
 		SSECustomerKey:          aws.String("SSECustomerKey"),
 		SSECustomerKeyMD5:       aws.String("SSECustomerKeyMD5"),
-		SSEKMSKeyID:             aws.String("SSEKMSKeyId"),
+		SSEKMSKeyId:             aws.String("SSEKMSKeyId"),
 		ServerSideEncryption:    aws.String("ServerSideEncryption"),
 		StorageClass:            aws.String("StorageClass"),
 		WebsiteRedirectLocation: aws.String("WebsiteRedirectLocation"),
@@ -1761,10 +1761,10 @@ func ExampleS3_PutObject() {
 	fmt.Println(awsutil.Prettify(resp))
 }
 
-func ExampleS3_PutObjectACL() {
+func ExampleS3_PutObjectAcl() {
 	svc := s3.New(nil)
 
-	params := &s3.PutObjectACLInput{
+	params := &s3.PutObjectAclInput{
 		Bucket: aws.String("BucketName"), // Required
 		Key:    aws.String("ObjectKey"),  // Required
 		ACL:    aws.String("ObjectCannedACL"),
@@ -1794,7 +1794,7 @@ func ExampleS3_PutObjectACL() {
 		GrantWriteACP:    aws.String("GrantWriteACP"),
 		RequestPayer:     aws.String("RequestPayer"),
 	}
-	resp, err := svc.PutObjectACL(params)
+	resp, err := svc.PutObjectAcl(params)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -1825,7 +1825,7 @@ func ExampleS3_RestoreObject() {
 		RestoreRequest: &s3.RestoreRequest{
 			Days: aws.Int64(1), // Required
 		},
-		VersionID: aws.String("ObjectVersionId"),
+		VersionId: aws.String("ObjectVersionId"),
 	}
 	resp, err := svc.RestoreObject(params)
 
@@ -1855,7 +1855,7 @@ func ExampleS3_UploadPart() {
 		Bucket:               aws.String("BucketName"),        // Required
 		Key:                  aws.String("ObjectKey"),         // Required
 		PartNumber:           aws.Int64(1),                    // Required
-		UploadID:             aws.String("MultipartUploadId"), // Required
+		UploadId:             aws.String("MultipartUploadId"), // Required
 		Body:                 bytes.NewReader([]byte("PAYLOAD")),
 		ContentLength:        aws.Int64(1),
 		RequestPayer:         aws.String("RequestPayer"),
@@ -1892,7 +1892,7 @@ func ExampleS3_UploadPartCopy() {
 		CopySource:                     aws.String("CopySource"),        // Required
 		Key:                            aws.String("ObjectKey"),         // Required
 		PartNumber:                     aws.Int64(1),                    // Required
-		UploadID:                       aws.String("MultipartUploadId"), // Required
+		UploadId:                       aws.String("MultipartUploadId"), // Required
 		CopySourceIfMatch:              aws.String("CopySourceIfMatch"),
 		CopySourceIfModifiedSince:      aws.Time(time.Now()),
 		CopySourceIfNoneMatch:          aws.String("CopySourceIfNoneMatch"),

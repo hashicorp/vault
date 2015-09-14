@@ -63,7 +63,7 @@ application to renew their credentials at least hourly, and to recycle
 them once per day.
 
 The next step is to configure a role. A role is a logical name that maps
-to a policy used to generated those credentials. For example, lets create
+to a policy used to generate those credentials. For example, lets create
 a "readonly" role:
 
 ```

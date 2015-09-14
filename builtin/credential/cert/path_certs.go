@@ -10,7 +10,7 @@ import (
 
 func pathCerts(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `certs/(?P<name>\w+)`,
+		Pattern: "certs/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -129,7 +129,7 @@ func (b *backend) pathCertWrite(
 		Certificate: certificate,
 		DisplayName: displayName,
 		Policies:    policies,
-		Lease:       leaseDur,
+		TTL:         leaseDur,
 	})
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ type CertEntry struct {
 	Certificate string
 	DisplayName string
 	Policies    []string
-	Lease       time.Duration
+	TTL         time.Duration
 }
 
 const pathCertHelpSyn = `

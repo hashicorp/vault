@@ -61,6 +61,9 @@ type Downloader struct {
 //
 // It is safe to call this method for multiple objects and across concurrent
 // goroutines.
+//
+// The w io.WriterAt can be satisfied by an os.File to do multipart concurrent
+// downloads, or in memory []byte wrapper using aws.WriteAtBuffer.
 func (d *Downloader) Download(w io.WriterAt, input *s3.GetObjectInput) (n int64, err error) {
 	impl := downloader{w: w, in: input, opts: *d.opts}
 	return impl.download()

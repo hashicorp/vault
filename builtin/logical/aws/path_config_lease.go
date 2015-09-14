@@ -24,6 +24,7 @@ func pathConfigLease(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:  b.pathLeaseRead,
 			logical.WriteOperation: b.pathLeaseWrite,
 		},
 
@@ -53,7 +54,14 @@ func (b *backend) Lease(s logical.Storage) (*configLease, error) {
 func (b *backend) pathLeaseWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	leaseRaw := d.Get("lease").(string)
-	leaseMaxRaw := d.Get("lease").(string)
+	leaseMaxRaw := d.Get("lease_max").(string)
+
+	if len(leaseRaw) == 0 {
+		return logical.ErrorResponse("'lease' is a required parameter"), nil
+	}
+	if len(leaseMaxRaw) == 0 {
+		return logical.ErrorResponse("'lease_max' is a required parameter"), nil
+	}
 
 	lease, err := time.ParseDuration(leaseRaw)
 	if err != nil {
@@ -63,7 +71,7 @@ func (b *backend) pathLeaseWrite(
 	leaseMax, err := time.ParseDuration(leaseMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid lease: %s", err)), nil
+			"Invalid lease_max: %s", err)), nil
 	}
 
 	// Store it
@@ -79,6 +87,25 @@ func (b *backend) pathLeaseWrite(
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathLeaseRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	lease, err := b.Lease(req.Storage)
+
+	if err != nil {
+		return nil, err
+	}
+	if lease == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"lease":     lease.Lease.String(),
+			"lease_max": lease.LeaseMax.String(),
+		},
+	}, nil
 }
 
 type configLease struct {

@@ -48,9 +48,9 @@ type TokenStore struct {
 
 // NewTokenStore is used to construct a token store that is
 // backed by the given barrier view.
-func NewTokenStore(c *Core) (*TokenStore, error) {
+func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
-	view := c.systemView.SubView(tokenSubPath)
+	view := c.systemBarrierView.SubView(tokenSubPath)
 
 	// Initialize the store
 	t := &TokenStore{
@@ -74,10 +74,6 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"revoke-prefix/*",
-			},
-
-			Unauthenticated: []string{
-				"lookup-self",
 			},
 		},
 
@@ -206,6 +202,8 @@ func NewTokenStore(c *Core) (*TokenStore, error) {
 			},
 		},
 	}
+
+	t.Backend.Setup(config)
 
 	return t, nil
 }
@@ -558,9 +556,10 @@ func (ts *TokenStore) handleCreate(
 			Policies:    te.Policies,
 			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
-				Lease:            leaseDuration,
-				LeaseGracePeriod: leaseDuration / 10,
-				Renewable:        leaseDuration > 0,
+				TTL:         leaseDuration,
+				GracePeriod: leaseDuration / 10,
+				// Tokens are renewable only if user provides lease duration
+				Renewable: leaseDuration > 0,
 			},
 			ClientToken: te.ID,
 		},
@@ -700,7 +699,7 @@ const (
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
-as revocation of tokens.`
+as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp       = `The token create path is used to create new tokens.`
 	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
 	tokenRevokeHelp       = `This endpoint will delete the token and all of its child tokens.`

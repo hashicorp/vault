@@ -51,7 +51,6 @@ a "deploy" role:
 
 ```text
 $ vault write aws/roles/deploy \
-    name=deploy \
     policy=@policy.json
 ```
 

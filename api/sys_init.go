@@ -14,13 +14,8 @@ func (c *Sys) InitStatus() (bool, error) {
 }
 
 func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
-	body := map[string]interface{}{
-		"secret_shares":    opts.SecretShares,
-		"secret_threshold": opts.SecretThreshold,
-	}
-
 	r := c.c.NewRequest("PUT", "/v1/sys/init")
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(opts); err != nil {
 		return nil, err
 	}
 
@@ -36,8 +31,9 @@ func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
 }
 
 type InitRequest struct {
-	SecretShares    int
-	SecretThreshold int
+	SecretShares    int      `json:"secret_shares"`
+	SecretThreshold int      `json:"secret_threshold"`
+	PGPKeys         []string `json:"pgp_keys"`
 }
 
 type InitStatusResponse struct {

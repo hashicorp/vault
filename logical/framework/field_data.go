@@ -34,11 +34,11 @@ func (d *FieldData) Validate() error {
 		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
-				return fmt.Errorf("Error converting input %v for field %s", value, field)
+				return fmt.Errorf("Error converting input %v for field %s: %s", value, field, err)
 			}
 		default:
 			return fmt.Errorf("unknown field type %s for field %s",
-			    schema.Type, field)
+				schema.Type, field)
 		}
 	}
 

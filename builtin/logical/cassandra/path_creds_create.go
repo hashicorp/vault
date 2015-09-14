@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/uuid"
@@ -11,7 +12,7 @@ import (
 
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `creds/(?P<name>\w+)`,
+		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -42,7 +43,7 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	displayName := req.DisplayName
-	username := fmt.Sprintf("vault-%s-%s-%s-%d", name, displayName, uuid.GenerateUUID(), time.Now().Unix())
+	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, strings.Replace(uuid.GenerateUUID(), "-", "_", -1), time.Now().Unix())
 	password := uuid.GenerateUUID()
 
 	// Get our connection
@@ -76,8 +77,8 @@ func (b *backend) pathCredsCreateRead(
 		"username": username,
 		"role":     name,
 	})
-	resp.Secret.Lease = role.Lease
-	resp.Secret.LeaseGracePeriod = role.LeaseGracePeriod
+	resp.Secret.TTL = role.Lease
+	resp.Secret.GracePeriod = role.LeaseGracePeriod
 
 	return resp, nil
 }

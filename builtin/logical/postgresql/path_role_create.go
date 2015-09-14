@@ -12,7 +12,7 @@ import (
 
 func pathRoleCreate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `creds/(?P<name>\w+)`,
+		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -63,7 +63,7 @@ func (b *backend) pathRoleCreateRead(
 	password := uuid.GenerateUUID()
 	expiration := time.Now().UTC().
 		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
-		Format("2006-01-02 15:04:05")
+		Format("2006-01-02 15:04:05-0700")
 
 	// Get our connection
 	db, err := b.DB(req.Storage)
@@ -105,7 +105,7 @@ func (b *backend) pathRoleCreateRead(
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.Lease = lease.Lease
+	resp.Secret.TTL = lease.Lease
 	return resp, nil
 }
 

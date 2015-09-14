@@ -18,11 +18,11 @@ type Secret struct {
 }
 
 func (s *Secret) Validate() error {
-	if s.Lease < 0 {
-		return fmt.Errorf("lease duration must not be less than zero")
+	if s.TTL < 0 {
+		return fmt.Errorf("ttl duration must not be less than zero")
 	}
-	if s.LeaseGracePeriod < 0 {
-		return fmt.Errorf("lease grace period must not be less than zero")
+	if s.GracePeriod < 0 {
+		return fmt.Errorf("grace period must not be less than zero")
 	}
 
 	return nil

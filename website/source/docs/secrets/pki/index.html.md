@@ -12,7 +12,7 @@ Name: `pki`
 
 The PKI secret backend for Vault generates X.509 certificates dynamically based on configured roles. This means services can get certificates needed for both client and server authentication without going through the usual manual process of generating a private key and CSR, submitting to a CA, and waiting for a verification and signing process to complete. Vault's built-in authentication and authorization mechanisms provide the verification functionality.
 
-By keeping leases relatively short, revocations are less likely to be needed, keeping CRLs short and helping the backend scale to large workloads. This in turn allows each instance of a running application to have a unique certificate, eliminating sharing and the accompanying pain of revocation and rollover.
+By keeping TTLs relatively short, revocations are less likely to be needed, keeping CRLs short and helping the backend scale to large workloads. This in turn allows each instance of a running application to have a unique certificate, eliminating sharing and the accompanying pain of revocation and rollover.
 
 In addition, by allowing revocation to mostly be forgone, this backend allows for ephemeral certificates; certificates can be fetched and stored in memory upon application startup and discarded upon shutdown, without ever being written to disk.
 
@@ -92,7 +92,7 @@ The next step is to configure a role. A role is a logical name that maps to a po
 ```text
 $ vault write pki/roles/example-dot-com \
     allowed_base_domain="example.com" \
-    allow_subdomains="true" lease_max="72h"
+    allow_subdomains="true" max_ttl="72h"
 Success! Data written to: pki/roles/example-dot-com
 ```
 
@@ -370,11 +370,12 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
         default).
       </li>
       <li>
-      <span class="param">lease</span>
+      <span class="param">ttl</span>
       <span class="param-flags">optional</span>
-        Requested lease time. Cannot be greater than the role's
-        `lease_max` parameter. If not provided, the role's `lease`
-        value will be used.
+        Requested Time To Live. Cannot be greater than the role's
+        `max_ttl` value. If not provided, the role's `ttl`
+        value will be used. Note that the role values default
+        to system values if not explicitly set.
       </li>
     </ul>
   </dd>
@@ -470,17 +471,19 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
   <dd>
     <ul>
       <li>
-        <span class="param">lease</span>
+        <span class="param">ttl</span>
         <span class="param-flags">optional</span>
-        The lease value provided as a string duration
+        The Time To Live value provided as a string duration
         with time suffix. Hour is the largest suffix.
-        If not set, uses the value of `lease_max`.
+        If not set, uses the system default value or the
+        value of `max_ttl`, whichever is shorter.
       </li>
       <li>
-        <span class="param">lease_max</span>
-        <span class="param-flags">required</span>
-        The maximum lease value provided as a string duration
-        with time suffix. Hour is the largest suffix.
+        <span class="param">max_ttl</span>
+        <span class="param-flags">optional</span>
+        The maximum Time To Live provided as a string duration
+        with time suffix. Hour is the largest suffix. If not set,
+        defaults to the system maximum lease TTL.
       </li>
       <li>
         <span class="param">allow_localhost</span>
@@ -611,8 +614,8 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
             "code_signing_flag": false,
             "key_bits": 2048,
             "key_type": "rsa",
-            "lease": "6h",
-            "lease_max": "12h",
+            "ttl": "6h",
+            "max_ttl": "12h",
             "server_flag": true
         }
     }

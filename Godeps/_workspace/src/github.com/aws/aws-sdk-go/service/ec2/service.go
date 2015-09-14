@@ -4,6 +4,8 @@ package ec2
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/service"
 	"github.com/aws/aws-sdk-go/internal/protocol/ec2query"
 	"github.com/aws/aws-sdk-go/internal/signer/v4"
 )
@@ -13,19 +15,19 @@ import (
 // need to invest in hardware up front, so you can develop and deploy applications
 // faster.
 type EC2 struct {
-	*aws.Service
+	*service.Service
 }
 
 // Used for custom service initialization logic
-var initService func(*aws.Service)
+var initService func(*service.Service)
 
 // Used for custom request initialization logic
-var initRequest func(*aws.Request)
+var initRequest func(*service.Request)
 
 // New returns a new EC2 client.
 func New(config *aws.Config) *EC2 {
-	service := &aws.Service{
-		Config:      aws.DefaultConfig.Merge(config),
+	service := &service.Service{
+		Config:      defaults.DefaultConfig.Merge(config),
 		ServiceName: "ec2",
 		APIVersion:  "2015-04-15",
 	}
@@ -48,8 +50,8 @@ func New(config *aws.Config) *EC2 {
 
 // newRequest creates a new request for a EC2 operation and runs any
 // custom request initialization.
-func (c *EC2) newRequest(op *aws.Operation, params, data interface{}) *aws.Request {
-	req := aws.NewRequest(c.Service, op, params, data)
+func (c *EC2) newRequest(op *service.Operation, params, data interface{}) *service.Request {
+	req := service.NewRequest(c.Service, op, params, data)
 
 	// Run custom request initialization if present
 	if initRequest != nil {

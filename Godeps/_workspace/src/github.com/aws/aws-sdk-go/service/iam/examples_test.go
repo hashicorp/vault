@@ -21,7 +21,7 @@ func ExampleIAM_AddClientIDToOpenIDConnectProvider() {
 
 	params := &iam.AddClientIDToOpenIDConnectProviderInput{
 		ClientID:                 aws.String("clientIDType"), // Required
-		OpenIDConnectProviderARN: aws.String("arnType"),      // Required
+		OpenIDConnectProviderArn: aws.String("arnType"),      // Required
 	}
 	resp, err := svc.AddClientIDToOpenIDConnectProvider(params)
 
@@ -105,7 +105,7 @@ func ExampleIAM_AttachGroupPolicy() {
 
 	params := &iam.AttachGroupPolicyInput{
 		GroupName: aws.String("groupNameType"), // Required
-		PolicyARN: aws.String("arnType"),       // Required
+		PolicyArn: aws.String("arnType"),       // Required
 	}
 	resp, err := svc.AttachGroupPolicy(params)
 
@@ -132,7 +132,7 @@ func ExampleIAM_AttachRolePolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.AttachRolePolicyInput{
-		PolicyARN: aws.String("arnType"),      // Required
+		PolicyArn: aws.String("arnType"),      // Required
 		RoleName:  aws.String("roleNameType"), // Required
 	}
 	resp, err := svc.AttachRolePolicy(params)
@@ -160,7 +160,7 @@ func ExampleIAM_AttachUserPolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.AttachUserPolicyInput{
-		PolicyARN: aws.String("arnType"),      // Required
+		PolicyArn: aws.String("arnType"),      // Required
 		UserName:  aws.String("userNameType"), // Required
 	}
 	resp, err := svc.AttachUserPolicy(params)
@@ -359,7 +359,7 @@ func ExampleIAM_CreateOpenIDConnectProvider() {
 			aws.String("thumbprintType"), // Required
 			// More values...
 		},
-		URL: aws.String("OpenIDConnectProviderUrlType"), // Required
+		Url: aws.String("OpenIDConnectProviderUrlType"), // Required
 		ClientIDList: []*string{
 			aws.String("clientIDType"), // Required
 			// More values...
@@ -420,7 +420,7 @@ func ExampleIAM_CreatePolicyVersion() {
 	svc := iam.New(nil)
 
 	params := &iam.CreatePolicyVersionInput{
-		PolicyARN:      aws.String("arnType"),            // Required
+		PolicyArn:      aws.String("arnType"),            // Required
 		PolicyDocument: aws.String("policyDocumentType"), // Required
 		SetAsDefault:   aws.Bool(true),
 	}
@@ -590,7 +590,7 @@ func ExampleIAM_DeleteAccessKey() {
 	svc := iam.New(nil)
 
 	params := &iam.DeleteAccessKeyInput{
-		AccessKeyID: aws.String("accessKeyIdType"), // Required
+		AccessKeyId: aws.String("accessKeyIdType"), // Required
 		UserName:    aws.String("existingUserNameType"),
 	}
 	resp, err := svc.DeleteAccessKey(params)
@@ -779,7 +779,7 @@ func ExampleIAM_DeleteOpenIDConnectProvider() {
 	svc := iam.New(nil)
 
 	params := &iam.DeleteOpenIDConnectProviderInput{
-		OpenIDConnectProviderARN: aws.String("arnType"), // Required
+		OpenIDConnectProviderArn: aws.String("arnType"), // Required
 	}
 	resp, err := svc.DeleteOpenIDConnectProvider(params)
 
@@ -806,7 +806,7 @@ func ExampleIAM_DeletePolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.DeletePolicyInput{
-		PolicyARN: aws.String("arnType"), // Required
+		PolicyArn: aws.String("arnType"), // Required
 	}
 	resp, err := svc.DeletePolicy(params)
 
@@ -833,8 +833,8 @@ func ExampleIAM_DeletePolicyVersion() {
 	svc := iam.New(nil)
 
 	params := &iam.DeletePolicyVersionInput{
-		PolicyARN: aws.String("arnType"),             // Required
-		VersionID: aws.String("policyVersionIdType"), // Required
+		PolicyArn: aws.String("arnType"),             // Required
+		VersionId: aws.String("policyVersionIdType"), // Required
 	}
 	resp, err := svc.DeletePolicyVersion(params)
 
@@ -916,7 +916,7 @@ func ExampleIAM_DeleteSAMLProvider() {
 	svc := iam.New(nil)
 
 	params := &iam.DeleteSAMLProviderInput{
-		SAMLProviderARN: aws.String("arnType"), // Required
+		SAMLProviderArn: aws.String("arnType"), // Required
 	}
 	resp, err := svc.DeleteSAMLProvider(params)
 
@@ -943,7 +943,7 @@ func ExampleIAM_DeleteSSHPublicKey() {
 	svc := iam.New(nil)
 
 	params := &iam.DeleteSSHPublicKeyInput{
-		SSHPublicKeyID: aws.String("publicKeyIdType"), // Required
+		SSHPublicKeyId: aws.String("publicKeyIdType"), // Required
 		UserName:       aws.String("userNameType"),    // Required
 	}
 	resp, err := svc.DeleteSSHPublicKey(params)
@@ -998,7 +998,7 @@ func ExampleIAM_DeleteSigningCertificate() {
 	svc := iam.New(nil)
 
 	params := &iam.DeleteSigningCertificateInput{
-		CertificateID: aws.String("certificateIdType"), // Required
+		CertificateId: aws.String("certificateIdType"), // Required
 		UserName:      aws.String("existingUserNameType"),
 	}
 	resp, err := svc.DeleteSigningCertificate(params)
@@ -1109,7 +1109,7 @@ func ExampleIAM_DetachGroupPolicy() {
 
 	params := &iam.DetachGroupPolicyInput{
 		GroupName: aws.String("groupNameType"), // Required
-		PolicyARN: aws.String("arnType"),       // Required
+		PolicyArn: aws.String("arnType"),       // Required
 	}
 	resp, err := svc.DetachGroupPolicy(params)
 
@@ -1136,7 +1136,7 @@ func ExampleIAM_DetachRolePolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.DetachRolePolicyInput{
-		PolicyARN: aws.String("arnType"),      // Required
+		PolicyArn: aws.String("arnType"),      // Required
 		RoleName:  aws.String("roleNameType"), // Required
 	}
 	resp, err := svc.DetachRolePolicy(params)
@@ -1164,7 +1164,7 @@ func ExampleIAM_DetachUserPolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.DetachUserPolicyInput{
-		PolicyARN: aws.String("arnType"),      // Required
+		PolicyArn: aws.String("arnType"),      // Required
 		UserName:  aws.String("userNameType"), // Required
 	}
 	resp, err := svc.DetachUserPolicy(params)
@@ -1247,7 +1247,7 @@ func ExampleIAM_GetAccessKeyLastUsed() {
 	svc := iam.New(nil)
 
 	params := &iam.GetAccessKeyLastUsedInput{
-		AccessKeyID: aws.String("accessKeyIdType"), // Required
+		AccessKeyId: aws.String("accessKeyIdType"), // Required
 	}
 	resp, err := svc.GetAccessKeyLastUsed(params)
 
@@ -1492,7 +1492,7 @@ func ExampleIAM_GetOpenIDConnectProvider() {
 	svc := iam.New(nil)
 
 	params := &iam.GetOpenIDConnectProviderInput{
-		OpenIDConnectProviderARN: aws.String("arnType"), // Required
+		OpenIDConnectProviderArn: aws.String("arnType"), // Required
 	}
 	resp, err := svc.GetOpenIDConnectProvider(params)
 
@@ -1519,7 +1519,7 @@ func ExampleIAM_GetPolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.GetPolicyInput{
-		PolicyARN: aws.String("arnType"), // Required
+		PolicyArn: aws.String("arnType"), // Required
 	}
 	resp, err := svc.GetPolicy(params)
 
@@ -1546,8 +1546,8 @@ func ExampleIAM_GetPolicyVersion() {
 	svc := iam.New(nil)
 
 	params := &iam.GetPolicyVersionInput{
-		PolicyARN: aws.String("arnType"),             // Required
-		VersionID: aws.String("policyVersionIdType"), // Required
+		PolicyArn: aws.String("arnType"),             // Required
+		VersionId: aws.String("policyVersionIdType"), // Required
 	}
 	resp, err := svc.GetPolicyVersion(params)
 
@@ -1629,7 +1629,7 @@ func ExampleIAM_GetSAMLProvider() {
 	svc := iam.New(nil)
 
 	params := &iam.GetSAMLProviderInput{
-		SAMLProviderARN: aws.String("arnType"), // Required
+		SAMLProviderArn: aws.String("arnType"), // Required
 	}
 	resp, err := svc.GetSAMLProvider(params)
 
@@ -1657,7 +1657,7 @@ func ExampleIAM_GetSSHPublicKey() {
 
 	params := &iam.GetSSHPublicKeyInput{
 		Encoding:       aws.String("encodingType"),    // Required
-		SSHPublicKeyID: aws.String("publicKeyIdType"), // Required
+		SSHPublicKeyId: aws.String("publicKeyIdType"), // Required
 		UserName:       aws.String("userNameType"),    // Required
 	}
 	resp, err := svc.GetSSHPublicKey(params)
@@ -1914,7 +1914,7 @@ func ExampleIAM_ListEntitiesForPolicy() {
 	svc := iam.New(nil)
 
 	params := &iam.ListEntitiesForPolicyInput{
-		PolicyARN:    aws.String("arnType"), // Required
+		PolicyArn:    aws.String("arnType"), // Required
 		EntityFilter: aws.String("EntityType"),
 		Marker:       aws.String("markerType"),
 		MaxItems:     aws.Int64(1),
@@ -2175,7 +2175,7 @@ func ExampleIAM_ListPolicyVersions() {
 	svc := iam.New(nil)
 
 	params := &iam.ListPolicyVersionsInput{
-		PolicyARN: aws.String("arnType"), // Required
+		PolicyArn: aws.String("arnType"), // Required
 		Marker:    aws.String("markerType"),
 		MaxItems:  aws.Int64(1),
 	}
@@ -2549,7 +2549,7 @@ func ExampleIAM_RemoveClientIDFromOpenIDConnectProvider() {
 
 	params := &iam.RemoveClientIDFromOpenIDConnectProviderInput{
 		ClientID:                 aws.String("clientIDType"), // Required
-		OpenIDConnectProviderARN: aws.String("arnType"),      // Required
+		OpenIDConnectProviderArn: aws.String("arnType"),      // Required
 	}
 	resp, err := svc.RemoveClientIDFromOpenIDConnectProvider(params)
 
@@ -2662,8 +2662,8 @@ func ExampleIAM_SetDefaultPolicyVersion() {
 	svc := iam.New(nil)
 
 	params := &iam.SetDefaultPolicyVersionInput{
-		PolicyARN: aws.String("arnType"),             // Required
-		VersionID: aws.String("policyVersionIdType"), // Required
+		PolicyArn: aws.String("arnType"),             // Required
+		VersionId: aws.String("policyVersionIdType"), // Required
 	}
 	resp, err := svc.SetDefaultPolicyVersion(params)
 
@@ -2690,7 +2690,7 @@ func ExampleIAM_UpdateAccessKey() {
 	svc := iam.New(nil)
 
 	params := &iam.UpdateAccessKeyInput{
-		AccessKeyID: aws.String("accessKeyIdType"), // Required
+		AccessKeyId: aws.String("accessKeyIdType"), // Required
 		Status:      aws.String("statusType"),      // Required
 		UserName:    aws.String("existingUserNameType"),
 	}
@@ -2840,7 +2840,7 @@ func ExampleIAM_UpdateOpenIDConnectProviderThumbprint() {
 	svc := iam.New(nil)
 
 	params := &iam.UpdateOpenIDConnectProviderThumbprintInput{
-		OpenIDConnectProviderARN: aws.String("arnType"), // Required
+		OpenIDConnectProviderArn: aws.String("arnType"), // Required
 		ThumbprintList: []*string{ // Required
 			aws.String("thumbprintType"), // Required
 			// More values...
@@ -2872,7 +2872,7 @@ func ExampleIAM_UpdateSAMLProvider() {
 
 	params := &iam.UpdateSAMLProviderInput{
 		SAMLMetadataDocument: aws.String("SAMLMetadataDocumentType"), // Required
-		SAMLProviderARN:      aws.String("arnType"),                  // Required
+		SAMLProviderArn:      aws.String("arnType"),                  // Required
 	}
 	resp, err := svc.UpdateSAMLProvider(params)
 
@@ -2899,7 +2899,7 @@ func ExampleIAM_UpdateSSHPublicKey() {
 	svc := iam.New(nil)
 
 	params := &iam.UpdateSSHPublicKeyInput{
-		SSHPublicKeyID: aws.String("publicKeyIdType"), // Required
+		SSHPublicKeyId: aws.String("publicKeyIdType"), // Required
 		Status:         aws.String("statusType"),      // Required
 		UserName:       aws.String("userNameType"),    // Required
 	}
@@ -2957,7 +2957,7 @@ func ExampleIAM_UpdateSigningCertificate() {
 	svc := iam.New(nil)
 
 	params := &iam.UpdateSigningCertificateInput{
-		CertificateID: aws.String("certificateIdType"), // Required
+		CertificateId: aws.String("certificateIdType"), // Required
 		Status:        aws.String("statusType"),        // Required
 		UserName:      aws.String("existingUserNameType"),
 	}

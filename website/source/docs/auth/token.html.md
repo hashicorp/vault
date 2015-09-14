@@ -35,8 +35,8 @@ $ vault auth <token>
 
 #### Via the API
 
-The token is set directly as a cookie for the HTTP API. The name
-of the cookie should be "token" and the value should be the token.
+The token is set directly as a header for the HTTP API. The name
+of the header should be "X-Vault-Token" and the value should be the token.
 
 ## API
 
@@ -285,8 +285,9 @@ of the cookie should be "token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Renews a lease associated with a token. This is used to prevent
-    the expiration of a token, and the automatic revocation of it.
+    Renews a lease associated with a token. This is used to prevent the
+    expiration of a token, and the automatic revocation of it. Token
+    renewal is possible only if there is a lease associated with it.
   </dd>
 
   <dt>Method</dt>

@@ -96,7 +96,7 @@ func (s *RepositoriesService) GetLatestRelease(owner, repo string) (*RepositoryR
 	return s.getSingleRelease(u)
 }
 
-// GetLatestReleaseByTag fetches a release with the specified tag.
+// GetReleaseByTag fetches a release with the specified tag.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/releases/#get-a-release-by-tag-name
 func (s *RepositoriesService) GetReleaseByTag(owner, repo, tag string) (*RepositoryRelease, *Response, error) {

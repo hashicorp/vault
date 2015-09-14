@@ -58,7 +58,7 @@ func TestSysInit_put(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, addr+"/v1/sys/init", map[string]interface{}{
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})

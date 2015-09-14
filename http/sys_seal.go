@@ -13,7 +13,10 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
+		switch r.Method {
+		case "PUT":
+		case "POST":
+		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
@@ -33,7 +36,10 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysUnseal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
+		switch r.Method {
+		case "PUT":
+		case "POST":
+		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}

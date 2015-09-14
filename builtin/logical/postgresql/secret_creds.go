@@ -67,7 +67,7 @@ func (b *backend) secretCredsRenew(
 	// Make sure we increase the VALID UNTIL endpoint for this user.
 	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
 		expiration := expireTime.Add(10 * time.Minute).
-			Format("2006-01-02 15:04:05")
+			Format("2006-01-02 15:04:05-0700")
 
 		query := fmt.Sprintf(
 			"ALTER ROLE %s VALID UNTIL '%s';",

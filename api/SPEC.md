@@ -54,7 +54,7 @@ that can be enabled (see
 [authentication](#reference/authentication)).
 
 Authentication is done with the login endpoint. The login endpoint
-returns an access token that is set as the `token` cookie.
+returns an access token that is set as the `X-Vault-Token` header.
 
 ## Help
 
@@ -127,7 +127,7 @@ and that the keys are properly distributed.
 The response also contains the initial root token that can be used
 as authentication in order to initially configure Vault once it is
 unsealed. Just as with the unseal keys, this is the only time Vault is
-every aware of this token.
+ever aware of this token.
 
 + Request (application/json)
 
@@ -176,7 +176,7 @@ Seal the vault.
 
 Sealing the vault locks Vault from any future operations on any
 secrets or system configuration until the vault is once again
-sealed. Internally, sealing throws away the keys to access the
+unsealed. Internally, sealing throws away the keys to access the
 encrypted vault data, so Vault is unable to access the data without
 unsealing to get the encryption keys.
 

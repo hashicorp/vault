@@ -3,24 +3,30 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
 )
 
-func testHttpDelete(t *testing.T, addr string) *http.Response {
-	return testHttpData(t, "DELETE", addr, nil)
+func testHttpGet(t *testing.T, token string, addr string) *http.Response {
+	t.Logf("Token is %s", token)
+	return testHttpData(t, "GET", token, addr, nil)
 }
 
-func testHttpPost(t *testing.T, addr string, body interface{}) *http.Response {
-	return testHttpData(t, "POST", addr, body)
+func testHttpDelete(t *testing.T, token string, addr string) *http.Response {
+	return testHttpData(t, "DELETE", token, addr, nil)
 }
 
-func testHttpPut(t *testing.T, addr string, body interface{}) *http.Response {
-	return testHttpData(t, "PUT", addr, body)
+func testHttpPost(t *testing.T, token string, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "POST", token, addr, body)
 }
 
-func testHttpData(t *testing.T, method string, addr string, body interface{}) *http.Response {
+func testHttpPut(t *testing.T, token string, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "PUT", token, addr, body)
+}
+
+func testHttpData(t *testing.T, method string, token string, addr string, body interface{}) *http.Response {
 	bodyReader := new(bytes.Buffer)
 	if body != nil {
 		enc := json.NewEncoder(bodyReader)
@@ -35,7 +41,32 @@ func testHttpData(t *testing.T, method string, addr string, body interface{}) *h
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+
+	if len(token) != 0 {
+		req.Header.Set("X-Vault-Token", token)
+	}
+
+	client := http.DefaultClient
+
+	// From https://github.com/michiwend/gomusicbrainz/pull/4/files
+	defaultRedirectLimit := 30
+
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) > defaultRedirectLimit {
+			return fmt.Errorf("%d consecutive requests(redirects)", len(via))
+		}
+		if len(via) == 0 {
+			// No redirects
+			return nil
+		}
+		// mutate the subsequent redirect requests with the first Header
+		if token := via[0].Header.Get("X-Vault-Token"); len(token) != 0 {
+			req.Header.Set("X-Vault-Token", token)
+		}
+		return nil
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

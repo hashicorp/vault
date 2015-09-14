@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
@@ -13,11 +14,13 @@ type InitCommand struct {
 }
 
 func (c *InitCommand) Run(args []string) int {
-	var shares, threshold int
+	var threshold, shares int
+	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("init", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
+	flags.Var(&pgpKeys, "pgp-keys", "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
@@ -32,6 +35,7 @@ func (c *InitCommand) Run(args []string) int {
 	resp, err := client.Sys().Init(&api.InitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
+		PGPKeys:         pgpKeys,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -90,6 +94,14 @@ Init Options:
   -key-threshold=3        The number of key shares required to reconstruct
                           the master key.
 
+  -pgp-keys               If provided, must be a comma-separated list of
+                          files on disk containing binary-format public PGP
+                          keys. The number of files must match 'key-shares'.
+                          The output unseal keys will encrypted and hex-encoded,
+                          in order, with the given public keys.
+                          If you want to use them with the 'vault unseal'
+                          command, you will need to hex decode and decrypt;
+                          this will be the plaintext unseal key.
 `
 	return strings.TrimSpace(helpText)
 }

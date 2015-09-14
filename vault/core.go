@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,9 +13,13 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -78,8 +83,14 @@ var (
 // SealConfig is used to describe the seal configuration
 type SealConfig struct {
 	// SecretShares is the number of shares the secret is
-	// split into. This is the N value of Shamir
+	// split into. This is the N value of Shamir.
 	SecretShares int `json:"secret_shares"`
+
+	// PGPKeys is the array of public PGP keys used,
+	// if requested, to encrypt the output unseal tokens. If
+	// provided, it sets the value of SecretShares. Ordering
+	// is important.
+	PGPKeys []string `json:"-"`
 
 	// SecretThreshold is the number of parts required
 	// to open the vault. This is the T value of Shamir
@@ -105,6 +116,21 @@ func (s *SealConfig) Validate() error {
 	}
 	if s.SecretThreshold > s.SecretShares {
 		return fmt.Errorf("secret threshold cannot be larger than secret shares")
+	}
+	if len(s.PGPKeys) > 0 && len(s.PGPKeys) != s.SecretShares {
+		return fmt.Errorf("count mismatch between number of provided PGP keys and number of shares")
+	}
+	if len(s.PGPKeys) > 0 {
+		for _, keystring := range s.PGPKeys {
+			data, err := base64.StdEncoding.DecodeString(keystring)
+			if err != nil {
+				return fmt.Errorf("Error decoding given PGP key: %s", err)
+			}
+			_, err = openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
+			if err != nil {
+				return fmt.Errorf("Error parsing given PGP key: %s", err)
+			}
+		}
 	}
 	return nil
 }
@@ -194,8 +220,8 @@ type Core struct {
 	// out into the configured audit backends
 	auditBroker *AuditBroker
 
-	// systemView is the barrier view for the system backend
-	systemView *BarrierView
+	// systemBarrierView is the barrier view for the system backend
+	systemBarrierView *BarrierView
 
 	// expiration manager is used for managing LeaseIDs,
 	// renewal, expiration and revocation
@@ -213,25 +239,25 @@ type Core struct {
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
-	defaultLeaseDuration time.Duration
-	maxLeaseDuration time.Duration
+	defaultLeaseTTL time.Duration
+	maxLeaseTTL     time.Duration
 
 	logger *log.Logger
 }
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	LogicalBackends      map[string]logical.Factory
-	CredentialBackends   map[string]logical.Factory
-	AuditBackends        map[string]audit.Factory
-	Physical             physical.Backend
-	Logger               *log.Logger
-	DisableCache         bool   // Disables the LRU cache on the physical backend
-	DisableMlock         bool   // Disables mlock syscall
-	CacheSize            int    // Custom cache size of zero for default
-	AdvertiseAddr        string // Set as the leader address for HA
-	DefaultLeaseDuration time.Duration
-	MaxLeaseDuration     time.Duration
+	LogicalBackends    map[string]logical.Factory
+	CredentialBackends map[string]logical.Factory
+	AuditBackends      map[string]audit.Factory
+	Physical           physical.Backend
+	Logger             *log.Logger
+	DisableCache       bool   // Disables the LRU cache on the physical backend
+	DisableMlock       bool   // Disables mlock syscall
+	CacheSize          int    // Custom cache size of zero for default
+	AdvertiseAddr      string // Set as the leader address for HA
+	DefaultLeaseTTL    time.Duration
+	MaxLeaseTTL        time.Duration
 }
 
 // NewCore is used to construct a new core
@@ -245,17 +271,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
-	if conf.DefaultLeaseDuration == 0 {
-		conf.DefaultLeaseDuration = defaultLeaseDuration
+	if conf.DefaultLeaseTTL == 0 {
+		conf.DefaultLeaseTTL = defaultLeaseTTL
 	}
-	if conf.MaxLeaseDuration == 0 {
-		conf.MaxLeaseDuration = maxLeaseDuration
+	if conf.MaxLeaseTTL == 0 {
+		conf.MaxLeaseTTL = maxLeaseTTL
 	}
-	
-	if conf.DefaultLeaseDuration > conf.MaxLeaseDuration {
-		return nil, fmt.Errorf("cannot have DefaultLeaseDuration larger than MaxLeaseDuration")
+
+	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
+		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
 	}
-	
+
 	// Validate the advertise addr if its given to us
 	if conf.AdvertiseAddr != "" {
 		u, err := url.Parse(conf.AdvertiseAddr)
@@ -307,16 +333,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:            haBackend,
-		advertiseAddr: conf.AdvertiseAddr,
-		physical:      conf.Physical,
-		barrier:       barrier,
-		router:        NewRouter(),
-		sealed:        true,
-		standby:       true,
-		logger:        conf.Logger,
-		defaultLeaseDuration: conf.DefaultLeaseDuration,
-		maxLeaseDuration: conf.MaxLeaseDuration,
+		ha:              haBackend,
+		advertiseAddr:   conf.AdvertiseAddr,
+		physical:        conf.Physical,
+		barrier:         barrier,
+		router:          NewRouter(),
+		sealed:          true,
+		standby:         true,
+		logger:          conf.Logger,
+		defaultLeaseTTL: conf.DefaultLeaseTTL,
+		maxLeaseTTL:     conf.MaxLeaseTTL,
 	}
 
 	// Setup the backends
@@ -325,8 +351,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends[k] = f
 	}
 	logicalBackends["generic"] = PassthroughBackendFactory
-	logicalBackends["system"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c), nil
+	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewSystemBackend(c, config), nil
 	}
 	c.logicalBackends = logicalBackends
 
@@ -334,8 +360,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(c)
+	credentialBackends["token"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewTokenStore(c, config)
 	}
 	c.credentialBackends = credentialBackends
 
@@ -400,11 +426,28 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	return
 }
 
-func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	auth, te, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	if te != nil {
+		defer func() {
+			// Attempt to use the token (decrement num_uses)
+			// If a secret was generated and num_uses is currently 1, it will be
+			// immediately revoked; in that case, don't return the generated
+			// credentials as they are now invalid.
+			if retResp != nil && te != nil && te.NumUses == 1 && retResp.Secret != nil {
+				retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so generated credentials were immediately revoked.")
+			}
+			if err := c.tokenStore.UseToken(te); err != nil {
+				c.logger.Printf("[ERR] core: failed to use token: %v", err)
+				retResp = nil
+				retAuth = nil
+				retErr = ErrInternalError
+			}
+		}()
+	}
 	if err != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
@@ -440,14 +483,23 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
+		// Get the SystemView for the mount
+		sysView := c.router.MatchingSystemView(req.Path)
+		if sysView == nil {
+			c.logger.Println("[ERR] core: unable to retrieve system view from router")
+			return nil, auth, ErrInternalError
+		}
+
 		// Apply the default lease if none given
-		if resp.Secret.Lease == 0 {
-			resp.Secret.Lease = c.defaultLeaseDuration
+		if resp.Secret.TTL == 0 {
+			ttl := sysView.DefaultLeaseTTL()
+			resp.Secret.TTL = ttl
 		}
 
 		// Limit the lease duration
-		if resp.Secret.Lease > c.maxLeaseDuration {
-			resp.Secret.Lease = c.maxLeaseDuration
+		maxTTL := sysView.MaxLeaseTTL()
+		if resp.Secret.TTL > maxTTL {
+			resp.Secret.TTL = maxTTL
 		}
 
 		// Register the lease
@@ -473,13 +525,13 @@ func (c *Core) handleRequest(req *logical.Request) (*logical.Response, *logical.
 		}
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if resp.Auth.Lease == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.Lease = c.defaultLeaseDuration
+		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
+			resp.Auth.TTL = c.defaultLeaseTTL
 		}
 
 		// Limit the lease duration
-		if resp.Auth.Lease > c.maxLeaseDuration {
-			resp.Auth.Lease = c.maxLeaseDuration
+		if resp.Auth.TTL > c.maxLeaseTTL {
+			resp.Auth.TTL = c.maxLeaseTTL
 		}
 
 		// Register with the expiration manager
@@ -542,16 +594,16 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Populate the client token
-		resp.Auth.ClientToken = te.ID
+		auth.ClientToken = te.ID
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if auth.Lease == 0 && !strListContains(auth.Policies, "root") {
-			auth.Lease = c.defaultLeaseDuration
+		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
+			auth.TTL = c.defaultLeaseTTL
 		}
 
 		// Limit the lease duration
-		if resp.Auth.Lease > c.maxLeaseDuration {
-			resp.Auth.Lease = c.maxLeaseDuration
+		if auth.TTL > c.maxLeaseTTL {
+			auth.TTL = c.maxLeaseTTL
 		}
 
 		// Register with the expiration manager
@@ -569,47 +621,46 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 }
 
 func (c *Core) checkToken(
-	op logical.Operation, path string, token string) (*logical.Auth, error) {
+	op logical.Operation, path string, token string) (*logical.Auth, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
 	// Ensure there is a client token
 	if token == "" {
-		return nil, fmt.Errorf("missing client token")
+		return nil, nil, fmt.Errorf("missing client token")
+	}
+
+	if c.tokenStore == nil {
+		c.logger.Printf("[ERR] core: token store is unavailable")
+		return nil, nil, ErrInternalError
 	}
 
 	// Resolve the token policy
 	te, err := c.tokenStore.Lookup(token)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
-		return nil, ErrInternalError
+		return nil, nil, ErrInternalError
 	}
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, logical.ErrPermissionDenied
-	}
-
-	// Attempt to use the token
-	if err := c.tokenStore.UseToken(te); err != nil {
-		c.logger.Printf("[ERR] core: failed to use token: %v", err)
-		return nil, ErrInternalError
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Construct the corresponding ACL object
 	acl, err := c.policy.ACL(te.Policies...)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
-		return nil, ErrInternalError
+		return nil, nil, ErrInternalError
 	}
 
 	// Check if this is a root protected path
 	if c.router.RootPath(path) && !acl.RootPrivilege(path) {
-		return nil, logical.ErrPermissionDenied
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Check the standard non-root ACLs
 	if !acl.AllowOperation(op, path) {
-		return nil, logical.ErrPermissionDenied
+		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Create the auth response
@@ -619,7 +670,7 @@ func (c *Core) checkToken(
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
 	}
-	return auth, nil
+	return auth, te, nil
 }
 
 // Initialized checks if the Vault is already initialized
@@ -698,7 +749,6 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	results := new(InitResult)
 	if config.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, masterKey)
-
 	} else {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(masterKey, config.SecretShares, config.SecretThreshold)
@@ -707,6 +757,14 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
+	}
+
+	if len(config.PGPKeys) > 0 {
+		encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, config.PGPKeys)
+		if err != nil {
+			return nil, err
+		}
+		results.SecretShares = encryptedShares
 	}
 
 	// Initialize the barrier
@@ -844,6 +902,7 @@ func (c *Core) SealConfig() (*SealConfig, error) {
 		c.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
 		return nil, fmt.Errorf("seal validation failed: %v", err)
 	}
+
 	return &conf, nil
 }
 
@@ -951,7 +1010,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 // Seal is used to re-seal the Vault. This requires the Vault to
 // be unsealed again to perform any further operations.
-func (c *Core) Seal(token string) error {
+func (c *Core) Seal(token string) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
@@ -960,13 +1019,27 @@ func (c *Core) Seal(token string) error {
 	}
 
 	// Validate the token is a root token
-	_, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	_, te, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	if te != nil {
+		// Attempt to use the token (decrement num_uses)
+		if err := c.tokenStore.UseToken(te); err != nil {
+			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			retErr = ErrInternalError
+		}
+	}
 	if err != nil {
 		return err
 	}
 
 	// Seal the Vault
-	return c.sealInternal()
+	err = c.sealInternal()
+	if err == nil && retErr == ErrInternalError {
+		c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
+	} else {
+		retErr = err
+	}
+
+	return
 }
 
 // sealInternal is an internal method used to seal the vault.
@@ -1156,7 +1229,6 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 	results := new(RekeyResult)
 	if c.rekeyConfig.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, newMasterKey)
-
 	} else {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(newMasterKey, c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
@@ -1165,6 +1237,14 @@ func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
+	}
+
+	if len(c.rekeyConfig.PGPKeys) > 0 {
+		encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, c.rekeyConfig.PGPKeys)
+		if err != nil {
+			return nil, err
+		}
+		results.SecretShares = encryptedShares
 	}
 
 	// Encode the seal configuration

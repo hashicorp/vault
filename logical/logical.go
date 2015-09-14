@@ -22,6 +22,12 @@ type Backend interface {
 	// ends in '*' then it is a prefix-based match. The '*' can only appear
 	// at the end.
 	SpecialPaths() *Paths
+
+	// System provides an interface to access certain system configuration
+	// information, such as globally configured default and max lease TTLs.
+	System() SystemView
+
+	Cleanup()
 }
 
 // BackendConfig is provided to the factory to initialize the backend
@@ -31,6 +37,10 @@ type BackendConfig struct {
 
 	// The backend should use this logger. The log should not contain any secrets.
 	Logger *log.Logger
+
+	// System provides a view into a subset of safe system information that
+	// is useful for backends, such as the default/max lease TTLs
+	System SystemView
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string

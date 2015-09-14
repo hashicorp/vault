@@ -71,11 +71,6 @@ func (b *backend) secretCredsRevoke(
 		return nil, fmt.Errorf("Error getting session")
 	}
 
-	err = session.Query(fmt.Sprintf("REVOKE ALL PERMISSIONS ON ALL KEYSPACES FROM '%s'", username)).Exec()
-	if err != nil {
-		return nil, fmt.Errorf("Error revoking permissions for user %s", username)
-	}
-
 	err = session.Query(fmt.Sprintf("DROP USER '%s'", username)).Exec()
 	if err != nil {
 		return nil, fmt.Errorf("Error removing user %s", username)

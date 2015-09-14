@@ -10,19 +10,30 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func getBackendConfig(c *Core) *logical.BackendConfig {
+	return &logical.BackendConfig{
+		Logger: c.logger,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	}
+}
+
 func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 
 	c, _, root := TestCoreUnsealed(t)
-	ts, err := NewTokenStore(c)
+
+	ts, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	router := NewRouter()
-	router.Mount(ts, "auth/token/", "", ts.view)
+	router.Mount(ts, "auth/token/", &MountEntry{UUID: ""}, ts.view)
 
-	view := c.systemView.SubView(expirationSubPath)
+	view := c.systemBarrierView.SubView(expirationSubPath)
 	exp := NewExpirationManager(router, view, ts, logger)
 	ts.SetExpirationManager(exp)
 	return c, ts, root
@@ -68,7 +79,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(c)
+	ts2, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -107,7 +118,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(c)
+	ts2, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -219,7 +230,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	ts.expiration.router.Mount(noop, "", "", nil)
+	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, nil)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.Create(ent); err != nil {
@@ -235,7 +246,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				Lease: 20 * time.Millisecond,
+				TTL: 20 * time.Millisecond,
 			},
 		},
 		Data: map[string]interface{}{
@@ -633,7 +644,7 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Auth.Lease != time.Hour {
+	if resp.Auth.TTL != time.Hour {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if !resp.Auth.Renewable {
@@ -743,7 +754,7 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		LeaseOptions: logical.LeaseOptions{
-			Lease: time.Hour,
+			TTL: time.Hour,
 		},
 	}
 	err = exp.RegisterAuth("auth/github/login", auth)
@@ -808,7 +819,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		LeaseOptions: logical.LeaseOptions{
-			Lease:     time.Hour,
+			TTL:       time.Hour,
 			Renewable: true,
 		},
 	}

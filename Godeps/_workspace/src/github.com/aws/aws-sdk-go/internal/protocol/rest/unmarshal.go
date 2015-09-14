@@ -12,10 +12,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/service"
 )
 
 // Unmarshal unmarshals the REST component of a response in a REST service.
-func Unmarshal(r *aws.Request) {
+func Unmarshal(r *service.Request) {
 	if r.DataFilled() {
 		v := reflect.Indirect(reflect.ValueOf(r.Data))
 		unmarshalBody(r, v)
@@ -23,7 +24,7 @@ func Unmarshal(r *aws.Request) {
 	}
 }
 
-func unmarshalBody(r *aws.Request, v reflect.Value) {
+func unmarshalBody(r *service.Request, v reflect.Value) {
 	if field, ok := v.Type().FieldByName("SDKShapeTraits"); ok {
 		if payloadName := field.Tag.Get("payload"); payloadName != "" {
 			pfield, _ := v.Type().FieldByName(payloadName)
@@ -64,7 +65,7 @@ func unmarshalBody(r *aws.Request, v reflect.Value) {
 	}
 }
 
-func unmarshalLocationElements(r *aws.Request, v reflect.Value) {
+func unmarshalLocationElements(r *service.Request, v reflect.Value) {
 	for i := 0; i < v.NumField(); i++ {
 		m, field := v.Field(i), v.Type().Field(i)
 		if n := field.Name; n[0:1] == strings.ToLower(n[0:1]) {

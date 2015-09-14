@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 
@@ -14,13 +13,10 @@ func TestSysRotate(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPost(t, addr+"/v1/sys/rotate", map[string]interface{}{})
+	resp := testHttpPost(t, token, addr+"/v1/sys/rotate", map[string]interface{}{})
 	testResponseStatus(t, resp, 204)
 
-	resp, err := http.Get(addr + "/v1/sys/key-status")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	resp = testHttpGet(t, token, addr+"/v1/sys/key-status")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -30,6 +26,6 @@ func TestSysRotate(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	delete(actual, "install_time")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad:\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 }

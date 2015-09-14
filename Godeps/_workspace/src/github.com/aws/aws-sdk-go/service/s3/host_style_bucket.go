@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
+	"github.com/aws/aws-sdk-go/aws/service"
 )
 
 var reDomain = regexp.MustCompile(`^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$`)
@@ -22,7 +23,7 @@ func dnsCompatibleBucketName(bucket string) bool {
 // hostStyleBucketName returns true if the request should put the bucket in
 // the host. This is false if S3ForcePathStyle is explicitly set or if the
 // bucket is not DNS compatible.
-func hostStyleBucketName(r *aws.Request, bucket string) bool {
+func hostStyleBucketName(r *service.Request, bucket string) bool {
 	if aws.BoolValue(r.Config.S3ForcePathStyle) {
 		return false
 	}
@@ -37,7 +38,7 @@ func hostStyleBucketName(r *aws.Request, bucket string) bool {
 	return dnsCompatibleBucketName(bucket)
 }
 
-func updateHostWithBucket(r *aws.Request) {
+func updateHostWithBucket(r *service.Request) {
 	b := awsutil.ValuesAtPath(r.Params, "Bucket")
 	if len(b) == 0 {
 		return

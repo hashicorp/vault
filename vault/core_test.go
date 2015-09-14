@@ -401,7 +401,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	if resp == nil || resp.Secret == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Secret.Lease != time.Hour {
+	if resp.Secret.TTL != time.Hour {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Secret.LeaseID == "" {
@@ -442,7 +442,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	if resp == nil || resp.Secret == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Secret.Lease != c.maxLeaseDuration {
+	if resp.Secret.TTL != c.maxLeaseTTL {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Secret.LeaseID == "" {
@@ -483,7 +483,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	if resp == nil || resp.Secret == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-	if resp.Secret.Lease != c.defaultLeaseDuration {
+	if resp.Secret.TTL != c.defaultLeaseTTL {
 		t.Fatalf("bad: %#v", resp.Secret)
 	}
 	if resp.Secret.LeaseID == "" {
@@ -829,7 +829,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Check that we have a lease with default duration
-	if lresp.Auth.Lease != c.defaultLeaseDuration {
+	if lresp.Auth.TTL != c.defaultLeaseTTL {
 		t.Fatalf("bad: %#v", lresp.Auth)
 	}
 }
@@ -904,7 +904,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		Response: &logical.Response{
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					Lease: time.Hour,
+					TTL: time.Hour,
 				},
 				Policies: []string{"foo", "bar"},
 				Metadata: map[string]string{
@@ -1016,7 +1016,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 
 	// Check that we have a lease with default duration
-	if resp.Auth.Lease != c.defaultLeaseDuration {
+	if resp.Auth.TTL != c.defaultLeaseTTL {
 		t.Fatalf("bad: %#v", resp.Auth)
 	}
 }

@@ -1,6 +1,9 @@
 package github
 
 import (
+	"fmt"
+	"net/url"
+
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -37,6 +40,14 @@ func (b *backend) pathLogin(
 	client, err := b.Client(data.Get("token").(string))
 	if err != nil {
 		return nil, err
+	}
+
+	if config.BaseURL != "" {
+		parsedURL, err := url.Parse(config.BaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("Successfully parsed base_url when set but failing to parse now: %s", err)
+		}
+		client.BaseURL = parsedURL
 	}
 
 	// Get the user
@@ -107,7 +118,6 @@ func (b *backend) pathLogin(
 			teamNames = append(teamNames, *t.Slug)
 		}
 	}
-
 
 	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
 	if err != nil {

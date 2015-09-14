@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -61,7 +62,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 		}},
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-		&credentials.EC2RoleProvider{},
+		&ec2rolecreds.EC2RoleProvider{},
 	})
 
 	s3conn := s3.New(&aws.Config{

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 )
 
 // RekeyCommand is a Command that rekeys the vault.
@@ -21,12 +22,14 @@ type RekeyCommand struct {
 func (c *RekeyCommand) Run(args []string) int {
 	var init, cancel, status bool
 	var shares, threshold int
+	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("rekey", FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
 	flags.BoolVar(&cancel, "cancel", false, "")
 	flags.BoolVar(&status, "status", false, "")
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
+	flags.Var(&pgpKeys, "pgp-keys", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -41,7 +44,7 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	// Check if we are running doing any restricted variants
 	if init {
-		return c.initRekey(client, shares, threshold)
+		return c.initRekey(client, shares, threshold, pgpKeys)
 	} else if cancel {
 		return c.cancelRekey(client)
 	} else if status {
@@ -60,6 +63,7 @@ func (c *RekeyCommand) Run(args []string) int {
 		err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    shares,
 			SecretThreshold: threshold,
+			PGPKeys:         pgpKeys,
 		})
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -136,11 +140,12 @@ func (c *RekeyCommand) Run(args []string) int {
 }
 
 // initRekey is used to start the rekey process
-func (c *RekeyCommand) initRekey(client *api.Client, shares, threshold int) int {
+func (c *RekeyCommand) initRekey(client *api.Client, shares, threshold int, pgpKeys pgpkeys.PubKeyFilesFlag) int {
 	// Start the rekey
 	err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
+		PGPKeys:         pgpKeys,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -162,7 +167,7 @@ func (c *RekeyCommand) cancelRekey(client *api.Client) int {
 	return 0
 }
 
-// rekeyStatus is used just to fetch and dump the statu
+// rekeyStatus is used just to fetch and dump the status
 func (c *RekeyCommand) rekeyStatus(client *api.Client) int {
 	// Check the status
 	status, err := client.Sys().RekeyStatus()
@@ -213,7 +218,7 @@ Unseal Options:
                           number of shares and the key threshold. This can only be
                           done if no rekey is already initiated.
 
-  -cancel				  Reset the rekey process by throwing away
+  -cancel                 Reset the rekey process by throwing away
                           prior keys and the rekey configuration.
 
   -status                 Prints the status of the current rekey operation.
@@ -225,6 +230,15 @@ Unseal Options:
 
   -key-threshold=3        The number of key shares required to reconstruct
                           the master key.
+
+  -pgp-keys               If provided, must be a comma-separated list of
+                          files on disk containing binary-format public PGP
+                          keys. The number of files must match 'key-shares'.
+                          The output unseal keys will encrypted and hex-encoded,
+                          in order, with the given public keys.
+                          If you want to use them with the 'vault unseal'
+                          command, you will need to hex decode and decrypt;
+                          this will be the plaintext unseal key.
 `
 	return strings.TrimSpace(helpText)
 }

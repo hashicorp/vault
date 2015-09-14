@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/lib/pq"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -35,6 +36,8 @@ func Backend() *framework.Backend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
+
+		Clean: b.ResetDB,
 	}
 
 	return b.Backend
@@ -71,6 +74,16 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	if err := entry.DecodeJSON(&conn); err != nil {
 		return nil, err
 	}
+
+	// Ensure timezone is set to UTC for all the conenctions
+	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
+		var err error
+		conn, err = pq.ParseURL(conn)
+		if err != nil {
+			return nil, err
+		}
+	}
+	conn += " timezone=utc"
 
 	b.db, err = sql.Open("postgres", conn)
 	if err != nil {

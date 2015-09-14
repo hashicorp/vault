@@ -167,7 +167,11 @@ func Test(t TestT, c TestCase) {
 
 	// Mount the backend
 	prefix := "mnt"
-	if err := client.Sys().Mount(prefix, "test", "acceptance test"); err != nil {
+	mountInfo := &api.Mount{
+		Type:        "test",
+		Description: "acceptance test",
+	}
+	if err := client.Sys().Mount(prefix, mountInfo); err != nil {
 		t.Fatal("error mounting backend: ", err)
 		return
 	}
