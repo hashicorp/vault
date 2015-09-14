@@ -38,6 +38,8 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 			op = logical.ListOperation
 		case "POST", "PUT":
 			op = logical.UpdateOperation
+		case "LIST":
+			op = logical.ListOperation
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
