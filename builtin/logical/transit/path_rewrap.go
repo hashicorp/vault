@@ -9,18 +9,18 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathEncrypt() *framework.Path {
+func pathRewrap() *framework.Path {
 	return &framework.Path{
-		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
+		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 
-			"plaintext": &framework.FieldSchema{
+			"ciphertext": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Plaintext value to encrypt",
+				Description: "Ciphertext value to rewrap",
 			},
 
 			"context": &framework.FieldSchema{
@@ -30,31 +30,21 @@ func pathEncrypt() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathEncryptWrite,
+			logical.WriteOperation: pathRewrapWrite,
 		},
 
-		HelpSynopsis:    pathEncryptHelpSyn,
-		HelpDescription: pathEncryptHelpDesc,
+		HelpSynopsis:    pathRewrapHelpSyn,
+		HelpDescription: pathRewrapHelpDesc,
 	}
 }
 
-func pathEncryptWrite(
+func pathRewrapWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	value := d.Get("plaintext").(string)
+
+	value := d.Get("ciphertext").(string)
 	if len(value) == 0 {
-		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
-	}
-
-	// Get the policy
-	p, err := getPolicy(req, name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fast track disable checking
-	if p != nil && p.Disabled {
-		return logical.ErrorResponse("key is disabled and cannot be used for encryption"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 	}
 
 	// Decode the context if any
@@ -68,16 +58,34 @@ func pathEncryptWrite(
 		}
 	}
 
+	// Get the policy
+	p, err := getPolicy(req, name)
+	if err != nil {
+		return nil, err
+	}
+
 	// Error if invalid policy
 	if p == nil {
-		isDerived := len(context) != 0
-		p, err = generatePolicy(req.Storage, name, isDerived)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to upsert policy: %v", err)), logical.ErrInvalidRequest
+		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
+	plaintext, err := p.Decrypt(context, value)
+	if err != nil {
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		case certutil.InternalError:
+			return nil, err
+		default:
+			return nil, err
 		}
 	}
 
-	ciphertext, err := p.Encrypt(context, value)
+	if plaintext == "" {
+		return nil, fmt.Errorf("empty plaintext returned during rewrap")
+	}
+
+	ciphertext, err := p.Encrypt(context, plaintext)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -102,9 +110,11 @@ func pathEncryptWrite(
 	return resp, nil
 }
 
-const pathEncryptHelpSyn = `Encrypt a plaintext value using a named key`
+const pathRewrapHelpSyn = `Rewrap ciphertext`
 
-const pathEncryptHelpDesc = `
-This path uses the named key from the request path to encrypt a user
-provided plaintext. The plaintext must be base64 encoded.
+const pathRewrapHelpDesc = `
+After key rotation, this function can be used to rewrap the
+given ciphertext with the latest version of the named key.
+If the given ciphertext is already using the latest version
+of the key, this function is a no-op.
 `

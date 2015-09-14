@@ -1,125 +1,11 @@
 package transit
 
 import (
-	"crypto/rand"
-	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/kdf"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
-
-const (
-	// kdfMode is the only KDF mode currently supported
-	kdfMode = "hmac-sha256-counter"
-)
-
-// Policy is the struct used to store metadata
-type Policy struct {
-	Name       string `json:"name"`
-	Key        []byte `json:"key"`
-	CipherMode string `json:"cipher"`
-
-	// Derived keys MUST provide a context and the
-	// master underlying key is never used.
-	Derived bool   `json:"derived"`
-	KDFMode string `json:"kdf_mode"`
-}
-
-func (p *Policy) Serialize() ([]byte, error) {
-	return json.Marshal(p)
-}
-
-// DeriveKey is used to derive the encryption key that should
-// be used depending on the policy. If derivation is disabled the
-// raw key is used and no context is required, otherwise the KDF
-// mode is used with the context to derive the proper key.
-func (p *Policy) DeriveKey(context []byte) ([]byte, error) {
-	// Fast-path non-derived keys
-	if !p.Derived {
-		return p.Key, nil
-	}
-
-	// Ensure a context is provided
-	if len(context) == 0 {
-		return nil, fmt.Errorf("missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to encrypt or decrypt information.")
-	}
-
-	switch p.KDFMode {
-	case kdfMode:
-		prf := kdf.HMACSHA256PRF
-		prfLen := kdf.HMACSHA256PRFLen
-		return kdf.CounterMode(prf, prfLen, p.Key, context, 256)
-	default:
-		return nil, fmt.Errorf("unsupported key derivation mode")
-	}
-}
-
-func DeserializePolicy(buf []byte) (*Policy, error) {
-	p := new(Policy)
-	if err := json.Unmarshal(buf, p); err != nil {
-		return nil, err
-	}
-	return p, nil
-}
-
-func getPolicy(req *logical.Request, name string) (*Policy, error) {
-	// Check if the policy already exists
-	raw, err := req.Storage.Get("policy/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if raw == nil {
-		return nil, nil
-	}
-
-	// Decode the policy
-	p, err := DeserializePolicy(raw.Value)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
-}
-
-// generatePolicy is used to create a new named policy with
-// a randomly generated key
-func generatePolicy(storage logical.Storage, name string, derived bool) (*Policy, error) {
-	// Create the policy object
-	p := &Policy{
-		Name:       name,
-		CipherMode: "aes-gcm",
-		Derived:    derived,
-	}
-	if derived {
-		p.KDFMode = kdfMode
-	}
-
-	// Generate a 256bit key
-	p.Key = make([]byte, 32)
-	_, err := rand.Read(p.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encode the policy
-	buf, err := p.Serialize()
-	if err != nil {
-		return nil, err
-	}
-
-	// Write the policy into storage
-	err = storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name,
-		Value: buf,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Return the policy
-	return p, nil
-}
 
 func pathKeys() *framework.Path {
 	return &framework.Path{
@@ -169,6 +55,7 @@ func pathPolicyWrite(
 func pathPolicyRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+
 	p, err := getPolicy(req, name)
 	if err != nil {
 		return nil, err
@@ -183,6 +70,7 @@ func pathPolicyRead(
 			"name":        p.Name,
 			"cipher_mode": p.CipherMode,
 			"derived":     p.Derived,
+			"disabled":    p.Disabled,
 		},
 	}
 	if p.Derived {
@@ -195,14 +83,26 @@ func pathPolicyDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	err := req.Storage.Delete("policy/" + name)
+	p, err := getPolicy(req, name)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return logical.ErrorResponse(fmt.Sprintf("no such key %s", name)), logical.ErrInvalidRequest
+	}
+
+	if !p.Disabled {
+		return logical.ErrorResponse(fmt.Sprintf("key must be disabled before deletion")), logical.ErrInvalidRequest
+	}
+
+	err = req.Storage.Delete("policy/" + name)
 	if err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-const pathPolicyHelpSyn = `Managed named encrption keys`
+const pathPolicyHelpSyn = `Managed named encryption keys`
 
 const pathPolicyHelpDesc = `
 This path is used to manage the named keys that are available.

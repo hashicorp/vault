@@ -15,13 +15,18 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"keys/*",
-				"raw/*",
 			},
 		},
 
 		Paths: []*framework.Path{
+			// Rotate/Enable/Disable needs to come before Keys
+			// as the handler is greedy
+			pathEnable(),
+			pathDisable(),
+			pathConfig(),
+			pathRotate(),
+			pathRewrap(),
 			pathKeys(),
-			pathRaw(),
 			pathEncrypt(),
 			pathDecrypt(),
 		},

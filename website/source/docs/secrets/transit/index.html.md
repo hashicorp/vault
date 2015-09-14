@@ -62,21 +62,6 @@ cipher_mode aes-gcm
 derived     false
 ````
 
-We can read from the `raw/` endpoint to see the encryption key itself:
-
-```
-$ vault read transit/raw/foo
-Key        	Value
-name       	foo
-cipher_mode	aes-gcm
-key        	PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8=
-derived     false
-````
-
-Here we can see that the randomly generated encryption key being used, as
-well as the AES-GCM cipher mode. We don't need to know any of this to use
-the key however.
-
 Now, if we wanted to encrypt a piece of plain text, we use the encrypt
 endpoint using our named key:
 
@@ -299,44 +284,3 @@ only encrypt or decrypt using the named keys they need access to.
 
   </dd>
 </dl>
-
-### /transit/raw/
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns raw information about a named encryption key,
-    Including the underlying encryption key. This is a root protected endpoint.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/transit/raw/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "data": {
-          "name":        "foo",
-          "cipher_mode": "aes-gcm",
-          "key":         "PhKFTALCmhAhVQfMBAH4+UwJ6J2gybapUH9BsrtIgR8="
-          "derived":     "true",
-          "kdf_mode":    "hmac-sha256-counter",
-      }
-    }
-    ```
-
-  </dd>
-</dl>
-
-
