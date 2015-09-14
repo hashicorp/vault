@@ -351,14 +351,13 @@ func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan
 //
 // If the lock is currently held by this instance of EtcdLock, Lock will
 // return an EtcdLockHeldError error.
-func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, err error) {
 	// Get the local lock before interacting with etcd.
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	var err error
 
 	// Check if the lock is already held.
-	if err = c.assertNotHeld(); err != nil {
+	if err := c.assertNotHeld(); err != nil {
 		return nil, err
 	}
 
@@ -395,10 +394,10 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// Loop until the we current semaphore key matches ours.
 	for semaphoreKey != currentSemaphoreKey {
-		var response *etcd.Response
+		var err error
 
 		// Start a watch of the entire lock directory, providing the stop channel.
-		response, err = c.client.Watch(c.semaphoreDirKey, currentEtcdIndex+1, true, nil, boolStopCh)
+		response, err := c.client.Watch(c.semaphoreDirKey, currentEtcdIndex+1, true, nil, boolStopCh)
 		if err != nil {
 
 			// If the error is not an etcd error, we can assume it's a notification
@@ -415,8 +414,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		// this is an error and nothing else needs to be done.
 		if response.Node.Key == semaphoreKey &&
 			(response.Action == "delete" || response.Action == "expire") {
-			err = EtcdSemaphoreKeyRemovedError
-			return nil, err
+			return nil, EtcdSemaphoreKeyRemovedError
 		}
 
 		// Get the current semaphore key and etcd index.
