@@ -9,16 +9,14 @@ import (
 	"strings"
 )
 
-// MaxBlobSize limits the value size per Blob to 4MB
-var MaxBlobSize = 1024 * 1024 * 4
-
-// AzureBackend is a backend storing data in Azure Blob Storage
-type AzureBackend struct {
+// AzureHABackend is a backend storing data in Azure Blob Storage
+type AzureHABackend struct {
 	container string
 	client    storage.BlobStorageClient
+	zkBackend *ZookeeperBackend
 }
 
-func newAzureBackend(conf map[string]string) (Backend, error) {
+func newAzureHABackend(conf map[string]string) (Backend, error) {
 	container, ok := conf["container"]
 
 	if !ok {
@@ -45,21 +43,30 @@ func newAzureBackend(conf map[string]string) (Backend, error) {
 
 	client.GetBlobService().CreateContainerIfNotExists(container, storage.ContainerAccessTypePrivate)
 
-	backend := &AzureBackend{
+	genBackend, zkerr := newZookeeperBackend(conf)
+
+	if zkerr != nil {
+		return nil, zkerr
+	}
+
+	zkBackend, ok := genBackend.(*ZookeeperBackend)
+
+	backend := &AzureHABackend{
 		container: container,
 		client:    client.GetBlobService(),
+		zkBackend: zkBackend,
 	}
 	return backend, nil
 }
 
 //Delete removes the blob {key} from the container
-func (a *AzureBackend) Delete(key string) error {
+func (a *AzureHABackend) Delete(key string) error {
 	_, err := a.client.DeleteBlobIfExists(a.container, key)
 	return err
 }
 
 //Get returns the blob {key} from the container
-func (a *AzureBackend) Get(key string) (*Entry, error) {
+func (a *AzureHABackend) Get(key string) (*Entry, error) {
 	exists, _ := a.client.BlobExists(a.container, key)
 
 	if !exists {
@@ -87,7 +94,7 @@ func (a *AzureBackend) Get(key string) (*Entry, error) {
 }
 
 //Put updates the blob {key} in the container
-func (a *AzureBackend) Put(entry *Entry) error {
+func (a *AzureHABackend) Put(entry *Entry) error {
 	if len(entry.Value) >= MaxBlobSize {
 		return fmt.Errorf("Value is bigger than 4MB which is not supported at this time.")
 	}
@@ -112,7 +119,7 @@ func (a *AzureBackend) Put(entry *Entry) error {
 }
 
 //List returns all known blobs with {prefix}
-func (a *AzureBackend) List(prefix string) ([]string, error) {
+func (a *AzureHABackend) List(prefix string) ([]string, error) {
 	list, err := a.client.ListBlobs(a.container, storage.ListBlobsParameters{Prefix: prefix})
 
 	if err != nil {
@@ -133,4 +140,14 @@ func (a *AzureBackend) List(prefix string) ([]string, error) {
 	}
 	sort.Strings(keys)
 	return keys, nil
+}
+
+// LockWith is used for mutual exclusion based on the given key.
+func (a *AzureHABackend) LockWith(key, value string) (Lock, error) {
+	l := &ZookeeperHALock{
+		in:    a.zkBackend,
+		key:   key,
+		value: value,
+	}
+	return l, nil
 }
