@@ -434,6 +434,12 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if te != nil {
 		defer func() {
 			// Attempt to use the token (decrement num_uses)
+			// If a secret was generated and num_uses is currently 1, it will be
+			// immediately revoked; in that case, don't return the generated
+			// credentials as they are now invalid.
+			if retResp != nil && te != nil && te.NumUses == 1 && retResp.Secret != nil {
+				retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so generated credentials were immediately revoked.")
+			}
 			if err := c.tokenStore.UseToken(te); err != nil {
 				c.logger.Printf("[ERR] core: failed to use token: %v", err)
 				retResp = nil
