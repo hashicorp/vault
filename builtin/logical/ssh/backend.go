@@ -22,7 +22,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 }
 
 func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
-	salt, err := salt.NewSalt(conf.View, nil)
+	salt, err := salt.NewSalt(conf.StorageView, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ a credential accordingly and issue it.
 
 Dynamic Key: is a RSA private key which can be used to establish SSH session using
 publickey authentication. When the client receives a key and uses it to establish
-connections with hosts, Vault server will have no way to know when and how many 
+connections with hosts, Vault server will have no way to know when and how many
 times the key will be used. So, these login attempts will not be audited by Vault.
 To create a dynamic credential, Vault will use the shared private key registered
 with the role. Named key should be created using 'keys/' endpoint and used with

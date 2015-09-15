@@ -73,7 +73,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingView("prod/aws/foo"); v != view {
+	if v := r.MatchingStorageView("prod/aws/foo"); v != view {
 		t.Fatalf("bad: %s", v)
 	}
 
@@ -81,7 +81,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingView("stage/aws/foo"); v != nil {
+	if v := r.MatchingStorageView("stage/aws/foo"); v != nil {
 		t.Fatalf("bad: %s", v)
 	}
 

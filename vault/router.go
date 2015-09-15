@@ -14,8 +14,9 @@ import (
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
-	l    sync.RWMutex
-	root *radix.Tree
+	l              sync.RWMutex
+	root           *radix.Tree
+	tokenStoreSalt *salt.Salt
 }
 
 // NewRouter returns a new router
@@ -28,12 +29,12 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted    bool
-	backend    logical.Backend
-	mountEntry *MountEntry
-	view       *BarrierView
-	rootPaths  *radix.Tree
-	loginPaths *radix.Tree
+	tainted     bool
+	backend     logical.Backend
+	mountEntry  *MountEntry
+	storageView *BarrierView
+	rootPaths   *radix.Tree
+	loginPaths  *radix.Tree
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversable
@@ -43,7 +44,7 @@ func (re *routeEntry) SaltID(id string) string {
 
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,
 // and the barrier view for that path.
-func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, view *BarrierView) error {
+func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, storageView *BarrierView) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -60,14 +61,15 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:    false,
-		backend:    backend,
-		mountEntry: mountEntry,
-		view:       view,
-		rootPaths:  pathsToRadix(paths.Root),
-		loginPaths: pathsToRadix(paths.Unauthenticated),
+		tainted:     false,
+		backend:     backend,
+		mountEntry:  mountEntry,
+		storageView: storageView,
+		rootPaths:   pathsToRadix(paths.Root),
+		loginPaths:  pathsToRadix(paths.Unauthenticated),
 	}
 	r.root.Insert(prefix, re)
+
 	return nil
 }
 
@@ -137,14 +139,14 @@ func (r *Router) MatchingMount(path string) string {
 }
 
 // MatchingView returns the view used for a path
-func (r *Router) MatchingView(path string) *BarrierView {
+func (r *Router) MatchingStorageView(path string) *BarrierView {
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry).view
+	return raw.(*routeEntry).storageView
 }
 
 // MatchingMountEntry returns the MountEntry used for a path
@@ -156,6 +158,17 @@ func (r *Router) MatchingMountEntry(path string) *MountEntry {
 		return nil
 	}
 	return raw.(*routeEntry).mountEntry
+}
+
+// MatchingMountEntry returns the MountEntry used for a path
+func (r *Router) MatchingBackend(path string) logical.Backend {
+	r.l.RLock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return nil
+	}
+	return raw.(*routeEntry).backend
 }
 
 // MatchingSystemView returns the SystemView used for a path
@@ -210,11 +223,17 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 
 	// Attach the storage view for the request
-	req.Storage = re.view
+	req.Storage = re.storageView
 
 	// Hash the request token unless this is the token backend
 	clientToken := req.ClientToken
-	if !strings.HasPrefix(original, "auth/token/") {
+	switch {
+	case strings.HasPrefix(original, "auth/token/"):
+	case strings.HasPrefix(original, "cubbyhole/"):
+		// In order for the token store to revoke later, we need to have the same
+		// salted ID, so we double-salt what's going to the cubbyhole backend
+		req.ClientToken = re.SaltID(r.tokenStoreSalt.SaltID(req.ClientToken))
+	default:
 		req.ClientToken = re.SaltID(req.ClientToken)
 	}
 

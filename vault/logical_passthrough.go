@@ -62,7 +62,7 @@ func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, er
 }
 
 // PassthroughBackend is used storing secrets directly into the physical
-// backend. The secrest are encrypted in the durable storage and custom TTL
+// backend. The secrets are encrypted in the durable storage and custom TTL
 // information can be specified, but otherwise this backend doesn't do anything
 // fancy.
 type PassthroughBackend struct {

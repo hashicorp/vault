@@ -59,6 +59,14 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(time.Duration),
 			},
 		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(time.Duration),
+				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(time.Duration),
+			},
+		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)

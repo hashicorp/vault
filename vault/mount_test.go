@@ -124,7 +124,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingView("test/")
+	view := c.router.MatchingStorageView("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -241,7 +241,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingView("test/")
+	view := c.router.MatchingStorageView("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -321,7 +321,7 @@ func TestDefaultMountTable(t *testing.T) {
 }
 
 func verifyDefaultTable(t *testing.T, table *MountTable) {
-	if len(table.Entries) != 2 {
+	if len(table.Entries) != 3 {
 		t.Fatalf("bad: %v", table.Entries)
 	}
 	for idx, entry := range table.Entries {
@@ -334,6 +334,13 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 				t.Fatalf("bad: %v", entry)
 			}
 		case 1:
+			if entry.Path != "cubbyhole/" {
+				t.Fatalf("bad: %v", entry)
+			}
+			if entry.Type != "cubbyhole" {
+				t.Fatalf("bad: %v", entry)
+			}
+		case 2:
 			if entry.Path != "sys/" {
 				t.Fatalf("bad: %v", entry)
 			}

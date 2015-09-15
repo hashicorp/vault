@@ -1,0 +1,183 @@
+package vault
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
+)
+
+// CubbyholeBackendFactory constructs a new cubbyhole backend
+func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+	var b CubbyholeBackend
+	b.Backend = &framework.Backend{
+		Help: strings.TrimSpace(cubbyholeHelp),
+
+		Paths: []*framework.Path{
+			&framework.Path{
+				Pattern: ".*",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleRead,
+					logical.WriteOperation:  b.handleWrite,
+					logical.DeleteOperation: b.handleDelete,
+					logical.ListOperation:   b.handleList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(cubbyholeHelpSynopsis),
+				HelpDescription: strings.TrimSpace(cubbyholeHelpDescription),
+			},
+		},
+	}
+
+	if conf == nil {
+		return nil, fmt.Errorf("Configuation passed into backend is nil")
+	}
+	b.Backend.Setup(conf)
+
+	return &b, nil
+}
+
+// CubbyholeBackend is used for storing secrets directly into the physical
+// backend. The secrets are encrypted in the durable storage.
+// This differs from generic in that every token has its own private
+// storage view. The view is removed when the token expires.
+type CubbyholeBackend struct {
+	*framework.Backend
+
+	saltUUID    string
+	storageView logical.Storage
+}
+
+func (b *CubbyholeBackend) revoke(saltedToken string) error {
+	if saltedToken == "" {
+		return fmt.Errorf("[ERR] cubbyhole: client token empty during revocation")
+	}
+
+	if err := ClearView(b.storageView.(*BarrierView).SubView(saltedToken + "/")); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *CubbyholeBackend) handleRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.ClientToken == "" {
+		return nil, fmt.Errorf("[ERR] cubbyhole read: Client token empty")
+	}
+
+	// Read the path
+	out, err := req.Storage.Get(req.ClientToken + "/" + req.Path)
+	if err != nil {
+		return nil, fmt.Errorf("read failed: %v", err)
+	}
+
+	// Fast-path the no data case
+	if out == nil {
+		return nil, nil
+	}
+
+	// Decode the data
+	var rawData map[string]interface{}
+	if err := json.Unmarshal(out.Value, &rawData); err != nil {
+		return nil, fmt.Errorf("json decoding failed: %v", err)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: rawData,
+	}
+
+	return resp, nil
+}
+
+func (b *CubbyholeBackend) handleWrite(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.ClientToken == "" {
+		return nil, fmt.Errorf("[ERR] cubbyhole write: Client token empty")
+	}
+	// Check that some fields are given
+	if len(req.Data) == 0 {
+		return nil, fmt.Errorf("missing data fields")
+	}
+
+	// JSON encode the data
+	buf, err := json.Marshal(req.Data)
+	if err != nil {
+		return nil, fmt.Errorf("json encoding failed: %v", err)
+	}
+
+	// Write out a new key
+	entry := &logical.StorageEntry{
+		Key:   req.ClientToken + "/" + req.Path,
+		Value: buf,
+	}
+	if err := req.Storage.Put(entry); err != nil {
+		return nil, fmt.Errorf("failed to write: %v", err)
+	}
+
+	return nil, nil
+}
+
+func (b *CubbyholeBackend) handleDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.ClientToken == "" {
+		return nil, fmt.Errorf("[ERR] cubbyhole delete: Client token empty")
+	}
+	// Delete the key at the request path
+	if err := req.Storage.Delete(req.ClientToken + "/" + req.Path); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *CubbyholeBackend) handleList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.ClientToken == "" {
+		return nil, fmt.Errorf("[ERR] cubbyhole list: Client token empty")
+	}
+	// List the keys at the prefix given by the request
+	keys, err := req.Storage.List(req.ClientToken + "/" + req.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	strippedKeys := []string{}
+	for _, key := range keys {
+		strippedKeys = append(strippedKeys, strings.TrimPrefix(key, req.ClientToken+"/"))
+	}
+
+	// Generate the response
+	return logical.ListResponse(strippedKeys), nil
+}
+
+const cubbyholeHelp = `
+The cubbyhole backend reads and writes arbitrary secrets to the backend.
+The secrets are encrypted/decrypted by Vault: they are never stored
+unencrypted in the backend and the backend never has an opportunity to
+see the unencrypted value.
+
+This backend differs from the 'generic' backend in that it is namespaced
+per-token. Tokens can only read and write their own values, with no
+sharing possible (per-token cubbyholes). This can be useful for implementing
+certain authentication workflows, as well as "scratch" areas for individual
+clients. When the token is revoked, the entire set of stored values for that
+token is also removed.
+`
+
+const cubbyholeHelpSynopsis = `
+Pass-through secret storage to a token-specific cubbyhole in the storage
+backend, allowing you to read/write arbitrary data into secret storage.
+`
+
+const cubbyholeHelpDescription = `
+The cubbyhole backend reads and writes arbitrary data into secret storage,
+encrypting it along the way.
+
+The view into the cubbyhole storage space is different for each token; it is
+a per-token cubbyhole. When the token is revoked all values are removed.
+`

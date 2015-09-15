@@ -37,6 +37,14 @@ var (
 		"audit/",
 		"auth/",
 		"sys/",
+		"cubbyhole/",
+	}
+
+	// singletonMounts can only exist in one location and are
+	// loaded by default. These are types, not paths.
+	singletonMounts = []string{
+		"cubbyhole",
+		"system",
 	}
 )
 
@@ -158,6 +166,13 @@ func (c *Core) mount(me *MountEntry) error {
 		}
 	}
 
+	// Do not allow more than one instance of a singleton mount
+	for _, p := range singletonMounts {
+		if me.Type == p {
+			return logical.CodedError(403, fmt.Sprintf("Cannot mount more than one instance of '%s'", me.Type))
+		}
+	}
+
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(me.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
@@ -212,7 +227,7 @@ func (c *Core) unmount(path string) error {
 	}
 
 	// Store the view for this backend
-	view := c.router.MatchingView(path)
+	view := c.router.MatchingStorageView(path)
 
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(path); err != nil {
@@ -441,8 +456,13 @@ func (c *Core) setupMounts() error {
 			return errLoadMountsFailed
 		}
 
-		if entry.Type == "system" {
+		switch entry.Type {
+		case "system":
 			c.systemBarrierView = view
+		case "cubbyhole":
+			ch := backend.(*CubbyholeBackend)
+			ch.saltUUID = entry.UUID
+			ch.storageView = view
 		}
 
 		// Mount the backend
@@ -486,10 +506,10 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 	}
 
 	config := &logical.BackendConfig{
-		View:   view,
-		Logger: c.logger,
-		Config: conf,
-		System: sysView,
+		StorageView: view,
+		Logger:      c.logger,
+		Config:      conf,
+		System:      sysView,
 	}
 
 	b, err := f(config)
@@ -518,6 +538,12 @@ func defaultMountTable() *MountTable {
 		Description: "generic secret storage",
 		UUID:        uuid.GenerateUUID(),
 	}
+	cubbyholeMount := &MountEntry{
+		Path:        "cubbyhole/",
+		Type:        "cubbyhole",
+		Description: "per-token private secret storage",
+		UUID:        uuid.GenerateUUID(),
+	}
 	sysMount := &MountEntry{
 		Path:        "sys/",
 		Type:        "system",
@@ -525,6 +551,7 @@ func defaultMountTable() *MountTable {
 		UUID:        uuid.GenerateUUID(),
 	}
 	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
 }

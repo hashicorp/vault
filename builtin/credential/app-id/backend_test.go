@@ -63,7 +63,7 @@ func TestBackend_upgradeToSalted(t *testing.T) {
 
 	// Initialize the backend, this should do the automatic upgrade
 	conf := &logical.BackendConfig{
-		View: inm,
+		StorageView: inm,
 	}
 	backend, err := Factory(conf)
 	if err != nil {

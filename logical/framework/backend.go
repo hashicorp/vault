@@ -53,7 +53,7 @@ type Backend struct {
 
 	// Clean is called on unload to clean up e.g any existing connections
 	// to the backend, if required.
-	Clean          CleanupFunc
+	Clean CleanupFunc
 
 	// AuthRenew is the callback to call when a RenewRequest for an
 	// authentication comes in. By default, renewal won't be allowed.
@@ -159,6 +159,7 @@ func (b *Backend) Cleanup() {
 		b.Clean()
 	}
 }
+
 // Logger can be used to get the logger. If no logger has been set,
 // the logs will be discarded.
 func (b *Backend) Logger() *log.Logger {

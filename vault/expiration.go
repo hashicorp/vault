@@ -477,6 +477,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 		if err := m.tokenStore.RevokeTree(le.Auth.ClientToken); err != nil {
 			return fmt.Errorf("failed to revoke token: %v", err)
 		}
+
 		return nil
 	}
 

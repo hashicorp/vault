@@ -18,7 +18,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 
 func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 	// Initialize the salt
-	salt, err := salt.NewSalt(conf.View, nil)
+	salt, err := salt.NewSalt(conf.StorageView, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 	// but for now we want a smooth upgrade experience by automatically
 	// upgrading to use salting.
 	if salt.DidGenerate() {
-		if err := b.upgradeToSalted(conf.View); err != nil {
+		if err := b.upgradeToSalted(conf.StorageView); err != nil {
 			return nil, err
 		}
 	}

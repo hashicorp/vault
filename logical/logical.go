@@ -33,7 +33,7 @@ type Backend interface {
 // BackendConfig is provided to the factory to initialize the backend
 type BackendConfig struct {
 	// View should not be stored, and should only be used for initialization
-	View Storage
+	StorageView Storage
 
 	// The backend should use this logger. The log should not contain any secrets.
 	Logger *log.Logger

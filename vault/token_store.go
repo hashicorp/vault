@@ -44,6 +44,8 @@ type TokenStore struct {
 	salt *salt.Salt
 
 	expiration *ExpirationManager
+
+	cubbyholeBackend *CubbyholeBackend
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -366,6 +368,7 @@ func (ts *TokenStore) Revoke(id string) error {
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
 	}
+
 	return ts.revokeSalted(ts.SaltID(id))
 }
 
@@ -398,6 +401,13 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 			return err
 		}
 	}
+
+	// Destroy the cubby space
+	err = ts.destroyCubbyhole(saltedId)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -693,6 +703,14 @@ func (ts *TokenStore) handleRenew(
 		Auth: auth,
 	}
 	return resp, nil
+}
+
+func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
+	if ts.cubbyholeBackend == nil {
+		// Should only ever happen in testing
+		return nil
+	}
+	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 }
 
 const (
