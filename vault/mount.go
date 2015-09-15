@@ -456,8 +456,13 @@ func (c *Core) setupMounts() error {
 			return errLoadMountsFailed
 		}
 
-		if entry.Type == "system" {
+		switch entry.Type {
+		case "system":
 			c.systemBarrierView = view
+		case "cubbyhole":
+			ch := backend.(*CubbyholeBackend)
+			ch.saltUUID = entry.UUID
+			ch.storageView = view
 		}
 
 		// Mount the backend

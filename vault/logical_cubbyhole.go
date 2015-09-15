@@ -46,14 +46,17 @@ func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, erro
 // storage view. The view is removed when the token expires.
 type CubbyholeBackend struct {
 	*framework.Backend
+
+	saltUUID    string
+	storageView logical.Storage
 }
 
-func (b *CubbyholeBackend) revoke(saltedToken string, storageView logical.Storage) error {
+func (b *CubbyholeBackend) revoke(saltedToken string) error {
 	if saltedToken == "" {
 		return fmt.Errorf("[ERR] cubbyhole: client token empty during revocation")
 	}
 
-	if err := ClearView(storageView.(*BarrierView).SubView(saltedToken + "/")); err != nil {
+	if err := ClearView(b.storageView.(*BarrierView).SubView(saltedToken + "/")); err != nil {
 		return err
 	}
 

@@ -34,14 +34,6 @@ var (
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 )
 
-// cubbyholeConfig is used to store information necessary for telling the
-// cubbyhole backend to remove the tree for the token
-type cubbyholeConfig struct {
-	revokeFunc  func(string, logical.Storage) error
-	storageView *BarrierView
-	saltUUID    string
-}
-
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
@@ -53,7 +45,7 @@ type TokenStore struct {
 
 	expiration *ExpirationManager
 
-	cubbyConfig cubbyholeConfig
+	cubbyholeBackend *CubbyholeBackend
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -714,11 +706,11 @@ func (ts *TokenStore) handleRenew(
 }
 
 func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
-	if ts.cubbyConfig.revokeFunc == nil {
+	if ts.cubbyholeBackend == nil {
 		// Should only ever happen in testing
 		return nil
 	}
-	return ts.cubbyConfig.revokeFunc(salt.SaltID(ts.cubbyConfig.saltUUID, saltedID, salt.SHA1Hash), ts.cubbyConfig.storageView)
+	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 }
 
 const (
