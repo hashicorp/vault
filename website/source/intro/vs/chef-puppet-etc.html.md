@@ -25,7 +25,7 @@ isn't clear what data has been accessed and by who.
 Vault is not tied to any specific configuration management system. You can
 read secrets from configuration management, but you can also use the API
 directly to read secrets from applications. This means that configuration
-management requires less secrets, and in many cases doesn't ever have to
+management requires fewer secrets, and in many cases doesn't ever have to
 persist them to disk.
 
 Vault encrypts the data onto physical storage and requires multiple
