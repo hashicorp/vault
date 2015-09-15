@@ -29,12 +29,12 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted    bool
-	backend    logical.Backend
-	mountEntry *MountEntry
-	view       *BarrierView
-	rootPaths  *radix.Tree
-	loginPaths *radix.Tree
+	tainted     bool
+	backend     logical.Backend
+	mountEntry  *MountEntry
+	storageView *BarrierView
+	rootPaths   *radix.Tree
+	loginPaths  *radix.Tree
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversable
@@ -44,7 +44,7 @@ func (re *routeEntry) SaltID(id string) string {
 
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,
 // and the barrier view for that path.
-func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, view *BarrierView) error {
+func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, storageView *BarrierView) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -61,32 +61,15 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:    false,
-		backend:    backend,
-		mountEntry: mountEntry,
-		view:       view,
-		rootPaths:  pathsToRadix(paths.Root),
-		loginPaths: pathsToRadix(paths.Unauthenticated),
+		tainted:     false,
+		backend:     backend,
+		mountEntry:  mountEntry,
+		storageView: storageView,
+		rootPaths:   pathsToRadix(paths.Root),
+		loginPaths:  pathsToRadix(paths.Unauthenticated),
 	}
 	r.root.Insert(prefix, re)
 
-	switch mountEntry.Type {
-	case "token":
-		// this is loaded *after* the normal mounts, including cubbyhole
-		r.tokenStoreSalt = backend.(*TokenStore).salt
-		// We still hold the lock for the tree so we can't call MatchingBackend
-		_, raw, ok := r.root.LongestPrefix("cubbyhole/")
-		if !ok {
-			return fmt.Errorf("unable to find cubbyhole")
-		}
-		cubbyRouteEntry := raw.(*routeEntry)
-		cubbyBackend := cubbyRouteEntry.backend.(CubbyholeBackend)
-		re.backend.(*TokenStore).cubbyConfig = cubbyholeConfig{
-			revokeFunc:  cubbyBackend.revoke,
-			storageView: cubbyRouteEntry.view,
-			saltUUID:    cubbyRouteEntry.mountEntry.UUID,
-		}
-	}
 	return nil
 }
 
@@ -156,14 +139,14 @@ func (r *Router) MatchingMount(path string) string {
 }
 
 // MatchingView returns the view used for a path
-func (r *Router) MatchingView(path string) *BarrierView {
+func (r *Router) MatchingStorageView(path string) *BarrierView {
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry).view
+	return raw.(*routeEntry).storageView
 }
 
 // MatchingMountEntry returns the MountEntry used for a path
@@ -240,7 +223,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 
 	// Attach the storage view for the request
-	req.Storage = re.view
+	req.Storage = re.storageView
 
 	// Hash the request token unless this is the token backend
 	clientToken := req.ClientToken

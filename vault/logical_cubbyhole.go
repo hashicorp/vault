@@ -37,7 +37,7 @@ func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, erro
 	}
 	b.Backend.Setup(conf)
 
-	return b, nil
+	return &b, nil
 }
 
 // CubbyholeBackend is used for storing secrets directly into the physical

@@ -106,7 +106,7 @@ func (c *Core) disableCredential(path string) error {
 
 	// Store the view for this backend
 	fullPath := credentialRoutePrefix + path
-	view := c.router.MatchingView(fullPath)
+	view := c.router.MatchingStorageView(fullPath)
 	if view == nil {
 		return fmt.Errorf("no matching backend")
 	}
@@ -266,6 +266,15 @@ func (c *Core) setupCredentials() error {
 		// Check if this is the token store
 		if entry.Type == "token" {
 			c.tokenStore = backend.(*TokenStore)
+
+			// this is loaded *after* the normal mounts, including cubbyhole
+			c.router.tokenStoreSalt = backend.(*TokenStore).salt
+
+			c.tokenStore.cubbyConfig = cubbyholeConfig{
+				revokeFunc:  c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend).revoke,
+				storageView: c.router.MatchingStorageView("cubbyhole/"),
+				saltUUID:    c.router.MatchingMountEntry("cubbyhole/").UUID,
+			}
 		}
 	}
 	return nil

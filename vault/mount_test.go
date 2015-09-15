@@ -124,7 +124,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingView("test/")
+	view := c.router.MatchingStorageView("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -241,7 +241,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingView("test/")
+	view := c.router.MatchingStorageView("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{

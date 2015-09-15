@@ -91,16 +91,16 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-    // 2nd should be a 409 error
-    err2 := c.enableCredential(me)
-    switch err2.(type) {
-        case logical.HTTPCodedError:
-            if err2.(logical.HTTPCodedError).Code() != 409 {
-                t.Fatalf("invalid code given")
-            }
-        default:
-            t.Fatalf("expected a different error type")
-    }
+	// 2nd should be a 409 error
+	err2 := c.enableCredential(me)
+	switch err2.(type) {
+	case logical.HTTPCodedError:
+		if err2.(logical.HTTPCodedError).Code() != 409 {
+			t.Fatalf("invalid code given")
+		}
+	default:
+		t.Fatalf("expected a different error type")
+	}
 }
 
 func TestCore_EnableCredential_Token(t *testing.T) {
@@ -194,7 +194,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingView("auth/foo/")
+	view := c.router.MatchingStorageView("auth/foo/")
 
 	// Inject data
 	se := &logical.StorageEntry{

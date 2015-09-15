@@ -227,7 +227,7 @@ func (c *Core) unmount(path string) error {
 	}
 
 	// Store the view for this backend
-	view := c.router.MatchingView(path)
+	view := c.router.MatchingStorageView(path)
 
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(path); err != nil {
