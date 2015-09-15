@@ -52,23 +52,9 @@ func (b *CubbyholeBackend) revoke(saltedToken string, storageView logical.Storag
 	if saltedToken == "" {
 		return fmt.Errorf("[ERR] cubbyhole: client token empty during revocation")
 	}
-	// Delete the entire tree in a stupid fashion for the moment
-	// to avoid changing the Storage interface
-	keys, err := storageView.List(saltedToken + "/")
-	if err != nil {
+
+	if err := ClearView(storageView.(*BarrierView).SubView(saltedToken + "/")); err != nil {
 		return err
-	}
-
-	errors := []string{}
-	for _, key := range keys {
-		err = storageView.Delete(saltedToken + "/" + key)
-		if err != nil {
-			errors = append(errors, err.Error())
-		}
-	}
-
-	if len(errors) != 0 {
-		return fmt.Errorf("[ERR] cubbyhole: errors were encountered when deleting the tree for token %s: %s", saltedToken, strings.Join(errors, "; "))
 	}
 
 	return nil

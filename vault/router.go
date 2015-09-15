@@ -14,11 +14,9 @@ import (
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
-	l                    sync.RWMutex
-	root                 *radix.Tree
-	cubbyholeEntry       *routeEntry
-	cubbyholeDestroyFunc func(string, logical.Storage) error
-	tokenStoreSalt       *salt.Salt
+	l              sync.RWMutex
+	root           *radix.Tree
+	tokenStoreSalt *salt.Salt
 }
 
 // NewRouter returns a new router
@@ -72,16 +70,24 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 	r.root.Insert(prefix, re)
 
-	if mountEntry.Type == "cubbyhole" {
-		r.cubbyholeEntry = re
-		be := backend.(CubbyholeBackend)
-		r.cubbyholeDestroyFunc = be.revoke
+	switch mountEntry.Type {
+	case "token":
+		// this is loaded *after* the normal mounts, including cubbyhole
+		r.tokenStoreSalt = backend.(*TokenStore).salt
+		// We still hold the lock for the tree so we can't call MatchingBackend
+		_, raw, ok := r.root.LongestPrefix("cubbyhole/")
+		if !ok {
+			return fmt.Errorf("unable to find cubbyhole")
+		}
+		cubbyRouteEntry := raw.(*routeEntry)
+		cubbyBackend := cubbyRouteEntry.backend.(CubbyholeBackend)
+		re.backend.(*TokenStore).cubbyConfig = cubbyholeConfig{
+			revokeFunc:  cubbyBackend.revoke,
+			storageView: cubbyRouteEntry.view,
+			saltUUID:    cubbyRouteEntry.mountEntry.UUID,
+		}
 	}
 	return nil
-}
-
-func (r *Router) destroyCubbyhole(saltedID string) error {
-	return r.cubbyholeDestroyFunc(r.cubbyholeEntry.SaltID(saltedID), r.cubbyholeEntry.view)
 }
 
 // Unmount is used to remove a logical backend from a given prefix
@@ -169,6 +175,17 @@ func (r *Router) MatchingMountEntry(path string) *MountEntry {
 		return nil
 	}
 	return raw.(*routeEntry).mountEntry
+}
+
+// MatchingMountEntry returns the MountEntry used for a path
+func (r *Router) MatchingBackend(path string) logical.Backend {
+	r.l.RLock()
+	_, raw, ok := r.root.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return nil
+	}
+	return raw.(*routeEntry).backend
 }
 
 // MatchingSystemView returns the SystemView used for a path

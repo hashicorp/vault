@@ -34,6 +34,14 @@ var (
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 )
 
+// cubbyholeConfig is used to store information necessary for telling the
+// cubbyhole backend to remove the tree for the token
+type cubbyholeConfig struct {
+	revokeFunc  func(string, logical.Storage) error
+	storageView *BarrierView
+	saltUUID    string
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
@@ -45,7 +53,7 @@ type TokenStore struct {
 
 	expiration *ExpirationManager
 
-	router *Router
+	cubbyConfig cubbyholeConfig
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -56,8 +64,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Initialize the store
 	t := &TokenStore{
-		view:   view,
-		router: c.router,
+		view: view,
 	}
 
 	// Setup the salt
@@ -66,7 +73,6 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		return nil, err
 	}
 	t.salt = salt
-	t.router.tokenStoreSalt = salt
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -405,7 +411,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 	}
 
 	// Destroy the cubby space
-	err = ts.router.destroyCubbyhole(saltedId)
+	err = ts.destroyCubbyhole(saltedId)
 	if err != nil {
 		return err
 	}
@@ -705,6 +711,14 @@ func (ts *TokenStore) handleRenew(
 		Auth: auth,
 	}
 	return resp, nil
+}
+
+func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
+	if ts.cubbyConfig.revokeFunc == nil {
+		// Should only ever happen in testing
+		return nil
+	}
+	return ts.cubbyConfig.revokeFunc(salt.SaltID(ts.cubbyConfig.saltUUID, saltedID, salt.SHA1Hash), ts.cubbyConfig.storageView)
 }
 
 const (
