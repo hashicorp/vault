@@ -351,7 +351,7 @@ func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan
 //
 // If the lock is currently held by this instance of EtcdLock, Lock will
 // return an EtcdLockHeldError error.
-func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, err error) {
+func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr error) {
 	// Get the local lock before interacting with etcd.
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -385,7 +385,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, err err
 	// Create a channel to signal when we lose the semaphore key.
 	done := make(chan struct{})
 	defer func() {
-		if err != nil {
+		if retErr != nil {
 			close(done)
 		}
 	}()
