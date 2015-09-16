@@ -431,7 +431,8 @@ General Options:
                       production!
 
   -log-level=info     Log verbosity. Defaults to "info", will be outputted
-                      to stderr.
+                      to stderr. Supported values: "trace", "debug", "info",
+                      "warn", "err"
 
 `
 	return strings.TrimSpace(helpText)
