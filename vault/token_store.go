@@ -76,6 +76,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"revoke-prefix/*",
+				"revoke-orphan/*",
 			},
 		},
 
@@ -604,6 +605,22 @@ func (ts *TokenStore) handleRevokeOrphan(
 	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+
+	parent, err := ts.Lookup(req.ClientToken)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+	}
+	if parent == nil {
+		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+	}
+
+	// Check if the parent policy is root
+	isRoot := strListContains(parent.Policies, "root")
+
+	if !isRoot {
+		return logical.ErrorResponse("root required to revoke and orphan"),
+			logical.ErrInvalidRequest
 	}
 
 	// Revoke and orphan

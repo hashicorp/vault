@@ -690,6 +690,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	testMakeToken(t, ts, "child", "sub-child", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/child")
+	req.ClientToken = root
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -708,6 +709,35 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 
 	// Sub-child should exist!
 	out, err = ts.Lookup("sub-child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("bad: %v", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+	testMakeToken(t, ts, root, "child", []string{"foo"})
+
+	out, err := ts.Lookup("child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("bad: %v", out)
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/child")
+	req.ClientToken = "child"
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
+	}
+
+	// Should still exist
+	out, err = ts.Lookup("child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
