@@ -225,6 +225,33 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
+### /auth/token/revoke-self/
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Revokes the token used to call it and all child tokens.
+    When the token is revoked, all secrets generated with
+    it are also revoked.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/revoke-self`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
 ### /auth/token/revoke-orphan/
 #### POST
 

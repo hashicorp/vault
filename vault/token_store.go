@@ -129,6 +129,17 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
+				Pattern: "revoke-self",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleRevokeSelf,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRevokeSelfHelp),
+				HelpDescription: strings.TrimSpace(tokenRevokeSelfHelp),
+			},
+
+			&framework.Path{
 				Pattern: "revoke/(?P<token>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -579,6 +590,18 @@ func (ts *TokenStore) handleCreate(
 	return resp, nil
 }
 
+// handleRevokeSelf handles the auth/token/revoke-self path for revocation of tokens
+// in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
+// the token and all children anyways, but that is only available when there is a lease.
+func (ts *TokenStore) handleRevokeSelf(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Revoke the token and its children
+	if err := ts.RevokeTree(req.ClientToken); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
@@ -737,7 +760,8 @@ which are enforced on every request. This backend also allows for generating sub
 as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp       = `The token create path is used to create new tokens.`
 	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
-	tokenRevokeHelp       = `This endpoint will delete the token and all of its child tokens.`
+	tokenRevokeHelp       = `This endpoint will delete the given token and all of its child tokens.`
+	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
 	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
 	tokenRenewHelp        = `This endpoint will renew the token and prevent expiration.`

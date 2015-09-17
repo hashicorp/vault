@@ -346,6 +346,49 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 	}
 }
 
+func TestTokenStore_RevokeSelf(t *testing.T) {
+	_, ts, _ := mockTokenStore(t)
+
+	ent1 := &TokenEntry{}
+	if err := ts.Create(ent1); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ent2 := &TokenEntry{Parent: ent1.ID}
+	if err := ts.Create(ent2); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ent3 := &TokenEntry{Parent: ent2.ID}
+	if err := ts.Create(ent3); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ent4 := &TokenEntry{Parent: ent2.ID}
+	if err := ts.Create(ent4); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "revoke-self")
+	req.ClientToken = ent1.ID
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
+	for _, id := range lookup {
+		out, err := ts.Lookup(id)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("bad: %#v", out)
+		}
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
