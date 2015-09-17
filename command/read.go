@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 )
 
@@ -60,8 +61,12 @@ func (c *ReadCommand) Run(args []string) int {
 			// not desired. Since Vault CLI currently only uses BasicUi,
 			// which writes to standard output, os.Stdout is used here to
 			// directly print the message. If mitchellh/cli exposes method
-			// to print without CR, this has to be replaced by that.
-			fmt.Fprintf(os.Stdout, val.(string))
+			// to print without CR, this check needs to be removed.
+			if reflect.TypeOf(c.Ui).String() == "*cli.BasicUi" {
+				fmt.Fprintf(os.Stdout, val.(string))
+			} else {
+				c.Ui.Output(val.(string))
+			}
 			return 0
 		} else {
 			c.Ui.Error(fmt.Sprintf(
