@@ -3,7 +3,6 @@ package userpass
 import (
 	"crypto/subtle"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -68,6 +67,11 @@ func (b *backend) pathLogin(
 				"username": username,
 			},
 			DisplayName: username,
+			LeaseOptions: logical.LeaseOptions{
+				TTL:         user.TTL,
+				GracePeriod: user.TTL / 10,
+				Renewable:   user.TTL > 0,
+			},
 		},
 	}, nil
 }
@@ -84,7 +88,7 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	return framework.LeaseExtend(1*time.Hour, 0, false)(req, d)
+	return framework.LeaseExtend(user.MaxTTL, 0, false)(req, d)
 }
 
 const pathLoginSyn = `

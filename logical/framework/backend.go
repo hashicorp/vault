@@ -174,6 +174,39 @@ func (b *Backend) System() logical.SystemView {
 	return b.system
 }
 
+// This method takes in the TTL and MaxTTL values provided by the user, compares
+// those with the SystemView values. If they are empty default values are set.
+// If they are set, their boundaries are validated.
+func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
+	sysMaxTTL := b.System().MaxLeaseTTL()
+	if len(ttlStr) == 0 {
+		ttl = b.System().DefaultLeaseTTL()
+	} else {
+		ttl, err = time.ParseDuration(ttlStr)
+		if err != nil {
+			return 0, 0, fmt.Errorf("Invalid ttl: %s", err)
+		}
+		if ttl > sysMaxTTL {
+			return 0, 0, fmt.Errorf("\"ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
+		}
+	}
+	if len(maxTTLStr) == 0 {
+		maxTTL = sysMaxTTL
+	} else {
+		maxTTL, err = time.ParseDuration(maxTTLStr)
+		if err != nil {
+			return 0, 0, fmt.Errorf("Invalid max_ttl: %s", err)
+		}
+		if maxTTL > sysMaxTTL {
+			return 0, 0, fmt.Errorf("\"max_ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
+		}
+	}
+	if ttl > maxTTL {
+		ttl = maxTTL
+	}
+	return
+}
+
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
