@@ -19,10 +19,8 @@ func Backend() *framework.Backend {
 		},
 
 		Paths: []*framework.Path{
-			// Rotate/Enable/Disable needs to come before Keys
+			// Rotate/Config needs to come before Keys
 			// as the handler is greedy
-			pathEnable(),
-			pathDisable(),
 			pathConfig(),
 			pathRotate(),
 			pathRewrap(),

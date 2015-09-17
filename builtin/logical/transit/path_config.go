@@ -21,6 +21,11 @@ func pathConfig() *framework.Path {
 				Description: `If set, the minimum version of the key allowed
 to be decrypted.`,
 			},
+
+			"deletion_allowed": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Whether to allow deletion of the key",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -47,13 +52,27 @@ func pathConfigWrite(
 			logical.ErrInvalidRequest
 	}
 
+	persistNeeded := false
+
 	minDecryptionVersion := d.Get("min_decryption_version").(int)
-	if minDecryptionVersion == 0 ||
-		minDecryptionVersion == policy.MinDecryptionVersion {
-		return nil, nil
+	if minDecryptionVersion != 0 &&
+		minDecryptionVersion != policy.MinDecryptionVersion {
+		policy.MinDecryptionVersion = minDecryptionVersion
+		persistNeeded = true
 	}
 
-	policy.MinDecryptionVersion = minDecryptionVersion
+	allowDeletionInt, ok := d.GetOk("deletion_allowed")
+	if ok {
+		allowDeletion := allowDeletionInt.(bool)
+		if allowDeletion != policy.DeletionAllowed {
+			policy.DeletionAllowed = allowDeletion
+			persistNeeded = true
+		}
+	}
+
+	if !persistNeeded {
+		return nil, nil
+	}
 
 	return nil, policy.Persist(req.Storage, name)
 }

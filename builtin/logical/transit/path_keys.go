@@ -2,6 +2,7 @@ package transit
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -67,15 +68,22 @@ func pathPolicyRead(
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"name":        p.Name,
-			"cipher_mode": p.CipherMode,
-			"derived":     p.Derived,
-			"disabled":    p.Disabled,
+			"name":             p.Name,
+			"cipher_mode":      p.CipherMode,
+			"derived":          p.Derived,
+			"deletion_allowed": p.DeletionAllowed,
 		},
 	}
 	if p.Derived {
 		resp.Data["kdf_mode"] = p.KDFMode
 	}
+
+	retKeys := map[string]int64{}
+	for k, v := range p.Keys {
+		retKeys[strconv.Itoa(k)] = v.CreationTime
+	}
+	resp.Data["keys"] = retKeys
+
 	return resp, nil
 }
 
@@ -85,19 +93,19 @@ func pathPolicyDelete(
 
 	p, err := getPolicy(req, name)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(fmt.Sprintf("error looking up policy %s, error is %s", name, err)), err
 	}
 	if p == nil {
 		return logical.ErrorResponse(fmt.Sprintf("no such key %s", name)), logical.ErrInvalidRequest
 	}
 
-	if !p.Disabled {
-		return logical.ErrorResponse(fmt.Sprintf("key must be disabled before deletion")), logical.ErrInvalidRequest
+	if !p.DeletionAllowed {
+		return logical.ErrorResponse(fmt.Sprintf("'allow_deletion' config value is not set")), logical.ErrInvalidRequest
 	}
 
 	err = req.Storage.Delete("policy/" + name)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}
 	return nil, nil
 }

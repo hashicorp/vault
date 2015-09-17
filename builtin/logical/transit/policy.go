@@ -68,12 +68,12 @@ type Policy struct {
 	Derived bool   `json:"derived"`
 	KDFMode string `json:"kdf_mode"`
 
-	// Whether the key can be used for encryption
-	Disabled bool `json:"disabled"`
-
 	// The minimum version of the key allowed to be used
 	// for decryption
 	MinDecryptionVersion int `json:"min_decryption_version"`
+
+	// Whether the key is allowed to be deleted
+	DeletionAllowed bool `json:"deletion_allowed"`
 }
 
 func (p *Policy) Persist(storage logical.Storage, name string) error {

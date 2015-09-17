@@ -26,13 +26,13 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
-			testAccStepDisablePolicy(t, "test"),
+			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepWritePolicy(t, "test", false),
-			testAccStepDisablePolicy(t, "test"),
-			testAccStepEnablePolicy(t, "test"),
+			testAccStepEnableDeletion(t, "test"),
+			testAccStepDisableDeletion(t, "test"),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
-			testAccStepDisablePolicy(t, "test"),
+			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", true, false),
 		},
@@ -90,7 +90,7 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepRewrap(t, "test", decryptData, 4),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepDisablePolicy(t, "test"),
+			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", true, false),
 		},
@@ -106,7 +106,7 @@ func TestBackend_upsert(t *testing.T) {
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepDisablePolicy(t, "test"),
+			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", true, false),
 		},
@@ -122,7 +122,7 @@ func TestBackend_basic_derived(t *testing.T) {
 			testAccStepReadPolicy(t, "test", false, true),
 			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepDisablePolicy(t, "test"),
+			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", true, true),
 		},
@@ -139,13 +139,6 @@ func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest
 	}
 }
 
-func testAccStepEnablePolicy(t *testing.T, name string) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      "keys/" + name + "/enable",
-	}
-}
-
 func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -156,10 +149,23 @@ func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.
 	}
 }
 
-func testAccStepDisablePolicy(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepDisableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "keys/" + name + "/disable",
+		Path:      "keys/" + name + "/config",
+		Data: map[string]interface{}{
+			"deletion_allowed": false,
+		},
+	}
+}
+
+func testAccStepEnableDeletion(t *testing.T, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "keys/" + name + "/config",
+		Data: map[string]interface{}{
+			"deletion_allowed": true,
+		},
 	}
 }
 
@@ -176,6 +182,9 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 		Path:      "keys/" + name,
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("Got nil response instead of error")
+			}
 			if resp.IsError() {
 				return nil
 			}
@@ -198,13 +207,13 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				return nil
 			}
 			var d struct {
-				Name       string   `mapstructure:"name"`
-				Key        []byte   `mapstructure:"key"`
-				Keys       [][]byte `mapstructure:"keys"`
-				CipherMode string   `mapstructure:"cipher_mode"`
-				Derived    bool     `mapstructure:"derived"`
-				KDFMode    string   `mapstructure:"kdf_mode"`
-				Disabled   bool     `mapstructure:"disabled"`
+				Name            string           `mapstructure:"name"`
+				Key             []byte           `mapstructure:"key"`
+				Keys            map[string]int64 `mapstructure:"keys"`
+				CipherMode      string           `mapstructure:"cipher_mode"`
+				Derived         bool             `mapstructure:"derived"`
+				KDFMode         string           `mapstructure:"kdf_mode"`
+				DeletionAllowed bool             `mapstructure:"deletion_allowed"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -220,10 +229,10 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 			if d.Key != nil {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.Keys != nil {
+			if d.Keys == nil {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.Disabled == true {
+			if d.DeletionAllowed == true {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Derived != derived {

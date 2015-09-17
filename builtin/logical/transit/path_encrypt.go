@@ -52,11 +52,6 @@ func pathEncryptWrite(
 		return nil, err
 	}
 
-	// Fast track disable checking
-	if p != nil && p.Disabled {
-		return logical.ErrorResponse("key is disabled and cannot be used for encryption"), logical.ErrInvalidRequest
-	}
-
 	// Decode the context if any
 	contextRaw := d.Get("context").(string)
 	var context []byte
