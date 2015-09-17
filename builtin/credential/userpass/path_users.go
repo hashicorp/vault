@@ -1,7 +1,9 @@
 package userpass
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -25,6 +27,16 @@ func pathUsers(b *backend) *framework.Path {
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of policies",
+			},
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "The lease duration which decides login expiration",
+			},
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "Maximum duration after which login should expire",
 			},
 		},
 
@@ -98,10 +110,19 @@ func (b *backend) pathUserWrite(
 		return nil, err
 	}
 
+	ttlStr := d.Get("ttl").(string)
+	maxTTLStr := d.Get("max_ttl").(string)
+	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
 		PasswordHash: hash,
 		Policies:     policies,
+		TTL:          ttl,
+		MaxTTL:       maxTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -123,6 +144,12 @@ type UserEntry struct {
 	PasswordHash []byte
 
 	Policies []string
+
+	// Duration after which the user will be revoked unless renewed
+	TTL time.Duration
+
+	// Maximum duration for which user can be valid
+	MaxTTL time.Duration
 }
 
 const pathUserHelpSyn = `
