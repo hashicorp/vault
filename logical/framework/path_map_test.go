@@ -125,7 +125,9 @@ func TestPathMap_routes(t *testing.T) {
 
 func TestPathMap_Salted(t *testing.T) {
 	storage := new(logical.InmemStorage)
-	salt, err := salt.NewSalt(storage, nil)
+	salt, err := salt.NewSalt(storage, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

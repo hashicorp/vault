@@ -57,7 +57,7 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t *testing.T) *Core {
 	noopAudits := map[string]audit.Factory{
-		"noop": func(map[string]string) (audit.Backend, error) {
+		"noop": func(audit.BackendConfig) (audit.Backend, error) {
 			return new(noopAudit), nil
 		},
 	}

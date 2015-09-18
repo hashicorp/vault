@@ -22,7 +22,9 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 }
 
 func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
-	salt, err := salt.NewSalt(conf.StorageView, nil)
+	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+	})
 	if err != nil {
 		return nil, err
 	}

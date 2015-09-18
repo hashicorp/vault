@@ -1,10 +1,12 @@
 package salt
 
 import (
+	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -24,6 +26,7 @@ type Salt struct {
 	config    *Config
 	salt      string
 	generated bool
+	hmac      hash.Hash
 }
 
 type HashFunc func([]byte) []byte
@@ -37,6 +40,10 @@ type Config struct {
 	// HashFunc is the hashing function to use for salting.
 	// Defaults to SHA1 if not provided.
 	HashFunc HashFunc
+
+	// HMAC allows specification of a hash function to use for
+	// the HMAC helpers
+	HMAC func() hash.Hash
 }
 
 // NewSalt creates a new salt based on the configuration
@@ -49,7 +56,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 		config.Location = DefaultLocation
 	}
 	if config.HashFunc == nil {
-		config.HashFunc = SHA1Hash
+		config.HashFunc = SHA256Hash
 	}
 
 	// Create the salt
@@ -80,13 +87,32 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 			return nil, fmt.Errorf("failed to persist salt: %v", err)
 		}
 	}
+
+	if config.HMAC != nil {
+		s.hmac = hmac.New(config.HMAC, []byte(s.salt))
+		if s.hmac == nil {
+			return nil, fmt.Errorf("failed to instantiate HMAC function")
+		}
+	}
+
 	return s, nil
 }
 
-// SaltID is used to apply a salt and hash functio to an ID to make sure
-// it is not reversable
+// SaltID is used to apply a salt and hash function to an ID to make sure
+// it is not reversible
 func (s *Salt) SaltID(id string) string {
 	return SaltID(s.salt, id, s.config.HashFunc)
+}
+
+// SaltIDandHMAC is used to apply a salt and hash function to an ID to make sure
+// it is not reversible, with an additional HMAC
+func (s *Salt) GetHMAC(id string) string {
+	if s.hmac == nil {
+		return ""
+	}
+	s.hmac.Reset()
+	s.hmac.Write([]byte(id))
+	return string(s.hmac.Sum(nil))
 }
 
 // DidGenerate returns if the underlying salt value was generated
@@ -95,8 +121,8 @@ func (s *Salt) DidGenerate() bool {
 	return s.generated
 }
 
-// SaltID is used to apply a salt and hash functio to an ID to make sure
-// it is not reversable
+// SaltID is used to apply a salt and hash function to an ID to make sure
+// it is not reversible
 func SaltID(salt, id string, hash HashFunc) string {
 	comb := salt + id
 	hashVal := hash([]byte(comb))
@@ -109,7 +135,7 @@ func SHA1Hash(inp []byte) []byte {
 	return hashed[:]
 }
 
-// SHA256Hash returns teh SHA256 of the input
+// SHA256Hash returns the SHA256 of the input
 func SHA256Hash(inp []byte) []byte {
 	hashed := sha256.Sum256(inp)
 	return hashed[:]
