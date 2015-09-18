@@ -19,11 +19,21 @@ func TestBackend_basic_CA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	b, err := Factory(&logical.BackendConfig{
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+	})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo"),
 			testAccStepLogin(t, connState),
+			testAccStepCertTTL(t, "web", ca, "foo"),
+			testAccStepLogin(t, connState),
+			testAccStepCertNoLease(t, "web", ca, "foo"),
+			testAccStepLoginDefaultLease(t, connState),
 		},
 	})
 }
@@ -74,6 +84,23 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 	}
 }
 
+func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.WriteOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		Check: func(resp *logical.Response) error {
+			if resp.Auth.TTL != 300*time.Second {
+				t.Fatalf("bad lease length: %#v", resp.Auth)
+			}
+
+			fn := logicaltest.TestCheckAuth([]string{"foo"})
+			return fn(resp)
+		},
+	}
+}
+
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.WriteOperation,
@@ -100,6 +127,33 @@ func testAccStepCert(
 			"policies":     policies,
 			"display_name": name,
 			"lease":        1000,
+		},
+	}
+}
+
+func testAccStepCertTTL(
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "certs/" + name,
+		Data: map[string]interface{}{
+			"certificate":  string(cert),
+			"policies":     policies,
+			"display_name": name,
+			"ttl":          1000,
+		},
+	}
+}
+
+func testAccStepCertNoLease(
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "certs/" + name,
+		Data: map[string]interface{}{
+			"certificate":  string(cert),
+			"policies":     policies,
+			"display_name": name,
 		},
 	}
 }

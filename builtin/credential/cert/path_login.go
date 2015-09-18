@@ -55,6 +55,11 @@ func (b *backend) pathLogin(
 		return nil, nil
 	}
 
+	ttl := matched.Entry.TTL
+	if ttl == 0 {
+		ttl = b.System().DefaultLeaseTTL()
+	}
+
 	// Generate a response
 	resp := &logical.Response{
 		Auth: &logical.Auth{
@@ -66,7 +71,7 @@ func (b *backend) pathLogin(
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				TTL:       matched.Entry.TTL,
+				TTL:       ttl,
 			},
 		},
 	}

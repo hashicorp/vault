@@ -93,7 +93,7 @@ func (c *AuthCommand) Run(args []string) int {
 
 	if handler == nil {
 		methods := make([]string, 0, len(c.Handlers))
-		for k, _ := range c.Handlers {
+		for k := range c.Handlers {
 			methods = append(methods, k)
 		}
 		sort.Strings(methods)
@@ -201,11 +201,16 @@ func (c *AuthCommand) Run(args []string) int {
 		policies = append(policies, v.(string))
 	}
 
-	c.Ui.Output(fmt.Sprintf(
-		"Successfully authenticated! The policies that are associated\n"+
-			"with this token are listed below:\n\n%s",
-		strings.Join(policies, ", "),
-	))
+	output := "Successfully authenticated!"
+	if secret.LeaseDuration > 0 {
+		output += fmt.Sprintf("\nThe token's lifetime is %d seconds.", secret.LeaseDuration)
+	}
+
+	if len(policies) > 0 {
+		output += fmt.Sprintf("\nThe policies that are associated with this token\narelisted below:\n\n%s", strings.Join(policies, ", "))
+	}
+
+	c.Ui.Output(output)
 
 	return 0
 }
@@ -226,7 +231,7 @@ func (c *AuthCommand) listMethods() int {
 	}
 
 	paths := make([]string, 0, len(auth))
-	for path, _ := range auth {
+	for path := range auth {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
