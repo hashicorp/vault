@@ -27,6 +27,7 @@ func Backend() *framework.Backend {
 			pathKeys(),
 			pathEncrypt(),
 			pathDecrypt(),
+			pathDatakey(),
 		},
 
 		Secrets: []*framework.Secret{},

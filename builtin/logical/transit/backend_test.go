@@ -39,6 +39,20 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_datakey(t *testing.T) {
+	dataKeyInfo := make(map[string]interface{})
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: Backend(),
+		Steps: []logicaltest.TestStep{
+			testAccStepWritePolicy(t, "test", false),
+			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepWriteDatakey(t, "test", false, 256, dataKeyInfo),
+			testAccStepDecryptDatakey(t, "test", dataKeyInfo),
+			testAccStepWriteDatakey(t, "test", true, 128, dataKeyInfo),
+		},
+	})
+}
+
 func TestBackend_rotation(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	encryptHistory := make(map[int]map[string]interface{})
@@ -420,6 +434,72 @@ func testAccStepRotate(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "keys/" + name + "/rotate",
+	}
+}
+
+func testAccStepWriteDatakey(t *testing.T, name string,
+	noPlaintext bool, bits int,
+	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
+	data := map[string]interface{}{}
+	if noPlaintext {
+		data["no_plaintext"] = true
+	}
+	if bits != 256 {
+		data["bits"] = bits
+	}
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "datakey/" + name,
+		Data:      data,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Plaintext  string `mapstructure:"plaintext"`
+				Ciphertext string `mapstructure:"ciphertext"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if noPlaintext && len(d.Plaintext) != 0 {
+				return fmt.Errorf("received plaintxt when we disabled it")
+			}
+			if !noPlaintext {
+				if len(d.Plaintext) == 0 {
+					return fmt.Errorf("did not get plaintext when we expected it")
+				}
+				dataKeyInfo["plaintext"] = d.Plaintext
+				plainBytes, err := base64.StdEncoding.DecodeString(d.Plaintext)
+				if err != nil {
+					return fmt.Errorf("could not base64 decode plaintext string '%s'", d.Plaintext)
+				}
+				if len(plainBytes)*8 != bits {
+					return fmt.Errorf("returned key does not have correct bit length")
+				}
+			}
+			dataKeyInfo["ciphertext"] = d.Ciphertext
+			return nil
+		},
+	}
+}
+
+func testAccStepDecryptDatakey(t *testing.T, name string,
+	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "decrypt/" + name,
+		Data:      dataKeyInfo,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Plaintext string `mapstructure:"plaintext"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.Plaintext != dataKeyInfo["plaintext"].(string) {
+				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string))
+			}
+			return nil
+		},
 	}
 }
 
