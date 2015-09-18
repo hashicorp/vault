@@ -1,11 +1,13 @@
 package audit
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -88,7 +90,7 @@ func TestHash(t *testing.T) {
 	}{
 		{
 			&logical.Auth{ClientToken: "foo"},
-			&logical.Auth{ClientToken: "sha1:0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"},
+			&logical.Auth{ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a"},
 		},
 		{
 			&logical.Request{
@@ -98,7 +100,7 @@ func TestHash(t *testing.T) {
 			},
 			&logical.Request{
 				Data: map[string]interface{}{
-					"foo": "sha1:62cdb7020ff920e5aa642c3d4066950dd1f01f4d",
+					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 				},
 			},
 		},
@@ -110,7 +112,7 @@ func TestHash(t *testing.T) {
 			},
 			&logical.Response{
 				Data: map[string]interface{}{
-					"foo": "sha1:62cdb7020ff920e5aa642c3d4066950dd1f01f4d",
+					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 				},
 			},
 		},
@@ -133,14 +135,22 @@ func TestHash(t *testing.T) {
 					IssueTime: now,
 				},
 
-				ClientToken: "sha1:0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33",
+				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
 			},
 		},
 	}
 
+	localSalt, err := salt.NewSalt(nil, &salt.Config{
+		HMAC:       sha256.New,
+		HMACType:   "hmac-sha256",
+		StaticSalt: "foo",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		if err := Hash(tc.Input); err != nil {
+		if err := Hash(localSalt, tc.Input); err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
 		if !reflect.DeepEqual(tc.Input, tc.Output) {
@@ -176,8 +186,8 @@ func TestHashWalker(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := HashStructure(tc.Input, func(string) (string, error) {
-			return replaceText, nil
+		output, err := HashStructure(tc.Input, func(string) string {
+			return replaceText
 		})
 		if err != nil {
 			t.Fatalf("err: %s\n\n%#v", err, tc.Input)
@@ -185,16 +195,5 @@ func TestHashWalker(t *testing.T) {
 		if !reflect.DeepEqual(output, tc.Output) {
 			t.Fatalf("bad:\n\n%#v\n\n%#v", tc.Input, output)
 		}
-	}
-}
-
-func TestHashSHA1(t *testing.T) {
-	fn := HashSHA1("")
-	result, err := fn("foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if result != "sha1:0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33" {
-		t.Fatalf("bad: %#v", result)
 	}
 }

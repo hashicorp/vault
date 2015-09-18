@@ -27,6 +27,7 @@ type Salt struct {
 	salt      string
 	generated bool
 	hmac      hash.Hash
+	hmacType  string
 }
 
 type HashFunc func([]byte) []byte
@@ -44,6 +45,14 @@ type Config struct {
 	// HMAC allows specification of a hash function to use for
 	// the HMAC helpers
 	HMAC func() hash.Hash
+
+	// String prepended to HMAC strings for identification.
+	// Required if using HMAC
+	HMACType string
+
+	// A static string to use if set. If not set, one will be
+	// generated and persisted. This value will *not* be persisted.
+	StaticSalt string
 }
 
 // NewSalt creates a new salt based on the configuration
@@ -64,35 +73,49 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 		config: config,
 	}
 
-	// Look for the salt
-	raw, err := view.Get(config.Location)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read salt: %v", err)
-	}
+	var raw *logical.StorageEntry
+	var err error
+	if config.StaticSalt != "" {
+		s.salt = config.StaticSalt
+	} else {
+		if view != nil {
+			// Look for the salt
+			raw, err = view.Get(config.Location)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read salt: %v", err)
+			}
 
-	// Restore the salt if it exists
-	if raw != nil {
-		s.salt = string(raw.Value)
+			// Restore the salt if it exists
+			if raw != nil {
+				s.salt = string(raw.Value)
+			}
+		}
 	}
 
 	// Generate a new salt if necessary
 	if s.salt == "" {
 		s.salt = uuid.GenerateUUID()
 		s.generated = true
-		raw = &logical.StorageEntry{
-			Key:   config.Location,
-			Value: []byte(s.salt),
-		}
-		if err := view.Put(raw); err != nil {
-			return nil, fmt.Errorf("failed to persist salt: %v", err)
+		if view != nil {
+			raw = &logical.StorageEntry{
+				Key:   config.Location,
+				Value: []byte(s.salt),
+			}
+			if err := view.Put(raw); err != nil {
+				return nil, fmt.Errorf("failed to persist salt: %v", err)
+			}
 		}
 	}
 
 	if config.HMAC != nil {
+		if len(config.HMACType) == 0 {
+			return nil, fmt.Errorf("HMACType must be defined")
+		}
 		s.hmac = hmac.New(config.HMAC, []byte(s.salt))
 		if s.hmac == nil {
 			return nil, fmt.Errorf("failed to instantiate HMAC function")
 		}
+		s.hmacType = config.HMACType
 	}
 
 	return s, nil
@@ -104,7 +127,7 @@ func (s *Salt) SaltID(id string) string {
 	return SaltID(s.salt, id, s.config.HashFunc)
 }
 
-// SaltIDandHMAC is used to apply a salt and hash function to an ID to make sure
+// GetHMAC is used to apply a salt and hash function to an ID to make sure
 // it is not reversible, with an additional HMAC
 func (s *Salt) GetHMAC(id string) string {
 	if s.hmac == nil {
@@ -112,7 +135,19 @@ func (s *Salt) GetHMAC(id string) string {
 	}
 	s.hmac.Reset()
 	s.hmac.Write([]byte(id))
-	return string(s.hmac.Sum(nil))
+	return hex.EncodeToString(s.hmac.Sum(nil))
+}
+
+// GetIdentifiedHMAC is used to apply a salt and hash function to an ID to make sure
+// it is not reversible, with an additional HMAC, and ID prepended
+func (s *Salt) GetIdentifiedHMAC(id string) string {
+	if s.hmac == nil {
+		return ""
+	}
+	s.hmac.Reset()
+	s.hmac.Write([]byte(id))
+
+	return s.hmacType + ":" + hex.EncodeToString(s.hmac.Sum(nil))
 }
 
 // DidGenerate returns if the underlying salt value was generated

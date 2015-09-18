@@ -209,11 +209,12 @@ func (c *Core) newAuditBackend(t string, view logical.Storage, conf map[string]s
 	salter, err := salt.NewSalt(view, &salt.Config{
 		HashFunc: salt.SHA256Hash,
 		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("[ERR] core: unable to generate salt: %v", err)
 	}
-	return f(audit.BackendConfig{
+	return f(&audit.BackendConfig{
 		Salt:   salter,
 		Config: conf,
 	})

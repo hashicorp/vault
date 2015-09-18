@@ -57,8 +57,10 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t *testing.T) *Core {
 	noopAudits := map[string]audit.Factory{
-		"noop": func(audit.BackendConfig) (audit.Backend, error) {
-			return new(noopAudit), nil
+		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
+			return &noopAudit{
+				Config: config,
+			}, nil
 		},
 	}
 	noopBackends := make(map[string]logical.Factory)
@@ -240,7 +242,9 @@ func AddTestLogicalBackend(name string, factory logical.Factory) error {
 	return nil
 }
 
-type noopAudit struct{}
+type noopAudit struct {
+	Config *audit.BackendConfig
+}
 
 func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, e error) error {
 	return nil

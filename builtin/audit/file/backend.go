@@ -13,7 +13,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-func Factory(conf audit.BackendConfig) (audit.Backend, error) {
+func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.Salt == nil {
 		return nil, fmt.Errorf("Nil salt passed in")
 	}

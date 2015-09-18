@@ -32,4 +32,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(BackendConfig) (Backend, error)
+type Factory func(*BackendConfig) (Backend, error)
