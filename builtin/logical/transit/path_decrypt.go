@@ -1,11 +1,10 @@
 package transit
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"encoding/base64"
-	"strings"
+	"fmt"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -42,8 +41,8 @@ func pathDecrypt() *framework.Path {
 func pathDecryptWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	value := d.Get("ciphertext").(string)
-	if len(value) == 0 {
+	ciphertext := d.Get("ciphertext").(string)
+	if len(ciphertext) == 0 {
 		return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 	}
 
@@ -69,56 +68,26 @@ func pathDecryptWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	// Derive the key that should be used
-	key, err := p.DeriveKey(context)
+	plaintext, err := p.Decrypt(context, ciphertext)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		case certutil.InternalError:
+			return nil, err
+		default:
+			return nil, err
+		}
 	}
 
-	// Guard against a potentially invalid cipher-mode
-	switch p.CipherMode {
-	case "aes-gcm":
-	default:
-		return logical.ErrorResponse("unsupported cipher mode"), logical.ErrInvalidRequest
-	}
-
-	// Verify the prefix
-	if !strings.HasPrefix(value, "vault:v0:") {
-		return logical.ErrorResponse("invalid ciphertext"), logical.ErrInvalidRequest
-	}
-
-	// Decode the base64
-	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(value, "vault:v0:"))
-	if err != nil {
-		return logical.ErrorResponse("invalid ciphertext"), logical.ErrInvalidRequest
-	}
-
-	// Setup the cipher
-	aesCipher, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	// Setup the GCM AEAD
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract the nonce and ciphertext
-	nonce := decoded[:gcm.NonceSize()]
-	ciphertext := decoded[gcm.NonceSize():]
-
-	// Verify and Decrypt
-	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return logical.ErrorResponse("invalid ciphertext"), logical.ErrInvalidRequest
+	if plaintext == "" {
+		return nil, fmt.Errorf("empty plaintext returned")
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"plaintext": base64.StdEncoding.EncodeToString(plain),
+			"plaintext": plaintext,
 		},
 	}
 	return resp, nil
