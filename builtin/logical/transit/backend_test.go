@@ -441,15 +441,16 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 	noPlaintext bool, bits int,
 	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
 	data := map[string]interface{}{}
+	subPath := "plaintext"
 	if noPlaintext {
-		data["no_plaintext"] = true
+		subPath = "wrapped"
 	}
 	if bits != 256 {
 		data["bits"] = bits
 	}
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
-		Path:      "datakey/" + name,
+		Path:      "datakey/" + subPath + "/" + name,
 		Data:      data,
 		Check: func(resp *logical.Response) error {
 			var d struct {

@@ -12,11 +12,17 @@ import (
 
 func pathDatakey() *framework.Path {
 	return &framework.Path{
-		Pattern: "datakey/" + framework.GenericNameRegex("name"),
+		Pattern: "datakey/" + framework.GenericNameRegex("plaintext") + "/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The backend key used for encrypting the data key",
+			},
+
+			"plaintext": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `"plaintext" will return the key in both plaintext and
+ciphertext; "wrapped" will return the ciphertext only.`,
 			},
 
 			"context": &framework.FieldSchema{
@@ -29,11 +35,6 @@ func pathDatakey() *framework.Path {
 				Description: `Number of bits for the key; currently 128 and
 256 are supported. Defaults to 256.`,
 				Default: 256,
-			},
-
-			"no_plaintext": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Description: "If set, the plaintext of the key will not be returned",
 			},
 		},
 
@@ -49,6 +50,16 @@ func pathDatakey() *framework.Path {
 func pathDatakeyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+
+	plaintext := d.Get("plaintext").(string)
+	plaintextAllowed := false
+	switch plaintext {
+	case "plaintext":
+		plaintextAllowed = true
+	case "wrapped":
+	default:
+		return logical.ErrorResponse("Invalid path, must be 'plaintext' or 'wrapped'"), logical.ErrInvalidRequest
+	}
 
 	// Decode the context if any
 	contextRaw := d.Get("context").(string)
@@ -75,6 +86,8 @@ func pathDatakeyWrite(
 	newKey := make([]byte, 32)
 	bits := d.Get("bits").(int)
 	switch bits {
+	case 512:
+		newKey = make([]byte, 64)
 	case 256:
 	case 128:
 		newKey = make([]byte, 16)
@@ -109,7 +122,7 @@ func pathDatakeyWrite(
 		},
 	}
 
-	if !d.Get("no_plaintext").(bool) {
+	if plaintextAllowed {
 		resp.Data["plaintext"] = base64.StdEncoding.EncodeToString(newKey)
 	}
 
@@ -121,9 +134,9 @@ const pathDatakeyHelpSyn = `Generate a data key`
 const pathDatakeyHelpDesc = `
 This path can be used to generate a data key: a random
 key of a certain length that can be used for encryption
-and decryption, protected by the named backend key. 128
-or 256 bits can be specified; if not specified, the default
-is 256 bits. The "no_plaintext" parameter can be used to
-prevent the (base64-encoded) plaintext key from being
-returned along with the encrypted key.
+and decryption, protected by the named backend key. 128, 256,
+or 512 bits can be specified; if not specified, the default
+is 256 bits. Call with the the "wrapped" path to prevent the
+(base64-encoded) plaintext key from being returned along with
+the encrypted key, the "plaintext" path returns both.
 `
