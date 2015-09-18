@@ -407,11 +407,13 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
 		DisplayName: "token-foo-bar-baz",
+		TTL:         0,
 	}
 	out, err := ts.Lookup(resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -436,11 +438,13 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		Path:        "auth/token/create",
 		DisplayName: "token",
 		NumUses:     1,
+		TTL:         0,
 	}
 	out, err := ts.Lookup(resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -496,11 +500,13 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
 		DisplayName: "token",
+		TTL:         0,
 	}
 	out, err := ts.Lookup(resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -807,7 +813,9 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"meta":         map[string]string(nil),
 		"display_name": "root",
 		"num_uses":     0,
+		"ttl":          time.Duration(0),
 	}
+	delete(resp.Data, "creation_time")
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
 	}
@@ -872,7 +880,9 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"meta":         map[string]string(nil),
 		"display_name": "root",
 		"num_uses":     0,
+		"ttl":          time.Duration(0),
 	}
+	delete(resp.Data, "creation_time")
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
 	}

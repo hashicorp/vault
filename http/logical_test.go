@@ -119,15 +119,19 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"policies":     []interface{}{"root"},
 			"display_name": "root",
 			"id":           root,
+			"ttl":          float64(0),
 		},
 		"auth": nil,
 	}
 
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	actualDataMap := actual["data"].(map[string]interface{})
+	delete(actualDataMap, "creation_time")
+	actual["data"] = actualDataMap
 	delete(actual, "lease_id")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v %#v", actual, expected)
+		t.Fatalf("bad: got %#v; expected %#v", actual, expected)
 	}
 
 	//// DELETE to standby

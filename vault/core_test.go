@@ -781,7 +781,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(conf *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -822,15 +822,18 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		Meta: map[string]string{
 			"user": "armon",
 		},
-		DisplayName: "foo-armon",
+		DisplayName:  "foo-armon",
+		TTL:          time.Hour * 24,
+		CreationTime: te.CreationTime,
 	}
+
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
 	}
 
 	// Check that we have a lease with default duration
-	if lresp.Auth.TTL != c.defaultLeaseTTL {
-		t.Fatalf("bad: %#v", lresp.Auth)
+	if lresp.Auth.TTL != noop.System().DefaultLeaseTTL() {
+		t.Fatalf("bad: %#v, defaultLeaseTTL: %#v", lresp.Auth, c.defaultLeaseTTL)
 	}
 }
 
@@ -1005,11 +1008,13 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &TokenEntry{
-		ID:          clientToken,
-		Parent:      root,
-		Policies:    []string{"foo"},
-		Path:        "auth/token/create",
-		DisplayName: "token",
+		ID:           clientToken,
+		Parent:       root,
+		Policies:     []string{"foo"},
+		Path:         "auth/token/create",
+		DisplayName:  "token",
+		CreationTime: te.CreationTime,
+		TTL:          time.Hour * 24 * 30,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)

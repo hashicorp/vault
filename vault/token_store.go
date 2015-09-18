@@ -224,20 +224,22 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	ID          string            // ID of this entry, generally a random UUID
-	Parent      string            // Parent token, used for revocation trees
-	Policies    []string          // Which named policies should be used
-	Path        string            // Used for audit trails, this is something like "auth/user/login"
-	Meta        map[string]string // Used for auditing. This could include things like "source", "user", "ip"
-	DisplayName string            // Used for operators to be able to associate with the source
-	NumUses     int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	ID           string            // ID of this entry, generally a random UUID
+	Parent       string            // Parent token, used for revocation trees
+	Policies     []string          // Which named policies should be used
+	Path         string            // Used for audit trails, this is something like "auth/user/login"
+	Meta         map[string]string // Used for auditing. This could include things like "source", "user", "ip"
+	DisplayName  string            // Used for operators to be able to associate with the source
+	NumUses      int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	CreationTime int64             // Time of token creation
+	TTL          time.Duration     // Duration set when token was created
 }
 
 // SetExpirationManager is used to provide the token store with
 // an expiration manager. This is used to manage prefix based revocation
 // of tokens and to cleanup entries when removed from the token store.
-func (t *TokenStore) SetExpirationManager(exp *ExpirationManager) {
-	t.expiration = exp
+func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
+	ts.expiration = exp
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversable
@@ -248,9 +250,10 @@ func (ts *TokenStore) SaltID(id string) string {
 // RootToken is used to generate a new token with root privileges and no parent
 func (ts *TokenStore) RootToken() (*TokenEntry, error) {
 	te := &TokenEntry{
-		Policies:    []string{"root"},
-		Path:        "auth/token/root",
-		DisplayName: "root",
+		Policies:     []string{"root"},
+		Path:         "auth/token/root",
+		DisplayName:  "root",
+		CreationTime: time.Now().Unix(),
 	}
 	if err := ts.Create(te); err != nil {
 		return nil, err
@@ -510,11 +513,12 @@ func (ts *TokenStore) handleCreate(
 
 	// Setup the token entry
 	te := TokenEntry{
-		Parent:      req.ClientToken,
-		Path:        "auth/token/create",
-		Meta:        data.Metadata,
-		DisplayName: "token",
-		NumUses:     data.NumUses,
+		Parent:       req.ClientToken,
+		Path:         "auth/token/create",
+		Meta:         data.Metadata,
+		DisplayName:  "token",
+		NumUses:      data.NumUses,
+		CreationTime: time.Now().Unix(),
 	}
 
 	// Attach the given display name if any
@@ -554,7 +558,6 @@ func (ts *TokenStore) handleCreate(
 	}
 
 	// Parse the lease if any
-	var leaseDuration time.Duration
 	if data.Lease != "" {
 		dur, err := time.ParseDuration(data.Lease)
 		if err != nil {
@@ -563,7 +566,19 @@ func (ts *TokenStore) handleCreate(
 		if dur < 0 {
 			return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
 		}
-		leaseDuration = dur
+		te.TTL = dur
+	}
+
+	sysView := ts.System()
+
+	// Set the default lease if non-provided, root tokens are exempt
+	if te.TTL == 0 && !strListContains(te.Policies, "root") {
+		te.TTL = sysView.DefaultLeaseTTL()
+	}
+
+	// Limit the lease duration
+	if te.TTL > sysView.MaxLeaseTTL() {
+		te.TTL = sysView.MaxLeaseTTL()
 	}
 
 	// Create the token
@@ -578,10 +593,10 @@ func (ts *TokenStore) handleCreate(
 			Policies:    te.Policies,
 			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         leaseDuration,
-				GracePeriod: leaseDuration / 10,
+				TTL:         te.TTL,
+				GracePeriod: te.TTL / 10,
 				// Tokens are renewable only if user provides lease duration
-				Renewable: leaseDuration > 0,
+				Renewable: te.TTL > 0,
 			},
 			ClientToken: te.ID,
 		},
@@ -697,12 +712,14 @@ func (ts *TokenStore) handleLookup(
 	// you could escalade your privileges.
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":           out.ID,
-			"policies":     out.Policies,
-			"path":         out.Path,
-			"meta":         out.Meta,
-			"display_name": out.DisplayName,
-			"num_uses":     out.NumUses,
+			"id":            out.ID,
+			"policies":      out.Policies,
+			"path":          out.Path,
+			"meta":          out.Meta,
+			"display_name":  out.DisplayName,
+			"num_uses":      out.NumUses,
+			"creation_time": out.CreationTime,
+			"ttl":           out.TTL,
 		},
 	}
 	return resp, nil

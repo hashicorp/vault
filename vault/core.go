@@ -582,13 +582,33 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		// Prepend the source to the display name
 		auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
 
+		sysView := c.router.MatchingSystemView(req.Path)
+		if sysView == nil {
+			c.logger.Printf("[ERR] core: unable to look up sys view for login path"+
+				"(request: %#v, response: %#v)", req, resp)
+			return nil, nil, ErrInternalError
+		}
+
+		// Set the default lease if non-provided, root tokens are exempt
+		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
+			auth.TTL = sysView.DefaultLeaseTTL()
+		}
+
+		// Limit the lease duration
+		if auth.TTL > sysView.MaxLeaseTTL() {
+			auth.TTL = sysView.MaxLeaseTTL()
+		}
+
 		// Generate a token
 		te := TokenEntry{
-			Path:        req.Path,
-			Policies:    auth.Policies,
-			Meta:        auth.Metadata,
-			DisplayName: auth.DisplayName,
+			Path:         req.Path,
+			Policies:     auth.Policies,
+			Meta:         auth.Metadata,
+			DisplayName:  auth.DisplayName,
+			CreationTime: time.Now().Unix(),
+			TTL:          auth.TTL,
 		}
+
 		if err := c.tokenStore.Create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
 			return nil, auth, ErrInternalError
@@ -596,16 +616,6 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 		// Populate the client token
 		auth.ClientToken = te.ID
-
-		// Set the default lease if non-provided, root tokens are exempt
-		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
-			auth.TTL = c.defaultLeaseTTL
-		}
-
-		// Limit the lease duration
-		if auth.TTL > c.maxLeaseTTL {
-			auth.TTL = c.maxLeaseTTL
-		}
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
