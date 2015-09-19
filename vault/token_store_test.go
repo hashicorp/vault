@@ -567,7 +567,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data["error"] != "root required to specify token id" {
+	if resp.Data["error"] != "root or sudo privileges required to specify token id" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -619,7 +619,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data["error"] != "root required to create orphan token" {
+	if resp.Data["error"] != "root or sudo privileges required to create orphan token" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }

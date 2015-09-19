@@ -32,5 +32,5 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 }
 
 func (d StaticSystemView) SudoPrivilege(path, policy string) bool {
-	return false
+	return policy == "root"
 }
