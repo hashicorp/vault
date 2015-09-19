@@ -485,13 +485,7 @@ func (ts *TokenStore) handleCreate(
 	}
 
 	// Check if the parent policy has sudo/root privileges for the requested path
-	var isSudo bool
-	for _, item := range parent.Policies {
-		isSudo = ts.System().SudoPrivilege(req.MountPoint+req.Path, item)
-		if isSudo {
-			break
-		}
-	}
+	isSudo := ts.System().SudoPrivilege(req.MountPoint+req.Path, parent.Policies)
 
 	// Read and parse the fields
 	var data struct {
@@ -645,13 +639,7 @@ func (ts *TokenStore) handleRevokeOrphan(
 	}
 
 	// Check if the parent policy has sudo privileges for the requested path
-	var isSudo bool
-	for _, item := range parent.Policies {
-		isSudo = ts.System().SudoPrivilege(req.MountPoint+req.Path, item)
-		if isSudo {
-			break
-		}
-	}
+	isSudo := ts.System().SudoPrivilege(req.MountPoint+req.Path, parent.Policies)
 
 	if !isSudo {
 		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),

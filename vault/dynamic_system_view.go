@@ -20,10 +20,10 @@ func (d dynamicSystemView) MaxLeaseTTL() time.Duration {
 	return max
 }
 
-func (d dynamicSystemView) SudoPrivilege(path, policy string) bool {
-	acl, err := d.core.policy.ACL(policy)
+func (d dynamicSystemView) SudoPrivilege(path string, policies []string) bool {
+	acl, err := d.core.policy.ACL(policies...)
 	if err != nil {
-		log.Printf("[WARN] Failed to retrieve ACL for policy %s: %s", policy, err)
+		log.Printf("[ERR] Failed to retrieve ACL for policies %#v: %s", policies, err)
 		return false
 	}
 	return acl.RootPrivilege(path)
