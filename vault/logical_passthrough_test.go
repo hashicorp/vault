@@ -39,7 +39,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 }
 
 func TestPassthroughBackend_Read_Lease(t *testing.T) {
-	b := testPassthroughBackend()
+	b := testPassthroughLeasedBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	req.Data["lease"] = "1h"
@@ -78,7 +78,7 @@ func TestPassthroughBackend_Read_Lease(t *testing.T) {
 }
 
 func TestPassthroughBackend_Read_TTL(t *testing.T) {
-	b := testPassthroughBackend()
+	b := testPassthroughLeasedBackend()
 	req := logical.TestRequest(t, logical.WriteOperation, "foo")
 	req.Data["raw"] = "test"
 	req.Data["ttl"] = "1h"
@@ -177,6 +177,17 @@ func TestPassthroughBackend_List(t *testing.T) {
 
 func testPassthroughBackend() logical.Backend {
 	b, _ := PassthroughBackendFactory(&logical.BackendConfig{
+		Logger: nil,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	})
+	return b
+}
+
+func testPassthroughLeasedBackend() logical.Backend {
+	b, _ := LeasedPassthroughBackendFactory(&logical.BackendConfig{
 		Logger: nil,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,
