@@ -21,6 +21,7 @@ type SystemView interface {
 type StaticSystemView struct {
 	DefaultLeaseTTLVal time.Duration
 	MaxLeaseTTLVal     time.Duration
+	SudoPrivilegeVal   bool
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -32,5 +33,5 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 }
 
 func (d StaticSystemView) SudoPrivilege(path, policy string) bool {
-	return policy == "root"
+	return d.SudoPrivilegeVal
 }

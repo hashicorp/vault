@@ -21,28 +21,12 @@ func (d dynamicSystemView) MaxLeaseTTL() time.Duration {
 }
 
 func (d dynamicSystemView) SudoPrivilege(path, policy string) bool {
-	// Special "root" policy name can never be overwritten and it always will
-	// have all the privileges
-	if policy == "root" {
-		return true
-	}
-
-	// Get the associated policy from core's PolicyStore
-	p, err := d.core.policy.GetPolicy(policy)
+	acl, err := d.core.policy.ACL(policy)
 	if err != nil {
-		log.Printf("[WARN] Failed to retrieve policy '%s': %s", policy, err)
+		log.Printf("[WARN] Failed to retrieve ACL for policy %s: %s", policy, err)
 		return false
 	}
-
-	// Look all the paths in the policy object to find an entry for given path
-	// and check its respective policy.
-	for _, item := range p.Paths {
-		if item.Prefix == path && item.Policy == PathPolicySudo {
-			return true
-		}
-	}
-
-	return false
+	return acl.RootPrivilege(path)
 }
 
 // TTLsByPath returns the default and max TTLs corresponding to a particular
