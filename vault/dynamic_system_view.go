@@ -1,9 +1,6 @@
 package vault
 
-import (
-	"log"
-	"time"
-)
+import "time"
 
 type dynamicSystemView struct {
 	core       *Core
@@ -23,7 +20,7 @@ func (d dynamicSystemView) MaxLeaseTTL() time.Duration {
 func (d dynamicSystemView) SudoPrivilege(path string, policies []string) bool {
 	acl, err := d.core.policy.ACL(policies...)
 	if err != nil {
-		log.Printf("[ERR] Failed to retrieve ACL for policies %#v: %s", policies, err)
+		d.core.logger.Printf("[ERR] Failed to retrieve ACL for policies [%#v]: %s", policies, err)
 		return false
 	}
 	return acl.RootPrivilege(path)
