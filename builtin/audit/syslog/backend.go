@@ -2,30 +2,36 @@ package file
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
 
-func Factory(conf map[string]string) (audit.Backend, error) {
+func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
+	if conf.Salt == nil {
+		return nil, fmt.Errorf("Nil salt passed in")
+	}
+
 	// Get facility or default to AUTH
-	facility, ok := conf["facility"]
+	facility, ok := conf.Config["facility"]
 	if !ok {
 		facility = "AUTH"
 	}
 
 	// Get tag or default to 'vault'
-	tag, ok := conf["tag"]
+	tag, ok := conf.Config["tag"]
 	if !ok {
 		tag = "vault"
 	}
 
 	// Check if raw logging is enabled
 	logRaw := false
-	if raw, ok := conf["log_raw"]; ok {
+	if raw, ok := conf.Config["log_raw"]; ok {
 		b, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
@@ -42,6 +48,7 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 	b := &Backend{
 		logger: logger,
 		logRaw: logRaw,
+		salt:   conf.Salt,
 	}
 	return b, nil
 }
@@ -50,6 +57,7 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 type Backend struct {
 	logger gsyslog.Syslogger
 	logRaw bool
+	salt   *salt.Salt
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
@@ -79,10 +87,10 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 		req = cp.(*logical.Request)
 
 		// Hash any sensitive information
-		if err := audit.Hash(auth); err != nil {
+		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
-		if err := audit.Hash(req); err != nil {
+		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
 	}
@@ -133,13 +141,13 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 		resp = cp.(*logical.Response)
 
 		// Hash any sensitive information
-		if err := audit.Hash(auth); err != nil {
+		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
-		if err := audit.Hash(req); err != nil {
+		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
-		if err := audit.Hash(resp); err != nil {
+		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
 		}
 	}

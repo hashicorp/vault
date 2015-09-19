@@ -1,10 +1,12 @@
 package salt
 
 import (
+	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -24,6 +26,7 @@ type Salt struct {
 	config    *Config
 	salt      string
 	generated bool
+	hmacType  string
 }
 
 type HashFunc func([]byte) []byte
@@ -37,6 +40,14 @@ type Config struct {
 	// HashFunc is the hashing function to use for salting.
 	// Defaults to SHA1 if not provided.
 	HashFunc HashFunc
+
+	// HMAC allows specification of a hash function to use for
+	// the HMAC helpers
+	HMAC func() hash.Hash
+
+	// String prepended to HMAC strings for identification.
+	// Required if using HMAC
+	HMACType string
 }
 
 // NewSalt creates a new salt based on the configuration
@@ -49,7 +60,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 		config.Location = DefaultLocation
 	}
 	if config.HashFunc == nil {
-		config.HashFunc = SHA1Hash
+		config.HashFunc = SHA256Hash
 	}
 
 	// Create the salt
@@ -72,21 +83,45 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 	if s.salt == "" {
 		s.salt = uuid.GenerateUUID()
 		s.generated = true
-		raw = &logical.StorageEntry{
-			Key:   config.Location,
-			Value: []byte(s.salt),
-		}
-		if err := view.Put(raw); err != nil {
-			return nil, fmt.Errorf("failed to persist salt: %v", err)
+		if view != nil {
+			raw := &logical.StorageEntry{
+				Key:   config.Location,
+				Value: []byte(s.salt),
+			}
+			if err := view.Put(raw); err != nil {
+				return nil, fmt.Errorf("failed to persist salt: %v", err)
+			}
 		}
 	}
+
+	if config.HMAC != nil {
+		if len(config.HMACType) == 0 {
+			return nil, fmt.Errorf("HMACType must be defined")
+		}
+		s.hmacType = config.HMACType
+	}
+
 	return s, nil
 }
 
-// SaltID is used to apply a salt and hash functio to an ID to make sure
-// it is not reversable
+// SaltID is used to apply a salt and hash function to an ID to make sure
+// it is not reversible
 func (s *Salt) SaltID(id string) string {
 	return SaltID(s.salt, id, s.config.HashFunc)
+}
+
+// GetHMAC is used to apply a salt and hash function to an ID to make sure
+// it is not reversible, with an additional HMAC
+func (s *Salt) GetHMAC(id string) string {
+	hm := hmac.New(s.config.HMAC, []byte(s.salt))
+	hm.Write([]byte(id))
+	return hex.EncodeToString(hm.Sum(nil))
+}
+
+// GetIdentifiedHMAC is used to apply a salt and hash function to an ID to make sure
+// it is not reversible, with an additional HMAC, and ID prepended
+func (s *Salt) GetIdentifiedHMAC(id string) string {
+	return s.hmacType + ":" + s.GetHMAC(id)
 }
 
 // DidGenerate returns if the underlying salt value was generated
@@ -95,12 +130,22 @@ func (s *Salt) DidGenerate() bool {
 	return s.generated
 }
 
-// SaltID is used to apply a salt and hash functio to an ID to make sure
-// it is not reversable
+// SaltID is used to apply a salt and hash function to an ID to make sure
+// it is not reversible
 func SaltID(salt, id string, hash HashFunc) string {
 	comb := salt + id
 	hashVal := hash([]byte(comb))
 	return hex.EncodeToString(hashVal)
+}
+
+func HMACValue(salt, val string, hashFunc func() hash.Hash) string {
+	hm := hmac.New(hashFunc, []byte(salt))
+	hm.Write([]byte(val))
+	return hex.EncodeToString(hm.Sum(nil))
+}
+
+func HMACIdentifiedValue(salt, val, hmacType string, hashFunc func() hash.Hash) string {
+	return hmacType + ":" + HMACValue(salt, val, hashFunc)
 }
 
 // SHA1Hash returns the SHA1 of the input
@@ -109,7 +154,7 @@ func SHA1Hash(inp []byte) []byte {
 	return hashed[:]
 }
 
-// SHA256Hash returns teh SHA256 of the input
+// SHA256Hash returns the SHA256 of the input
 func SHA256Hash(inp []byte) []byte {
 	hashed := sha256.Sum256(inp)
 	return hashed[:]

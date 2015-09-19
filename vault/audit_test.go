@@ -15,6 +15,7 @@ import (
 )
 
 type NoopAudit struct {
+	Config  *audit.BackendConfig
 	ReqErr  error
 	ReqAuth []*logical.Auth
 	Req     []*logical.Request
@@ -44,8 +45,10 @@ func (n *NoopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical
 
 func TestCore_EnableAudit(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
-		return &NoopAudit{}, nil
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
 	}
 
 	me := &MountEntry{
@@ -66,8 +69,10 @@ func TestCore_EnableAudit(t *testing.T) {
 		AuditBackends: make(map[string]audit.Factory),
 		DisableMlock:  true,
 	}
-	conf.AuditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
-		return &NoopAudit{}, nil
+	conf.AuditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -94,8 +99,10 @@ func TestCore_EnableAudit(t *testing.T) {
 
 func TestCore_DisableAudit(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
-		return &NoopAudit{}, nil
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
 	}
 
 	err := c.disableAudit("foo")

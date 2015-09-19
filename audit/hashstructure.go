@@ -1,12 +1,10 @@
 package audit
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/reflectwalk"
@@ -17,8 +15,8 @@ import (
 // it will be passed through.
 //
 // The structure is modified in-place.
-func Hash(raw interface{}) error {
-	fn := HashSHA1("")
+func Hash(salter *salt.Salt, raw interface{}) error {
+	fn := salter.GetIdentifiedHMAC
 
 	switch s := raw.(type) {
 	case *logical.Auth:
@@ -26,11 +24,7 @@ func Hash(raw interface{}) error {
 			return nil
 		}
 		if s.ClientToken != "" {
-			token, err := fn(s.ClientToken)
-			if err != nil {
-				return err
-			}
-
+			token := fn(s.ClientToken)
 			s.ClientToken = token
 		}
 	case *logical.Request:
@@ -38,7 +32,7 @@ func Hash(raw interface{}) error {
 			return nil
 		}
 		if s.Auth != nil {
-			if err := Hash(s.Auth); err != nil {
+			if err := Hash(salter, s.Auth); err != nil {
 				return err
 			}
 		}
@@ -54,7 +48,7 @@ func Hash(raw interface{}) error {
 			return nil
 		}
 		if s.Auth != nil {
-			if err := Hash(s.Auth); err != nil {
+			if err := Hash(salter, s.Auth); err != nil {
 				return err
 			}
 		}
@@ -90,16 +84,7 @@ func HashStructure(s interface{}, cb HashCallback) (interface{}, error) {
 
 // HashCallback is the callback called for HashStructure to hash
 // a value.
-type HashCallback func(string) (string, error)
-
-// HashSHA1 returns a HashCallback that hashes data with SHA1 and
-// with an optional salt. If salt is a blank string, no salt is used.
-func HashSHA1(salt string) HashCallback {
-	return func(v string) (string, error) {
-		hashed := sha1.Sum([]byte(v + salt))
-		return "sha1:" + hex.EncodeToString(hashed[:]), nil
-	}
-}
+type HashCallback func(string) string
 
 // hashWalker implements interfaces for the reflectwalk package
 // (github.com/mitchellh/reflectwalk) that can be used to automatically
@@ -188,10 +173,7 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		return nil
 	}
 
-	replaceVal, err := w.Callback(v.Interface().(string))
-	if err != nil {
-		return fmt.Errorf("Error hashing value: %s", err)
-	}
+	replaceVal := w.Callback(v.Interface().(string))
 
 	resultVal := reflect.ValueOf(replaceVal)
 	switch w.loc {

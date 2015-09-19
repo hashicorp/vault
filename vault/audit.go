@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
@@ -28,7 +30,7 @@ const (
 
 var (
 	// loadAuditFailed if loading audit tables encounters an error
-	loadAuditFailed = errors.New("failed to setup audit table")
+	errLoadAuditFailed = errors.New("failed to setup audit table")
 )
 
 // enableAudit is used to enable a new audit backend
@@ -58,15 +60,15 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 		}
 	}
 
-	// Lookup the new backend
-	backend, err := c.newAuditBackend(entry.Type, entry.Options)
-	if err != nil {
-		return err
-	}
-
 	// Generate a new UUID and view
 	entry.UUID = uuid.GenerateUUID()
 	view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
+
+	// Lookup the new backend
+	backend, err := c.newAuditBackend(entry.Type, view, entry.Options)
+	if err != nil {
+		return err
+	}
 
 	// Update the audit table
 	newTable := c.audit.ShallowClone()
@@ -120,13 +122,13 @@ func (c *Core) loadAudits() error {
 	raw, err := c.barrier.Get(coreAuditConfigPath)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to read audit table: %v", err)
-		return loadAuditFailed
+		return errLoadAuditFailed
 	}
 	if raw != nil {
 		c.audit = &MountTable{}
 		if err := json.Unmarshal(raw.Value, c.audit); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode audit table: %v", err)
-			return loadAuditFailed
+			return errLoadAuditFailed
 		}
 	}
 
@@ -138,7 +140,7 @@ func (c *Core) loadAudits() error {
 	// Create and persist the default audit table
 	c.audit = defaultAuditTable()
 	if err := c.persistAudit(c.audit); err != nil {
-		return loadAuditFailed
+		return errLoadAuditFailed
 	}
 	return nil
 }
@@ -171,17 +173,17 @@ func (c *Core) persistAudit(table *MountTable) error {
 func (c *Core) setupAudits() error {
 	broker := NewAuditBroker(c.logger)
 	for _, entry := range c.audit.Entries {
+		// Create a barrier view using the UUID
+		view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
+
 		// Initialize the backend
-		audit, err := c.newAuditBackend(entry.Type, entry.Options)
+		audit, err := c.newAuditBackend(entry.Type, view, entry.Options)
 		if err != nil {
 			c.logger.Printf(
 				"[ERR] core: failed to create audit entry %#v: %v",
 				entry, err)
-			return loadAuditFailed
+			return errLoadAuditFailed
 		}
-
-		// Create a barrier view using the UUID
-		view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 		// Mount the backend
 		broker.Register(entry.Path, audit, view)
@@ -199,12 +201,22 @@ func (c *Core) teardownAudits() error {
 }
 
 // newAuditBackend is used to create and configure a new audit backend by name
-func (c *Core) newAuditBackend(t string, conf map[string]string) (audit.Backend, error) {
+func (c *Core) newAuditBackend(t string, view logical.Storage, conf map[string]string) (audit.Backend, error) {
 	f, ok := c.auditBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
-	return f(conf)
+	salter, err := salt.NewSalt(view, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("[ERR] core: unable to generate salt: %v", err)
+	}
+	return f(&audit.BackendConfig{
+		Salt:   salter,
+		Config: conf,
+	})
 }
 
 // defaultAuditTable creates a default audit table

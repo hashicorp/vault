@@ -521,8 +521,10 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
-		return &NoopAudit{}, nil
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
 	}
 
 	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
@@ -552,8 +554,10 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
-		return &NoopAudit{}, nil
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
 	}
 
 	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
@@ -586,8 +590,10 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
-		return &NoopAudit{}, nil
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
 	}
 
 	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")

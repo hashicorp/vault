@@ -841,7 +841,10 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
 	noop := &NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		noop = &NoopAudit{
+			Config: config,
+		}
 		return noop, nil
 	}
 
@@ -920,7 +923,10 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(map[string]string) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		noop = &NoopAudit{
+			Config: config,
+		}
 		return noop, nil
 	}
 

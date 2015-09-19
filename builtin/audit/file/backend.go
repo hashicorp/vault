@@ -8,19 +8,24 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
 
-func Factory(conf map[string]string) (audit.Backend, error) {
-	path, ok := conf["path"]
+func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
+	if conf.Salt == nil {
+		return nil, fmt.Errorf("Nil salt passed in")
+	}
+
+	path, ok := conf.Config["path"]
 	if !ok {
 		return nil, fmt.Errorf("path is required")
 	}
 
 	// Check if raw logging is enabled
 	logRaw := false
-	if raw, ok := conf["log_raw"]; ok {
+	if raw, ok := conf.Config["log_raw"]; ok {
 		b, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
@@ -29,8 +34,9 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 	}
 
 	b := &Backend{
-		Path:   path,
-		LogRaw: logRaw,
+		path:   path,
+		logRaw: logRaw,
+		salt:   conf.Salt,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -49,8 +55,9 @@ func Factory(conf map[string]string) (audit.Backend, error) {
 // It doesn't do anything more at the moment to assist with rotation
 // or reset the write cursor, this should be done in the future.
 type Backend struct {
-	Path   string
-	LogRaw bool
+	path   string
+	logRaw bool
+	salt   *salt.Salt
 
 	once sync.Once
 	f    *os.File
@@ -60,7 +67,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 	if err := b.open(); err != nil {
 		return err
 	}
-	if !b.LogRaw {
+	if !b.logRaw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
 		if req.Connection != nil && req.Connection.ConnState != nil {
@@ -86,10 +93,10 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 		req = cp.(*logical.Request)
 
 		// Hash any sensitive information
-		if err := audit.Hash(auth); err != nil {
+		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
-		if err := audit.Hash(req); err != nil {
+		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
 	}
@@ -106,7 +113,7 @@ func (b *Backend) LogResponse(
 	if err := b.open(); err != nil {
 		return err
 	}
-	if !b.LogRaw {
+	if !b.logRaw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
 		if req.Connection != nil && req.Connection.ConnState != nil {
@@ -138,13 +145,13 @@ func (b *Backend) LogResponse(
 		resp = cp.(*logical.Response)
 
 		// Hash any sensitive information
-		if err := audit.Hash(auth); err != nil {
+		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
-		if err := audit.Hash(req); err != nil {
+		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
-		if err := audit.Hash(resp); err != nil {
+		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
 		}
 	}
@@ -157,12 +164,12 @@ func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(b.Path), 0600); err != nil {
+	if err := os.MkdirAll(filepath.Dir(b.path), 0600); err != nil {
 		return err
 	}
 
 	var err error
-	b.f, err = os.OpenFile(b.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	b.f, err = os.OpenFile(b.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}

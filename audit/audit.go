@@ -1,6 +1,9 @@
 package audit
 
-import "github.com/hashicorp/vault/logical"
+import (
+	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/logical"
+)
 
 // Backend interface must be implemented for an audit
 // mechanism to be made available. Audit backends can be enabled to
@@ -20,5 +23,13 @@ type Backend interface {
 	LogResponse(*logical.Auth, *logical.Request, *logical.Response, error) error
 }
 
+type BackendConfig struct {
+	// The salt that should be used for any secret obfuscation
+	Salt *salt.Salt
+
+	// Config is the opaque user configuration provided when mounting
+	Config map[string]string
+}
+
 // Factory is the factory function to create an audit backend.
-type Factory func(map[string]string) (Backend, error)
+type Factory func(*BackendConfig) (Backend, error)

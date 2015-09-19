@@ -60,7 +60,9 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	}
 
 	// Setup the salt
-	salt, err := salt.NewSalt(view, nil)
+	salt, err := salt.NewSalt(view, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+	})
 	if err != nil {
 		return nil, err
 	}
