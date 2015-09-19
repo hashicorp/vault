@@ -207,7 +207,6 @@ func (c *Core) newAuditBackend(t string, view logical.Storage, conf map[string]s
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
 	salter, err := salt.NewSalt(view, &salt.Config{
-		HashFunc: salt.SHA256Hash,
 		HMAC:     sha256.New,
 		HMACType: "hmac-sha256",
 	})

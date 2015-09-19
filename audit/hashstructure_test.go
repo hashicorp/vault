@@ -140,10 +140,14 @@ func TestHash(t *testing.T) {
 		},
 	}
 
-	localSalt, err := salt.NewSalt(nil, &salt.Config{
-		HMAC:       sha256.New,
-		HMACType:   "hmac-sha256",
-		StaticSalt: "foo",
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(&logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
 	})
 	if err != nil {
 		t.Fatalf("Error instantiating salt: %s", err)
