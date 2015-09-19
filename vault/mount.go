@@ -40,6 +40,12 @@ var (
 		"cubbyhole/",
 	}
 
+	untunableMounts = []string{
+		"cubbyhole/",
+		"sys/",
+		"audit/",
+	}
+
 	// singletonMounts can only exist in one location and are
 	// loaded by default. These are types, not paths.
 	singletonMounts = []string{

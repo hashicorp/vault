@@ -527,7 +527,7 @@ func (b *SystemBackend) handleMountTune(
 	}
 
 	// Prevent protected paths from being changed
-	for _, p := range protectedMounts {
+	for _, p := range untunableMounts {
 		if strings.HasPrefix(path, p) {
 			err := fmt.Errorf("[ERR] core: cannot tune '%s'", path)
 			b.Backend.Logger().Print(err)
