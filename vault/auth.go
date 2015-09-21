@@ -268,7 +268,7 @@ func (c *Core) setupCredentials() error {
 			c.tokenStore = backend.(*TokenStore)
 
 			// this is loaded *after* the normal mounts, including cubbyhole
-			c.router.tokenStoreSalt = backend.(*TokenStore).salt
+			c.router.tokenStoreSalt = c.tokenStore.salt
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
 	}

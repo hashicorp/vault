@@ -400,13 +400,36 @@ func (c *Core) loadMounts() error {
 		}
 	}
 
-	// Done if we have restored the mount table
+	// Ensure that required entries are loaded, or new ones
+	// added may never get loaded at all. Note that this
+	// is only designed to work with singletons, as it checks
+	// by type only.
 	if c.mounts != nil {
-		return nil
+		needPersist := false
+		for _, requiredMount := range requiredMountTable().Entries {
+			foundRequired := false
+			for _, coreMount := range c.mounts.Entries {
+				if coreMount.Type == requiredMount.Type {
+					foundRequired = true
+					break
+				}
+			}
+			if !foundRequired {
+				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
+				needPersist = true
+			}
+		}
+
+		// Done if we have restored the mount table and we don't need
+		// to persist
+		if !needPersist {
+			return nil
+		}
+	} else {
+		// Create and persist the default mount table
+		c.mounts = defaultMountTable()
 	}
 
-	// Create and persist the default mount table
-	c.mounts = defaultMountTable()
 	if err := c.persistMounts(c.mounts); err != nil {
 		return errLoadMountsFailed
 	}
@@ -476,6 +499,8 @@ func (c *Core) setupMounts() error {
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
 			return errLoadMountsFailed
+		} else {
+			c.logger.Printf("[INFO] core: mounted backend of type %s at %s", entry.Type, view.prefix)
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -544,6 +569,15 @@ func defaultMountTable() *MountTable {
 		Description: "generic secret storage",
 		UUID:        uuid.GenerateUUID(),
 	}
+	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, requiredMountTable().Entries...)
+	return table
+}
+
+// requiredMountTable() creates a mount table with entries required
+// to be available
+func requiredMountTable() *MountTable {
+	table := &MountTable{}
 	cubbyholeMount := &MountEntry{
 		Path:        "cubbyhole/",
 		Type:        "cubbyhole",
@@ -556,7 +590,6 @@ func defaultMountTable() *MountTable {
 		Description: "system endpoints used for control, policy and debugging",
 		UUID:        uuid.GenerateUUID(),
 	}
-	table.Entries = append(table.Entries, genericMount)
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
