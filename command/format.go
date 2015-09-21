@@ -52,7 +52,7 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 				"lease_duration %s %d", config.Delim, s.LeaseDuration))
 		} else {
 			input = append(input, fmt.Sprintf(
-				"ttl %s %d", config.Delim, s.LeaseDuration))
+				"ttl_seconds %s %d", config.Delim, s.LeaseDuration))
 		}
 		if s.LeaseID != "" {
 			input = append(input, fmt.Sprintf(
