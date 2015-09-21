@@ -61,7 +61,7 @@ The main concern with the OTP backend type is the remote host's connection to
 Vault; if compromised, an attacker could spoof the Vault server returning
 a successful request. This risk can be mitigated by using TLS for the
 connection to Vault and checking certificate validity; future enhancements to
-this backend may address this problem in a more concrete way.
+this backend may allow for extra security on top of what TLS provides.
 
 ### Creating a Role
 
