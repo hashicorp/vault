@@ -10,9 +10,23 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-// logical.Factory
+// PassthroughBackendFactory returns a PassthroughBackend
+// with leases switched off
 func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(conf, false)
+}
+
+// PassthroughBackendWithLeasesFactory returns a PassthroughBackend
+// with leases switched on
+func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(conf, true)
+}
+
+// LeaseSwitchedPassthroughBackendFactory returns a PassthroughBackend
+// with leases switched on or off
+func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
 	var b PassthroughBackend
+	b.generateLeases = leases
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
@@ -42,15 +56,17 @@ func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, er
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
 			},
 		},
+	}
 
-		Secrets: []*framework.Secret{
+	if b.generateLeases {
+		b.Backend.Secrets = []*framework.Secret{
 			&framework.Secret{
 				Type: "generic",
 
 				Renew:  b.handleRead,
 				Revoke: b.handleRevoke,
 			},
-		},
+		}
 	}
 
 	if conf == nil {
@@ -58,7 +74,7 @@ func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, er
 	}
 	b.Backend.Setup(conf)
 
-	return b, nil
+	return &b, nil
 }
 
 // PassthroughBackend is used storing secrets directly into the physical
@@ -67,6 +83,7 @@ func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, er
 // fancy.
 type PassthroughBackend struct {
 	*framework.Backend
+	generateLeases bool
 }
 
 func (b *PassthroughBackend) handleRevoke(
@@ -94,9 +111,17 @@ func (b *PassthroughBackend) handleRead(
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
 
-	// Generate the response
-	resp := b.Secret("generic").Response(rawData, nil)
-	resp.Secret.Renewable = false
+	var resp *logical.Response
+	if b.generateLeases {
+		// Generate the response
+		resp = b.Secret("generic").Response(rawData, nil)
+		resp.Secret.Renewable = false
+	} else {
+		resp = &logical.Response{
+			Secret: &logical.Secret{},
+			Data:   rawData,
+		}
+	}
 
 	// Check if there is a ttl key
 	var ttl string
@@ -105,13 +130,18 @@ func (b *PassthroughBackend) handleRead(
 		ttl, _ = rawData["ttl"].(string)
 	}
 
+	ttlDuration := b.System().DefaultLeaseTTL()
 	if len(ttl) != 0 {
-		ttlDuration, err := time.ParseDuration(ttl)
-		if err == nil {
+		ttlDuration, err = time.ParseDuration(ttl)
+		if err != nil {
+			return logical.ErrorResponse("failed to parse ttl for entry"), nil
+		}
+		if b.generateLeases {
 			resp.Secret.Renewable = true
-			resp.Secret.TTL = ttlDuration
 		}
 	}
+
+	resp.Secret.TTL = ttlDuration
 
 	return resp, nil
 }
@@ -161,6 +191,10 @@ func (b *PassthroughBackend) handleList(
 
 	// Generate the response
 	return logical.ListResponse(keys), nil
+}
+
+func (b *PassthroughBackend) GeneratesLeases() bool {
+	return b.generateLeases
 }
 
 const passthroughHelp = `

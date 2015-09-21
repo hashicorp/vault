@@ -43,6 +43,9 @@ func TestCore_Init(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:     inm,
 		DisableMlock: true,
+		LogicalBackends: map[string]logical.Factory{
+			"generic": LeasedPassthroughBackendFactory,
+		},
 	}
 	c, err := NewCore(conf)
 	if err != nil {

@@ -350,7 +350,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
 	}
-	logicalBackends["generic"] = PassthroughBackendFactory
+	_, ok := logicalBackends["generic"]
+	if !ok {
+		logicalBackends["generic"] = PassthroughBackendFactory
+	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return NewSystemBackend(c, config), nil
@@ -503,15 +506,31 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			resp.Secret.TTL = maxTTL
 		}
 
-		// Register the lease
-		leaseID, err := c.expiration.Register(req, resp)
-		if err != nil {
-			c.logger.Printf(
-				"[ERR] core: failed to register lease "+
-					"(request: %#v, response: %#v): %v", req, resp, err)
+		// Generic mounts should return the TTL but not register
+		// for a lease as this provides a massive slowdown
+		registerLease := true
+		matchingBackend := c.router.MatchingBackend(req.Path)
+		if matchingBackend == nil {
+			c.logger.Println("[ERR] core: unable to retrieve generic backend from router")
 			return nil, auth, ErrInternalError
 		}
-		resp.Secret.LeaseID = leaseID
+		if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
+			if !ptbe.GeneratesLeases() {
+				registerLease = false
+				resp.Secret.Renewable = false
+			}
+		}
+
+		if registerLease {
+			leaseID, err := c.expiration.Register(req, resp)
+			if err != nil {
+				c.logger.Printf(
+					"[ERR] core: failed to register lease "+
+						"(request: %#v, response: %#v): %v", req, resp, err)
+				return nil, auth, ErrInternalError
+			}
+			resp.Secret.LeaseID = leaseID
+		}
 	}
 
 	// Only the token store is allowed to return an auth block, for any

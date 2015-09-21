@@ -45,12 +45,16 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 	input := make([]string, 0, 5)
 	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
 
-	if s.LeaseID != "" && s.LeaseDuration > 0 {
-		input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
+	if s.LeaseDuration > 0 {
+		if s.LeaseID != "" {
+			input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
+		}
 		input = append(input, fmt.Sprintf(
 			"lease_duration %s %d", config.Delim, s.LeaseDuration))
-		input = append(input, fmt.Sprintf(
-			"lease_renewable %s %s", config.Delim, strconv.FormatBool(s.Renewable)))
+		if s.LeaseID != "" {
+			input = append(input, fmt.Sprintf(
+				"lease_renewable %s %s", config.Delim, strconv.FormatBool(s.Renewable)))
+		}
 	}
 
 	if s.Auth != nil {
