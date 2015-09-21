@@ -68,10 +68,11 @@ func pathPolicyRead(
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"name":             p.Name,
-			"cipher_mode":      p.CipherMode,
-			"derived":          p.Derived,
-			"deletion_allowed": p.DeletionAllowed,
+			"name":                   p.Name,
+			"cipher_mode":            p.CipherMode,
+			"derived":                p.Derived,
+			"deletion_allowed":       p.DeletionAllowed,
+			"min_decryption_version": p.MinDecryptionVersion,
 		},
 	}
 	if p.Derived {

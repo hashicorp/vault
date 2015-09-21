@@ -32,8 +32,8 @@ ciphertext; "wrapped" will return the ciphertext only.`,
 
 			"bits": &framework.FieldSchema{
 				Type: framework.TypeInt,
-				Description: `Number of bits for the key; currently 128 and
-256 are supported. Defaults to 256.`,
+				Description: `Number of bits for the key; currently 128, 256,
+and 512 bits are supported. Defaults to 256.`,
 				Default: 256,
 			},
 		},
