@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -21,21 +22,30 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 }
 
 func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-
 	c, _, root := TestCoreUnsealed(t)
 
-	ts, err := NewTokenStore(c, getBackendConfig(c))
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	me := &MountEntry{
+		Path:        "token/",
+		Type:        "token",
+		Description: "token based credentials",
 	}
+
+	me.UUID = uuid.GenerateUUID()
+
+	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
+
+	tokenstore, _ := c.newCredentialBackend("token", c.mountEntrySysView(me), view, nil)
+	ts := tokenstore.(*TokenStore)
 
 	router := NewRouter()
 	router.Mount(ts, "auth/token/", &MountEntry{UUID: ""}, ts.view)
 
-	view := c.systemBarrierView.SubView(expirationSubPath)
-	exp := NewExpirationManager(router, view, ts, logger)
+	subview := c.systemBarrierView.SubView(expirationSubPath)
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+
+	exp := NewExpirationManager(router, subview, ts, logger)
 	ts.SetExpirationManager(exp)
+
 	return c, ts, root
 }
 
@@ -573,7 +583,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data["error"] != "root required to specify token id" {
+	if resp.Data["error"] != "root or sudo privileges required to specify token id" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -625,7 +635,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Data["error"] != "root required to create orphan token" {
+	if resp.Data["error"] != "root or sudo privileges required to create orphan token" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }

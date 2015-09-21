@@ -489,8 +489,8 @@ func (ts *TokenStore) handleCreate(
 			logical.ErrInvalidRequest
 	}
 
-	// Check if the parent policy is root
-	isRoot := strListContains(parent.Policies, "root")
+	// Check if the client token has sudo/root privileges for the requested path
+	isSudo := ts.System().SudoPrivilege(req.MountPoint+req.Path, req.ClientToken)
 
 	// Read and parse the fields
 	var data struct {
@@ -531,28 +531,28 @@ func (ts *TokenStore) handleCreate(
 		te.DisplayName = full
 	}
 
-	// Allow specifying the ID of the token if the client is root
+	// Allow specifying the ID of the token if the client has root or sudo privileges
 	if data.ID != "" {
-		if !isRoot {
-			return logical.ErrorResponse("root required to specify token id"),
+		if !isSudo {
+			return logical.ErrorResponse("root or sudo privileges required to specify token id"),
 				logical.ErrInvalidRequest
 		}
 		te.ID = data.ID
 	}
 
-	// Only permit policies to be a subset unless the client is root
+	// Only permit policies to be a subset unless the client has root or sudo privileges
 	if len(data.Policies) == 0 {
 		data.Policies = parent.Policies
 	}
-	if !isRoot && !strListSubset(parent.Policies, data.Policies) {
+	if !isSudo && !strListSubset(parent.Policies, data.Policies) {
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
 	te.Policies = data.Policies
 
-	// Only allow an orphan token if the client is root
+	// Only allow an orphan token if the client has sudo policy
 	if data.NoParent {
-		if !isRoot {
-			return logical.ErrorResponse("root required to create orphan token"),
+		if !isSudo {
+			return logical.ErrorResponse("root or sudo privileges required to create orphan token"),
 				logical.ErrInvalidRequest
 		}
 
@@ -655,11 +655,11 @@ func (ts *TokenStore) handleRevokeOrphan(
 		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
 	}
 
-	// Check if the parent policy is root
-	isRoot := strListContains(parent.Policies, "root")
+	// Check if the client token has sudo/root privileges for the requested path
+	isSudo := ts.System().SudoPrivilege(req.MountPoint+req.Path, req.ClientToken)
 
-	if !isRoot {
-		return logical.ErrorResponse("root required to revoke and orphan"),
+	if !isSudo {
+		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
 			logical.ErrInvalidRequest
 	}
 
