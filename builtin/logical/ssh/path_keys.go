@@ -27,7 +27,6 @@ func pathKeys(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathKeysRead,
 			logical.WriteOperation:  b.pathKeysWrite,
 			logical.DeleteOperation: b.pathKeysDelete,
 		},
@@ -50,22 +49,6 @@ func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
 		return nil, err
 	}
 	return &result, nil
-}
-
-func (b *backend) pathKeysRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	key, err := b.getKey(req.Storage, d.Get("key_name").(string))
-	if err != nil {
-		return nil, err
-	}
-	if key == nil {
-		return nil, nil
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"key": key.Key,
-		},
-	}, nil
 }
 
 func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -120,7 +103,7 @@ Vault uses this key to install and uninstall dynamic keys in remote hosts. This
 key should have sudoer privileges in remote hosts. This enables installing keys
 for unprivileged usernames.
 
-If this backend is mounted as "ssh", then the endpoint for registering shared key
-is "ssh/keys/webrack", if "webrack" is the user coined name for the key. The name
-given here can be associated with any number of roles via the endpoint "ssh/roles/".
+If this backend is mounted as "ssh", then the endpoint for registering shared
+key is "ssh/keys/<name>". The name given here can be associated with any number
+of roles via the endpoint "ssh/roles/".
 `

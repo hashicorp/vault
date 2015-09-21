@@ -157,20 +157,8 @@ func (b *backend) pathCredsCreateWrite(
 		return nil, fmt.Errorf("key type unknown")
 	}
 
-	// Change the lease information to reflect user's choice
-	lease, _ := b.Lease(req.Storage)
-
-	// If the lease information is set, update it in secret.
-	if lease != nil {
-		result.Secret.TTL = lease.Lease
-		result.Secret.GracePeriod = lease.LeaseMax
-	}
-
-	// If lease information is not set, set it to 10 minutes.
-	if lease == nil {
-		result.Secret.TTL = 10 * time.Minute
-		result.Secret.GracePeriod = 2 * time.Minute
-	}
+	result.Secret.TTL = b.System().DefaultLeaseTTL()
+	result.Secret.GracePeriod = 2 * time.Minute
 
 	return result, nil
 }

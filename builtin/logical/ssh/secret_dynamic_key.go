@@ -23,7 +23,7 @@ func secretDynamicKey(b *backend) *framework.Secret {
 				Description: "IP address of host",
 			},
 		},
-		DefaultDuration:    10 * time.Minute,
+		DefaultDuration:    0, // this will use sysview's value
 		DefaultGracePeriod: 2 * time.Minute,
 		Renew:              b.secretDynamicKeyRenew,
 		Revoke:             b.secretDynamicKeyRevoke,
@@ -31,14 +31,7 @@ func secretDynamicKey(b *backend) *framework.Secret {
 }
 
 func (b *backend) secretDynamicKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.Lease(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
-	}
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
+	f := framework.LeaseExtend(b.System().DefaultLeaseTTL(), b.System().MaxLeaseTTL(), false)
 	return f(req, d)
 }
 

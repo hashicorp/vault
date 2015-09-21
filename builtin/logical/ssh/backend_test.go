@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
@@ -54,6 +55,19 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 `
 )
 
+func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+	defaultLeaseTTLVal := 2 * time.Minute
+	maxLeaseTTLVal := 10 * time.Minute
+	return Factory(&logical.BackendConfig{
+		Logger:      nil,
+		StorageView: &logical.InmemStorage{},
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+}
+
 var testIP string
 
 var testUserName string
@@ -101,7 +115,7 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp3 := []string{testDynamicRoleName, testOTPRoleName}
 	resp4 := []string{testDynamicRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -123,7 +137,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -140,7 +154,7 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 		"cidr_list":    testCIDRList,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
@@ -162,7 +176,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -175,11 +189,9 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 
 func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
-			testNamedKeysRead(t, ""),
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testNamedKeysRead(t, testSharedPrivateKey),
 			testNamedKeysDelete(t),
 		},
 	})
@@ -191,7 +203,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName, data, false),
@@ -207,7 +219,7 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 		"message": api.VerifyEchoResponse,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -232,7 +244,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
@@ -272,7 +284,7 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
 			testCredsWrite(t, testOTPRoleName, data, true),
@@ -346,31 +358,6 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 
 			if !reflect.DeepEqual(ac, ex) {
 				return fmt.Errorf("Invalid response")
-			}
-			return nil
-		},
-	}
-}
-
-func testNamedKeysRead(t *testing.T, key string) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.ReadOperation,
-		Path:      fmt.Sprintf("keys/%s", testKeyName),
-		Check: func(resp *logical.Response) error {
-			if key != "" {
-				if resp == nil || resp.Data == nil {
-					return fmt.Errorf("Key missing in response")
-				}
-				var d struct {
-					Key string `mapstructure:"key"`
-				}
-				if err := mapstructure.Decode(resp.Data, &d); err != nil {
-					return err
-				}
-
-				if d.Key != key {
-					return fmt.Errorf("Key mismatch")
-				}
 			}
 			return nil
 		},

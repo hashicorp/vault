@@ -19,7 +19,7 @@ func secretOTP(b *backend) *framework.Secret {
 				Description: "One time password",
 			},
 		},
-		DefaultDuration:    10 * time.Minute,
+		DefaultDuration:    0, // this will use sysview's value
 		DefaultGracePeriod: 2 * time.Minute,
 		Revoke:             b.secretOTPRevoke,
 	}
