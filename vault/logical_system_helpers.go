@@ -3,42 +3,60 @@ package vault
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // tuneMount is used to set config on a mount point
-func (b *SystemBackend) tuneMountTTLs(path string, meConfig, newConfig *MountConfig) error {
-	if meConfig.MaxLeaseTTL == newConfig.MaxLeaseTTL &&
-		meConfig.DefaultLeaseTTL == newConfig.DefaultLeaseTTL {
+func (b *SystemBackend) tuneMountTTLs(path string, meConfig *MountConfig, newDefault, newMax *time.Duration) error {
+	if newDefault == nil && newMax == nil {
+		return nil
+	}
+	if newDefault == nil && newMax != nil &&
+		*newMax == meConfig.MaxLeaseTTL {
+		return nil
+	}
+	if newMax == nil && newDefault != nil &&
+		*newDefault == meConfig.DefaultLeaseTTL {
+		return nil
+	}
+	if newMax != nil && newDefault != nil &&
+		*newDefault == meConfig.DefaultLeaseTTL &&
+		*newMax == meConfig.MaxLeaseTTL {
 		return nil
 	}
 
-	if meConfig.DefaultLeaseTTL != 0 {
-		if newConfig.MaxLeaseTTL < meConfig.DefaultLeaseTTL {
-			if newConfig.DefaultLeaseTTL == 0 {
-				return fmt.Errorf("New backend max lease TTL of %d less than backend default lease TTL of %d",
-					newConfig.MaxLeaseTTL, meConfig.DefaultLeaseTTL)
+	if newMax != nil && newDefault != nil && *newMax < *newDefault {
+		return fmt.Errorf("New backend max lease TTL of %d less than new backend default lease TTL of %d",
+			*newMax, *newDefault)
+	}
+
+	if newMax != nil && newDefault == nil {
+		if meConfig.DefaultLeaseTTL != 0 && *newMax < meConfig.DefaultLeaseTTL {
+			return fmt.Errorf("New backend max lease TTL of %d less than backend default lease TTL of %d",
+				*newMax, meConfig.DefaultLeaseTTL)
+		}
+	}
+
+	if newDefault != nil {
+		if meConfig.MaxLeaseTTL == 0 {
+			if *newDefault > b.Core.maxLeaseTTL {
+				return fmt.Errorf("New backend default lease TTL of %d greater than system max lease TTL of %d",
+					*newDefault, b.Core.maxLeaseTTL)
 			}
-			if newConfig.MaxLeaseTTL < newConfig.DefaultLeaseTTL {
-				return fmt.Errorf("New backend max lease TTL of %d less than new backend default lease TTL of %d",
-					newConfig.MaxLeaseTTL, newConfig.DefaultLeaseTTL)
+		} else {
+			if meConfig.MaxLeaseTTL < *newDefault {
+				return fmt.Errorf("New backend default lease TTL of %d greater than backend max lease TTL of %d",
+					*newDefault, meConfig.MaxLeaseTTL)
 			}
 		}
 	}
 
-	if meConfig.MaxLeaseTTL == 0 {
-		if newConfig.DefaultLeaseTTL > b.Core.maxLeaseTTL {
-			return fmt.Errorf("New backend default lease TTL of %d greater than system max lease TTL of %d",
-				newConfig.DefaultLeaseTTL, b.Core.maxLeaseTTL)
-		}
-	} else {
-		if meConfig.MaxLeaseTTL < newConfig.DefaultLeaseTTL {
-			return fmt.Errorf("New backend default lease TTL of %d greater than backend max lease TTL of %d",
-				newConfig.DefaultLeaseTTL, meConfig.MaxLeaseTTL)
-		}
+	if newMax != nil {
+		meConfig.MaxLeaseTTL = *newMax
 	}
-
-	meConfig.MaxLeaseTTL = newConfig.MaxLeaseTTL
-	meConfig.DefaultLeaseTTL = newConfig.DefaultLeaseTTL
+	if newDefault != nil {
+		meConfig.DefaultLeaseTTL = *newDefault
+	}
 
 	// Update the mount table
 	if err := b.Core.persistMounts(b.Core.mounts); err != nil {

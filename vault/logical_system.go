@@ -542,23 +542,19 @@ func (b *SystemBackend) handleMountTune(
 		return handleError(err)
 	}
 
-	newMountConfig := mountEntry.Config
-
 	// Timing configuration parameters
 	{
-		var needTTLTune bool
-		defTTLInt, ok := data.GetOk("default_lease_ttl")
-		if ok {
-			newMountConfig.DefaultLeaseTTL = time.Duration(defTTLInt.(int))
-			needTTLTune = true
+		var newDefault, newMax *time.Duration
+		if defTTLInt, ok := data.GetOk("default_lease_ttl"); ok {
+			def := time.Duration(defTTLInt.(int))
+			newDefault = &def
 		}
-		maxTTLInt, ok := data.GetOk("max_lease_ttl")
-		if ok {
-			newMountConfig.MaxLeaseTTL = time.Duration(maxTTLInt.(int))
-			needTTLTune = true
+		if maxTTLInt, ok := data.GetOk("max_lease_ttl"); ok {
+			max := time.Duration(maxTTLInt.(int))
+			newMax = &max
 		}
-		if needTTLTune {
-			if err := b.tuneMountTTLs(path, &mountEntry.Config, &newMountConfig); err != nil {
+		if newDefault != nil || newMax != nil {
+			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
 				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
 				return handleError(err)
 			}

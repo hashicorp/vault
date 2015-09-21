@@ -115,35 +115,34 @@ func (d *FieldData) getPrimitive(
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
 		}
-
 		return result, true, nil
+
 	case TypeInt:
 		var result int
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
 		}
-
 		return result, true, nil
+
 	case TypeString:
 		var result string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
 		}
-
 		return result, true, nil
+
 	case TypeMap:
 		var result map[string]interface{}
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
 		}
-
 		return result, true, nil
 
 	case TypeDurationSecond:
 		var result int
 		switch inp := raw.(type) {
 		case nil:
-			return nil, true, nil
+			return nil, false, nil
 		case int:
 			result = inp
 		case float32:
