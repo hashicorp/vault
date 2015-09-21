@@ -96,7 +96,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	// Protect with master key
 	master, _ := b.GenerateKey()
 	gcm, _ := b.aeadFromKey(master)
-	value := b.encrypt(initialKeyTerm, gcm, buf)
+	value := b.encrypt(barrierInitPath, initialKeyTerm, gcm, buf)
 
 	// Write to the physical backend
 	pe := &physical.Entry{
@@ -109,7 +109,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	gcm, _ = b.aeadFromKey(encrypt)
 	pe = &physical.Entry{
 		Key:   "test/foo",
-		Value: b.encrypt(initialKeyTerm, gcm, []byte("test")),
+		Value: b.encrypt("test/foo", initialKeyTerm, gcm, []byte("test")),
 	}
 	inm.Put(pe)
 
@@ -193,7 +193,7 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 	}
 }
 
-// Verify data sent through is cannot be tampered
+// Verify data sent through cannot be tampered with
 func TestAESGCMBarrier_Integrity(t *testing.T) {
 	inm := physical.NewInmem()
 	b, err := NewAESGCMBarrier(inm)
@@ -228,6 +228,135 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 	}
 }
 
+// Verify data sent through cannot be moved
+func TestAESGCMBarrier_MoveIntegrityV1(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b.currentAESGCMVersionByte = AESGCMVersion1
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	err = b.Initialize(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = b.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Put a logical entry
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	err = b.Put(entry)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Change the location of the underlying physical entry
+	pe, _ := inm.Get("test")
+	pe.Key = "moved"
+	err = inm.Put(pe)
+
+	// Read from the barrier
+	_, err = b.Get("moved")
+	if err != nil {
+		t.Fatalf("should succeed with version 1!")
+	}
+}
+
+func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b.currentAESGCMVersionByte = AESGCMVersion2
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	err = b.Initialize(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = b.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Put a logical entry
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	err = b.Put(entry)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Change the location of the underlying physical entry
+	pe, _ := inm.Get("test")
+	pe.Key = "moved"
+	err = inm.Put(pe)
+
+	// Read from the barrier
+	_, err = b.Get("moved")
+	if err == nil {
+		t.Fatalf("should fail with version 2!")
+	}
+}
+
+func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
+	inm := physical.NewInmem()
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b.currentAESGCMVersionByte = AESGCMVersion1
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	err = b.Initialize(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = b.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Put a logical entry
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	err = b.Put(entry)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Seal
+	err = b.Seal()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Open again as version 2
+	b, err = NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b.currentAESGCMVersionByte = AESGCMVersion2
+
+	// Unseal
+	err = b.Unseal(key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check successful decryption
+	_, err = b.Get("test")
+	if err != nil {
+		t.Fatalf("Upgrade unsuccessful")
+	}
+}
+
 func TestEncrypt_Unique(t *testing.T) {
 	inm := physical.NewInmem()
 	b, err := NewAESGCMBarrier(inm)
@@ -247,8 +376,8 @@ func TestEncrypt_Unique(t *testing.T) {
 	term := b.keyring.ActiveTerm()
 	primary, _ := b.aeadForTerm(term)
 
-	first := b.encrypt(term, primary, entry.Value)
-	second := b.encrypt(term, primary, entry.Value)
+	first := b.encrypt("test", term, primary, entry.Value)
+	second := b.encrypt("test", term, primary, entry.Value)
 
 	if bytes.Equal(first, second) == true {
 		t.Fatalf("improper random seeding detected")
