@@ -13,9 +13,9 @@ type SystemView interface {
 	// this value, as Vault will revoke them
 	MaxLeaseTTL() time.Duration
 
-	// SudoPrivilege returns true if given path has sudo privileges under the given
-	// list of policies
-	SudoPrivilege(path string, policies []string) bool
+	// SudoPrivilege returns true if given path has sudo privileges
+	// for the given client token
+	SudoPrivilege(path string, token string) bool
 }
 
 type StaticSystemView struct {
@@ -32,6 +32,6 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 	return d.MaxLeaseTTLVal
 }
 
-func (d StaticSystemView) SudoPrivilege(path string, policies []string) bool {
+func (d StaticSystemView) SudoPrivilege(path string, token string) bool {
 	return d.SudoPrivilegeVal
 }
