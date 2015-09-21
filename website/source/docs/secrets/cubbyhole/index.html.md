@@ -48,3 +48,76 @@ zip           	zap
 ```
 
 As expected, the value previously set is returned to us.
+
+## API
+
+### /cubbyhole
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Retrieves the secret at the specified location.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/cubbyhole/<path>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+  ```javascript
+  {
+      "auth": null,
+      "data": {
+          "foo": "bar"
+      },
+      "lease_duration": 0,
+      "lease_id": "",
+      "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
+
+#### POST/PUT
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Stores a secret at the specified location.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST/PUT</dd>
+
+  <dt>URL</dt>
+  <dd>`/cubbyhole/<path>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">(key)</span>
+        <span class="param-flags">optional</span>
+        A key, paired with an associated value, to be held at the
+        given location. Multiple key/value pairs can be specified,
+        and all will be returned on a read operation.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  A `204` response code.
+  </dd>
+</dl>
