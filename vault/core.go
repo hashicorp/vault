@@ -506,26 +506,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			resp.Secret.TTL = maxTTL
 		}
 
-		mountEntry := c.router.MatchingMountEntry(req.Path)
-		if mountEntry == nil {
-			c.logger.Println("[ERR] core: unable to retrieve generic mount entry from router")
-			return nil, auth, ErrInternalError
-		}
-
 		// Generic mounts should return the TTL but not register
 		// for a lease as this provides a massive slowdown
 		registerLease := true
-		if mountEntry.Type == "generic" {
-			backend := c.router.MatchingBackend(req.Path)
-			if backend == nil {
-				c.logger.Println("[ERR] core: unable to retrieve generic backend from router")
-				return nil, auth, ErrInternalError
-			}
-			if !backend.(*PassthroughBackend).GeneratesLeases() {
+		matchingBackend := c.router.MatchingBackend(req.Path)
+		if matchingBackend == nil {
+			c.logger.Println("[ERR] core: unable to retrieve generic backend from router")
+			return nil, auth, ErrInternalError
+		}
+		if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
+			if !ptbe.GeneratesLeases() {
 				registerLease = false
 				resp.Secret.Renewable = false
 			}
 		}
+
 		if registerLease {
 			leaseID, err := c.expiration.Register(req, resp)
 			if err != nil {

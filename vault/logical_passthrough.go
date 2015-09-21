@@ -130,7 +130,7 @@ func (b *PassthroughBackend) handleRead(
 		ttl, _ = rawData["ttl"].(string)
 	}
 
-	var ttlDuration time.Duration
+	ttlDuration := b.System().DefaultLeaseTTL()
 	if len(ttl) != 0 {
 		ttlDuration, err = time.ParseDuration(ttl)
 		if err != nil {
@@ -139,8 +139,6 @@ func (b *PassthroughBackend) handleRead(
 		if b.generateLeases {
 			resp.Secret.Renewable = true
 		}
-	} else {
-		ttlDuration = b.System().DefaultLeaseTTL()
 	}
 
 	resp.Secret.TTL = ttlDuration
