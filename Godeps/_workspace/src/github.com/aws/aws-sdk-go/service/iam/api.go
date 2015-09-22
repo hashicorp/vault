@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 const opAddClientIDToOpenIDConnectProvider = "AddClientIDToOpenIDConnectProvider"
 
 // AddClientIDToOpenIDConnectProviderRequest generates a request for the AddClientIDToOpenIDConnectProvider operation.
-func (c *IAM) AddClientIDToOpenIDConnectProviderRequest(input *AddClientIDToOpenIDConnectProviderInput) (req *service.Request, output *AddClientIDToOpenIDConnectProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) AddClientIDToOpenIDConnectProviderRequest(input *AddClientIDToOpenIDConnectProviderInput) (req *request.Request, output *AddClientIDToOpenIDConnectProviderOutput) {
+	op := &request.Operation{
 		Name:       opAddClientIDToOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -44,8 +44,8 @@ func (c *IAM) AddClientIDToOpenIDConnectProvider(input *AddClientIDToOpenIDConne
 const opAddRoleToInstanceProfile = "AddRoleToInstanceProfile"
 
 // AddRoleToInstanceProfileRequest generates a request for the AddRoleToInstanceProfile operation.
-func (c *IAM) AddRoleToInstanceProfileRequest(input *AddRoleToInstanceProfileInput) (req *service.Request, output *AddRoleToInstanceProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) AddRoleToInstanceProfileRequest(input *AddRoleToInstanceProfileInput) (req *request.Request, output *AddRoleToInstanceProfileOutput) {
+	op := &request.Operation{
 		Name:       opAddRoleToInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -74,8 +74,8 @@ func (c *IAM) AddRoleToInstanceProfile(input *AddRoleToInstanceProfileInput) (*A
 const opAddUserToGroup = "AddUserToGroup"
 
 // AddUserToGroupRequest generates a request for the AddUserToGroup operation.
-func (c *IAM) AddUserToGroupRequest(input *AddUserToGroupInput) (req *service.Request, output *AddUserToGroupOutput) {
-	op := &service.Operation{
+func (c *IAM) AddUserToGroupRequest(input *AddUserToGroupInput) (req *request.Request, output *AddUserToGroupOutput) {
+	op := &request.Operation{
 		Name:       opAddUserToGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -101,8 +101,8 @@ func (c *IAM) AddUserToGroup(input *AddUserToGroupInput) (*AddUserToGroupOutput,
 const opAttachGroupPolicy = "AttachGroupPolicy"
 
 // AttachGroupPolicyRequest generates a request for the AttachGroupPolicy operation.
-func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *service.Request, output *AttachGroupPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *request.Request, output *AttachGroupPolicyOutput) {
+	op := &request.Operation{
 		Name:       opAttachGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -125,7 +125,7 @@ func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *serv
 //
 // For more information about policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) AttachGroupPolicy(input *AttachGroupPolicyInput) (*AttachGroupPolicyOutput, error) {
 	req, out := c.AttachGroupPolicyRequest(input)
 	err := req.Send()
@@ -135,8 +135,8 @@ func (c *IAM) AttachGroupPolicy(input *AttachGroupPolicyInput) (*AttachGroupPoli
 const opAttachRolePolicy = "AttachRolePolicy"
 
 // AttachRolePolicyRequest generates a request for the AttachRolePolicy operation.
-func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *service.Request, output *AttachRolePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *request.Request, output *AttachRolePolicyOutput) {
+	op := &request.Operation{
 		Name:       opAttachRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -163,7 +163,7 @@ func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *servic
 // Use this API to attach a managed policy to a role. To embed an inline policy
 // in a role, use PutRolePolicy. For more information about policies, refer
 // to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) AttachRolePolicy(input *AttachRolePolicyInput) (*AttachRolePolicyOutput, error) {
 	req, out := c.AttachRolePolicyRequest(input)
 	err := req.Send()
@@ -173,8 +173,8 @@ func (c *IAM) AttachRolePolicy(input *AttachRolePolicyInput) (*AttachRolePolicyO
 const opAttachUserPolicy = "AttachUserPolicy"
 
 // AttachUserPolicyRequest generates a request for the AttachUserPolicy operation.
-func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *service.Request, output *AttachUserPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *request.Request, output *AttachUserPolicyOutput) {
+	op := &request.Operation{
 		Name:       opAttachUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -197,7 +197,7 @@ func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *servic
 //
 // For more information about policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) AttachUserPolicy(input *AttachUserPolicyInput) (*AttachUserPolicyOutput, error) {
 	req, out := c.AttachUserPolicyRequest(input)
 	err := req.Send()
@@ -207,8 +207,8 @@ func (c *IAM) AttachUserPolicy(input *AttachUserPolicyInput) (*AttachUserPolicyO
 const opChangePassword = "ChangePassword"
 
 // ChangePasswordRequest generates a request for the ChangePassword operation.
-func (c *IAM) ChangePasswordRequest(input *ChangePasswordInput) (req *service.Request, output *ChangePasswordOutput) {
-	op := &service.Operation{
+func (c *IAM) ChangePasswordRequest(input *ChangePasswordInput) (req *request.Request, output *ChangePasswordOutput) {
+	op := &request.Operation{
 		Name:       opChangePassword,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -229,7 +229,7 @@ func (c *IAM) ChangePasswordRequest(input *ChangePasswordInput) (req *service.Re
 //
 // To change the password for a different user, see UpdateLoginProfile. For
 // more information about modifying passwords, see Managing Passwords (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_ManagingLogins.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) ChangePassword(input *ChangePasswordInput) (*ChangePasswordOutput, error) {
 	req, out := c.ChangePasswordRequest(input)
 	err := req.Send()
@@ -239,8 +239,8 @@ func (c *IAM) ChangePassword(input *ChangePasswordInput) (*ChangePasswordOutput,
 const opCreateAccessKey = "CreateAccessKey"
 
 // CreateAccessKeyRequest generates a request for the CreateAccessKey operation.
-func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *service.Request, output *CreateAccessKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *request.Request, output *CreateAccessKeyOutput) {
+	op := &request.Operation{
 		Name:       opCreateAccessKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -266,7 +266,7 @@ func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *service.
 //
 //  For information about limits on the number of keys you can create, see
 // Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 //  To ensure the security of your AWS account, the secret access key is accessible
 // only during key and user creation. You must save the key (for example, in
@@ -282,8 +282,8 @@ func (c *IAM) CreateAccessKey(input *CreateAccessKeyInput) (*CreateAccessKeyOutp
 const opCreateAccountAlias = "CreateAccountAlias"
 
 // CreateAccountAliasRequest generates a request for the CreateAccountAlias operation.
-func (c *IAM) CreateAccountAliasRequest(input *CreateAccountAliasInput) (req *service.Request, output *CreateAccountAliasOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateAccountAliasRequest(input *CreateAccountAliasInput) (req *request.Request, output *CreateAccountAliasOutput) {
+	op := &request.Operation{
 		Name:       opCreateAccountAlias,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -301,7 +301,7 @@ func (c *IAM) CreateAccountAliasRequest(input *CreateAccountAliasInput) (req *se
 
 // Creates an alias for your AWS account. For information about using an AWS
 // account alias, see Using an Alias for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreateAccountAlias(input *CreateAccountAliasInput) (*CreateAccountAliasOutput, error) {
 	req, out := c.CreateAccountAliasRequest(input)
 	err := req.Send()
@@ -311,8 +311,8 @@ func (c *IAM) CreateAccountAlias(input *CreateAccountAliasInput) (*CreateAccount
 const opCreateGroup = "CreateGroup"
 
 // CreateGroupRequest generates a request for the CreateGroup operation.
-func (c *IAM) CreateGroupRequest(input *CreateGroupInput) (req *service.Request, output *CreateGroupOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateGroupRequest(input *CreateGroupInput) (req *request.Request, output *CreateGroupOutput) {
+	op := &request.Operation{
 		Name:       opCreateGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -332,7 +332,7 @@ func (c *IAM) CreateGroupRequest(input *CreateGroupInput) (req *service.Request,
 //
 //  For information about the number of groups you can create, see Limitations
 // on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreateGroup(input *CreateGroupInput) (*CreateGroupOutput, error) {
 	req, out := c.CreateGroupRequest(input)
 	err := req.Send()
@@ -342,8 +342,8 @@ func (c *IAM) CreateGroup(input *CreateGroupInput) (*CreateGroupOutput, error) {
 const opCreateInstanceProfile = "CreateInstanceProfile"
 
 // CreateInstanceProfileRequest generates a request for the CreateInstanceProfile operation.
-func (c *IAM) CreateInstanceProfileRequest(input *CreateInstanceProfileInput) (req *service.Request, output *CreateInstanceProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateInstanceProfileRequest(input *CreateInstanceProfileInput) (req *request.Request, output *CreateInstanceProfileOutput) {
+	op := &request.Operation{
 		Name:       opCreateInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -364,7 +364,7 @@ func (c *IAM) CreateInstanceProfileRequest(input *CreateInstanceProfileInput) (r
 //
 //  For information about the number of instance profiles you can create, see
 // Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreateInstanceProfile(input *CreateInstanceProfileInput) (*CreateInstanceProfileOutput, error) {
 	req, out := c.CreateInstanceProfileRequest(input)
 	err := req.Send()
@@ -374,8 +374,8 @@ func (c *IAM) CreateInstanceProfile(input *CreateInstanceProfileInput) (*CreateI
 const opCreateLoginProfile = "CreateLoginProfile"
 
 // CreateLoginProfileRequest generates a request for the CreateLoginProfile operation.
-func (c *IAM) CreateLoginProfileRequest(input *CreateLoginProfileInput) (req *service.Request, output *CreateLoginProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateLoginProfileRequest(input *CreateLoginProfileInput) (req *request.Request, output *CreateLoginProfileOutput) {
+	op := &request.Operation{
 		Name:       opCreateLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -404,8 +404,8 @@ func (c *IAM) CreateLoginProfile(input *CreateLoginProfileInput) (*CreateLoginPr
 const opCreateOpenIDConnectProvider = "CreateOpenIDConnectProvider"
 
 // CreateOpenIDConnectProviderRequest generates a request for the CreateOpenIDConnectProvider operation.
-func (c *IAM) CreateOpenIDConnectProviderRequest(input *CreateOpenIDConnectProviderInput) (req *service.Request, output *CreateOpenIDConnectProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateOpenIDConnectProviderRequest(input *CreateOpenIDConnectProviderInput) (req *request.Request, output *CreateOpenIDConnectProviderOutput) {
+	op := &request.Operation{
 		Name:       opCreateOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -447,8 +447,8 @@ func (c *IAM) CreateOpenIDConnectProvider(input *CreateOpenIDConnectProviderInpu
 const opCreatePolicy = "CreatePolicy"
 
 // CreatePolicyRequest generates a request for the CreatePolicy operation.
-func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *service.Request, output *CreatePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *request.Request, output *CreatePolicyOutput) {
+	op := &request.Operation{
 		Name:       opCreatePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -469,11 +469,11 @@ func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *service.Reques
 // This operation creates a policy version with a version identifier of v1
 // and sets v1 as the policy's default version. For more information about policy
 // versions, see Versioning for Managed Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // For more information about managed policies in general, refer to Managed
 // Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreatePolicy(input *CreatePolicyInput) (*CreatePolicyOutput, error) {
 	req, out := c.CreatePolicyRequest(input)
 	err := req.Send()
@@ -483,8 +483,8 @@ func (c *IAM) CreatePolicy(input *CreatePolicyInput) (*CreatePolicyOutput, error
 const opCreatePolicyVersion = "CreatePolicyVersion"
 
 // CreatePolicyVersionRequest generates a request for the CreatePolicyVersion operation.
-func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *service.Request, output *CreatePolicyVersionOutput) {
-	op := &service.Operation{
+func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *request.Request, output *CreatePolicyVersionOutput) {
+	op := &request.Operation{
 		Name:       opCreatePolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -512,7 +512,7 @@ func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *
 //
 // For more information about managed policy versions, see Versioning for Managed
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreatePolicyVersion(input *CreatePolicyVersionInput) (*CreatePolicyVersionOutput, error) {
 	req, out := c.CreatePolicyVersionRequest(input)
 	err := req.Send()
@@ -522,8 +522,8 @@ func (c *IAM) CreatePolicyVersion(input *CreatePolicyVersionInput) (*CreatePolic
 const opCreateRole = "CreateRole"
 
 // CreateRoleRequest generates a request for the CreateRole operation.
-func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *service.Request, output *CreateRoleOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *request.Request, output *CreateRoleOutput) {
+	op := &request.Operation{
 		Name:       opCreateRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -543,7 +543,7 @@ func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *service.Request, o
 // go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
 // For information about limitations on role names and the number of roles you
 // can create, go to Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // The policy in the following example grants permission to an EC2 instance
 // to assume the role.
@@ -556,8 +556,8 @@ func (c *IAM) CreateRole(input *CreateRoleInput) (*CreateRoleOutput, error) {
 const opCreateSAMLProvider = "CreateSAMLProvider"
 
 // CreateSAMLProviderRequest generates a request for the CreateSAMLProvider operation.
-func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *service.Request, output *CreateSAMLProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *request.Request, output *CreateSAMLProviderOutput) {
+	op := &request.Operation{
 		Name:       opCreateSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -590,9 +590,10 @@ func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *se
 // your organization's IdP.
 //
 //  This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
-//   For more information, see Giving Console Access Using SAML (http://docs.aws.amazon.com/STS/latest/UsingSTS/STSMgmtConsole-SAML.html)
-// and Creating Temporary Security Credentials for SAML Federation (http://docs.aws.amazon.com/STS/latest/UsingSTS/CreatingSAML.html)
-// in the Using Temporary Credentials guide.
+//   For more information, see Enabling SAML 2.0 Federated Users to Access the
+// AWS Management Console (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-saml.html)
+// and About SAML 2.0-based Federation (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_saml.html)
+// in the IAM User Guide.
 func (c *IAM) CreateSAMLProvider(input *CreateSAMLProviderInput) (*CreateSAMLProviderOutput, error) {
 	req, out := c.CreateSAMLProviderRequest(input)
 	err := req.Send()
@@ -602,8 +603,8 @@ func (c *IAM) CreateSAMLProvider(input *CreateSAMLProviderInput) (*CreateSAMLPro
 const opCreateUser = "CreateUser"
 
 // CreateUserRequest generates a request for the CreateUser operation.
-func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *service.Request, output *CreateUserOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *request.Request, output *CreateUserOutput) {
+	op := &request.Operation{
 		Name:       opCreateUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -623,7 +624,7 @@ func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *service.Request, o
 //
 //  For information about limitations on the number of users you can create,
 // see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreateUser(input *CreateUserInput) (*CreateUserOutput, error) {
 	req, out := c.CreateUserRequest(input)
 	err := req.Send()
@@ -633,8 +634,8 @@ func (c *IAM) CreateUser(input *CreateUserInput) (*CreateUserOutput, error) {
 const opCreateVirtualMFADevice = "CreateVirtualMFADevice"
 
 // CreateVirtualMFADeviceRequest generates a request for the CreateVirtualMFADevice operation.
-func (c *IAM) CreateVirtualMFADeviceRequest(input *CreateVirtualMFADeviceInput) (req *service.Request, output *CreateVirtualMFADeviceOutput) {
-	op := &service.Operation{
+func (c *IAM) CreateVirtualMFADeviceRequest(input *CreateVirtualMFADeviceInput) (req *request.Request, output *CreateVirtualMFADeviceOutput) {
+	op := &request.Operation{
 		Name:       opCreateVirtualMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -673,8 +674,8 @@ func (c *IAM) CreateVirtualMFADevice(input *CreateVirtualMFADeviceInput) (*Creat
 const opDeactivateMFADevice = "DeactivateMFADevice"
 
 // DeactivateMFADeviceRequest generates a request for the DeactivateMFADevice operation.
-func (c *IAM) DeactivateMFADeviceRequest(input *DeactivateMFADeviceInput) (req *service.Request, output *DeactivateMFADeviceOutput) {
-	op := &service.Operation{
+func (c *IAM) DeactivateMFADeviceRequest(input *DeactivateMFADeviceInput) (req *request.Request, output *DeactivateMFADeviceOutput) {
+	op := &request.Operation{
 		Name:       opDeactivateMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -705,8 +706,8 @@ func (c *IAM) DeactivateMFADevice(input *DeactivateMFADeviceInput) (*DeactivateM
 const opDeleteAccessKey = "DeleteAccessKey"
 
 // DeleteAccessKeyRequest generates a request for the DeleteAccessKey operation.
-func (c *IAM) DeleteAccessKeyRequest(input *DeleteAccessKeyInput) (req *service.Request, output *DeleteAccessKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteAccessKeyRequest(input *DeleteAccessKeyInput) (req *request.Request, output *DeleteAccessKeyOutput) {
+	op := &request.Operation{
 		Name:       opDeleteAccessKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -737,8 +738,8 @@ func (c *IAM) DeleteAccessKey(input *DeleteAccessKeyInput) (*DeleteAccessKeyOutp
 const opDeleteAccountAlias = "DeleteAccountAlias"
 
 // DeleteAccountAliasRequest generates a request for the DeleteAccountAlias operation.
-func (c *IAM) DeleteAccountAliasRequest(input *DeleteAccountAliasInput) (req *service.Request, output *DeleteAccountAliasOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteAccountAliasRequest(input *DeleteAccountAliasInput) (req *request.Request, output *DeleteAccountAliasOutput) {
+	op := &request.Operation{
 		Name:       opDeleteAccountAlias,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -756,7 +757,7 @@ func (c *IAM) DeleteAccountAliasRequest(input *DeleteAccountAliasInput) (req *se
 
 // Deletes the specified AWS account alias. For information about using an AWS
 // account alias, see Using an Alias for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeleteAccountAlias(input *DeleteAccountAliasInput) (*DeleteAccountAliasOutput, error) {
 	req, out := c.DeleteAccountAliasRequest(input)
 	err := req.Send()
@@ -766,8 +767,8 @@ func (c *IAM) DeleteAccountAlias(input *DeleteAccountAliasInput) (*DeleteAccount
 const opDeleteAccountPasswordPolicy = "DeleteAccountPasswordPolicy"
 
 // DeleteAccountPasswordPolicyRequest generates a request for the DeleteAccountPasswordPolicy operation.
-func (c *IAM) DeleteAccountPasswordPolicyRequest(input *DeleteAccountPasswordPolicyInput) (req *service.Request, output *DeleteAccountPasswordPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteAccountPasswordPolicyRequest(input *DeleteAccountPasswordPolicyInput) (req *request.Request, output *DeleteAccountPasswordPolicyOutput) {
+	op := &request.Operation{
 		Name:       opDeleteAccountPasswordPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -793,8 +794,8 @@ func (c *IAM) DeleteAccountPasswordPolicy(input *DeleteAccountPasswordPolicyInpu
 const opDeleteGroup = "DeleteGroup"
 
 // DeleteGroupRequest generates a request for the DeleteGroup operation.
-func (c *IAM) DeleteGroupRequest(input *DeleteGroupInput) (req *service.Request, output *DeleteGroupOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteGroupRequest(input *DeleteGroupInput) (req *request.Request, output *DeleteGroupOutput) {
+	op := &request.Operation{
 		Name:       opDeleteGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -821,8 +822,8 @@ func (c *IAM) DeleteGroup(input *DeleteGroupInput) (*DeleteGroupOutput, error) {
 const opDeleteGroupPolicy = "DeleteGroupPolicy"
 
 // DeleteGroupPolicyRequest generates a request for the DeleteGroupPolicy operation.
-func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *service.Request, output *DeleteGroupPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *request.Request, output *DeleteGroupPolicyOutput) {
+	op := &request.Operation{
 		Name:       opDeleteGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -843,7 +844,7 @@ func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *serv
 // A group can also have managed policies attached to it. To detach a managed
 // policy from a group, use DetachGroupPolicy. For more information about policies,
 // refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeleteGroupPolicy(input *DeleteGroupPolicyInput) (*DeleteGroupPolicyOutput, error) {
 	req, out := c.DeleteGroupPolicyRequest(input)
 	err := req.Send()
@@ -853,8 +854,8 @@ func (c *IAM) DeleteGroupPolicy(input *DeleteGroupPolicyInput) (*DeleteGroupPoli
 const opDeleteInstanceProfile = "DeleteInstanceProfile"
 
 // DeleteInstanceProfileRequest generates a request for the DeleteInstanceProfile operation.
-func (c *IAM) DeleteInstanceProfileRequest(input *DeleteInstanceProfileInput) (req *service.Request, output *DeleteInstanceProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteInstanceProfileRequest(input *DeleteInstanceProfileInput) (req *request.Request, output *DeleteInstanceProfileOutput) {
+	op := &request.Operation{
 		Name:       opDeleteInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -887,8 +888,8 @@ func (c *IAM) DeleteInstanceProfile(input *DeleteInstanceProfileInput) (*DeleteI
 const opDeleteLoginProfile = "DeleteLoginProfile"
 
 // DeleteLoginProfileRequest generates a request for the DeleteLoginProfile operation.
-func (c *IAM) DeleteLoginProfileRequest(input *DeleteLoginProfileInput) (req *service.Request, output *DeleteLoginProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteLoginProfileRequest(input *DeleteLoginProfileInput) (req *request.Request, output *DeleteLoginProfileOutput) {
+	op := &request.Operation{
 		Name:       opDeleteLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -920,8 +921,8 @@ func (c *IAM) DeleteLoginProfile(input *DeleteLoginProfileInput) (*DeleteLoginPr
 const opDeleteOpenIDConnectProvider = "DeleteOpenIDConnectProvider"
 
 // DeleteOpenIDConnectProviderRequest generates a request for the DeleteOpenIDConnectProvider operation.
-func (c *IAM) DeleteOpenIDConnectProviderRequest(input *DeleteOpenIDConnectProviderInput) (req *service.Request, output *DeleteOpenIDConnectProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteOpenIDConnectProviderRequest(input *DeleteOpenIDConnectProviderInput) (req *request.Request, output *DeleteOpenIDConnectProviderOutput) {
+	op := &request.Operation{
 		Name:       opDeleteOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -954,8 +955,8 @@ func (c *IAM) DeleteOpenIDConnectProvider(input *DeleteOpenIDConnectProviderInpu
 const opDeletePolicy = "DeletePolicy"
 
 // DeletePolicyRequest generates a request for the DeletePolicy operation.
-func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *service.Request, output *DeletePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *request.Request, output *DeletePolicyOutput) {
+	op := &request.Operation{
 		Name:       opDeletePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -988,7 +989,7 @@ func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *service.Reques
 //
 // For information about managed policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeletePolicy(input *DeletePolicyInput) (*DeletePolicyOutput, error) {
 	req, out := c.DeletePolicyRequest(input)
 	err := req.Send()
@@ -998,8 +999,8 @@ func (c *IAM) DeletePolicy(input *DeletePolicyInput) (*DeletePolicyOutput, error
 const opDeletePolicyVersion = "DeletePolicyVersion"
 
 // DeletePolicyVersionRequest generates a request for the DeletePolicyVersion operation.
-func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *service.Request, output *DeletePolicyVersionOutput) {
-	op := &service.Operation{
+func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *request.Request, output *DeletePolicyVersionOutput) {
+	op := &request.Operation{
 		Name:       opDeletePolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1023,7 +1024,7 @@ func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *
 //
 // For information about versions for managed policies, refer to Versioning
 // for Managed Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeletePolicyVersion(input *DeletePolicyVersionInput) (*DeletePolicyVersionOutput, error) {
 	req, out := c.DeletePolicyVersionRequest(input)
 	err := req.Send()
@@ -1033,8 +1034,8 @@ func (c *IAM) DeletePolicyVersion(input *DeletePolicyVersionInput) (*DeletePolic
 const opDeleteRole = "DeleteRole"
 
 // DeleteRoleRequest generates a request for the DeleteRole operation.
-func (c *IAM) DeleteRoleRequest(input *DeleteRoleInput) (req *service.Request, output *DeleteRoleOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteRoleRequest(input *DeleteRoleInput) (req *request.Request, output *DeleteRoleOutput) {
+	op := &request.Operation{
 		Name:       opDeleteRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1065,8 +1066,8 @@ func (c *IAM) DeleteRole(input *DeleteRoleInput) (*DeleteRoleOutput, error) {
 const opDeleteRolePolicy = "DeleteRolePolicy"
 
 // DeleteRolePolicyRequest generates a request for the DeleteRolePolicy operation.
-func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *service.Request, output *DeleteRolePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *request.Request, output *DeleteRolePolicyOutput) {
+	op := &request.Operation{
 		Name:       opDeleteRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1087,7 +1088,7 @@ func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *servic
 // A role can also have managed policies attached to it. To detach a managed
 // policy from a role, use DetachRolePolicy. For more information about policies,
 // refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeleteRolePolicy(input *DeleteRolePolicyInput) (*DeleteRolePolicyOutput, error) {
 	req, out := c.DeleteRolePolicyRequest(input)
 	err := req.Send()
@@ -1097,8 +1098,8 @@ func (c *IAM) DeleteRolePolicy(input *DeleteRolePolicyInput) (*DeleteRolePolicyO
 const opDeleteSAMLProvider = "DeleteSAMLProvider"
 
 // DeleteSAMLProviderRequest generates a request for the DeleteSAMLProvider operation.
-func (c *IAM) DeleteSAMLProviderRequest(input *DeleteSAMLProviderInput) (req *service.Request, output *DeleteSAMLProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteSAMLProviderRequest(input *DeleteSAMLProviderInput) (req *request.Request, output *DeleteSAMLProviderOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1130,8 +1131,8 @@ func (c *IAM) DeleteSAMLProvider(input *DeleteSAMLProviderInput) (*DeleteSAMLPro
 const opDeleteSSHPublicKey = "DeleteSSHPublicKey"
 
 // DeleteSSHPublicKeyRequest generates a request for the DeleteSSHPublicKey operation.
-func (c *IAM) DeleteSSHPublicKeyRequest(input *DeleteSSHPublicKeyInput) (req *service.Request, output *DeleteSSHPublicKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteSSHPublicKeyRequest(input *DeleteSSHPublicKeyInput) (req *request.Request, output *DeleteSSHPublicKeyOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1163,8 +1164,8 @@ func (c *IAM) DeleteSSHPublicKey(input *DeleteSSHPublicKeyInput) (*DeleteSSHPubl
 const opDeleteServerCertificate = "DeleteServerCertificate"
 
 // DeleteServerCertificateRequest generates a request for the DeleteServerCertificate operation.
-func (c *IAM) DeleteServerCertificateRequest(input *DeleteServerCertificateInput) (req *service.Request, output *DeleteServerCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteServerCertificateRequest(input *DeleteServerCertificateInput) (req *request.Request, output *DeleteServerCertificateOutput) {
+	op := &request.Operation{
 		Name:       opDeleteServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1200,8 +1201,8 @@ func (c *IAM) DeleteServerCertificate(input *DeleteServerCertificateInput) (*Del
 const opDeleteSigningCertificate = "DeleteSigningCertificate"
 
 // DeleteSigningCertificateRequest generates a request for the DeleteSigningCertificate operation.
-func (c *IAM) DeleteSigningCertificateRequest(input *DeleteSigningCertificateInput) (req *service.Request, output *DeleteSigningCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteSigningCertificateRequest(input *DeleteSigningCertificateInput) (req *request.Request, output *DeleteSigningCertificateOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSigningCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1232,8 +1233,8 @@ func (c *IAM) DeleteSigningCertificate(input *DeleteSigningCertificateInput) (*D
 const opDeleteUser = "DeleteUser"
 
 // DeleteUserRequest generates a request for the DeleteUser operation.
-func (c *IAM) DeleteUserRequest(input *DeleteUserInput) (req *service.Request, output *DeleteUserOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteUserRequest(input *DeleteUserInput) (req *request.Request, output *DeleteUserOutput) {
+	op := &request.Operation{
 		Name:       opDeleteUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1260,8 +1261,8 @@ func (c *IAM) DeleteUser(input *DeleteUserInput) (*DeleteUserOutput, error) {
 const opDeleteUserPolicy = "DeleteUserPolicy"
 
 // DeleteUserPolicyRequest generates a request for the DeleteUserPolicy operation.
-func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *service.Request, output *DeleteUserPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *request.Request, output *DeleteUserPolicyOutput) {
+	op := &request.Operation{
 		Name:       opDeleteUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1282,7 +1283,7 @@ func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *servic
 // A user can also have managed policies attached to it. To detach a managed
 // policy from a user, use DetachUserPolicy. For more information about policies,
 // refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeleteUserPolicy(input *DeleteUserPolicyInput) (*DeleteUserPolicyOutput, error) {
 	req, out := c.DeleteUserPolicyRequest(input)
 	err := req.Send()
@@ -1292,8 +1293,8 @@ func (c *IAM) DeleteUserPolicy(input *DeleteUserPolicyInput) (*DeleteUserPolicyO
 const opDeleteVirtualMFADevice = "DeleteVirtualMFADevice"
 
 // DeleteVirtualMFADeviceRequest generates a request for the DeleteVirtualMFADevice operation.
-func (c *IAM) DeleteVirtualMFADeviceRequest(input *DeleteVirtualMFADeviceInput) (req *service.Request, output *DeleteVirtualMFADeviceOutput) {
-	op := &service.Operation{
+func (c *IAM) DeleteVirtualMFADeviceRequest(input *DeleteVirtualMFADeviceInput) (req *request.Request, output *DeleteVirtualMFADeviceOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVirtualMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1322,8 +1323,8 @@ func (c *IAM) DeleteVirtualMFADevice(input *DeleteVirtualMFADeviceInput) (*Delet
 const opDetachGroupPolicy = "DetachGroupPolicy"
 
 // DetachGroupPolicyRequest generates a request for the DetachGroupPolicy operation.
-func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *service.Request, output *DetachGroupPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *request.Request, output *DetachGroupPolicyOutput) {
+	op := &request.Operation{
 		Name:       opDetachGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1344,7 +1345,7 @@ func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *serv
 // A group can also have inline policies embedded with it. To delete an inline
 // policy, use the DeleteGroupPolicy API. For information about policies, refer
 // to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DetachGroupPolicy(input *DetachGroupPolicyInput) (*DetachGroupPolicyOutput, error) {
 	req, out := c.DetachGroupPolicyRequest(input)
 	err := req.Send()
@@ -1354,8 +1355,8 @@ func (c *IAM) DetachGroupPolicy(input *DetachGroupPolicyInput) (*DetachGroupPoli
 const opDetachRolePolicy = "DetachRolePolicy"
 
 // DetachRolePolicyRequest generates a request for the DetachRolePolicy operation.
-func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *service.Request, output *DetachRolePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *request.Request, output *DetachRolePolicyOutput) {
+	op := &request.Operation{
 		Name:       opDetachRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1376,7 +1377,7 @@ func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *servic
 // A role can also have inline policies embedded with it. To delete an inline
 // policy, use the DeleteRolePolicy API. For information about policies, refer
 // to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DetachRolePolicy(input *DetachRolePolicyInput) (*DetachRolePolicyOutput, error) {
 	req, out := c.DetachRolePolicyRequest(input)
 	err := req.Send()
@@ -1386,8 +1387,8 @@ func (c *IAM) DetachRolePolicy(input *DetachRolePolicyInput) (*DetachRolePolicyO
 const opDetachUserPolicy = "DetachUserPolicy"
 
 // DetachUserPolicyRequest generates a request for the DetachUserPolicy operation.
-func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *service.Request, output *DetachUserPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *request.Request, output *DetachUserPolicyOutput) {
+	op := &request.Operation{
 		Name:       opDetachUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1408,7 +1409,7 @@ func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *servic
 // A user can also have inline policies embedded with it. To delete an inline
 // policy, use the DeleteUserPolicy API. For information about policies, refer
 // to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DetachUserPolicy(input *DetachUserPolicyInput) (*DetachUserPolicyOutput, error) {
 	req, out := c.DetachUserPolicyRequest(input)
 	err := req.Send()
@@ -1418,8 +1419,8 @@ func (c *IAM) DetachUserPolicy(input *DetachUserPolicyInput) (*DetachUserPolicyO
 const opEnableMFADevice = "EnableMFADevice"
 
 // EnableMFADeviceRequest generates a request for the EnableMFADevice operation.
-func (c *IAM) EnableMFADeviceRequest(input *EnableMFADeviceInput) (req *service.Request, output *EnableMFADeviceOutput) {
-	op := &service.Operation{
+func (c *IAM) EnableMFADeviceRequest(input *EnableMFADeviceInput) (req *request.Request, output *EnableMFADeviceOutput) {
+	op := &request.Operation{
 		Name:       opEnableMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1447,8 +1448,8 @@ func (c *IAM) EnableMFADevice(input *EnableMFADeviceInput) (*EnableMFADeviceOutp
 const opGenerateCredentialReport = "GenerateCredentialReport"
 
 // GenerateCredentialReportRequest generates a request for the GenerateCredentialReport operation.
-func (c *IAM) GenerateCredentialReportRequest(input *GenerateCredentialReportInput) (req *service.Request, output *GenerateCredentialReportOutput) {
-	op := &service.Operation{
+func (c *IAM) GenerateCredentialReportRequest(input *GenerateCredentialReportInput) (req *request.Request, output *GenerateCredentialReportOutput) {
+	op := &request.Operation{
 		Name:       opGenerateCredentialReport,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1466,7 +1467,7 @@ func (c *IAM) GenerateCredentialReportRequest(input *GenerateCredentialReportInp
 
 // Generates a credential report for the AWS account. For more information about
 // the credential report, see Getting Credential Reports (http://docs.aws.amazon.com/IAM/latest/UserGuide/credential-reports.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GenerateCredentialReport(input *GenerateCredentialReportInput) (*GenerateCredentialReportOutput, error) {
 	req, out := c.GenerateCredentialReportRequest(input)
 	err := req.Send()
@@ -1476,8 +1477,8 @@ func (c *IAM) GenerateCredentialReport(input *GenerateCredentialReportInput) (*G
 const opGetAccessKeyLastUsed = "GetAccessKeyLastUsed"
 
 // GetAccessKeyLastUsedRequest generates a request for the GetAccessKeyLastUsed operation.
-func (c *IAM) GetAccessKeyLastUsedRequest(input *GetAccessKeyLastUsedInput) (req *service.Request, output *GetAccessKeyLastUsedOutput) {
-	op := &service.Operation{
+func (c *IAM) GetAccessKeyLastUsedRequest(input *GetAccessKeyLastUsedInput) (req *request.Request, output *GetAccessKeyLastUsedOutput) {
+	op := &request.Operation{
 		Name:       opGetAccessKeyLastUsed,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1506,12 +1507,12 @@ func (c *IAM) GetAccessKeyLastUsed(input *GetAccessKeyLastUsedInput) (*GetAccess
 const opGetAccountAuthorizationDetails = "GetAccountAuthorizationDetails"
 
 // GetAccountAuthorizationDetailsRequest generates a request for the GetAccountAuthorizationDetails operation.
-func (c *IAM) GetAccountAuthorizationDetailsRequest(input *GetAccountAuthorizationDetailsInput) (req *service.Request, output *GetAccountAuthorizationDetailsOutput) {
-	op := &service.Operation{
+func (c *IAM) GetAccountAuthorizationDetailsRequest(input *GetAccountAuthorizationDetailsInput) (req *request.Request, output *GetAccountAuthorizationDetailsOutput) {
+	op := &request.Operation{
 		Name:       opGetAccountAuthorizationDetails,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -1552,8 +1553,8 @@ func (c *IAM) GetAccountAuthorizationDetailsPages(input *GetAccountAuthorization
 const opGetAccountPasswordPolicy = "GetAccountPasswordPolicy"
 
 // GetAccountPasswordPolicyRequest generates a request for the GetAccountPasswordPolicy operation.
-func (c *IAM) GetAccountPasswordPolicyRequest(input *GetAccountPasswordPolicyInput) (req *service.Request, output *GetAccountPasswordPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) GetAccountPasswordPolicyRequest(input *GetAccountPasswordPolicyInput) (req *request.Request, output *GetAccountPasswordPolicyOutput) {
+	op := &request.Operation{
 		Name:       opGetAccountPasswordPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1580,8 +1581,8 @@ func (c *IAM) GetAccountPasswordPolicy(input *GetAccountPasswordPolicyInput) (*G
 const opGetAccountSummary = "GetAccountSummary"
 
 // GetAccountSummaryRequest generates a request for the GetAccountSummary operation.
-func (c *IAM) GetAccountSummaryRequest(input *GetAccountSummaryInput) (req *service.Request, output *GetAccountSummaryOutput) {
-	op := &service.Operation{
+func (c *IAM) GetAccountSummaryRequest(input *GetAccountSummaryInput) (req *request.Request, output *GetAccountSummaryOutput) {
+	op := &request.Operation{
 		Name:       opGetAccountSummary,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1601,9 +1602,90 @@ func (c *IAM) GetAccountSummaryRequest(input *GetAccountSummaryInput) (req *serv
 //
 //  For information about limitations on IAM entities, see Limitations on IAM
 // Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GetAccountSummary(input *GetAccountSummaryInput) (*GetAccountSummaryOutput, error) {
 	req, out := c.GetAccountSummaryRequest(input)
+	err := req.Send()
+	return out, err
+}
+
+const opGetContextKeysForCustomPolicy = "GetContextKeysForCustomPolicy"
+
+// GetContextKeysForCustomPolicyRequest generates a request for the GetContextKeysForCustomPolicy operation.
+func (c *IAM) GetContextKeysForCustomPolicyRequest(input *GetContextKeysForCustomPolicyInput) (req *request.Request, output *GetContextKeysForPolicyResponse) {
+	op := &request.Operation{
+		Name:       opGetContextKeysForCustomPolicy,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &GetContextKeysForCustomPolicyInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &GetContextKeysForPolicyResponse{}
+	req.Data = output
+	return
+}
+
+// Gets a list of all of the context keys referenced in Condition elements in
+// the input policies. The policies are supplied as a list of one or more strings.
+// To get the context keys from policies associated with an IAM user, group,
+// or role, use GetContextKeysForPrincipalPolicy.
+//
+// Context keys are variables maintained by AWS and its services that provide
+// details about the context of an API query request, and can be evaluated by
+// using the Condition element of an IAM policy. Use GetContextKeysForCustomPolicy
+// to understand what key names and values you must supply when you call SimulateCustomPolicy.
+// Note that all parameters are shown in unencoded form here for clarity, but
+// must be URL encoded to be included as a part of a real HTML request.
+func (c *IAM) GetContextKeysForCustomPolicy(input *GetContextKeysForCustomPolicyInput) (*GetContextKeysForPolicyResponse, error) {
+	req, out := c.GetContextKeysForCustomPolicyRequest(input)
+	err := req.Send()
+	return out, err
+}
+
+const opGetContextKeysForPrincipalPolicy = "GetContextKeysForPrincipalPolicy"
+
+// GetContextKeysForPrincipalPolicyRequest generates a request for the GetContextKeysForPrincipalPolicy operation.
+func (c *IAM) GetContextKeysForPrincipalPolicyRequest(input *GetContextKeysForPrincipalPolicyInput) (req *request.Request, output *GetContextKeysForPolicyResponse) {
+	op := &request.Operation{
+		Name:       opGetContextKeysForPrincipalPolicy,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &GetContextKeysForPrincipalPolicyInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &GetContextKeysForPolicyResponse{}
+	req.Data = output
+	return
+}
+
+// Gets a list of all of the context keys referenced in Condition elements in
+// all of the IAM policies attached to the specified IAM entity. The entity
+// can be an IAM user, group, or role. If you specify a user, then the request
+// also includes all of the policies attached to groups that the user is a member
+// of.
+//
+// You can optionally include a list of one or more additional policies, specified
+// as strings. If you want to include only a list of policies by string, use
+// GetContextKeysForCustomPolicy instead.
+//
+// Note: This API discloses information about the permissions granted to other
+// users. If you do not want users to see other user's permissions, then consider
+// allowing them to use GetContextKeysForCustomPolicy instead.
+//
+// Context keys are variables maintained by AWS and its services that provide
+// details about the context of an API query request, and can be evaluated by
+// using the Condition element of an IAM policy. Use GetContextKeysForPrincipalPolicy
+// to understand what key names and values you must supply when you call SimulatePrincipalPolicy.
+func (c *IAM) GetContextKeysForPrincipalPolicy(input *GetContextKeysForPrincipalPolicyInput) (*GetContextKeysForPolicyResponse, error) {
+	req, out := c.GetContextKeysForPrincipalPolicyRequest(input)
 	err := req.Send()
 	return out, err
 }
@@ -1611,8 +1693,8 @@ func (c *IAM) GetAccountSummary(input *GetAccountSummaryInput) (*GetAccountSumma
 const opGetCredentialReport = "GetCredentialReport"
 
 // GetCredentialReportRequest generates a request for the GetCredentialReport operation.
-func (c *IAM) GetCredentialReportRequest(input *GetCredentialReportInput) (req *service.Request, output *GetCredentialReportOutput) {
-	op := &service.Operation{
+func (c *IAM) GetCredentialReportRequest(input *GetCredentialReportInput) (req *request.Request, output *GetCredentialReportOutput) {
+	op := &request.Operation{
 		Name:       opGetCredentialReport,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1630,7 +1712,7 @@ func (c *IAM) GetCredentialReportRequest(input *GetCredentialReportInput) (req *
 
 // Retrieves a credential report for the AWS account. For more information about
 // the credential report, see Getting Credential Reports (http://docs.aws.amazon.com/IAM/latest/UserGuide/credential-reports.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GetCredentialReport(input *GetCredentialReportInput) (*GetCredentialReportOutput, error) {
 	req, out := c.GetCredentialReportRequest(input)
 	err := req.Send()
@@ -1640,12 +1722,12 @@ func (c *IAM) GetCredentialReport(input *GetCredentialReportInput) (*GetCredenti
 const opGetGroup = "GetGroup"
 
 // GetGroupRequest generates a request for the GetGroup operation.
-func (c *IAM) GetGroupRequest(input *GetGroupInput) (req *service.Request, output *GetGroupOutput) {
-	op := &service.Operation{
+func (c *IAM) GetGroupRequest(input *GetGroupInput) (req *request.Request, output *GetGroupOutput) {
+	op := &request.Operation{
 		Name:       opGetGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -1681,8 +1763,8 @@ func (c *IAM) GetGroupPages(input *GetGroupInput, fn func(p *GetGroupOutput, las
 const opGetGroupPolicy = "GetGroupPolicy"
 
 // GetGroupPolicyRequest generates a request for the GetGroupPolicy operation.
-func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *service.Request, output *GetGroupPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *request.Request, output *GetGroupPolicyOutput) {
+	op := &request.Operation{
 		Name:       opGetGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1708,7 +1790,7 @@ func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *service.Re
 //
 // For more information about policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GetGroupPolicy(input *GetGroupPolicyInput) (*GetGroupPolicyOutput, error) {
 	req, out := c.GetGroupPolicyRequest(input)
 	err := req.Send()
@@ -1718,8 +1800,8 @@ func (c *IAM) GetGroupPolicy(input *GetGroupPolicyInput) (*GetGroupPolicyOutput,
 const opGetInstanceProfile = "GetInstanceProfile"
 
 // GetInstanceProfileRequest generates a request for the GetInstanceProfile operation.
-func (c *IAM) GetInstanceProfileRequest(input *GetInstanceProfileInput) (req *service.Request, output *GetInstanceProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) GetInstanceProfileRequest(input *GetInstanceProfileInput) (req *request.Request, output *GetInstanceProfileOutput) {
+	op := &request.Operation{
 		Name:       opGetInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1748,8 +1830,8 @@ func (c *IAM) GetInstanceProfile(input *GetInstanceProfileInput) (*GetInstancePr
 const opGetLoginProfile = "GetLoginProfile"
 
 // GetLoginProfileRequest generates a request for the GetLoginProfile operation.
-func (c *IAM) GetLoginProfileRequest(input *GetLoginProfileInput) (req *service.Request, output *GetLoginProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) GetLoginProfileRequest(input *GetLoginProfileInput) (req *request.Request, output *GetLoginProfileOutput) {
+	op := &request.Operation{
 		Name:       opGetLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1777,8 +1859,8 @@ func (c *IAM) GetLoginProfile(input *GetLoginProfileInput) (*GetLoginProfileOutp
 const opGetOpenIDConnectProvider = "GetOpenIDConnectProvider"
 
 // GetOpenIDConnectProviderRequest generates a request for the GetOpenIDConnectProvider operation.
-func (c *IAM) GetOpenIDConnectProviderRequest(input *GetOpenIDConnectProviderInput) (req *service.Request, output *GetOpenIDConnectProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) GetOpenIDConnectProviderRequest(input *GetOpenIDConnectProviderInput) (req *request.Request, output *GetOpenIDConnectProviderOutput) {
+	op := &request.Operation{
 		Name:       opGetOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1804,8 +1886,8 @@ func (c *IAM) GetOpenIDConnectProvider(input *GetOpenIDConnectProviderInput) (*G
 const opGetPolicy = "GetPolicy"
 
 // GetPolicyRequest generates a request for the GetPolicy operation.
-func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *service.Request, output *GetPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *request.Request, output *GetPolicyOutput) {
+	op := &request.Operation{
 		Name:       opGetPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1834,7 +1916,7 @@ func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *service.Request, out
 //
 // For more information about policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GetPolicy(input *GetPolicyInput) (*GetPolicyOutput, error) {
 	req, out := c.GetPolicyRequest(input)
 	err := req.Send()
@@ -1844,8 +1926,8 @@ func (c *IAM) GetPolicy(input *GetPolicyInput) (*GetPolicyOutput, error) {
 const opGetPolicyVersion = "GetPolicyVersion"
 
 // GetPolicyVersionRequest generates a request for the GetPolicyVersion operation.
-func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *service.Request, output *GetPolicyVersionOutput) {
-	op := &service.Operation{
+func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *request.Request, output *GetPolicyVersionOutput) {
+	op := &request.Operation{
 		Name:       opGetPolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1872,7 +1954,7 @@ func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *servic
 //
 // For more information about the types of policies, refer to Managed Policies
 // and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GetPolicyVersion(input *GetPolicyVersionInput) (*GetPolicyVersionOutput, error) {
 	req, out := c.GetPolicyVersionRequest(input)
 	err := req.Send()
@@ -1882,8 +1964,8 @@ func (c *IAM) GetPolicyVersion(input *GetPolicyVersionInput) (*GetPolicyVersionO
 const opGetRole = "GetRole"
 
 // GetRoleRequest generates a request for the GetRole operation.
-func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *service.Request, output *GetRoleOutput) {
-	op := &service.Operation{
+func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *request.Request, output *GetRoleOutput) {
+	op := &request.Operation{
 		Name:       opGetRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1912,8 +1994,8 @@ func (c *IAM) GetRole(input *GetRoleInput) (*GetRoleOutput, error) {
 const opGetRolePolicy = "GetRolePolicy"
 
 // GetRolePolicyRequest generates a request for the GetRolePolicy operation.
-func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *service.Request, output *GetRolePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *request.Request, output *GetRolePolicyOutput) {
+	op := &request.Operation{
 		Name:       opGetRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1939,7 +2021,7 @@ func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *service.Requ
 //
 // For more information about policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // For more information about roles, go to Using Roles to Delegate Permissions
 // and Federate Identities (http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-toplevel.html).
@@ -1952,8 +2034,8 @@ func (c *IAM) GetRolePolicy(input *GetRolePolicyInput) (*GetRolePolicyOutput, er
 const opGetSAMLProvider = "GetSAMLProvider"
 
 // GetSAMLProviderRequest generates a request for the GetSAMLProvider operation.
-func (c *IAM) GetSAMLProviderRequest(input *GetSAMLProviderInput) (req *service.Request, output *GetSAMLProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) GetSAMLProviderRequest(input *GetSAMLProviderInput) (req *request.Request, output *GetSAMLProviderOutput) {
+	op := &request.Operation{
 		Name:       opGetSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1982,8 +2064,8 @@ func (c *IAM) GetSAMLProvider(input *GetSAMLProviderInput) (*GetSAMLProviderOutp
 const opGetSSHPublicKey = "GetSSHPublicKey"
 
 // GetSSHPublicKeyRequest generates a request for the GetSSHPublicKey operation.
-func (c *IAM) GetSSHPublicKeyRequest(input *GetSSHPublicKeyInput) (req *service.Request, output *GetSSHPublicKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) GetSSHPublicKeyRequest(input *GetSSHPublicKeyInput) (req *request.Request, output *GetSSHPublicKeyOutput) {
+	op := &request.Operation{
 		Name:       opGetSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2015,8 +2097,8 @@ func (c *IAM) GetSSHPublicKey(input *GetSSHPublicKeyInput) (*GetSSHPublicKeyOutp
 const opGetServerCertificate = "GetServerCertificate"
 
 // GetServerCertificateRequest generates a request for the GetServerCertificate operation.
-func (c *IAM) GetServerCertificateRequest(input *GetServerCertificateInput) (req *service.Request, output *GetServerCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) GetServerCertificateRequest(input *GetServerCertificateInput) (req *request.Request, output *GetServerCertificateOutput) {
+	op := &request.Operation{
 		Name:       opGetServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2042,8 +2124,8 @@ func (c *IAM) GetServerCertificate(input *GetServerCertificateInput) (*GetServer
 const opGetUser = "GetUser"
 
 // GetUserRequest generates a request for the GetUser operation.
-func (c *IAM) GetUserRequest(input *GetUserInput) (req *service.Request, output *GetUserOutput) {
-	op := &service.Operation{
+func (c *IAM) GetUserRequest(input *GetUserInput) (req *request.Request, output *GetUserOutput) {
+	op := &request.Operation{
 		Name:       opGetUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2073,8 +2155,8 @@ func (c *IAM) GetUser(input *GetUserInput) (*GetUserOutput, error) {
 const opGetUserPolicy = "GetUserPolicy"
 
 // GetUserPolicyRequest generates a request for the GetUserPolicy operation.
-func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *service.Request, output *GetUserPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *request.Request, output *GetUserPolicyOutput) {
+	op := &request.Operation{
 		Name:       opGetUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2100,7 +2182,7 @@ func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *service.Requ
 //
 // For more information about policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) GetUserPolicy(input *GetUserPolicyInput) (*GetUserPolicyOutput, error) {
 	req, out := c.GetUserPolicyRequest(input)
 	err := req.Send()
@@ -2110,12 +2192,12 @@ func (c *IAM) GetUserPolicy(input *GetUserPolicyInput) (*GetUserPolicyOutput, er
 const opListAccessKeys = "ListAccessKeys"
 
 // ListAccessKeysRequest generates a request for the ListAccessKeys operation.
-func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *service.Request, output *ListAccessKeysOutput) {
-	op := &service.Operation{
+func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *request.Request, output *ListAccessKeysOutput) {
+	op := &request.Operation{
 		Name:       opListAccessKeys,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2162,12 +2244,12 @@ func (c *IAM) ListAccessKeysPages(input *ListAccessKeysInput, fn func(p *ListAcc
 const opListAccountAliases = "ListAccountAliases"
 
 // ListAccountAliasesRequest generates a request for the ListAccountAliases operation.
-func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *service.Request, output *ListAccountAliasesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *request.Request, output *ListAccountAliasesOutput) {
+	op := &request.Operation{
 		Name:       opListAccountAliases,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2187,7 +2269,7 @@ func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *se
 
 // Lists the account aliases associated with the account. For information about
 // using an AWS account alias, see Using an Alias for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 //  You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListAccountAliases(input *ListAccountAliasesInput) (*ListAccountAliasesOutput, error) {
@@ -2206,12 +2288,12 @@ func (c *IAM) ListAccountAliasesPages(input *ListAccountAliasesInput, fn func(p 
 const opListAttachedGroupPolicies = "ListAttachedGroupPolicies"
 
 // ListAttachedGroupPoliciesRequest generates a request for the ListAttachedGroupPolicies operation.
-func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesInput) (req *service.Request, output *ListAttachedGroupPoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesInput) (req *request.Request, output *ListAttachedGroupPoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListAttachedGroupPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2234,7 +2316,7 @@ func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesI
 // A group can also have inline policies embedded with it. To list the inline
 // policies for a group, use the ListGroupPolicies API. For information about
 // policies, refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. You
 // can use the PathPrefix parameter to limit the list of policies to only those
@@ -2257,12 +2339,12 @@ func (c *IAM) ListAttachedGroupPoliciesPages(input *ListAttachedGroupPoliciesInp
 const opListAttachedRolePolicies = "ListAttachedRolePolicies"
 
 // ListAttachedRolePoliciesRequest generates a request for the ListAttachedRolePolicies operation.
-func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInput) (req *service.Request, output *ListAttachedRolePoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInput) (req *request.Request, output *ListAttachedRolePoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListAttachedRolePolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2285,7 +2367,7 @@ func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInp
 // A role can also have inline policies embedded with it. To list the inline
 // policies for a role, use the ListRolePolicies API. For information about
 // policies, refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. You
 // can use the PathPrefix parameter to limit the list of policies to only those
@@ -2308,12 +2390,12 @@ func (c *IAM) ListAttachedRolePoliciesPages(input *ListAttachedRolePoliciesInput
 const opListAttachedUserPolicies = "ListAttachedUserPolicies"
 
 // ListAttachedUserPoliciesRequest generates a request for the ListAttachedUserPolicies operation.
-func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInput) (req *service.Request, output *ListAttachedUserPoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInput) (req *request.Request, output *ListAttachedUserPoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListAttachedUserPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2336,7 +2418,7 @@ func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInp
 // A user can also have inline policies embedded with it. To list the inline
 // policies for a user, use the ListUserPolicies API. For information about
 // policies, refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. You
 // can use the PathPrefix parameter to limit the list of policies to only those
@@ -2359,12 +2441,12 @@ func (c *IAM) ListAttachedUserPoliciesPages(input *ListAttachedUserPoliciesInput
 const opListEntitiesForPolicy = "ListEntitiesForPolicy"
 
 // ListEntitiesForPolicyRequest generates a request for the ListEntitiesForPolicy operation.
-func (c *IAM) ListEntitiesForPolicyRequest(input *ListEntitiesForPolicyInput) (req *service.Request, output *ListEntitiesForPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) ListEntitiesForPolicyRequest(input *ListEntitiesForPolicyInput) (req *request.Request, output *ListEntitiesForPolicyOutput) {
+	op := &request.Operation{
 		Name:       opListEntitiesForPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2407,12 +2489,12 @@ func (c *IAM) ListEntitiesForPolicyPages(input *ListEntitiesForPolicyInput, fn f
 const opListGroupPolicies = "ListGroupPolicies"
 
 // ListGroupPoliciesRequest generates a request for the ListGroupPolicies operation.
-func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *service.Request, output *ListGroupPoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *request.Request, output *ListGroupPoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListGroupPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2437,7 +2519,7 @@ func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *serv
 // policies that are attached to a group, use ListAttachedGroupPolicies. For
 // more information about policies, refer to Managed Policies and Inline Policies
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. If
 // there are no inline policies embedded with the specified group, the action
@@ -2458,12 +2540,12 @@ func (c *IAM) ListGroupPoliciesPages(input *ListGroupPoliciesInput, fn func(p *L
 const opListGroups = "ListGroups"
 
 // ListGroupsRequest generates a request for the ListGroups operation.
-func (c *IAM) ListGroupsRequest(input *ListGroupsInput) (req *service.Request, output *ListGroupsOutput) {
-	op := &service.Operation{
+func (c *IAM) ListGroupsRequest(input *ListGroupsInput) (req *request.Request, output *ListGroupsOutput) {
+	op := &request.Operation{
 		Name:       opListGroups,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2500,12 +2582,12 @@ func (c *IAM) ListGroupsPages(input *ListGroupsInput, fn func(p *ListGroupsOutpu
 const opListGroupsForUser = "ListGroupsForUser"
 
 // ListGroupsForUserRequest generates a request for the ListGroupsForUser operation.
-func (c *IAM) ListGroupsForUserRequest(input *ListGroupsForUserInput) (req *service.Request, output *ListGroupsForUserOutput) {
-	op := &service.Operation{
+func (c *IAM) ListGroupsForUserRequest(input *ListGroupsForUserInput) (req *request.Request, output *ListGroupsForUserOutput) {
+	op := &request.Operation{
 		Name:       opListGroupsForUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2542,12 +2624,12 @@ func (c *IAM) ListGroupsForUserPages(input *ListGroupsForUserInput, fn func(p *L
 const opListInstanceProfiles = "ListInstanceProfiles"
 
 // ListInstanceProfilesRequest generates a request for the ListInstanceProfiles operation.
-func (c *IAM) ListInstanceProfilesRequest(input *ListInstanceProfilesInput) (req *service.Request, output *ListInstanceProfilesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListInstanceProfilesRequest(input *ListInstanceProfilesInput) (req *request.Request, output *ListInstanceProfilesOutput) {
+	op := &request.Operation{
 		Name:       opListInstanceProfiles,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2586,12 +2668,12 @@ func (c *IAM) ListInstanceProfilesPages(input *ListInstanceProfilesInput, fn fun
 const opListInstanceProfilesForRole = "ListInstanceProfilesForRole"
 
 // ListInstanceProfilesForRoleRequest generates a request for the ListInstanceProfilesForRole operation.
-func (c *IAM) ListInstanceProfilesForRoleRequest(input *ListInstanceProfilesForRoleInput) (req *service.Request, output *ListInstanceProfilesForRoleOutput) {
-	op := &service.Operation{
+func (c *IAM) ListInstanceProfilesForRoleRequest(input *ListInstanceProfilesForRoleInput) (req *request.Request, output *ListInstanceProfilesForRoleOutput) {
+	op := &request.Operation{
 		Name:       opListInstanceProfilesForRole,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2630,12 +2712,12 @@ func (c *IAM) ListInstanceProfilesForRolePages(input *ListInstanceProfilesForRol
 const opListMFADevices = "ListMFADevices"
 
 // ListMFADevicesRequest generates a request for the ListMFADevices operation.
-func (c *IAM) ListMFADevicesRequest(input *ListMFADevicesInput) (req *service.Request, output *ListMFADevicesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListMFADevicesRequest(input *ListMFADevicesInput) (req *request.Request, output *ListMFADevicesOutput) {
+	op := &request.Operation{
 		Name:       opListMFADevices,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2675,8 +2757,8 @@ func (c *IAM) ListMFADevicesPages(input *ListMFADevicesInput, fn func(p *ListMFA
 const opListOpenIDConnectProviders = "ListOpenIDConnectProviders"
 
 // ListOpenIDConnectProvidersRequest generates a request for the ListOpenIDConnectProviders operation.
-func (c *IAM) ListOpenIDConnectProvidersRequest(input *ListOpenIDConnectProvidersInput) (req *service.Request, output *ListOpenIDConnectProvidersOutput) {
-	op := &service.Operation{
+func (c *IAM) ListOpenIDConnectProvidersRequest(input *ListOpenIDConnectProvidersInput) (req *request.Request, output *ListOpenIDConnectProvidersOutput) {
+	op := &request.Operation{
 		Name:       opListOpenIDConnectProviders,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2702,12 +2784,12 @@ func (c *IAM) ListOpenIDConnectProviders(input *ListOpenIDConnectProvidersInput)
 const opListPolicies = "ListPolicies"
 
 // ListPoliciesRequest generates a request for the ListPolicies operation.
-func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *service.Request, output *ListPoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *request.Request, output *ListPoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2737,7 +2819,7 @@ func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *service.Reques
 //
 // For more information about managed policies, refer to Managed Policies and
 // Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) ListPolicies(input *ListPoliciesInput) (*ListPoliciesOutput, error) {
 	req, out := c.ListPoliciesRequest(input)
 	err := req.Send()
@@ -2754,8 +2836,8 @@ func (c *IAM) ListPoliciesPages(input *ListPoliciesInput, fn func(p *ListPolicie
 const opListPolicyVersions = "ListPolicyVersions"
 
 // ListPolicyVersionsRequest generates a request for the ListPolicyVersions operation.
-func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *service.Request, output *ListPolicyVersionsOutput) {
-	op := &service.Operation{
+func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *request.Request, output *ListPolicyVersionsOutput) {
+	op := &request.Operation{
 		Name:       opListPolicyVersions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2776,7 +2858,7 @@ func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *se
 //
 // For more information about managed policies, refer to Managed Policies and
 // Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) ListPolicyVersions(input *ListPolicyVersionsInput) (*ListPolicyVersionsOutput, error) {
 	req, out := c.ListPolicyVersionsRequest(input)
 	err := req.Send()
@@ -2786,12 +2868,12 @@ func (c *IAM) ListPolicyVersions(input *ListPolicyVersionsInput) (*ListPolicyVer
 const opListRolePolicies = "ListRolePolicies"
 
 // ListRolePoliciesRequest generates a request for the ListRolePolicies operation.
-func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *service.Request, output *ListRolePoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *request.Request, output *ListRolePoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListRolePolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2816,7 +2898,7 @@ func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *servic
 // policies that are attached to a role, use ListAttachedRolePolicies. For more
 // information about policies, refer to Managed Policies and Inline Policies
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. If
 // there are no inline policies embedded with the specified role, the action
@@ -2837,12 +2919,12 @@ func (c *IAM) ListRolePoliciesPages(input *ListRolePoliciesInput, fn func(p *Lis
 const opListRoles = "ListRoles"
 
 // ListRolesRequest generates a request for the ListRoles operation.
-func (c *IAM) ListRolesRequest(input *ListRolesInput) (req *service.Request, output *ListRolesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListRolesRequest(input *ListRolesInput) (req *request.Request, output *ListRolesOutput) {
+	op := &request.Operation{
 		Name:       opListRoles,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2881,8 +2963,8 @@ func (c *IAM) ListRolesPages(input *ListRolesInput, fn func(p *ListRolesOutput, 
 const opListSAMLProviders = "ListSAMLProviders"
 
 // ListSAMLProvidersRequest generates a request for the ListSAMLProviders operation.
-func (c *IAM) ListSAMLProvidersRequest(input *ListSAMLProvidersInput) (req *service.Request, output *ListSAMLProvidersOutput) {
-	op := &service.Operation{
+func (c *IAM) ListSAMLProvidersRequest(input *ListSAMLProvidersInput) (req *request.Request, output *ListSAMLProvidersOutput) {
+	op := &request.Operation{
 		Name:       opListSAMLProviders,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2910,8 +2992,8 @@ func (c *IAM) ListSAMLProviders(input *ListSAMLProvidersInput) (*ListSAMLProvide
 const opListSSHPublicKeys = "ListSSHPublicKeys"
 
 // ListSSHPublicKeysRequest generates a request for the ListSSHPublicKeys operation.
-func (c *IAM) ListSSHPublicKeysRequest(input *ListSSHPublicKeysInput) (req *service.Request, output *ListSSHPublicKeysOutput) {
-	op := &service.Operation{
+func (c *IAM) ListSSHPublicKeysRequest(input *ListSSHPublicKeysInput) (req *request.Request, output *ListSSHPublicKeysOutput) {
+	op := &request.Operation{
 		Name:       opListSSHPublicKeys,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2947,12 +3029,12 @@ func (c *IAM) ListSSHPublicKeys(input *ListSSHPublicKeysInput) (*ListSSHPublicKe
 const opListServerCertificates = "ListServerCertificates"
 
 // ListServerCertificatesRequest generates a request for the ListServerCertificates operation.
-func (c *IAM) ListServerCertificatesRequest(input *ListServerCertificatesInput) (req *service.Request, output *ListServerCertificatesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListServerCertificatesRequest(input *ListServerCertificatesInput) (req *request.Request, output *ListServerCertificatesOutput) {
+	op := &request.Operation{
 		Name:       opListServerCertificates,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -2990,12 +3072,12 @@ func (c *IAM) ListServerCertificatesPages(input *ListServerCertificatesInput, fn
 const opListSigningCertificates = "ListSigningCertificates"
 
 // ListSigningCertificatesRequest generates a request for the ListSigningCertificates operation.
-func (c *IAM) ListSigningCertificatesRequest(input *ListSigningCertificatesInput) (req *service.Request, output *ListSigningCertificatesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListSigningCertificatesRequest(input *ListSigningCertificatesInput) (req *request.Request, output *ListSigningCertificatesOutput) {
+	op := &request.Operation{
 		Name:       opListSigningCertificates,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3039,12 +3121,12 @@ func (c *IAM) ListSigningCertificatesPages(input *ListSigningCertificatesInput, 
 const opListUserPolicies = "ListUserPolicies"
 
 // ListUserPoliciesRequest generates a request for the ListUserPolicies operation.
-func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *service.Request, output *ListUserPoliciesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *request.Request, output *ListUserPoliciesOutput) {
+	op := &request.Operation{
 		Name:       opListUserPolicies,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3068,7 +3150,7 @@ func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *servic
 // policies that are attached to a user, use ListAttachedUserPolicies. For more
 // information about policies, refer to Managed Policies and Inline Policies
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. If
 // there are no inline policies embedded with the specified user, the action
@@ -3089,12 +3171,12 @@ func (c *IAM) ListUserPoliciesPages(input *ListUserPoliciesInput, fn func(p *Lis
 const opListUsers = "ListUsers"
 
 // ListUsersRequest generates a request for the ListUsers operation.
-func (c *IAM) ListUsersRequest(input *ListUsersInput) (req *service.Request, output *ListUsersOutput) {
-	op := &service.Operation{
+func (c *IAM) ListUsersRequest(input *ListUsersInput) (req *request.Request, output *ListUsersOutput) {
+	op := &request.Operation{
 		Name:       opListUsers,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3133,12 +3215,12 @@ func (c *IAM) ListUsersPages(input *ListUsersInput, fn func(p *ListUsersOutput, 
 const opListVirtualMFADevices = "ListVirtualMFADevices"
 
 // ListVirtualMFADevicesRequest generates a request for the ListVirtualMFADevices operation.
-func (c *IAM) ListVirtualMFADevicesRequest(input *ListVirtualMFADevicesInput) (req *service.Request, output *ListVirtualMFADevicesOutput) {
-	op := &service.Operation{
+func (c *IAM) ListVirtualMFADevicesRequest(input *ListVirtualMFADevicesInput) (req *request.Request, output *ListVirtualMFADevicesOutput) {
+	op := &request.Operation{
 		Name:       opListVirtualMFADevices,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"Marker"},
 			OutputTokens:    []string{"Marker"},
 			LimitToken:      "MaxItems",
@@ -3178,8 +3260,8 @@ func (c *IAM) ListVirtualMFADevicesPages(input *ListVirtualMFADevicesInput, fn f
 const opPutGroupPolicy = "PutGroupPolicy"
 
 // PutGroupPolicyRequest generates a request for the PutGroupPolicy operation.
-func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *service.Request, output *PutGroupPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *request.Request, output *PutGroupPolicyOutput) {
+	op := &request.Operation{
 		Name:       opPutGroupPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3202,11 +3284,11 @@ func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *service.Re
 // policy to a group, use AttachGroupPolicy. To create a new managed policy,
 // use CreatePolicy. For information about policies, refer to Managed Policies
 // and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // For information about limits on the number of inline policies that you can
 // embed in a group, see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // Because policy documents can be large, you should use POST rather than GET
 // when calling PutGroupPolicy. For general information about using the Query
@@ -3221,8 +3303,8 @@ func (c *IAM) PutGroupPolicy(input *PutGroupPolicyInput) (*PutGroupPolicyOutput,
 const opPutRolePolicy = "PutRolePolicy"
 
 // PutRolePolicyRequest generates a request for the PutRolePolicy operation.
-func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *service.Request, output *PutRolePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *request.Request, output *PutRolePolicyOutput) {
+	op := &request.Operation{
 		Name:       opPutRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3251,11 +3333,11 @@ func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *service.Requ
 // policy to a role, use AttachRolePolicy. To create a new managed policy, use
 // CreatePolicy. For information about policies, refer to Managed Policies and
 // Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // For information about limits on the number of inline policies that you can
 // embed with a role, see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // Because policy documents can be large, you should use POST rather than GET
 // when calling PutRolePolicy. For general information about using the Query
@@ -3270,8 +3352,8 @@ func (c *IAM) PutRolePolicy(input *PutRolePolicyInput) (*PutRolePolicyOutput, er
 const opPutUserPolicy = "PutUserPolicy"
 
 // PutUserPolicyRequest generates a request for the PutUserPolicy operation.
-func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *service.Request, output *PutUserPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *request.Request, output *PutUserPolicyOutput) {
+	op := &request.Operation{
 		Name:       opPutUserPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3294,11 +3376,11 @@ func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *service.Requ
 // policy to a user, use AttachUserPolicy. To create a new managed policy, use
 // CreatePolicy. For information about policies, refer to Managed Policies and
 // Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // For information about limits on the number of inline policies that you can
 // embed in a user, see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // Because policy documents can be large, you should use POST rather than GET
 // when calling PutUserPolicy. For general information about using the Query
@@ -3313,8 +3395,8 @@ func (c *IAM) PutUserPolicy(input *PutUserPolicyInput) (*PutUserPolicyOutput, er
 const opRemoveClientIDFromOpenIDConnectProvider = "RemoveClientIDFromOpenIDConnectProvider"
 
 // RemoveClientIDFromOpenIDConnectProviderRequest generates a request for the RemoveClientIDFromOpenIDConnectProvider operation.
-func (c *IAM) RemoveClientIDFromOpenIDConnectProviderRequest(input *RemoveClientIDFromOpenIDConnectProviderInput) (req *service.Request, output *RemoveClientIDFromOpenIDConnectProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) RemoveClientIDFromOpenIDConnectProviderRequest(input *RemoveClientIDFromOpenIDConnectProviderInput) (req *request.Request, output *RemoveClientIDFromOpenIDConnectProviderOutput) {
+	op := &request.Operation{
 		Name:       opRemoveClientIDFromOpenIDConnectProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3344,8 +3426,8 @@ func (c *IAM) RemoveClientIDFromOpenIDConnectProvider(input *RemoveClientIDFromO
 const opRemoveRoleFromInstanceProfile = "RemoveRoleFromInstanceProfile"
 
 // RemoveRoleFromInstanceProfileRequest generates a request for the RemoveRoleFromInstanceProfile operation.
-func (c *IAM) RemoveRoleFromInstanceProfileRequest(input *RemoveRoleFromInstanceProfileInput) (req *service.Request, output *RemoveRoleFromInstanceProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) RemoveRoleFromInstanceProfileRequest(input *RemoveRoleFromInstanceProfileInput) (req *request.Request, output *RemoveRoleFromInstanceProfileOutput) {
+	op := &request.Operation{
 		Name:       opRemoveRoleFromInstanceProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3379,8 +3461,8 @@ func (c *IAM) RemoveRoleFromInstanceProfile(input *RemoveRoleFromInstanceProfile
 const opRemoveUserFromGroup = "RemoveUserFromGroup"
 
 // RemoveUserFromGroupRequest generates a request for the RemoveUserFromGroup operation.
-func (c *IAM) RemoveUserFromGroupRequest(input *RemoveUserFromGroupInput) (req *service.Request, output *RemoveUserFromGroupOutput) {
-	op := &service.Operation{
+func (c *IAM) RemoveUserFromGroupRequest(input *RemoveUserFromGroupInput) (req *request.Request, output *RemoveUserFromGroupOutput) {
+	op := &request.Operation{
 		Name:       opRemoveUserFromGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3406,8 +3488,8 @@ func (c *IAM) RemoveUserFromGroup(input *RemoveUserFromGroupInput) (*RemoveUserF
 const opResyncMFADevice = "ResyncMFADevice"
 
 // ResyncMFADeviceRequest generates a request for the ResyncMFADevice operation.
-func (c *IAM) ResyncMFADeviceRequest(input *ResyncMFADeviceInput) (req *service.Request, output *ResyncMFADeviceOutput) {
-	op := &service.Operation{
+func (c *IAM) ResyncMFADeviceRequest(input *ResyncMFADeviceInput) (req *request.Request, output *ResyncMFADeviceOutput) {
+	op := &request.Operation{
 		Name:       opResyncMFADevice,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3437,8 +3519,8 @@ func (c *IAM) ResyncMFADevice(input *ResyncMFADeviceInput) (*ResyncMFADeviceOutp
 const opSetDefaultPolicyVersion = "SetDefaultPolicyVersion"
 
 // SetDefaultPolicyVersionRequest generates a request for the SetDefaultPolicyVersion operation.
-func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput) (req *service.Request, output *SetDefaultPolicyVersionOutput) {
-	op := &service.Operation{
+func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput) (req *request.Request, output *SetDefaultPolicyVersionOutput) {
+	op := &request.Operation{
 		Name:       opSetDefaultPolicyVersion,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3463,9 +3545,102 @@ func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput
 //
 // For information about managed policies, refer to Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) SetDefaultPolicyVersion(input *SetDefaultPolicyVersionInput) (*SetDefaultPolicyVersionOutput, error) {
 	req, out := c.SetDefaultPolicyVersionRequest(input)
+	err := req.Send()
+	return out, err
+}
+
+const opSimulateCustomPolicy = "SimulateCustomPolicy"
+
+// SimulateCustomPolicyRequest generates a request for the SimulateCustomPolicy operation.
+func (c *IAM) SimulateCustomPolicyRequest(input *SimulateCustomPolicyInput) (req *request.Request, output *SimulatePolicyResponse) {
+	op := &request.Operation{
+		Name:       opSimulateCustomPolicy,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &SimulateCustomPolicyInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &SimulatePolicyResponse{}
+	req.Data = output
+	return
+}
+
+// Simulate a set of IAM policies against a list of API actions and AWS resources
+// to determine the policies' effective permissions. The policies are provided
+// as a list of strings.
+//
+// The simulation does not perform the API actions, it only checks the authorization
+// to determine if the simulated policies allow or deny the actions.
+//
+// If you want to simulate existing policies attached to an IAM user, group,
+// or role, use SimulatePrincipalPolicy instead.
+//
+// Context keys are variables maintained by AWS and its services that provide
+// details about the context of an API query request, and can be evaluated by
+// using the Condition element of an IAM policy. To get the list of context
+// keys required by the policies to simulate them correctly, use GetContextKeysForCustomPolicy.
+//
+// If the output is long, you can paginate the results using the MaxItems and
+// Marker parameters.
+func (c *IAM) SimulateCustomPolicy(input *SimulateCustomPolicyInput) (*SimulatePolicyResponse, error) {
+	req, out := c.SimulateCustomPolicyRequest(input)
+	err := req.Send()
+	return out, err
+}
+
+const opSimulatePrincipalPolicy = "SimulatePrincipalPolicy"
+
+// SimulatePrincipalPolicyRequest generates a request for the SimulatePrincipalPolicy operation.
+func (c *IAM) SimulatePrincipalPolicyRequest(input *SimulatePrincipalPolicyInput) (req *request.Request, output *SimulatePolicyResponse) {
+	op := &request.Operation{
+		Name:       opSimulatePrincipalPolicy,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &SimulatePrincipalPolicyInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &SimulatePolicyResponse{}
+	req.Data = output
+	return
+}
+
+// Simulate the set of IAM policies attached to an IAM entity against a list
+// of API actions and AWS resources to determine the policies' effective permissions.
+// The entity can be an IAM user, group, or role. If you specify a user, then
+// the simulation also includes all of the policies attached to groups that
+// the user is a member of.
+//
+// You can optionally include a list of one or more additional policies specified
+// as strings to include in the simulation. If you want to simulate only policies
+// specified as strings, use SimulateCustomPolicy instead.
+//
+// The simulation does not perform the API actions, it only checks the authorization
+// to determine if the simulated policies allow or deny the actions.
+//
+// Note: This API discloses information about the permissions granted to other
+// users. If you do not want users to see other user's permissions, then consider
+// allowing them to use SimulateCustomPolicy instead.
+//
+// Context keys are variables maintained by AWS and its services that provide
+// details about the context of an API query request, and can be evaluated by
+// using the Condition element of an IAM policy. To get the list of context
+// keys required by the policies to simulate them correctly, use GetContextKeysForPrincipalPolicy.
+//
+// If the output is long, you can paginate the results using the MaxItems and
+// Marker parameters.
+func (c *IAM) SimulatePrincipalPolicy(input *SimulatePrincipalPolicyInput) (*SimulatePolicyResponse, error) {
+	req, out := c.SimulatePrincipalPolicyRequest(input)
 	err := req.Send()
 	return out, err
 }
@@ -3473,8 +3648,8 @@ func (c *IAM) SetDefaultPolicyVersion(input *SetDefaultPolicyVersionInput) (*Set
 const opUpdateAccessKey = "UpdateAccessKey"
 
 // UpdateAccessKeyRequest generates a request for the UpdateAccessKey operation.
-func (c *IAM) UpdateAccessKeyRequest(input *UpdateAccessKeyInput) (req *service.Request, output *UpdateAccessKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateAccessKeyRequest(input *UpdateAccessKeyInput) (req *request.Request, output *UpdateAccessKeyOutput) {
+	op := &request.Operation{
 		Name:       opUpdateAccessKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3501,7 +3676,7 @@ func (c *IAM) UpdateAccessKeyRequest(input *UpdateAccessKeyInput) (req *service.
 //
 // For information about rotating keys, see Managing Keys and Certificates
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/ManagingCredentials.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) UpdateAccessKey(input *UpdateAccessKeyInput) (*UpdateAccessKeyOutput, error) {
 	req, out := c.UpdateAccessKeyRequest(input)
 	err := req.Send()
@@ -3511,8 +3686,8 @@ func (c *IAM) UpdateAccessKey(input *UpdateAccessKeyInput) (*UpdateAccessKeyOutp
 const opUpdateAccountPasswordPolicy = "UpdateAccountPasswordPolicy"
 
 // UpdateAccountPasswordPolicyRequest generates a request for the UpdateAccountPasswordPolicy operation.
-func (c *IAM) UpdateAccountPasswordPolicyRequest(input *UpdateAccountPasswordPolicyInput) (req *service.Request, output *UpdateAccountPasswordPolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateAccountPasswordPolicyRequest(input *UpdateAccountPasswordPolicyInput) (req *request.Request, output *UpdateAccountPasswordPolicyOutput) {
+	op := &request.Operation{
 		Name:       opUpdateAccountPasswordPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3537,7 +3712,7 @@ func (c *IAM) UpdateAccountPasswordPolicyRequest(input *UpdateAccountPasswordPol
 //
 //   For more information about using a password policy, see Managing an IAM
 // Password Policy (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_ManagingPasswordPolicies.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) UpdateAccountPasswordPolicy(input *UpdateAccountPasswordPolicyInput) (*UpdateAccountPasswordPolicyOutput, error) {
 	req, out := c.UpdateAccountPasswordPolicyRequest(input)
 	err := req.Send()
@@ -3547,8 +3722,8 @@ func (c *IAM) UpdateAccountPasswordPolicy(input *UpdateAccountPasswordPolicyInpu
 const opUpdateAssumeRolePolicy = "UpdateAssumeRolePolicy"
 
 // UpdateAssumeRolePolicyRequest generates a request for the UpdateAssumeRolePolicy operation.
-func (c *IAM) UpdateAssumeRolePolicyRequest(input *UpdateAssumeRolePolicyInput) (req *service.Request, output *UpdateAssumeRolePolicyOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateAssumeRolePolicyRequest(input *UpdateAssumeRolePolicyInput) (req *request.Request, output *UpdateAssumeRolePolicyOutput) {
+	op := &request.Operation{
 		Name:       opUpdateAssumeRolePolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3576,8 +3751,8 @@ func (c *IAM) UpdateAssumeRolePolicy(input *UpdateAssumeRolePolicyInput) (*Updat
 const opUpdateGroup = "UpdateGroup"
 
 // UpdateGroupRequest generates a request for the UpdateGroup operation.
-func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *service.Request, output *UpdateGroupOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *request.Request, output *UpdateGroupOutput) {
+	op := &request.Operation{
 		Name:       opUpdateGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3597,7 +3772,7 @@ func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *service.Request,
 //
 //  You should understand the implications of changing a group's path or name.
 // For more information, see Renaming Users and Groups (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_WorkingWithGroupsAndUsers.html)
-// in the Using IAM guide.  To change a group name the requester must have appropriate
+// in the IAM User Guide.  To change a group name the requester must have appropriate
 // permissions on both the source object and the target object. For example,
 // to change Managers to MGRs, the entity making the request must have permission
 // on Managers and MGRs, or must have permission on all (*). For more information
@@ -3612,8 +3787,8 @@ func (c *IAM) UpdateGroup(input *UpdateGroupInput) (*UpdateGroupOutput, error) {
 const opUpdateLoginProfile = "UpdateLoginProfile"
 
 // UpdateLoginProfileRequest generates a request for the UpdateLoginProfile operation.
-func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *service.Request, output *UpdateLoginProfileOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *request.Request, output *UpdateLoginProfileOutput) {
+	op := &request.Operation{
 		Name:       opUpdateLoginProfile,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3633,7 +3808,7 @@ func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *se
 //
 // Users can change their own passwords by calling ChangePassword. For more
 // information about modifying passwords, see Managing Passwords (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_ManagingLogins.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) UpdateLoginProfile(input *UpdateLoginProfileInput) (*UpdateLoginProfileOutput, error) {
 	req, out := c.UpdateLoginProfileRequest(input)
 	err := req.Send()
@@ -3643,8 +3818,8 @@ func (c *IAM) UpdateLoginProfile(input *UpdateLoginProfileInput) (*UpdateLoginPr
 const opUpdateOpenIDConnectProviderThumbprint = "UpdateOpenIDConnectProviderThumbprint"
 
 // UpdateOpenIDConnectProviderThumbprintRequest generates a request for the UpdateOpenIDConnectProviderThumbprint operation.
-func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDConnectProviderThumbprintInput) (req *service.Request, output *UpdateOpenIDConnectProviderThumbprintOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDConnectProviderThumbprintInput) (req *request.Request, output *UpdateOpenIDConnectProviderThumbprintOutput) {
+	op := &request.Operation{
 		Name:       opUpdateOpenIDConnectProviderThumbprint,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3683,8 +3858,8 @@ func (c *IAM) UpdateOpenIDConnectProviderThumbprint(input *UpdateOpenIDConnectPr
 const opUpdateSAMLProvider = "UpdateSAMLProvider"
 
 // UpdateSAMLProviderRequest generates a request for the UpdateSAMLProvider operation.
-func (c *IAM) UpdateSAMLProviderRequest(input *UpdateSAMLProviderInput) (req *service.Request, output *UpdateSAMLProviderOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateSAMLProviderRequest(input *UpdateSAMLProviderInput) (req *request.Request, output *UpdateSAMLProviderOutput) {
+	op := &request.Operation{
 		Name:       opUpdateSAMLProvider,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3712,8 +3887,8 @@ func (c *IAM) UpdateSAMLProvider(input *UpdateSAMLProviderInput) (*UpdateSAMLPro
 const opUpdateSSHPublicKey = "UpdateSSHPublicKey"
 
 // UpdateSSHPublicKeyRequest generates a request for the UpdateSSHPublicKey operation.
-func (c *IAM) UpdateSSHPublicKeyRequest(input *UpdateSSHPublicKeyInput) (req *service.Request, output *UpdateSSHPublicKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateSSHPublicKeyRequest(input *UpdateSSHPublicKeyInput) (req *request.Request, output *UpdateSSHPublicKeyOutput) {
+	op := &request.Operation{
 		Name:       opUpdateSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3748,8 +3923,8 @@ func (c *IAM) UpdateSSHPublicKey(input *UpdateSSHPublicKeyInput) (*UpdateSSHPubl
 const opUpdateServerCertificate = "UpdateServerCertificate"
 
 // UpdateServerCertificateRequest generates a request for the UpdateServerCertificate operation.
-func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput) (req *service.Request, output *UpdateServerCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput) (req *request.Request, output *UpdateServerCertificateOutput) {
+	op := &request.Operation{
 		Name:       opUpdateServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3769,7 +3944,7 @@ func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput
 //
 //  You should understand the implications of changing a server certificate's
 // path or name. For more information, see Managing Server Certificates (http://docs.aws.amazon.com/IAM/latest/UserGuide/ManagingServerCerts.html)
-// in the Using IAM guide.  To change a server certificate name the requester
+// in the IAM User Guide.  To change a server certificate name the requester
 // must have appropriate permissions on both the source object and the target
 // object. For example, to change the name from ProductionCert to ProdCert,
 // the entity making the request must have permission on ProductionCert and
@@ -3785,8 +3960,8 @@ func (c *IAM) UpdateServerCertificate(input *UpdateServerCertificateInput) (*Upd
 const opUpdateSigningCertificate = "UpdateSigningCertificate"
 
 // UpdateSigningCertificateRequest generates a request for the UpdateSigningCertificate operation.
-func (c *IAM) UpdateSigningCertificateRequest(input *UpdateSigningCertificateInput) (req *service.Request, output *UpdateSigningCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateSigningCertificateRequest(input *UpdateSigningCertificateInput) (req *request.Request, output *UpdateSigningCertificateOutput) {
+	op := &request.Operation{
 		Name:       opUpdateSigningCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3819,8 +3994,8 @@ func (c *IAM) UpdateSigningCertificate(input *UpdateSigningCertificateInput) (*U
 const opUpdateUser = "UpdateUser"
 
 // UpdateUserRequest generates a request for the UpdateUser operation.
-func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *service.Request, output *UpdateUserOutput) {
-	op := &service.Operation{
+func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *request.Request, output *UpdateUserOutput) {
+	op := &request.Operation{
 		Name:       opUpdateUser,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3840,7 +4015,7 @@ func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *service.Request, o
 //
 //  You should understand the implications of changing a user's path or name.
 // For more information, see Renaming Users and Groups (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_WorkingWithGroupsAndUsers.html)
-// in the Using IAM guide.   To change a user name the requester must have appropriate
+// in the IAM User Guide.   To change a user name the requester must have appropriate
 // permissions on both the source object and the target object. For example,
 // to change Bob to Robert, the entity making the request must have permission
 // on Bob and Robert, or must have permission on all (*). For more information
@@ -3855,8 +4030,8 @@ func (c *IAM) UpdateUser(input *UpdateUserInput) (*UpdateUserOutput, error) {
 const opUploadSSHPublicKey = "UploadSSHPublicKey"
 
 // UploadSSHPublicKeyRequest generates a request for the UploadSSHPublicKey operation.
-func (c *IAM) UploadSSHPublicKeyRequest(input *UploadSSHPublicKeyInput) (req *service.Request, output *UploadSSHPublicKeyOutput) {
-	op := &service.Operation{
+func (c *IAM) UploadSSHPublicKeyRequest(input *UploadSSHPublicKeyInput) (req *request.Request, output *UploadSSHPublicKeyOutput) {
+	op := &request.Operation{
 		Name:       opUploadSSHPublicKey,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3888,8 +4063,8 @@ func (c *IAM) UploadSSHPublicKey(input *UploadSSHPublicKeyInput) (*UploadSSHPubl
 const opUploadServerCertificate = "UploadServerCertificate"
 
 // UploadServerCertificateRequest generates a request for the UploadServerCertificate operation.
-func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput) (req *service.Request, output *UploadServerCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput) (req *request.Request, output *UploadServerCertificateOutput) {
+	op := &request.Operation{
 		Name:       opUploadServerCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3911,7 +4086,7 @@ func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput
 //
 // For information about the number of server certificates you can upload,
 // see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // Because the body of the public key certificate, private key, and the certificate
 // chain can be large, you should use POST rather than GET when calling UploadServerCertificate.
@@ -3919,7 +4094,7 @@ func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput
 // API, go to Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html)
 // in the AWS General Reference. For general information about using the Query
 // API with IAM, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) UploadServerCertificate(input *UploadServerCertificateInput) (*UploadServerCertificateOutput, error) {
 	req, out := c.UploadServerCertificateRequest(input)
 	err := req.Send()
@@ -3929,8 +4104,8 @@ func (c *IAM) UploadServerCertificate(input *UploadServerCertificateInput) (*Upl
 const opUploadSigningCertificate = "UploadSigningCertificate"
 
 // UploadSigningCertificateRequest generates a request for the UploadSigningCertificate operation.
-func (c *IAM) UploadSigningCertificateRequest(input *UploadSigningCertificateInput) (req *service.Request, output *UploadSigningCertificateOutput) {
-	op := &service.Operation{
+func (c *IAM) UploadSigningCertificateRequest(input *UploadSigningCertificateInput) (req *request.Request, output *UploadSigningCertificateOutput) {
+	op := &request.Operation{
 		Name:       opUploadSigningCertificate,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3980,7 +4155,7 @@ func (c *IAM) UploadSigningCertificate(input *UploadSigningCertificateInput) (*U
 // key, you must create a new access key.
 type AccessKey struct {
 	// The ID for this access key.
-	AccessKeyId *string `type:"string" required:"true"`
+	AccessKeyId *string `min:"16" type:"string" required:"true"`
 
 	// The date when the access key was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -3993,7 +4168,7 @@ type AccessKey struct {
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
 	// The name of the IAM user that the access key is associated with.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataAccessKey `json:"-" xml:"-"`
 }
@@ -4075,7 +4250,7 @@ func (s AccessKeyLastUsed) GoString() string {
 // This data type is used as a response element in the ListAccessKeys action.
 type AccessKeyMetadata struct {
 	// The ID for this access key.
-	AccessKeyId *string `type:"string"`
+	AccessKeyId *string `min:"16" type:"string"`
 
 	// The date when the access key was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -4085,7 +4260,7 @@ type AccessKeyMetadata struct {
 	Status *string `type:"string" enum:"statusType"`
 
 	// The name of the IAM user that the key is associated with.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataAccessKeyMetadata `json:"-" xml:"-"`
 }
@@ -4106,12 +4281,12 @@ func (s AccessKeyMetadata) GoString() string {
 
 type AddClientIDToOpenIDConnectProviderInput struct {
 	// The client ID (also known as audience) to add to the IAM OpenID Connect provider.
-	ClientID *string `type:"string" required:"true"`
+	ClientID *string `min:"1" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to add the client ID to. You can get a list of OIDC provider ARNs by using
 	// the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderArn *string `type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataAddClientIDToOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -4150,10 +4325,10 @@ func (s AddClientIDToOpenIDConnectProviderOutput) GoString() string {
 
 type AddRoleToInstanceProfileInput struct {
 	// The name of the instance profile to update.
-	InstanceProfileName *string `type:"string" required:"true"`
+	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to add.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataAddRoleToInstanceProfileInput `json:"-" xml:"-"`
 }
@@ -4192,10 +4367,10 @@ func (s AddRoleToInstanceProfileOutput) GoString() string {
 
 type AddUserToGroupInput struct {
 	// The name of the group to update.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user to add.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataAddUserToGroupInput `json:"-" xml:"-"`
 }
@@ -4234,14 +4409,14 @@ func (s AddUserToGroupOutput) GoString() string {
 
 type AttachGroupPolicyInput struct {
 	// The name (friendly name, not ARN) of the group to attach the policy to.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	metadataAttachGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -4284,10 +4459,10 @@ type AttachRolePolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the role to attach the policy to.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataAttachRolePolicyInput `json:"-" xml:"-"`
 }
@@ -4330,10 +4505,10 @@ type AttachUserPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the user to attach the policy to.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataAttachUserPolicyInput `json:"-" xml:"-"`
 }
@@ -4386,10 +4561,10 @@ type AttachedPolicy struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string"`
+	PolicyArn *string `min:"20" type:"string"`
 
 	// The friendly name of the attached policy.
-	PolicyName *string `type:"string"`
+	PolicyName *string `min:"1" type:"string"`
 
 	metadataAttachedPolicy `json:"-" xml:"-"`
 }
@@ -4411,10 +4586,10 @@ func (s AttachedPolicy) GoString() string {
 type ChangePasswordInput struct {
 	// The new password. The new password must conform to the AWS account's password
 	// policy, if one exists.
-	NewPassword *string `type:"string" required:"true"`
+	NewPassword *string `min:"1" type:"string" required:"true"`
 
 	// The IAM user's current password.
-	OldPassword *string `type:"string" required:"true"`
+	OldPassword *string `min:"1" type:"string" required:"true"`
 
 	metadataChangePasswordInput `json:"-" xml:"-"`
 }
@@ -4451,9 +4626,46 @@ func (s ChangePasswordOutput) GoString() string {
 	return s.String()
 }
 
+// Contains information about a condition context key. It includes the name
+// of the key and specifies the value (or values, if the context key supports
+// multiple values) to use in the simulation. This information is used when
+// evaluating the Condition elements of the input policies.
+//
+// This data type is used as an input parameter to SimulatePolicy.
+type ContextEntry struct {
+	// The full name of a condition context key, including the service prefix. For
+	// example, aws:SourceIp or s3:VersionId.
+	ContextKeyName *string `min:"5" type:"string"`
+
+	// The data type of the value (or values) specified in the ContextKeyValues
+	// parameter.
+	ContextKeyType *string `type:"string" enum:"ContextKeyTypeEnum"`
+
+	// The value (or values, if the condition context key supports multiple values)
+	// to provide to the simulation for use when the key is referenced by a Condition
+	// element in an input policy.
+	ContextKeyValues []*string `type:"list"`
+
+	metadataContextEntry `json:"-" xml:"-"`
+}
+
+type metadataContextEntry struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ContextEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ContextEntry) GoString() string {
+	return s.String()
+}
+
 type CreateAccessKeyInput struct {
 	// The user name that the new key will belong to.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataCreateAccessKeyInput `json:"-" xml:"-"`
 }
@@ -4496,7 +4708,7 @@ func (s CreateAccessKeyOutput) GoString() string {
 
 type CreateAccountAliasInput struct {
 	// The account alias to create.
-	AccountAlias *string `type:"string" required:"true"`
+	AccountAlias *string `min:"3" type:"string" required:"true"`
 
 	metadataCreateAccountAliasInput `json:"-" xml:"-"`
 }
@@ -4535,7 +4747,7 @@ func (s CreateAccountAliasOutput) GoString() string {
 
 type CreateGroupInput struct {
 	// The name of the group to create. Do not include the path in this value.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The path to the group. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -4543,7 +4755,7 @@ type CreateGroupInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	metadataCreateGroupInput `json:"-" xml:"-"`
 }
@@ -4586,7 +4798,7 @@ func (s CreateGroupOutput) GoString() string {
 
 type CreateInstanceProfileInput struct {
 	// The name of the instance profile to create.
-	InstanceProfileName *string `type:"string" required:"true"`
+	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The path to the instance profile. For more information about paths, see IAM
 	// Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -4594,7 +4806,7 @@ type CreateInstanceProfileInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	metadataCreateInstanceProfileInput `json:"-" xml:"-"`
 }
@@ -4637,13 +4849,13 @@ func (s CreateInstanceProfileOutput) GoString() string {
 
 type CreateLoginProfileInput struct {
 	// The new password for the user.
-	Password *string `type:"string" required:"true"`
+	Password *string `min:"1" type:"string" required:"true"`
 
 	// Specifies whether the user is required to set a new password on next sign-in.
 	PasswordResetRequired *bool `type:"boolean"`
 
 	// The name of the user to create a password for.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataCreateLoginProfileInput `json:"-" xml:"-"`
 }
@@ -4716,7 +4928,7 @@ type CreateOpenIDConnectProviderInput struct {
 	//
 	// For more information about obtaining the OIDC provider's thumbprint, see
 	// Obtaining the Thumbprint for an OpenID Connect Provider (http://docs.aws.amazon.com/IAM/latest/UserGuide/identity-providers-oidc-obtain-thumbprint.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	ThumbprintList []*string `type:"list" required:"true"`
 
 	// The URL of the identity provider. The URL must begin with "https://" and
@@ -4728,7 +4940,7 @@ type CreateOpenIDConnectProviderInput struct {
 	// You cannot register the same provider multiple times in a single AWS account.
 	// If you try to submit a URL that has already been used for an OpenID Connect
 	// provider in the AWS account, you will get an error.
-	Url *string `type:"string" required:"true"`
+	Url *string `min:"1" type:"string" required:"true"`
 
 	metadataCreateOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -4751,7 +4963,7 @@ func (s CreateOpenIDConnectProviderInput) GoString() string {
 type CreateOpenIDConnectProviderOutput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider that was
 	// created. For more information, see OpenIDConnectProviderListEntry.
-	OpenIDConnectProviderArn *string `type:"string"`
+	OpenIDConnectProviderArn *string `min:"20" type:"string"`
 
 	metadataCreateOpenIDConnectProviderOutput `json:"-" xml:"-"`
 }
@@ -4783,17 +4995,17 @@ type CreatePolicyInput struct {
 	// The path for the policy.
 	//
 	// For more information about paths, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
 	Path *string `type:"string"`
 
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	metadataCreatePolicyInput `json:"-" xml:"-"`
 }
@@ -4840,10 +5052,10 @@ type CreatePolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// Specifies whether to set this version as the policy's default version.
 	//
@@ -4853,7 +5065,7 @@ type CreatePolicyVersionInput struct {
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	SetAsDefault *bool `type:"boolean"`
 
 	metadataCreatePolicyVersionInput `json:"-" xml:"-"`
@@ -4897,7 +5109,7 @@ func (s CreatePolicyVersionOutput) GoString() string {
 
 type CreateRoleInput struct {
 	// The policy that grants an entity permission to assume the role.
-	AssumeRolePolicyDocument *string `type:"string" required:"true"`
+	AssumeRolePolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The path to the role. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -4905,10 +5117,10 @@ type CreateRoleInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	// The name of the role to create.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataCreateRoleInput `json:"-" xml:"-"`
 }
@@ -4951,7 +5163,7 @@ func (s CreateRoleOutput) GoString() string {
 
 type CreateSAMLProviderInput struct {
 	// The name of the provider to create.
-	Name *string `type:"string" required:"true"`
+	Name *string `min:"1" type:"string" required:"true"`
 
 	// An XML document generated by an identity provider (IdP) that supports SAML
 	// 2.0. The document includes the issuer's name, expiration information, and
@@ -4959,10 +5171,9 @@ type CreateSAMLProviderInput struct {
 	// that are received from the IdP. You must generate the metadata document using
 	// the identity management software that is used as your organization's IdP.
 	//
-	// For more information, see Creating Temporary Security Credentials for SAML
-	// Federation (http://docs.aws.amazon.com/STS/latest/UsingSTS/CreatingSAML.html)
-	// in the Using Temporary Security Credentials guide.
-	SAMLMetadataDocument *string `type:"string" required:"true"`
+	// For more information, see About SAML 2.0-based Federation (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_saml.html)
+	// in the IAM User Guide
+	SAMLMetadataDocument *string `min:"1000" type:"string" required:"true"`
 
 	metadataCreateSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -4984,7 +5195,7 @@ func (s CreateSAMLProviderInput) GoString() string {
 // Contains the response to a successful CreateSAMLProvider request.
 type CreateSAMLProviderOutput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider.
-	SAMLProviderArn *string `type:"string"`
+	SAMLProviderArn *string `min:"20" type:"string"`
 
 	metadataCreateSAMLProviderOutput `json:"-" xml:"-"`
 }
@@ -5010,10 +5221,10 @@ type CreateUserInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	// The name of the user to create.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataCreateUserInput `json:"-" xml:"-"`
 }
@@ -5061,11 +5272,11 @@ type CreateVirtualMFADeviceInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	// The name of the virtual MFA device. Use with path to uniquely identify a
 	// virtual MFA device.
-	VirtualMFADeviceName *string `type:"string" required:"true"`
+	VirtualMFADeviceName *string `min:"1" type:"string" required:"true"`
 
 	metadataCreateVirtualMFADeviceInput `json:"-" xml:"-"`
 }
@@ -5109,10 +5320,10 @@ func (s CreateVirtualMFADeviceOutput) GoString() string {
 type DeactivateMFADeviceInput struct {
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the device ARN.
-	SerialNumber *string `type:"string" required:"true"`
+	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// The name of the user whose MFA device you want to deactivate.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeactivateMFADeviceInput `json:"-" xml:"-"`
 }
@@ -5152,10 +5363,10 @@ func (s DeactivateMFADeviceOutput) GoString() string {
 type DeleteAccessKeyInput struct {
 	// The access key ID for the access key ID and secret access key you want to
 	// delete.
-	AccessKeyId *string `type:"string" required:"true"`
+	AccessKeyId *string `min:"16" type:"string" required:"true"`
 
 	// The name of the user whose key you want to delete.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataDeleteAccessKeyInput `json:"-" xml:"-"`
 }
@@ -5194,7 +5405,7 @@ func (s DeleteAccessKeyOutput) GoString() string {
 
 type DeleteAccountAliasInput struct {
 	// The name of the account alias to delete.
-	AccountAlias *string `type:"string" required:"true"`
+	AccountAlias *string `min:"3" type:"string" required:"true"`
 
 	metadataDeleteAccountAliasInput `json:"-" xml:"-"`
 }
@@ -5269,7 +5480,7 @@ func (s DeleteAccountPasswordPolicyOutput) GoString() string {
 
 type DeleteGroupInput struct {
 	// The name of the group to delete.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteGroupInput `json:"-" xml:"-"`
 }
@@ -5309,10 +5520,10 @@ func (s DeleteGroupOutput) GoString() string {
 type DeleteGroupPolicyInput struct {
 	// The name (friendly name, not ARN) identifying the group that the policy is
 	// embedded in.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name identifying the policy document to delete.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -5351,7 +5562,7 @@ func (s DeleteGroupPolicyOutput) GoString() string {
 
 type DeleteInstanceProfileInput struct {
 	// The name of the instance profile to delete.
-	InstanceProfileName *string `type:"string" required:"true"`
+	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteInstanceProfileInput `json:"-" xml:"-"`
 }
@@ -5390,7 +5601,7 @@ func (s DeleteInstanceProfileOutput) GoString() string {
 
 type DeleteLoginProfileInput struct {
 	// The name of the user whose password you want to delete.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteLoginProfileInput `json:"-" xml:"-"`
 }
@@ -5431,7 +5642,7 @@ type DeleteOpenIDConnectProviderInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider to delete.
 	// You can get a list of OpenID Connect provider ARNs by using the ListOpenIDConnectProviders
 	// action.
-	OpenIDConnectProviderArn *string `type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataDeleteOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -5474,7 +5685,7 @@ type DeletePolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	metadataDeletePolicyInput `json:"-" xml:"-"`
 }
@@ -5517,13 +5728,13 @@ type DeletePolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The policy version to delete.
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	VersionId *string `type:"string" required:"true"`
 
 	metadataDeletePolicyVersionInput `json:"-" xml:"-"`
@@ -5563,7 +5774,7 @@ func (s DeletePolicyVersionOutput) GoString() string {
 
 type DeleteRoleInput struct {
 	// The name of the role to delete.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteRoleInput `json:"-" xml:"-"`
 }
@@ -5602,11 +5813,11 @@ func (s DeleteRoleOutput) GoString() string {
 
 type DeleteRolePolicyInput struct {
 	// The name identifying the policy document to delete.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) identifying the role that the policy is
 	// embedded in.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteRolePolicyInput `json:"-" xml:"-"`
 }
@@ -5645,7 +5856,7 @@ func (s DeleteRolePolicyOutput) GoString() string {
 
 type DeleteSAMLProviderInput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider to delete.
-	SAMLProviderArn *string `type:"string" required:"true"`
+	SAMLProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataDeleteSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -5684,10 +5895,10 @@ func (s DeleteSAMLProviderOutput) GoString() string {
 
 type DeleteSSHPublicKeyInput struct {
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyId *string `type:"string" required:"true"`
+	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteSSHPublicKeyInput `json:"-" xml:"-"`
 }
@@ -5726,7 +5937,7 @@ func (s DeleteSSHPublicKeyOutput) GoString() string {
 
 type DeleteServerCertificateInput struct {
 	// The name of the server certificate you want to delete.
-	ServerCertificateName *string `type:"string" required:"true"`
+	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteServerCertificateInput `json:"-" xml:"-"`
 }
@@ -5765,10 +5976,10 @@ func (s DeleteServerCertificateOutput) GoString() string {
 
 type DeleteSigningCertificateInput struct {
 	// The ID of the signing certificate to delete.
-	CertificateId *string `type:"string" required:"true"`
+	CertificateId *string `min:"24" type:"string" required:"true"`
 
 	// The name of the user the signing certificate belongs to.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataDeleteSigningCertificateInput `json:"-" xml:"-"`
 }
@@ -5807,7 +6018,7 @@ func (s DeleteSigningCertificateOutput) GoString() string {
 
 type DeleteUserInput struct {
 	// The name of the user to delete.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteUserInput `json:"-" xml:"-"`
 }
@@ -5846,11 +6057,11 @@ func (s DeleteUserOutput) GoString() string {
 
 type DeleteUserPolicyInput struct {
 	// The name identifying the policy document to delete.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) identifying the user that the policy is
 	// embedded in.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataDeleteUserPolicyInput `json:"-" xml:"-"`
 }
@@ -5890,7 +6101,7 @@ func (s DeleteUserPolicyOutput) GoString() string {
 type DeleteVirtualMFADeviceInput struct {
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the same as the ARN.
-	SerialNumber *string `type:"string" required:"true"`
+	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	metadataDeleteVirtualMFADeviceInput `json:"-" xml:"-"`
 }
@@ -5929,14 +6140,14 @@ func (s DeleteVirtualMFADeviceOutput) GoString() string {
 
 type DetachGroupPolicyInput struct {
 	// The name (friendly name, not ARN) of the group to detach the policy from.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	metadataDetachGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -5979,10 +6190,10 @@ type DetachRolePolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the role to detach the policy from.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataDetachRolePolicyInput `json:"-" xml:"-"`
 }
@@ -6025,10 +6236,10 @@ type DetachUserPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the user to detach the policy from.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataDetachUserPolicyInput `json:"-" xml:"-"`
 }
@@ -6067,17 +6278,17 @@ func (s DetachUserPolicyOutput) GoString() string {
 
 type EnableMFADeviceInput struct {
 	// An authentication code emitted by the device.
-	AuthenticationCode1 *string `type:"string" required:"true"`
+	AuthenticationCode1 *string `min:"6" type:"string" required:"true"`
 
 	// A subsequent authentication code emitted by the device.
-	AuthenticationCode2 *string `type:"string" required:"true"`
+	AuthenticationCode2 *string `min:"6" type:"string" required:"true"`
 
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the device ARN.
-	SerialNumber *string `type:"string" required:"true"`
+	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// The name of the user for whom you want to enable the MFA device.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataEnableMFADeviceInput `json:"-" xml:"-"`
 }
@@ -6111,6 +6322,54 @@ func (s EnableMFADeviceOutput) String() string {
 
 // GoString returns the string representation
 func (s EnableMFADeviceOutput) GoString() string {
+	return s.String()
+}
+
+// Contains the results of a simulation.
+//
+// This data type is used by the return parameter of SimulatePolicy.
+type EvaluationResult struct {
+	// The name of the API action tested on the indicated resource.
+	EvalActionName *string `min:"3" type:"string" required:"true"`
+
+	// The result of the simulation.
+	EvalDecision *string `type:"string" required:"true" enum:"PolicyEvaluationDecisionType"`
+
+	// The ARN of the resource that the indicated API action was tested on.
+	EvalResourceName *string `min:"1" type:"string" required:"true"`
+
+	// A list of the statements in the input policies that determine the result
+	// for this scenario. Remember that even if multiple statements allow the action
+	// on the resource, if only one statement denies that action, then the explicit
+	// deny overrides any allow, and the deny statement is the only entry included
+	// in the result.
+	MatchedStatements []*Statement `type:"list"`
+
+	// A list of context keys that are required by the included input policies but
+	// that were not provided by one of the input parameters. To discover the context
+	// keys used by a set of policies, you can call GetContextKeysForCustomPolicy
+	// or GetContextKeysForPrincipalPolicy.
+	//
+	//  If the response includes any keys in this list, then the reported results
+	// might be untrustworthy because the simulation could not completely evaluate
+	// all of the conditions specified in the policies that would occur in a real
+	// world request.
+	MissingContextValues []*string `type:"list"`
+
+	metadataEvaluationResult `json:"-" xml:"-"`
+}
+
+type metadataEvaluationResult struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s EvaluationResult) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s EvaluationResult) GoString() string {
 	return s.String()
 }
 
@@ -6159,7 +6418,7 @@ func (s GenerateCredentialReportOutput) GoString() string {
 
 type GetAccessKeyLastUsedInput struct {
 	// The identifier of an access key.
-	AccessKeyId *string `type:"string" required:"true"`
+	AccessKeyId *string `min:"16" type:"string" required:"true"`
 
 	metadataGetAccessKeyLastUsedInput `json:"-" xml:"-"`
 }
@@ -6186,7 +6445,7 @@ type GetAccessKeyLastUsedOutput struct {
 	AccessKeyLastUsed *AccessKeyLastUsed `type:"structure"`
 
 	// The name of the AWS IAM user that owns this access key.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataGetAccessKeyLastUsedOutput `json:"-" xml:"-"`
 }
@@ -6210,17 +6469,22 @@ type GetAccountAuthorizationDetailsInput struct {
 	// policy) for filtering the results.
 	Filter []*string `type:"list"`
 
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataGetAccountAuthorizationDetailsInput `json:"-" xml:"-"`
 }
@@ -6246,12 +6510,15 @@ type GetAccountAuthorizationDetailsOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list containing information about managed policies.
 	Policies []*ManagedPolicyDetail `type:"list"`
@@ -6504,6 +6771,83 @@ func (s GetAccountSummaryOutput) GoString() string {
 	return s.String()
 }
 
+type GetContextKeysForCustomPolicyInput struct {
+	// A list of policies for which you want list of context keys used in Condition
+	// elements.
+	PolicyInputList []*string `type:"list" required:"true"`
+
+	metadataGetContextKeysForCustomPolicyInput `json:"-" xml:"-"`
+}
+
+type metadataGetContextKeysForCustomPolicyInput struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetContextKeysForCustomPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetContextKeysForCustomPolicyInput) GoString() string {
+	return s.String()
+}
+
+// Contains the response to a successful GetContextKeysForPrincipalPolicy or
+// GetContextKeysForCustomPolicy request.
+type GetContextKeysForPolicyResponse struct {
+	// The list of context keys that are used in the Condition elements of the input
+	// policies.
+	ContextKeyNames []*string `type:"list"`
+
+	metadataGetContextKeysForPolicyResponse `json:"-" xml:"-"`
+}
+
+type metadataGetContextKeysForPolicyResponse struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetContextKeysForPolicyResponse) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetContextKeysForPolicyResponse) GoString() string {
+	return s.String()
+}
+
+type GetContextKeysForPrincipalPolicyInput struct {
+	// A optional list of additional policies for which you want list of context
+	// keys used in Condition elements.
+	PolicyInputList []*string `type:"list"`
+
+	// The ARN of a user, group, or role whose policies contain the context keys
+	// that you want listed. If you specify a user, the list includes context keys
+	// that are found in all policies attached to the user as well as to all groups
+	// that the user is a member of. If you pick a group or a role, then it includes
+	// only those context keys that are found in policies attached to that entity.
+	// Note that all parameters are shown in unencoded form here for clarity, but
+	// must be URL encoded to be included as a part of a real HTML request.
+	PolicySourceArn *string `min:"20" type:"string" required:"true"`
+
+	metadataGetContextKeysForPrincipalPolicyInput `json:"-" xml:"-"`
+}
+
+type metadataGetContextKeysForPrincipalPolicyInput struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s GetContextKeysForPrincipalPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetContextKeysForPrincipalPolicyInput) GoString() string {
+	return s.String()
+}
+
 type GetCredentialReportInput struct {
 	metadataGetCredentialReportInput `json:"-" xml:"-"`
 }
@@ -6553,19 +6897,24 @@ func (s GetCredentialReportOutput) GoString() string {
 
 type GetGroupInput struct {
 	// The name of the group.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataGetGroupInput `json:"-" xml:"-"`
 }
@@ -6591,12 +6940,15 @@ type GetGroupOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of users in the group.
 	Users []*User `type:"list" required:"true"`
@@ -6620,10 +6972,10 @@ func (s GetGroupOutput) GoString() string {
 
 type GetGroupPolicyInput struct {
 	// The name of the group the policy is associated with.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document to get.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -6645,13 +6997,13 @@ func (s GetGroupPolicyInput) GoString() string {
 // Contains the response to a successful GetGroupPolicy request.
 type GetGroupPolicyOutput struct {
 	// The group the policy is associated with.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetGroupPolicyOutput `json:"-" xml:"-"`
 }
@@ -6672,7 +7024,7 @@ func (s GetGroupPolicyOutput) GoString() string {
 
 type GetInstanceProfileInput struct {
 	// The name of the instance profile to get information about.
-	InstanceProfileName *string `type:"string" required:"true"`
+	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetInstanceProfileInput `json:"-" xml:"-"`
 }
@@ -6715,7 +7067,7 @@ func (s GetInstanceProfileOutput) GoString() string {
 
 type GetLoginProfileInput struct {
 	// The name of the user whose login profile you want to retrieve.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetLoginProfileInput `json:"-" xml:"-"`
 }
@@ -6760,7 +7112,7 @@ type GetOpenIDConnectProviderInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to get information for. You can get a list of OIDC provider ARNs by using
 	// the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderArn *string `type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataGetOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -6795,7 +7147,7 @@ type GetOpenIDConnectProviderOutput struct {
 
 	// The URL that the IAM OpenID Connect provider is associated with. For more
 	// information, see CreateOpenIDConnectProvider.
-	Url *string `type:"string"`
+	Url *string `min:"1" type:"string"`
 
 	metadataGetOpenIDConnectProviderOutput `json:"-" xml:"-"`
 }
@@ -6820,7 +7172,7 @@ type GetPolicyInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	metadataGetPolicyInput `json:"-" xml:"-"`
 }
@@ -6867,7 +7219,7 @@ type GetPolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// Identifies the policy version to retrieve.
 	VersionId *string `type:"string" required:"true"`
@@ -6895,7 +7247,7 @@ type GetPolicyVersionOutput struct {
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	PolicyVersion *PolicyVersion `type:"structure"`
 
 	metadataGetPolicyVersionOutput `json:"-" xml:"-"`
@@ -6917,7 +7269,7 @@ func (s GetPolicyVersionOutput) GoString() string {
 
 type GetRoleInput struct {
 	// The name of the role to get information about.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetRoleInput `json:"-" xml:"-"`
 }
@@ -6960,10 +7312,10 @@ func (s GetRoleOutput) GoString() string {
 
 type GetRolePolicyInput struct {
 	// The name of the policy document to get.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role associated with the policy.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetRolePolicyInput `json:"-" xml:"-"`
 }
@@ -6985,13 +7337,13 @@ func (s GetRolePolicyInput) GoString() string {
 // Contains the response to a successful GetRolePolicy request.
 type GetRolePolicyOutput struct {
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The role the policy is associated with.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetRolePolicyOutput `json:"-" xml:"-"`
 }
@@ -7012,7 +7364,7 @@ func (s GetRolePolicyOutput) GoString() string {
 
 type GetSAMLProviderInput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider to get information about.
-	SAMLProviderArn *string `type:"string" required:"true"`
+	SAMLProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataGetSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -7037,7 +7389,7 @@ type GetSAMLProviderOutput struct {
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	// The XML metadata document that includes information about an identity provider.
-	SAMLMetadataDocument *string `type:"string"`
+	SAMLMetadataDocument *string `min:"1000" type:"string"`
 
 	// The expiration date and time for the SAML provider.
 	ValidUntil *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -7066,10 +7418,10 @@ type GetSSHPublicKeyInput struct {
 	Encoding *string `type:"string" required:"true" enum:"encodingType"`
 
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyId *string `type:"string" required:"true"`
+	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetSSHPublicKeyInput `json:"-" xml:"-"`
 }
@@ -7112,7 +7464,7 @@ func (s GetSSHPublicKeyOutput) GoString() string {
 
 type GetServerCertificateInput struct {
 	// The name of the server certificate you want to retrieve information about.
-	ServerCertificateName *string `type:"string" required:"true"`
+	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetServerCertificateInput `json:"-" xml:"-"`
 }
@@ -7158,7 +7510,7 @@ type GetUserInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to the user
 	// making the request.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataGetUserInput `json:"-" xml:"-"`
 }
@@ -7201,10 +7553,10 @@ func (s GetUserOutput) GoString() string {
 
 type GetUserPolicyInput struct {
 	// The name of the policy document to get.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user who the policy is associated with.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetUserPolicyInput `json:"-" xml:"-"`
 }
@@ -7226,13 +7578,13 @@ func (s GetUserPolicyInput) GoString() string {
 // Contains the response to a successful GetUserPolicy request.
 type GetUserPolicyOutput struct {
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The user the policy is associated with.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataGetUserPolicyOutput `json:"-" xml:"-"`
 }
@@ -7260,7 +7612,7 @@ type Group struct {
 	// The Amazon Resource Name (ARN) specifying the group. For more information
 	// about ARNs and how to use them in policies, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Arn *string `type:"string" required:"true"`
+	Arn *string `min:"20" type:"string" required:"true"`
 
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
 	// when the group was created.
@@ -7269,15 +7621,15 @@ type Group struct {
 	// The stable and unique string identifying the group. For more information
 	// about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	GroupId *string `type:"string" required:"true"`
+	GroupId *string `min:"16" type:"string" required:"true"`
 
 	// The friendly name that identifies the group.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The path to the group. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string" required:"true"`
+	Path *string `min:"1" type:"string" required:"true"`
 
 	metadataGroup `json:"-" xml:"-"`
 }
@@ -7306,7 +7658,7 @@ type GroupDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	// A list of the managed policies attached to the group.
 	AttachedManagedPolicies []*AttachedPolicy `type:"list"`
@@ -7318,10 +7670,10 @@ type GroupDetail struct {
 	// The stable and unique string identifying the group. For more information
 	// about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	GroupId *string `type:"string"`
+	GroupId *string `min:"16" type:"string"`
 
 	// The friendly name that identifies the group.
-	GroupName *string `type:"string"`
+	GroupName *string `min:"1" type:"string"`
 
 	// A list of the inline policies embedded in the group.
 	GroupPolicyList []*PolicyDetail `type:"list"`
@@ -7329,7 +7681,7 @@ type GroupDetail struct {
 	// The path to the group. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	metadataGroupDetail `json:"-" xml:"-"`
 }
@@ -7364,7 +7716,7 @@ type InstanceProfile struct {
 	// information about ARNs and how to use them in policies, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Arn *string `type:"string" required:"true"`
+	Arn *string `min:"20" type:"string" required:"true"`
 
 	// The date when the instance profile was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601" required:"true"`
@@ -7372,15 +7724,15 @@ type InstanceProfile struct {
 	// The stable and unique string identifying the instance profile. For more information
 	// about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	InstanceProfileId *string `type:"string" required:"true"`
+	InstanceProfileId *string `min:"16" type:"string" required:"true"`
 
 	// The name identifying the instance profile.
-	InstanceProfileName *string `type:"string" required:"true"`
+	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The path to the instance profile. For more information about paths, see IAM
 	// Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string" required:"true"`
+	Path *string `min:"1" type:"string" required:"true"`
 
 	// The role associated with the instance profile.
 	Roles []*Role `type:"list" required:"true"`
@@ -7403,20 +7755,25 @@ func (s InstanceProfile) GoString() string {
 }
 
 type ListAccessKeysInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataListAccessKeysInput `json:"-" xml:"-"`
 }
@@ -7442,12 +7799,15 @@ type ListAccessKeysOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListAccessKeysOutput `json:"-" xml:"-"`
 }
@@ -7467,17 +7827,22 @@ func (s ListAccessKeysOutput) GoString() string {
 }
 
 type ListAccountAliasesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataListAccountAliasesInput `json:"-" xml:"-"`
 }
@@ -7503,12 +7868,15 @@ type ListAccountAliasesOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListAccountAliasesOutput `json:"-" xml:"-"`
 }
@@ -7530,19 +7898,24 @@ func (s ListAccountAliasesOutput) GoString() string {
 type ListAttachedGroupPoliciesInput struct {
 	// The name (friendly name, not ARN) of the group to list attached policies
 	// for.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all policies.
@@ -7572,12 +7945,15 @@ type ListAttachedGroupPoliciesOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListAttachedGroupPoliciesOutput `json:"-" xml:"-"`
 }
@@ -7597,24 +7973,29 @@ func (s ListAttachedGroupPoliciesOutput) GoString() string {
 }
 
 type ListAttachedRolePoliciesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all policies.
 	PathPrefix *string `type:"string"`
 
 	// The name (friendly name, not ARN) of the role to list attached policies for.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataListAttachedRolePoliciesInput `json:"-" xml:"-"`
 }
@@ -7640,12 +8021,15 @@ type ListAttachedRolePoliciesOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListAttachedRolePoliciesOutput `json:"-" xml:"-"`
 }
@@ -7665,24 +8049,29 @@ func (s ListAttachedRolePoliciesOutput) GoString() string {
 }
 
 type ListAttachedUserPoliciesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all policies.
 	PathPrefix *string `type:"string"`
 
 	// The name (friendly name, not ARN) of the user to list attached policies for.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataListAttachedUserPoliciesInput `json:"-" xml:"-"`
 }
@@ -7708,12 +8097,15 @@ type ListAttachedUserPoliciesOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListAttachedUserPoliciesOutput `json:"-" xml:"-"`
 }
@@ -7740,28 +8132,33 @@ type ListEntitiesForPolicyInput struct {
 	// not included, all attached entities (users, groups, and roles) are returned.
 	EntityFilter *string `type:"string" enum:"EntityType"`
 
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all entities.
-	PathPrefix *string `type:"string"`
+	PathPrefix *string `min:"1" type:"string"`
 
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	metadataListEntitiesForPolicyInput `json:"-" xml:"-"`
 }
@@ -7784,12 +8181,15 @@ func (s ListEntitiesForPolicyInput) GoString() string {
 type ListEntitiesForPolicyOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of groups that the policy is attached to.
 	PolicyGroups []*PolicyGroup `type:"list"`
@@ -7819,19 +8219,24 @@ func (s ListEntitiesForPolicyOutput) GoString() string {
 
 type ListGroupPoliciesInput struct {
 	// The name of the group to list policies for.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataListGroupPoliciesInput `json:"-" xml:"-"`
 }
@@ -7854,12 +8259,15 @@ func (s ListGroupPoliciesInput) GoString() string {
 type ListGroupPoliciesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of policy names.
 	PolicyNames []*string `type:"list" required:"true"`
@@ -7882,20 +8290,25 @@ func (s ListGroupPoliciesOutput) GoString() string {
 }
 
 type ListGroupsForUserInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user to list groups for.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataListGroupsForUserInput `json:"-" xml:"-"`
 }
@@ -7921,12 +8334,15 @@ type ListGroupsForUserOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListGroupsForUserOutput `json:"-" xml:"-"`
 }
@@ -7946,24 +8362,29 @@ func (s ListGroupsForUserOutput) GoString() string {
 }
 
 type ListGroupsInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example, the prefix /division_abc/subdivision_xyz/
 	// gets all groups whose path starts with /division_abc/subdivision_xyz/.
 	//
 	//  This parameter is optional. If it is not included, it defaults to a slash
 	// (/), listing all groups.
-	PathPrefix *string `type:"string"`
+	PathPrefix *string `min:"1" type:"string"`
 
 	metadataListGroupsInput `json:"-" xml:"-"`
 }
@@ -7989,12 +8410,15 @@ type ListGroupsOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListGroupsOutput `json:"-" xml:"-"`
 }
@@ -8014,20 +8438,25 @@ func (s ListGroupsOutput) GoString() string {
 }
 
 type ListInstanceProfilesForRoleInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the role to list instance profiles for.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataListInstanceProfilesForRoleInput `json:"-" xml:"-"`
 }
@@ -8053,12 +8482,15 @@ type ListInstanceProfilesForRoleOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListInstanceProfilesForRoleOutput `json:"-" xml:"-"`
 }
@@ -8078,24 +8510,29 @@ func (s ListInstanceProfilesForRoleOutput) GoString() string {
 }
 
 type ListInstanceProfilesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example, the prefix /application_abc/component_xyz/
 	// gets all instance profiles whose path starts with /application_abc/component_xyz/.
 	//
 	//  This parameter is optional. If it is not included, it defaults to a slash
 	// (/), listing all instance profiles.
-	PathPrefix *string `type:"string"`
+	PathPrefix *string `min:"1" type:"string"`
 
 	metadataListInstanceProfilesInput `json:"-" xml:"-"`
 }
@@ -8121,12 +8558,15 @@ type ListInstanceProfilesOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListInstanceProfilesOutput `json:"-" xml:"-"`
 }
@@ -8146,20 +8586,25 @@ func (s ListInstanceProfilesOutput) GoString() string {
 }
 
 type ListMFADevicesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user whose MFA devices you want to list.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataListMFADevicesInput `json:"-" xml:"-"`
 }
@@ -8182,7 +8627,10 @@ func (s ListMFADevicesInput) GoString() string {
 type ListMFADevicesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// A list of MFA devices.
@@ -8190,7 +8638,7 @@ type ListMFADevicesOutput struct {
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListMFADevicesOutput `json:"-" xml:"-"`
 }
@@ -8250,17 +8698,22 @@ func (s ListOpenIDConnectProvidersOutput) GoString() string {
 }
 
 type ListPoliciesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// A flag to filter the results to only the attached policies.
 	//
@@ -8303,12 +8756,15 @@ func (s ListPoliciesInput) GoString() string {
 type ListPoliciesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of policies.
 	Policies []*Policy `type:"list"`
@@ -8331,24 +8787,29 @@ func (s ListPoliciesOutput) GoString() string {
 }
 
 type ListPolicyVersionsInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	metadataListPolicyVersionsInput `json:"-" xml:"-"`
 }
@@ -8371,18 +8832,21 @@ func (s ListPolicyVersionsInput) GoString() string {
 type ListPolicyVersionsOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of policy versions.
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	Versions []*PolicyVersion `type:"list"`
 
 	metadataListPolicyVersionsOutput `json:"-" xml:"-"`
@@ -8403,20 +8867,25 @@ func (s ListPolicyVersionsOutput) GoString() string {
 }
 
 type ListRolePoliciesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the role to list policies for.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataListRolePoliciesInput `json:"-" xml:"-"`
 }
@@ -8439,12 +8908,15 @@ func (s ListRolePoliciesInput) GoString() string {
 type ListRolePoliciesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of policy names.
 	PolicyNames []*string `type:"list" required:"true"`
@@ -8467,24 +8939,29 @@ func (s ListRolePoliciesOutput) GoString() string {
 }
 
 type ListRolesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example, the prefix /application_abc/component_xyz/
 	// gets all roles whose path starts with /application_abc/component_xyz/.
 	//
 	//  This parameter is optional. If it is not included, it defaults to a slash
 	// (/), listing all roles.
-	PathPrefix *string `type:"string"`
+	PathPrefix *string `min:"1" type:"string"`
 
 	metadataListRolesInput `json:"-" xml:"-"`
 }
@@ -8507,12 +8984,15 @@ func (s ListRolesInput) GoString() string {
 type ListRolesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of roles.
 	Roles []*Role `type:"list" required:"true"`
@@ -8575,22 +9055,27 @@ func (s ListSAMLProvidersOutput) GoString() string {
 }
 
 type ListSSHPublicKeysInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the IAM user to list SSH public keys for. If none is specified,
 	// the UserName field is determined implicitly based on the AWS access key used
 	// to sign the request.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataListSSHPublicKeysInput `json:"-" xml:"-"`
 }
@@ -8613,12 +9098,15 @@ func (s ListSSHPublicKeysInput) GoString() string {
 type ListSSHPublicKeysOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of SSH public keys.
 	SSHPublicKeys []*SSHPublicKeyMetadata `type:"list"`
@@ -8641,24 +9129,29 @@ func (s ListSSHPublicKeysOutput) GoString() string {
 }
 
 type ListServerCertificatesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example: /company/servercerts
 	// would get all server certificates for which the path starts with /company/servercerts.
 	//
 	//  This parameter is optional. If it is not included, it defaults to a slash
 	// (/), listing all server certificates.
-	PathPrefix *string `type:"string"`
+	PathPrefix *string `min:"1" type:"string"`
 
 	metadataListServerCertificatesInput `json:"-" xml:"-"`
 }
@@ -8681,12 +9174,15 @@ func (s ListServerCertificatesInput) GoString() string {
 type ListServerCertificatesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of server certificates.
 	ServerCertificateMetadataList []*ServerCertificateMetadata `type:"list" required:"true"`
@@ -8709,20 +9205,25 @@ func (s ListServerCertificatesOutput) GoString() string {
 }
 
 type ListSigningCertificatesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataListSigningCertificatesInput `json:"-" xml:"-"`
 }
@@ -8748,12 +9249,15 @@ type ListSigningCertificatesOutput struct {
 
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	metadataListSigningCertificatesOutput `json:"-" xml:"-"`
 }
@@ -8773,20 +9277,25 @@ func (s ListSigningCertificatesOutput) GoString() string {
 }
 
 type ListUserPoliciesInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user to list policies for.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataListUserPoliciesInput `json:"-" xml:"-"`
 }
@@ -8809,12 +9318,15 @@ func (s ListUserPoliciesInput) GoString() string {
 type ListUserPoliciesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of policy names.
 	PolicyNames []*string `type:"list" required:"true"`
@@ -8837,24 +9349,29 @@ func (s ListUserPoliciesOutput) GoString() string {
 }
 
 type ListUsersInput struct {
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example: /division_abc/subdivision_xyz/,
 	// which would get all user names whose path starts with /division_abc/subdivision_xyz/.
 	//
 	//  This parameter is optional. If it is not included, it defaults to a slash
 	// (/), listing all user names.
-	PathPrefix *string `type:"string"`
+	PathPrefix *string `min:"1" type:"string"`
 
 	metadataListUsersInput `json:"-" xml:"-"`
 }
@@ -8877,12 +9394,15 @@ func (s ListUsersInput) GoString() string {
 type ListUsersOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// A list of users.
 	Users []*User `type:"list" required:"true"`
@@ -8910,17 +9430,22 @@ type ListVirtualMFADevicesInput struct {
 	// assigned and unassigned virtual MFA devices.
 	AssignmentStatus *string `type:"string" enum:"assignmentStatusType"`
 
-	// Use this parameter only when paginating results and only after you have received
-	// a response where the results are truncated. Set it to the value of the Marker
-	// element in the response you just received.
-	Marker *string `type:"string"`
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
 	// you want in the response. If there are additional items beyond the maximum
 	// you specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
-	MaxItems *int64 `type:"integer"`
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataListVirtualMFADevicesInput `json:"-" xml:"-"`
 }
@@ -8943,12 +9468,15 @@ func (s ListVirtualMFADevicesInput) GoString() string {
 type ListVirtualMFADevicesOutput struct {
 	// A flag that indicates whether there are more items to return. If your results
 	// were truncated, you can make a subsequent pagination request using the Marker
-	// request parameter to retrieve more items.
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
 	IsTruncated *bool `type:"boolean"`
 
 	// When IsTruncated is true, this element is present and contains the value
 	// to use for the Marker parameter in a subsequent pagination request.
-	Marker *string `type:"string"`
+	Marker *string `min:"1" type:"string"`
 
 	// The list of virtual MFA devices in the current account that match the AssignmentStatus
 	// value that was passed in the request.
@@ -8984,7 +9512,7 @@ type LoginProfile struct {
 
 	// The name of the user, which can be used for signing in to the AWS Management
 	// Console.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataLoginProfile `json:"-" xml:"-"`
 }
@@ -9012,10 +9540,10 @@ type MFADevice struct {
 
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the device ARN.
-	SerialNumber *string `type:"string" required:"true"`
+	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// The user with whom the MFA device is associated.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataMFADevice `json:"-" xml:"-"`
 }
@@ -9050,7 +9578,7 @@ type ManagedPolicyDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	// The number of principal entities (users, groups, and roles) that the policy
 	// is attached to.
@@ -9084,10 +9612,10 @@ type ManagedPolicyDetail struct {
 	//
 	// For more information about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	PolicyId *string `type:"string"`
+	PolicyId *string `min:"16" type:"string"`
 
 	// The friendly name (not ARN) identifying the policy.
-	PolicyName *string `type:"string"`
+	PolicyName *string `min:"1" type:"string"`
 
 	// A list containing information about the versions of the policy.
 	PolicyVersionList []*PolicyVersion `type:"list"`
@@ -9125,7 +9653,7 @@ type OpenIDConnectProviderListEntry struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	metadataOpenIDConnectProviderListEntry `json:"-" xml:"-"`
 }
@@ -9161,14 +9689,14 @@ type PasswordPolicy struct {
 	HardExpiry *bool `type:"boolean"`
 
 	// The number of days that an IAM user password is valid.
-	MaxPasswordAge *int64 `type:"integer"`
+	MaxPasswordAge *int64 `min:"1" type:"integer"`
 
 	// Minimum length to require for IAM user passwords.
-	MinimumPasswordLength *int64 `type:"integer"`
+	MinimumPasswordLength *int64 `min:"6" type:"integer"`
 
 	// Specifies the number of previous passwords that IAM users are prevented from
 	// reusing.
-	PasswordReusePrevention *int64 `type:"integer"`
+	PasswordReusePrevention *int64 `min:"1" type:"integer"`
 
 	// Specifies whether to require lowercase characters for IAM user passwords.
 	RequireLowercaseCharacters *bool `type:"boolean"`
@@ -9213,7 +9741,7 @@ type Policy struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	// The number of entities (users, groups, and roles) that the policy is attached
 	// to.
@@ -9245,10 +9773,10 @@ type Policy struct {
 	//
 	// For more information about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	PolicyId *string `type:"string"`
+	PolicyId *string `min:"16" type:"string"`
 
 	// The friendly name (not ARN) identifying the policy.
-	PolicyName *string `type:"string"`
+	PolicyName *string `min:"1" type:"string"`
 
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
 	// when the policy was last updated.
@@ -9282,10 +9810,10 @@ func (s Policy) GoString() string {
 // action.
 type PolicyDetail struct {
 	// The policy document.
-	PolicyDocument *string `type:"string"`
+	PolicyDocument *string `min:"1" type:"string"`
 
 	// The name of the policy.
-	PolicyName *string `type:"string"`
+	PolicyName *string `min:"1" type:"string"`
 
 	metadataPolicyDetail `json:"-" xml:"-"`
 }
@@ -9314,7 +9842,7 @@ func (s PolicyDetail) GoString() string {
 // in the Using IAM guide.
 type PolicyGroup struct {
 	// The name (friendly name, not ARN) identifying the group.
-	GroupName *string `type:"string"`
+	GroupName *string `min:"1" type:"string"`
 
 	metadataPolicyGroup `json:"-" xml:"-"`
 }
@@ -9343,7 +9871,7 @@ func (s PolicyGroup) GoString() string {
 // in the Using IAM guide.
 type PolicyRole struct {
 	// The name (friendly name, not ARN) identifying the role.
-	RoleName *string `type:"string"`
+	RoleName *string `min:"1" type:"string"`
 
 	metadataPolicyRole `json:"-" xml:"-"`
 }
@@ -9372,7 +9900,7 @@ func (s PolicyRole) GoString() string {
 // in the Using IAM guide.
 type PolicyUser struct {
 	// The name (friendly name, not ARN) identifying the user.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataPolicyUser `json:"-" xml:"-"`
 }
@@ -9410,7 +9938,7 @@ type PolicyVersion struct {
 	// The policy document is returned in the response to the GetPolicyVersion
 	// and GetAccountAuthorizationDetails operations. It is not returned in the
 	// response to the CreatePolicyVersion or ListPolicyVersions operations.
-	Document *string `type:"string"`
+	Document *string `min:"1" type:"string"`
 
 	// Specifies whether the policy version is set as the policy's default version.
 	IsDefaultVersion *bool `type:"boolean"`
@@ -9438,15 +9966,43 @@ func (s PolicyVersion) GoString() string {
 	return s.String()
 }
 
+// Contains the row and column of a location of a Statement element in a policy
+// document.
+//
+// This data type is used as a member of the Statement type.
+type Position struct {
+	// The column in the line containing the specified position in the document.
+	Column *int64 `type:"integer"`
+
+	// The line containing the specified position in the document.
+	Line *int64 `type:"integer"`
+
+	metadataPosition `json:"-" xml:"-"`
+}
+
+type metadataPosition struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Position) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Position) GoString() string {
+	return s.String()
+}
+
 type PutGroupPolicyInput struct {
 	// The name of the group to associate the policy with.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	metadataPutGroupPolicyInput `json:"-" xml:"-"`
 }
@@ -9485,13 +10041,13 @@ func (s PutGroupPolicyOutput) GoString() string {
 
 type PutRolePolicyInput struct {
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to associate the policy with.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataPutRolePolicyInput `json:"-" xml:"-"`
 }
@@ -9530,13 +10086,13 @@ func (s PutRolePolicyOutput) GoString() string {
 
 type PutUserPolicyInput struct {
 	// The policy document.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
-	PolicyName *string `type:"string" required:"true"`
+	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user to associate the policy with.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataPutUserPolicyInput `json:"-" xml:"-"`
 }
@@ -9576,12 +10132,12 @@ func (s PutUserPolicyOutput) GoString() string {
 type RemoveClientIDFromOpenIDConnectProviderInput struct {
 	// The client ID (also known as audience) to remove from the IAM OpenID Connect
 	// provider. For more information about client IDs, see CreateOpenIDConnectProvider.
-	ClientID *string `type:"string" required:"true"`
+	ClientID *string `min:"1" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to remove the client ID from. You can get a list of OIDC provider ARNs by
 	// using the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderArn *string `type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataRemoveClientIDFromOpenIDConnectProviderInput `json:"-" xml:"-"`
 }
@@ -9620,10 +10176,10 @@ func (s RemoveClientIDFromOpenIDConnectProviderOutput) GoString() string {
 
 type RemoveRoleFromInstanceProfileInput struct {
 	// The name of the instance profile to update.
-	InstanceProfileName *string `type:"string" required:"true"`
+	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to remove.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataRemoveRoleFromInstanceProfileInput `json:"-" xml:"-"`
 }
@@ -9662,10 +10218,10 @@ func (s RemoveRoleFromInstanceProfileOutput) GoString() string {
 
 type RemoveUserFromGroupInput struct {
 	// The name of the group to update.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user to remove.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataRemoveUserFromGroupInput `json:"-" xml:"-"`
 }
@@ -9704,16 +10260,16 @@ func (s RemoveUserFromGroupOutput) GoString() string {
 
 type ResyncMFADeviceInput struct {
 	// An authentication code emitted by the device.
-	AuthenticationCode1 *string `type:"string" required:"true"`
+	AuthenticationCode1 *string `min:"6" type:"string" required:"true"`
 
 	// A subsequent authentication code emitted by the device.
-	AuthenticationCode2 *string `type:"string" required:"true"`
+	AuthenticationCode2 *string `min:"6" type:"string" required:"true"`
 
 	// Serial number that uniquely identifies the MFA device.
-	SerialNumber *string `type:"string" required:"true"`
+	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// The name of the user whose MFA device you want to resynchronize.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataResyncMFADeviceInput `json:"-" xml:"-"`
 }
@@ -9763,10 +10319,10 @@ type Role struct {
 	// The Amazon Resource Name (ARN) specifying the role. For more information
 	// about ARNs and how to use them in policies, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Arn *string `type:"string" required:"true"`
+	Arn *string `min:"20" type:"string" required:"true"`
 
 	// The policy that grants an entity permission to assume the role.
-	AssumeRolePolicyDocument *string `type:"string"`
+	AssumeRolePolicyDocument *string `min:"1" type:"string"`
 
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
 	// when the role was created.
@@ -9775,15 +10331,15 @@ type Role struct {
 	// The path to the role. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string" required:"true"`
+	Path *string `min:"1" type:"string" required:"true"`
 
 	// The stable and unique string identifying the role. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	RoleId *string `type:"string" required:"true"`
+	RoleId *string `min:"16" type:"string" required:"true"`
 
 	// The friendly name that identifies the role.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataRole `json:"-" xml:"-"`
 }
@@ -9812,10 +10368,10 @@ type RoleDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	// The trust policy that grants permission to assume the role.
-	AssumeRolePolicyDocument *string `type:"string"`
+	AssumeRolePolicyDocument *string `min:"1" type:"string"`
 
 	// A list of managed policies attached to the role. These policies are the role's
 	// access (permissions) policies.
@@ -9831,15 +10387,15 @@ type RoleDetail struct {
 	// The path to the role. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	// The stable and unique string identifying the role. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	RoleId *string `type:"string"`
+	RoleId *string `min:"16" type:"string"`
 
 	// The friendly name that identifies the role.
-	RoleName *string `type:"string"`
+	RoleName *string `min:"1" type:"string"`
 
 	// A list of inline policies embedded in the role. These policies are the role's
 	// access (permissions) policies.
@@ -9865,7 +10421,7 @@ func (s RoleDetail) GoString() string {
 // Contains the list of SAML providers for this account.
 type SAMLProviderListEntry struct {
 	// The Amazon Resource Name (ARN) of the SAML provider.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	// The date and time when the SAML provider was created.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -9896,13 +10452,13 @@ func (s SAMLProviderListEntry) GoString() string {
 // UploadSSHPublicKey actions.
 type SSHPublicKey struct {
 	// The MD5 message digest of the SSH public key.
-	Fingerprint *string `type:"string" required:"true"`
+	Fingerprint *string `min:"48" type:"string" required:"true"`
 
 	// The SSH public key.
-	SSHPublicKeyBody *string `type:"string" required:"true"`
+	SSHPublicKeyBody *string `min:"1" type:"string" required:"true"`
 
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyId *string `type:"string" required:"true"`
+	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The status of the SSH public key. Active means the key can be used for authentication
 	// with an AWS CodeCommit repository. Inactive means the key cannot be used.
@@ -9913,7 +10469,7 @@ type SSHPublicKey struct {
 	UploadDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	// The name of the IAM user associated with the SSH public key.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataSSHPublicKey `json:"-" xml:"-"`
 }
@@ -9937,7 +10493,7 @@ func (s SSHPublicKey) GoString() string {
 // This data type is used as a response element in the ListSSHPublicKeys action.
 type SSHPublicKeyMetadata struct {
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyId *string `type:"string" required:"true"`
+	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The status of the SSH public key. Active means the key can be used for authentication
 	// with an AWS CodeCommit repository. Inactive means the key cannot be used.
@@ -9948,7 +10504,7 @@ type SSHPublicKeyMetadata struct {
 	UploadDate *time.Time `type:"timestamp" timestampFormat:"iso8601" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataSSHPublicKeyMetadata `json:"-" xml:"-"`
 }
@@ -9973,10 +10529,10 @@ func (s SSHPublicKeyMetadata) GoString() string {
 // action.
 type ServerCertificate struct {
 	// The contents of the public key certificate.
-	CertificateBody *string `type:"string" required:"true"`
+	CertificateBody *string `min:"1" type:"string" required:"true"`
 
 	// The contents of the public key certificate chain.
-	CertificateChain *string `type:"string"`
+	CertificateChain *string `min:"1" type:"string"`
 
 	// The meta information of the server certificate, such as its name, path, ID,
 	// and ARN.
@@ -10009,7 +10565,7 @@ type ServerCertificateMetadata struct {
 	// information about ARNs and how to use them in policies, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Arn *string `type:"string" required:"true"`
+	Arn *string `min:"20" type:"string" required:"true"`
 
 	// The date on which the certificate is set to expire.
 	Expiration *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -10017,15 +10573,15 @@ type ServerCertificateMetadata struct {
 	// The path to the server certificate. For more information about paths, see
 	// IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string" required:"true"`
+	Path *string `min:"1" type:"string" required:"true"`
 
 	// The stable and unique string identifying the server certificate. For more
 	// information about IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	ServerCertificateId *string `type:"string" required:"true"`
+	ServerCertificateId *string `min:"16" type:"string" required:"true"`
 
 	// The name that identifies the server certificate.
-	ServerCertificateName *string `type:"string" required:"true"`
+	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 
 	// The date when the server certificate was uploaded.
 	UploadDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
@@ -10053,13 +10609,13 @@ type SetDefaultPolicyVersionInput struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	PolicyArn *string `type:"string" required:"true"`
+	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The version of the policy to set as the default (operative) version.
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	VersionId *string `type:"string" required:"true"`
 
 	metadataSetDefaultPolicyVersionInput `json:"-" xml:"-"`
@@ -10103,10 +10659,10 @@ func (s SetDefaultPolicyVersionOutput) GoString() string {
 // and ListSigningCertificates actions.
 type SigningCertificate struct {
 	// The contents of the signing certificate.
-	CertificateBody *string `type:"string" required:"true"`
+	CertificateBody *string `min:"1" type:"string" required:"true"`
 
 	// The ID for the signing certificate.
-	CertificateId *string `type:"string" required:"true"`
+	CertificateId *string `min:"24" type:"string" required:"true"`
 
 	// The status of the signing certificate. Active means the key is valid for
 	// API calls, while Inactive means it is not.
@@ -10116,7 +10672,7 @@ type SigningCertificate struct {
 	UploadDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	// The name of the user the signing certificate is associated with.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataSigningCertificate `json:"-" xml:"-"`
 }
@@ -10135,9 +10691,200 @@ func (s SigningCertificate) GoString() string {
 	return s.String()
 }
 
+type SimulateCustomPolicyInput struct {
+	// A list of names of API actions to evaluate in the simulation. Each action
+	// is evaluated for each resource. Each action must include the service identifier,
+	// such as iam:CreateUser.
+	ActionNames []*string `type:"list" required:"true"`
+
+	// A list of context keys and corresponding values that are used by the simulation.
+	// Whenever a context key is evaluated by a Condition element in one of the
+	// simulated IAM permission policies, the corresponding value is supplied.
+	ContextEntries []*ContextEntry `type:"list"`
+
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
+
+	// Use this only when paginating results to indicate the maximum number of items
+	// you want in the response. If there are additional items beyond the maximum
+	// you specify, the IsTruncated response element is true.
+	//
+	// This parameter is optional. If you do not include it, it defaults to 100.
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
+
+	// A list of policy documents to include in the simulation. Each document is
+	// specified as a string containing the complete, valid JSON text of an IAM
+	// policy.
+	PolicyInputList []*string `type:"list" required:"true"`
+
+	// A list of ARNs of AWS resources to include in the simulation. If this parameter
+	// is not provided then the value defaults to * (all resources). Each API in
+	// the ActionNames parameter is evaluated for each resource in this list. The
+	// simulation determines the access result (allowed or denied) of each combination
+	// and reports it in the response.
+	ResourceArns []*string `type:"list"`
+
+	metadataSimulateCustomPolicyInput `json:"-" xml:"-"`
+}
+
+type metadataSimulateCustomPolicyInput struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s SimulateCustomPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SimulateCustomPolicyInput) GoString() string {
+	return s.String()
+}
+
+// Contains the response to a successful SimulatePrincipalPolicy or SimulateCustomPolicy
+// request.
+type SimulatePolicyResponse struct {
+	// The results of the simulation.
+	EvaluationResults []*EvaluationResult `type:"list"`
+
+	// A flag that indicates whether there are more items to return. If your results
+	// were truncated, you can make a subsequent pagination request using the Marker
+	// request parameter to retrieve more items. Note that IAM might return fewer
+	// than the MaxItems number of results even when there are more results available.
+	// We recommend that you check IsTruncated after every call to ensure that you
+	// receive all of your results.
+	IsTruncated *bool `type:"boolean"`
+
+	// When IsTruncated is true, this element is present and contains the value
+	// to use for the Marker parameter in a subsequent pagination request.
+	Marker *string `min:"1" type:"string"`
+
+	metadataSimulatePolicyResponse `json:"-" xml:"-"`
+}
+
+type metadataSimulatePolicyResponse struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s SimulatePolicyResponse) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SimulatePolicyResponse) GoString() string {
+	return s.String()
+}
+
+type SimulatePrincipalPolicyInput struct {
+	// A list of names of API actions to evaluate in the simulation. Each action
+	// is evaluated for each resource. Each action must include the service identifier,
+	// such as iam:CreateUser.
+	ActionNames []*string `type:"list" required:"true"`
+
+	// A list of context keys and corresponding values that are used by the simulation.
+	// Whenever a context key is evaluated by a Condition element in one of the
+	// simulated IAM permission policies, the corresponding value is supplied.
+	ContextEntries []*ContextEntry `type:"list"`
+
+	// Use this parameter only when paginating results and only after you receive
+	// a response indicating that the results are truncated. Set it to the value
+	// of the Marker element in the response you received to inform the next call
+	// about where to start.
+	Marker *string `min:"1" type:"string"`
+
+	// Use this only when paginating results to indicate the maximum number of items
+	// you want in the response. If there are additional items beyond the maximum
+	// you specify, the IsTruncated response element is true.
+	//
+	// This parameter is optional. If you do not include it, it defaults to 100.
+	// Note that IAM might return fewer results, even when there are more results
+	// available. If this is the case, the IsTruncated response element returns
+	// true and Marker contains a value to include in the subsequent call that tells
+	// the service where to continue from.
+	MaxItems *int64 `min:"1" type:"integer"`
+
+	// An optional list of additional policy documents to include in the simulation.
+	// Each document is specified as a string containing the complete, valid JSON
+	// text of an IAM policy.
+	PolicyInputList []*string `type:"list"`
+
+	// The Amazon Resource Name (ARN) of a user, group, or role whose policies you
+	// want to include in the simulation. If you specify a user, group, or role,
+	// the simulation includes all policies associated with that entity. If you
+	// specify a user, the simulation also includes all policies attached to any
+	// groups the user is a member of.
+	PolicySourceArn *string `min:"20" type:"string" required:"true"`
+
+	// A list of ARNs of AWS resources to include in the simulation. If this parameter
+	// is not provided then the value defaults to * (all resources). Each API in
+	// the ActionNames parameter is evaluated for each resource in this list. The
+	// simulation determines the access result (allowed or denied) of each combination
+	// and reports it in the response.
+	ResourceArns []*string `type:"list"`
+
+	metadataSimulatePrincipalPolicyInput `json:"-" xml:"-"`
+}
+
+type metadataSimulatePrincipalPolicyInput struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s SimulatePrincipalPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SimulatePrincipalPolicyInput) GoString() string {
+	return s.String()
+}
+
+// Contains a reference to a Statement element in a policy document that determines
+// the result of the simulation.
+//
+// This data type is used by the MatchedStatements member of the EvaluationResult
+// type.
+type Statement struct {
+	// The row and column of the end of a Statement in an IAM policy.
+	EndPosition *Position `type:"structure"`
+
+	// The identifier of the policy that was provided as an input.
+	SourcePolicyId *string `type:"string"`
+
+	// The type of the policy.
+	SourcePolicyType *string `type:"string" enum:"PolicySourceType"`
+
+	// The row and column of the beginning of the Statement in an IAM policy.
+	StartPosition *Position `type:"structure"`
+
+	metadataStatement `json:"-" xml:"-"`
+}
+
+type metadataStatement struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s Statement) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Statement) GoString() string {
+	return s.String()
+}
+
 type UpdateAccessKeyInput struct {
 	// The access key ID of the secret access key you want to update.
-	AccessKeyId *string `type:"string" required:"true"`
+	AccessKeyId *string `min:"16" type:"string" required:"true"`
 
 	// The status you want to assign to the secret access key. Active means the
 	// key can be used for API calls to AWS, while Inactive means the key cannot
@@ -10145,7 +10892,7 @@ type UpdateAccessKeyInput struct {
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
 	// The name of the user whose key you want to update.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataUpdateAccessKeyInput `json:"-" xml:"-"`
 }
@@ -10186,7 +10933,7 @@ type UpdateAccountPasswordPolicyInput struct {
 	// Allows all IAM users in your account to use the AWS Management Console to
 	// change their own passwords. For more information, see Letting IAM Users Change
 	// Their Own Passwords (http://docs.aws.amazon.com/IAM/latest/UserGuide/HowToPwdIAMUser.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// Default value: false
 	AllowUsersToChangePassword *bool `type:"boolean"`
@@ -10200,19 +10947,19 @@ type UpdateAccountPasswordPolicyInput struct {
 	// of 0 means IAM user passwords never expire.
 	//
 	// Default value: 0
-	MaxPasswordAge *int64 `type:"integer"`
+	MaxPasswordAge *int64 `min:"1" type:"integer"`
 
 	// The minimum number of characters allowed in an IAM user password.
 	//
 	// Default value: 6
-	MinimumPasswordLength *int64 `type:"integer"`
+	MinimumPasswordLength *int64 `min:"6" type:"integer"`
 
 	// Specifies the number of previous passwords that IAM users are prevented from
 	// reusing. The default value of 0 means IAM users are not prevented from reusing
 	// previous passwords.
 	//
 	// Default value: 0
-	PasswordReusePrevention *int64 `type:"integer"`
+	PasswordReusePrevention *int64 `min:"1" type:"integer"`
 
 	// Specifies whether IAM user passwords must contain at least one lowercase
 	// character from the ISO basic Latin alphabet (a to z).
@@ -10277,10 +11024,10 @@ func (s UpdateAccountPasswordPolicyOutput) GoString() string {
 
 type UpdateAssumeRolePolicyInput struct {
 	// The policy that grants an entity permission to assume the role.
-	PolicyDocument *string `type:"string" required:"true"`
+	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to update.
-	RoleName *string `type:"string" required:"true"`
+	RoleName *string `min:"1" type:"string" required:"true"`
 
 	metadataUpdateAssumeRolePolicyInput `json:"-" xml:"-"`
 }
@@ -10320,13 +11067,13 @@ func (s UpdateAssumeRolePolicyOutput) GoString() string {
 type UpdateGroupInput struct {
 	// Name of the group to update. If you're changing the name of the group, this
 	// is the original name.
-	GroupName *string `type:"string" required:"true"`
+	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// New name for the group. Only include this if changing the group's name.
-	NewGroupName *string `type:"string"`
+	NewGroupName *string `min:"1" type:"string"`
 
 	// New path for the group. Only include this if changing the group's path.
-	NewPath *string `type:"string"`
+	NewPath *string `min:"1" type:"string"`
 
 	metadataUpdateGroupInput `json:"-" xml:"-"`
 }
@@ -10365,13 +11112,13 @@ func (s UpdateGroupOutput) GoString() string {
 
 type UpdateLoginProfileInput struct {
 	// The new password for the specified user.
-	Password *string `type:"string"`
+	Password *string `min:"1" type:"string"`
 
 	// Require the specified user to set a new password on next sign-in.
 	PasswordResetRequired *bool `type:"boolean"`
 
 	// The name of the user whose password you want to update.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataUpdateLoginProfileInput `json:"-" xml:"-"`
 }
@@ -10412,7 +11159,7 @@ type UpdateOpenIDConnectProviderThumbprintInput struct {
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
 	// to update the thumbprint for. You can get a list of OIDC provider ARNs by
 	// using the ListOpenIDConnectProviders action.
-	OpenIDConnectProviderArn *string `type:"string" required:"true"`
+	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 
 	// A list of certificate thumbprints that are associated with the specified
 	// IAM OpenID Connect provider. For more information, see CreateOpenIDConnectProvider.
@@ -10459,10 +11206,10 @@ type UpdateSAMLProviderInput struct {
 	// keys that can be used to validate the SAML authentication response (assertions)
 	// that are received from the IdP. You must generate the metadata document using
 	// the identity management software that is used as your organization's IdP.
-	SAMLMetadataDocument *string `type:"string" required:"true"`
+	SAMLMetadataDocument *string `min:"1000" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN) of the SAML provider to update.
-	SAMLProviderArn *string `type:"string" required:"true"`
+	SAMLProviderArn *string `min:"20" type:"string" required:"true"`
 
 	metadataUpdateSAMLProviderInput `json:"-" xml:"-"`
 }
@@ -10484,7 +11231,7 @@ func (s UpdateSAMLProviderInput) GoString() string {
 // Contains the response to a successful UpdateSAMLProvider request.
 type UpdateSAMLProviderOutput struct {
 	// The Amazon Resource Name (ARN) of the SAML provider that was updated.
-	SAMLProviderArn *string `type:"string"`
+	SAMLProviderArn *string `min:"20" type:"string"`
 
 	metadataUpdateSAMLProviderOutput `json:"-" xml:"-"`
 }
@@ -10505,7 +11252,7 @@ func (s UpdateSAMLProviderOutput) GoString() string {
 
 type UpdateSSHPublicKeyInput struct {
 	// The unique identifier for the SSH public key.
-	SSHPublicKeyId *string `type:"string" required:"true"`
+	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The status to assign to the SSH public key. Active means the key can be used
 	// for authentication with an AWS CodeCommit repository. Inactive means the
@@ -10513,7 +11260,7 @@ type UpdateSSHPublicKeyInput struct {
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
 	// The name of the IAM user associated with the SSH public key.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataUpdateSSHPublicKeyInput `json:"-" xml:"-"`
 }
@@ -10553,15 +11300,15 @@ func (s UpdateSSHPublicKeyOutput) GoString() string {
 type UpdateServerCertificateInput struct {
 	// The new path for the server certificate. Include this only if you are updating
 	// the server certificate's path.
-	NewPath *string `type:"string"`
+	NewPath *string `min:"1" type:"string"`
 
 	// The new name for the server certificate. Include this only if you are updating
 	// the server certificate's name. The name of the certificate cannot contain
 	// any spaces.
-	NewServerCertificateName *string `type:"string"`
+	NewServerCertificateName *string `min:"1" type:"string"`
 
 	// The name of the server certificate that you want to update.
-	ServerCertificateName *string `type:"string" required:"true"`
+	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 
 	metadataUpdateServerCertificateInput `json:"-" xml:"-"`
 }
@@ -10600,7 +11347,7 @@ func (s UpdateServerCertificateOutput) GoString() string {
 
 type UpdateSigningCertificateInput struct {
 	// The ID of the signing certificate you want to update.
-	CertificateId *string `type:"string" required:"true"`
+	CertificateId *string `min:"24" type:"string" required:"true"`
 
 	// The status you want to assign to the certificate. Active means the certificate
 	// can be used for API calls to AWS, while Inactive means the certificate cannot
@@ -10608,7 +11355,7 @@ type UpdateSigningCertificateInput struct {
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
 	// The name of the user the signing certificate belongs to.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataUpdateSigningCertificateInput `json:"-" xml:"-"`
 }
@@ -10648,15 +11395,15 @@ func (s UpdateSigningCertificateOutput) GoString() string {
 type UpdateUserInput struct {
 	// New path for the user. Include this parameter only if you're changing the
 	// user's path.
-	NewPath *string `type:"string"`
+	NewPath *string `min:"1" type:"string"`
 
 	// New name for the user. Include this parameter only if you're changing the
 	// user's name.
-	NewUserName *string `type:"string"`
+	NewUserName *string `min:"1" type:"string"`
 
 	// Name of the user to update. If you're changing the name of the user, this
 	// is the original user name.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataUpdateUserInput `json:"-" xml:"-"`
 }
@@ -10696,10 +11443,10 @@ func (s UpdateUserOutput) GoString() string {
 type UploadSSHPublicKeyInput struct {
 	// The SSH public key. The public key must be encoded in ssh-rsa format or PEM
 	// format.
-	SSHPublicKeyBody *string `type:"string" required:"true"`
+	SSHPublicKeyBody *string `min:"1" type:"string" required:"true"`
 
 	// The name of the IAM user to associate the SSH public key with.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataUploadSSHPublicKeyInput `json:"-" xml:"-"`
 }
@@ -10742,11 +11489,11 @@ func (s UploadSSHPublicKeyOutput) GoString() string {
 
 type UploadServerCertificateInput struct {
 	// The contents of the public key certificate in PEM-encoded format.
-	CertificateBody *string `type:"string" required:"true"`
+	CertificateBody *string `min:"1" type:"string" required:"true"`
 
 	// The contents of the certificate chain. This is typically a concatenation
 	// of the PEM-encoded public key certificates of the chain.
-	CertificateChain *string `type:"string"`
+	CertificateChain *string `min:"1" type:"string"`
 
 	// The path for the server certificate. For more information about paths, see
 	// IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -10759,14 +11506,14 @@ type UploadServerCertificateInput struct {
 	// CloudFront distributions, you must specify a path using the --path option.
 	// The path must begin with /cloudfront and must include a trailing slash (for
 	// example, /cloudfront/test/).
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	// The contents of the private key in PEM-encoded format.
-	PrivateKey *string `type:"string" required:"true"`
+	PrivateKey *string `min:"1" type:"string" required:"true"`
 
 	// The name for the server certificate. Do not include the path in this value.
 	// The name of the certificate cannot contain any spaces.
-	ServerCertificateName *string `type:"string" required:"true"`
+	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 
 	metadataUploadServerCertificateInput `json:"-" xml:"-"`
 }
@@ -10810,10 +11557,10 @@ func (s UploadServerCertificateOutput) GoString() string {
 
 type UploadSigningCertificateInput struct {
 	// The contents of the signing certificate.
-	CertificateBody *string `type:"string" required:"true"`
+	CertificateBody *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user the signing certificate is for.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	metadataUploadSigningCertificateInput `json:"-" xml:"-"`
 }
@@ -10867,7 +11614,7 @@ type User struct {
 	// The Amazon Resource Name (ARN) that identifies the user. For more information
 	// about ARNs and how to use ARNs in policies, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Arn *string `type:"string" required:"true"`
+	Arn *string `min:"20" type:"string" required:"true"`
 
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
 	// when the user was created.
@@ -10894,15 +11641,15 @@ type User struct {
 	// The path to the user. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string" required:"true"`
+	Path *string `min:"1" type:"string" required:"true"`
 
 	// The stable and unique string identifying the user. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	UserId *string `type:"string" required:"true"`
+	UserId *string `min:"16" type:"string" required:"true"`
 
 	// The friendly name identifying the user.
-	UserName *string `type:"string" required:"true"`
+	UserName *string `min:"1" type:"string" required:"true"`
 
 	metadataUser `json:"-" xml:"-"`
 }
@@ -10932,7 +11679,7 @@ type UserDetail struct {
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
 	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
-	Arn *string `type:"string"`
+	Arn *string `min:"20" type:"string"`
 
 	// A list of the managed policies attached to the user.
 	AttachedManagedPolicies []*AttachedPolicy `type:"list"`
@@ -10947,15 +11694,15 @@ type UserDetail struct {
 	// The path to the user. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	Path *string `type:"string"`
+	Path *string `min:"1" type:"string"`
 
 	// The stable and unique string identifying the user. For more information about
 	// IDs, see IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the Using IAM guide.
-	UserId *string `type:"string"`
+	UserId *string `min:"16" type:"string"`
 
 	// The friendly name identifying the user.
-	UserName *string `type:"string"`
+	UserName *string `min:"1" type:"string"`
 
 	// A list of the inline policies embedded in the user.
 	UserPolicyList []*PolicyDetail `type:"list"`
@@ -10993,7 +11740,7 @@ type VirtualMFADevice struct {
 	QRCodePNG []byte `type:"blob"`
 
 	// The serial number associated with VirtualMFADevice.
-	SerialNumber *string `type:"string" required:"true"`
+	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// Contains information about an IAM user entity.
 	//
@@ -11024,6 +11771,33 @@ func (s VirtualMFADevice) GoString() string {
 }
 
 const (
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumString = "string"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumStringList = "stringList"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumNumeric = "numeric"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumNumericList = "numericList"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumBoolean = "boolean"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumBooleanList = "booleanList"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumIp = "ip"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumIpList = "ipList"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumBinary = "binary"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumBinaryList = "binaryList"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumDate = "date"
+	// @enum ContextKeyTypeEnum
+	ContextKeyTypeEnumDateList = "dateList"
+)
+
+const (
 	// @enum EntityType
 	EntityTypeUser = "User"
 	// @enum EntityType
@@ -11034,6 +11808,30 @@ const (
 	EntityTypeLocalManagedPolicy = "LocalManagedPolicy"
 	// @enum EntityType
 	EntityTypeAwsmanagedPolicy = "AWSManagedPolicy"
+)
+
+const (
+	// @enum PolicyEvaluationDecisionType
+	PolicyEvaluationDecisionTypeAllowed = "allowed"
+	// @enum PolicyEvaluationDecisionType
+	PolicyEvaluationDecisionTypeExplicitDeny = "explicitDeny"
+	// @enum PolicyEvaluationDecisionType
+	PolicyEvaluationDecisionTypeImplicitDeny = "implicitDeny"
+)
+
+const (
+	// @enum PolicySourceType
+	PolicySourceTypeUser = "user"
+	// @enum PolicySourceType
+	PolicySourceTypeGroup = "group"
+	// @enum PolicySourceType
+	PolicySourceTypeRole = "role"
+	// @enum PolicySourceType
+	PolicySourceTypeAwsManaged = "aws-managed"
+	// @enum PolicySourceType
+	PolicySourceTypeUserManaged = "user-managed"
+	// @enum PolicySourceType
+	PolicySourceTypeNone = "none"
 )
 
 const (

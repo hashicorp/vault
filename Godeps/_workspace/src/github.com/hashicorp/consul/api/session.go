@@ -102,7 +102,7 @@ func (s *Session) create(obj interface{}, q *WriteOptions) (string, *WriteMeta, 
 	return out.ID, wm, nil
 }
 
-// Destroy invalides a given session
+// Destroy invalidates a given session
 func (s *Session) Destroy(id string, q *WriteOptions) (*WriteMeta, error) {
 	wm, err := s.c.write("/v1/session/destroy/"+id, nil, nil, q)
 	if err != nil {

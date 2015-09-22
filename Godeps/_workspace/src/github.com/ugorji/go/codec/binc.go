@@ -69,7 +69,15 @@ func (e *bincEncDriver) IsBuiltinType(rt uintptr) bool {
 
 func (e *bincEncDriver) EncodeBuiltin(rt uintptr, v interface{}) {
 	if rt == timeTypId {
-		bs := encodeTime(v.(time.Time))
+		var bs []byte
+		switch x := v.(type) {
+		case time.Time:
+			bs = encodeTime(x)
+		case *time.Time:
+			bs = encodeTime(*x)
+		default:
+			e.e.errorf("binc error encoding builtin: expect time.Time, received %T", v)
+		}
 		e.w.writen1(bincVdTimestamp<<4 | uint8(len(bs)))
 		e.w.writeb(bs)
 	}

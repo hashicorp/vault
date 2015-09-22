@@ -41,23 +41,22 @@ type ClaimSet struct {
 	// See http://tools.ietf.org/html/draft-jones-json-web-token-10#section-4.3
 	// This array is marshalled using custom code (see (c *ClaimSet) encode()).
 	PrivateClaims map[string]interface{} `json:"-"`
-
-	exp time.Time
-	iat time.Time
 }
 
 func (c *ClaimSet) encode() (string, error) {
-	if c.exp.IsZero() || c.iat.IsZero() {
-		// Reverting time back for machines whose time is not perfectly in sync.
-		// If client machine's time is in the future according
-		// to Google servers, an access token will not be issued.
-		now := time.Now().Add(-10 * time.Second)
-		c.iat = now
-		c.exp = now.Add(time.Hour)
+	// Reverting time back for machines whose time is not perfectly in sync.
+	// If client machine's time is in the future according
+	// to Google servers, an access token will not be issued.
+	now := time.Now().Add(-10 * time.Second)
+	if c.Iat == 0 {
+		c.Iat = now.Unix()
 	}
-
-	c.Exp = c.exp.Unix()
-	c.Iat = c.iat.Unix()
+	if c.Exp == 0 {
+		c.Exp = now.Add(time.Hour).Unix()
+	}
+	if c.Exp < c.Iat {
+		return "", fmt.Errorf("jws: invalid Exp = %v; must be later than Iat = %v", c.Exp, c.Iat)
+	}
 
 	b, err := json.Marshal(c)
 	if err != nil {

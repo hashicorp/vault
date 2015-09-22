@@ -6,12 +6,12 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 // contentMD5 computes and sets the HTTP Content-MD5 header for requests that
 // require it.
-func contentMD5(r *service.Request) {
+func contentMD5(r *request.Request) {
 	h := md5.New()
 
 	// hash the body.  seek back to the first position after reading to reset

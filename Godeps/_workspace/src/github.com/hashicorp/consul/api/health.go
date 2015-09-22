@@ -104,7 +104,7 @@ func (h *Health) Service(service, tag string, passingOnly bool, q *QueryOptions)
 	return out, qm, nil
 }
 
-// State is used to retreive all the checks in a given state.
+// State is used to retrieve all the checks in a given state.
 // The wildcard "any" state can also be used for all checks.
 func (h *Health) State(state string, q *QueryOptions) ([]*HealthCheck, *QueryMeta, error) {
 	switch state {

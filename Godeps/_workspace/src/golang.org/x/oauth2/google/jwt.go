@@ -19,6 +19,10 @@ import (
 // requests, and returns a TokenSource that does not use any OAuth2 flow but
 // instead creates a JWT and sends that as the access token.
 // The audience is typically a URL that specifies the scope of the credentials.
+//
+// Note that this is not a standard OAuth flow, but rather an
+// optimization supported by a few Google services.
+// Unless you know otherwise, you should use JWTConfigFromJSON instead.
 func JWTAccessTokenSourceFromJSON(jsonKey []byte, audience string) (oauth2.TokenSource, error) {
 	cfg, err := JWTConfigFromJSON(jsonKey)
 	if err != nil {
@@ -63,5 +67,5 @@ func (ts *jwtAccessTokenSource) Token() (*oauth2.Token, error) {
 	if err != nil {
 		return nil, fmt.Errorf("google: could not encode JWT: %v", err)
 	}
-	return &oauth2.Token{AccessToken: msg}, nil
+	return &oauth2.Token{AccessToken: msg, TokenType: "Bearer"}, nil
 }

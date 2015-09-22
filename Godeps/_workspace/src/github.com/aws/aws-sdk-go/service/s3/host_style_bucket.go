@@ -6,7 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 var reDomain = regexp.MustCompile(`^[a-z0-9][a-z0-9\.\-]{1,61}[a-z0-9]$`)
@@ -23,8 +23,8 @@ func dnsCompatibleBucketName(bucket string) bool {
 // hostStyleBucketName returns true if the request should put the bucket in
 // the host. This is false if S3ForcePathStyle is explicitly set or if the
 // bucket is not DNS compatible.
-func hostStyleBucketName(r *service.Request, bucket string) bool {
-	if aws.BoolValue(r.Config.S3ForcePathStyle) {
+func hostStyleBucketName(r *request.Request, bucket string) bool {
+	if aws.BoolValue(r.Service.Config.S3ForcePathStyle) {
 		return false
 	}
 
@@ -34,11 +34,17 @@ func hostStyleBucketName(r *service.Request, bucket string) bool {
 		return false
 	}
 
+	// GetBucketLocation should be able to be called from any region within
+	// a partition, and return the associated region of the bucket.
+	if r.Operation.Name == opGetBucketLocation {
+		return false
+	}
+
 	// Use host-style if the bucket is DNS compatible
 	return dnsCompatibleBucketName(bucket)
 }
 
-func updateHostWithBucket(r *service.Request) {
+func updateHostWithBucket(r *request.Request) {
 	b := awsutil.ValuesAtPath(r.Params, "Bucket")
 	if len(b) == 0 {
 		return

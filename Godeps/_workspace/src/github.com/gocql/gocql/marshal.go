@@ -1369,6 +1369,48 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 		}
 
 		return nil
+	case *map[string]interface{}:
+		udt := info.(UDTTypeInfo)
+
+		rv := reflect.ValueOf(value)
+		if rv.Kind() != reflect.Ptr {
+			return unmarshalErrorf("can not unmarshal into non-pointer %T", value)
+		}
+
+		rv = rv.Elem()
+		t := rv.Type()
+		if t.Kind() != reflect.Map {
+			return unmarshalErrorf("can not unmarshal %s into %T", info, value)
+		} else if data == nil {
+			rv.Set(reflect.Zero(t))
+			return nil
+		}
+
+		rv.Set(reflect.MakeMap(t))
+		m := *v
+
+		for _, e := range udt.Elements {
+			size := readInt(data[:4])
+			data = data[4:]
+
+			val := reflect.New(goType(e.Type))
+
+			var err error
+			if size < 0 {
+				err = Unmarshal(e.Type, nil, val.Interface())
+			} else {
+				err = Unmarshal(e.Type, data[:size], val.Interface())
+				data = data[size:]
+			}
+
+			if err != nil {
+				return err
+			}
+
+			m[e.Name] = val.Elem().Interface()
+		}
+
+		return nil
 	}
 
 	k := reflect.ValueOf(value).Elem()
@@ -1533,26 +1575,26 @@ type Type int
 
 const (
 	TypeCustom    Type = 0x0000
-	TypeAscii          = 0x0001
-	TypeBigInt         = 0x0002
-	TypeBlob           = 0x0003
-	TypeBoolean        = 0x0004
-	TypeCounter        = 0x0005
-	TypeDecimal        = 0x0006
-	TypeDouble         = 0x0007
-	TypeFloat          = 0x0008
-	TypeInt            = 0x0009
-	TypeTimestamp      = 0x000B
-	TypeUUID           = 0x000C
-	TypeVarchar        = 0x000D
-	TypeVarint         = 0x000E
-	TypeTimeUUID       = 0x000F
-	TypeInet           = 0x0010
-	TypeList           = 0x0020
-	TypeMap            = 0x0021
-	TypeSet            = 0x0022
-	TypeUDT            = 0x0030
-	TypeTuple          = 0x0031
+	TypeAscii     Type = 0x0001
+	TypeBigInt    Type = 0x0002
+	TypeBlob      Type = 0x0003
+	TypeBoolean   Type = 0x0004
+	TypeCounter   Type = 0x0005
+	TypeDecimal   Type = 0x0006
+	TypeDouble    Type = 0x0007
+	TypeFloat     Type = 0x0008
+	TypeInt       Type = 0x0009
+	TypeTimestamp Type = 0x000B
+	TypeUUID      Type = 0x000C
+	TypeVarchar   Type = 0x000D
+	TypeVarint    Type = 0x000E
+	TypeTimeUUID  Type = 0x000F
+	TypeInet      Type = 0x0010
+	TypeList      Type = 0x0020
+	TypeMap       Type = 0x0021
+	TypeSet       Type = 0x0022
+	TypeUDT       Type = 0x0030
+	TypeTuple     Type = 0x0031
 )
 
 // String returns the name of the identifier.

@@ -50,7 +50,8 @@ func DefaultClient(ctx context.Context, scope ...string) (*http.Client, error) {
 //      On Windows, this is %APPDATA%/gcloud/application_default_credentials.json.
 //      On other systems, $HOME/.config/gcloud/application_default_credentials.json.
 //   3. On Google App Engine it uses the appengine.AccessToken function.
-//   4. On Google Compute Engine, it fetches credentials from the metadata server.
+//   4. On Google Compute Engine and Google App Engine Managed VMs, it fetches
+//      credentials from the metadata server.
 //      (In this final case any provided scopes are ignored.)
 //
 // For more details, see:
@@ -84,7 +85,7 @@ func DefaultTokenSource(ctx context.Context, scope ...string) (oauth2.TokenSourc
 	}
 
 	// Third, if we're on Google App Engine use those credentials.
-	if appengineTokenFunc != nil {
+	if appengineTokenFunc != nil && !appengineVM {
 		return AppEngineTokenSource(ctx, scope...), nil
 	}
 

@@ -332,9 +332,9 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 		magics.serverKexInit = otherInitPacket
 	}
 
-	algs := findAgreedAlgorithms(clientInit, serverInit)
-	if algs == nil {
-		return errors.New("ssh: no common algorithms")
+	algs, err := findAgreedAlgorithms(clientInit, serverInit)
+	if err != nil {
+		return err
 	}
 
 	// We don't send FirstKexFollows, but we handle receiving it.

@@ -85,7 +85,7 @@ func (x *hclLex) Lex(yylval *hclSymType) int {
 		case '-':
 			return MINUS
 		case ',':
-			return x.lexComma()
+			return COMMA
 		case '=':
 			return EQUAL
 		case '[':
@@ -164,27 +164,6 @@ func (x *hclLex) consumeComment(c rune) bool {
 			// Continue
 		}
 	}
-}
-
-// lexComma reads the comma
-func (x *hclLex) lexComma() int {
-	for {
-		c := x.peek()
-
-		// Consume space
-		if unicode.IsSpace(c) {
-			x.next()
-			continue
-		}
-
-		if c == ']' {
-			return COMMAEND
-		}
-
-		break
-	}
-
-	return COMMA
 }
 
 // lexId lexes an identifier

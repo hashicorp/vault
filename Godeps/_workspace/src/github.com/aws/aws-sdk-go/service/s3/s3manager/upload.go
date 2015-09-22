@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
 
 // The maximum allowed number of parts in a multi-part upload on Amazon S3.
@@ -215,7 +216,7 @@ type UploadOptions struct {
 
 	// The client to use when uploading to S3. Leave this as nil to use the
 	// default S3 client.
-	S3 *s3.S3
+	S3 s3iface.S3API
 }
 
 // NewUploader creates a new Uploader object to upload data to S3. Pass in

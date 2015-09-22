@@ -2769,19 +2769,10 @@ func (_ fastpathT) EncSliceIntfV(v []interface{}, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			e.encode(v2)
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			e.encode(v2)
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceStringR(rv reflect.Value) {
@@ -2794,19 +2785,10 @@ func (_ fastpathT) EncSliceStringV(v []string, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeString(c_UTF8, v2)
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceFloat32R(rv reflect.Value) {
@@ -2819,19 +2801,10 @@ func (_ fastpathT) EncSliceFloat32V(v []float32, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeFloat32(v2)
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceFloat64R(rv reflect.Value) {
@@ -2844,19 +2817,10 @@ func (_ fastpathT) EncSliceFloat64V(v []float64, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeFloat64(v2)
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceUintR(rv reflect.Value) {
@@ -2869,19 +2833,10 @@ func (_ fastpathT) EncSliceUintV(v []uint, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeUint(uint64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceUint16R(rv reflect.Value) {
@@ -2894,19 +2849,10 @@ func (_ fastpathT) EncSliceUint16V(v []uint16, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeUint(uint64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceUint32R(rv reflect.Value) {
@@ -2919,19 +2865,10 @@ func (_ fastpathT) EncSliceUint32V(v []uint32, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeUint(uint64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceUint64R(rv reflect.Value) {
@@ -2944,19 +2881,10 @@ func (_ fastpathT) EncSliceUint64V(v []uint64, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeUint(uint64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceIntR(rv reflect.Value) {
@@ -2969,19 +2897,10 @@ func (_ fastpathT) EncSliceIntV(v []int, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeInt(int64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceInt8R(rv reflect.Value) {
@@ -2994,19 +2913,10 @@ func (_ fastpathT) EncSliceInt8V(v []int8, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeInt(int64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceInt16R(rv reflect.Value) {
@@ -3019,19 +2929,10 @@ func (_ fastpathT) EncSliceInt16V(v []int16, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeInt(int64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceInt32R(rv reflect.Value) {
@@ -3044,19 +2945,10 @@ func (_ fastpathT) EncSliceInt32V(v []int32, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeInt(int64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceInt64R(rv reflect.Value) {
@@ -3069,19 +2961,10 @@ func (_ fastpathT) EncSliceInt64V(v []int64, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeInt(int64(v2))
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncSliceBoolR(rv reflect.Value) {
@@ -3094,19 +2977,10 @@ func (_ fastpathT) EncSliceBoolV(v []bool, checkNil bool, e *Encoder) {
 		return
 	}
 	ee.EncodeArrayStart(len(v))
-	if e.be {
-		for _, v2 := range v {
-			ee.EncodeBool(v2)
-		}
-	} else {
-		for j, v2 := range v {
-			if j > 0 {
-				ee.EncodeArrayEntrySeparator()
-			}
-			ee.EncodeBool(v2)
-		}
-		ee.EncodeArrayEnd()
+	for _, v2 := range v {
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfIntfR(rv reflect.Value) {
@@ -3120,24 +2994,11 @@ func (_ fastpathT) EncMapIntfIntfV(v map[interface{}]interface{}, checkNil bool,
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfStringR(rv reflect.Value) {
@@ -3151,24 +3012,11 @@ func (_ fastpathT) EncMapIntfStringV(v map[interface{}]string, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfUintR(rv reflect.Value) {
@@ -3182,24 +3030,11 @@ func (_ fastpathT) EncMapIntfUintV(v map[interface{}]uint, checkNil bool, e *Enc
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfUint8R(rv reflect.Value) {
@@ -3213,24 +3048,11 @@ func (_ fastpathT) EncMapIntfUint8V(v map[interface{}]uint8, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfUint16R(rv reflect.Value) {
@@ -3244,24 +3066,11 @@ func (_ fastpathT) EncMapIntfUint16V(v map[interface{}]uint16, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfUint32R(rv reflect.Value) {
@@ -3275,24 +3084,11 @@ func (_ fastpathT) EncMapIntfUint32V(v map[interface{}]uint32, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfUint64R(rv reflect.Value) {
@@ -3306,24 +3102,11 @@ func (_ fastpathT) EncMapIntfUint64V(v map[interface{}]uint64, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfIntR(rv reflect.Value) {
@@ -3337,24 +3120,11 @@ func (_ fastpathT) EncMapIntfIntV(v map[interface{}]int, checkNil bool, e *Encod
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfInt8R(rv reflect.Value) {
@@ -3368,24 +3138,11 @@ func (_ fastpathT) EncMapIntfInt8V(v map[interface{}]int8, checkNil bool, e *Enc
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfInt16R(rv reflect.Value) {
@@ -3399,24 +3156,11 @@ func (_ fastpathT) EncMapIntfInt16V(v map[interface{}]int16, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfInt32R(rv reflect.Value) {
@@ -3430,24 +3174,11 @@ func (_ fastpathT) EncMapIntfInt32V(v map[interface{}]int32, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfInt64R(rv reflect.Value) {
@@ -3461,24 +3192,11 @@ func (_ fastpathT) EncMapIntfInt64V(v map[interface{}]int64, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfFloat32R(rv reflect.Value) {
@@ -3492,24 +3210,11 @@ func (_ fastpathT) EncMapIntfFloat32V(v map[interface{}]float32, checkNil bool, 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfFloat64R(rv reflect.Value) {
@@ -3523,24 +3228,11 @@ func (_ fastpathT) EncMapIntfFloat64V(v map[interface{}]float64, checkNil bool, 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntfBoolR(rv reflect.Value) {
@@ -3554,24 +3246,11 @@ func (_ fastpathT) EncMapIntfBoolV(v map[interface{}]bool, checkNil bool, e *Enc
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			e.encode(k2)
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			e.encode(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		e.encode(k2)
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringIntfR(rv reflect.Value) {
@@ -3585,32 +3264,15 @@ func (_ fastpathT) EncMapStringIntfV(v map[string]interface{}, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			e.encode(v2)
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringStringR(rv reflect.Value) {
@@ -3624,32 +3286,15 @@ func (_ fastpathT) EncMapStringStringV(v map[string]string, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeString(c_UTF8, v2)
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringUintR(rv reflect.Value) {
@@ -3663,32 +3308,15 @@ func (_ fastpathT) EncMapStringUintV(v map[string]uint, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeUint(uint64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringUint8R(rv reflect.Value) {
@@ -3702,32 +3330,15 @@ func (_ fastpathT) EncMapStringUint8V(v map[string]uint8, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeUint(uint64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringUint16R(rv reflect.Value) {
@@ -3741,32 +3352,15 @@ func (_ fastpathT) EncMapStringUint16V(v map[string]uint16, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeUint(uint64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringUint32R(rv reflect.Value) {
@@ -3780,32 +3374,15 @@ func (_ fastpathT) EncMapStringUint32V(v map[string]uint32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeUint(uint64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringUint64R(rv reflect.Value) {
@@ -3819,32 +3396,15 @@ func (_ fastpathT) EncMapStringUint64V(v map[string]uint64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeUint(uint64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringIntR(rv reflect.Value) {
@@ -3858,32 +3418,15 @@ func (_ fastpathT) EncMapStringIntV(v map[string]int, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeInt(int64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringInt8R(rv reflect.Value) {
@@ -3897,32 +3440,15 @@ func (_ fastpathT) EncMapStringInt8V(v map[string]int8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeInt(int64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringInt16R(rv reflect.Value) {
@@ -3936,32 +3462,15 @@ func (_ fastpathT) EncMapStringInt16V(v map[string]int16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeInt(int64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringInt32R(rv reflect.Value) {
@@ -3975,32 +3484,15 @@ func (_ fastpathT) EncMapStringInt32V(v map[string]int32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeInt(int64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringInt64R(rv reflect.Value) {
@@ -4014,32 +3506,15 @@ func (_ fastpathT) EncMapStringInt64V(v map[string]int64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeInt(int64(v2))
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringFloat32R(rv reflect.Value) {
@@ -4053,32 +3528,15 @@ func (_ fastpathT) EncMapStringFloat32V(v map[string]float32, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeFloat32(v2)
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringFloat64R(rv reflect.Value) {
@@ -4092,32 +3550,15 @@ func (_ fastpathT) EncMapStringFloat64V(v map[string]float64, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeFloat64(v2)
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapStringBoolR(rv reflect.Value) {
@@ -4131,32 +3572,15 @@ func (_ fastpathT) EncMapStringBoolV(v map[string]bool, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 	asSymbols := e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
-	if e.be {
-		for k2, v2 := range v {
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeBool(v2)
+	for k2, v2 := range v {
+		if asSymbols {
+			ee.EncodeSymbol(k2)
+		} else {
+			ee.EncodeString(c_UTF8, k2)
 		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			if asSymbols {
-				ee.EncodeSymbol(k2)
-			} else {
-				ee.EncodeString(c_UTF8, k2)
-			}
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32IntfR(rv reflect.Value) {
@@ -4170,24 +3594,11 @@ func (_ fastpathT) EncMapFloat32IntfV(v map[float32]interface{}, checkNil bool, 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32StringR(rv reflect.Value) {
@@ -4201,24 +3612,11 @@ func (_ fastpathT) EncMapFloat32StringV(v map[float32]string, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32UintR(rv reflect.Value) {
@@ -4232,24 +3630,11 @@ func (_ fastpathT) EncMapFloat32UintV(v map[float32]uint, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Uint8R(rv reflect.Value) {
@@ -4263,24 +3648,11 @@ func (_ fastpathT) EncMapFloat32Uint8V(v map[float32]uint8, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Uint16R(rv reflect.Value) {
@@ -4294,24 +3666,11 @@ func (_ fastpathT) EncMapFloat32Uint16V(v map[float32]uint16, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Uint32R(rv reflect.Value) {
@@ -4325,24 +3684,11 @@ func (_ fastpathT) EncMapFloat32Uint32V(v map[float32]uint32, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Uint64R(rv reflect.Value) {
@@ -4356,24 +3702,11 @@ func (_ fastpathT) EncMapFloat32Uint64V(v map[float32]uint64, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32IntR(rv reflect.Value) {
@@ -4387,24 +3720,11 @@ func (_ fastpathT) EncMapFloat32IntV(v map[float32]int, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Int8R(rv reflect.Value) {
@@ -4418,24 +3738,11 @@ func (_ fastpathT) EncMapFloat32Int8V(v map[float32]int8, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Int16R(rv reflect.Value) {
@@ -4449,24 +3756,11 @@ func (_ fastpathT) EncMapFloat32Int16V(v map[float32]int16, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Int32R(rv reflect.Value) {
@@ -4480,24 +3774,11 @@ func (_ fastpathT) EncMapFloat32Int32V(v map[float32]int32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Int64R(rv reflect.Value) {
@@ -4511,24 +3792,11 @@ func (_ fastpathT) EncMapFloat32Int64V(v map[float32]int64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Float32R(rv reflect.Value) {
@@ -4542,24 +3810,11 @@ func (_ fastpathT) EncMapFloat32Float32V(v map[float32]float32, checkNil bool, e
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32Float64R(rv reflect.Value) {
@@ -4573,24 +3828,11 @@ func (_ fastpathT) EncMapFloat32Float64V(v map[float32]float64, checkNil bool, e
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat32BoolR(rv reflect.Value) {
@@ -4604,24 +3846,11 @@ func (_ fastpathT) EncMapFloat32BoolV(v map[float32]bool, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat32(k2)
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat32(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat32(k2)
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64IntfR(rv reflect.Value) {
@@ -4635,24 +3864,11 @@ func (_ fastpathT) EncMapFloat64IntfV(v map[float64]interface{}, checkNil bool, 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64StringR(rv reflect.Value) {
@@ -4666,24 +3882,11 @@ func (_ fastpathT) EncMapFloat64StringV(v map[float64]string, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64UintR(rv reflect.Value) {
@@ -4697,24 +3900,11 @@ func (_ fastpathT) EncMapFloat64UintV(v map[float64]uint, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Uint8R(rv reflect.Value) {
@@ -4728,24 +3918,11 @@ func (_ fastpathT) EncMapFloat64Uint8V(v map[float64]uint8, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Uint16R(rv reflect.Value) {
@@ -4759,24 +3936,11 @@ func (_ fastpathT) EncMapFloat64Uint16V(v map[float64]uint16, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Uint32R(rv reflect.Value) {
@@ -4790,24 +3954,11 @@ func (_ fastpathT) EncMapFloat64Uint32V(v map[float64]uint32, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Uint64R(rv reflect.Value) {
@@ -4821,24 +3972,11 @@ func (_ fastpathT) EncMapFloat64Uint64V(v map[float64]uint64, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64IntR(rv reflect.Value) {
@@ -4852,24 +3990,11 @@ func (_ fastpathT) EncMapFloat64IntV(v map[float64]int, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Int8R(rv reflect.Value) {
@@ -4883,24 +4008,11 @@ func (_ fastpathT) EncMapFloat64Int8V(v map[float64]int8, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Int16R(rv reflect.Value) {
@@ -4914,24 +4026,11 @@ func (_ fastpathT) EncMapFloat64Int16V(v map[float64]int16, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Int32R(rv reflect.Value) {
@@ -4945,24 +4044,11 @@ func (_ fastpathT) EncMapFloat64Int32V(v map[float64]int32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Int64R(rv reflect.Value) {
@@ -4976,24 +4062,11 @@ func (_ fastpathT) EncMapFloat64Int64V(v map[float64]int64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Float32R(rv reflect.Value) {
@@ -5007,24 +4080,11 @@ func (_ fastpathT) EncMapFloat64Float32V(v map[float64]float32, checkNil bool, e
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64Float64R(rv reflect.Value) {
@@ -5038,24 +4098,11 @@ func (_ fastpathT) EncMapFloat64Float64V(v map[float64]float64, checkNil bool, e
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapFloat64BoolR(rv reflect.Value) {
@@ -5069,24 +4116,11 @@ func (_ fastpathT) EncMapFloat64BoolV(v map[float64]bool, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeFloat64(k2)
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeFloat64(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeFloat64(k2)
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintIntfR(rv reflect.Value) {
@@ -5100,24 +4134,11 @@ func (_ fastpathT) EncMapUintIntfV(v map[uint]interface{}, checkNil bool, e *Enc
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintStringR(rv reflect.Value) {
@@ -5131,24 +4152,11 @@ func (_ fastpathT) EncMapUintStringV(v map[uint]string, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintUintR(rv reflect.Value) {
@@ -5162,24 +4170,11 @@ func (_ fastpathT) EncMapUintUintV(v map[uint]uint, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintUint8R(rv reflect.Value) {
@@ -5193,24 +4188,11 @@ func (_ fastpathT) EncMapUintUint8V(v map[uint]uint8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintUint16R(rv reflect.Value) {
@@ -5224,24 +4206,11 @@ func (_ fastpathT) EncMapUintUint16V(v map[uint]uint16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintUint32R(rv reflect.Value) {
@@ -5255,24 +4224,11 @@ func (_ fastpathT) EncMapUintUint32V(v map[uint]uint32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintUint64R(rv reflect.Value) {
@@ -5286,24 +4242,11 @@ func (_ fastpathT) EncMapUintUint64V(v map[uint]uint64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintIntR(rv reflect.Value) {
@@ -5317,24 +4260,11 @@ func (_ fastpathT) EncMapUintIntV(v map[uint]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintInt8R(rv reflect.Value) {
@@ -5348,24 +4278,11 @@ func (_ fastpathT) EncMapUintInt8V(v map[uint]int8, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintInt16R(rv reflect.Value) {
@@ -5379,24 +4296,11 @@ func (_ fastpathT) EncMapUintInt16V(v map[uint]int16, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintInt32R(rv reflect.Value) {
@@ -5410,24 +4314,11 @@ func (_ fastpathT) EncMapUintInt32V(v map[uint]int32, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintInt64R(rv reflect.Value) {
@@ -5441,24 +4332,11 @@ func (_ fastpathT) EncMapUintInt64V(v map[uint]int64, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintFloat32R(rv reflect.Value) {
@@ -5472,24 +4350,11 @@ func (_ fastpathT) EncMapUintFloat32V(v map[uint]float32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintFloat64R(rv reflect.Value) {
@@ -5503,24 +4368,11 @@ func (_ fastpathT) EncMapUintFloat64V(v map[uint]float64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUintBoolR(rv reflect.Value) {
@@ -5534,24 +4386,11 @@ func (_ fastpathT) EncMapUintBoolV(v map[uint]bool, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8IntfR(rv reflect.Value) {
@@ -5565,24 +4404,11 @@ func (_ fastpathT) EncMapUint8IntfV(v map[uint8]interface{}, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8StringR(rv reflect.Value) {
@@ -5596,24 +4422,11 @@ func (_ fastpathT) EncMapUint8StringV(v map[uint8]string, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8UintR(rv reflect.Value) {
@@ -5627,24 +4440,11 @@ func (_ fastpathT) EncMapUint8UintV(v map[uint8]uint, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Uint8R(rv reflect.Value) {
@@ -5658,24 +4458,11 @@ func (_ fastpathT) EncMapUint8Uint8V(v map[uint8]uint8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Uint16R(rv reflect.Value) {
@@ -5689,24 +4476,11 @@ func (_ fastpathT) EncMapUint8Uint16V(v map[uint8]uint16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Uint32R(rv reflect.Value) {
@@ -5720,24 +4494,11 @@ func (_ fastpathT) EncMapUint8Uint32V(v map[uint8]uint32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Uint64R(rv reflect.Value) {
@@ -5751,24 +4512,11 @@ func (_ fastpathT) EncMapUint8Uint64V(v map[uint8]uint64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8IntR(rv reflect.Value) {
@@ -5782,24 +4530,11 @@ func (_ fastpathT) EncMapUint8IntV(v map[uint8]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Int8R(rv reflect.Value) {
@@ -5813,24 +4548,11 @@ func (_ fastpathT) EncMapUint8Int8V(v map[uint8]int8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Int16R(rv reflect.Value) {
@@ -5844,24 +4566,11 @@ func (_ fastpathT) EncMapUint8Int16V(v map[uint8]int16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Int32R(rv reflect.Value) {
@@ -5875,24 +4584,11 @@ func (_ fastpathT) EncMapUint8Int32V(v map[uint8]int32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Int64R(rv reflect.Value) {
@@ -5906,24 +4602,11 @@ func (_ fastpathT) EncMapUint8Int64V(v map[uint8]int64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Float32R(rv reflect.Value) {
@@ -5937,24 +4620,11 @@ func (_ fastpathT) EncMapUint8Float32V(v map[uint8]float32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8Float64R(rv reflect.Value) {
@@ -5968,24 +4638,11 @@ func (_ fastpathT) EncMapUint8Float64V(v map[uint8]float64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint8BoolR(rv reflect.Value) {
@@ -5999,24 +4656,11 @@ func (_ fastpathT) EncMapUint8BoolV(v map[uint8]bool, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16IntfR(rv reflect.Value) {
@@ -6030,24 +4674,11 @@ func (_ fastpathT) EncMapUint16IntfV(v map[uint16]interface{}, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16StringR(rv reflect.Value) {
@@ -6061,24 +4692,11 @@ func (_ fastpathT) EncMapUint16StringV(v map[uint16]string, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16UintR(rv reflect.Value) {
@@ -6092,24 +4710,11 @@ func (_ fastpathT) EncMapUint16UintV(v map[uint16]uint, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Uint8R(rv reflect.Value) {
@@ -6123,24 +4728,11 @@ func (_ fastpathT) EncMapUint16Uint8V(v map[uint16]uint8, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Uint16R(rv reflect.Value) {
@@ -6154,24 +4746,11 @@ func (_ fastpathT) EncMapUint16Uint16V(v map[uint16]uint16, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Uint32R(rv reflect.Value) {
@@ -6185,24 +4764,11 @@ func (_ fastpathT) EncMapUint16Uint32V(v map[uint16]uint32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Uint64R(rv reflect.Value) {
@@ -6216,24 +4782,11 @@ func (_ fastpathT) EncMapUint16Uint64V(v map[uint16]uint64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16IntR(rv reflect.Value) {
@@ -6247,24 +4800,11 @@ func (_ fastpathT) EncMapUint16IntV(v map[uint16]int, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Int8R(rv reflect.Value) {
@@ -6278,24 +4818,11 @@ func (_ fastpathT) EncMapUint16Int8V(v map[uint16]int8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Int16R(rv reflect.Value) {
@@ -6309,24 +4836,11 @@ func (_ fastpathT) EncMapUint16Int16V(v map[uint16]int16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Int32R(rv reflect.Value) {
@@ -6340,24 +4854,11 @@ func (_ fastpathT) EncMapUint16Int32V(v map[uint16]int32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Int64R(rv reflect.Value) {
@@ -6371,24 +4872,11 @@ func (_ fastpathT) EncMapUint16Int64V(v map[uint16]int64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Float32R(rv reflect.Value) {
@@ -6402,24 +4890,11 @@ func (_ fastpathT) EncMapUint16Float32V(v map[uint16]float32, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16Float64R(rv reflect.Value) {
@@ -6433,24 +4908,11 @@ func (_ fastpathT) EncMapUint16Float64V(v map[uint16]float64, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint16BoolR(rv reflect.Value) {
@@ -6464,24 +4926,11 @@ func (_ fastpathT) EncMapUint16BoolV(v map[uint16]bool, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32IntfR(rv reflect.Value) {
@@ -6495,24 +4944,11 @@ func (_ fastpathT) EncMapUint32IntfV(v map[uint32]interface{}, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32StringR(rv reflect.Value) {
@@ -6526,24 +4962,11 @@ func (_ fastpathT) EncMapUint32StringV(v map[uint32]string, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32UintR(rv reflect.Value) {
@@ -6557,24 +4980,11 @@ func (_ fastpathT) EncMapUint32UintV(v map[uint32]uint, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Uint8R(rv reflect.Value) {
@@ -6588,24 +4998,11 @@ func (_ fastpathT) EncMapUint32Uint8V(v map[uint32]uint8, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Uint16R(rv reflect.Value) {
@@ -6619,24 +5016,11 @@ func (_ fastpathT) EncMapUint32Uint16V(v map[uint32]uint16, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Uint32R(rv reflect.Value) {
@@ -6650,24 +5034,11 @@ func (_ fastpathT) EncMapUint32Uint32V(v map[uint32]uint32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Uint64R(rv reflect.Value) {
@@ -6681,24 +5052,11 @@ func (_ fastpathT) EncMapUint32Uint64V(v map[uint32]uint64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32IntR(rv reflect.Value) {
@@ -6712,24 +5070,11 @@ func (_ fastpathT) EncMapUint32IntV(v map[uint32]int, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Int8R(rv reflect.Value) {
@@ -6743,24 +5088,11 @@ func (_ fastpathT) EncMapUint32Int8V(v map[uint32]int8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Int16R(rv reflect.Value) {
@@ -6774,24 +5106,11 @@ func (_ fastpathT) EncMapUint32Int16V(v map[uint32]int16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Int32R(rv reflect.Value) {
@@ -6805,24 +5124,11 @@ func (_ fastpathT) EncMapUint32Int32V(v map[uint32]int32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Int64R(rv reflect.Value) {
@@ -6836,24 +5142,11 @@ func (_ fastpathT) EncMapUint32Int64V(v map[uint32]int64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Float32R(rv reflect.Value) {
@@ -6867,24 +5160,11 @@ func (_ fastpathT) EncMapUint32Float32V(v map[uint32]float32, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32Float64R(rv reflect.Value) {
@@ -6898,24 +5178,11 @@ func (_ fastpathT) EncMapUint32Float64V(v map[uint32]float64, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint32BoolR(rv reflect.Value) {
@@ -6929,24 +5196,11 @@ func (_ fastpathT) EncMapUint32BoolV(v map[uint32]bool, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64IntfR(rv reflect.Value) {
@@ -6960,24 +5214,11 @@ func (_ fastpathT) EncMapUint64IntfV(v map[uint64]interface{}, checkNil bool, e 
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64StringR(rv reflect.Value) {
@@ -6991,24 +5232,11 @@ func (_ fastpathT) EncMapUint64StringV(v map[uint64]string, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64UintR(rv reflect.Value) {
@@ -7022,24 +5250,11 @@ func (_ fastpathT) EncMapUint64UintV(v map[uint64]uint, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Uint8R(rv reflect.Value) {
@@ -7053,24 +5268,11 @@ func (_ fastpathT) EncMapUint64Uint8V(v map[uint64]uint8, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Uint16R(rv reflect.Value) {
@@ -7084,24 +5286,11 @@ func (_ fastpathT) EncMapUint64Uint16V(v map[uint64]uint16, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Uint32R(rv reflect.Value) {
@@ -7115,24 +5304,11 @@ func (_ fastpathT) EncMapUint64Uint32V(v map[uint64]uint32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Uint64R(rv reflect.Value) {
@@ -7146,24 +5322,11 @@ func (_ fastpathT) EncMapUint64Uint64V(v map[uint64]uint64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64IntR(rv reflect.Value) {
@@ -7177,24 +5340,11 @@ func (_ fastpathT) EncMapUint64IntV(v map[uint64]int, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Int8R(rv reflect.Value) {
@@ -7208,24 +5358,11 @@ func (_ fastpathT) EncMapUint64Int8V(v map[uint64]int8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Int16R(rv reflect.Value) {
@@ -7239,24 +5376,11 @@ func (_ fastpathT) EncMapUint64Int16V(v map[uint64]int16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Int32R(rv reflect.Value) {
@@ -7270,24 +5394,11 @@ func (_ fastpathT) EncMapUint64Int32V(v map[uint64]int32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Int64R(rv reflect.Value) {
@@ -7301,24 +5412,11 @@ func (_ fastpathT) EncMapUint64Int64V(v map[uint64]int64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Float32R(rv reflect.Value) {
@@ -7332,24 +5430,11 @@ func (_ fastpathT) EncMapUint64Float32V(v map[uint64]float32, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64Float64R(rv reflect.Value) {
@@ -7363,24 +5448,11 @@ func (_ fastpathT) EncMapUint64Float64V(v map[uint64]float64, checkNil bool, e *
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapUint64BoolR(rv reflect.Value) {
@@ -7394,24 +5466,11 @@ func (_ fastpathT) EncMapUint64BoolV(v map[uint64]bool, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeUint(uint64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeUint(uint64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntIntfR(rv reflect.Value) {
@@ -7425,24 +5484,11 @@ func (_ fastpathT) EncMapIntIntfV(v map[int]interface{}, checkNil bool, e *Encod
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntStringR(rv reflect.Value) {
@@ -7456,24 +5502,11 @@ func (_ fastpathT) EncMapIntStringV(v map[int]string, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntUintR(rv reflect.Value) {
@@ -7487,24 +5520,11 @@ func (_ fastpathT) EncMapIntUintV(v map[int]uint, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntUint8R(rv reflect.Value) {
@@ -7518,24 +5538,11 @@ func (_ fastpathT) EncMapIntUint8V(v map[int]uint8, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntUint16R(rv reflect.Value) {
@@ -7549,24 +5556,11 @@ func (_ fastpathT) EncMapIntUint16V(v map[int]uint16, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntUint32R(rv reflect.Value) {
@@ -7580,24 +5574,11 @@ func (_ fastpathT) EncMapIntUint32V(v map[int]uint32, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntUint64R(rv reflect.Value) {
@@ -7611,24 +5592,11 @@ func (_ fastpathT) EncMapIntUint64V(v map[int]uint64, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntIntR(rv reflect.Value) {
@@ -7642,24 +5610,11 @@ func (_ fastpathT) EncMapIntIntV(v map[int]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntInt8R(rv reflect.Value) {
@@ -7673,24 +5628,11 @@ func (_ fastpathT) EncMapIntInt8V(v map[int]int8, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntInt16R(rv reflect.Value) {
@@ -7704,24 +5646,11 @@ func (_ fastpathT) EncMapIntInt16V(v map[int]int16, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntInt32R(rv reflect.Value) {
@@ -7735,24 +5664,11 @@ func (_ fastpathT) EncMapIntInt32V(v map[int]int32, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntInt64R(rv reflect.Value) {
@@ -7766,24 +5682,11 @@ func (_ fastpathT) EncMapIntInt64V(v map[int]int64, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntFloat32R(rv reflect.Value) {
@@ -7797,24 +5700,11 @@ func (_ fastpathT) EncMapIntFloat32V(v map[int]float32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntFloat64R(rv reflect.Value) {
@@ -7828,24 +5718,11 @@ func (_ fastpathT) EncMapIntFloat64V(v map[int]float64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapIntBoolR(rv reflect.Value) {
@@ -7859,24 +5736,11 @@ func (_ fastpathT) EncMapIntBoolV(v map[int]bool, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8IntfR(rv reflect.Value) {
@@ -7890,24 +5754,11 @@ func (_ fastpathT) EncMapInt8IntfV(v map[int8]interface{}, checkNil bool, e *Enc
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8StringR(rv reflect.Value) {
@@ -7921,24 +5772,11 @@ func (_ fastpathT) EncMapInt8StringV(v map[int8]string, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8UintR(rv reflect.Value) {
@@ -7952,24 +5790,11 @@ func (_ fastpathT) EncMapInt8UintV(v map[int8]uint, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Uint8R(rv reflect.Value) {
@@ -7983,24 +5808,11 @@ func (_ fastpathT) EncMapInt8Uint8V(v map[int8]uint8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Uint16R(rv reflect.Value) {
@@ -8014,24 +5826,11 @@ func (_ fastpathT) EncMapInt8Uint16V(v map[int8]uint16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Uint32R(rv reflect.Value) {
@@ -8045,24 +5844,11 @@ func (_ fastpathT) EncMapInt8Uint32V(v map[int8]uint32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Uint64R(rv reflect.Value) {
@@ -8076,24 +5862,11 @@ func (_ fastpathT) EncMapInt8Uint64V(v map[int8]uint64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8IntR(rv reflect.Value) {
@@ -8107,24 +5880,11 @@ func (_ fastpathT) EncMapInt8IntV(v map[int8]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Int8R(rv reflect.Value) {
@@ -8138,24 +5898,11 @@ func (_ fastpathT) EncMapInt8Int8V(v map[int8]int8, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Int16R(rv reflect.Value) {
@@ -8169,24 +5916,11 @@ func (_ fastpathT) EncMapInt8Int16V(v map[int8]int16, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Int32R(rv reflect.Value) {
@@ -8200,24 +5934,11 @@ func (_ fastpathT) EncMapInt8Int32V(v map[int8]int32, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Int64R(rv reflect.Value) {
@@ -8231,24 +5952,11 @@ func (_ fastpathT) EncMapInt8Int64V(v map[int8]int64, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Float32R(rv reflect.Value) {
@@ -8262,24 +5970,11 @@ func (_ fastpathT) EncMapInt8Float32V(v map[int8]float32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8Float64R(rv reflect.Value) {
@@ -8293,24 +5988,11 @@ func (_ fastpathT) EncMapInt8Float64V(v map[int8]float64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt8BoolR(rv reflect.Value) {
@@ -8324,24 +6006,11 @@ func (_ fastpathT) EncMapInt8BoolV(v map[int8]bool, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16IntfR(rv reflect.Value) {
@@ -8355,24 +6024,11 @@ func (_ fastpathT) EncMapInt16IntfV(v map[int16]interface{}, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16StringR(rv reflect.Value) {
@@ -8386,24 +6042,11 @@ func (_ fastpathT) EncMapInt16StringV(v map[int16]string, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16UintR(rv reflect.Value) {
@@ -8417,24 +6060,11 @@ func (_ fastpathT) EncMapInt16UintV(v map[int16]uint, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Uint8R(rv reflect.Value) {
@@ -8448,24 +6078,11 @@ func (_ fastpathT) EncMapInt16Uint8V(v map[int16]uint8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Uint16R(rv reflect.Value) {
@@ -8479,24 +6096,11 @@ func (_ fastpathT) EncMapInt16Uint16V(v map[int16]uint16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Uint32R(rv reflect.Value) {
@@ -8510,24 +6114,11 @@ func (_ fastpathT) EncMapInt16Uint32V(v map[int16]uint32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Uint64R(rv reflect.Value) {
@@ -8541,24 +6132,11 @@ func (_ fastpathT) EncMapInt16Uint64V(v map[int16]uint64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16IntR(rv reflect.Value) {
@@ -8572,24 +6150,11 @@ func (_ fastpathT) EncMapInt16IntV(v map[int16]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Int8R(rv reflect.Value) {
@@ -8603,24 +6168,11 @@ func (_ fastpathT) EncMapInt16Int8V(v map[int16]int8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Int16R(rv reflect.Value) {
@@ -8634,24 +6186,11 @@ func (_ fastpathT) EncMapInt16Int16V(v map[int16]int16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Int32R(rv reflect.Value) {
@@ -8665,24 +6204,11 @@ func (_ fastpathT) EncMapInt16Int32V(v map[int16]int32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Int64R(rv reflect.Value) {
@@ -8696,24 +6222,11 @@ func (_ fastpathT) EncMapInt16Int64V(v map[int16]int64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Float32R(rv reflect.Value) {
@@ -8727,24 +6240,11 @@ func (_ fastpathT) EncMapInt16Float32V(v map[int16]float32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16Float64R(rv reflect.Value) {
@@ -8758,24 +6258,11 @@ func (_ fastpathT) EncMapInt16Float64V(v map[int16]float64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt16BoolR(rv reflect.Value) {
@@ -8789,24 +6276,11 @@ func (_ fastpathT) EncMapInt16BoolV(v map[int16]bool, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32IntfR(rv reflect.Value) {
@@ -8820,24 +6294,11 @@ func (_ fastpathT) EncMapInt32IntfV(v map[int32]interface{}, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32StringR(rv reflect.Value) {
@@ -8851,24 +6312,11 @@ func (_ fastpathT) EncMapInt32StringV(v map[int32]string, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32UintR(rv reflect.Value) {
@@ -8882,24 +6330,11 @@ func (_ fastpathT) EncMapInt32UintV(v map[int32]uint, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Uint8R(rv reflect.Value) {
@@ -8913,24 +6348,11 @@ func (_ fastpathT) EncMapInt32Uint8V(v map[int32]uint8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Uint16R(rv reflect.Value) {
@@ -8944,24 +6366,11 @@ func (_ fastpathT) EncMapInt32Uint16V(v map[int32]uint16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Uint32R(rv reflect.Value) {
@@ -8975,24 +6384,11 @@ func (_ fastpathT) EncMapInt32Uint32V(v map[int32]uint32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Uint64R(rv reflect.Value) {
@@ -9006,24 +6402,11 @@ func (_ fastpathT) EncMapInt32Uint64V(v map[int32]uint64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32IntR(rv reflect.Value) {
@@ -9037,24 +6420,11 @@ func (_ fastpathT) EncMapInt32IntV(v map[int32]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Int8R(rv reflect.Value) {
@@ -9068,24 +6438,11 @@ func (_ fastpathT) EncMapInt32Int8V(v map[int32]int8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Int16R(rv reflect.Value) {
@@ -9099,24 +6456,11 @@ func (_ fastpathT) EncMapInt32Int16V(v map[int32]int16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Int32R(rv reflect.Value) {
@@ -9130,24 +6474,11 @@ func (_ fastpathT) EncMapInt32Int32V(v map[int32]int32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Int64R(rv reflect.Value) {
@@ -9161,24 +6492,11 @@ func (_ fastpathT) EncMapInt32Int64V(v map[int32]int64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Float32R(rv reflect.Value) {
@@ -9192,24 +6510,11 @@ func (_ fastpathT) EncMapInt32Float32V(v map[int32]float32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32Float64R(rv reflect.Value) {
@@ -9223,24 +6528,11 @@ func (_ fastpathT) EncMapInt32Float64V(v map[int32]float64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt32BoolR(rv reflect.Value) {
@@ -9254,24 +6546,11 @@ func (_ fastpathT) EncMapInt32BoolV(v map[int32]bool, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64IntfR(rv reflect.Value) {
@@ -9285,24 +6564,11 @@ func (_ fastpathT) EncMapInt64IntfV(v map[int64]interface{}, checkNil bool, e *E
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64StringR(rv reflect.Value) {
@@ -9316,24 +6582,11 @@ func (_ fastpathT) EncMapInt64StringV(v map[int64]string, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64UintR(rv reflect.Value) {
@@ -9347,24 +6600,11 @@ func (_ fastpathT) EncMapInt64UintV(v map[int64]uint, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Uint8R(rv reflect.Value) {
@@ -9378,24 +6618,11 @@ func (_ fastpathT) EncMapInt64Uint8V(v map[int64]uint8, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Uint16R(rv reflect.Value) {
@@ -9409,24 +6636,11 @@ func (_ fastpathT) EncMapInt64Uint16V(v map[int64]uint16, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Uint32R(rv reflect.Value) {
@@ -9440,24 +6654,11 @@ func (_ fastpathT) EncMapInt64Uint32V(v map[int64]uint32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Uint64R(rv reflect.Value) {
@@ -9471,24 +6672,11 @@ func (_ fastpathT) EncMapInt64Uint64V(v map[int64]uint64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64IntR(rv reflect.Value) {
@@ -9502,24 +6690,11 @@ func (_ fastpathT) EncMapInt64IntV(v map[int64]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Int8R(rv reflect.Value) {
@@ -9533,24 +6708,11 @@ func (_ fastpathT) EncMapInt64Int8V(v map[int64]int8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Int16R(rv reflect.Value) {
@@ -9564,24 +6726,11 @@ func (_ fastpathT) EncMapInt64Int16V(v map[int64]int16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Int32R(rv reflect.Value) {
@@ -9595,24 +6744,11 @@ func (_ fastpathT) EncMapInt64Int32V(v map[int64]int32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Int64R(rv reflect.Value) {
@@ -9626,24 +6762,11 @@ func (_ fastpathT) EncMapInt64Int64V(v map[int64]int64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Float32R(rv reflect.Value) {
@@ -9657,24 +6780,11 @@ func (_ fastpathT) EncMapInt64Float32V(v map[int64]float32, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64Float64R(rv reflect.Value) {
@@ -9688,24 +6798,11 @@ func (_ fastpathT) EncMapInt64Float64V(v map[int64]float64, checkNil bool, e *En
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapInt64BoolR(rv reflect.Value) {
@@ -9719,24 +6816,11 @@ func (_ fastpathT) EncMapInt64BoolV(v map[int64]bool, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeInt(int64(k2))
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeInt(int64(k2))
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeInt(int64(k2))
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolIntfR(rv reflect.Value) {
@@ -9750,24 +6834,11 @@ func (_ fastpathT) EncMapBoolIntfV(v map[bool]interface{}, checkNil bool, e *Enc
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			e.encode(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			e.encode(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		e.encode(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolStringR(rv reflect.Value) {
@@ -9781,24 +6852,11 @@ func (_ fastpathT) EncMapBoolStringV(v map[bool]string, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeString(c_UTF8, v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeString(c_UTF8, v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeString(c_UTF8, v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolUintR(rv reflect.Value) {
@@ -9812,24 +6870,11 @@ func (_ fastpathT) EncMapBoolUintV(v map[bool]uint, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolUint8R(rv reflect.Value) {
@@ -9843,24 +6888,11 @@ func (_ fastpathT) EncMapBoolUint8V(v map[bool]uint8, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolUint16R(rv reflect.Value) {
@@ -9874,24 +6906,11 @@ func (_ fastpathT) EncMapBoolUint16V(v map[bool]uint16, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolUint32R(rv reflect.Value) {
@@ -9905,24 +6924,11 @@ func (_ fastpathT) EncMapBoolUint32V(v map[bool]uint32, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolUint64R(rv reflect.Value) {
@@ -9936,24 +6942,11 @@ func (_ fastpathT) EncMapBoolUint64V(v map[bool]uint64, checkNil bool, e *Encode
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeUint(uint64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeUint(uint64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeUint(uint64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolIntR(rv reflect.Value) {
@@ -9967,24 +6960,11 @@ func (_ fastpathT) EncMapBoolIntV(v map[bool]int, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolInt8R(rv reflect.Value) {
@@ -9998,24 +6978,11 @@ func (_ fastpathT) EncMapBoolInt8V(v map[bool]int8, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolInt16R(rv reflect.Value) {
@@ -10029,24 +6996,11 @@ func (_ fastpathT) EncMapBoolInt16V(v map[bool]int16, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolInt32R(rv reflect.Value) {
@@ -10060,24 +7014,11 @@ func (_ fastpathT) EncMapBoolInt32V(v map[bool]int32, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolInt64R(rv reflect.Value) {
@@ -10091,24 +7032,11 @@ func (_ fastpathT) EncMapBoolInt64V(v map[bool]int64, checkNil bool, e *Encoder)
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeInt(int64(v2))
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeInt(int64(v2))
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeInt(int64(v2))
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolFloat32R(rv reflect.Value) {
@@ -10122,24 +7050,11 @@ func (_ fastpathT) EncMapBoolFloat32V(v map[bool]float32, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeFloat32(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat32(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeFloat32(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolFloat64R(rv reflect.Value) {
@@ -10153,24 +7068,11 @@ func (_ fastpathT) EncMapBoolFloat64V(v map[bool]float64, checkNil bool, e *Enco
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeFloat64(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeFloat64(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeFloat64(v2)
 	}
+	ee.EncodeEnd()
 }
 
 func (f encFnInfo) fastpathEncMapBoolBoolR(rv reflect.Value) {
@@ -10184,24 +7086,11 @@ func (_ fastpathT) EncMapBoolBoolV(v map[bool]bool, checkNil bool, e *Encoder) {
 	}
 	ee.EncodeMapStart(len(v))
 
-	if e.be {
-		for k2, v2 := range v {
-			ee.EncodeBool(k2)
-			ee.EncodeBool(v2)
-		}
-	} else {
-		j := 0
-		for k2, v2 := range v {
-			if j > 0 {
-				ee.EncodeMapEntrySeparator()
-			}
-			ee.EncodeBool(k2)
-			ee.EncodeMapKVSeparator()
-			ee.EncodeBool(v2)
-			j++
-		}
-		ee.EncodeMapEnd()
+	for k2, v2 := range v {
+		ee.EncodeBool(k2)
+		ee.EncodeBool(v2)
 	}
+	ee.EncodeEnd()
 }
 
 // -- decode
@@ -12216,9 +9105,6 @@ func (_ fastpathT) DecSliceIntfV(v []interface{}, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				d.decode(&v[j])
 
@@ -12317,9 +9203,6 @@ func (_ fastpathT) DecSliceStringV(v []string, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = dd.DecodeString()
 			} else {
@@ -12416,9 +9299,6 @@ func (_ fastpathT) DecSliceFloat32V(v []float32, checkNil bool, canChange bool,
 				} else {
 					d.arrayCannotExpand(len(v), j+1)
 				}
-			}
-			if j > 0 {
-				slh.Sep(j)
 			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = float32(dd.DecodeFloat(true))
@@ -12517,9 +9397,6 @@ func (_ fastpathT) DecSliceFloat64V(v []float64, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = dd.DecodeFloat(false)
 			} else {
@@ -12616,9 +9493,6 @@ func (_ fastpathT) DecSliceUintV(v []uint, checkNil bool, canChange bool,
 				} else {
 					d.arrayCannotExpand(len(v), j+1)
 				}
-			}
-			if j > 0 {
-				slh.Sep(j)
 			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = uint(dd.DecodeUint(uintBitsize))
@@ -12717,9 +9591,6 @@ func (_ fastpathT) DecSliceUint16V(v []uint16, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = uint16(dd.DecodeUint(16))
 			} else {
@@ -12816,9 +9687,6 @@ func (_ fastpathT) DecSliceUint32V(v []uint32, checkNil bool, canChange bool,
 				} else {
 					d.arrayCannotExpand(len(v), j+1)
 				}
-			}
-			if j > 0 {
-				slh.Sep(j)
 			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = uint32(dd.DecodeUint(32))
@@ -12917,9 +9785,6 @@ func (_ fastpathT) DecSliceUint64V(v []uint64, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = dd.DecodeUint(64)
 			} else {
@@ -13016,9 +9881,6 @@ func (_ fastpathT) DecSliceIntV(v []int, checkNil bool, canChange bool,
 				} else {
 					d.arrayCannotExpand(len(v), j+1)
 				}
-			}
-			if j > 0 {
-				slh.Sep(j)
 			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = int(dd.DecodeInt(intBitsize))
@@ -13117,9 +9979,6 @@ func (_ fastpathT) DecSliceInt8V(v []int8, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = int8(dd.DecodeInt(8))
 			} else {
@@ -13216,9 +10075,6 @@ func (_ fastpathT) DecSliceInt16V(v []int16, checkNil bool, canChange bool,
 				} else {
 					d.arrayCannotExpand(len(v), j+1)
 				}
-			}
-			if j > 0 {
-				slh.Sep(j)
 			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = int16(dd.DecodeInt(16))
@@ -13317,9 +10173,6 @@ func (_ fastpathT) DecSliceInt32V(v []int32, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = int32(dd.DecodeInt(32))
 			} else {
@@ -13416,9 +10269,6 @@ func (_ fastpathT) DecSliceInt64V(v []int64, checkNil bool, canChange bool,
 				} else {
 					d.arrayCannotExpand(len(v), j+1)
 				}
-			}
-			if j > 0 {
-				slh.Sep(j)
 			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = dd.DecodeInt(64)
@@ -13517,9 +10367,6 @@ func (_ fastpathT) DecSliceBoolV(v []bool, checkNil bool, canChange bool,
 					d.arrayCannotExpand(len(v), j+1)
 				}
 			}
-			if j > 0 {
-				slh.Sep(j)
-			}
 			if j < len(v) { // all checks done. cannot go past len.
 				v[j] = dd.DecodeBool()
 			} else {
@@ -13585,15 +10432,11 @@ func (_ fastpathT) DecMapIntfIntfV(v map[interface{}]interface{}, checkNil bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -13601,7 +10444,7 @@ func (_ fastpathT) DecMapIntfIntfV(v map[interface{}]interface{}, checkNil bool,
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -13659,22 +10502,18 @@ func (_ fastpathT) DecMapIntfStringV(v map[interface{}]string, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -13732,22 +10571,18 @@ func (_ fastpathT) DecMapIntfUintV(v map[interface{}]uint, checkNil bool, canCha
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -13805,22 +10640,18 @@ func (_ fastpathT) DecMapIntfUint8V(v map[interface{}]uint8, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -13878,22 +10709,18 @@ func (_ fastpathT) DecMapIntfUint16V(v map[interface{}]uint16, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -13951,22 +10778,18 @@ func (_ fastpathT) DecMapIntfUint32V(v map[interface{}]uint32, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14024,22 +10847,18 @@ func (_ fastpathT) DecMapIntfUint64V(v map[interface{}]uint64, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14097,22 +10916,18 @@ func (_ fastpathT) DecMapIntfIntV(v map[interface{}]int, checkNil bool, canChang
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14170,22 +10985,18 @@ func (_ fastpathT) DecMapIntfInt8V(v map[interface{}]int8, checkNil bool, canCha
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14243,22 +11054,18 @@ func (_ fastpathT) DecMapIntfInt16V(v map[interface{}]int16, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14316,22 +11123,18 @@ func (_ fastpathT) DecMapIntfInt32V(v map[interface{}]int32, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14389,22 +11192,18 @@ func (_ fastpathT) DecMapIntfInt64V(v map[interface{}]int64, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14462,22 +11261,18 @@ func (_ fastpathT) DecMapIntfFloat32V(v map[interface{}]float32, checkNil bool, 
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14535,22 +11330,18 @@ func (_ fastpathT) DecMapIntfFloat64V(v map[interface{}]float64, checkNil bool, 
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14608,22 +11399,18 @@ func (_ fastpathT) DecMapIntfBoolV(v map[interface{}]bool, checkNil bool, canCha
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			var mk interface{}
 			d.decode(&mk)
 			if bv, bok := mk.([]byte); bok {
 				mk = string(bv) // maps cannot have []byte as key. switch to string.
 			}
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14678,11 +11465,7 @@ func (_ fastpathT) DecMapStringIntfV(v map[string]interface{}, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -14690,7 +11473,7 @@ func (_ fastpathT) DecMapStringIntfV(v map[string]interface{}, checkNil bool, ca
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14744,18 +11527,14 @@ func (_ fastpathT) DecMapStringStringV(v map[string]string, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14809,18 +11588,14 @@ func (_ fastpathT) DecMapStringUintV(v map[string]uint, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14874,18 +11649,14 @@ func (_ fastpathT) DecMapStringUint8V(v map[string]uint8, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -14939,18 +11710,14 @@ func (_ fastpathT) DecMapStringUint16V(v map[string]uint16, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15004,18 +11771,14 @@ func (_ fastpathT) DecMapStringUint32V(v map[string]uint32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15069,18 +11832,14 @@ func (_ fastpathT) DecMapStringUint64V(v map[string]uint64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15134,18 +11893,14 @@ func (_ fastpathT) DecMapStringIntV(v map[string]int, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15199,18 +11954,14 @@ func (_ fastpathT) DecMapStringInt8V(v map[string]int8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15264,18 +12015,14 @@ func (_ fastpathT) DecMapStringInt16V(v map[string]int16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15329,18 +12076,14 @@ func (_ fastpathT) DecMapStringInt32V(v map[string]int32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15394,18 +12137,14 @@ func (_ fastpathT) DecMapStringInt64V(v map[string]int64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15459,18 +12198,14 @@ func (_ fastpathT) DecMapStringFloat32V(v map[string]float32, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15524,18 +12259,14 @@ func (_ fastpathT) DecMapStringFloat64V(v map[string]float64, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15589,18 +12320,14 @@ func (_ fastpathT) DecMapStringBoolV(v map[string]bool, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeString()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15655,11 +12382,7 @@ func (_ fastpathT) DecMapFloat32IntfV(v map[float32]interface{}, checkNil bool, 
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -15667,7 +12390,7 @@ func (_ fastpathT) DecMapFloat32IntfV(v map[float32]interface{}, checkNil bool, 
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15721,18 +12444,14 @@ func (_ fastpathT) DecMapFloat32StringV(v map[float32]string, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15786,18 +12505,14 @@ func (_ fastpathT) DecMapFloat32UintV(v map[float32]uint, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15851,18 +12566,14 @@ func (_ fastpathT) DecMapFloat32Uint8V(v map[float32]uint8, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15916,18 +12627,14 @@ func (_ fastpathT) DecMapFloat32Uint16V(v map[float32]uint16, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -15981,18 +12688,14 @@ func (_ fastpathT) DecMapFloat32Uint32V(v map[float32]uint32, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16046,18 +12749,14 @@ func (_ fastpathT) DecMapFloat32Uint64V(v map[float32]uint64, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16111,18 +12810,14 @@ func (_ fastpathT) DecMapFloat32IntV(v map[float32]int, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16176,18 +12871,14 @@ func (_ fastpathT) DecMapFloat32Int8V(v map[float32]int8, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16241,18 +12932,14 @@ func (_ fastpathT) DecMapFloat32Int16V(v map[float32]int16, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16306,18 +12993,14 @@ func (_ fastpathT) DecMapFloat32Int32V(v map[float32]int32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16371,18 +13054,14 @@ func (_ fastpathT) DecMapFloat32Int64V(v map[float32]int64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16436,18 +13115,14 @@ func (_ fastpathT) DecMapFloat32Float32V(v map[float32]float32, checkNil bool, c
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16501,18 +13176,14 @@ func (_ fastpathT) DecMapFloat32Float64V(v map[float32]float64, checkNil bool, c
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16566,18 +13237,14 @@ func (_ fastpathT) DecMapFloat32BoolV(v map[float32]bool, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := float32(dd.DecodeFloat(true))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16632,11 +13299,7 @@ func (_ fastpathT) DecMapFloat64IntfV(v map[float64]interface{}, checkNil bool, 
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -16644,7 +13307,7 @@ func (_ fastpathT) DecMapFloat64IntfV(v map[float64]interface{}, checkNil bool, 
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16698,18 +13361,14 @@ func (_ fastpathT) DecMapFloat64StringV(v map[float64]string, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16763,18 +13422,14 @@ func (_ fastpathT) DecMapFloat64UintV(v map[float64]uint, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16828,18 +13483,14 @@ func (_ fastpathT) DecMapFloat64Uint8V(v map[float64]uint8, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16893,18 +13544,14 @@ func (_ fastpathT) DecMapFloat64Uint16V(v map[float64]uint16, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -16958,18 +13605,14 @@ func (_ fastpathT) DecMapFloat64Uint32V(v map[float64]uint32, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17023,18 +13666,14 @@ func (_ fastpathT) DecMapFloat64Uint64V(v map[float64]uint64, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17088,18 +13727,14 @@ func (_ fastpathT) DecMapFloat64IntV(v map[float64]int, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17153,18 +13788,14 @@ func (_ fastpathT) DecMapFloat64Int8V(v map[float64]int8, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17218,18 +13849,14 @@ func (_ fastpathT) DecMapFloat64Int16V(v map[float64]int16, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17283,18 +13910,14 @@ func (_ fastpathT) DecMapFloat64Int32V(v map[float64]int32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17348,18 +13971,14 @@ func (_ fastpathT) DecMapFloat64Int64V(v map[float64]int64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17413,18 +14032,14 @@ func (_ fastpathT) DecMapFloat64Float32V(v map[float64]float32, checkNil bool, c
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17478,18 +14093,14 @@ func (_ fastpathT) DecMapFloat64Float64V(v map[float64]float64, checkNil bool, c
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17543,18 +14154,14 @@ func (_ fastpathT) DecMapFloat64BoolV(v map[float64]bool, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeFloat(false)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17609,11 +14216,7 @@ func (_ fastpathT) DecMapUintIntfV(v map[uint]interface{}, checkNil bool, canCha
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -17621,7 +14224,7 @@ func (_ fastpathT) DecMapUintIntfV(v map[uint]interface{}, checkNil bool, canCha
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17675,18 +14278,14 @@ func (_ fastpathT) DecMapUintStringV(v map[uint]string, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17740,18 +14339,14 @@ func (_ fastpathT) DecMapUintUintV(v map[uint]uint, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17805,18 +14400,14 @@ func (_ fastpathT) DecMapUintUint8V(v map[uint]uint8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17870,18 +14461,14 @@ func (_ fastpathT) DecMapUintUint16V(v map[uint]uint16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -17935,18 +14522,14 @@ func (_ fastpathT) DecMapUintUint32V(v map[uint]uint32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18000,18 +14583,14 @@ func (_ fastpathT) DecMapUintUint64V(v map[uint]uint64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18065,18 +14644,14 @@ func (_ fastpathT) DecMapUintIntV(v map[uint]int, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18130,18 +14705,14 @@ func (_ fastpathT) DecMapUintInt8V(v map[uint]int8, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18195,18 +14766,14 @@ func (_ fastpathT) DecMapUintInt16V(v map[uint]int16, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18260,18 +14827,14 @@ func (_ fastpathT) DecMapUintInt32V(v map[uint]int32, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18325,18 +14888,14 @@ func (_ fastpathT) DecMapUintInt64V(v map[uint]int64, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18390,18 +14949,14 @@ func (_ fastpathT) DecMapUintFloat32V(v map[uint]float32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18455,18 +15010,14 @@ func (_ fastpathT) DecMapUintFloat64V(v map[uint]float64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18520,18 +15071,14 @@ func (_ fastpathT) DecMapUintBoolV(v map[uint]bool, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint(dd.DecodeUint(uintBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18586,11 +15133,7 @@ func (_ fastpathT) DecMapUint8IntfV(v map[uint8]interface{}, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -18598,7 +15141,7 @@ func (_ fastpathT) DecMapUint8IntfV(v map[uint8]interface{}, checkNil bool, canC
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18652,18 +15195,14 @@ func (_ fastpathT) DecMapUint8StringV(v map[uint8]string, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18717,18 +15256,14 @@ func (_ fastpathT) DecMapUint8UintV(v map[uint8]uint, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18782,18 +15317,14 @@ func (_ fastpathT) DecMapUint8Uint8V(v map[uint8]uint8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18847,18 +15378,14 @@ func (_ fastpathT) DecMapUint8Uint16V(v map[uint8]uint16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18912,18 +15439,14 @@ func (_ fastpathT) DecMapUint8Uint32V(v map[uint8]uint32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -18977,18 +15500,14 @@ func (_ fastpathT) DecMapUint8Uint64V(v map[uint8]uint64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19042,18 +15561,14 @@ func (_ fastpathT) DecMapUint8IntV(v map[uint8]int, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19107,18 +15622,14 @@ func (_ fastpathT) DecMapUint8Int8V(v map[uint8]int8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19172,18 +15683,14 @@ func (_ fastpathT) DecMapUint8Int16V(v map[uint8]int16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19237,18 +15744,14 @@ func (_ fastpathT) DecMapUint8Int32V(v map[uint8]int32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19302,18 +15805,14 @@ func (_ fastpathT) DecMapUint8Int64V(v map[uint8]int64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19367,18 +15866,14 @@ func (_ fastpathT) DecMapUint8Float32V(v map[uint8]float32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19432,18 +15927,14 @@ func (_ fastpathT) DecMapUint8Float64V(v map[uint8]float64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19497,18 +15988,14 @@ func (_ fastpathT) DecMapUint8BoolV(v map[uint8]bool, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint8(dd.DecodeUint(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19563,11 +16050,7 @@ func (_ fastpathT) DecMapUint16IntfV(v map[uint16]interface{}, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -19575,7 +16058,7 @@ func (_ fastpathT) DecMapUint16IntfV(v map[uint16]interface{}, checkNil bool, ca
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19629,18 +16112,14 @@ func (_ fastpathT) DecMapUint16StringV(v map[uint16]string, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19694,18 +16173,14 @@ func (_ fastpathT) DecMapUint16UintV(v map[uint16]uint, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19759,18 +16234,14 @@ func (_ fastpathT) DecMapUint16Uint8V(v map[uint16]uint8, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19824,18 +16295,14 @@ func (_ fastpathT) DecMapUint16Uint16V(v map[uint16]uint16, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19889,18 +16356,14 @@ func (_ fastpathT) DecMapUint16Uint32V(v map[uint16]uint32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -19954,18 +16417,14 @@ func (_ fastpathT) DecMapUint16Uint64V(v map[uint16]uint64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20019,18 +16478,14 @@ func (_ fastpathT) DecMapUint16IntV(v map[uint16]int, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20084,18 +16539,14 @@ func (_ fastpathT) DecMapUint16Int8V(v map[uint16]int8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20149,18 +16600,14 @@ func (_ fastpathT) DecMapUint16Int16V(v map[uint16]int16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20214,18 +16661,14 @@ func (_ fastpathT) DecMapUint16Int32V(v map[uint16]int32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20279,18 +16722,14 @@ func (_ fastpathT) DecMapUint16Int64V(v map[uint16]int64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20344,18 +16783,14 @@ func (_ fastpathT) DecMapUint16Float32V(v map[uint16]float32, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20409,18 +16844,14 @@ func (_ fastpathT) DecMapUint16Float64V(v map[uint16]float64, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20474,18 +16905,14 @@ func (_ fastpathT) DecMapUint16BoolV(v map[uint16]bool, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint16(dd.DecodeUint(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20540,11 +16967,7 @@ func (_ fastpathT) DecMapUint32IntfV(v map[uint32]interface{}, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -20552,7 +16975,7 @@ func (_ fastpathT) DecMapUint32IntfV(v map[uint32]interface{}, checkNil bool, ca
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20606,18 +17029,14 @@ func (_ fastpathT) DecMapUint32StringV(v map[uint32]string, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20671,18 +17090,14 @@ func (_ fastpathT) DecMapUint32UintV(v map[uint32]uint, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20736,18 +17151,14 @@ func (_ fastpathT) DecMapUint32Uint8V(v map[uint32]uint8, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20801,18 +17212,14 @@ func (_ fastpathT) DecMapUint32Uint16V(v map[uint32]uint16, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20866,18 +17273,14 @@ func (_ fastpathT) DecMapUint32Uint32V(v map[uint32]uint32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20931,18 +17334,14 @@ func (_ fastpathT) DecMapUint32Uint64V(v map[uint32]uint64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -20996,18 +17395,14 @@ func (_ fastpathT) DecMapUint32IntV(v map[uint32]int, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21061,18 +17456,14 @@ func (_ fastpathT) DecMapUint32Int8V(v map[uint32]int8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21126,18 +17517,14 @@ func (_ fastpathT) DecMapUint32Int16V(v map[uint32]int16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21191,18 +17578,14 @@ func (_ fastpathT) DecMapUint32Int32V(v map[uint32]int32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21256,18 +17639,14 @@ func (_ fastpathT) DecMapUint32Int64V(v map[uint32]int64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21321,18 +17700,14 @@ func (_ fastpathT) DecMapUint32Float32V(v map[uint32]float32, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21386,18 +17761,14 @@ func (_ fastpathT) DecMapUint32Float64V(v map[uint32]float64, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21451,18 +17822,14 @@ func (_ fastpathT) DecMapUint32BoolV(v map[uint32]bool, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := uint32(dd.DecodeUint(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21517,11 +17884,7 @@ func (_ fastpathT) DecMapUint64IntfV(v map[uint64]interface{}, checkNil bool, ca
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -21529,7 +17892,7 @@ func (_ fastpathT) DecMapUint64IntfV(v map[uint64]interface{}, checkNil bool, ca
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21583,18 +17946,14 @@ func (_ fastpathT) DecMapUint64StringV(v map[uint64]string, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21648,18 +18007,14 @@ func (_ fastpathT) DecMapUint64UintV(v map[uint64]uint, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21713,18 +18068,14 @@ func (_ fastpathT) DecMapUint64Uint8V(v map[uint64]uint8, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21778,18 +18129,14 @@ func (_ fastpathT) DecMapUint64Uint16V(v map[uint64]uint16, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21843,18 +18190,14 @@ func (_ fastpathT) DecMapUint64Uint32V(v map[uint64]uint32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21908,18 +18251,14 @@ func (_ fastpathT) DecMapUint64Uint64V(v map[uint64]uint64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -21973,18 +18312,14 @@ func (_ fastpathT) DecMapUint64IntV(v map[uint64]int, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22038,18 +18373,14 @@ func (_ fastpathT) DecMapUint64Int8V(v map[uint64]int8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22103,18 +18434,14 @@ func (_ fastpathT) DecMapUint64Int16V(v map[uint64]int16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22168,18 +18495,14 @@ func (_ fastpathT) DecMapUint64Int32V(v map[uint64]int32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22233,18 +18556,14 @@ func (_ fastpathT) DecMapUint64Int64V(v map[uint64]int64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22298,18 +18617,14 @@ func (_ fastpathT) DecMapUint64Float32V(v map[uint64]float32, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22363,18 +18678,14 @@ func (_ fastpathT) DecMapUint64Float64V(v map[uint64]float64, checkNil bool, can
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22428,18 +18739,14 @@ func (_ fastpathT) DecMapUint64BoolV(v map[uint64]bool, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeUint(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22494,11 +18801,7 @@ func (_ fastpathT) DecMapIntIntfV(v map[int]interface{}, checkNil bool, canChang
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -22506,7 +18809,7 @@ func (_ fastpathT) DecMapIntIntfV(v map[int]interface{}, checkNil bool, canChang
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22560,18 +18863,14 @@ func (_ fastpathT) DecMapIntStringV(v map[int]string, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22625,18 +18924,14 @@ func (_ fastpathT) DecMapIntUintV(v map[int]uint, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22690,18 +18985,14 @@ func (_ fastpathT) DecMapIntUint8V(v map[int]uint8, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22755,18 +19046,14 @@ func (_ fastpathT) DecMapIntUint16V(v map[int]uint16, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22820,18 +19107,14 @@ func (_ fastpathT) DecMapIntUint32V(v map[int]uint32, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22885,18 +19168,14 @@ func (_ fastpathT) DecMapIntUint64V(v map[int]uint64, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -22950,18 +19229,14 @@ func (_ fastpathT) DecMapIntIntV(v map[int]int, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23015,18 +19290,14 @@ func (_ fastpathT) DecMapIntInt8V(v map[int]int8, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23080,18 +19351,14 @@ func (_ fastpathT) DecMapIntInt16V(v map[int]int16, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23145,18 +19412,14 @@ func (_ fastpathT) DecMapIntInt32V(v map[int]int32, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23210,18 +19473,14 @@ func (_ fastpathT) DecMapIntInt64V(v map[int]int64, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23275,18 +19534,14 @@ func (_ fastpathT) DecMapIntFloat32V(v map[int]float32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23340,18 +19595,14 @@ func (_ fastpathT) DecMapIntFloat64V(v map[int]float64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23405,18 +19656,14 @@ func (_ fastpathT) DecMapIntBoolV(v map[int]bool, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int(dd.DecodeInt(intBitsize))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23471,11 +19718,7 @@ func (_ fastpathT) DecMapInt8IntfV(v map[int8]interface{}, checkNil bool, canCha
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -23483,7 +19726,7 @@ func (_ fastpathT) DecMapInt8IntfV(v map[int8]interface{}, checkNil bool, canCha
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23537,18 +19780,14 @@ func (_ fastpathT) DecMapInt8StringV(v map[int8]string, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23602,18 +19841,14 @@ func (_ fastpathT) DecMapInt8UintV(v map[int8]uint, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23667,18 +19902,14 @@ func (_ fastpathT) DecMapInt8Uint8V(v map[int8]uint8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23732,18 +19963,14 @@ func (_ fastpathT) DecMapInt8Uint16V(v map[int8]uint16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23797,18 +20024,14 @@ func (_ fastpathT) DecMapInt8Uint32V(v map[int8]uint32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23862,18 +20085,14 @@ func (_ fastpathT) DecMapInt8Uint64V(v map[int8]uint64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23927,18 +20146,14 @@ func (_ fastpathT) DecMapInt8IntV(v map[int8]int, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -23992,18 +20207,14 @@ func (_ fastpathT) DecMapInt8Int8V(v map[int8]int8, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24057,18 +20268,14 @@ func (_ fastpathT) DecMapInt8Int16V(v map[int8]int16, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24122,18 +20329,14 @@ func (_ fastpathT) DecMapInt8Int32V(v map[int8]int32, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24187,18 +20390,14 @@ func (_ fastpathT) DecMapInt8Int64V(v map[int8]int64, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24252,18 +20451,14 @@ func (_ fastpathT) DecMapInt8Float32V(v map[int8]float32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24317,18 +20512,14 @@ func (_ fastpathT) DecMapInt8Float64V(v map[int8]float64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24382,18 +20573,14 @@ func (_ fastpathT) DecMapInt8BoolV(v map[int8]bool, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int8(dd.DecodeInt(8))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24448,11 +20635,7 @@ func (_ fastpathT) DecMapInt16IntfV(v map[int16]interface{}, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -24460,7 +20643,7 @@ func (_ fastpathT) DecMapInt16IntfV(v map[int16]interface{}, checkNil bool, canC
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24514,18 +20697,14 @@ func (_ fastpathT) DecMapInt16StringV(v map[int16]string, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24579,18 +20758,14 @@ func (_ fastpathT) DecMapInt16UintV(v map[int16]uint, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24644,18 +20819,14 @@ func (_ fastpathT) DecMapInt16Uint8V(v map[int16]uint8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24709,18 +20880,14 @@ func (_ fastpathT) DecMapInt16Uint16V(v map[int16]uint16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24774,18 +20941,14 @@ func (_ fastpathT) DecMapInt16Uint32V(v map[int16]uint32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24839,18 +21002,14 @@ func (_ fastpathT) DecMapInt16Uint64V(v map[int16]uint64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24904,18 +21063,14 @@ func (_ fastpathT) DecMapInt16IntV(v map[int16]int, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -24969,18 +21124,14 @@ func (_ fastpathT) DecMapInt16Int8V(v map[int16]int8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25034,18 +21185,14 @@ func (_ fastpathT) DecMapInt16Int16V(v map[int16]int16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25099,18 +21246,14 @@ func (_ fastpathT) DecMapInt16Int32V(v map[int16]int32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25164,18 +21307,14 @@ func (_ fastpathT) DecMapInt16Int64V(v map[int16]int64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25229,18 +21368,14 @@ func (_ fastpathT) DecMapInt16Float32V(v map[int16]float32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25294,18 +21429,14 @@ func (_ fastpathT) DecMapInt16Float64V(v map[int16]float64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25359,18 +21490,14 @@ func (_ fastpathT) DecMapInt16BoolV(v map[int16]bool, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int16(dd.DecodeInt(16))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25425,11 +21552,7 @@ func (_ fastpathT) DecMapInt32IntfV(v map[int32]interface{}, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -25437,7 +21560,7 @@ func (_ fastpathT) DecMapInt32IntfV(v map[int32]interface{}, checkNil bool, canC
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25491,18 +21614,14 @@ func (_ fastpathT) DecMapInt32StringV(v map[int32]string, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25556,18 +21675,14 @@ func (_ fastpathT) DecMapInt32UintV(v map[int32]uint, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25621,18 +21736,14 @@ func (_ fastpathT) DecMapInt32Uint8V(v map[int32]uint8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25686,18 +21797,14 @@ func (_ fastpathT) DecMapInt32Uint16V(v map[int32]uint16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25751,18 +21858,14 @@ func (_ fastpathT) DecMapInt32Uint32V(v map[int32]uint32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25816,18 +21919,14 @@ func (_ fastpathT) DecMapInt32Uint64V(v map[int32]uint64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25881,18 +21980,14 @@ func (_ fastpathT) DecMapInt32IntV(v map[int32]int, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -25946,18 +22041,14 @@ func (_ fastpathT) DecMapInt32Int8V(v map[int32]int8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26011,18 +22102,14 @@ func (_ fastpathT) DecMapInt32Int16V(v map[int32]int16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26076,18 +22163,14 @@ func (_ fastpathT) DecMapInt32Int32V(v map[int32]int32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26141,18 +22224,14 @@ func (_ fastpathT) DecMapInt32Int64V(v map[int32]int64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26206,18 +22285,14 @@ func (_ fastpathT) DecMapInt32Float32V(v map[int32]float32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26271,18 +22346,14 @@ func (_ fastpathT) DecMapInt32Float64V(v map[int32]float64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26336,18 +22407,14 @@ func (_ fastpathT) DecMapInt32BoolV(v map[int32]bool, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := int32(dd.DecodeInt(32))
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26402,11 +22469,7 @@ func (_ fastpathT) DecMapInt64IntfV(v map[int64]interface{}, checkNil bool, canC
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -26414,7 +22477,7 @@ func (_ fastpathT) DecMapInt64IntfV(v map[int64]interface{}, checkNil bool, canC
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26468,18 +22531,14 @@ func (_ fastpathT) DecMapInt64StringV(v map[int64]string, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26533,18 +22592,14 @@ func (_ fastpathT) DecMapInt64UintV(v map[int64]uint, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26598,18 +22653,14 @@ func (_ fastpathT) DecMapInt64Uint8V(v map[int64]uint8, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26663,18 +22714,14 @@ func (_ fastpathT) DecMapInt64Uint16V(v map[int64]uint16, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26728,18 +22775,14 @@ func (_ fastpathT) DecMapInt64Uint32V(v map[int64]uint32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26793,18 +22836,14 @@ func (_ fastpathT) DecMapInt64Uint64V(v map[int64]uint64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26858,18 +22897,14 @@ func (_ fastpathT) DecMapInt64IntV(v map[int64]int, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26923,18 +22958,14 @@ func (_ fastpathT) DecMapInt64Int8V(v map[int64]int8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -26988,18 +23019,14 @@ func (_ fastpathT) DecMapInt64Int16V(v map[int64]int16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27053,18 +23080,14 @@ func (_ fastpathT) DecMapInt64Int32V(v map[int64]int32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27118,18 +23141,14 @@ func (_ fastpathT) DecMapInt64Int64V(v map[int64]int64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27183,18 +23202,14 @@ func (_ fastpathT) DecMapInt64Float32V(v map[int64]float32, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27248,18 +23263,14 @@ func (_ fastpathT) DecMapInt64Float64V(v map[int64]float64, checkNil bool, canCh
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27313,18 +23324,14 @@ func (_ fastpathT) DecMapInt64BoolV(v map[int64]bool, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeInt(64)
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27379,11 +23386,7 @@ func (_ fastpathT) DecMapBoolIntfV(v map[bool]interface{}, checkNil bool, canCha
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			d.decode(&mv)
 
@@ -27391,7 +23394,7 @@ func (_ fastpathT) DecMapBoolIntfV(v map[bool]interface{}, checkNil bool, canCha
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27445,18 +23448,14 @@ func (_ fastpathT) DecMapBoolStringV(v map[bool]string, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeString()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27510,18 +23509,14 @@ func (_ fastpathT) DecMapBoolUintV(v map[bool]uint, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint(dd.DecodeUint(uintBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27575,18 +23570,14 @@ func (_ fastpathT) DecMapBoolUint8V(v map[bool]uint8, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint8(dd.DecodeUint(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27640,18 +23631,14 @@ func (_ fastpathT) DecMapBoolUint16V(v map[bool]uint16, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint16(dd.DecodeUint(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27705,18 +23692,14 @@ func (_ fastpathT) DecMapBoolUint32V(v map[bool]uint32, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = uint32(dd.DecodeUint(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27770,18 +23753,14 @@ func (_ fastpathT) DecMapBoolUint64V(v map[bool]uint64, checkNil bool, canChange
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeUint(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27835,18 +23814,14 @@ func (_ fastpathT) DecMapBoolIntV(v map[bool]int, checkNil bool, canChange bool,
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int(dd.DecodeInt(intBitsize))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27900,18 +23875,14 @@ func (_ fastpathT) DecMapBoolInt8V(v map[bool]int8, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int8(dd.DecodeInt(8))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -27965,18 +23936,14 @@ func (_ fastpathT) DecMapBoolInt16V(v map[bool]int16, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int16(dd.DecodeInt(16))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -28030,18 +23997,14 @@ func (_ fastpathT) DecMapBoolInt32V(v map[bool]int32, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = int32(dd.DecodeInt(32))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -28095,18 +24058,14 @@ func (_ fastpathT) DecMapBoolInt64V(v map[bool]int64, checkNil bool, canChange b
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeInt(64)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -28160,18 +24119,14 @@ func (_ fastpathT) DecMapBoolFloat32V(v map[bool]float32, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = float32(dd.DecodeFloat(true))
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -28225,18 +24180,14 @@ func (_ fastpathT) DecMapBoolFloat64V(v map[bool]float64, checkNil bool, canChan
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeFloat(false)
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }
@@ -28290,18 +24241,14 @@ func (_ fastpathT) DecMapBoolBoolV(v map[bool]bool, checkNil bool, canChange boo
 		}
 	} else if containerLen < 0 {
 		for j := 0; !dd.CheckBreak(); j++ {
-			if j > 0 {
-				dd.ReadMapEntrySeparator()
-			}
 			mk := dd.DecodeBool()
-			dd.ReadMapKVSeparator()
 			mv := v[mk]
 			mv = dd.DecodeBool()
 			if v != nil {
 				v[mk] = mv
 			}
 		}
-		dd.ReadMapEnd()
+		dd.ReadEnd()
 	}
 	return v, changed
 }

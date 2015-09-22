@@ -66,7 +66,7 @@ type Client struct {
 
 	// Rate specifies the current rate limit for the client as determined by the
 	// most recent API call.  If the client is used in a multi-user application,
-	// this rate may not always be up-to-date.  Call RateLimit() to check the
+	// this rate may not always be up-to-date.  Call RateLimits() to check the
 	// current rate.
 	Rate Rate
 

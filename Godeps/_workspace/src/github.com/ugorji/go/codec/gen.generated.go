@@ -33,9 +33,6 @@ for {{var "j"}} := 0; {{var "j"}} < {{var "l"}}; {{var "j"}}++ {
 }
 } else if {{var "l"}} < 0  {
 for {{var "j"}} := 0; !r.CheckBreak(); {{var "j"}}++ {
-	if {{var "j"}} > 0 {
-		r.ReadMapEntrySeparator()
-	}
 	var {{var "mk"}} {{ .KTyp }} 
 	{{ $x := printf "%vmk%v" .TempVar .Rand }}{{ decLineVarK $x }}
 {{ if eq .KTyp "interface{}" }}// special case if a byte array.
@@ -43,14 +40,13 @@ for {{var "j"}} := 0; !r.CheckBreak(); {{var "j"}}++ {
 		{{var "mk"}} = string({{var "bv"}})
 	}
 {{ end }}
-	r.ReadMapKVSeparator()
 	{{var "mv"}} := {{var "v"}}[{{var "mk"}}]
 	{{ $x := printf "%vmv%v" .TempVar .Rand }}{{ decLineVar $x }}
 	if {{var "v"}} != nil {
 		{{var "v"}}[{{var "mk"}}] = {{var "mv"}}
 	}
 }
-r.ReadMapEnd()
+r.ReadEnd()
 } // else len==0: TODO: Should we clear map entries?
 `
 
@@ -113,9 +109,6 @@ if {{var "l"}} == 0 { {{ if isSlice }}
 			{{ if isArray }}z.DecArrayCannotExpand(len({{var "v"}}), {{var "j"}}+1)
 			{{ else if isSlice}}{{var "v"}} = append({{var "v"}}, {{zero}})// var {{var "z"}} {{ .Typ }}
 			{{var "c"}} = true {{ end }}
-		}
-		if {{var "j"}} > 0 {
-			{{var "h"}}.Sep({{var "j"}})
 		}
 		{{ if isChan}}
 		var {{var "t"}} {{ .Typ }}

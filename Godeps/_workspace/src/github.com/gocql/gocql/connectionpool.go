@@ -22,7 +22,7 @@ import (
 Purpose
 
 The connection pool in gocql opens and closes connections as well as selects an available connection
-for gocql to execute a query against. The pool is also respnsible for handling connection errors that
+for gocql to execute a query against. The pool is also responsible for handling connection errors that
 are caught by the connection experiencing the error.
 
 A connection pool should make a copy of the variables used from the ClusterConfig provided to the pool

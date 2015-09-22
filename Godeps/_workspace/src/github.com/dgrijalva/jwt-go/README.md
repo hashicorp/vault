@@ -48,6 +48,12 @@ Parsing and verifying tokens is pretty straight forward.  You pass in the token 
 	tokenString, err := token.SignedString(mySigningKey)
 ```	
 
+## Extensions
+
+This library publishes all the necessary components for adding your own signing methods.  Simply implement the `SigningMethod` interface and register a factory method using `RegisterSigningMethod`.  
+
+Here's an example of an extension that integrates with the Google App Engine signing tools: https://github.com/someone1/gcp-jwt-go
+
 ## Project Status & Versioning
 
 This library is considered production ready.  Feedback and feature requests are appreciated.  The API should be considered stable.  There should be very few backwards-incompatible changes outside of major version updates (and only with good reason).

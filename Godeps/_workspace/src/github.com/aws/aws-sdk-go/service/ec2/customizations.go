@@ -4,18 +4,18 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 func init() {
-	initRequest = func(r *service.Request) {
+	initRequest = func(r *request.Request) {
 		if r.Operation.Name == opCopySnapshot { // fill the PresignedURL parameter
 			r.Handlers.Build.PushFront(fillPresignedURL)
 		}
 	}
 }
 
-func fillPresignedURL(r *service.Request) {
+func fillPresignedURL(r *request.Request) {
 	if !r.ParamsFilled() {
 		return
 	}

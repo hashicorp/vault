@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 const opAcceptVpcPeeringConnection = "AcceptVpcPeeringConnection"
 
 // AcceptVpcPeeringConnectionRequest generates a request for the AcceptVpcPeeringConnection operation.
-func (c *EC2) AcceptVpcPeeringConnectionRequest(input *AcceptVpcPeeringConnectionInput) (req *service.Request, output *AcceptVpcPeeringConnectionOutput) {
-	op := &service.Operation{
+func (c *EC2) AcceptVpcPeeringConnectionRequest(input *AcceptVpcPeeringConnectionInput) (req *request.Request, output *AcceptVpcPeeringConnectionOutput) {
+	op := &request.Operation{
 		Name:       opAcceptVpcPeeringConnection,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -43,8 +43,8 @@ func (c *EC2) AcceptVpcPeeringConnection(input *AcceptVpcPeeringConnectionInput)
 const opAllocateAddress = "AllocateAddress"
 
 // AllocateAddressRequest generates a request for the AllocateAddress operation.
-func (c *EC2) AllocateAddressRequest(input *AllocateAddressInput) (req *service.Request, output *AllocateAddressOutput) {
-	op := &service.Operation{
+func (c *EC2) AllocateAddressRequest(input *AllocateAddressInput) (req *request.Request, output *AllocateAddressOutput) {
+	op := &request.Operation{
 		Name:       opAllocateAddress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -74,8 +74,8 @@ func (c *EC2) AllocateAddress(input *AllocateAddressInput) (*AllocateAddressOutp
 const opAssignPrivateIpAddresses = "AssignPrivateIpAddresses"
 
 // AssignPrivateIpAddressesRequest generates a request for the AssignPrivateIpAddresses operation.
-func (c *EC2) AssignPrivateIpAddressesRequest(input *AssignPrivateIpAddressesInput) (req *service.Request, output *AssignPrivateIpAddressesOutput) {
-	op := &service.Operation{
+func (c *EC2) AssignPrivateIpAddressesRequest(input *AssignPrivateIpAddressesInput) (req *request.Request, output *AssignPrivateIpAddressesOutput) {
+	op := &request.Operation{
 		Name:       opAssignPrivateIpAddresses,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -111,8 +111,8 @@ func (c *EC2) AssignPrivateIpAddresses(input *AssignPrivateIpAddressesInput) (*A
 const opAssociateAddress = "AssociateAddress"
 
 // AssociateAddressRequest generates a request for the AssociateAddress operation.
-func (c *EC2) AssociateAddressRequest(input *AssociateAddressInput) (req *service.Request, output *AssociateAddressOutput) {
-	op := &service.Operation{
+func (c *EC2) AssociateAddressRequest(input *AssociateAddressInput) (req *request.Request, output *AssociateAddressOutput) {
+	op := &request.Operation{
 		Name:       opAssociateAddress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -154,8 +154,8 @@ func (c *EC2) AssociateAddress(input *AssociateAddressInput) (*AssociateAddressO
 const opAssociateDhcpOptions = "AssociateDhcpOptions"
 
 // AssociateDhcpOptionsRequest generates a request for the AssociateDhcpOptions operation.
-func (c *EC2) AssociateDhcpOptionsRequest(input *AssociateDhcpOptionsInput) (req *service.Request, output *AssociateDhcpOptionsOutput) {
-	op := &service.Operation{
+func (c *EC2) AssociateDhcpOptionsRequest(input *AssociateDhcpOptionsInput) (req *request.Request, output *AssociateDhcpOptionsOutput) {
+	op := &request.Operation{
 		Name:       opAssociateDhcpOptions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -192,8 +192,8 @@ func (c *EC2) AssociateDhcpOptions(input *AssociateDhcpOptionsInput) (*Associate
 const opAssociateRouteTable = "AssociateRouteTable"
 
 // AssociateRouteTableRequest generates a request for the AssociateRouteTable operation.
-func (c *EC2) AssociateRouteTableRequest(input *AssociateRouteTableInput) (req *service.Request, output *AssociateRouteTableOutput) {
-	op := &service.Operation{
+func (c *EC2) AssociateRouteTableRequest(input *AssociateRouteTableInput) (req *request.Request, output *AssociateRouteTableOutput) {
+	op := &request.Operation{
 		Name:       opAssociateRouteTable,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -226,8 +226,8 @@ func (c *EC2) AssociateRouteTable(input *AssociateRouteTableInput) (*AssociateRo
 const opAttachClassicLinkVpc = "AttachClassicLinkVpc"
 
 // AttachClassicLinkVpcRequest generates a request for the AttachClassicLinkVpc operation.
-func (c *EC2) AttachClassicLinkVpcRequest(input *AttachClassicLinkVpcInput) (req *service.Request, output *AttachClassicLinkVpcOutput) {
-	op := &service.Operation{
+func (c *EC2) AttachClassicLinkVpcRequest(input *AttachClassicLinkVpcInput) (req *request.Request, output *AttachClassicLinkVpcOutput) {
+	op := &request.Operation{
 		Name:       opAttachClassicLinkVpc,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -264,8 +264,8 @@ func (c *EC2) AttachClassicLinkVpc(input *AttachClassicLinkVpcInput) (*AttachCla
 const opAttachInternetGateway = "AttachInternetGateway"
 
 // AttachInternetGatewayRequest generates a request for the AttachInternetGateway operation.
-func (c *EC2) AttachInternetGatewayRequest(input *AttachInternetGatewayInput) (req *service.Request, output *AttachInternetGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) AttachInternetGatewayRequest(input *AttachInternetGatewayInput) (req *request.Request, output *AttachInternetGatewayOutput) {
+	op := &request.Operation{
 		Name:       opAttachInternetGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -293,8 +293,8 @@ func (c *EC2) AttachInternetGateway(input *AttachInternetGatewayInput) (*AttachI
 const opAttachNetworkInterface = "AttachNetworkInterface"
 
 // AttachNetworkInterfaceRequest generates a request for the AttachNetworkInterface operation.
-func (c *EC2) AttachNetworkInterfaceRequest(input *AttachNetworkInterfaceInput) (req *service.Request, output *AttachNetworkInterfaceOutput) {
-	op := &service.Operation{
+func (c *EC2) AttachNetworkInterfaceRequest(input *AttachNetworkInterfaceInput) (req *request.Request, output *AttachNetworkInterfaceOutput) {
+	op := &request.Operation{
 		Name:       opAttachNetworkInterface,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -320,8 +320,8 @@ func (c *EC2) AttachNetworkInterface(input *AttachNetworkInterfaceInput) (*Attac
 const opAttachVolume = "AttachVolume"
 
 // AttachVolumeRequest generates a request for the AttachVolume operation.
-func (c *EC2) AttachVolumeRequest(input *AttachVolumeInput) (req *service.Request, output *VolumeAttachment) {
-	op := &service.Operation{
+func (c *EC2) AttachVolumeRequest(input *AttachVolumeInput) (req *request.Request, output *VolumeAttachment) {
+	op := &request.Operation{
 		Name:       opAttachVolume,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -371,8 +371,8 @@ func (c *EC2) AttachVolume(input *AttachVolumeInput) (*VolumeAttachment, error) 
 const opAttachVpnGateway = "AttachVpnGateway"
 
 // AttachVpnGatewayRequest generates a request for the AttachVpnGateway operation.
-func (c *EC2) AttachVpnGatewayRequest(input *AttachVpnGatewayInput) (req *service.Request, output *AttachVpnGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) AttachVpnGatewayRequest(input *AttachVpnGatewayInput) (req *request.Request, output *AttachVpnGatewayOutput) {
+	op := &request.Operation{
 		Name:       opAttachVpnGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -400,8 +400,8 @@ func (c *EC2) AttachVpnGateway(input *AttachVpnGatewayInput) (*AttachVpnGatewayO
 const opAuthorizeSecurityGroupEgress = "AuthorizeSecurityGroupEgress"
 
 // AuthorizeSecurityGroupEgressRequest generates a request for the AuthorizeSecurityGroupEgress operation.
-func (c *EC2) AuthorizeSecurityGroupEgressRequest(input *AuthorizeSecurityGroupEgressInput) (req *service.Request, output *AuthorizeSecurityGroupEgressOutput) {
-	op := &service.Operation{
+func (c *EC2) AuthorizeSecurityGroupEgressRequest(input *AuthorizeSecurityGroupEgressInput) (req *request.Request, output *AuthorizeSecurityGroupEgressOutput) {
+	op := &request.Operation{
 		Name:       opAuthorizeSecurityGroupEgress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -447,8 +447,8 @@ func (c *EC2) AuthorizeSecurityGroupEgress(input *AuthorizeSecurityGroupEgressIn
 const opAuthorizeSecurityGroupIngress = "AuthorizeSecurityGroupIngress"
 
 // AuthorizeSecurityGroupIngressRequest generates a request for the AuthorizeSecurityGroupIngress operation.
-func (c *EC2) AuthorizeSecurityGroupIngressRequest(input *AuthorizeSecurityGroupIngressInput) (req *service.Request, output *AuthorizeSecurityGroupIngressOutput) {
-	op := &service.Operation{
+func (c *EC2) AuthorizeSecurityGroupIngressRequest(input *AuthorizeSecurityGroupIngressInput) (req *request.Request, output *AuthorizeSecurityGroupIngressOutput) {
+	op := &request.Operation{
 		Name:       opAuthorizeSecurityGroupIngress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -492,8 +492,8 @@ func (c *EC2) AuthorizeSecurityGroupIngress(input *AuthorizeSecurityGroupIngress
 const opBundleInstance = "BundleInstance"
 
 // BundleInstanceRequest generates a request for the BundleInstance operation.
-func (c *EC2) BundleInstanceRequest(input *BundleInstanceInput) (req *service.Request, output *BundleInstanceOutput) {
-	op := &service.Operation{
+func (c *EC2) BundleInstanceRequest(input *BundleInstanceInput) (req *request.Request, output *BundleInstanceOutput) {
+	op := &request.Operation{
 		Name:       opBundleInstance,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -528,8 +528,8 @@ func (c *EC2) BundleInstance(input *BundleInstanceInput) (*BundleInstanceOutput,
 const opCancelBundleTask = "CancelBundleTask"
 
 // CancelBundleTaskRequest generates a request for the CancelBundleTask operation.
-func (c *EC2) CancelBundleTaskRequest(input *CancelBundleTaskInput) (req *service.Request, output *CancelBundleTaskOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelBundleTaskRequest(input *CancelBundleTaskInput) (req *request.Request, output *CancelBundleTaskOutput) {
+	op := &request.Operation{
 		Name:       opCancelBundleTask,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -555,8 +555,8 @@ func (c *EC2) CancelBundleTask(input *CancelBundleTaskInput) (*CancelBundleTaskO
 const opCancelConversionTask = "CancelConversionTask"
 
 // CancelConversionTaskRequest generates a request for the CancelConversionTask operation.
-func (c *EC2) CancelConversionTaskRequest(input *CancelConversionTaskInput) (req *service.Request, output *CancelConversionTaskOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelConversionTaskRequest(input *CancelConversionTaskInput) (req *request.Request, output *CancelConversionTaskOutput) {
+	op := &request.Operation{
 		Name:       opCancelConversionTask,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -590,8 +590,8 @@ func (c *EC2) CancelConversionTask(input *CancelConversionTaskInput) (*CancelCon
 const opCancelExportTask = "CancelExportTask"
 
 // CancelExportTaskRequest generates a request for the CancelExportTask operation.
-func (c *EC2) CancelExportTaskRequest(input *CancelExportTaskInput) (req *service.Request, output *CancelExportTaskOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelExportTaskRequest(input *CancelExportTaskInput) (req *request.Request, output *CancelExportTaskOutput) {
+	op := &request.Operation{
 		Name:       opCancelExportTask,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -620,8 +620,8 @@ func (c *EC2) CancelExportTask(input *CancelExportTaskInput) (*CancelExportTaskO
 const opCancelImportTask = "CancelImportTask"
 
 // CancelImportTaskRequest generates a request for the CancelImportTask operation.
-func (c *EC2) CancelImportTaskRequest(input *CancelImportTaskInput) (req *service.Request, output *CancelImportTaskOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelImportTaskRequest(input *CancelImportTaskInput) (req *request.Request, output *CancelImportTaskOutput) {
+	op := &request.Operation{
 		Name:       opCancelImportTask,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -647,8 +647,8 @@ func (c *EC2) CancelImportTask(input *CancelImportTaskInput) (*CancelImportTaskO
 const opCancelReservedInstancesListing = "CancelReservedInstancesListing"
 
 // CancelReservedInstancesListingRequest generates a request for the CancelReservedInstancesListing operation.
-func (c *EC2) CancelReservedInstancesListingRequest(input *CancelReservedInstancesListingInput) (req *service.Request, output *CancelReservedInstancesListingOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelReservedInstancesListingRequest(input *CancelReservedInstancesListingInput) (req *request.Request, output *CancelReservedInstancesListingOutput) {
+	op := &request.Operation{
 		Name:       opCancelReservedInstancesListing,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -678,8 +678,8 @@ func (c *EC2) CancelReservedInstancesListing(input *CancelReservedInstancesListi
 const opCancelSpotFleetRequests = "CancelSpotFleetRequests"
 
 // CancelSpotFleetRequestsRequest generates a request for the CancelSpotFleetRequests operation.
-func (c *EC2) CancelSpotFleetRequestsRequest(input *CancelSpotFleetRequestsInput) (req *service.Request, output *CancelSpotFleetRequestsOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelSpotFleetRequestsRequest(input *CancelSpotFleetRequestsInput) (req *request.Request, output *CancelSpotFleetRequestsOutput) {
+	op := &request.Operation{
 		Name:       opCancelSpotFleetRequests,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -705,8 +705,8 @@ func (c *EC2) CancelSpotFleetRequests(input *CancelSpotFleetRequestsInput) (*Can
 const opCancelSpotInstanceRequests = "CancelSpotInstanceRequests"
 
 // CancelSpotInstanceRequestsRequest generates a request for the CancelSpotInstanceRequests operation.
-func (c *EC2) CancelSpotInstanceRequestsRequest(input *CancelSpotInstanceRequestsInput) (req *service.Request, output *CancelSpotInstanceRequestsOutput) {
-	op := &service.Operation{
+func (c *EC2) CancelSpotInstanceRequestsRequest(input *CancelSpotInstanceRequestsInput) (req *request.Request, output *CancelSpotInstanceRequestsOutput) {
+	op := &request.Operation{
 		Name:       opCancelSpotInstanceRequests,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -722,14 +722,14 @@ func (c *EC2) CancelSpotInstanceRequestsRequest(input *CancelSpotInstanceRequest
 	return
 }
 
-// Cancels one or more Spot Instance requests. Spot Instances are instances
+// Cancels one or more Spot instance requests. Spot instances are instances
 // that Amazon EC2 starts on your behalf when the bid price that you specify
-// exceeds the current Spot Price. Amazon EC2 periodically sets the Spot Price
-// based on available Spot Instance capacity and current Spot Instance requests.
+// exceeds the current Spot price. Amazon EC2 periodically sets the Spot price
+// based on available Spot instance capacity and current Spot instance requests.
 // For more information, see Spot Instance Requests (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-//  Canceling a Spot Instance request does not terminate running Spot Instances
+//  Canceling a Spot instance request does not terminate running Spot instances
 // associated with the request.
 func (c *EC2) CancelSpotInstanceRequests(input *CancelSpotInstanceRequestsInput) (*CancelSpotInstanceRequestsOutput, error) {
 	req, out := c.CancelSpotInstanceRequestsRequest(input)
@@ -740,8 +740,8 @@ func (c *EC2) CancelSpotInstanceRequests(input *CancelSpotInstanceRequestsInput)
 const opConfirmProductInstance = "ConfirmProductInstance"
 
 // ConfirmProductInstanceRequest generates a request for the ConfirmProductInstance operation.
-func (c *EC2) ConfirmProductInstanceRequest(input *ConfirmProductInstanceInput) (req *service.Request, output *ConfirmProductInstanceOutput) {
-	op := &service.Operation{
+func (c *EC2) ConfirmProductInstanceRequest(input *ConfirmProductInstanceInput) (req *request.Request, output *ConfirmProductInstanceOutput) {
+	op := &request.Operation{
 		Name:       opConfirmProductInstance,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -770,8 +770,8 @@ func (c *EC2) ConfirmProductInstance(input *ConfirmProductInstanceInput) (*Confi
 const opCopyImage = "CopyImage"
 
 // CopyImageRequest generates a request for the CopyImage operation.
-func (c *EC2) CopyImageRequest(input *CopyImageInput) (req *service.Request, output *CopyImageOutput) {
-	op := &service.Operation{
+func (c *EC2) CopyImageRequest(input *CopyImageInput) (req *request.Request, output *CopyImageOutput) {
+	op := &request.Operation{
 		Name:       opCopyImage,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -803,8 +803,8 @@ func (c *EC2) CopyImage(input *CopyImageInput) (*CopyImageOutput, error) {
 const opCopySnapshot = "CopySnapshot"
 
 // CopySnapshotRequest generates a request for the CopySnapshot operation.
-func (c *EC2) CopySnapshotRequest(input *CopySnapshotInput) (req *service.Request, output *CopySnapshotOutput) {
-	op := &service.Operation{
+func (c *EC2) CopySnapshotRequest(input *CopySnapshotInput) (req *request.Request, output *CopySnapshotOutput) {
+	op := &request.Operation{
 		Name:       opCopySnapshot,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -843,8 +843,8 @@ func (c *EC2) CopySnapshot(input *CopySnapshotInput) (*CopySnapshotOutput, error
 const opCreateCustomerGateway = "CreateCustomerGateway"
 
 // CreateCustomerGatewayRequest generates a request for the CreateCustomerGateway operation.
-func (c *EC2) CreateCustomerGatewayRequest(input *CreateCustomerGatewayInput) (req *service.Request, output *CreateCustomerGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateCustomerGatewayRequest(input *CreateCustomerGatewayInput) (req *request.Request, output *CreateCustomerGatewayOutput) {
+	op := &request.Operation{
 		Name:       opCreateCustomerGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -894,8 +894,8 @@ func (c *EC2) CreateCustomerGateway(input *CreateCustomerGatewayInput) (*CreateC
 const opCreateDhcpOptions = "CreateDhcpOptions"
 
 // CreateDhcpOptionsRequest generates a request for the CreateDhcpOptions operation.
-func (c *EC2) CreateDhcpOptionsRequest(input *CreateDhcpOptionsInput) (req *service.Request, output *CreateDhcpOptionsOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateDhcpOptionsRequest(input *CreateDhcpOptionsInput) (req *request.Request, output *CreateDhcpOptionsOutput) {
+	op := &request.Operation{
 		Name:       opCreateDhcpOptions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -949,8 +949,8 @@ func (c *EC2) CreateDhcpOptions(input *CreateDhcpOptionsInput) (*CreateDhcpOptio
 const opCreateFlowLogs = "CreateFlowLogs"
 
 // CreateFlowLogsRequest generates a request for the CreateFlowLogs operation.
-func (c *EC2) CreateFlowLogsRequest(input *CreateFlowLogsInput) (req *service.Request, output *CreateFlowLogsOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateFlowLogsRequest(input *CreateFlowLogsInput) (req *request.Request, output *CreateFlowLogsOutput) {
+	op := &request.Operation{
 		Name:       opCreateFlowLogs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -985,8 +985,8 @@ func (c *EC2) CreateFlowLogs(input *CreateFlowLogsInput) (*CreateFlowLogsOutput,
 const opCreateImage = "CreateImage"
 
 // CreateImageRequest generates a request for the CreateImage operation.
-func (c *EC2) CreateImageRequest(input *CreateImageInput) (req *service.Request, output *CreateImageOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateImageRequest(input *CreateImageInput) (req *request.Request, output *CreateImageOutput) {
+	op := &request.Operation{
 		Name:       opCreateImage,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1021,8 +1021,8 @@ func (c *EC2) CreateImage(input *CreateImageInput) (*CreateImageOutput, error) {
 const opCreateInstanceExportTask = "CreateInstanceExportTask"
 
 // CreateInstanceExportTaskRequest generates a request for the CreateInstanceExportTask operation.
-func (c *EC2) CreateInstanceExportTaskRequest(input *CreateInstanceExportTaskInput) (req *service.Request, output *CreateInstanceExportTaskOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateInstanceExportTaskRequest(input *CreateInstanceExportTaskInput) (req *request.Request, output *CreateInstanceExportTaskOutput) {
+	op := &request.Operation{
 		Name:       opCreateInstanceExportTask,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1053,8 +1053,8 @@ func (c *EC2) CreateInstanceExportTask(input *CreateInstanceExportTaskInput) (*C
 const opCreateInternetGateway = "CreateInternetGateway"
 
 // CreateInternetGatewayRequest generates a request for the CreateInternetGateway operation.
-func (c *EC2) CreateInternetGatewayRequest(input *CreateInternetGatewayInput) (req *service.Request, output *CreateInternetGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateInternetGatewayRequest(input *CreateInternetGatewayInput) (req *request.Request, output *CreateInternetGatewayOutput) {
+	op := &request.Operation{
 		Name:       opCreateInternetGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1084,8 +1084,8 @@ func (c *EC2) CreateInternetGateway(input *CreateInternetGatewayInput) (*CreateI
 const opCreateKeyPair = "CreateKeyPair"
 
 // CreateKeyPairRequest generates a request for the CreateKeyPair operation.
-func (c *EC2) CreateKeyPairRequest(input *CreateKeyPairInput) (req *service.Request, output *CreateKeyPairOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateKeyPairRequest(input *CreateKeyPairInput) (req *request.Request, output *CreateKeyPairOutput) {
+	op := &request.Operation{
 		Name:       opCreateKeyPair,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1122,8 +1122,8 @@ func (c *EC2) CreateKeyPair(input *CreateKeyPairInput) (*CreateKeyPairOutput, er
 const opCreateNetworkAcl = "CreateNetworkAcl"
 
 // CreateNetworkAclRequest generates a request for the CreateNetworkAcl operation.
-func (c *EC2) CreateNetworkAclRequest(input *CreateNetworkAclInput) (req *service.Request, output *CreateNetworkAclOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateNetworkAclRequest(input *CreateNetworkAclInput) (req *request.Request, output *CreateNetworkAclOutput) {
+	op := &request.Operation{
 		Name:       opCreateNetworkAcl,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1153,8 +1153,8 @@ func (c *EC2) CreateNetworkAcl(input *CreateNetworkAclInput) (*CreateNetworkAclO
 const opCreateNetworkAclEntry = "CreateNetworkAclEntry"
 
 // CreateNetworkAclEntryRequest generates a request for the CreateNetworkAclEntry operation.
-func (c *EC2) CreateNetworkAclEntryRequest(input *CreateNetworkAclEntryInput) (req *service.Request, output *CreateNetworkAclEntryOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateNetworkAclEntryRequest(input *CreateNetworkAclEntryInput) (req *request.Request, output *CreateNetworkAclEntryOutput) {
+	op := &request.Operation{
 		Name:       opCreateNetworkAclEntry,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1196,8 +1196,8 @@ func (c *EC2) CreateNetworkAclEntry(input *CreateNetworkAclEntryInput) (*CreateN
 const opCreateNetworkInterface = "CreateNetworkInterface"
 
 // CreateNetworkInterfaceRequest generates a request for the CreateNetworkInterface operation.
-func (c *EC2) CreateNetworkInterfaceRequest(input *CreateNetworkInterfaceInput) (req *service.Request, output *CreateNetworkInterfaceOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateNetworkInterfaceRequest(input *CreateNetworkInterfaceInput) (req *request.Request, output *CreateNetworkInterfaceOutput) {
+	op := &request.Operation{
 		Name:       opCreateNetworkInterface,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1227,8 +1227,8 @@ func (c *EC2) CreateNetworkInterface(input *CreateNetworkInterfaceInput) (*Creat
 const opCreatePlacementGroup = "CreatePlacementGroup"
 
 // CreatePlacementGroupRequest generates a request for the CreatePlacementGroup operation.
-func (c *EC2) CreatePlacementGroupRequest(input *CreatePlacementGroupInput) (req *service.Request, output *CreatePlacementGroupOutput) {
-	op := &service.Operation{
+func (c *EC2) CreatePlacementGroupRequest(input *CreatePlacementGroupInput) (req *request.Request, output *CreatePlacementGroupOutput) {
+	op := &request.Operation{
 		Name:       opCreatePlacementGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1259,8 +1259,8 @@ func (c *EC2) CreatePlacementGroup(input *CreatePlacementGroupInput) (*CreatePla
 const opCreateReservedInstancesListing = "CreateReservedInstancesListing"
 
 // CreateReservedInstancesListingRequest generates a request for the CreateReservedInstancesListing operation.
-func (c *EC2) CreateReservedInstancesListingRequest(input *CreateReservedInstancesListingInput) (req *service.Request, output *CreateReservedInstancesListingOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateReservedInstancesListingRequest(input *CreateReservedInstancesListingInput) (req *request.Request, output *CreateReservedInstancesListingOutput) {
+	op := &request.Operation{
 		Name:       opCreateReservedInstancesListing,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1305,8 +1305,8 @@ func (c *EC2) CreateReservedInstancesListing(input *CreateReservedInstancesListi
 const opCreateRoute = "CreateRoute"
 
 // CreateRouteRequest generates a request for the CreateRoute operation.
-func (c *EC2) CreateRouteRequest(input *CreateRouteInput) (req *service.Request, output *CreateRouteOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateRouteRequest(input *CreateRouteInput) (req *request.Request, output *CreateRouteOutput) {
+	op := &request.Operation{
 		Name:       opCreateRoute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1350,8 +1350,8 @@ func (c *EC2) CreateRoute(input *CreateRouteInput) (*CreateRouteOutput, error) {
 const opCreateRouteTable = "CreateRouteTable"
 
 // CreateRouteTableRequest generates a request for the CreateRouteTable operation.
-func (c *EC2) CreateRouteTableRequest(input *CreateRouteTableInput) (req *service.Request, output *CreateRouteTableOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateRouteTableRequest(input *CreateRouteTableInput) (req *request.Request, output *CreateRouteTableOutput) {
+	op := &request.Operation{
 		Name:       opCreateRouteTable,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1381,8 +1381,8 @@ func (c *EC2) CreateRouteTable(input *CreateRouteTableInput) (*CreateRouteTableO
 const opCreateSecurityGroup = "CreateSecurityGroup"
 
 // CreateSecurityGroupRequest generates a request for the CreateSecurityGroup operation.
-func (c *EC2) CreateSecurityGroupRequest(input *CreateSecurityGroupInput) (req *service.Request, output *CreateSecurityGroupOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateSecurityGroupRequest(input *CreateSecurityGroupInput) (req *request.Request, output *CreateSecurityGroupOutput) {
+	op := &request.Operation{
 		Name:       opCreateSecurityGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1434,8 +1434,8 @@ func (c *EC2) CreateSecurityGroup(input *CreateSecurityGroupInput) (*CreateSecur
 const opCreateSnapshot = "CreateSnapshot"
 
 // CreateSnapshotRequest generates a request for the CreateSnapshot operation.
-func (c *EC2) CreateSnapshotRequest(input *CreateSnapshotInput) (req *service.Request, output *Snapshot) {
-	op := &service.Operation{
+func (c *EC2) CreateSnapshotRequest(input *CreateSnapshotInput) (req *request.Request, output *Snapshot) {
+	op := &request.Operation{
 		Name:       opCreateSnapshot,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1488,8 +1488,8 @@ func (c *EC2) CreateSnapshot(input *CreateSnapshotInput) (*Snapshot, error) {
 const opCreateSpotDatafeedSubscription = "CreateSpotDatafeedSubscription"
 
 // CreateSpotDatafeedSubscriptionRequest generates a request for the CreateSpotDatafeedSubscription operation.
-func (c *EC2) CreateSpotDatafeedSubscriptionRequest(input *CreateSpotDatafeedSubscriptionInput) (req *service.Request, output *CreateSpotDatafeedSubscriptionOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateSpotDatafeedSubscriptionRequest(input *CreateSpotDatafeedSubscriptionInput) (req *request.Request, output *CreateSpotDatafeedSubscriptionOutput) {
+	op := &request.Operation{
 		Name:       opCreateSpotDatafeedSubscription,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1505,7 +1505,7 @@ func (c *EC2) CreateSpotDatafeedSubscriptionRequest(input *CreateSpotDatafeedSub
 	return
 }
 
-// Creates a data feed for Spot Instances, enabling you to view Spot Instance
+// Creates a data feed for Spot instances, enabling you to view Spot instance
 // usage logs. You can create one data feed per AWS account. For more information,
 // see Spot Instance Data Feed (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-data-feeds.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -1518,8 +1518,8 @@ func (c *EC2) CreateSpotDatafeedSubscription(input *CreateSpotDatafeedSubscripti
 const opCreateSubnet = "CreateSubnet"
 
 // CreateSubnetRequest generates a request for the CreateSubnet operation.
-func (c *EC2) CreateSubnetRequest(input *CreateSubnetInput) (req *service.Request, output *CreateSubnetOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateSubnetRequest(input *CreateSubnetInput) (req *request.Request, output *CreateSubnetOutput) {
+	op := &request.Operation{
 		Name:       opCreateSubnet,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1569,8 +1569,8 @@ func (c *EC2) CreateSubnet(input *CreateSubnetInput) (*CreateSubnetOutput, error
 const opCreateTags = "CreateTags"
 
 // CreateTagsRequest generates a request for the CreateTags operation.
-func (c *EC2) CreateTagsRequest(input *CreateTagsInput) (req *service.Request, output *CreateTagsOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateTagsRequest(input *CreateTagsInput) (req *request.Request, output *CreateTagsOutput) {
+	op := &request.Operation{
 		Name:       opCreateTags,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1601,8 +1601,8 @@ func (c *EC2) CreateTags(input *CreateTagsInput) (*CreateTagsOutput, error) {
 const opCreateVolume = "CreateVolume"
 
 // CreateVolumeRequest generates a request for the CreateVolume operation.
-func (c *EC2) CreateVolumeRequest(input *CreateVolumeInput) (req *service.Request, output *Volume) {
-	op := &service.Operation{
+func (c *EC2) CreateVolumeRequest(input *CreateVolumeInput) (req *request.Request, output *Volume) {
+	op := &request.Operation{
 		Name:       opCreateVolume,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1643,8 +1643,8 @@ func (c *EC2) CreateVolume(input *CreateVolumeInput) (*Volume, error) {
 const opCreateVpc = "CreateVpc"
 
 // CreateVpcRequest generates a request for the CreateVpc operation.
-func (c *EC2) CreateVpcRequest(input *CreateVpcInput) (req *service.Request, output *CreateVpcOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateVpcRequest(input *CreateVpcInput) (req *request.Request, output *CreateVpcOutput) {
+	op := &request.Operation{
 		Name:       opCreateVpc,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1680,8 +1680,8 @@ func (c *EC2) CreateVpc(input *CreateVpcInput) (*CreateVpcOutput, error) {
 const opCreateVpcEndpoint = "CreateVpcEndpoint"
 
 // CreateVpcEndpointRequest generates a request for the CreateVpcEndpoint operation.
-func (c *EC2) CreateVpcEndpointRequest(input *CreateVpcEndpointInput) (req *service.Request, output *CreateVpcEndpointOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateVpcEndpointRequest(input *CreateVpcEndpointInput) (req *request.Request, output *CreateVpcEndpointOutput) {
+	op := &request.Operation{
 		Name:       opCreateVpcEndpoint,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1713,8 +1713,8 @@ func (c *EC2) CreateVpcEndpoint(input *CreateVpcEndpointInput) (*CreateVpcEndpoi
 const opCreateVpcPeeringConnection = "CreateVpcPeeringConnection"
 
 // CreateVpcPeeringConnectionRequest generates a request for the CreateVpcPeeringConnection operation.
-func (c *EC2) CreateVpcPeeringConnectionRequest(input *CreateVpcPeeringConnectionInput) (req *service.Request, output *CreateVpcPeeringConnectionOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateVpcPeeringConnectionRequest(input *CreateVpcPeeringConnectionInput) (req *request.Request, output *CreateVpcPeeringConnectionOutput) {
+	op := &request.Operation{
 		Name:       opCreateVpcPeeringConnection,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1750,8 +1750,8 @@ func (c *EC2) CreateVpcPeeringConnection(input *CreateVpcPeeringConnectionInput)
 const opCreateVpnConnection = "CreateVpnConnection"
 
 // CreateVpnConnectionRequest generates a request for the CreateVpnConnection operation.
-func (c *EC2) CreateVpnConnectionRequest(input *CreateVpnConnectionInput) (req *service.Request, output *CreateVpnConnectionOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateVpnConnectionRequest(input *CreateVpnConnectionInput) (req *request.Request, output *CreateVpnConnectionOutput) {
+	op := &request.Operation{
 		Name:       opCreateVpnConnection,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1793,8 +1793,8 @@ func (c *EC2) CreateVpnConnection(input *CreateVpnConnectionInput) (*CreateVpnCo
 const opCreateVpnConnectionRoute = "CreateVpnConnectionRoute"
 
 // CreateVpnConnectionRouteRequest generates a request for the CreateVpnConnectionRoute operation.
-func (c *EC2) CreateVpnConnectionRouteRequest(input *CreateVpnConnectionRouteInput) (req *service.Request, output *CreateVpnConnectionRouteOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateVpnConnectionRouteRequest(input *CreateVpnConnectionRouteInput) (req *request.Request, output *CreateVpnConnectionRouteOutput) {
+	op := &request.Operation{
 		Name:       opCreateVpnConnectionRoute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1827,8 +1827,8 @@ func (c *EC2) CreateVpnConnectionRoute(input *CreateVpnConnectionRouteInput) (*C
 const opCreateVpnGateway = "CreateVpnGateway"
 
 // CreateVpnGatewayRequest generates a request for the CreateVpnGateway operation.
-func (c *EC2) CreateVpnGatewayRequest(input *CreateVpnGatewayInput) (req *service.Request, output *CreateVpnGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) CreateVpnGatewayRequest(input *CreateVpnGatewayInput) (req *request.Request, output *CreateVpnGatewayOutput) {
+	op := &request.Operation{
 		Name:       opCreateVpnGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1860,8 +1860,8 @@ func (c *EC2) CreateVpnGateway(input *CreateVpnGatewayInput) (*CreateVpnGatewayO
 const opDeleteCustomerGateway = "DeleteCustomerGateway"
 
 // DeleteCustomerGatewayRequest generates a request for the DeleteCustomerGateway operation.
-func (c *EC2) DeleteCustomerGatewayRequest(input *DeleteCustomerGatewayInput) (req *service.Request, output *DeleteCustomerGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteCustomerGatewayRequest(input *DeleteCustomerGatewayInput) (req *request.Request, output *DeleteCustomerGatewayOutput) {
+	op := &request.Operation{
 		Name:       opDeleteCustomerGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1888,8 +1888,8 @@ func (c *EC2) DeleteCustomerGateway(input *DeleteCustomerGatewayInput) (*DeleteC
 const opDeleteDhcpOptions = "DeleteDhcpOptions"
 
 // DeleteDhcpOptionsRequest generates a request for the DeleteDhcpOptions operation.
-func (c *EC2) DeleteDhcpOptionsRequest(input *DeleteDhcpOptionsInput) (req *service.Request, output *DeleteDhcpOptionsOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteDhcpOptionsRequest(input *DeleteDhcpOptionsInput) (req *request.Request, output *DeleteDhcpOptionsOutput) {
+	op := &request.Operation{
 		Name:       opDeleteDhcpOptions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1918,8 +1918,8 @@ func (c *EC2) DeleteDhcpOptions(input *DeleteDhcpOptionsInput) (*DeleteDhcpOptio
 const opDeleteFlowLogs = "DeleteFlowLogs"
 
 // DeleteFlowLogsRequest generates a request for the DeleteFlowLogs operation.
-func (c *EC2) DeleteFlowLogsRequest(input *DeleteFlowLogsInput) (req *service.Request, output *DeleteFlowLogsOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteFlowLogsRequest(input *DeleteFlowLogsInput) (req *request.Request, output *DeleteFlowLogsOutput) {
+	op := &request.Operation{
 		Name:       opDeleteFlowLogs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1945,8 +1945,8 @@ func (c *EC2) DeleteFlowLogs(input *DeleteFlowLogsInput) (*DeleteFlowLogsOutput,
 const opDeleteInternetGateway = "DeleteInternetGateway"
 
 // DeleteInternetGatewayRequest generates a request for the DeleteInternetGateway operation.
-func (c *EC2) DeleteInternetGatewayRequest(input *DeleteInternetGatewayInput) (req *service.Request, output *DeleteInternetGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteInternetGatewayRequest(input *DeleteInternetGatewayInput) (req *request.Request, output *DeleteInternetGatewayOutput) {
+	op := &request.Operation{
 		Name:       opDeleteInternetGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -1973,8 +1973,8 @@ func (c *EC2) DeleteInternetGateway(input *DeleteInternetGatewayInput) (*DeleteI
 const opDeleteKeyPair = "DeleteKeyPair"
 
 // DeleteKeyPairRequest generates a request for the DeleteKeyPair operation.
-func (c *EC2) DeleteKeyPairRequest(input *DeleteKeyPairInput) (req *service.Request, output *DeleteKeyPairOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteKeyPairRequest(input *DeleteKeyPairInput) (req *request.Request, output *DeleteKeyPairOutput) {
+	op := &request.Operation{
 		Name:       opDeleteKeyPair,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2000,8 +2000,8 @@ func (c *EC2) DeleteKeyPair(input *DeleteKeyPairInput) (*DeleteKeyPairOutput, er
 const opDeleteNetworkAcl = "DeleteNetworkAcl"
 
 // DeleteNetworkAclRequest generates a request for the DeleteNetworkAcl operation.
-func (c *EC2) DeleteNetworkAclRequest(input *DeleteNetworkAclInput) (req *service.Request, output *DeleteNetworkAclOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteNetworkAclRequest(input *DeleteNetworkAclInput) (req *request.Request, output *DeleteNetworkAclOutput) {
+	op := &request.Operation{
 		Name:       opDeleteNetworkAcl,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2028,8 +2028,8 @@ func (c *EC2) DeleteNetworkAcl(input *DeleteNetworkAclInput) (*DeleteNetworkAclO
 const opDeleteNetworkAclEntry = "DeleteNetworkAclEntry"
 
 // DeleteNetworkAclEntryRequest generates a request for the DeleteNetworkAclEntry operation.
-func (c *EC2) DeleteNetworkAclEntryRequest(input *DeleteNetworkAclEntryInput) (req *service.Request, output *DeleteNetworkAclEntryOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteNetworkAclEntryRequest(input *DeleteNetworkAclEntryInput) (req *request.Request, output *DeleteNetworkAclEntryOutput) {
+	op := &request.Operation{
 		Name:       opDeleteNetworkAclEntry,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2056,8 +2056,8 @@ func (c *EC2) DeleteNetworkAclEntry(input *DeleteNetworkAclEntryInput) (*DeleteN
 const opDeleteNetworkInterface = "DeleteNetworkInterface"
 
 // DeleteNetworkInterfaceRequest generates a request for the DeleteNetworkInterface operation.
-func (c *EC2) DeleteNetworkInterfaceRequest(input *DeleteNetworkInterfaceInput) (req *service.Request, output *DeleteNetworkInterfaceOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteNetworkInterfaceRequest(input *DeleteNetworkInterfaceInput) (req *request.Request, output *DeleteNetworkInterfaceOutput) {
+	op := &request.Operation{
 		Name:       opDeleteNetworkInterface,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2084,8 +2084,8 @@ func (c *EC2) DeleteNetworkInterface(input *DeleteNetworkInterfaceInput) (*Delet
 const opDeletePlacementGroup = "DeletePlacementGroup"
 
 // DeletePlacementGroupRequest generates a request for the DeletePlacementGroup operation.
-func (c *EC2) DeletePlacementGroupRequest(input *DeletePlacementGroupInput) (req *service.Request, output *DeletePlacementGroupOutput) {
-	op := &service.Operation{
+func (c *EC2) DeletePlacementGroupRequest(input *DeletePlacementGroupInput) (req *request.Request, output *DeletePlacementGroupOutput) {
+	op := &request.Operation{
 		Name:       opDeletePlacementGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2114,8 +2114,8 @@ func (c *EC2) DeletePlacementGroup(input *DeletePlacementGroupInput) (*DeletePla
 const opDeleteRoute = "DeleteRoute"
 
 // DeleteRouteRequest generates a request for the DeleteRoute operation.
-func (c *EC2) DeleteRouteRequest(input *DeleteRouteInput) (req *service.Request, output *DeleteRouteOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteRouteRequest(input *DeleteRouteInput) (req *request.Request, output *DeleteRouteOutput) {
+	op := &request.Operation{
 		Name:       opDeleteRoute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2141,8 +2141,8 @@ func (c *EC2) DeleteRoute(input *DeleteRouteInput) (*DeleteRouteOutput, error) {
 const opDeleteRouteTable = "DeleteRouteTable"
 
 // DeleteRouteTableRequest generates a request for the DeleteRouteTable operation.
-func (c *EC2) DeleteRouteTableRequest(input *DeleteRouteTableInput) (req *service.Request, output *DeleteRouteTableOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteRouteTableRequest(input *DeleteRouteTableInput) (req *request.Request, output *DeleteRouteTableOutput) {
+	op := &request.Operation{
 		Name:       opDeleteRouteTable,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2170,8 +2170,8 @@ func (c *EC2) DeleteRouteTable(input *DeleteRouteTableInput) (*DeleteRouteTableO
 const opDeleteSecurityGroup = "DeleteSecurityGroup"
 
 // DeleteSecurityGroupRequest generates a request for the DeleteSecurityGroup operation.
-func (c *EC2) DeleteSecurityGroupRequest(input *DeleteSecurityGroupInput) (req *service.Request, output *DeleteSecurityGroupOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteSecurityGroupRequest(input *DeleteSecurityGroupInput) (req *request.Request, output *DeleteSecurityGroupOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSecurityGroup,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2201,8 +2201,8 @@ func (c *EC2) DeleteSecurityGroup(input *DeleteSecurityGroupInput) (*DeleteSecur
 const opDeleteSnapshot = "DeleteSnapshot"
 
 // DeleteSnapshotRequest generates a request for the DeleteSnapshot operation.
-func (c *EC2) DeleteSnapshotRequest(input *DeleteSnapshotInput) (req *service.Request, output *DeleteSnapshotOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteSnapshotRequest(input *DeleteSnapshotInput) (req *request.Request, output *DeleteSnapshotOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSnapshot,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2242,8 +2242,8 @@ func (c *EC2) DeleteSnapshot(input *DeleteSnapshotInput) (*DeleteSnapshotOutput,
 const opDeleteSpotDatafeedSubscription = "DeleteSpotDatafeedSubscription"
 
 // DeleteSpotDatafeedSubscriptionRequest generates a request for the DeleteSpotDatafeedSubscription operation.
-func (c *EC2) DeleteSpotDatafeedSubscriptionRequest(input *DeleteSpotDatafeedSubscriptionInput) (req *service.Request, output *DeleteSpotDatafeedSubscriptionOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteSpotDatafeedSubscriptionRequest(input *DeleteSpotDatafeedSubscriptionInput) (req *request.Request, output *DeleteSpotDatafeedSubscriptionOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSpotDatafeedSubscription,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2259,9 +2259,7 @@ func (c *EC2) DeleteSpotDatafeedSubscriptionRequest(input *DeleteSpotDatafeedSub
 	return
 }
 
-// Deletes the data feed for Spot Instances. For more information, see Spot
-// Instance Data Feed (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-data-feeds.html)
-// in the Amazon Elastic Compute Cloud User Guide.
+// Deletes the data feed for Spot instances.
 func (c *EC2) DeleteSpotDatafeedSubscription(input *DeleteSpotDatafeedSubscriptionInput) (*DeleteSpotDatafeedSubscriptionOutput, error) {
 	req, out := c.DeleteSpotDatafeedSubscriptionRequest(input)
 	err := req.Send()
@@ -2271,8 +2269,8 @@ func (c *EC2) DeleteSpotDatafeedSubscription(input *DeleteSpotDatafeedSubscripti
 const opDeleteSubnet = "DeleteSubnet"
 
 // DeleteSubnetRequest generates a request for the DeleteSubnet operation.
-func (c *EC2) DeleteSubnetRequest(input *DeleteSubnetInput) (req *service.Request, output *DeleteSubnetOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteSubnetRequest(input *DeleteSubnetInput) (req *request.Request, output *DeleteSubnetOutput) {
+	op := &request.Operation{
 		Name:       opDeleteSubnet,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2299,8 +2297,8 @@ func (c *EC2) DeleteSubnet(input *DeleteSubnetInput) (*DeleteSubnetOutput, error
 const opDeleteTags = "DeleteTags"
 
 // DeleteTagsRequest generates a request for the DeleteTags operation.
-func (c *EC2) DeleteTagsRequest(input *DeleteTagsInput) (req *service.Request, output *DeleteTagsOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteTagsRequest(input *DeleteTagsInput) (req *request.Request, output *DeleteTagsOutput) {
+	op := &request.Operation{
 		Name:       opDeleteTags,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2330,8 +2328,8 @@ func (c *EC2) DeleteTags(input *DeleteTagsInput) (*DeleteTagsOutput, error) {
 const opDeleteVolume = "DeleteVolume"
 
 // DeleteVolumeRequest generates a request for the DeleteVolume operation.
-func (c *EC2) DeleteVolumeRequest(input *DeleteVolumeInput) (req *service.Request, output *DeleteVolumeOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVolumeRequest(input *DeleteVolumeInput) (req *request.Request, output *DeleteVolumeOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVolume,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2363,8 +2361,8 @@ func (c *EC2) DeleteVolume(input *DeleteVolumeInput) (*DeleteVolumeOutput, error
 const opDeleteVpc = "DeleteVpc"
 
 // DeleteVpcRequest generates a request for the DeleteVpc operation.
-func (c *EC2) DeleteVpcRequest(input *DeleteVpcInput) (req *service.Request, output *DeleteVpcOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVpcRequest(input *DeleteVpcInput) (req *request.Request, output *DeleteVpcOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVpc,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2394,8 +2392,8 @@ func (c *EC2) DeleteVpc(input *DeleteVpcInput) (*DeleteVpcOutput, error) {
 const opDeleteVpcEndpoints = "DeleteVpcEndpoints"
 
 // DeleteVpcEndpointsRequest generates a request for the DeleteVpcEndpoints operation.
-func (c *EC2) DeleteVpcEndpointsRequest(input *DeleteVpcEndpointsInput) (req *service.Request, output *DeleteVpcEndpointsOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVpcEndpointsRequest(input *DeleteVpcEndpointsInput) (req *request.Request, output *DeleteVpcEndpointsOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVpcEndpoints,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2422,8 +2420,8 @@ func (c *EC2) DeleteVpcEndpoints(input *DeleteVpcEndpointsInput) (*DeleteVpcEndp
 const opDeleteVpcPeeringConnection = "DeleteVpcPeeringConnection"
 
 // DeleteVpcPeeringConnectionRequest generates a request for the DeleteVpcPeeringConnection operation.
-func (c *EC2) DeleteVpcPeeringConnectionRequest(input *DeleteVpcPeeringConnectionInput) (req *service.Request, output *DeleteVpcPeeringConnectionOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVpcPeeringConnectionRequest(input *DeleteVpcPeeringConnectionInput) (req *request.Request, output *DeleteVpcPeeringConnectionOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVpcPeeringConnection,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2452,8 +2450,8 @@ func (c *EC2) DeleteVpcPeeringConnection(input *DeleteVpcPeeringConnectionInput)
 const opDeleteVpnConnection = "DeleteVpnConnection"
 
 // DeleteVpnConnectionRequest generates a request for the DeleteVpnConnection operation.
-func (c *EC2) DeleteVpnConnectionRequest(input *DeleteVpnConnectionInput) (req *service.Request, output *DeleteVpnConnectionOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVpnConnectionRequest(input *DeleteVpnConnectionInput) (req *request.Request, output *DeleteVpnConnectionOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVpnConnection,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2488,8 +2486,8 @@ func (c *EC2) DeleteVpnConnection(input *DeleteVpnConnectionInput) (*DeleteVpnCo
 const opDeleteVpnConnectionRoute = "DeleteVpnConnectionRoute"
 
 // DeleteVpnConnectionRouteRequest generates a request for the DeleteVpnConnectionRoute operation.
-func (c *EC2) DeleteVpnConnectionRouteRequest(input *DeleteVpnConnectionRouteInput) (req *service.Request, output *DeleteVpnConnectionRouteOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVpnConnectionRouteRequest(input *DeleteVpnConnectionRouteInput) (req *request.Request, output *DeleteVpnConnectionRouteOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVpnConnectionRoute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2518,8 +2516,8 @@ func (c *EC2) DeleteVpnConnectionRoute(input *DeleteVpnConnectionRouteInput) (*D
 const opDeleteVpnGateway = "DeleteVpnGateway"
 
 // DeleteVpnGatewayRequest generates a request for the DeleteVpnGateway operation.
-func (c *EC2) DeleteVpnGatewayRequest(input *DeleteVpnGatewayInput) (req *service.Request, output *DeleteVpnGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) DeleteVpnGatewayRequest(input *DeleteVpnGatewayInput) (req *request.Request, output *DeleteVpnGatewayOutput) {
+	op := &request.Operation{
 		Name:       opDeleteVpnGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2549,8 +2547,8 @@ func (c *EC2) DeleteVpnGateway(input *DeleteVpnGatewayInput) (*DeleteVpnGatewayO
 const opDeregisterImage = "DeregisterImage"
 
 // DeregisterImageRequest generates a request for the DeregisterImage operation.
-func (c *EC2) DeregisterImageRequest(input *DeregisterImageInput) (req *service.Request, output *DeregisterImageOutput) {
-	op := &service.Operation{
+func (c *EC2) DeregisterImageRequest(input *DeregisterImageInput) (req *request.Request, output *DeregisterImageOutput) {
+	op := &request.Operation{
 		Name:       opDeregisterImage,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2579,8 +2577,8 @@ func (c *EC2) DeregisterImage(input *DeregisterImageInput) (*DeregisterImageOutp
 const opDescribeAccountAttributes = "DescribeAccountAttributes"
 
 // DescribeAccountAttributesRequest generates a request for the DescribeAccountAttributes operation.
-func (c *EC2) DescribeAccountAttributesRequest(input *DescribeAccountAttributesInput) (req *service.Request, output *DescribeAccountAttributesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeAccountAttributesRequest(input *DescribeAccountAttributesInput) (req *request.Request, output *DescribeAccountAttributesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeAccountAttributes,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2624,8 +2622,8 @@ func (c *EC2) DescribeAccountAttributes(input *DescribeAccountAttributesInput) (
 const opDescribeAddresses = "DescribeAddresses"
 
 // DescribeAddressesRequest generates a request for the DescribeAddresses operation.
-func (c *EC2) DescribeAddressesRequest(input *DescribeAddressesInput) (req *service.Request, output *DescribeAddressesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeAddressesRequest(input *DescribeAddressesInput) (req *request.Request, output *DescribeAddressesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeAddresses,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2655,8 +2653,8 @@ func (c *EC2) DescribeAddresses(input *DescribeAddressesInput) (*DescribeAddress
 const opDescribeAvailabilityZones = "DescribeAvailabilityZones"
 
 // DescribeAvailabilityZonesRequest generates a request for the DescribeAvailabilityZones operation.
-func (c *EC2) DescribeAvailabilityZonesRequest(input *DescribeAvailabilityZonesInput) (req *service.Request, output *DescribeAvailabilityZonesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeAvailabilityZonesRequest(input *DescribeAvailabilityZonesInput) (req *request.Request, output *DescribeAvailabilityZonesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeAvailabilityZones,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2688,8 +2686,8 @@ func (c *EC2) DescribeAvailabilityZones(input *DescribeAvailabilityZonesInput) (
 const opDescribeBundleTasks = "DescribeBundleTasks"
 
 // DescribeBundleTasksRequest generates a request for the DescribeBundleTasks operation.
-func (c *EC2) DescribeBundleTasksRequest(input *DescribeBundleTasksInput) (req *service.Request, output *DescribeBundleTasksOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeBundleTasksRequest(input *DescribeBundleTasksInput) (req *request.Request, output *DescribeBundleTasksOutput) {
+	op := &request.Operation{
 		Name:       opDescribeBundleTasks,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2720,8 +2718,8 @@ func (c *EC2) DescribeBundleTasks(input *DescribeBundleTasksInput) (*DescribeBun
 const opDescribeClassicLinkInstances = "DescribeClassicLinkInstances"
 
 // DescribeClassicLinkInstancesRequest generates a request for the DescribeClassicLinkInstances operation.
-func (c *EC2) DescribeClassicLinkInstancesRequest(input *DescribeClassicLinkInstancesInput) (req *service.Request, output *DescribeClassicLinkInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeClassicLinkInstancesRequest(input *DescribeClassicLinkInstancesInput) (req *request.Request, output *DescribeClassicLinkInstancesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeClassicLinkInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2750,8 +2748,8 @@ func (c *EC2) DescribeClassicLinkInstances(input *DescribeClassicLinkInstancesIn
 const opDescribeConversionTasks = "DescribeConversionTasks"
 
 // DescribeConversionTasksRequest generates a request for the DescribeConversionTasks operation.
-func (c *EC2) DescribeConversionTasksRequest(input *DescribeConversionTasksInput) (req *service.Request, output *DescribeConversionTasksOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeConversionTasksRequest(input *DescribeConversionTasksInput) (req *request.Request, output *DescribeConversionTasksOutput) {
+	op := &request.Operation{
 		Name:       opDescribeConversionTasks,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2780,8 +2778,8 @@ func (c *EC2) DescribeConversionTasks(input *DescribeConversionTasksInput) (*Des
 const opDescribeCustomerGateways = "DescribeCustomerGateways"
 
 // DescribeCustomerGatewaysRequest generates a request for the DescribeCustomerGateways operation.
-func (c *EC2) DescribeCustomerGatewaysRequest(input *DescribeCustomerGatewaysInput) (req *service.Request, output *DescribeCustomerGatewaysOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeCustomerGatewaysRequest(input *DescribeCustomerGatewaysInput) (req *request.Request, output *DescribeCustomerGatewaysOutput) {
+	op := &request.Operation{
 		Name:       opDescribeCustomerGateways,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2811,8 +2809,8 @@ func (c *EC2) DescribeCustomerGateways(input *DescribeCustomerGatewaysInput) (*D
 const opDescribeDhcpOptions = "DescribeDhcpOptions"
 
 // DescribeDhcpOptionsRequest generates a request for the DescribeDhcpOptions operation.
-func (c *EC2) DescribeDhcpOptionsRequest(input *DescribeDhcpOptionsInput) (req *service.Request, output *DescribeDhcpOptionsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeDhcpOptionsRequest(input *DescribeDhcpOptionsInput) (req *request.Request, output *DescribeDhcpOptionsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeDhcpOptions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2841,8 +2839,8 @@ func (c *EC2) DescribeDhcpOptions(input *DescribeDhcpOptionsInput) (*DescribeDhc
 const opDescribeExportTasks = "DescribeExportTasks"
 
 // DescribeExportTasksRequest generates a request for the DescribeExportTasks operation.
-func (c *EC2) DescribeExportTasksRequest(input *DescribeExportTasksInput) (req *service.Request, output *DescribeExportTasksOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeExportTasksRequest(input *DescribeExportTasksInput) (req *request.Request, output *DescribeExportTasksOutput) {
+	op := &request.Operation{
 		Name:       opDescribeExportTasks,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2868,8 +2866,8 @@ func (c *EC2) DescribeExportTasks(input *DescribeExportTasksInput) (*DescribeExp
 const opDescribeFlowLogs = "DescribeFlowLogs"
 
 // DescribeFlowLogsRequest generates a request for the DescribeFlowLogs operation.
-func (c *EC2) DescribeFlowLogsRequest(input *DescribeFlowLogsInput) (req *service.Request, output *DescribeFlowLogsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeFlowLogsRequest(input *DescribeFlowLogsInput) (req *request.Request, output *DescribeFlowLogsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeFlowLogs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2897,8 +2895,8 @@ func (c *EC2) DescribeFlowLogs(input *DescribeFlowLogsInput) (*DescribeFlowLogsO
 const opDescribeImageAttribute = "DescribeImageAttribute"
 
 // DescribeImageAttributeRequest generates a request for the DescribeImageAttribute operation.
-func (c *EC2) DescribeImageAttributeRequest(input *DescribeImageAttributeInput) (req *service.Request, output *DescribeImageAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeImageAttributeRequest(input *DescribeImageAttributeInput) (req *request.Request, output *DescribeImageAttributeOutput) {
+	op := &request.Operation{
 		Name:       opDescribeImageAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2925,8 +2923,8 @@ func (c *EC2) DescribeImageAttribute(input *DescribeImageAttributeInput) (*Descr
 const opDescribeImages = "DescribeImages"
 
 // DescribeImagesRequest generates a request for the DescribeImages operation.
-func (c *EC2) DescribeImagesRequest(input *DescribeImagesInput) (req *service.Request, output *DescribeImagesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeImagesRequest(input *DescribeImagesInput) (req *request.Request, output *DescribeImagesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeImages,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2958,8 +2956,8 @@ func (c *EC2) DescribeImages(input *DescribeImagesInput) (*DescribeImagesOutput,
 const opDescribeImportImageTasks = "DescribeImportImageTasks"
 
 // DescribeImportImageTasksRequest generates a request for the DescribeImportImageTasks operation.
-func (c *EC2) DescribeImportImageTasksRequest(input *DescribeImportImageTasksInput) (req *service.Request, output *DescribeImportImageTasksOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeImportImageTasksRequest(input *DescribeImportImageTasksInput) (req *request.Request, output *DescribeImportImageTasksOutput) {
+	op := &request.Operation{
 		Name:       opDescribeImportImageTasks,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -2986,8 +2984,8 @@ func (c *EC2) DescribeImportImageTasks(input *DescribeImportImageTasksInput) (*D
 const opDescribeImportSnapshotTasks = "DescribeImportSnapshotTasks"
 
 // DescribeImportSnapshotTasksRequest generates a request for the DescribeImportSnapshotTasks operation.
-func (c *EC2) DescribeImportSnapshotTasksRequest(input *DescribeImportSnapshotTasksInput) (req *service.Request, output *DescribeImportSnapshotTasksOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeImportSnapshotTasksRequest(input *DescribeImportSnapshotTasksInput) (req *request.Request, output *DescribeImportSnapshotTasksOutput) {
+	op := &request.Operation{
 		Name:       opDescribeImportSnapshotTasks,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3013,8 +3011,8 @@ func (c *EC2) DescribeImportSnapshotTasks(input *DescribeImportSnapshotTasksInpu
 const opDescribeInstanceAttribute = "DescribeInstanceAttribute"
 
 // DescribeInstanceAttributeRequest generates a request for the DescribeInstanceAttribute operation.
-func (c *EC2) DescribeInstanceAttributeRequest(input *DescribeInstanceAttributeInput) (req *service.Request, output *DescribeInstanceAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeInstanceAttributeRequest(input *DescribeInstanceAttributeInput) (req *request.Request, output *DescribeInstanceAttributeOutput) {
+	op := &request.Operation{
 		Name:       opDescribeInstanceAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3044,12 +3042,12 @@ func (c *EC2) DescribeInstanceAttribute(input *DescribeInstanceAttributeInput) (
 const opDescribeInstanceStatus = "DescribeInstanceStatus"
 
 // DescribeInstanceStatusRequest generates a request for the DescribeInstanceStatus operation.
-func (c *EC2) DescribeInstanceStatusRequest(input *DescribeInstanceStatusInput) (req *service.Request, output *DescribeInstanceStatusOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeInstanceStatusRequest(input *DescribeInstanceStatusInput) (req *request.Request, output *DescribeInstanceStatusOutput) {
+	op := &request.Operation{
 		Name:       opDescribeInstanceStatus,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "MaxResults",
@@ -3103,12 +3101,12 @@ func (c *EC2) DescribeInstanceStatusPages(input *DescribeInstanceStatusInput, fn
 const opDescribeInstances = "DescribeInstances"
 
 // DescribeInstancesRequest generates a request for the DescribeInstances operation.
-func (c *EC2) DescribeInstancesRequest(input *DescribeInstancesInput) (req *service.Request, output *DescribeInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeInstancesRequest(input *DescribeInstancesInput) (req *request.Request, output *DescribeInstancesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "MaxResults",
@@ -3152,8 +3150,8 @@ func (c *EC2) DescribeInstancesPages(input *DescribeInstancesInput, fn func(p *D
 const opDescribeInternetGateways = "DescribeInternetGateways"
 
 // DescribeInternetGatewaysRequest generates a request for the DescribeInternetGateways operation.
-func (c *EC2) DescribeInternetGatewaysRequest(input *DescribeInternetGatewaysInput) (req *service.Request, output *DescribeInternetGatewaysOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeInternetGatewaysRequest(input *DescribeInternetGatewaysInput) (req *request.Request, output *DescribeInternetGatewaysOutput) {
+	op := &request.Operation{
 		Name:       opDescribeInternetGateways,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3179,8 +3177,8 @@ func (c *EC2) DescribeInternetGateways(input *DescribeInternetGatewaysInput) (*D
 const opDescribeKeyPairs = "DescribeKeyPairs"
 
 // DescribeKeyPairsRequest generates a request for the DescribeKeyPairs operation.
-func (c *EC2) DescribeKeyPairsRequest(input *DescribeKeyPairsInput) (req *service.Request, output *DescribeKeyPairsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeKeyPairsRequest(input *DescribeKeyPairsInput) (req *request.Request, output *DescribeKeyPairsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeKeyPairs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3209,8 +3207,8 @@ func (c *EC2) DescribeKeyPairs(input *DescribeKeyPairsInput) (*DescribeKeyPairsO
 const opDescribeMovingAddresses = "DescribeMovingAddresses"
 
 // DescribeMovingAddressesRequest generates a request for the DescribeMovingAddresses operation.
-func (c *EC2) DescribeMovingAddressesRequest(input *DescribeMovingAddressesInput) (req *service.Request, output *DescribeMovingAddressesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeMovingAddressesRequest(input *DescribeMovingAddressesInput) (req *request.Request, output *DescribeMovingAddressesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeMovingAddresses,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3238,8 +3236,8 @@ func (c *EC2) DescribeMovingAddresses(input *DescribeMovingAddressesInput) (*Des
 const opDescribeNetworkAcls = "DescribeNetworkAcls"
 
 // DescribeNetworkAclsRequest generates a request for the DescribeNetworkAcls operation.
-func (c *EC2) DescribeNetworkAclsRequest(input *DescribeNetworkAclsInput) (req *service.Request, output *DescribeNetworkAclsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeNetworkAclsRequest(input *DescribeNetworkAclsInput) (req *request.Request, output *DescribeNetworkAclsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeNetworkAcls,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3268,8 +3266,8 @@ func (c *EC2) DescribeNetworkAcls(input *DescribeNetworkAclsInput) (*DescribeNet
 const opDescribeNetworkInterfaceAttribute = "DescribeNetworkInterfaceAttribute"
 
 // DescribeNetworkInterfaceAttributeRequest generates a request for the DescribeNetworkInterfaceAttribute operation.
-func (c *EC2) DescribeNetworkInterfaceAttributeRequest(input *DescribeNetworkInterfaceAttributeInput) (req *service.Request, output *DescribeNetworkInterfaceAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeNetworkInterfaceAttributeRequest(input *DescribeNetworkInterfaceAttributeInput) (req *request.Request, output *DescribeNetworkInterfaceAttributeOutput) {
+	op := &request.Operation{
 		Name:       opDescribeNetworkInterfaceAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3296,8 +3294,8 @@ func (c *EC2) DescribeNetworkInterfaceAttribute(input *DescribeNetworkInterfaceA
 const opDescribeNetworkInterfaces = "DescribeNetworkInterfaces"
 
 // DescribeNetworkInterfacesRequest generates a request for the DescribeNetworkInterfaces operation.
-func (c *EC2) DescribeNetworkInterfacesRequest(input *DescribeNetworkInterfacesInput) (req *service.Request, output *DescribeNetworkInterfacesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeNetworkInterfacesRequest(input *DescribeNetworkInterfacesInput) (req *request.Request, output *DescribeNetworkInterfacesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeNetworkInterfaces,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3323,8 +3321,8 @@ func (c *EC2) DescribeNetworkInterfaces(input *DescribeNetworkInterfacesInput) (
 const opDescribePlacementGroups = "DescribePlacementGroups"
 
 // DescribePlacementGroupsRequest generates a request for the DescribePlacementGroups operation.
-func (c *EC2) DescribePlacementGroupsRequest(input *DescribePlacementGroupsInput) (req *service.Request, output *DescribePlacementGroupsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribePlacementGroupsRequest(input *DescribePlacementGroupsInput) (req *request.Request, output *DescribePlacementGroupsOutput) {
+	op := &request.Operation{
 		Name:       opDescribePlacementGroups,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3352,8 +3350,8 @@ func (c *EC2) DescribePlacementGroups(input *DescribePlacementGroupsInput) (*Des
 const opDescribePrefixLists = "DescribePrefixLists"
 
 // DescribePrefixListsRequest generates a request for the DescribePrefixLists operation.
-func (c *EC2) DescribePrefixListsRequest(input *DescribePrefixListsInput) (req *service.Request, output *DescribePrefixListsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribePrefixListsRequest(input *DescribePrefixListsInput) (req *request.Request, output *DescribePrefixListsOutput) {
+	op := &request.Operation{
 		Name:       opDescribePrefixLists,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3383,8 +3381,8 @@ func (c *EC2) DescribePrefixLists(input *DescribePrefixListsInput) (*DescribePre
 const opDescribeRegions = "DescribeRegions"
 
 // DescribeRegionsRequest generates a request for the DescribeRegions operation.
-func (c *EC2) DescribeRegionsRequest(input *DescribeRegionsInput) (req *service.Request, output *DescribeRegionsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeRegionsRequest(input *DescribeRegionsInput) (req *request.Request, output *DescribeRegionsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeRegions,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3413,8 +3411,8 @@ func (c *EC2) DescribeRegions(input *DescribeRegionsInput) (*DescribeRegionsOutp
 const opDescribeReservedInstances = "DescribeReservedInstances"
 
 // DescribeReservedInstancesRequest generates a request for the DescribeReservedInstances operation.
-func (c *EC2) DescribeReservedInstancesRequest(input *DescribeReservedInstancesInput) (req *service.Request, output *DescribeReservedInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeReservedInstancesRequest(input *DescribeReservedInstancesInput) (req *request.Request, output *DescribeReservedInstancesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeReservedInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3443,8 +3441,8 @@ func (c *EC2) DescribeReservedInstances(input *DescribeReservedInstancesInput) (
 const opDescribeReservedInstancesListings = "DescribeReservedInstancesListings"
 
 // DescribeReservedInstancesListingsRequest generates a request for the DescribeReservedInstancesListings operation.
-func (c *EC2) DescribeReservedInstancesListingsRequest(input *DescribeReservedInstancesListingsInput) (req *service.Request, output *DescribeReservedInstancesListingsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeReservedInstancesListingsRequest(input *DescribeReservedInstancesListingsInput) (req *request.Request, output *DescribeReservedInstancesListingsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeReservedInstancesListings,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3491,12 +3489,12 @@ func (c *EC2) DescribeReservedInstancesListings(input *DescribeReservedInstances
 const opDescribeReservedInstancesModifications = "DescribeReservedInstancesModifications"
 
 // DescribeReservedInstancesModificationsRequest generates a request for the DescribeReservedInstancesModifications operation.
-func (c *EC2) DescribeReservedInstancesModificationsRequest(input *DescribeReservedInstancesModificationsInput) (req *service.Request, output *DescribeReservedInstancesModificationsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeReservedInstancesModificationsRequest(input *DescribeReservedInstancesModificationsInput) (req *request.Request, output *DescribeReservedInstancesModificationsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeReservedInstancesModifications,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "",
@@ -3537,12 +3535,12 @@ func (c *EC2) DescribeReservedInstancesModificationsPages(input *DescribeReserve
 const opDescribeReservedInstancesOfferings = "DescribeReservedInstancesOfferings"
 
 // DescribeReservedInstancesOfferingsRequest generates a request for the DescribeReservedInstancesOfferings operation.
-func (c *EC2) DescribeReservedInstancesOfferingsRequest(input *DescribeReservedInstancesOfferingsInput) (req *service.Request, output *DescribeReservedInstancesOfferingsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeReservedInstancesOfferingsRequest(input *DescribeReservedInstancesOfferingsInput) (req *request.Request, output *DescribeReservedInstancesOfferingsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeReservedInstancesOfferings,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "MaxResults",
@@ -3584,8 +3582,8 @@ func (c *EC2) DescribeReservedInstancesOfferingsPages(input *DescribeReservedIns
 const opDescribeRouteTables = "DescribeRouteTables"
 
 // DescribeRouteTablesRequest generates a request for the DescribeRouteTables operation.
-func (c *EC2) DescribeRouteTablesRequest(input *DescribeRouteTablesInput) (req *service.Request, output *DescribeRouteTablesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeRouteTablesRequest(input *DescribeRouteTablesInput) (req *request.Request, output *DescribeRouteTablesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeRouteTables,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3619,8 +3617,8 @@ func (c *EC2) DescribeRouteTables(input *DescribeRouteTablesInput) (*DescribeRou
 const opDescribeSecurityGroups = "DescribeSecurityGroups"
 
 // DescribeSecurityGroupsRequest generates a request for the DescribeSecurityGroups operation.
-func (c *EC2) DescribeSecurityGroupsRequest(input *DescribeSecurityGroupsInput) (req *service.Request, output *DescribeSecurityGroupsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSecurityGroupsRequest(input *DescribeSecurityGroupsInput) (req *request.Request, output *DescribeSecurityGroupsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSecurityGroups,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3653,8 +3651,8 @@ func (c *EC2) DescribeSecurityGroups(input *DescribeSecurityGroupsInput) (*Descr
 const opDescribeSnapshotAttribute = "DescribeSnapshotAttribute"
 
 // DescribeSnapshotAttributeRequest generates a request for the DescribeSnapshotAttribute operation.
-func (c *EC2) DescribeSnapshotAttributeRequest(input *DescribeSnapshotAttributeInput) (req *service.Request, output *DescribeSnapshotAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSnapshotAttributeRequest(input *DescribeSnapshotAttributeInput) (req *request.Request, output *DescribeSnapshotAttributeOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSnapshotAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3684,12 +3682,12 @@ func (c *EC2) DescribeSnapshotAttribute(input *DescribeSnapshotAttributeInput) (
 const opDescribeSnapshots = "DescribeSnapshots"
 
 // DescribeSnapshotsRequest generates a request for the DescribeSnapshots operation.
-func (c *EC2) DescribeSnapshotsRequest(input *DescribeSnapshotsInput) (req *service.Request, output *DescribeSnapshotsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSnapshotsRequest(input *DescribeSnapshotsInput) (req *request.Request, output *DescribeSnapshotsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSnapshots,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "",
@@ -3763,8 +3761,8 @@ func (c *EC2) DescribeSnapshotsPages(input *DescribeSnapshotsInput, fn func(p *D
 const opDescribeSpotDatafeedSubscription = "DescribeSpotDatafeedSubscription"
 
 // DescribeSpotDatafeedSubscriptionRequest generates a request for the DescribeSpotDatafeedSubscription operation.
-func (c *EC2) DescribeSpotDatafeedSubscriptionRequest(input *DescribeSpotDatafeedSubscriptionInput) (req *service.Request, output *DescribeSpotDatafeedSubscriptionOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSpotDatafeedSubscriptionRequest(input *DescribeSpotDatafeedSubscriptionInput) (req *request.Request, output *DescribeSpotDatafeedSubscriptionOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSpotDatafeedSubscription,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3780,7 +3778,7 @@ func (c *EC2) DescribeSpotDatafeedSubscriptionRequest(input *DescribeSpotDatafee
 	return
 }
 
-// Describes the data feed for Spot Instances. For more information, see Spot
+// Describes the data feed for Spot instances. For more information, see Spot
 // Instance Data Feed (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-data-feeds.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 func (c *EC2) DescribeSpotDatafeedSubscription(input *DescribeSpotDatafeedSubscriptionInput) (*DescribeSpotDatafeedSubscriptionOutput, error) {
@@ -3792,8 +3790,8 @@ func (c *EC2) DescribeSpotDatafeedSubscription(input *DescribeSpotDatafeedSubscr
 const opDescribeSpotFleetInstances = "DescribeSpotFleetInstances"
 
 // DescribeSpotFleetInstancesRequest generates a request for the DescribeSpotFleetInstances operation.
-func (c *EC2) DescribeSpotFleetInstancesRequest(input *DescribeSpotFleetInstancesInput) (req *service.Request, output *DescribeSpotFleetInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSpotFleetInstancesRequest(input *DescribeSpotFleetInstancesInput) (req *request.Request, output *DescribeSpotFleetInstancesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSpotFleetInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3819,8 +3817,8 @@ func (c *EC2) DescribeSpotFleetInstances(input *DescribeSpotFleetInstancesInput)
 const opDescribeSpotFleetRequestHistory = "DescribeSpotFleetRequestHistory"
 
 // DescribeSpotFleetRequestHistoryRequest generates a request for the DescribeSpotFleetRequestHistory operation.
-func (c *EC2) DescribeSpotFleetRequestHistoryRequest(input *DescribeSpotFleetRequestHistoryInput) (req *service.Request, output *DescribeSpotFleetRequestHistoryOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSpotFleetRequestHistoryRequest(input *DescribeSpotFleetRequestHistoryInput) (req *request.Request, output *DescribeSpotFleetRequestHistoryOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSpotFleetRequestHistory,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3851,8 +3849,8 @@ func (c *EC2) DescribeSpotFleetRequestHistory(input *DescribeSpotFleetRequestHis
 const opDescribeSpotFleetRequests = "DescribeSpotFleetRequests"
 
 // DescribeSpotFleetRequestsRequest generates a request for the DescribeSpotFleetRequests operation.
-func (c *EC2) DescribeSpotFleetRequestsRequest(input *DescribeSpotFleetRequestsInput) (req *service.Request, output *DescribeSpotFleetRequestsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSpotFleetRequestsRequest(input *DescribeSpotFleetRequestsInput) (req *request.Request, output *DescribeSpotFleetRequestsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSpotFleetRequests,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3878,8 +3876,8 @@ func (c *EC2) DescribeSpotFleetRequests(input *DescribeSpotFleetRequestsInput) (
 const opDescribeSpotInstanceRequests = "DescribeSpotInstanceRequests"
 
 // DescribeSpotInstanceRequestsRequest generates a request for the DescribeSpotInstanceRequests operation.
-func (c *EC2) DescribeSpotInstanceRequestsRequest(input *DescribeSpotInstanceRequestsInput) (req *service.Request, output *DescribeSpotInstanceRequestsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSpotInstanceRequestsRequest(input *DescribeSpotInstanceRequestsInput) (req *request.Request, output *DescribeSpotInstanceRequestsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSpotInstanceRequests,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3895,15 +3893,15 @@ func (c *EC2) DescribeSpotInstanceRequestsRequest(input *DescribeSpotInstanceReq
 	return
 }
 
-// Describes the Spot Instance requests that belong to your account. Spot Instances
+// Describes the Spot instance requests that belong to your account. Spot instances
 // are instances that Amazon EC2 launches when the bid price that you specify
-// exceeds the current Spot Price. Amazon EC2 periodically sets the Spot Price
-// based on available Spot Instance capacity and current Spot Instance requests.
+// exceeds the current Spot price. Amazon EC2 periodically sets the Spot price
+// based on available Spot instance capacity and current Spot instance requests.
 // For more information, see Spot Instance Requests (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-// You can use DescribeSpotInstanceRequests to find a running Spot Instance
-// by examining the response. If the status of the Spot Instance is fulfilled,
+// You can use DescribeSpotInstanceRequests to find a running Spot instance
+// by examining the response. If the status of the Spot instance is fulfilled,
 // the instance ID appears in the response and contains the identifier of the
 // instance. Alternatively, you can use DescribeInstances with a filter to look
 // for instances where the instance lifecycle is spot.
@@ -3916,12 +3914,12 @@ func (c *EC2) DescribeSpotInstanceRequests(input *DescribeSpotInstanceRequestsIn
 const opDescribeSpotPriceHistory = "DescribeSpotPriceHistory"
 
 // DescribeSpotPriceHistoryRequest generates a request for the DescribeSpotPriceHistory operation.
-func (c *EC2) DescribeSpotPriceHistoryRequest(input *DescribeSpotPriceHistoryInput) (req *service.Request, output *DescribeSpotPriceHistoryOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSpotPriceHistoryRequest(input *DescribeSpotPriceHistoryInput) (req *request.Request, output *DescribeSpotPriceHistoryOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSpotPriceHistory,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "MaxResults",
@@ -3939,7 +3937,7 @@ func (c *EC2) DescribeSpotPriceHistoryRequest(input *DescribeSpotPriceHistoryInp
 	return
 }
 
-// Describes the Spot Price history. The prices returned are listed in chronological
+// Describes the Spot price history. The prices returned are listed in chronological
 // order, from the oldest to the most recent, for up to the past 90 days. For
 // more information, see Spot Instance Pricing History (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances-history.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -3964,8 +3962,8 @@ func (c *EC2) DescribeSpotPriceHistoryPages(input *DescribeSpotPriceHistoryInput
 const opDescribeSubnets = "DescribeSubnets"
 
 // DescribeSubnetsRequest generates a request for the DescribeSubnets operation.
-func (c *EC2) DescribeSubnetsRequest(input *DescribeSubnetsInput) (req *service.Request, output *DescribeSubnetsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeSubnetsRequest(input *DescribeSubnetsInput) (req *request.Request, output *DescribeSubnetsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeSubnets,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -3994,8 +3992,8 @@ func (c *EC2) DescribeSubnets(input *DescribeSubnetsInput) (*DescribeSubnetsOutp
 const opDescribeTags = "DescribeTags"
 
 // DescribeTagsRequest generates a request for the DescribeTags operation.
-func (c *EC2) DescribeTagsRequest(input *DescribeTagsInput) (req *service.Request, output *DescribeTagsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeTagsRequest(input *DescribeTagsInput) (req *request.Request, output *DescribeTagsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeTags,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4024,8 +4022,8 @@ func (c *EC2) DescribeTags(input *DescribeTagsInput) (*DescribeTagsOutput, error
 const opDescribeVolumeAttribute = "DescribeVolumeAttribute"
 
 // DescribeVolumeAttributeRequest generates a request for the DescribeVolumeAttribute operation.
-func (c *EC2) DescribeVolumeAttributeRequest(input *DescribeVolumeAttributeInput) (req *service.Request, output *DescribeVolumeAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVolumeAttributeRequest(input *DescribeVolumeAttributeInput) (req *request.Request, output *DescribeVolumeAttributeOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVolumeAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4055,12 +4053,12 @@ func (c *EC2) DescribeVolumeAttribute(input *DescribeVolumeAttributeInput) (*Des
 const opDescribeVolumeStatus = "DescribeVolumeStatus"
 
 // DescribeVolumeStatusRequest generates a request for the DescribeVolumeStatus operation.
-func (c *EC2) DescribeVolumeStatusRequest(input *DescribeVolumeStatusInput) (req *service.Request, output *DescribeVolumeStatusOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVolumeStatusRequest(input *DescribeVolumeStatusInput) (req *request.Request, output *DescribeVolumeStatusOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVolumeStatus,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "MaxResults",
@@ -4129,12 +4127,12 @@ func (c *EC2) DescribeVolumeStatusPages(input *DescribeVolumeStatusInput, fn fun
 const opDescribeVolumes = "DescribeVolumes"
 
 // DescribeVolumesRequest generates a request for the DescribeVolumes operation.
-func (c *EC2) DescribeVolumesRequest(input *DescribeVolumesInput) (req *service.Request, output *DescribeVolumesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVolumesRequest(input *DescribeVolumesInput) (req *request.Request, output *DescribeVolumesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVolumes,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
-		Paginator: &service.Paginator{
+		Paginator: &request.Paginator{
 			InputTokens:     []string{"NextToken"},
 			OutputTokens:    []string{"NextToken"},
 			LimitToken:      "MaxResults",
@@ -4179,8 +4177,8 @@ func (c *EC2) DescribeVolumesPages(input *DescribeVolumesInput, fn func(p *Descr
 const opDescribeVpcAttribute = "DescribeVpcAttribute"
 
 // DescribeVpcAttributeRequest generates a request for the DescribeVpcAttribute operation.
-func (c *EC2) DescribeVpcAttributeRequest(input *DescribeVpcAttributeInput) (req *service.Request, output *DescribeVpcAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpcAttributeRequest(input *DescribeVpcAttributeInput) (req *request.Request, output *DescribeVpcAttributeOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpcAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4207,8 +4205,8 @@ func (c *EC2) DescribeVpcAttribute(input *DescribeVpcAttributeInput) (*DescribeV
 const opDescribeVpcClassicLink = "DescribeVpcClassicLink"
 
 // DescribeVpcClassicLinkRequest generates a request for the DescribeVpcClassicLink operation.
-func (c *EC2) DescribeVpcClassicLinkRequest(input *DescribeVpcClassicLinkInput) (req *service.Request, output *DescribeVpcClassicLinkOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpcClassicLinkRequest(input *DescribeVpcClassicLinkInput) (req *request.Request, output *DescribeVpcClassicLinkOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpcClassicLink,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4234,8 +4232,8 @@ func (c *EC2) DescribeVpcClassicLink(input *DescribeVpcClassicLinkInput) (*Descr
 const opDescribeVpcEndpointServices = "DescribeVpcEndpointServices"
 
 // DescribeVpcEndpointServicesRequest generates a request for the DescribeVpcEndpointServices operation.
-func (c *EC2) DescribeVpcEndpointServicesRequest(input *DescribeVpcEndpointServicesInput) (req *service.Request, output *DescribeVpcEndpointServicesOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpcEndpointServicesRequest(input *DescribeVpcEndpointServicesInput) (req *request.Request, output *DescribeVpcEndpointServicesOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpcEndpointServices,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4262,8 +4260,8 @@ func (c *EC2) DescribeVpcEndpointServices(input *DescribeVpcEndpointServicesInpu
 const opDescribeVpcEndpoints = "DescribeVpcEndpoints"
 
 // DescribeVpcEndpointsRequest generates a request for the DescribeVpcEndpoints operation.
-func (c *EC2) DescribeVpcEndpointsRequest(input *DescribeVpcEndpointsInput) (req *service.Request, output *DescribeVpcEndpointsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpcEndpointsRequest(input *DescribeVpcEndpointsInput) (req *request.Request, output *DescribeVpcEndpointsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpcEndpoints,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4289,8 +4287,8 @@ func (c *EC2) DescribeVpcEndpoints(input *DescribeVpcEndpointsInput) (*DescribeV
 const opDescribeVpcPeeringConnections = "DescribeVpcPeeringConnections"
 
 // DescribeVpcPeeringConnectionsRequest generates a request for the DescribeVpcPeeringConnections operation.
-func (c *EC2) DescribeVpcPeeringConnectionsRequest(input *DescribeVpcPeeringConnectionsInput) (req *service.Request, output *DescribeVpcPeeringConnectionsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpcPeeringConnectionsRequest(input *DescribeVpcPeeringConnectionsInput) (req *request.Request, output *DescribeVpcPeeringConnectionsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpcPeeringConnections,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4316,8 +4314,8 @@ func (c *EC2) DescribeVpcPeeringConnections(input *DescribeVpcPeeringConnections
 const opDescribeVpcs = "DescribeVpcs"
 
 // DescribeVpcsRequest generates a request for the DescribeVpcs operation.
-func (c *EC2) DescribeVpcsRequest(input *DescribeVpcsInput) (req *service.Request, output *DescribeVpcsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpcsRequest(input *DescribeVpcsInput) (req *request.Request, output *DescribeVpcsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpcs,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4343,8 +4341,8 @@ func (c *EC2) DescribeVpcs(input *DescribeVpcsInput) (*DescribeVpcsOutput, error
 const opDescribeVpnConnections = "DescribeVpnConnections"
 
 // DescribeVpnConnectionsRequest generates a request for the DescribeVpnConnections operation.
-func (c *EC2) DescribeVpnConnectionsRequest(input *DescribeVpnConnectionsInput) (req *service.Request, output *DescribeVpnConnectionsOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpnConnectionsRequest(input *DescribeVpnConnectionsInput) (req *request.Request, output *DescribeVpnConnectionsOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpnConnections,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4374,8 +4372,8 @@ func (c *EC2) DescribeVpnConnections(input *DescribeVpnConnectionsInput) (*Descr
 const opDescribeVpnGateways = "DescribeVpnGateways"
 
 // DescribeVpnGatewaysRequest generates a request for the DescribeVpnGateways operation.
-func (c *EC2) DescribeVpnGatewaysRequest(input *DescribeVpnGatewaysInput) (req *service.Request, output *DescribeVpnGatewaysOutput) {
-	op := &service.Operation{
+func (c *EC2) DescribeVpnGatewaysRequest(input *DescribeVpnGatewaysInput) (req *request.Request, output *DescribeVpnGatewaysOutput) {
+	op := &request.Operation{
 		Name:       opDescribeVpnGateways,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4405,8 +4403,8 @@ func (c *EC2) DescribeVpnGateways(input *DescribeVpnGatewaysInput) (*DescribeVpn
 const opDetachClassicLinkVpc = "DetachClassicLinkVpc"
 
 // DetachClassicLinkVpcRequest generates a request for the DetachClassicLinkVpc operation.
-func (c *EC2) DetachClassicLinkVpcRequest(input *DetachClassicLinkVpcInput) (req *service.Request, output *DetachClassicLinkVpcOutput) {
-	op := &service.Operation{
+func (c *EC2) DetachClassicLinkVpcRequest(input *DetachClassicLinkVpcInput) (req *request.Request, output *DetachClassicLinkVpcOutput) {
+	op := &request.Operation{
 		Name:       opDetachClassicLinkVpc,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4434,8 +4432,8 @@ func (c *EC2) DetachClassicLinkVpc(input *DetachClassicLinkVpcInput) (*DetachCla
 const opDetachInternetGateway = "DetachInternetGateway"
 
 // DetachInternetGatewayRequest generates a request for the DetachInternetGateway operation.
-func (c *EC2) DetachInternetGatewayRequest(input *DetachInternetGatewayInput) (req *service.Request, output *DetachInternetGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) DetachInternetGatewayRequest(input *DetachInternetGatewayInput) (req *request.Request, output *DetachInternetGatewayOutput) {
+	op := &request.Operation{
 		Name:       opDetachInternetGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4463,8 +4461,8 @@ func (c *EC2) DetachInternetGateway(input *DetachInternetGatewayInput) (*DetachI
 const opDetachNetworkInterface = "DetachNetworkInterface"
 
 // DetachNetworkInterfaceRequest generates a request for the DetachNetworkInterface operation.
-func (c *EC2) DetachNetworkInterfaceRequest(input *DetachNetworkInterfaceInput) (req *service.Request, output *DetachNetworkInterfaceOutput) {
-	op := &service.Operation{
+func (c *EC2) DetachNetworkInterfaceRequest(input *DetachNetworkInterfaceInput) (req *request.Request, output *DetachNetworkInterfaceOutput) {
+	op := &request.Operation{
 		Name:       opDetachNetworkInterface,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4490,8 +4488,8 @@ func (c *EC2) DetachNetworkInterface(input *DetachNetworkInterfaceInput) (*Detac
 const opDetachVolume = "DetachVolume"
 
 // DetachVolumeRequest generates a request for the DetachVolume operation.
-func (c *EC2) DetachVolumeRequest(input *DetachVolumeInput) (req *service.Request, output *VolumeAttachment) {
-	op := &service.Operation{
+func (c *EC2) DetachVolumeRequest(input *DetachVolumeInput) (req *request.Request, output *VolumeAttachment) {
+	op := &request.Operation{
 		Name:       opDetachVolume,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4529,8 +4527,8 @@ func (c *EC2) DetachVolume(input *DetachVolumeInput) (*VolumeAttachment, error) 
 const opDetachVpnGateway = "DetachVpnGateway"
 
 // DetachVpnGatewayRequest generates a request for the DetachVpnGateway operation.
-func (c *EC2) DetachVpnGatewayRequest(input *DetachVpnGatewayInput) (req *service.Request, output *DetachVpnGatewayOutput) {
-	op := &service.Operation{
+func (c *EC2) DetachVpnGatewayRequest(input *DetachVpnGatewayInput) (req *request.Request, output *DetachVpnGatewayOutput) {
+	op := &request.Operation{
 		Name:       opDetachVpnGateway,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4563,8 +4561,8 @@ func (c *EC2) DetachVpnGateway(input *DetachVpnGatewayInput) (*DetachVpnGatewayO
 const opDisableVgwRoutePropagation = "DisableVgwRoutePropagation"
 
 // DisableVgwRoutePropagationRequest generates a request for the DisableVgwRoutePropagation operation.
-func (c *EC2) DisableVgwRoutePropagationRequest(input *DisableVgwRoutePropagationInput) (req *service.Request, output *DisableVgwRoutePropagationOutput) {
-	op := &service.Operation{
+func (c *EC2) DisableVgwRoutePropagationRequest(input *DisableVgwRoutePropagationInput) (req *request.Request, output *DisableVgwRoutePropagationOutput) {
+	op := &request.Operation{
 		Name:       opDisableVgwRoutePropagation,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4591,8 +4589,8 @@ func (c *EC2) DisableVgwRoutePropagation(input *DisableVgwRoutePropagationInput)
 const opDisableVpcClassicLink = "DisableVpcClassicLink"
 
 // DisableVpcClassicLinkRequest generates a request for the DisableVpcClassicLink operation.
-func (c *EC2) DisableVpcClassicLinkRequest(input *DisableVpcClassicLinkInput) (req *service.Request, output *DisableVpcClassicLinkOutput) {
-	op := &service.Operation{
+func (c *EC2) DisableVpcClassicLinkRequest(input *DisableVpcClassicLinkInput) (req *request.Request, output *DisableVpcClassicLinkOutput) {
+	op := &request.Operation{
 		Name:       opDisableVpcClassicLink,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4619,8 +4617,8 @@ func (c *EC2) DisableVpcClassicLink(input *DisableVpcClassicLinkInput) (*Disable
 const opDisassociateAddress = "DisassociateAddress"
 
 // DisassociateAddressRequest generates a request for the DisassociateAddress operation.
-func (c *EC2) DisassociateAddressRequest(input *DisassociateAddressInput) (req *service.Request, output *DisassociateAddressOutput) {
-	op := &service.Operation{
+func (c *EC2) DisassociateAddressRequest(input *DisassociateAddressInput) (req *request.Request, output *DisassociateAddressOutput) {
+	op := &request.Operation{
 		Name:       opDisassociateAddress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4654,8 +4652,8 @@ func (c *EC2) DisassociateAddress(input *DisassociateAddressInput) (*Disassociat
 const opDisassociateRouteTable = "DisassociateRouteTable"
 
 // DisassociateRouteTableRequest generates a request for the DisassociateRouteTable operation.
-func (c *EC2) DisassociateRouteTableRequest(input *DisassociateRouteTableInput) (req *service.Request, output *DisassociateRouteTableOutput) {
-	op := &service.Operation{
+func (c *EC2) DisassociateRouteTableRequest(input *DisassociateRouteTableInput) (req *request.Request, output *DisassociateRouteTableOutput) {
+	op := &request.Operation{
 		Name:       opDisassociateRouteTable,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4686,8 +4684,8 @@ func (c *EC2) DisassociateRouteTable(input *DisassociateRouteTableInput) (*Disas
 const opEnableVgwRoutePropagation = "EnableVgwRoutePropagation"
 
 // EnableVgwRoutePropagationRequest generates a request for the EnableVgwRoutePropagation operation.
-func (c *EC2) EnableVgwRoutePropagationRequest(input *EnableVgwRoutePropagationInput) (req *service.Request, output *EnableVgwRoutePropagationOutput) {
-	op := &service.Operation{
+func (c *EC2) EnableVgwRoutePropagationRequest(input *EnableVgwRoutePropagationInput) (req *request.Request, output *EnableVgwRoutePropagationOutput) {
+	op := &request.Operation{
 		Name:       opEnableVgwRoutePropagation,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4714,8 +4712,8 @@ func (c *EC2) EnableVgwRoutePropagation(input *EnableVgwRoutePropagationInput) (
 const opEnableVolumeIO = "EnableVolumeIO"
 
 // EnableVolumeIORequest generates a request for the EnableVolumeIO operation.
-func (c *EC2) EnableVolumeIORequest(input *EnableVolumeIOInput) (req *service.Request, output *EnableVolumeIOOutput) {
-	op := &service.Operation{
+func (c *EC2) EnableVolumeIORequest(input *EnableVolumeIOInput) (req *request.Request, output *EnableVolumeIOOutput) {
+	op := &request.Operation{
 		Name:       opEnableVolumeIO,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4742,8 +4740,8 @@ func (c *EC2) EnableVolumeIO(input *EnableVolumeIOInput) (*EnableVolumeIOOutput,
 const opEnableVpcClassicLink = "EnableVpcClassicLink"
 
 // EnableVpcClassicLinkRequest generates a request for the EnableVpcClassicLink operation.
-func (c *EC2) EnableVpcClassicLinkRequest(input *EnableVpcClassicLinkInput) (req *service.Request, output *EnableVpcClassicLinkOutput) {
-	op := &service.Operation{
+func (c *EC2) EnableVpcClassicLinkRequest(input *EnableVpcClassicLinkInput) (req *request.Request, output *EnableVpcClassicLinkOutput) {
+	op := &request.Operation{
 		Name:       opEnableVpcClassicLink,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4775,8 +4773,8 @@ func (c *EC2) EnableVpcClassicLink(input *EnableVpcClassicLinkInput) (*EnableVpc
 const opGetConsoleOutput = "GetConsoleOutput"
 
 // GetConsoleOutputRequest generates a request for the GetConsoleOutput operation.
-func (c *EC2) GetConsoleOutputRequest(input *GetConsoleOutputInput) (req *service.Request, output *GetConsoleOutputOutput) {
-	op := &service.Operation{
+func (c *EC2) GetConsoleOutputRequest(input *GetConsoleOutputInput) (req *request.Request, output *GetConsoleOutputOutput) {
+	op := &request.Operation{
 		Name:       opGetConsoleOutput,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4819,8 +4817,8 @@ func (c *EC2) GetConsoleOutput(input *GetConsoleOutputInput) (*GetConsoleOutputO
 const opGetPasswordData = "GetPasswordData"
 
 // GetPasswordDataRequest generates a request for the GetPasswordData operation.
-func (c *EC2) GetPasswordDataRequest(input *GetPasswordDataInput) (req *service.Request, output *GetPasswordDataOutput) {
-	op := &service.Operation{
+func (c *EC2) GetPasswordDataRequest(input *GetPasswordDataInput) (req *request.Request, output *GetPasswordDataOutput) {
+	op := &request.Operation{
 		Name:       opGetPasswordData,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4859,8 +4857,8 @@ func (c *EC2) GetPasswordData(input *GetPasswordDataInput) (*GetPasswordDataOutp
 const opImportImage = "ImportImage"
 
 // ImportImageRequest generates a request for the ImportImage operation.
-func (c *EC2) ImportImageRequest(input *ImportImageInput) (req *service.Request, output *ImportImageOutput) {
-	op := &service.Operation{
+func (c *EC2) ImportImageRequest(input *ImportImageInput) (req *request.Request, output *ImportImageOutput) {
+	op := &request.Operation{
 		Name:       opImportImage,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4887,8 +4885,8 @@ func (c *EC2) ImportImage(input *ImportImageInput) (*ImportImageOutput, error) {
 const opImportInstance = "ImportInstance"
 
 // ImportInstanceRequest generates a request for the ImportInstance operation.
-func (c *EC2) ImportInstanceRequest(input *ImportInstanceInput) (req *service.Request, output *ImportInstanceOutput) {
-	op := &service.Operation{
+func (c *EC2) ImportInstanceRequest(input *ImportInstanceInput) (req *request.Request, output *ImportInstanceOutput) {
+	op := &request.Operation{
 		Name:       opImportInstance,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4920,8 +4918,8 @@ func (c *EC2) ImportInstance(input *ImportInstanceInput) (*ImportInstanceOutput,
 const opImportKeyPair = "ImportKeyPair"
 
 // ImportKeyPairRequest generates a request for the ImportKeyPair operation.
-func (c *EC2) ImportKeyPairRequest(input *ImportKeyPairInput) (req *service.Request, output *ImportKeyPairOutput) {
-	op := &service.Operation{
+func (c *EC2) ImportKeyPairRequest(input *ImportKeyPairInput) (req *request.Request, output *ImportKeyPairOutput) {
+	op := &request.Operation{
 		Name:       opImportKeyPair,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4954,8 +4952,8 @@ func (c *EC2) ImportKeyPair(input *ImportKeyPairInput) (*ImportKeyPairOutput, er
 const opImportSnapshot = "ImportSnapshot"
 
 // ImportSnapshotRequest generates a request for the ImportSnapshot operation.
-func (c *EC2) ImportSnapshotRequest(input *ImportSnapshotInput) (req *service.Request, output *ImportSnapshotOutput) {
-	op := &service.Operation{
+func (c *EC2) ImportSnapshotRequest(input *ImportSnapshotInput) (req *request.Request, output *ImportSnapshotOutput) {
+	op := &request.Operation{
 		Name:       opImportSnapshot,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -4981,8 +4979,8 @@ func (c *EC2) ImportSnapshot(input *ImportSnapshotInput) (*ImportSnapshotOutput,
 const opImportVolume = "ImportVolume"
 
 // ImportVolumeRequest generates a request for the ImportVolume operation.
-func (c *EC2) ImportVolumeRequest(input *ImportVolumeInput) (req *service.Request, output *ImportVolumeOutput) {
-	op := &service.Operation{
+func (c *EC2) ImportVolumeRequest(input *ImportVolumeInput) (req *request.Request, output *ImportVolumeOutput) {
+	op := &request.Operation{
 		Name:       opImportVolume,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5013,8 +5011,8 @@ func (c *EC2) ImportVolume(input *ImportVolumeInput) (*ImportVolumeOutput, error
 const opModifyImageAttribute = "ModifyImageAttribute"
 
 // ModifyImageAttributeRequest generates a request for the ModifyImageAttribute operation.
-func (c *EC2) ModifyImageAttributeRequest(input *ModifyImageAttributeInput) (req *service.Request, output *ModifyImageAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyImageAttributeRequest(input *ModifyImageAttributeInput) (req *request.Request, output *ModifyImageAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifyImageAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5044,8 +5042,8 @@ func (c *EC2) ModifyImageAttribute(input *ModifyImageAttributeInput) (*ModifyIma
 const opModifyInstanceAttribute = "ModifyInstanceAttribute"
 
 // ModifyInstanceAttributeRequest generates a request for the ModifyInstanceAttribute operation.
-func (c *EC2) ModifyInstanceAttributeRequest(input *ModifyInstanceAttributeInput) (req *service.Request, output *ModifyInstanceAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyInstanceAttributeRequest(input *ModifyInstanceAttributeInput) (req *request.Request, output *ModifyInstanceAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifyInstanceAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5076,8 +5074,8 @@ func (c *EC2) ModifyInstanceAttribute(input *ModifyInstanceAttributeInput) (*Mod
 const opModifyNetworkInterfaceAttribute = "ModifyNetworkInterfaceAttribute"
 
 // ModifyNetworkInterfaceAttributeRequest generates a request for the ModifyNetworkInterfaceAttribute operation.
-func (c *EC2) ModifyNetworkInterfaceAttributeRequest(input *ModifyNetworkInterfaceAttributeInput) (req *service.Request, output *ModifyNetworkInterfaceAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyNetworkInterfaceAttributeRequest(input *ModifyNetworkInterfaceAttributeInput) (req *request.Request, output *ModifyNetworkInterfaceAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifyNetworkInterfaceAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5104,8 +5102,8 @@ func (c *EC2) ModifyNetworkInterfaceAttribute(input *ModifyNetworkInterfaceAttri
 const opModifyReservedInstances = "ModifyReservedInstances"
 
 // ModifyReservedInstancesRequest generates a request for the ModifyReservedInstances operation.
-func (c *EC2) ModifyReservedInstancesRequest(input *ModifyReservedInstancesInput) (req *service.Request, output *ModifyReservedInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyReservedInstancesRequest(input *ModifyReservedInstancesInput) (req *request.Request, output *ModifyReservedInstancesOutput) {
+	op := &request.Operation{
 		Name:       opModifyReservedInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5137,8 +5135,8 @@ func (c *EC2) ModifyReservedInstances(input *ModifyReservedInstancesInput) (*Mod
 const opModifySnapshotAttribute = "ModifySnapshotAttribute"
 
 // ModifySnapshotAttributeRequest generates a request for the ModifySnapshotAttribute operation.
-func (c *EC2) ModifySnapshotAttributeRequest(input *ModifySnapshotAttributeInput) (req *service.Request, output *ModifySnapshotAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifySnapshotAttributeRequest(input *ModifySnapshotAttributeInput) (req *request.Request, output *ModifySnapshotAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifySnapshotAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5174,8 +5172,8 @@ func (c *EC2) ModifySnapshotAttribute(input *ModifySnapshotAttributeInput) (*Mod
 const opModifySubnetAttribute = "ModifySubnetAttribute"
 
 // ModifySubnetAttributeRequest generates a request for the ModifySubnetAttribute operation.
-func (c *EC2) ModifySubnetAttributeRequest(input *ModifySubnetAttributeInput) (req *service.Request, output *ModifySubnetAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifySubnetAttributeRequest(input *ModifySubnetAttributeInput) (req *request.Request, output *ModifySubnetAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifySubnetAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5201,8 +5199,8 @@ func (c *EC2) ModifySubnetAttribute(input *ModifySubnetAttributeInput) (*ModifyS
 const opModifyVolumeAttribute = "ModifyVolumeAttribute"
 
 // ModifyVolumeAttributeRequest generates a request for the ModifyVolumeAttribute operation.
-func (c *EC2) ModifyVolumeAttributeRequest(input *ModifyVolumeAttributeInput) (req *service.Request, output *ModifyVolumeAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyVolumeAttributeRequest(input *ModifyVolumeAttributeInput) (req *request.Request, output *ModifyVolumeAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifyVolumeAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5237,8 +5235,8 @@ func (c *EC2) ModifyVolumeAttribute(input *ModifyVolumeAttributeInput) (*ModifyV
 const opModifyVpcAttribute = "ModifyVpcAttribute"
 
 // ModifyVpcAttributeRequest generates a request for the ModifyVpcAttribute operation.
-func (c *EC2) ModifyVpcAttributeRequest(input *ModifyVpcAttributeInput) (req *service.Request, output *ModifyVpcAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyVpcAttributeRequest(input *ModifyVpcAttributeInput) (req *request.Request, output *ModifyVpcAttributeOutput) {
+	op := &request.Operation{
 		Name:       opModifyVpcAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5264,8 +5262,8 @@ func (c *EC2) ModifyVpcAttribute(input *ModifyVpcAttributeInput) (*ModifyVpcAttr
 const opModifyVpcEndpoint = "ModifyVpcEndpoint"
 
 // ModifyVpcEndpointRequest generates a request for the ModifyVpcEndpoint operation.
-func (c *EC2) ModifyVpcEndpointRequest(input *ModifyVpcEndpointInput) (req *service.Request, output *ModifyVpcEndpointOutput) {
-	op := &service.Operation{
+func (c *EC2) ModifyVpcEndpointRequest(input *ModifyVpcEndpointInput) (req *request.Request, output *ModifyVpcEndpointOutput) {
+	op := &request.Operation{
 		Name:       opModifyVpcEndpoint,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5293,8 +5291,8 @@ func (c *EC2) ModifyVpcEndpoint(input *ModifyVpcEndpointInput) (*ModifyVpcEndpoi
 const opMonitorInstances = "MonitorInstances"
 
 // MonitorInstancesRequest generates a request for the MonitorInstances operation.
-func (c *EC2) MonitorInstancesRequest(input *MonitorInstancesInput) (req *service.Request, output *MonitorInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) MonitorInstancesRequest(input *MonitorInstancesInput) (req *request.Request, output *MonitorInstancesOutput) {
+	op := &request.Operation{
 		Name:       opMonitorInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5322,8 +5320,8 @@ func (c *EC2) MonitorInstances(input *MonitorInstancesInput) (*MonitorInstancesO
 const opMoveAddressToVpc = "MoveAddressToVpc"
 
 // MoveAddressToVpcRequest generates a request for the MoveAddressToVpc operation.
-func (c *EC2) MoveAddressToVpcRequest(input *MoveAddressToVpcInput) (req *service.Request, output *MoveAddressToVpcOutput) {
-	op := &service.Operation{
+func (c *EC2) MoveAddressToVpcRequest(input *MoveAddressToVpcInput) (req *request.Request, output *MoveAddressToVpcOutput) {
+	op := &request.Operation{
 		Name:       opMoveAddressToVpc,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5355,8 +5353,8 @@ func (c *EC2) MoveAddressToVpc(input *MoveAddressToVpcInput) (*MoveAddressToVpcO
 const opPurchaseReservedInstancesOffering = "PurchaseReservedInstancesOffering"
 
 // PurchaseReservedInstancesOfferingRequest generates a request for the PurchaseReservedInstancesOffering operation.
-func (c *EC2) PurchaseReservedInstancesOfferingRequest(input *PurchaseReservedInstancesOfferingInput) (req *service.Request, output *PurchaseReservedInstancesOfferingOutput) {
-	op := &service.Operation{
+func (c *EC2) PurchaseReservedInstancesOfferingRequest(input *PurchaseReservedInstancesOfferingInput) (req *request.Request, output *PurchaseReservedInstancesOfferingOutput) {
+	op := &request.Operation{
 		Name:       opPurchaseReservedInstancesOffering,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5393,8 +5391,8 @@ func (c *EC2) PurchaseReservedInstancesOffering(input *PurchaseReservedInstances
 const opRebootInstances = "RebootInstances"
 
 // RebootInstancesRequest generates a request for the RebootInstances operation.
-func (c *EC2) RebootInstancesRequest(input *RebootInstancesInput) (req *service.Request, output *RebootInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) RebootInstancesRequest(input *RebootInstancesInput) (req *request.Request, output *RebootInstancesOutput) {
+	op := &request.Operation{
 		Name:       opRebootInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5430,8 +5428,8 @@ func (c *EC2) RebootInstances(input *RebootInstancesInput) (*RebootInstancesOutp
 const opRegisterImage = "RegisterImage"
 
 // RegisterImageRequest generates a request for the RegisterImage operation.
-func (c *EC2) RegisterImageRequest(input *RegisterImageInput) (req *service.Request, output *RegisterImageOutput) {
-	op := &service.Operation{
+func (c *EC2) RegisterImageRequest(input *RegisterImageInput) (req *request.Request, output *RegisterImageOutput) {
+	op := &request.Operation{
 		Name:       opRegisterImage,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5448,23 +5446,32 @@ func (c *EC2) RegisterImageRequest(input *RegisterImageInput) (req *service.Requ
 }
 
 // Registers an AMI. When you're creating an AMI, this is the final step you
-// must complete before you can launch an instance from the AMI. This step is
-// required if you're creating an instance store-backed Linux or Windows AMI.
-// For more information, see Creating an Instance Store-Backed Linux AMI (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-instance-store.html)
-// and Creating an Instance Store-Backed Windows AMI (http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/Creating_InstanceStoreBacked_WinAMI.html)
+// must complete before you can launch an instance from the AMI. For more information
+// about creating AMIs, see Creating Your Own AMIs (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // For Amazon EBS-backed instances, CreateImage creates and registers the AMI
 // in a single request, so you don't have to register the AMI yourself.
 //
-// You can also use RegisterImage to create an Amazon EBS-backed AMI from a
-// snapshot of a root device volume. For more information, see Launching an
-// Instance from a Backup (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-launch-snapshot.html)
-// in the Amazon Elastic Compute Cloud User Guide. Note that although you can
-// create a Windows AMI from a snapshot, you can't launch an instance from the
-// AMI - use the CreateImage command instead.
+// You can also use RegisterImage to create an Amazon EBS-backed Linux AMI
+// from a snapshot of a root device volume. For more information, see Launching
+// an Instance from a Snapshot (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_LaunchingInstanceFromSnapshot.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 //
-// If needed, you can deregister an AMI at any time. Any modifications you
+//  Some Linux distributions, such as Red Hat Enterprise Linux (RHEL) and SUSE
+// Linux Enterprise Server (SLES), use the EC2 billingProduct code associated
+// with an AMI to verify subscription status for package updates. Creating an
+// AMI from an EBS snapshot does not maintain this billing code, and subsequent
+// instances launched from such an AMI will not be able to connect to package
+// update infrastructure.
+//
+// Similarly, although you can create a Windows AMI from a snapshot, you can't
+// successfully launch an instance from the AMI.
+//
+// To create Windows AMIs or to create AMIs for Linux operating systems that
+// must retain AMI billing codes to work properly, see CreateImage.
+//
+//  If needed, you can deregister an AMI at any time. Any modifications you
 // make to an AMI backed by an instance store volume invalidates its registration.
 // If you make changes to an image, deregister the previous image and register
 // the new image.
@@ -5480,8 +5487,8 @@ func (c *EC2) RegisterImage(input *RegisterImageInput) (*RegisterImageOutput, er
 const opRejectVpcPeeringConnection = "RejectVpcPeeringConnection"
 
 // RejectVpcPeeringConnectionRequest generates a request for the RejectVpcPeeringConnection operation.
-func (c *EC2) RejectVpcPeeringConnectionRequest(input *RejectVpcPeeringConnectionInput) (req *service.Request, output *RejectVpcPeeringConnectionOutput) {
-	op := &service.Operation{
+func (c *EC2) RejectVpcPeeringConnectionRequest(input *RejectVpcPeeringConnectionInput) (req *request.Request, output *RejectVpcPeeringConnectionOutput) {
+	op := &request.Operation{
 		Name:       opRejectVpcPeeringConnection,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5511,8 +5518,8 @@ func (c *EC2) RejectVpcPeeringConnection(input *RejectVpcPeeringConnectionInput)
 const opReleaseAddress = "ReleaseAddress"
 
 // ReleaseAddressRequest generates a request for the ReleaseAddress operation.
-func (c *EC2) ReleaseAddressRequest(input *ReleaseAddressInput) (req *service.Request, output *ReleaseAddressOutput) {
-	op := &service.Operation{
+func (c *EC2) ReleaseAddressRequest(input *ReleaseAddressInput) (req *request.Request, output *ReleaseAddressOutput) {
+	op := &request.Operation{
 		Name:       opReleaseAddress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5552,8 +5559,8 @@ func (c *EC2) ReleaseAddress(input *ReleaseAddressInput) (*ReleaseAddressOutput,
 const opReplaceNetworkAclAssociation = "ReplaceNetworkAclAssociation"
 
 // ReplaceNetworkAclAssociationRequest generates a request for the ReplaceNetworkAclAssociation operation.
-func (c *EC2) ReplaceNetworkAclAssociationRequest(input *ReplaceNetworkAclAssociationInput) (req *service.Request, output *ReplaceNetworkAclAssociationOutput) {
-	op := &service.Operation{
+func (c *EC2) ReplaceNetworkAclAssociationRequest(input *ReplaceNetworkAclAssociationInput) (req *request.Request, output *ReplaceNetworkAclAssociationOutput) {
+	op := &request.Operation{
 		Name:       opReplaceNetworkAclAssociation,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5582,8 +5589,8 @@ func (c *EC2) ReplaceNetworkAclAssociation(input *ReplaceNetworkAclAssociationIn
 const opReplaceNetworkAclEntry = "ReplaceNetworkAclEntry"
 
 // ReplaceNetworkAclEntryRequest generates a request for the ReplaceNetworkAclEntry operation.
-func (c *EC2) ReplaceNetworkAclEntryRequest(input *ReplaceNetworkAclEntryInput) (req *service.Request, output *ReplaceNetworkAclEntryOutput) {
-	op := &service.Operation{
+func (c *EC2) ReplaceNetworkAclEntryRequest(input *ReplaceNetworkAclEntryInput) (req *request.Request, output *ReplaceNetworkAclEntryOutput) {
+	op := &request.Operation{
 		Name:       opReplaceNetworkAclEntry,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5611,8 +5618,8 @@ func (c *EC2) ReplaceNetworkAclEntry(input *ReplaceNetworkAclEntryInput) (*Repla
 const opReplaceRoute = "ReplaceRoute"
 
 // ReplaceRouteRequest generates a request for the ReplaceRoute operation.
-func (c *EC2) ReplaceRouteRequest(input *ReplaceRouteInput) (req *service.Request, output *ReplaceRouteOutput) {
-	op := &service.Operation{
+func (c *EC2) ReplaceRouteRequest(input *ReplaceRouteInput) (req *request.Request, output *ReplaceRouteOutput) {
+	op := &request.Operation{
 		Name:       opReplaceRoute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5643,8 +5650,8 @@ func (c *EC2) ReplaceRoute(input *ReplaceRouteInput) (*ReplaceRouteOutput, error
 const opReplaceRouteTableAssociation = "ReplaceRouteTableAssociation"
 
 // ReplaceRouteTableAssociationRequest generates a request for the ReplaceRouteTableAssociation operation.
-func (c *EC2) ReplaceRouteTableAssociationRequest(input *ReplaceRouteTableAssociationInput) (req *service.Request, output *ReplaceRouteTableAssociationOutput) {
-	op := &service.Operation{
+func (c *EC2) ReplaceRouteTableAssociationRequest(input *ReplaceRouteTableAssociationInput) (req *request.Request, output *ReplaceRouteTableAssociationOutput) {
+	op := &request.Operation{
 		Name:       opReplaceRouteTableAssociation,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5678,8 +5685,8 @@ func (c *EC2) ReplaceRouteTableAssociation(input *ReplaceRouteTableAssociationIn
 const opReportInstanceStatus = "ReportInstanceStatus"
 
 // ReportInstanceStatusRequest generates a request for the ReportInstanceStatus operation.
-func (c *EC2) ReportInstanceStatusRequest(input *ReportInstanceStatusInput) (req *service.Request, output *ReportInstanceStatusOutput) {
-	op := &service.Operation{
+func (c *EC2) ReportInstanceStatusRequest(input *ReportInstanceStatusInput) (req *request.Request, output *ReportInstanceStatusOutput) {
+	op := &request.Operation{
 		Name:       opReportInstanceStatus,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5711,8 +5718,8 @@ func (c *EC2) ReportInstanceStatus(input *ReportInstanceStatusInput) (*ReportIns
 const opRequestSpotFleet = "RequestSpotFleet"
 
 // RequestSpotFleetRequest generates a request for the RequestSpotFleet operation.
-func (c *EC2) RequestSpotFleetRequest(input *RequestSpotFleetInput) (req *service.Request, output *RequestSpotFleetOutput) {
-	op := &service.Operation{
+func (c *EC2) RequestSpotFleetRequest(input *RequestSpotFleetInput) (req *request.Request, output *RequestSpotFleetOutput) {
+	op := &request.Operation{
 		Name:       opRequestSpotFleet,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5730,7 +5737,20 @@ func (c *EC2) RequestSpotFleetRequest(input *RequestSpotFleetInput) (req *servic
 
 // Creates a Spot fleet request.
 //
-// For more information, see Spot Fleets (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html)
+// You can submit a single request that includes multiple launch specifications
+// that vary by instance type, AMI, Availability Zone, or subnet.
+//
+// By default, the Spot fleet requests Spot instances in the Spot pool where
+// the price per unit is the lowest. Each launch specification can include its
+// own instance weighting that reflects the value of the instance type to your
+// application workload.
+//
+// Alternatively, you can specify that the Spot fleet distribute the target
+// capacity across the Spot pools included in its launch specifications. By
+// ensuring that the Spot instances in your Spot fleet are in different Spot
+// pools, you can improve the availability of your fleet.
+//
+// For more information, see Spot Fleet Requests (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 func (c *EC2) RequestSpotFleet(input *RequestSpotFleetInput) (*RequestSpotFleetOutput, error) {
 	req, out := c.RequestSpotFleetRequest(input)
@@ -5741,8 +5761,8 @@ func (c *EC2) RequestSpotFleet(input *RequestSpotFleetInput) (*RequestSpotFleetO
 const opRequestSpotInstances = "RequestSpotInstances"
 
 // RequestSpotInstancesRequest generates a request for the RequestSpotInstances operation.
-func (c *EC2) RequestSpotInstancesRequest(input *RequestSpotInstancesInput) (req *service.Request, output *RequestSpotInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) RequestSpotInstancesRequest(input *RequestSpotInstancesInput) (req *request.Request, output *RequestSpotInstancesOutput) {
+	op := &request.Operation{
 		Name:       opRequestSpotInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5758,10 +5778,10 @@ func (c *EC2) RequestSpotInstancesRequest(input *RequestSpotInstancesInput) (req
 	return
 }
 
-// Creates a Spot Instance request. Spot Instances are instances that Amazon
+// Creates a Spot instance request. Spot instances are instances that Amazon
 // EC2 launches when the bid price that you specify exceeds the current Spot
-// Price. Amazon EC2 periodically sets the Spot Price based on available Spot
-// Instance capacity and current Spot Instance requests. For more information,
+// price. Amazon EC2 periodically sets the Spot price based on available Spot
+// Instance capacity and current Spot instance requests. For more information,
 // see Spot Instance Requests (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 func (c *EC2) RequestSpotInstances(input *RequestSpotInstancesInput) (*RequestSpotInstancesOutput, error) {
@@ -5773,8 +5793,8 @@ func (c *EC2) RequestSpotInstances(input *RequestSpotInstancesInput) (*RequestSp
 const opResetImageAttribute = "ResetImageAttribute"
 
 // ResetImageAttributeRequest generates a request for the ResetImageAttribute operation.
-func (c *EC2) ResetImageAttributeRequest(input *ResetImageAttributeInput) (req *service.Request, output *ResetImageAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ResetImageAttributeRequest(input *ResetImageAttributeInput) (req *request.Request, output *ResetImageAttributeOutput) {
+	op := &request.Operation{
 		Name:       opResetImageAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5802,8 +5822,8 @@ func (c *EC2) ResetImageAttribute(input *ResetImageAttributeInput) (*ResetImageA
 const opResetInstanceAttribute = "ResetInstanceAttribute"
 
 // ResetInstanceAttributeRequest generates a request for the ResetInstanceAttribute operation.
-func (c *EC2) ResetInstanceAttributeRequest(input *ResetInstanceAttributeInput) (req *service.Request, output *ResetInstanceAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ResetInstanceAttributeRequest(input *ResetInstanceAttributeInput) (req *request.Request, output *ResetInstanceAttributeOutput) {
+	op := &request.Operation{
 		Name:       opResetInstanceAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5837,8 +5857,8 @@ func (c *EC2) ResetInstanceAttribute(input *ResetInstanceAttributeInput) (*Reset
 const opResetNetworkInterfaceAttribute = "ResetNetworkInterfaceAttribute"
 
 // ResetNetworkInterfaceAttributeRequest generates a request for the ResetNetworkInterfaceAttribute operation.
-func (c *EC2) ResetNetworkInterfaceAttributeRequest(input *ResetNetworkInterfaceAttributeInput) (req *service.Request, output *ResetNetworkInterfaceAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ResetNetworkInterfaceAttributeRequest(input *ResetNetworkInterfaceAttributeInput) (req *request.Request, output *ResetNetworkInterfaceAttributeOutput) {
+	op := &request.Operation{
 		Name:       opResetNetworkInterfaceAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5865,8 +5885,8 @@ func (c *EC2) ResetNetworkInterfaceAttribute(input *ResetNetworkInterfaceAttribu
 const opResetSnapshotAttribute = "ResetSnapshotAttribute"
 
 // ResetSnapshotAttributeRequest generates a request for the ResetSnapshotAttribute operation.
-func (c *EC2) ResetSnapshotAttributeRequest(input *ResetSnapshotAttributeInput) (req *service.Request, output *ResetSnapshotAttributeOutput) {
-	op := &service.Operation{
+func (c *EC2) ResetSnapshotAttributeRequest(input *ResetSnapshotAttributeInput) (req *request.Request, output *ResetSnapshotAttributeOutput) {
+	op := &request.Operation{
 		Name:       opResetSnapshotAttribute,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5896,8 +5916,8 @@ func (c *EC2) ResetSnapshotAttribute(input *ResetSnapshotAttributeInput) (*Reset
 const opRestoreAddressToClassic = "RestoreAddressToClassic"
 
 // RestoreAddressToClassicRequest generates a request for the RestoreAddressToClassic operation.
-func (c *EC2) RestoreAddressToClassicRequest(input *RestoreAddressToClassicInput) (req *service.Request, output *RestoreAddressToClassicOutput) {
-	op := &service.Operation{
+func (c *EC2) RestoreAddressToClassicRequest(input *RestoreAddressToClassicInput) (req *request.Request, output *RestoreAddressToClassicOutput) {
+	op := &request.Operation{
 		Name:       opRestoreAddressToClassic,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5926,8 +5946,8 @@ func (c *EC2) RestoreAddressToClassic(input *RestoreAddressToClassicInput) (*Res
 const opRevokeSecurityGroupEgress = "RevokeSecurityGroupEgress"
 
 // RevokeSecurityGroupEgressRequest generates a request for the RevokeSecurityGroupEgress operation.
-func (c *EC2) RevokeSecurityGroupEgressRequest(input *RevokeSecurityGroupEgressInput) (req *service.Request, output *RevokeSecurityGroupEgressOutput) {
-	op := &service.Operation{
+func (c *EC2) RevokeSecurityGroupEgressRequest(input *RevokeSecurityGroupEgressInput) (req *request.Request, output *RevokeSecurityGroupEgressOutput) {
+	op := &request.Operation{
 		Name:       opRevokeSecurityGroupEgress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -5963,8 +5983,8 @@ func (c *EC2) RevokeSecurityGroupEgress(input *RevokeSecurityGroupEgressInput) (
 const opRevokeSecurityGroupIngress = "RevokeSecurityGroupIngress"
 
 // RevokeSecurityGroupIngressRequest generates a request for the RevokeSecurityGroupIngress operation.
-func (c *EC2) RevokeSecurityGroupIngressRequest(input *RevokeSecurityGroupIngressInput) (req *service.Request, output *RevokeSecurityGroupIngressOutput) {
-	op := &service.Operation{
+func (c *EC2) RevokeSecurityGroupIngressRequest(input *RevokeSecurityGroupIngressInput) (req *request.Request, output *RevokeSecurityGroupIngressOutput) {
+	op := &request.Operation{
 		Name:       opRevokeSecurityGroupIngress,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6000,8 +6020,8 @@ func (c *EC2) RevokeSecurityGroupIngress(input *RevokeSecurityGroupIngressInput)
 const opRunInstances = "RunInstances"
 
 // RunInstancesRequest generates a request for the RunInstances operation.
-func (c *EC2) RunInstancesRequest(input *RunInstancesInput) (req *service.Request, output *Reservation) {
-	op := &service.Operation{
+func (c *EC2) RunInstancesRequest(input *RunInstancesInput) (req *request.Request, output *Reservation) {
+	op := &request.Operation{
 		Name:       opRunInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6028,6 +6048,12 @@ func (c *EC2) RunInstancesRequest(input *RunInstancesInput) (req *service.Reques
 // EC2 uses the default security group. For more information, see Security Groups
 // (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-network-security.html)
 // in the Amazon Elastic Compute Cloud User Guide.
+//
+// [EC2-VPC only accounts] If you don't specify a subnet in the request, we
+// choose a default subnet from your default VPC for you.
+//
+// [EC2-Classic accounts] If you're launching into EC2-Classic and you don't
+// specify an Availability Zone, we choose one for you.
 //
 // Linux instances have access to the public key of the key pair at boot. You
 // can use this key to provide secure access to the instance. Amazon EC2 public
@@ -6059,8 +6085,8 @@ func (c *EC2) RunInstances(input *RunInstancesInput) (*Reservation, error) {
 const opStartInstances = "StartInstances"
 
 // StartInstancesRequest generates a request for the StartInstances operation.
-func (c *EC2) StartInstancesRequest(input *StartInstancesInput) (req *service.Request, output *StartInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) StartInstancesRequest(input *StartInstancesInput) (req *request.Request, output *StartInstancesOutput) {
+	op := &request.Operation{
 		Name:       opStartInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6104,8 +6130,8 @@ func (c *EC2) StartInstances(input *StartInstancesInput) (*StartInstancesOutput,
 const opStopInstances = "StopInstances"
 
 // StopInstancesRequest generates a request for the StopInstances operation.
-func (c *EC2) StopInstancesRequest(input *StopInstancesInput) (req *service.Request, output *StopInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) StopInstancesRequest(input *StopInstancesInput) (req *request.Request, output *StopInstancesOutput) {
+	op := &request.Operation{
 		Name:       opStopInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6161,8 +6187,8 @@ func (c *EC2) StopInstances(input *StopInstancesInput) (*StopInstancesOutput, er
 const opTerminateInstances = "TerminateInstances"
 
 // TerminateInstancesRequest generates a request for the TerminateInstances operation.
-func (c *EC2) TerminateInstancesRequest(input *TerminateInstancesInput) (req *service.Request, output *TerminateInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) TerminateInstancesRequest(input *TerminateInstancesInput) (req *request.Request, output *TerminateInstancesOutput) {
+	op := &request.Operation{
 		Name:       opTerminateInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6191,9 +6217,10 @@ func (c *EC2) TerminateInstancesRequest(input *TerminateInstancesInput) (req *se
 // instance store-backed instances. What happens to an instance differs if you
 // stop it or terminate it. For example, when you stop an instance, the root
 // device and any other devices attached to the instance persist. When you terminate
-// an instance, the root device and any other devices attached during the instance
-// launch are automatically deleted. For more information about the differences
-// between stopping and terminating instances, see Instance Lifecycle (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html)
+// an instance, any attached EBS volumes with the DeleteOnTermination block
+// device mapping parameter set to true are automatically deleted. For more
+// information about the differences between stopping and terminating instances,
+// see Instance Lifecycle (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // For more information about troubleshooting, see Troubleshooting Terminating
@@ -6208,8 +6235,8 @@ func (c *EC2) TerminateInstances(input *TerminateInstancesInput) (*TerminateInst
 const opUnassignPrivateIpAddresses = "UnassignPrivateIpAddresses"
 
 // UnassignPrivateIpAddressesRequest generates a request for the UnassignPrivateIpAddresses operation.
-func (c *EC2) UnassignPrivateIpAddressesRequest(input *UnassignPrivateIpAddressesInput) (req *service.Request, output *UnassignPrivateIpAddressesOutput) {
-	op := &service.Operation{
+func (c *EC2) UnassignPrivateIpAddressesRequest(input *UnassignPrivateIpAddressesInput) (req *request.Request, output *UnassignPrivateIpAddressesOutput) {
+	op := &request.Operation{
 		Name:       opUnassignPrivateIpAddresses,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6235,8 +6262,8 @@ func (c *EC2) UnassignPrivateIpAddresses(input *UnassignPrivateIpAddressesInput)
 const opUnmonitorInstances = "UnmonitorInstances"
 
 // UnmonitorInstancesRequest generates a request for the UnmonitorInstances operation.
-func (c *EC2) UnmonitorInstancesRequest(input *UnmonitorInstancesInput) (req *service.Request, output *UnmonitorInstancesOutput) {
-	op := &service.Operation{
+func (c *EC2) UnmonitorInstancesRequest(input *UnmonitorInstancesInput) (req *request.Request, output *UnmonitorInstancesOutput) {
+	op := &request.Operation{
 		Name:       opUnmonitorInstances,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
@@ -6364,7 +6391,7 @@ type ActiveInstance struct {
 	// The instance type.
 	InstanceType *string `locationName:"instanceType" type:"string"`
 
-	// The ID of the Spot Instance request.
+	// The ID of the Spot instance request.
 	SpotInstanceRequestId *string `locationName:"spotInstanceRequestId" type:"string"`
 
 	metadataActiveInstance `json:"-" xml:"-"`
@@ -7780,7 +7807,7 @@ type CancelSpotInstanceRequestsInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
-	// One or more Spot Instance request IDs.
+	// One or more Spot instance request IDs.
 	SpotInstanceRequestIds []*string `locationName:"SpotInstanceRequestId" locationNameList:"SpotInstanceRequestId" type:"list" required:"true"`
 
 	metadataCancelSpotInstanceRequestsInput `json:"-" xml:"-"`
@@ -7802,7 +7829,7 @@ func (s CancelSpotInstanceRequestsInput) GoString() string {
 
 // Contains the output of CancelSpotInstanceRequests.
 type CancelSpotInstanceRequestsOutput struct {
-	// One or more Spot Instance requests.
+	// One or more Spot instance requests.
 	CancelledSpotInstanceRequests []*CancelledSpotInstanceRequest `locationName:"spotInstanceRequestSet" locationNameList:"item" type:"list"`
 
 	metadataCancelSpotInstanceRequestsOutput `json:"-" xml:"-"`
@@ -7822,12 +7849,12 @@ func (s CancelSpotInstanceRequestsOutput) GoString() string {
 	return s.String()
 }
 
-// Describes a request to cancel a Spot Instance.
+// Describes a request to cancel a Spot instance.
 type CancelledSpotInstanceRequest struct {
-	// The ID of the Spot Instance request.
+	// The ID of the Spot instance request.
 	SpotInstanceRequestId *string `locationName:"spotInstanceRequestId" type:"string"`
 
-	// The state of the Spot Instance request.
+	// The state of the Spot instance request.
 	State *string `locationName:"state" type:"string" enum:"CancelSpotInstanceRequestState"`
 
 	metadataCancelledSpotInstanceRequest `json:"-" xml:"-"`
@@ -9072,7 +9099,7 @@ func (s CreateSnapshotInput) GoString() string {
 
 // Contains the parameters for CreateSpotDatafeedSubscription.
 type CreateSpotDatafeedSubscriptionInput struct {
-	// The Amazon S3 bucket in which to store the Spot Instance data feed.
+	// The Amazon S3 bucket in which to store the Spot instance data feed.
 	Bucket *string `locationName:"bucket" type:"string" required:"true"`
 
 	// Checks whether you have the required permissions for the action, without
@@ -9103,7 +9130,7 @@ func (s CreateSpotDatafeedSubscriptionInput) GoString() string {
 
 // Contains the output of CreateSpotDatafeedSubscription.
 type CreateSpotDatafeedSubscriptionOutput struct {
-	// The Spot Instance data feed subscription.
+	// The Spot instance data feed subscription.
 	SpotDatafeedSubscription *SpotDatafeedSubscription `locationName:"spotDatafeedSubscription" type:"structure"`
 
 	metadataCreateSpotDatafeedSubscriptionOutput `json:"-" xml:"-"`
@@ -13509,7 +13536,9 @@ type DescribeSecurityGroupsInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
-	// One or more filters.
+	// One or more filters. If using multiple filters for rules, the results include
+	// security groups for which any combination of rules - not necessarily a single
+	// rule - match all filters.
 	//
 	//   description - The description of the security group.
 	//
@@ -13801,7 +13830,7 @@ func (s DescribeSpotDatafeedSubscriptionInput) GoString() string {
 
 // Contains the output of DescribeSpotDatafeedSubscription.
 type DescribeSpotDatafeedSubscriptionOutput struct {
-	// The Spot Instance data feed subscription.
+	// The Spot instance data feed subscription.
 	SpotDatafeedSubscription *SpotDatafeedSubscription `locationName:"spotDatafeedSubscription" type:"structure"`
 
 	metadataDescribeSpotDatafeedSubscriptionOutput `json:"-" xml:"-"`
@@ -14041,7 +14070,7 @@ type DescribeSpotInstanceRequestsInput struct {
 	//
 	//   availability-zone-group - The Availability Zone group.
 	//
-	//   create-time - The time stamp when the Spot Instance request was created.
+	//   create-time - The time stamp when the Spot instance request was created.
 	//
 	//   fault-code - The fault code related to the request.
 	//
@@ -14049,7 +14078,7 @@ type DescribeSpotInstanceRequestsInput struct {
 	//
 	//   instance-id - The ID of the instance that fulfilled the request.
 	//
-	//   launch-group - The Spot Instance launch group.
+	//   launch-group - The Spot instance launch group.
 	//
 	//   launch.block-device-mapping.delete-on-termination - Indicates whether
 	// the Amazon EBS volume is deleted on instance termination.
@@ -14077,7 +14106,7 @@ type DescribeSpotInstanceRequestsInput struct {
 	//   launch.key-name - The name of the key pair the instance launched with.
 	//
 	//   launch.monitoring-enabled - Whether monitoring is enabled for the Spot
-	// Instance.
+	// instance.
 	//
 	//   launch.ramdisk-id - The RAM disk ID.
 	//
@@ -14108,21 +14137,21 @@ type DescribeSpotInstanceRequestsInput struct {
 	//   product-description - The product description associated with the instance
 	// (Linux/UNIX | Windows).
 	//
-	//   spot-instance-request-id - The Spot Instance request ID.
+	//   spot-instance-request-id - The Spot instance request ID.
 	//
-	//   spot-price - The maximum hourly price for any Spot Instance launched to
+	//   spot-price - The maximum hourly price for any Spot instance launched to
 	// fulfill the request.
 	//
-	//   state - The state of the Spot Instance request (open | active | closed
+	//   state - The state of the Spot instance request (open | active | closed
 	// | cancelled | failed). Spot bid status information can help you track your
-	// Amazon EC2 Spot Instance requests. For more information, see Spot Bid Status
+	// Amazon EC2 Spot instance requests. For more information, see Spot Bid Status
 	// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-bid-status.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	//
 	//   status-code - The short code describing the most recent evaluation of
-	// your Spot Instance request.
+	// your Spot instance request.
 	//
-	//   status-message - The message explaining the status of the Spot Instance
+	//   status-message - The message explaining the status of the Spot instance
 	// request.
 	//
 	//   tag:key=value - The key/value combination of a tag assigned to the resource.
@@ -14137,7 +14166,7 @@ type DescribeSpotInstanceRequestsInput struct {
 	//   tag-value - The value of a tag assigned to the resource. This filter is
 	// independent of the tag-key filter.
 	//
-	//   type - The type of Spot Instance request (one-time | persistent).
+	//   type - The type of Spot instance request (one-time | persistent).
 	//
 	//   launched-availability-zone - The Availability Zone in which the bid is
 	// launched.
@@ -14147,7 +14176,7 @@ type DescribeSpotInstanceRequestsInput struct {
 	//   valid-until - The end date of the request.
 	Filters []*Filter `locationName:"Filter" locationNameList:"Filter" type:"list"`
 
-	// One or more Spot Instance request IDs.
+	// One or more Spot instance request IDs.
 	SpotInstanceRequestIds []*string `locationName:"SpotInstanceRequestId" locationNameList:"SpotInstanceRequestId" type:"list"`
 
 	metadataDescribeSpotInstanceRequestsInput `json:"-" xml:"-"`
@@ -14169,7 +14198,7 @@ func (s DescribeSpotInstanceRequestsInput) GoString() string {
 
 // Contains the output of DescribeSpotInstanceRequests.
 type DescribeSpotInstanceRequestsOutput struct {
-	// One or more Spot Instance requests.
+	// One or more Spot instance requests.
 	SpotInstanceRequests []*SpotInstanceRequest `locationName:"spotInstanceRequestSet" locationNameList:"item" type:"list"`
 
 	metadataDescribeSpotInstanceRequestsOutput `json:"-" xml:"-"`
@@ -14210,14 +14239,14 @@ type DescribeSpotPriceHistoryInput struct {
 	//
 	//   instance-type - The type of instance (for example, m1.small).
 	//
-	//   product-description - The product description for the Spot Price (Linux/UNIX
+	//   product-description - The product description for the Spot price (Linux/UNIX
 	// | SUSE Linux | Windows | Linux/UNIX (Amazon VPC) | SUSE Linux (Amazon VPC)
 	// | Windows (Amazon VPC)).
 	//
-	//   spot-price - The Spot Price. The value must match exactly (or use wildcards;
+	//   spot-price - The Spot price. The value must match exactly (or use wildcards;
 	// greater than or less than comparison is not supported).
 	//
-	//   timestamp - The timestamp of the Spot Price history, in UTC format (for
+	//   timestamp - The timestamp of the Spot price history, in UTC format (for
 	// example, YYYY-MM-DDTHH:MM:SSZ). You can use wildcards (* and ?). Greater
 	// than or less than comparison is not supported.
 	Filters []*Filter `locationName:"Filter" locationNameList:"Filter" type:"list"`
@@ -14263,7 +14292,7 @@ type DescribeSpotPriceHistoryOutput struct {
 	// when there are no more results to return.
 	NextToken *string `locationName:"nextToken" type:"string"`
 
-	// The historical Spot Prices.
+	// The historical Spot prices.
 	SpotPriceHistory []*SpotPrice `locationName:"spotPriceHistorySet" locationNameList:"item" type:"list"`
 
 	metadataDescribeSpotPriceHistoryOutput `json:"-" xml:"-"`
@@ -16179,32 +16208,32 @@ type EventInformation struct {
 	// For more information, see the description.
 	//
 	//   spotInstanceCountLimitExceeded - You've reached the limit on the number
-	// of Spot Instances that you can launch.
+	// of Spot instances that you can launch.
 	//
 	//   The following are the fleetRequestChange events.
 	//
 	//   active - The Spot fleet has been validated and Amazon EC2 is attempting
-	// to maintain the target number of running Spot Instances.
+	// to maintain the target number of running Spot instances.
 	//
-	//   cancelled - The Spot fleet is canceled and has no running Spot Instances.
+	//   cancelled - The Spot fleet is canceled and has no running Spot instances.
 	// The Spot fleet will be deleted two days after its instances were terminated.
 	//
 	//   cancelled_running - The Spot fleet is canceled and will not launch additional
-	// Spot Instances, but its existing Spot Instances will continue to run until
-	// they are interrupted or terminated.
+	// Spot instances, but its existing Spot instances continue to run until they
+	// are interrupted or terminated.
 	//
-	//   cancelled_terminating - The Spot fleet is canceled and its Spot Instances
+	//   cancelled_terminating - The Spot fleet is canceled and its Spot instances
 	// are terminating.
 	//
 	//   expired - The Spot fleet request has expired. A subsequent event indicates
-	// that the instances were terminated, if the request was created with terminateInstancesWithExpiration
+	// that the instances were terminated, if the request was created with TerminateInstancesWithExpiration
 	// set.
 	//
 	//   price_update - The bid price for a launch configuration was adjusted because
 	// it was too high. This change is permanent.
 	//
 	//   submitted - The Spot fleet request is being evaluated and Amazon EC2 is
-	// preparing to launch the target number of Spot Instances.
+	// preparing to launch the target number of Spot instances.
 	//
 	//   The following are the instanceChange events.
 	//
@@ -18378,7 +18407,7 @@ type ModifyImageAttributeInput struct {
 	LaunchPermission *LaunchPermissionModifications `type:"structure"`
 
 	// The operation type.
-	OperationType *string `type:"string"`
+	OperationType *string `type:"string" enum:"OperationType"`
 
 	// One or more product codes. After you add a product code to an AMI, it can't
 	// be removed. This is only valid when modifying the productCodes attribute.
@@ -18447,7 +18476,8 @@ type ModifyInstanceAttributeInput struct {
 	BlockDeviceMappings []*InstanceBlockDeviceMappingSpecification `locationName:"blockDeviceMapping" locationNameList:"item" type:"list"`
 
 	// If the value is true, you can't terminate the instance using the Amazon EC2
-	// console, CLI, or API; otherwise, you can.
+	// console, CLI, or API; otherwise, you can. You cannot use this paramater for
+	// Spot Instances.
 	DisableApiTermination *AttributeBooleanValue `locationName:"disableApiTermination" type:"structure"`
 
 	// Checks whether you have the required permissions for the action, without
@@ -18507,7 +18537,7 @@ type ModifyInstanceAttributeInput struct {
 	UserData *BlobAttributeValue `locationName:"userData" type:"structure"`
 
 	// A new value for the attribute. Use only with the kernel, ramdisk, userData,
-	// disableApiTermination, or intanceInitiateShutdownBehavior attribute.
+	// disableApiTermination, or instanceInitiatedShutdownBehavior attribute.
 	Value *string `locationName:"value" type:"string"`
 
 	metadataModifyInstanceAttributeInput `json:"-" xml:"-"`
@@ -18678,7 +18708,7 @@ type ModifySnapshotAttributeInput struct {
 	GroupNames []*string `locationName:"UserGroup" locationNameList:"GroupName" type:"list"`
 
 	// The type of operation to perform to the attribute.
-	OperationType *string `type:"string"`
+	OperationType *string `type:"string" enum:"OperationType"`
 
 	// The ID of the snapshot.
 	SnapshotId *string `type:"string" required:"true"`
@@ -20418,18 +20448,18 @@ type RequestSpotInstancesInput struct {
 	// The user-specified name for a logical grouping of bids.
 	//
 	// When you specify an Availability Zone group in a Spot Instance request,
-	// all Spot Instances in the request are launched in the same Availability Zone.
+	// all Spot instances in the request are launched in the same Availability Zone.
 	// Instance proximity is maintained with this parameter, but the choice of Availability
 	// Zone is not. The group applies only to bids for Spot Instances of the same
-	// instance type. Any additional Spot Instance requests that are specified with
+	// instance type. Any additional Spot instance requests that are specified with
 	// the same Availability Zone group name are launched in that same Availability
 	// Zone, as long as at least one instance from the group is still active.
 	//
 	// If there is no active instance running in the Availability Zone group that
-	// you specify for a new Spot Instance request (all instances are terminated,
+	// you specify for a new Spot instance request (all instances are terminated,
 	// the bid is expired, or the bid falls below current market), then Amazon EC2
 	// launches the instance in any Availability Zone where the constraint can be
-	// met. Consequently, the subsequent set of Spot Instances could be placed in
+	// met. Consequently, the subsequent set of Spot instances could be placed in
 	// a different zone from the original request, even if you specified the same
 	// Availability Zone group.
 	//
@@ -20447,12 +20477,12 @@ type RequestSpotInstancesInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
-	// The maximum number of Spot Instances to launch.
+	// The maximum number of Spot instances to launch.
 	//
 	// Default: 1
 	InstanceCount *int64 `locationName:"instanceCount" type:"integer"`
 
-	// The instance launch group. Launch groups are Spot Instances that launch together
+	// The instance launch group. Launch groups are Spot instances that launch together
 	// and terminate together.
 	//
 	// Default: Instances are launched and terminated individually
@@ -20461,11 +20491,11 @@ type RequestSpotInstancesInput struct {
 	// Describes the launch specification for an instance.
 	LaunchSpecification *RequestSpotLaunchSpecification `type:"structure"`
 
-	// The maximum hourly price (bid) for any Spot Instance launched to fulfill
+	// The maximum hourly price (bid) for any Spot instance launched to fulfill
 	// the request.
 	SpotPrice *string `locationName:"spotPrice" type:"string" required:"true"`
 
-	// The Spot Instance request type.
+	// The Spot instance request type.
 	//
 	// Default: one-time
 	Type *string `locationName:"type" type:"string" enum:"SpotInstanceType"`
@@ -20506,7 +20536,7 @@ func (s RequestSpotInstancesInput) GoString() string {
 
 // Contains the output of RequestSpotInstances.
 type RequestSpotInstancesOutput struct {
-	// One or more Spot Instance requests.
+	// One or more Spot instance requests.
 	SpotInstanceRequests []*SpotInstanceRequest `locationName:"spotInstanceRequestSet" locationNameList:"item" type:"list"`
 
 	metadataRequestSpotInstancesOutput `json:"-" xml:"-"`
@@ -21751,6 +21781,14 @@ func (s SecurityGroup) GoString() string {
 
 // Describes a snapshot.
 type Snapshot struct {
+	// The data encryption key identifier for the snapshot. This value is a unique
+	// identifier that corresponds to the data encryption key that was used to encrypt
+	// the original volume or snapshot copy. Because data encryption keys are inherited
+	// by volumes created from snapshots, and vice versa, if snapshots share the
+	// same data encryption key identifier, then they belong to the same volume/snapshot
+	// lineage. This parameter is only returned by the DescribeSnapshots API operation.
+	DataEncryptionKeyId *string `locationName:"dataEncryptionKeyId" type:"string"`
+
 	// The description for the snapshot.
 	Description *string `locationName:"description" type:"string"`
 
@@ -21772,7 +21810,8 @@ type Snapshot struct {
 	// The progress of the snapshot, as a percentage.
 	Progress *string `locationName:"progress" type:"string"`
 
-	// The ID of the snapshot.
+	// The ID of the snapshot. Each snapshot receives a unique identifier when it
+	// is created.
 	SnapshotId *string `locationName:"snapshotId" type:"string"`
 
 	// The time stamp when the snapshot was initiated.
@@ -21781,10 +21820,17 @@ type Snapshot struct {
 	// The snapshot state.
 	State *string `locationName:"status" type:"string" enum:"SnapshotState"`
 
+	// Encrypted Amazon EBS snapshots are copied asynchronously. If a snapshot copy
+	// operation fails (for example, if the proper AWS Key Management Service (AWS
+	// KMS) permissions are not obtained) this field displays error state details
+	// to help you diagnose why the error occurred. This parameter is only returned
+	// by the DescribeSnapshots API operation.
+	StateMessage *string `locationName:"statusMessage" type:"string"`
+
 	// Any tags assigned to the snapshot.
 	Tags []*Tag `locationName:"tagSet" locationNameList:"item" type:"list"`
 
-	// The ID of the volume.
+	// The ID of the volume that was used to create the snapshot.
 	VolumeId *string `locationName:"volumeId" type:"string"`
 
 	// The size of the volume, in GiB.
@@ -21936,12 +21982,12 @@ func (s SnapshotTaskDetail) GoString() string {
 	return s.String()
 }
 
-// Describes the data feed for a Spot Instance.
+// Describes the data feed for a Spot instance.
 type SpotDatafeedSubscription struct {
-	// The Amazon S3 bucket where the Spot Instance data feed is located.
+	// The Amazon S3 bucket where the Spot instance data feed is located.
 	Bucket *string `locationName:"bucket" type:"string"`
 
-	// The fault codes for the Spot Instance request, if any.
+	// The fault codes for the Spot instance request, if any.
 	Fault *SpotInstanceStateFault `locationName:"fault" type:"structure"`
 
 	// The AWS account ID of the account.
@@ -21950,7 +21996,7 @@ type SpotDatafeedSubscription struct {
 	// The prefix that is prepended to data feed files.
 	Prefix *string `locationName:"prefix" type:"string"`
 
-	// The state of the Spot Instance data feed subscription.
+	// The state of the Spot instance data feed subscription.
 	State *string `locationName:"state" type:"string" enum:"DatafeedSubscriptionState"`
 
 	metadataSpotDatafeedSubscription `json:"-" xml:"-"`
@@ -21970,7 +22016,7 @@ func (s SpotDatafeedSubscription) GoString() string {
 	return s.String()
 }
 
-// Describes the launch specification for an instance.
+// Describes the launch specification for one or more Spot instances.
 type SpotFleetLaunchSpecification struct {
 	// Deprecated.
 	AddressingType *string `locationName:"addressingType" type:"string"`
@@ -21978,7 +22024,7 @@ type SpotFleetLaunchSpecification struct {
 	// One or more block device mapping entries.
 	BlockDeviceMappings []*BlockDeviceMapping `locationName:"blockDeviceMapping" locationNameList:"item" type:"list"`
 
-	// Indicates whether the instance is optimized for EBS I/O. This optimization
+	// Indicates whether the instances are optimized for EBS I/O. This optimization
 	// provides dedicated throughput to Amazon EBS and an optimized configuration
 	// stack to provide optimal EBS I/O performance. This optimization isn't available
 	// with all instance types. Additional usage charges apply when using an EBS
@@ -21987,7 +22033,7 @@ type SpotFleetLaunchSpecification struct {
 	// Default: false
 	EbsOptimized *bool `locationName:"ebsOptimized" type:"boolean"`
 
-	// Describes an IAM instance profile.
+	// The IAM instance profile.
 	IamInstanceProfile *IamInstanceProfileSpecification `locationName:"iamInstanceProfile" type:"structure"`
 
 	// The ID of the AMI.
@@ -22002,13 +22048,13 @@ type SpotFleetLaunchSpecification struct {
 	// The name of the key pair.
 	KeyName *string `locationName:"keyName" type:"string"`
 
-	// Enable or disable monitoring for the instance.
+	// Enable or disable monitoring for the instances.
 	Monitoring *SpotFleetMonitoring `locationName:"monitoring" type:"structure"`
 
 	// One or more network interfaces.
 	NetworkInterfaces []*InstanceNetworkInterfaceSpecification `locationName:"networkInterfaceSet" locationNameList:"item" type:"list"`
 
-	// Describes Spot Instance placement.
+	// The placement information.
 	Placement *SpotPlacement `locationName:"placement" type:"structure"`
 
 	// The ID of the RAM disk.
@@ -22020,11 +22066,26 @@ type SpotFleetLaunchSpecification struct {
 	// group.
 	SecurityGroups []*GroupIdentifier `locationName:"groupSet" locationNameList:"item" type:"list"`
 
-	// The ID of the subnet in which to launch the instance.
+	// The bid price per unit hour for the specified instance type. If this value
+	// is not specified, the default is the Spot bid price specified for the fleet.
+	// To determine the bid price per unit hour, divide the Spot bid price by the
+	// value of WeightedCapacity.
+	SpotPrice *string `locationName:"spotPrice" type:"string"`
+
+	// The ID of the subnet in which to launch the instances.
 	SubnetId *string `locationName:"subnetId" type:"string"`
 
 	// The Base64-encoded MIME user data to make available to the instances.
 	UserData *string `locationName:"userData" type:"string"`
+
+	// The number of units provided by the specified instance type. These are the
+	// same units that you chose to set the target capacity in terms (instances
+	// or a performance characteristic such as vCPUs, memory, or I/O).
+	//
+	// If the target capacity divided by this value is not a whole number, we round
+	// the number of instances to the next whole number. If this value is not specified,
+	// the default is 1.
+	WeightedCapacity *float64 `locationName:"weightedCapacity" type:"double"`
 
 	metadataSpotFleetLaunchSpecification `json:"-" xml:"-"`
 }
@@ -22097,28 +22158,33 @@ func (s SpotFleetRequestConfig) GoString() string {
 
 // Describes the configuration of a Spot fleet request.
 type SpotFleetRequestConfigData struct {
+	// Determines how to allocate the target capacity across the Spot pools specified
+	// by the Spot fleet request. The default is lowestPrice.
+	AllocationStrategy *string `locationName:"allocationStrategy" type:"string" enum:"AllocationStrategy"`
+
 	// A unique, case-sensitive identifier you provide to ensure idempotency of
 	// your listings. This helps avoid duplicate listings. For more information,
 	// see Ensuring Idempotency (http://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html).
 	ClientToken *string `locationName:"clientToken" type:"string"`
 
-	// Grants the Spot fleet service permission to terminate instances on your behalf
-	// when you cancel a Spot fleet request using CancelSpotFleetRequests or when
+	// Grants the Spot fleet permission to terminate Spot instances on your behalf
+	// when you cancel its Spot fleet request using CancelSpotFleetRequests or when
 	// the Spot fleet request expires, if you set terminateInstancesWithExpiration.
 	IamFleetRole *string `locationName:"iamFleetRole" type:"string" required:"true"`
 
-	// Information about the launch specifications for the instances.
-	LaunchSpecifications []*SpotFleetLaunchSpecification `locationName:"launchSpecifications" locationNameList:"item" type:"list" required:"true"`
+	// Information about the launch specifications for the Spot fleet request.
+	LaunchSpecifications []*SpotFleetLaunchSpecification `locationName:"launchSpecifications" locationNameList:"item" min:"1" type:"list" required:"true"`
 
-	// The maximum hourly price (bid) for any Spot Instance launched to fulfill
-	// the request.
+	// The bid price per unit hour.
 	SpotPrice *string `locationName:"spotPrice" type:"string" required:"true"`
 
-	// The maximum number of Spot Instances to launch.
+	// The number of units to request. You can choose to set the target capacity
+	// in terms of instances or a performance characteristic that is important to
+	// your application workload, such as vCPUs, memory, or I/O.
 	TargetCapacity *int64 `locationName:"targetCapacity" type:"integer" required:"true"`
 
-	// Indicates whether running instances should be terminated when the Spot fleet
-	// request expires.
+	// Indicates whether running Spot instances should be terminated when the Spot
+	// fleet request expires.
 	TerminateInstancesWithExpiration *bool `locationName:"terminateInstancesWithExpiration" type:"boolean"`
 
 	// The start date and time of the request, in UTC format (for example, YYYY-MM-DDTHH:MM:SSZ).
@@ -22126,7 +22192,7 @@ type SpotFleetRequestConfigData struct {
 	ValidFrom *time.Time `locationName:"validFrom" type:"timestamp" timestampFormat:"iso8601"`
 
 	// The end date and time of the request, in UTC format (for example, YYYY-MM-DDTHH:MM:SSZ).
-	// At this point, no new Spot Instance requests are placed or enabled to fulfill
+	// At this point, no new Spot instance requests are placed or enabled to fulfill
 	// the request.
 	ValidUntil *time.Time `locationName:"validUntil" type:"timestamp" timestampFormat:"iso8601"`
 
@@ -22147,25 +22213,25 @@ func (s SpotFleetRequestConfigData) GoString() string {
 	return s.String()
 }
 
-// Describe a Spot Instance request.
+// Describe a Spot instance request.
 type SpotInstanceRequest struct {
 	// The Availability Zone group. If you specify the same Availability Zone group
-	// for all Spot Instance requests, all Spot Instances are launched in the same
+	// for all Spot instance requests, all Spot instances are launched in the same
 	// Availability Zone.
 	AvailabilityZoneGroup *string `locationName:"availabilityZoneGroup" type:"string"`
 
-	// The date and time when the Spot Instance request was created, in UTC format
+	// The date and time when the Spot instance request was created, in UTC format
 	// (for example, YYYY-MM-DDTHH:MM:SSZ).
 	CreateTime *time.Time `locationName:"createTime" type:"timestamp" timestampFormat:"iso8601"`
 
-	// The fault codes for the Spot Instance request, if any.
+	// The fault codes for the Spot instance request, if any.
 	Fault *SpotInstanceStateFault `locationName:"fault" type:"structure"`
 
-	// The instance ID, if an instance has been launched to fulfill the Spot Instance
+	// The instance ID, if an instance has been launched to fulfill the Spot instance
 	// request.
 	InstanceId *string `locationName:"instanceId" type:"string"`
 
-	// The instance launch group. Launch groups are Spot Instances that launch together
+	// The instance launch group. Launch groups are Spot instances that launch together
 	// and terminate together.
 	LaunchGroup *string `locationName:"launchGroup" type:"string"`
 
@@ -22175,29 +22241,29 @@ type SpotInstanceRequest struct {
 	// The Availability Zone in which the bid is launched.
 	LaunchedAvailabilityZone *string `locationName:"launchedAvailabilityZone" type:"string"`
 
-	// The product description associated with the Spot Instance.
+	// The product description associated with the Spot instance.
 	ProductDescription *string `locationName:"productDescription" type:"string" enum:"RIProductDescription"`
 
-	// The ID of the Spot Instance request.
+	// The ID of the Spot instance request.
 	SpotInstanceRequestId *string `locationName:"spotInstanceRequestId" type:"string"`
 
-	// The maximum hourly price (bid) for any Spot Instance launched to fulfill
+	// The maximum hourly price (bid) for any Spot instance launched to fulfill
 	// the request.
 	SpotPrice *string `locationName:"spotPrice" type:"string"`
 
-	// The state of the Spot Instance request. Spot bid status information can help
-	// you track your Spot Instance requests. For more information, see Spot Bid
+	// The state of the Spot instance request. Spot bid status information can help
+	// you track your Spot instance requests. For more information, see Spot Bid
 	// Status (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-bid-status.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	State *string `locationName:"state" type:"string" enum:"SpotInstanceState"`
 
-	// The status code and status message describing the Spot Instance request.
+	// The status code and status message describing the Spot instance request.
 	Status *SpotInstanceStatus `locationName:"status" type:"structure"`
 
 	// Any tags assigned to the resource.
 	Tags []*Tag `locationName:"tagSet" locationNameList:"item" type:"list"`
 
-	// The Spot Instance request type.
+	// The Spot instance request type.
 	Type *string `locationName:"type" type:"string" enum:"SpotInstanceType"`
 
 	// The start date of the request, in UTC format (for example, YYYY-MM-DDTHH:MM:SSZ).
@@ -22230,12 +22296,12 @@ func (s SpotInstanceRequest) GoString() string {
 	return s.String()
 }
 
-// Describes a Spot Instance state change.
+// Describes a Spot instance state change.
 type SpotInstanceStateFault struct {
-	// The reason code for the Spot Instance state change.
+	// The reason code for the Spot instance state change.
 	Code *string `locationName:"code" type:"string"`
 
-	// The message for the Spot Instance state change.
+	// The message for the Spot instance state change.
 	Message *string `locationName:"message" type:"string"`
 
 	metadataSpotInstanceStateFault `json:"-" xml:"-"`
@@ -22255,7 +22321,7 @@ func (s SpotInstanceStateFault) GoString() string {
 	return s.String()
 }
 
-// Describes the status of a Spot Instance request.
+// Describes the status of a Spot instance request.
 type SpotInstanceStatus struct {
 	// The status code.
 	Code *string `locationName:"code" type:"string"`
@@ -22284,7 +22350,7 @@ func (s SpotInstanceStatus) GoString() string {
 	return s.String()
 }
 
-// Describes Spot Instance placement.
+// Describes Spot instance placement.
 type SpotPlacement struct {
 	// The Availability Zone.
 	AvailabilityZone *string `locationName:"availabilityZone" type:"string"`
@@ -22309,7 +22375,7 @@ func (s SpotPlacement) GoString() string {
 	return s.String()
 }
 
-// Describes the maximum hourly price (bid) for any Spot Instance launched to
+// Describes the maximum hourly price (bid) for any Spot instance launched to
 // fulfill the request.
 type SpotPrice struct {
 	// The Availability Zone.
@@ -22321,7 +22387,7 @@ type SpotPrice struct {
 	// A general description of the AMI.
 	ProductDescription *string `locationName:"productDescription" type:"string" enum:"RIProductDescription"`
 
-	// The maximum price (bid) that you are willing to pay for a Spot Instance.
+	// The maximum price (bid) that you are willing to pay for a Spot instance.
 	SpotPrice *string `locationName:"spotPrice" type:"string"`
 
 	// The date and time the request was created, in UTC format (for example, YYYY-MM-DDTHH:MM:SSZ).
@@ -22793,7 +22859,7 @@ func (s UnsuccessfulItem) GoString() string {
 	return s.String()
 }
 
-// Information about the error that occured. For more information about errors,
+// Information about the error that occurred. For more information about errors,
 // see Error Codes (http://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html).
 type UnsuccessfulItemError struct {
 	// The error code.
@@ -23628,6 +23694,13 @@ const (
 )
 
 const (
+	// @enum AllocationStrategy
+	AllocationStrategyLowestPrice = "lowestPrice"
+	// @enum AllocationStrategy
+	AllocationStrategyDiversified = "diversified"
+)
+
+const (
 	// @enum ArchitectureValues
 	ArchitectureValuesI386 = "i386"
 	// @enum ArchitectureValues
@@ -24096,6 +24169,13 @@ const (
 	OfferingTypeValuesPartialUpfront = "Partial Upfront"
 	// @enum OfferingTypeValues
 	OfferingTypeValuesAllUpfront = "All Upfront"
+)
+
+const (
+	// @enum OperationType
+	OperationTypeAdd = "add"
+	// @enum OperationType
+	OperationTypeRemove = "remove"
 )
 
 const (

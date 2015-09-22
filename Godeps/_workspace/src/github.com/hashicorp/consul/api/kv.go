@@ -143,7 +143,7 @@ func (k *KV) CAS(p *KVPair, q *WriteOptions) (bool, *WriteMeta, error) {
 	return k.put(p.Key, params, p.Value, q)
 }
 
-// Acquire is used for a lock acquisiiton operation. The Key,
+// Acquire is used for a lock acquisition operation. The Key,
 // Flags, Value and Session are respected. Returns true
 // on success or false on failures.
 func (k *KV) Acquire(p *KVPair, q *WriteOptions) (bool, *WriteMeta, error) {

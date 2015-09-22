@@ -536,15 +536,11 @@ func (d *msgpackDecDriver) DecodeBytes(bs []byte, isstring, zerocopy bool) (bsOu
 		d.readNextBd()
 	}
 	var clen int
-	if isstring {
-		clen = d.readContainerLen(msgpackContainerStr)
+	// ignore isstring. Expect that the bytes may be found from msgpackContainerStr or msgpackContainerBin
+	if bd := d.bd; bd == mpBin8 || bd == mpBin16 || bd == mpBin32 {
+		clen = d.readContainerLen(msgpackContainerBin)
 	} else {
-		// bytes can be decoded from msgpackContainerStr or msgpackContainerBin
-		if bd := d.bd; bd == mpBin8 || bd == mpBin16 || bd == mpBin32 {
-			clen = d.readContainerLen(msgpackContainerBin)
-		} else {
-			clen = d.readContainerLen(msgpackContainerStr)
-		}
+		clen = d.readContainerLen(msgpackContainerStr)
 	}
 	// println("DecodeBytes: clen: ", clen)
 	d.bdRead = false
@@ -617,7 +613,7 @@ func (d *msgpackDecDriver) readContainerLen(ct msgpackContainerType) (clen int) 
 	} else if (ct.bFixMin & bd) == ct.bFixMin {
 		clen = int(ct.bFixMin ^ bd)
 	} else {
-		d.d.errorf("readContainerLen: %s: hex: %x, dec: %d", msgBadDesc, bd, bd)
+		d.d.errorf("readContainerLen: %s: hex: %x, decimal: %d", msgBadDesc, bd, bd)
 		return
 	}
 	d.bdRead = false

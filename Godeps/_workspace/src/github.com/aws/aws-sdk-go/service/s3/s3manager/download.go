@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
 
 // The default range of bytes to get at a time when using Download().
@@ -37,7 +38,7 @@ type DownloadOptions struct {
 
 	// An S3 client to use when performing downloads. Leave this as nil to use
 	// a default client.
-	S3 *s3.S3
+	S3 s3iface.S3API
 }
 
 // NewDownloader creates a new Downloader structure that downloads an object

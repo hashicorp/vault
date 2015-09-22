@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 // RFC822 returns an RFC822 formatted timestamp for AWS protocols
@@ -37,7 +37,7 @@ func init() {
 }
 
 // Build builds the REST component of a service request.
-func Build(r *service.Request) {
+func Build(r *request.Request) {
 	if r.ParamsFilled() {
 		v := reflect.ValueOf(r.Params).Elem()
 		buildLocationElements(r, v)
@@ -45,7 +45,7 @@ func Build(r *service.Request) {
 	}
 }
 
-func buildLocationElements(r *service.Request, v reflect.Value) {
+func buildLocationElements(r *request.Request, v reflect.Value) {
 	query := r.HTTPRequest.URL.Query()
 
 	for i := 0; i < v.NumField(); i++ {
@@ -87,7 +87,7 @@ func buildLocationElements(r *service.Request, v reflect.Value) {
 	updatePath(r.HTTPRequest.URL, r.HTTPRequest.URL.Path)
 }
 
-func buildBody(r *service.Request, v reflect.Value) {
+func buildBody(r *request.Request, v reflect.Value) {
 	if field, ok := v.Type().FieldByName("SDKShapeTraits"); ok {
 		if payloadName := field.Tag.Get("payload"); payloadName != "" {
 			pfield, _ := v.Type().FieldByName(payloadName)
@@ -112,7 +112,7 @@ func buildBody(r *service.Request, v reflect.Value) {
 	}
 }
 
-func buildHeader(r *service.Request, v reflect.Value, name string) {
+func buildHeader(r *request.Request, v reflect.Value, name string) {
 	str, err := convertType(v)
 	if err != nil {
 		r.Error = awserr.New("SerializationError", "failed to encode REST request", err)
@@ -121,7 +121,7 @@ func buildHeader(r *service.Request, v reflect.Value, name string) {
 	}
 }
 
-func buildHeaderMap(r *service.Request, v reflect.Value, prefix string) {
+func buildHeaderMap(r *request.Request, v reflect.Value, prefix string) {
 	for _, key := range v.MapKeys() {
 		str, err := convertType(v.MapIndex(key))
 		if err != nil {
@@ -132,7 +132,7 @@ func buildHeaderMap(r *service.Request, v reflect.Value, prefix string) {
 	}
 }
 
-func buildURI(r *service.Request, v reflect.Value, name string) {
+func buildURI(r *request.Request, v reflect.Value, name string) {
 	value, err := convertType(v)
 	if err != nil {
 		r.Error = awserr.New("SerializationError", "failed to encode REST request", err)
@@ -144,7 +144,7 @@ func buildURI(r *service.Request, v reflect.Value, name string) {
 	}
 }
 
-func buildQueryString(r *service.Request, v reflect.Value, name string, query url.Values) {
+func buildQueryString(r *request.Request, v reflect.Value, name string, query url.Values) {
 	str, err := convertType(v)
 	if err != nil {
 		r.Error = awserr.New("SerializationError", "failed to encode REST request", err)

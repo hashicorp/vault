@@ -29,7 +29,7 @@ import (
 %token  <b> BOOL
 %token  <f> FLOAT
 %token  <num> NUMBER
-%token  <str> COMMA COMMAEND IDENTIFIER EQUAL NEWLINE STRING MINUS
+%token  <str> COMMA IDENTIFIER EQUAL NEWLINE STRING MINUS
 %token  <str> LEFTBRACE RIGHTBRACE LEFTBRACKET RIGHTBRACKET PERIOD
 %token  <str> EPLUS EMINUS
 
@@ -152,6 +152,10 @@ list:
 	{
 		$$ = $2
 	}
+|	LEFTBRACKET listitems COMMA RIGHTBRACKET
+	{
+		$$ = $2
+	}
 |	LEFTBRACKET RIGHTBRACKET
 	{
 		$$ = nil
@@ -165,10 +169,6 @@ listitems:
 |	listitems COMMA listitem
 	{
 		$$ = append($1, $3)
-	}
-|	listitems COMMAEND
-	{
-		$$ = $1
 	}
 
 listitem:

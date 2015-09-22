@@ -5,7 +5,9 @@ package iam
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/service/serviceinfo"
 	"github.com/aws/aws-sdk-go/internal/protocol/query"
 	"github.com/aws/aws-sdk-go/internal/signer/v4"
 )
@@ -55,9 +57,7 @@ import (
 // This topic provides general information about the types of credentials used
 // for accessing AWS.   IAM Best Practices (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAMBestPractices.html).
 // This topic presents a list of suggestions for using the IAM service to help
-// secure your AWS resources.   AWS Security Token Service (http://docs.aws.amazon.com/STS/latest/UsingSTS/).
-// This guide describes how to create and use temporary security credentials.
-//   Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html).
+// secure your AWS resources.   Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html).
 // This set of topics walk you through the process of signing a request using
 // an access key ID and secret access key.
 type IAM struct {
@@ -68,14 +68,16 @@ type IAM struct {
 var initService func(*service.Service)
 
 // Used for custom request initialization logic
-var initRequest func(*service.Request)
+var initRequest func(*request.Request)
 
 // New returns a new IAM client.
 func New(config *aws.Config) *IAM {
 	service := &service.Service{
-		Config:      defaults.DefaultConfig.Merge(config),
-		ServiceName: "iam",
-		APIVersion:  "2010-05-08",
+		ServiceInfo: serviceinfo.ServiceInfo{
+			Config:      defaults.DefaultConfig.Merge(config),
+			ServiceName: "iam",
+			APIVersion:  "2010-05-08",
+		},
 	}
 	service.Initialize()
 
@@ -96,8 +98,8 @@ func New(config *aws.Config) *IAM {
 
 // newRequest creates a new request for a IAM operation and runs any
 // custom request initialization.
-func (c *IAM) newRequest(op *service.Operation, params, data interface{}) *service.Request {
-	req := service.NewRequest(c.Service, op, params, data)
+func (c *IAM) newRequest(op *request.Operation, params, data interface{}) *request.Request {
+	req := c.NewRequest(op, params, data)
 
 	// Run custom request initialization if present
 	if initRequest != nil {

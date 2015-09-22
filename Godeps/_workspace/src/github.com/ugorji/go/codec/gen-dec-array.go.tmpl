@@ -57,9 +57,6 @@ if {{var "l"}} == 0 { {{ if isSlice }}
 			{{ else if isSlice}}{{var "v"}} = append({{var "v"}}, {{zero}})// var {{var "z"}} {{ .Typ }}
 			{{var "c"}} = true {{ end }}
 		}
-		if {{var "j"}} > 0 {
-			{{var "h"}}.Sep({{var "j"}})
-		}
 		{{ if isChan}}
 		var {{var "t"}} {{ .Typ }}
 		{{ $x := printf "%st%s" .TempVar .Rand }}{{ decLineVar $x }}

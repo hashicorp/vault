@@ -3,19 +3,19 @@ package ec2metadata
 import (
 	"path"
 
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 )
 
 // GetMetadata uses the path provided to request
 func (c *Client) GetMetadata(p string) (string, error) {
-	op := &service.Operation{
+	op := &request.Operation{
 		Name:       "GetMetadata",
 		HTTPMethod: "GET",
 		HTTPPath:   path.Join("/", "meta-data", p),
 	}
 
 	output := &metadataOutput{}
-	req := service.NewRequest(c.Service, op, nil, output)
+	req := request.New(c.Service.ServiceInfo, c.Service.Handlers, c.Service.Retryer, op, nil, output)
 
 	return output.Content, req.Send()
 }

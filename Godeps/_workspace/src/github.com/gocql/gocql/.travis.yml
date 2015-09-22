@@ -13,14 +13,14 @@ env:
   global:
     - GOMAXPROCS=2
   matrix:
-    - CASS=1.2.19 AUTH=false
-    - CASS=2.0.14 AUTH=false
+    - CASS=2.0.16 AUTH=false
     - CASS=2.1.5  AUTH=false
     - CASS=2.1.5  AUTH=true
+    - CASS=2.2.0  AUTH=false
 
 go:
-  - 1.3
   - 1.4
+  - 1.5
 
 install:
   - pip install --user cql PyYAML six

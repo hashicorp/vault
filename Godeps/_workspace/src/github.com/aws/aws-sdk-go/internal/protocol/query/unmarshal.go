@@ -6,12 +6,12 @@ import (
 	"encoding/xml"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/service"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/internal/protocol/xml/xmlutil"
 )
 
 // Unmarshal unmarshals a response for an AWS Query service.
-func Unmarshal(r *service.Request) {
+func Unmarshal(r *request.Request) {
 	defer r.HTTPResponse.Body.Close()
 	if r.DataFilled() {
 		decoder := xml.NewDecoder(r.HTTPResponse.Body)
@@ -24,6 +24,6 @@ func Unmarshal(r *service.Request) {
 }
 
 // UnmarshalMeta unmarshals header response values for an AWS Query service.
-func UnmarshalMeta(r *service.Request) {
+func UnmarshalMeta(r *request.Request) {
 	// TODO implement unmarshaling of request IDs
 }

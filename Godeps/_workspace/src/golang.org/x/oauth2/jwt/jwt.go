@@ -54,6 +54,9 @@ type Config struct {
 
 	// TokenURL is the endpoint required to complete the 2-legged JWT flow.
 	TokenURL string
+
+	// Expires optionally specifies how long the token is valid for.
+	Expires time.Duration
 }
 
 // TokenSource returns a JWT TokenSource using the configuration
@@ -94,6 +97,9 @@ func (js jwtSource) Token() (*oauth2.Token, error) {
 		// prn is the old name of sub. Keep setting it
 		// to be compatible with legacy OAuth 2.0 providers.
 		claimSet.Prn = subject
+	}
+	if t := js.conf.Expires; t > 0 {
+		claimSet.Exp = time.Now().Add(t).Unix()
 	}
 	payload, err := jws.Encode(defaultHeader, claimSet, pk)
 	if err != nil {

@@ -113,7 +113,7 @@ func (s *UsersService) Edit(user *User) (*User, *Response, error) {
 	return uResp, resp, err
 }
 
-// UserListOptions specifies optional parameters to the UsersService.List
+// UserListOptions specifies optional parameters to the UsersService.ListAll
 // method.
 type UserListOptions struct {
 	// ID of the last user seen

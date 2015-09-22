@@ -66,7 +66,7 @@ type SemaphoreOptions struct {
 	Prefix      string // Must be set and have write permissions
 	Limit       int    // Must be set, and be positive
 	Value       []byte // Optional, value to associate with the contender entry
-	Session     string // OPtional, created if not specified
+	Session     string // Optional, created if not specified
 	SessionName string // Optional, defaults to DefaultLockSessionName
 	SessionTTL  string // Optional, defaults to DefaultLockSessionTTL
 }
@@ -123,7 +123,7 @@ func (c *Client) SemaphoreOpts(opts *SemaphoreOptions) (*Semaphore, error) {
 }
 
 // Acquire attempts to reserve a slot in the semaphore, blocking until
-// success, interrupted via the stopCh or an error is encounted.
+// success, interrupted via the stopCh or an error is encountered.
 // Providing a non-nil stopCh can be used to abort the attempt.
 // On success, a channel is returned that represents our slot.
 // This channel could be closed at any time due to session invalidation,

@@ -144,7 +144,7 @@ func Connect(addr string, cfg ConnConfig, errorHandler ConnErrorHandler) (*Conn,
 	}
 
 	// going to default to proto 2
-	if cfg.ProtoVersion < protoVersion1 || cfg.ProtoVersion > protoVersion3 {
+	if cfg.ProtoVersion < protoVersion1 || cfg.ProtoVersion > protoVersion4 {
 		log.Printf("unsupported protocol version: %d using 2\n", cfg.ProtoVersion)
 		cfg.ProtoVersion = 2
 	}
@@ -462,12 +462,25 @@ func (c *Conn) exec(req frameWriter, tracer Tracer) (frame, error) {
 
 	err := req.writeFrame(framer, stream)
 	if err != nil {
+		// I think this is the correct thing to do, im not entirely sure. It is not
+		// ideal as readers might still get some data, but they probably wont.
+		// Here we need to be careful as the stream is not available and if all
+		// writes just timeout or fail then the pool might use this connection to
+		// send a frame on, with all the streams used up and not returned.
+		c.closeWithError(err)
 		return nil, err
 	}
 
 	select {
 	case err := <-call.resp:
 		if err != nil {
+			if !c.Closed() {
+				// if the connection is closed then we cant release the stream,
+				// this is because the request is still outstanding and we have
+				// been handed another error from another stream which caused the
+				// connection to close.
+				c.releaseStream(stream)
+			}
 			return nil, err
 		}
 	case <-time.After(c.timeout):
@@ -633,7 +646,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 			rows: x.rows,
 		}
 
-		if len(x.meta.pagingState) > 0 {
+		if len(x.meta.pagingState) > 0 && !qry.disableAutoPage {
 			iter.next = &nextIter{
 				qry: *qry,
 				pos: int((1 - qry.prefetch) * float64(len(iter.rows))),
@@ -646,7 +659,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 		}
 
 		return iter
-	case *resultKeyspaceFrame, *resultSchemaChangeFrame:
+	case *resultKeyspaceFrame, *resultSchemaChangeFrame, *schemaChangeKeyspace, *schemaChangeTable:
 		return &Iter{}
 	case *RequestErrUnprepared:
 		stmtsLRU.Lock()
@@ -661,7 +674,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 	case error:
 		return &Iter{err: x}
 	default:
-		return &Iter{err: NewErrProtocol("Unknown type in response to execute query: %s", x)}
+		return &Iter{err: NewErrProtocol("Unknown type in response to execute query (%T): %s", x, x)}
 	}
 }
 
