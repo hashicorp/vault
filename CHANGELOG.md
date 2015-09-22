@@ -1,8 +1,60 @@
 ## 0.3.0 (Unreleased)
 
+FEATURES:
+
+ * **Cubbyhole Backend**: This backend works similarly to the "generic" backend but provides a per-token workspace. This enables some additional authentication workflows (especially for containers) and can be useful to applications to e.g. store local credentials while being restarted or upgraded, rather than persisting to disk. [GH-612]
+ * **Global and Per-Mount Default/Max TTL Support**: You can now set the default and maximum Time To Live for leases both globally and per-mount. Per-mount settings override global settings. Not all backends honor these settings yet, but the maximum is a hard limit enforced outside the backend. [GH-469]
+ * **PGP Encryption for Unseal Keys**: When initializing or rotating Vault's master key, PGP/GPG public keys can now be provided. The output keys will be encrypted with the given keys, in order. [GH-570]
+ * **Codebase Audit**: Vault's codebase was audited by iSEC. (The terms of the audit contract do not allow us to make the results public.) [GH-220]
+
+DEPRECATIONS/BREAKING CHANGES:
+
+Note: deprecations and breaking changes in upcoming releaes are announced ahead of time on the "vault-tool" mailing list.
+
+ * **Cookie Authentication Removed**: As of 0.3 the only way to authenticate is via the X-Vault-Token header. Cookie authentication was hard to properly test, could result in browsers/tools/applications saving tokens in plaintext on disk, and other issues. [GH-564]
+ * **Terminology/Field Names**: Vault is transitioning from overloading the term "lease" to mean both "a set of metadata" and "the amount of time the metadata is valid". The latter is now being referred to as TTL (or "lease_duration" for backwards-compatibility); some parts of Vault have already switched to using "ttl" and others will follow in upcoming releases. In particular, the "generic" backend accepts both "ttl" and "lease" but in 0.4 only "ttl" will be accepted. [GH-528]
+
+
+IMPROVEMENTS:
+
+ * audit: Log entries now contain a time field [GH-495]
+ * backends: Add ability for a cleanup function to be called on backend unmount [GH-608]
+ * core: If trying to mount in a location that is already mounted, be more helpful about the error [GH-510]
+ * core: Be more explicit on failure if the issue is invalid JSON [GH-553]
+ * core: Tokens can now revoke themselves [GH-620]
+ * credential/app-id: Give a more specific error when sending a duplicate POST to sys/auth/app-id [GH-392]
+ * credential/github: Support custom API endpoints (e.g. for Github Enterprise) [GH-572]
+ * credential/ldap: Add per-user policies and option to login with userPrincipalName [GH-420]
+ * scripts: Use /usr/bin/env to find Bash instead of hardcoding [GH-446]
+ * scripts: Use godep for build scripts to use same environment as tests [GH-404]
+ * secret/mysql: Allow reading configuration data [GH-529]
+ * secret/pki: Split "allow_any_name" logic to that and "enforce_hostnames", to allow for non-hostname values (e.g. for client certificates) [GH-555]
+ * telemetry: Put telemetry object in configuration to allow more flexibility [GH-419]
+ * testing: Disable mlock for testing of logical backends so as not to require root [GH-479]
+
 BUG FIXES:
 
-* cli: Fixed missing setup of client TLS certificates if no custom CA was provided
+ * audit/file: Do not enable auditing if file permissions are invalid [GH-550]
+ * backends: Allow hyphens in endpoint patterns (fixes AWS and others) [GH-559]
+ * cli: Fixed missing setup of client TLS certificates if no custom CA was provided
+ * cli/read: Do not include a carriage return when using raw field output [GH-624]
+ * core: Bad input data could lead to a panic for that session, rather than returning an error [GH-503]
+ * core: Allow SHA2-384/SHA2-512 hashed certificates [GH-448]
+ * core: Do not return a Secret if there are no uses left on a token (since it will be unable to be used) [GH-615]
+ * core: Code paths that called lookup-self would decrement num_uses and potentially immediately revoke a token [GH-552]
+ * core: Some /sys/ paths would not properly redirect from a standby to the leader [GH-499] [GH-551]
+ * credential/github: Integration failed if more than ten organizations or teams [GH-489]
+ * credential/token: Tokens with sudo access to "auth/token/create" can now use root-only options [GH-629]
+ * physical/zookeeper: Fix collisions in storage that could lead to data unavailability [GH-411]
+ * secret/cassandra: Work around backwards-incompatible change made in Cassandra 2.2 preventing Vault from properly setting/revoking leases [GH-549]
+ * secret/mysql: Use varbinary instead of varchar to avoid InnoDB/UTF-8 issues [GH-522]
+ * secret/postgres: Explicitly set timezone in connections [GH-597]
+
+MISC:
+
+ * Various documentation fixes and improvements [GH-412] [GH-474] [GH-476] [GH-613]
+ * Less "armon"'" in stack traces [GH-453]
+ * Sourcegraph integration [GH-456]
 
 ## 0.2.0 (July 13, 2015)
 
