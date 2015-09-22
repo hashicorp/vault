@@ -91,7 +91,7 @@ Key           	Value
 lease_id      	postgresql/creds/readonly/c888a097-b0e2-26a8-b306-fc7c84b98f07
 lease_duration	3600
 password      	34205e88-0de1-68b7-6267-72d8e32c5d3d
-username      	vault-root-1430162075-7887
+username      	root-1430162075-7887
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -302,7 +302,7 @@ subpath for interactive help output.
     ```javascript
     {
         "data": {
-            "username": "vault-root-1430158508-126",
+            "username": "root-1430158508-126",
             "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
         }
     }
