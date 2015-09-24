@@ -1,3 +1,11 @@
+---
+layout: "docs"
+page_title: "Secret Backend: JWT"
+sidebar_current: "docs-secrets-jwt"
+description: |-
+  The JWT secret backend for Vault generates JSON Web Tokens dynamically based on configured roles.
+---
+
 # JWT Secret Backend
 
 Name: `jwt`
@@ -10,21 +18,21 @@ The JWT secret backend acts like the `transit` backend, it does not store any in
 
 ## Algorithms
 
-### RSA 
+#### RSA
 * RS256
 * RS384
 * RS512
 
 These require a RSA private/public keypair for signing and verification.
 
-### ECDSA
+#### ECDSA
 * EC256
 * EC384
 * EC512
 
 These require an ECDSA private/public keypair for signing and verification.
 
-### HMAC
+#### HMAC
 * HS256
 * HS384
 * HS512
