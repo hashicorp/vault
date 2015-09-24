@@ -49,11 +49,11 @@ to specify where the configuration is.
 * `telemetry` (optional)  - Configures the telemetry reporting system
   (see below).
 
-* `default_lease_duration` (optional) - Configures the default lease
-  duration for tokens and secrets, specified in hours. Default value
-  is 30 days. This value cannot be larger than `max_lease_duration`.
+* `default_lease_ttl` (optional) - Configures the default lease duration
+  for tokens and secrets, specified in hours. Default value
+  is 30 days. This value cannot be larger than `max_lease_ttl`.
 
-* `max_lease_duration` (optional) - Configures the maximum possible
+* `max_lease_ttl` (optional) - Configures the maximum possible
   lease duration for tokens and secrets, specified in hours. Default
   value is 30 days.
 
