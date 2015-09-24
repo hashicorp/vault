@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/cassandra"
 	"github.com/hashicorp/vault/builtin/logical/consul"
-	"github.com/hashicorp/vault/builtin/logical/jwt"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
@@ -76,7 +75,6 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"transit":    transit.Factory,
 					"mysql":      mysql.Factory,
 					"ssh":        ssh.Factory,
-					"jwt":        jwt.Factory,
 				},
 				ShutdownCh: makeShutdownCh(),
 			}, nil
