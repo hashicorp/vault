@@ -41,8 +41,8 @@ func pathIssue(b *backend) *framework.Path {
 				Description: "Defines the time before which the JWT MUST NOT be accepted for processing",
 			},
 			"issued_at": &framework.FieldSchema{
-				Type:        framework.TypeInt,
-				Description: "The time the JWT was issued",
+				Type:        framework.TypeBool,
+				Description: "Whether to include the issued_at claim",
 			},
 			"jti": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -90,7 +90,7 @@ func (b *backend) pathIssueWrite(
 	if data.Get("not_before") == 0 {
 		claims["nbf"] = int(time.Now().Unix())
 	}
-	if data.Get("issued_at") == 0 {
+	if data.Get("issued_at").(bool) {
 		claims["iat"] = int(time.Now().Unix())
 	}
 	if data.Get("jti") == "" {
@@ -111,9 +111,6 @@ func (b *backend) pathIssueWrite(
 	}
 	if data.Get("not_before").(int) > 0 {
 		claims["nbf"] = data.Get("not_before").(int)
-	}
-	if data.Get("issued_at").(int) > 0 {
-		claims["iat"] = data.Get("issued_at").(int)
 	}
 	if data.Get("jti") != "" {
 		claims["jti"] = data.Get("jti").(string)

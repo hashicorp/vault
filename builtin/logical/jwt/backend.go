@@ -19,7 +19,6 @@ func Backend() *framework.Backend {
 			pathRoles(&b),
 			pathIssue(&b),
 		},
-
 	}
 
 	return b.Backend

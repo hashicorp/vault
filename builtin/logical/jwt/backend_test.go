@@ -13,7 +13,7 @@ import (
 
 func TestBackend_basic(t *testing.T) {
 	tokenClaims := map[string]interface{}{
-		"iss": "Test Issuer", 
+		"iss": "Test Issuer",
 		"sub": "Test Subject",
 		"aud": "Test Audience",
 		"iat": 1438898720,
@@ -61,10 +61,10 @@ func testAccStepWriteRole(t *testing.T, name string, algorithm string, key strin
 		Operation: logical.WriteOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
-			"algorithm": algorithm,
-			"key": key,
-			"default_issuer": "Test Default Issuer",
-			"default_subject": "Test Default Subject",
+			"algorithm":        algorithm,
+			"key":              key,
+			"default_issuer":   "Test Default Issuer",
+			"default_subject":  "Test Default Subject",
 			"default_audience": "Test Default Audience",
 		},
 	}
@@ -86,27 +86,23 @@ func testAccStepReadRole(t *testing.T, name string, algorithm string, key string
 				return fmt.Errorf("missing response")
 			}
 			var d struct {
-				Name           string        `json:"name" mapstructure:"name"`
-				Algorithm      string        `json:"algorithm" structs:"algorithm" mapstructure:"algorithm"`
-				Key            string        `json:"key" structs:"key" mapstructure:"key"`
-				Issuer         string        `json:"iss" structs:"iss" mapstructure:"iss"`
-				Subject        string        `json:"sub" structs:"sub" mapstructure:"sub"`
-				Audience       string        `json:"aud" structs:"aud" mapstructure:"aud"`
+				Algorithm string `json:"algorithm" structs:"algorithm" mapstructure:"algorithm"`
+				Key       string `json:"key" structs:"key" mapstructure:"key"`
+				Issuer    string `json:"iss" structs:"iss" mapstructure:"iss"`
+				Subject   string `json:"sub" structs:"sub" mapstructure:"sub"`
+				Audience  string `json:"aud" structs:"aud" mapstructure:"aud"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
 
-			if d.Name != name {
-				return fmt.Errorf("bad: %#v", d)
-			}
 			if d.Algorithm != algorithm {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("bad algorithm: expected %s, got %#v", algorithm, d)
 			}
-			if d.Key != key {
-				return fmt.Errorf("bad: %#v", d)
+			if d.Key != "" {
+				return fmt.Errorf("bad key: expected %s, got %#v", key, d)
 			}
-			
+
 			return nil
 		},
 	}
@@ -119,8 +115,8 @@ func testAccStepSignToken(t *testing.T, name string, tokenClaims map[string]inte
 		Data:      tokenClaims,
 		Check: func(resp *logical.Response) error {
 			var d struct {
-				JTI        string `mapstructure:"jti"`
-				Token      string `mapstructure:"token"`
+				JTI   string `mapstructure:"jti"`
+				Token string `mapstructure:"token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -131,7 +127,7 @@ func testAccStepSignToken(t *testing.T, name string, tokenClaims map[string]inte
 
 			token, err := jwt.Parse(d.Token, func(token *jwt.Token) (interface{}, error) {
 				return token, nil
-		    })
+			})
 			if err != nil {
 				return fmt.Errorf("error parsing token")
 			}
@@ -139,7 +135,7 @@ func testAccStepSignToken(t *testing.T, name string, tokenClaims map[string]inte
 			if d.JTI != token.Claims["jti"] {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			
+
 			if token.Claims["ran"] != "random" {
 				return fmt.Errorf("bad: %#v", d)
 			}
