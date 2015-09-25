@@ -60,9 +60,9 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    List the given secret backends configuration. `default_lease_ttl`
-    or `max_lease_ttl` values of `0` mean that the system
-    defaults are used by this backend.
+    List the given mount's configuration. Unlike the `mounts`
+    endpoint, this will return the current time in seconds for each
+    TTL, which may be the system default or a mount-specific value.
   </dd>
 
   <dt>Method</dt>
@@ -81,8 +81,8 @@ description: |-
 
     ```javascript
     {
-      "default_lease_ttl": 0,
-      "max_lease_ttl": 0
+      "default_lease_ttl": 3600,
+      "max_lease_ttl": 7200
     }
     ```
 
@@ -153,13 +153,15 @@ description: |-
         <span class="param">default_lease_ttl</span>
         <span class="param-flags">optional</span>
         The default time-to-live. If set on a specific mount,
-        overrides the global default.
+        overrides the global default. A value of "system" or "0"
+        are equivalent and set to the system default TTL.
       </li>
       <li>
         <span class="param">max_lease_ttl</span>
         <span class="param-flags">optional</span>
         The maximum time-to-live. If set on a specific mount,
-        overrides the global default.
+        overrides the global default. A value of "system" or "0"
+        are equivalent and set to the system max TTL.
       </li>
     </ul>
   </dd>

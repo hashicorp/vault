@@ -167,7 +167,7 @@ func Test(t TestT, c TestCase) {
 
 	// Mount the backend
 	prefix := "mnt"
-	mountInfo := &api.Mount{
+	mountInfo := &api.MountInput{
 		Type:        "test",
 		Description: "acceptance test",
 	}

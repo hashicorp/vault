@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -47,29 +46,13 @@ func (c *MountCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountInfo := &api.Mount{
+	mountInfo := &api.MountInput{
 		Type:        mountType,
 		Description: description,
-		Config:      api.APIMountConfig{},
-	}
-
-	if defaultLeaseTTL != "" {
-		defTTL, err := time.ParseDuration(defaultLeaseTTL)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error parsing default lease TTL duration: %s", err))
-			return 2
-		}
-		mountInfo.Config.DefaultLeaseTTL = &defTTL
-	}
-	if maxLeaseTTL != "" {
-		maxTTL, err := time.ParseDuration(maxLeaseTTL)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error parsing max lease TTL duration: %s", err))
-			return 2
-		}
-		mountInfo.Config.MaxLeaseTTL = &maxTTL
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: defaultLeaseTTL,
+			MaxLeaseTTL:     maxLeaseTTL,
+		},
 	}
 
 	if err := client.Sys().Mount(path, mountInfo); err != nil {

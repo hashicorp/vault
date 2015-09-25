@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/ryanuber/columnize"
@@ -43,9 +44,26 @@ func (c *MountsCommand) Run(args []string) int {
 	columns := []string{"Path | Type | Default TTL | Max TTL | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
-
+		defTTL := "system"
+		switch {
+		case mount.Type == "system":
+			defTTL = "n/a"
+		case mount.Type == "cubbyhole":
+			defTTL = "n/a"
+		case mount.Config.DefaultLeaseTTL != 0:
+			defTTL = strconv.Itoa(mount.Config.DefaultLeaseTTL)
+		}
+		maxTTL := "system"
+		switch {
+		case mount.Type == "system":
+			maxTTL = "n/a"
+		case mount.Type == "cubbyhole":
+			maxTTL = "n/a"
+		case mount.Config.MaxLeaseTTL != 0:
+			maxTTL = strconv.Itoa(mount.Config.MaxLeaseTTL)
+		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s", path, mount.Type, mount.Config.DefaultLeaseTTL, mount.Config.MaxLeaseTTL, mount.Description))
+			"%s | %s | %s | %s | %s", path, mount.Type, defTTL, maxTTL, mount.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))
@@ -64,7 +82,7 @@ Usage: vault mounts [options]
 
   This command lists the mounted backends, their mount points, the
   configured TTLs, and a human-friendly description of the mount point.
-  A TTL of '0' indicates that the system default is being used.
+  A TTL of 'system' indicates that the system default is being used.
 
 General Options:
 

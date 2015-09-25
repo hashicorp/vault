@@ -499,6 +499,7 @@ func (ts *TokenStore) handleCreate(
 		Metadata    map[string]string `mapstructure:"meta"`
 		NoParent    bool              `mapstructure:"no_parent"`
 		Lease       string
+		TTL         string
 		DisplayName string `mapstructure:"display_name"`
 		NumUses     int    `mapstructure:"num_uses"`
 	}
@@ -559,8 +560,17 @@ func (ts *TokenStore) handleCreate(
 		te.Parent = ""
 	}
 
-	// Parse the lease if any
-	if data.Lease != "" {
+	// Parse the TTL/lease if any
+	if data.TTL != "" {
+		dur, err := time.ParseDuration(data.TTL)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if dur < 0 {
+			return logical.ErrorResponse("ttl must be positive"), logical.ErrInvalidRequest
+		}
+		te.TTL = dur
+	} else if data.Lease != "" {
 		dur, err := time.ParseDuration(data.Lease)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest

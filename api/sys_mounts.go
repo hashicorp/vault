@@ -2,12 +2,11 @@ package api
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/fatih/structs"
 )
 
-func (c *Sys) ListMounts() (map[string]*Mount, error) {
+func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/mounts")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
@@ -15,12 +14,12 @@ func (c *Sys) ListMounts() (map[string]*Mount, error) {
 	}
 	defer resp.Body.Close()
 
-	var result map[string]*Mount
+	var result map[string]*MountOutput
 	err = resp.DecodeJSON(&result)
 	return result, err
 }
 
-func (c *Sys) Mount(path string, mountInfo *Mount) error {
+func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 	if err := c.checkMountPath(path); err != nil {
 		return err
 	}
@@ -79,7 +78,7 @@ func (c *Sys) Remount(from, to string) error {
 	return err
 }
 
-func (c *Sys) TuneMount(path string, config APIMountConfig) error {
+func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 	if err := c.checkMountPath(path); err != nil {
 		return err
 	}
@@ -119,13 +118,24 @@ func (c *Sys) checkMountPath(path string) error {
 	return nil
 }
 
-type Mount struct {
-	Type        string         `json:"type" structs:"type"`
-	Description string         `json:"description" structs:"description"`
-	Config      APIMountConfig `json:"config" structs:"config"`
+type MountInput struct {
+	Type        string           `json:"type" structs:"type"`
+	Description string           `json:"description" structs:"description"`
+	Config      MountConfigInput `json:"config" structs:"config"`
 }
 
-type APIMountConfig struct {
-	DefaultLeaseTTL *time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     *time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+type MountConfigInput struct {
+	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+}
+
+type MountOutput struct {
+	Type        string            `json:"type" structs:"type"`
+	Description string            `json:"description" structs:"description"`
+	Config      MountConfigOutput `json:"config" structs:"config"`
+}
+
+type MountConfigOutput struct {
+	DefaultLeaseTTL int `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     int `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 }

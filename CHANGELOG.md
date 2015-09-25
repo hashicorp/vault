@@ -5,7 +5,7 @@ DEPRECATIONS/BREAKING CHANGES:
 Note: deprecations and breaking changes in upcoming releases are announced ahead of time on the "vault-tool" mailing list.
 
  * **Cookie Authentication Removed**: As of 0.3 the only way to authenticate is via the X-Vault-Token header. Cookie authentication was hard to properly test, could result in browsers/tools/applications saving tokens in plaintext on disk, and other issues. [GH-564]
- * **Terminology/Field Names**: Vault is transitioning from overloading the term "lease" to mean both "a set of metadata" and "the amount of time the metadata is valid". The latter is now being referred to as TTL (or "lease_duration" for backwards-compatibility); some parts of Vault have already switched to using "ttl" and others will follow in upcoming releases. In particular, both the "generic" and "pki" backend accept both "ttl" and "lease" but in 0.4 only "ttl" will be accepted. [GH-528]
+ * **Terminology/Field Names**: Vault is transitioning from overloading the term "lease" to mean both "a set of metadata" and "the amount of time the metadata is valid". The latter is now being referred to as TTL (or "lease_duration" for backwards-compatibility); some parts of Vault have already switched to using "ttl" and others will follow in upcoming releases. In particular, the "token", "generic", and "pki" backends accept both "ttl" and "lease" but in 0.4 only "ttl" will be accepted. [GH-528]
  * **Downgrade Not Supported**: Due to enhancements in the storage subsytem, values written by Vault 0.3+ will not be able to be read by prior versions of Vault. There are no expected upgrade issues, however, as with all critical infrastructure it is recommended to back up Vault's physical storage before upgrading.
 
 FEATURES:

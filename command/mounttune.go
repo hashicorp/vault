@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -34,24 +33,9 @@ func (c *MountTuneCommand) Run(args []string) int {
 
 	path := args[0]
 
-	mountConfig := api.APIMountConfig{}
-	if defaultLeaseTTL != "" {
-		defTTL, err := time.ParseDuration(defaultLeaseTTL)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error parsing default lease TTL duration: %s", err))
-			return 2
-		}
-		mountConfig.DefaultLeaseTTL = &defTTL
-	}
-	if maxLeaseTTL != "" {
-		maxTTL, err := time.ParseDuration(maxLeaseTTL)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error parsing max lease TTL duration: %s", err))
-			return 2
-		}
-		mountConfig.MaxLeaseTTL = &maxTTL
+	mountConfig := api.MountConfigInput{
+		DefaultLeaseTTL: defaultLeaseTTL,
+		MaxLeaseTTL:     maxLeaseTTL,
 	}
 
 	client, err := c.Client()
@@ -83,7 +67,7 @@ func (c *MountTuneCommand) Help() string {
 
   Tune configuration options for a mounted secret backend.
 
-  Example: vault tune-mount -default-lease-ttl="24h" secret/
+  Example: vault tune-mount -default-lease-ttl="24h" secret
 
 General Options:
 
@@ -92,14 +76,14 @@ General Options:
 Mount Options:
 
   -default-lease-ttl=<duration>  Default lease time-to-live for this backend.
-                                 If not specified, uses the global default, or
-                                 the previously set value. Set to '0' to
-                                 explicitly set it to use the global default.
+                                 If not specified, uses the system default, or
+                                 the previously set value. Set to 'system' to
+                                 explicitly set it to use the system default.
 
   -max-lease-ttl=<duration>      Max lease time-to-live for this backend.
-                                 If not specified, uses the global default, or
-                                 the previously set value. Set to '0' to
-                                 explicitly set it to use the global default.
+                                 If not specified, uses the system default, or
+                                 the previously set value. Set to 'system' to
+                                 explicitly set it to use the system default.
 
 `
 	return strings.TrimSpace(helpText)

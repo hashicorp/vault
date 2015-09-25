@@ -711,6 +711,29 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"foo"}
+	req.Data["ttl"] = "1h"
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Auth.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if !resp.Auth.Renewable {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "child", []string{"root", "foo"})

@@ -26,27 +26,27 @@ func (b *SystemBackend) tuneMountTTLs(path string, meConfig *MountConfig, newDef
 	}
 
 	if newMax != nil && newDefault != nil && *newMax < *newDefault {
-		return fmt.Errorf("New backend max lease TTL of %d less than new backend default lease TTL of %d",
-			*newMax, *newDefault)
+		return fmt.Errorf("new backend max lease TTL of %d less than new backend default lease TTL of %d",
+			int(newMax.Seconds()), int(newDefault.Seconds()))
 	}
 
 	if newMax != nil && newDefault == nil {
 		if meConfig.DefaultLeaseTTL != 0 && *newMax < meConfig.DefaultLeaseTTL {
-			return fmt.Errorf("New backend max lease TTL of %d less than backend default lease TTL of %d",
-				*newMax, meConfig.DefaultLeaseTTL)
+			return fmt.Errorf("new backend max lease TTL of %d less than backend default lease TTL of %d",
+				int(newMax.Seconds()), int(meConfig.DefaultLeaseTTL.Seconds()))
 		}
 	}
 
 	if newDefault != nil {
 		if meConfig.MaxLeaseTTL == 0 {
 			if *newDefault > b.Core.maxLeaseTTL {
-				return fmt.Errorf("New backend default lease TTL of %d greater than system max lease TTL of %d",
-					*newDefault, b.Core.maxLeaseTTL)
+				return fmt.Errorf("new backend default lease TTL of %d greater than system max lease TTL of %d",
+					int(newDefault.Seconds()), int(b.Core.maxLeaseTTL.Seconds()))
 			}
 		} else {
 			if meConfig.MaxLeaseTTL < *newDefault {
-				return fmt.Errorf("New backend default lease TTL of %d greater than backend max lease TTL of %d",
-					*newDefault, meConfig.MaxLeaseTTL)
+				return fmt.Errorf("new backend default lease TTL of %d greater than backend max lease TTL of %d",
+					int(newDefault.Seconds()), int(meConfig.MaxLeaseTTL.Seconds()))
 			}
 		}
 	}

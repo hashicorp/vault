@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -54,11 +53,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
 					},
 					"default_lease_ttl": &framework.FieldSchema{
-						Type:        framework.TypeDurationSecond,
+						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
 					},
 					"max_lease_ttl": &framework.FieldSchema{
-						Type:        framework.TypeDurationSecond,
+						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
 					},
 				},
@@ -378,8 +377,12 @@ func (b *SystemBackend) handleMountTable(
 		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
-			"config":      structs.Map(entry.Config),
+			"config": map[string]interface{}{
+				"default_lease_ttl": int(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int(entry.Config.MaxLeaseTTL.Seconds()),
+			},
 		}
+
 		resp.Data[entry.Path] = info
 	}
 
@@ -395,14 +398,57 @@ func (b *SystemBackend) handleMount(
 	description := data.Get("description").(string)
 
 	var config MountConfig
+
+	var apiConfig struct {
+		DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+		MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	}
 	configMap := data.Get("config").(map[string]interface{})
 	if configMap != nil && len(configMap) != 0 {
-		err := mapstructure.Decode(configMap, &config)
+		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
 			return logical.ErrorResponse(
 					"unable to convert given mount config information"),
 				logical.ErrInvalidRequest
 		}
+	}
+
+	switch apiConfig.DefaultLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpDef, err := time.ParseDuration(apiConfig.DefaultLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.DefaultLeaseTTL = tmpDef
+	}
+
+	switch apiConfig.MaxLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpMax, err := time.ParseDuration(apiConfig.MaxLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.MaxLeaseTTL = tmpMax
+	}
+
+	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
+		return logical.ErrorResponse(
+				"given default lease TTL greater than given max lease TTL"),
+			logical.ErrInvalidRequest
+	}
+
+	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+			logical.ErrInvalidRequest
 	}
 
 	if logicalType == "" {
@@ -498,14 +544,10 @@ func (b *SystemBackend) handleMountConfig(
 		return handleError(err)
 	}
 
-	def := sysView.DefaultLeaseTTL()
-
-	max := sysView.MaxLeaseTTL()
-
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"default_lease_ttl": def,
-			"max_lease_ttl":     max,
+			"default_lease_ttl": int(sysView.DefaultLeaseTTL().Seconds()),
+			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
 		},
 	}
 
@@ -545,14 +587,34 @@ func (b *SystemBackend) handleMountTune(
 	// Timing configuration parameters
 	{
 		var newDefault, newMax *time.Duration
-		if defTTLInt, ok := data.GetOk("default_lease_ttl"); ok {
-			def := time.Duration(defTTLInt.(int))
-			newDefault = &def
+		defTTL := data.Get("default_lease_ttl").(string)
+		switch defTTL {
+		case "":
+		case "system":
+			tmpDef := time.Duration(0)
+			newDefault = &tmpDef
+		default:
+			tmpDef, err := time.ParseDuration(defTTL)
+			if err != nil {
+				return handleError(err)
+			}
+			newDefault = &tmpDef
 		}
-		if maxTTLInt, ok := data.GetOk("max_lease_ttl"); ok {
-			max := time.Duration(maxTTLInt.(int))
-			newMax = &max
+
+		maxTTL := data.Get("max_lease_ttl").(string)
+		switch maxTTL {
+		case "":
+		case "system":
+			tmpMax := time.Duration(0)
+			newMax = &tmpMax
+		default:
+			tmpMax, err := time.ParseDuration(maxTTL)
+			if err != nil {
+				return handleError(err)
+			}
+			newMax = &tmpMax
 		}
+
 		if newDefault != nil || newMax != nil {
 			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
 				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
