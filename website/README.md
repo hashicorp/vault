@@ -12,13 +12,7 @@ requests like any normal GitHub project, and we'll merge it in.
 
 ## Running the Site Locally
 
-Running the site locally is simple. Clone this repo and run the following
-commands:
-
-```
-$ bundle
-$ bundle exec middleman server
-```
+Running the site locally is simple. Clone this repo and run `make dev`.
 
 Then open up `http://localhost:4567`. Note that some URLs you may need to append
 ".html" to make them work (in the navigation).
