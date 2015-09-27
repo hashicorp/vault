@@ -66,7 +66,6 @@ func (p *PathPolicy) TakesPrecedence(other *PathPolicy) bool {
 	default:
 		panic("missing case")
 	}
-	return false
 }
 
 // Parse is used to parse the specified ACL rules into an

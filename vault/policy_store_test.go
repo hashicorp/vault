@@ -136,7 +136,7 @@ func TestPolicyStore_v1Upgrade(t *testing.T) {
 
 	// Put a V1 record
 	raw := `path "foo" { policy = "read" }`
-	ps.view.Put(&logical.StorageEntry{"old", []byte(raw)})
+	ps.view.Put(&logical.StorageEntry{Key: "old", Value: []byte(raw)})
 
 	// Do a read
 	p, err := ps.GetPolicy("old")
