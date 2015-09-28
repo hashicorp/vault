@@ -846,7 +846,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"meta":         map[string]string(nil),
 		"display_name": "root",
 		"num_uses":     0,
-		"ttl":          time.Duration(0),
+		"ttl":          0,
 	}
 	delete(resp.Data, "creation_time")
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -913,7 +913,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"meta":         map[string]string(nil),
 		"display_name": "root",
 		"num_uses":     0,
-		"ttl":          time.Duration(0),
+		"ttl":          0,
 	}
 	delete(resp.Data, "creation_time")
 	if !reflect.DeepEqual(resp.Data, exp) {

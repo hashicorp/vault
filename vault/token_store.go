@@ -730,8 +730,8 @@ func (ts *TokenStore) handleLookup(
 			"meta":          out.Meta,
 			"display_name":  out.DisplayName,
 			"num_uses":      out.NumUses,
-			"creation_time": out.CreationTime,
-			"ttl":           out.TTL,
+			"creation_time": int(out.CreationTime),
+			"ttl":           int(out.TTL.Seconds()),
 		},
 	}
 	return resp, nil
