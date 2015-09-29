@@ -10,44 +10,64 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathIssue(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "issue/" + framework.GenericNameRegex("role"),
-		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The desired role with configuration for this
+var issueAndSignSchema = map[string]*framework.FieldSchema{
+	"role": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The desired role with configuration for this
 request`,
-			},
+	},
 
-			"common_name": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The requested common name; if you want more than
+	"common_name": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested common name; if you want more than
 one, specify the alternative names in the
 alt_names map`,
-			},
+	},
 
-			"alt_names": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The requested Subject Alternative Names, if any,
+	"alt_names": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested Subject Alternative Names, if any,
 in a comma-delimited list`,
-			},
+	},
 
-			"ip_sans": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The requested IP SANs, if any, in a
+	"ip_sans": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested IP SANs, if any, in a
 common-delimited list`,
-			},
+	},
 
-			"ttl": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The requested Time To Live for the certificate;
+	"ttl": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
 default TTL is used, in that order. Cannot
 be later than the role max TTL.`,
-			},
+	},
+	"csr": &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `PEM-format CSR to be signed.`,
+	},
+}
+
+func pathIssue(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "issue/" + framework.GenericNameRegex("role"),
+		Fields:  issueAndSignSchema,
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.WriteOperation: b.pathIssueCert,
 		},
+
+		HelpSynopsis:    pathIssueCertHelpSyn,
+		HelpDescription: pathIssueCertHelpDesc,
+	}
+}
+
+func pathSign(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "sign/" + framework.GenericNameRegex("role"),
+		Fields:  issueAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathIssueCert,
@@ -82,13 +102,7 @@ func (b *backend) pathIssueCert(
 			"Error fetching CA certificate: %s", caErr)}
 	}
 
-	// Don't allow these on the standard path. Ideally we should determine
-	// this internally once we get SudoPrivilege from System() working
-	// for non-TokenStore
-	delete(req.Data, "ca_type")
-	delete(req.Data, "pki_address")
-
-	parsedBundle, err := generateCert(b, role, signingBundle, req, data)
+	parsedBundle, err := generateCert(b, role, signingBundle, false, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

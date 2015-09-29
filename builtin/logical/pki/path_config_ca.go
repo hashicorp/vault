@@ -14,43 +14,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-var generateAndSignSchema = map[string]*framework.FieldSchema{
-	"type": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Must be "self-signed" or "intermediate".
-If set to "self-signed", a self-signed root CA
-will be generated. If set to "intermediate", a
-CSR will be returned for signing by the root.`,
-	},
-
-	"exported": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported".
-If set to "exported", the generated private
-key will be returned. This is your *only*
-chance to retrieve the private key!`,
-	},
-
-	"pki_address": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The base URL of the PKI mount. For
-"self-signed"; this is needed when
-calling '/generate/' and should be
-the base URL of the mount where you
-are running this command, e.g.
-"https://vault.example.com/v1/root_pki".
-For "intermediate", this is needed
-when calling '/sign/' and should be
-the base URL of the destination
-mount of the certificate, e.g.
-"https://vault.example.com/v1/intermediate_pki".
-For HA setups, the given host name
-should be the address that can always
-be used to contact the leader. This is
-is used for generating the CA/CRL URLs in
-the certificate. Required as specified.`,
-	},
-
+var rootAndSignSchema = map[string]*framework.FieldSchema{
 	"common_name": &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested common name; if you want more than
@@ -70,26 +34,16 @@ in a comma-delimited list`,
 common-delimited list`,
 	},
 
-	"key_bits": &framework.FieldSchema{
-		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
-	},
-
 	"ttl": &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
 default TTL is used, in that order. Cannot
-be larger than the mount max TTL.`,
-	},
-
-	"csr": &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: `PEM-format CSR to be signed.`,
+be larger than the mount max TTL. Note:
+this only has an effect when generating
+a CA cert or signing a CA cert, not when
+creating a CSR for an intermediate CA.`,
 	},
 }
 
@@ -134,26 +88,88 @@ endpoint, just the signed certificate.`,
 	}
 }
 
-func pathGenerateCA(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "config/ca/generate/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("exported"),
+func pathGenerateRootCA(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "config/ca/generate/root/" + framework.GenericNameRegex("exported"),
 
-		Fields: generateAndSignSchema,
+		Fields: rootAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathCAGenerateWrite,
+			logical.WriteOperation: b.pathCAGenerateRoot,
 		},
 
 		HelpSynopsis:    pathConfigCAGenerateHelpSyn,
 		HelpDescription: pathConfigCAGenerateHelpDesc,
 	}
+
+	ret.Fields["pki_address"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The base URL of the PKI mount, e.g.
+"https://vault.example.com/v1/root_pki".
+For HA setups, the given host name
+should be the address that can always
+be used to contact the leader, as this is
+is used for generating the CA/CRL URLs in
+the certificate.`,
+	}
+
+	ret.Fields["exported"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Must be "internal" or "exported".
+If set to "exported", the generated private
+key will be returned. This is your *only*
+chance to retrieve the private key!`,
+	}
+
+	ret.Fields["key_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 2048,
+		Description: `The number of bits to use. You will almost
+certainly want to change this if you adjust
+the key_type.`,
+	}
+
+	return ret
 }
 
-func pathSignCA(b *backend) *framework.Path {
-	return &framework.Path{
+func pathGenerateIntermediateCA(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "config/ca/generate/intermediate/" + framework.GenericNameRegex("exported"),
+
+		Fields: map[string]*framework.FieldSchema{},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.WriteOperation: b.pathCAGenerateIntermediate,
+		},
+
+		HelpSynopsis:    pathConfigCAGenerateHelpSyn,
+		HelpDescription: pathConfigCAGenerateHelpDesc,
+	}
+
+	ret.Fields["exported"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Must be "internal" or "exported".
+If set to "exported", the generated private
+key will be returned. This is your *only*
+chance to retrieve the private key!`,
+	}
+
+	ret.Fields["key_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 2048,
+		Description: `The number of bits to use. You will almost
+certainly want to change this if you adjust
+the key_type.`,
+	}
+
+	return ret
+}
+
+func pathSignIntermediateCA(b *backend) *framework.Path {
+	ret := &framework.Path{
 		Pattern: "config/ca/sign",
 
-		Fields: generateAndSignSchema,
+		Fields: rootAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathCASignWrite,
@@ -162,9 +178,28 @@ func pathSignCA(b *backend) *framework.Path {
 		HelpSynopsis:    pathConfigCASignHelpSyn,
 		HelpDescription: pathConfigCASignHelpDesc,
 	}
+
+	ret.Fields["pki_address"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The base URL of the *destination*
+PKI mount, e.g.
+"https://vault.example.com/v1/intermediate_pki".
+For HA setups, the given host name
+should be the address that can always
+be used to contact the leader, as this is
+is used for generating the CA/CRL URLs in
+the certificate.`,
+	}
+
+	ret.Fields["csr"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `PEM-format CSR to be signed.`,
+	}
+
+	return ret
 }
 
-func (b *backend) pathCAGenerateWrite(
+func (b *backend) pathCAGenerateRoot(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 	exported := data.Get("exported").(string)
@@ -176,39 +211,28 @@ func (b *backend) pathCAGenerateWrite(
 			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
 	}
 
-	genType := data.Get("type").(string)
-	switch genType {
-	case "self-signed":
-	case "intermediate":
-	default:
+	req.Data["ca_type"] = "root"
+
+	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
+	switch {
+	case len(pkiAddress) == 0:
 		return logical.ErrorResponse(fmt.Sprintf(
-			"The \"type\" path parameter must be \"self-signed\" or \"intermediate\"")), nil
+			"\"pki_address\" cannot be empty")), nil
+	case !strings.HasPrefix(pkiAddress, "http"):
+		return logical.ErrorResponse(fmt.Sprintf(
+			"\"pki_address\" must be a URL")), nil
+	case !strings.Contains(pkiAddress, "/v1/"):
+		return logical.ErrorResponse(fmt.Sprintf(
+			"\"pki_address\" needs to be the path to the PKI mount, not the base Vault path")), nil
+	case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
+		return logical.ErrorResponse(fmt.Sprintf(
+			"\"pki_address\" needs to be the path to this mount")), nil
+	}
+	if strings.HasSuffix(pkiAddress, "/") {
+		pkiAddress = pkiAddress[:len(pkiAddress)-1]
 	}
 
-	req.Data["ca_type"] = genType
-
-	if genType == "self-signed" {
-		pkiAddress := strings.ToLower(data.Get("pki_address").(string))
-		switch {
-		case len(pkiAddress) == 0:
-			return logical.ErrorResponse(fmt.Sprintf(
-				"\"pki_address\" cannot be empty")), nil
-		case !strings.HasPrefix(pkiAddress, "http"):
-			return logical.ErrorResponse(fmt.Sprintf(
-				"\"pki_address\" must be a URL")), nil
-		case !strings.Contains(pkiAddress, "/v1/"):
-			return logical.ErrorResponse(fmt.Sprintf(
-				"\"pki_address\" needs to be the path to the PKI mount, not the base Vault path")), nil
-		case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
-			return logical.ErrorResponse(fmt.Sprintf(
-				"\"pki_address\" needs to be the path to this mount")), nil
-		}
-		if strings.HasSuffix(pkiAddress, "/") {
-			pkiAddress = pkiAddress[:len(pkiAddress)-1]
-		}
-
-		req.Data["pki_address"] = pkiAddress
-	}
+	req.Data["pki_address"] = pkiAddress
 
 	role := &roleEntry{
 		TTL:              data.Get("ttl").(string),
@@ -217,21 +241,6 @@ func (b *backend) pathCAGenerateWrite(
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		EnforceHostnames: false,
-	}
-
-	maxSystemTTL := b.System().MaxLeaseTTL()
-
-	ttl := b.System().DefaultLeaseTTL()
-	if len(role.TTL) != 0 {
-		ttl, err = time.ParseDuration(role.TTL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid ttl: %s", err)), nil
-		}
-	}
-	if ttl > maxSystemTTL {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"ttl\" value must be less than mount max of %d seconds", maxSystemTTL/time.Second)), nil
 	}
 
 	switch role.KeyBits {
@@ -246,105 +255,135 @@ func (b *backend) pathCAGenerateWrite(
 	}
 
 	var resp *logical.Response
-	switch genType {
-	case "self-signed":
-		parsedBundle, err := generateCert(b, role, nil, req, data)
-		if err != nil {
-			switch err.(type) {
-			case certutil.UserError:
-				return logical.ErrorResponse(err.Error()), nil
-			case certutil.InternalError:
-				return nil, err
-			}
-		}
-
-		cb, err := parsedBundle.ToCertBundle()
-		if err != nil {
-			return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
-		}
-
-		resp = &logical.Response{
-			Data: map[string]interface{}{
-				"serial_number": cb.SerialNumber,
-				"certificate":   cb.Certificate,
-				"issuing_ca":    cb.IssuingCA,
-				"expiration":    int(parsedBundle.Certificate.NotAfter.Unix()),
-			},
-		}
-
-		if exported == "exported" {
-			resp.Data["private_key"] = cb.PrivateKey
-			resp.Data["private_key_type"] = cb.PrivateKeyType
-		}
-
-		entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
-		if err != nil {
+	parsedBundle, err := generateCert(b, role, nil, true, req, data)
+	if err != nil {
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		case certutil.InternalError:
 			return nil, err
 		}
-		err = req.Storage.Put(entry)
-		if err != nil {
-			return nil, err
-		}
+	}
 
-		// For ease of later use, also store just the certificate at a known
-		// location, plus a blank CRL
-		entry.Key = "ca"
-		entry.Value = parsedBundle.CertificateBytes
-		err = req.Storage.Put(entry)
-		if err != nil {
-			return nil, err
-		}
+	cb, err := parsedBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
+	}
 
-		entry.Key = "crl"
-		entry.Value = []byte{}
-		err = req.Storage.Put(entry)
-		if err != nil {
-			return nil, err
-		}
+	resp = &logical.Response{
+		Data: map[string]interface{}{
+			"serial_number": cb.SerialNumber,
+			"certificate":   cb.Certificate,
+			"issuing_ca":    cb.IssuingCA,
+			"expiration":    int(parsedBundle.Certificate.NotAfter.Unix()),
+		},
+	}
 
-	case "intermediate":
-		parsedBundle, err := generateCSR(b, role, nil, req, data)
-		if err != nil {
-			switch err.(type) {
-			case certutil.UserError:
-				return logical.ErrorResponse(err.Error()), nil
-			case certutil.InternalError:
-				return nil, err
-			}
-		}
+	if exported == "exported" {
+		resp.Data["private_key"] = cb.PrivateKey
+		resp.Data["private_key_type"] = cb.PrivateKeyType
+	}
 
-		csrb, err := parsedBundle.ToCSRBundle()
-		if err != nil {
-			return nil, fmt.Errorf("Error converting raw CSR bundle to CSR bundle: %s", err)
-		}
+	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
+	if err != nil {
+		return nil, err
+	}
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
 
-		resp = &logical.Response{
-			Data: map[string]interface{}{
-				"csr": csrb.CSR,
-			},
-		}
+	// For ease of later use, also store just the certificate at a known
+	// location, plus a blank CRL
+	entry.Key = "ca"
+	entry.Value = parsedBundle.CertificateBytes
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
 
-		if exported == "exported" {
-			resp.Data["private_key"] = csrb.PrivateKey
-			resp.Data["private_key_type"] = csrb.PrivateKeyType
-		}
+	entry.Key = "crl"
+	entry.Value = []byte{}
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
 
-		cb := &certutil.CertBundle{
-			PrivateKey:     csrb.PrivateKey,
-			PrivateKeyType: csrb.PrivateKeyType,
-		}
+	return resp, nil
+}
 
-		entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
-		if err != nil {
-			return nil, err
-		}
-		err = req.Storage.Put(entry)
-		if err != nil {
-			return nil, err
-		}
-
+func (b *backend) pathCAGenerateIntermediate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var err error
+	exported := data.Get("exported").(string)
+	switch exported {
+	case "exported":
+	case "internal":
 	default:
-		return logical.ErrorResponse("Unknown generation type"), nil
+		return logical.ErrorResponse(fmt.Sprintf(
+			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
+	}
+
+	req.Data["ca_type"] = "intermediate"
+
+	role := &roleEntry{
+		KeyType:          "rsa",
+		KeyBits:          data.Get("key_bits").(int),
+		AllowLocalhost:   true,
+		AllowAnyName:     true,
+		EnforceHostnames: false,
+	}
+
+	switch role.KeyBits {
+	case 0:
+		role.KeyBits = 2048
+	case 1024:
+	case 2048:
+	case 4096:
+	default:
+		return logical.ErrorResponse(fmt.Sprintf(
+			"\"key_bits\" must be 1024, 2048, or 4096")), nil
+	}
+
+	var resp *logical.Response
+	parsedBundle, err := generateCSR(b, role, nil, true, req, data)
+	if err != nil {
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		case certutil.InternalError:
+			return nil, err
+		}
+	}
+
+	csrb, err := parsedBundle.ToCSRBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw CSR bundle to CSR bundle: %s", err)
+	}
+
+	resp = &logical.Response{
+		Data: map[string]interface{}{
+			"csr": csrb.CSR,
+		},
+	}
+
+	if exported == "exported" {
+		resp.Data["private_key"] = csrb.PrivateKey
+		resp.Data["private_key_type"] = csrb.PrivateKeyType
+	}
+
+	cb := &certutil.CertBundle{
+		PrivateKey:     csrb.PrivateKey,
+		PrivateKeyType: csrb.PrivateKeyType,
+	}
+
+	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
+	if err != nil {
+		return nil, err
+	}
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
 	}
 
 	return resp, nil
@@ -425,7 +464,7 @@ func (b *backend) pathCASignWrite(
 			"Error fetching CA certificate: %s", caErr)}
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, csr, req, data)
+	parsedBundle, err := signCert(b, role, signingBundle, csr, true, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

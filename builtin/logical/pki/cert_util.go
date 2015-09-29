@@ -170,10 +170,16 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 func generateCert(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
+	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, req, data)
+	_, ok := data.GetOk("common_name")
+	if !ok {
+		return nil, certutil.UserError{Err: "The common_name field is required"}
+	}
+
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -189,10 +195,11 @@ func generateCert(b *backend,
 func generateCSR(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
+	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCSRBundle, error) {
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, req, data)
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -209,10 +216,16 @@ func signCert(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
 	csr *x509.CertificateRequest,
+	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, req, data)
+	_, ok := data.GetOk("common_name")
+	if !ok {
+		return nil, certutil.UserError{Err: "The common_name field is required"}
+	}
+
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -228,47 +241,56 @@ func signCert(b *backend,
 func generateCreationBundle(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
+	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certCreationBundle, error) {
 	var err error
 
 	// Get the common name(s)
-	var commonNames []string
-	cn := data.Get("common_name").(string)
-	if len(cn) == 0 {
-		return nil, certutil.UserError{Err: "The common_name field is required"}
+	var cn string
+	cnInt, ok := data.GetOk("common_name")
+	if ok {
+		cn = cnInt.(string)
 	}
-	commonNames = []string{cn}
 
-	cnAlt := data.Get("alt_names").(string)
-	if len(cnAlt) != 0 {
-		for _, v := range strings.Split(cnAlt, ",") {
-			commonNames = append(commonNames, v)
+	commonNames := []string{cn}
+	cnAltInt, ok := data.GetOk("alt_names")
+	if ok {
+		cnAlt := cnAltInt.(string)
+		if len(cnAlt) != 0 {
+			for _, v := range strings.Split(cnAlt, ",") {
+				commonNames = append(commonNames, v)
+			}
 		}
 	}
 
 	// Get any IP SANs
 	ipSANs := []net.IP{}
-
-	ipAlt := data.Get("ip_sans").(string)
-	if len(ipAlt) != 0 {
-		if !role.AllowIPSANs {
-			return nil, certutil.UserError{Err: fmt.Sprintf(
-				"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
-		}
-		for _, v := range strings.Split(ipAlt, ",") {
-			parsedIP := net.ParseIP(v)
-			if parsedIP == nil {
+	ipAltInt, ok := data.GetOk("ip_sans")
+	if ok {
+		ipAlt := ipAltInt.(string)
+		if len(ipAlt) != 0 {
+			if !role.AllowIPSANs {
 				return nil, certutil.UserError{Err: fmt.Sprintf(
-					"the value '%s' is not a valid IP address", v)}
+					"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
 			}
-			ipSANs = append(ipSANs, parsedIP)
+			for _, v := range strings.Split(ipAlt, ",") {
+				parsedIP := net.ParseIP(v)
+				if parsedIP == nil {
+					return nil, certutil.UserError{Err: fmt.Sprintf(
+						"the value '%s' is not a valid IP address", v)}
+				}
+				ipSANs = append(ipSANs, parsedIP)
+			}
 		}
 	}
 
-	ttlField := data.Get("ttl").(string)
-	if len(ttlField) == 0 {
+	var ttlField string
+	ttlFieldInt, ok := data.GetOk("ttl")
+	if !ok {
 		ttlField = role.TTL
+	} else {
+		ttlField = ttlFieldInt.(string)
 	}
 
 	var ttl time.Duration
@@ -340,11 +362,13 @@ func generateCreationBundle(b *backend,
 		Usage:         usage,
 	}
 
-	if _, ok := req.Data["ca_type"]; ok {
-		creationBundle.CAType = req.Data["ca_type"].(string)
-	}
-	if _, ok := req.Data["pki_address"]; ok {
-		creationBundle.PKIAddress = req.Data["pki_address"].(string)
+	if isCA {
+		if _, ok := req.Data["ca_type"]; ok {
+			creationBundle.CAType = req.Data["ca_type"].(string)
+		}
+		if _, ok := req.Data["pki_address"]; ok {
+			creationBundle.PKIAddress = req.Data["pki_address"].(string)
+		}
 	}
 
 	return creationBundle, nil
