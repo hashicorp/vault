@@ -8,12 +8,12 @@ type SSH struct {
 	MountPoint string
 }
 
-// Returns the client for logical-backend API calls.
+// SSH returns the client for logical-backend API calls.
 func (c *Client) SSH() *SSH {
 	return c.SSHWithMountPoint(SSHAgentDefaultMountPoint)
 }
 
-// Returns the client with specific SSH mount point.
+// SSHWithMountPoint returns the client with specific SSH mount point.
 func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 	return &SSH{
 		c:          c,
@@ -21,7 +21,7 @@ func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 	}
 }
 
-// Invokes the SSH backend API to create a credential to establish an SSH session.
+// Credential invokes the SSH backend API to create a credential to establish an SSH session.
 func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
 	if err := r.SetJSONBody(data); err != nil {

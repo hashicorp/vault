@@ -20,7 +20,7 @@ type Secret struct {
 	Auth *SecretAuth `json:"auth,omitempty"`
 }
 
-// Auth is the structure containing auth information if we have it.
+// SecretAuth is the structure containing auth information if we have it.
 type SecretAuth struct {
 	ClientToken string            `json:"client_token"`
 	Policies    []string          `json:"policies"`
