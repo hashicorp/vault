@@ -27,7 +27,7 @@ const (
 	VerifyEchoResponse = "verify-echo-response"
 )
 
-// This is a structure representing an SSH agent which can talk to vault server
+// SSHAgent is a structure representing an SSH agent which can talk to vault server
 // in order to verify the OTP entered by the user. It contains the path at which
 // SSH backend is mounted at the server.
 type SSHAgent struct {
@@ -35,7 +35,7 @@ type SSHAgent struct {
 	MountPoint string
 }
 
-// SSHVerifyResp is a structure representing the fields in Vault server's
+// SSHVerifyResponse is a structure representing the fields in Vault server's
 // response.
 type SSHVerifyResponse struct {
 	// Usually empty. If the request OTP is echo request message, this will
@@ -49,7 +49,7 @@ type SSHVerifyResponse struct {
 	IP string `mapstructure:"ip"`
 }
 
-// Structure which represents the entries from the agent's configuration file.
+// SSHAgentConfig is a structure which represents the entries from the agent's configuration file.
 type SSHAgentConfig struct {
 	VaultAddr       string `hcl:"vault_addr"`
 	SSHMountPoint   string `hcl:"ssh_mount_point"`
@@ -59,7 +59,7 @@ type SSHAgentConfig struct {
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
 }
 
-// Returns a HTTP client that uses TLS verification (TLS 1.2) for a given
+// TLSClient returns a HTTP client that uses TLS verification (TLS 1.2) for a given
 // certificate pool.
 func (c *SSHAgentConfig) TLSClient(certPool *x509.CertPool) *http.Client {
 	tlsConfig := &tls.Config{
@@ -100,7 +100,7 @@ func (c *SSHAgentConfig) TLSClient(certPool *x509.CertPool) *http.Client {
 	return &client
 }
 
-// Returns a new client for the configuration. This client will be used by the
+// NewClient returns a new client for the configuration. This client will be used by the
 // SSH agent to communicate with Vault server and verify the OTP entered by user.
 // If the configuration supplies Vault SSL certificates, then the client will
 // have TLS configured in its transport.
@@ -137,7 +137,7 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 	return client, nil
 }
 
-// Load agent's configuration from the file and populate the corresponding
+// LoadSSHAgentConfig loads agent's configuration from the file and populates the corresponding
 // in-memory structure.
 //
 // Vault address is a required parameter.
@@ -168,13 +168,13 @@ func LoadSSHAgentConfig(path string) (*SSHAgentConfig, error) {
 	return &config, nil
 }
 
-// Creates an SSHAgent object which can talk to Vault server with SSH backend
+// SSHAgent creates an SSHAgent object which can talk to Vault server with SSH backend
 // mounted at default path ("ssh").
 func (c *Client) SSHAgent() *SSHAgent {
 	return c.SSHAgentWithMountPoint(SSHAgentDefaultMountPoint)
 }
 
-// Creates an SSHAgent object which can talk to Vault server with SSH backend
+// SSHAgentWithMountPoint creates an SSHAgent object which can talk to Vault server with SSH backend
 // mounted at a specific mount point.
 func (c *Client) SSHAgentWithMountPoint(mountPoint string) *SSHAgent {
 	return &SSHAgent{
@@ -183,7 +183,7 @@ func (c *Client) SSHAgentWithMountPoint(mountPoint string) *SSHAgent {
 	}
 }
 
-// Verifies if the key provided by user is present in Vault server. The response
+// Verify verifies if the key provided by user is present in Vault server. The response
 // will contain the IP address and username associated with the OTP. In case the
 // OTP matches the echo request message, instead of searching an entry for the OTP,
 // an echo response message is returned. This feature is used by agent to verify if
