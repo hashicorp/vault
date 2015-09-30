@@ -6,7 +6,7 @@ BUG FIXES:
 
 MISC:
 
- * Various minor documentation fixes and improvements [GH-649]
+ * Various minor documentation fixes and improvements [GH-649] [GH-650]
 
 ## 0.3.0 (September 28, 2015)
 
