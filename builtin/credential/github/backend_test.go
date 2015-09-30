@@ -3,15 +3,29 @@ package github
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
 func TestBackend_basic(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  Backend(),
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccMap(t, "default", "root"),
