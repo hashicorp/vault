@@ -1,8 +1,6 @@
 package pki
 
 import (
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"reflect"
 	"strings"
@@ -413,22 +411,6 @@ func (b *backend) pathCASignWrite(
 		pkiAddress = pkiAddress[:len(pkiAddress)-1]
 	}
 
-	csrString := req.Data["csr"].(string)
-	if csrString == "" {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"csr\" is empty")), nil
-	}
-
-	pemBytes := []byte(csrString)
-	pemBlock, pemBytes := pem.Decode(pemBytes)
-	if pemBlock == nil {
-		return nil, certutil.UserError{Err: "csr contains no data"}
-	}
-	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
-	if err != nil {
-		return nil, certutil.UserError{Err: "certificate request could not be parsed"}
-	}
-
 	req.Data["pki_address"] = pkiAddress
 
 	role := &roleEntry{
@@ -464,7 +446,7 @@ func (b *backend) pathCASignWrite(
 			"Error fetching CA certificate: %s", caErr)}
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, csr, true, req, data)
+	parsedBundle, err := signCert(b, role, signingBundle, true, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

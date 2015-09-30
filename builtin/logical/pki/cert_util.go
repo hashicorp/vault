@@ -9,6 +9,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"math/big"
 	"net"
@@ -215,7 +216,6 @@ func generateCSR(b *backend,
 func signCert(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
-	csr *x509.CertificateRequest,
 	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
@@ -223,6 +223,22 @@ func signCert(b *backend,
 	_, ok := data.GetOk("common_name")
 	if !ok {
 		return nil, certutil.UserError{Err: "The common_name field is required"}
+	}
+
+	csrString := req.Data["csr"].(string)
+	if csrString == "" {
+		return nil, certutil.UserError{Err: fmt.Sprintf(
+			"\"csr\" is empty")}
+	}
+
+	pemBytes := []byte(csrString)
+	pemBlock, pemBytes := pem.Decode(pemBytes)
+	if pemBlock == nil {
+		return nil, certutil.UserError{Err: "csr contains no data"}
+	}
+	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
+	if err != nil {
+		return nil, certutil.UserError{Err: "certificate request could not be parsed"}
 	}
 
 	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)

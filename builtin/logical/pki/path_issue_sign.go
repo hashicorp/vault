@@ -44,10 +44,6 @@ the role default, backend default, or system
 default TTL is used, in that order. Cannot
 be later than the role max TTL.`,
 	},
-	"csr": &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: `PEM-format CSR to be signed.`,
-	},
 }
 
 func pathIssue(b *backend) *framework.Path {
@@ -65,7 +61,7 @@ func pathIssue(b *backend) *framework.Path {
 }
 
 func pathSign(b *backend) *framework.Path {
-	return &framework.Path{
+	ret := &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("role"),
 		Fields:  issueAndSignSchema,
 
@@ -76,6 +72,13 @@ func pathSign(b *backend) *framework.Path {
 		HelpSynopsis:    pathIssueCertHelpSyn,
 		HelpDescription: pathIssueCertHelpDesc,
 	}
+
+	ret.Fields["csr"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `PEM-format CSR to be signed.`,
+	}
+
+	return ret
 }
 
 func (b *backend) pathIssueCert(
@@ -103,6 +106,64 @@ func (b *backend) pathIssueCert(
 	}
 
 	parsedBundle, err := generateCert(b, role, signingBundle, false, req, data)
+	if err != nil {
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		case certutil.InternalError:
+			return nil, err
+		}
+	}
+
+	cb, err := parsedBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
+	}
+
+	resp := b.Secret(SecretCertsType).Response(
+		structs.New(cb).Map(),
+		map[string]interface{}{
+			"serial_number": cb.SerialNumber,
+		})
+
+	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+
+	err = req.Storage.Put(&logical.StorageEntry{
+		Key:   "certs/" + cb.SerialNumber,
+		Value: parsedBundle.CertificateBytes,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Unable to store certificate locally")
+	}
+
+	return resp, nil
+}
+
+func (b *backend) pathSignCSR(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role").(string)
+
+	// Get the role
+	role, err := b.getRole(req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
+	}
+
+	var caErr error
+	signingBundle, caErr := fetchCAInfo(req)
+	switch caErr.(type) {
+	case certutil.UserError:
+		return nil, certutil.UserError{Err: fmt.Sprintf(
+			"Could not fetch the CA certificate (was one set?): %s", caErr)}
+	case certutil.InternalError:
+		return nil, certutil.InternalError{Err: fmt.Sprintf(
+			"Error fetching CA certificate: %s", caErr)}
+	}
+
+	parsedBundle, err := signCert(b, role, signingBundle, false, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
