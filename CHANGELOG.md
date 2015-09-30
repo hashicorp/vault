@@ -1,4 +1,14 @@
-## 0.3.0 (September 23, 2015)
+## 0.4.0 (Unreleased)
+
+BUG FIXES:
+
+ * credential/github: Fix acceptance tests [GH-651]
+
+MISC:
+
+ * Various minor documentation fixes and improvements [GH-649]
+
+## 0.3.0 (September 28, 2015)
 
 DEPRECATIONS/BREAKING CHANGES:
 
