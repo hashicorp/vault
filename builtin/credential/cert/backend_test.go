@@ -19,8 +19,12 @@ func TestBackend_basic_CA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	backend, err := logical.TestBackend(Factory)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: buildBackend(t),
+		Backend: backend,
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo"),
 			testAccStepLogin(t, connState),
@@ -40,8 +44,13 @@ func TestBackend_basic_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	backend, err := logical.TestBackend(Factory)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: buildBackend(t),
+		Backend: backend,
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo"),
 			testAccStepLogin(t, connState),
@@ -53,25 +62,16 @@ func TestBackend_basic_singleCert(t *testing.T) {
 func TestBackend_untrusted(t *testing.T) {
 	connState := testConnState(t, "../../../test/unsigned/cert.pem",
 		"../../../test/unsigned/key.pem")
+	backend, err := logical.TestBackend(Factory)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: buildBackend(t),
+		Backend: backend,
 		Steps: []logicaltest.TestStep{
 			testAccStepLoginInvalid(t, connState),
 		},
 	})
-}
-
-func buildBackend(t *testing.T) logical.Backend {
-	b, err := Factory(&logical.BackendConfig{
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: 300 * time.Second,
-			MaxLeaseTTLVal:     1800 * time.Second,
-		},
-	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	return b
 }
 
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
