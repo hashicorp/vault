@@ -40,7 +40,7 @@ Successfully mounted 'ssh' at 'ssh'!
 
 This backend type allows a Vault server to issue an OTP every time a client
 wants to SSH into a remote host, using a helper command on the remote host to
-perform verification through a helper command.
+perform verification.
 
 An authenticated client requests credentials from the Vault server and, if
 authorized, is issued an OTP. When the client establishes an SSH connection
