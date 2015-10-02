@@ -132,6 +132,20 @@ func (b *backend) pathLogin(
 				"org":      *org.Login,
 			},
 			DisplayName: *user.Login,
+			LeaseOptions: logical.LeaseOptions{
+				TTL:         config.TTL,
+				GracePeriod: config.TTL / 10,
+				Renewable:   config.TTL > 0,
+			},
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	return framework.LeaseExtend(config.MaxTTL, 0, false)(req, d)
 }

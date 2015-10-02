@@ -3,12 +3,13 @@ package github
 import (
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfig() *framework.Path {
+func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
@@ -23,29 +24,47 @@ func pathConfig() *framework.Path {
 are running GitHub Enterprise or an
 API-compatible authentication server.`,
 			},
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Duration after which authentication will be expired`,
+			},
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Maximum duration after which authentication will be expired`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathConfigWrite,
+			logical.WriteOperation: b.pathConfigWrite,
 		},
 	}
 }
 
-func pathConfigWrite(
+func (b *backend) pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf := config{
-		Org: data.Get("organization").(string),
-	}
+	organization := data.Get("organization").(string)
 	baseURL := data.Get("base_url").(string)
 	if len(baseURL) != 0 {
 		_, err := url.Parse(baseURL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
 		}
-		conf.BaseURL = baseURL
 	}
 
-	entry, err := logical.StorageEntryJSON("config", conf)
+	ttlStr := data.Get("ttl").(string)
+	maxTTLStr := data.Get("max_ttl").(string)
+	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
+	}
+
+	entry, err := logical.StorageEntryJSON("config", config{
+		Org:     organization,
+		BaseURL: baseURL,
+		TTL:     ttl,
+		MaxTTL:  maxTTL,
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +94,8 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	Org     string `json:"organization"`
-	BaseURL string `json:"base_url"`
+	Org     string        `json:"organization"`
+	BaseURL string        `json:"base_url"`
+	TTL     time.Duration `json:"ttl"`
+	MaxTTL  time.Duration `json:"max_ttl"`
 }

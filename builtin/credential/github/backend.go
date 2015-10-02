@@ -35,9 +35,11 @@ func Backend() *framework.Backend {
 		},
 
 		Paths: append([]*framework.Path{
-			pathConfig(),
+			pathConfig(&b),
 			pathLogin(&b),
 		}, b.Map.Paths()...),
+
+		AuthRenew: b.pathLoginRenew,
 	}
 
 	return b.Backend

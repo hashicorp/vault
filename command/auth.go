@@ -33,6 +33,7 @@ type AuthCommand struct {
 }
 
 func (c *AuthCommand) Run(args []string) int {
+	var format string
 	var method string
 	var methods, methodHelp, noVerify bool
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
@@ -40,6 +41,7 @@ func (c *AuthCommand) Run(args []string) int {
 	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.BoolVar(&noVerify, "no-verify", false, "")
 	flags.StringVar(&method, "method", "", "method")
+	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -202,12 +204,10 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	output := "Successfully authenticated!"
-	if secret.LeaseDuration > 0 {
-		output += fmt.Sprintf("\nThe token's lifetime is %d seconds.", secret.LeaseDuration)
-	}
-
+	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
+	output += fmt.Sprintf("\ntoken_duration: %d", int(secret.Data["ttl"].(float64)))
 	if len(policies) > 0 {
-		output += fmt.Sprintf("\nThe policies that are associated with this token\narelisted below:\n\n%s", strings.Join(policies, ", "))
+		output += fmt.Sprintf("\ntoken_policies: [%s]", strings.Join(policies, ", "))
 	}
 
 	c.Ui.Output(output)
