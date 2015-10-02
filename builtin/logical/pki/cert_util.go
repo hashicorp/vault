@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/otto/helper/uuid"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -175,11 +176,6 @@ func generateCert(b *backend,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
-	_, ok := data.GetOk("common_name")
-	if !ok {
-		return nil, certutil.UserError{Err: "The common_name field is required"}
-	}
-
 	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
 	if err != nil {
 		return nil, err
@@ -193,6 +189,8 @@ func generateCert(b *backend,
 	return parsedBundle, nil
 }
 
+// N.B.: This is only meant to be used for generating intermediate CAs.
+// It skips some sanity checks.
 func generateCSR(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
@@ -200,9 +198,12 @@ func generateCSR(b *backend,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCSRBundle, error) {
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
-	if err != nil {
-		return nil, err
+	creationBundle := &certCreationBundle{
+		CommonNames: []string{
+			fmt.Sprintf("intcsr-%s-%s", strings.TrimSuffix(req.MountPoint, "/"), uuid.GenerateUUID()),
+		},
+		KeyType: "rsa",
+		KeyBits: role.KeyBits,
 	}
 
 	parsedBundle, err := createCSR(creationBundle)
@@ -219,11 +220,6 @@ func signCert(b *backend,
 	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
-
-	_, ok := data.GetOk("common_name")
-	if !ok {
-		return nil, certutil.UserError{Err: "The common_name field is required"}
-	}
 
 	csrString := req.Data["csr"].(string)
 	if csrString == "" {
@@ -263,10 +259,9 @@ func generateCreationBundle(b *backend,
 	var err error
 
 	// Get the common name(s)
-	var cn string
-	cnInt, ok := data.GetOk("common_name")
-	if ok {
-		cn = cnInt.(string)
+	cn := data.Get("common_name").(string)
+	if len(cn) == 0 {
+		return nil, certutil.UserError{Err: "The common_name field is required"}
 	}
 
 	commonNames := []string{cn}
@@ -366,6 +361,9 @@ func generateCreationBundle(b *backend,
 	}
 	if role.CodeSigningFlag {
 		usage = usage | codeSigningUsage
+	}
+	if role.EmailProtectionFlag {
+		usage = usage | emailProtectionUsage
 	}
 
 	creationBundle := &certCreationBundle{
@@ -551,8 +549,6 @@ func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, err
 	csrTemplate := &x509.CertificateRequest{
 		SignatureAlgorithm: x509.SHA256WithRSA,
 		Subject:            subject,
-		DNSNames:           creationInfo.CommonNames,
-		IPAddresses:        creationInfo.IPSANs,
 	}
 
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, result.PrivateKey)

@@ -111,9 +111,13 @@ func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Dura
 	// There should only be one usage type, because only one is requested
 	// in the tests
 	if len(cert.ExtKeyUsage) != 1 {
-		return nil, fmt.Errorf("Got wrong size key usage in generated cert")
+		return nil, fmt.Errorf("Got wrong size key usage in generated cert; values are %#v", cert.ExtKeyUsage)
 	}
 	switch usage {
+	case emailProtectionUsage:
+		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageEmailProtection {
+			return nil, fmt.Errorf("Bad key usage")
+		}
 	case serverUsage:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageServerAuth {
 			return nil, fmt.Errorf("Bad key usage")
@@ -383,9 +387,13 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 			roleVals.ServerFlag = false
 			roleVals.ClientFlag = false
 			roleVals.CodeSigningFlag = false
+			roleVals.EmailProtectionFlag = false
 			var usage certUsage
 			i := mathRand.Int()
 			switch {
+			case i%5 == 0:
+				usage = emailProtectionUsage
+				roleVals.EmailProtectionFlag = true
 			case i%3 == 0:
 				usage = serverUsage
 				roleVals.ServerFlag = true

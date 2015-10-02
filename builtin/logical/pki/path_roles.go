@@ -109,7 +109,7 @@ Defaults to true.`,
 use. Defaults to false.`,
 			},
 
-			"email_flag": &framework.FieldSchema{
+			"email_protection_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: false,
 				Description: `If set, certificates are flagged for email
@@ -240,7 +240,7 @@ func (b *backend) pathRoleCreate(
 		ServerFlag:            data.Get("server_flag").(bool),
 		ClientFlag:            data.Get("client_flag").(bool),
 		CodeSigningFlag:       data.Get("code_signing_flag").(bool),
-		EmailFlag:             data.Get("email_flag").(bool),
+		EmailProtectionFlag:   data.Get("email_protection_flag").(bool),
 		KeyType:               data.Get("key_type").(string),
 		KeyBits:               data.Get("key_bits").(int),
 	}
@@ -327,7 +327,7 @@ type roleEntry struct {
 	ServerFlag            bool   `json:"server_flag" structs:"server_flag" mapstructure:"server_flag"`
 	ClientFlag            bool   `json:"client_flag" structs:"client_flag" mapstructure:"client_flag"`
 	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailFlag             bool   `json:"email_flag" structs:"email_flag" mapstructure:"email_flag"`
+	EmailProtectionFlag   bool   `json:"email_protection_flag" structs:"email_protection_flag" mapstructure:"email_protection_flag"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 }

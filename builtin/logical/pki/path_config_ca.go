@@ -273,7 +273,7 @@ func (b *backend) pathCAGenerateRoot(
 			"serial_number": cb.SerialNumber,
 			"certificate":   cb.Certificate,
 			"issuing_ca":    cb.IssuingCA,
-			"expiration":    int(parsedBundle.Certificate.NotAfter.Unix()),
+			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 		},
 	}
 
