@@ -33,7 +33,6 @@ type AuthCommand struct {
 }
 
 func (c *AuthCommand) Run(args []string) int {
-	var format string
 	var method string
 	var methods, methodHelp, noVerify bool
 	flags := c.Meta.FlagSet("auth", FlagSetDefault)
@@ -41,7 +40,6 @@ func (c *AuthCommand) Run(args []string) int {
 	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.BoolVar(&noVerify, "no-verify", false, "")
 	flags.StringVar(&method, "method", "", "method")
-	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
