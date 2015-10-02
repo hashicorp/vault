@@ -112,11 +112,8 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 		return "", fmt.Errorf("error compiling hostname regex: %s", err)
 	}
 	for _, name := range names {
-		if role.AllowLocalhost && name == "localhost" {
-			continue
-		}
-
 		sanitizedName := name
+		emailDomain := name
 		isEmail := false
 		isWildcard := false
 		var emailUserPart string
@@ -130,6 +127,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			}
 			emailUserPart = splitEmail[0]
 			sanitizedName = splitEmail[1]
+			emailDomain = splitEmail[1]
 			isEmail = true
 		}
 		if strings.HasPrefix(sanitizedName, "*.") {
@@ -148,13 +146,8 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			}
 		}
 
-		if role.AllowAnyName {
-			continue
-		}
-
-		if role.AllowTokenDisplayName {
-			// Don't check sanitized here because it needs to be exact
-			if name == req.DisplayName {
+		if role.AllowLocalhost {
+			if name == "localhost" || (isEmail && emailDomain == "localhost") {
 				continue
 			}
 
@@ -177,8 +170,34 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			}
 		}
 
+		if role.AllowAnyName {
+			continue
+		}
+
+		if role.AllowTokenDisplayName {
+			// Don't check sanitized here because it needs to be exact
+			if name == req.DisplayName || (isEmail && emailDomain == req.DisplayName) {
+				continue
+			}
+
+			if role.AllowSubdomains {
+				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) {
+					trimmed := strings.TrimSuffix(sanitizedName, "."+req.DisplayName)
+					if hostnameRegex.MatchString(trimmed) {
+						continue
+					}
+				}
+
+				if isWildcard && sanitizedName == role.AllowedBaseDomain {
+					continue
+				}
+			}
+		}
+
 		if len(role.AllowedBaseDomain) != 0 {
-			if name == role.AllowedBaseDomain && role.AllowBaseDomain {
+			if role.AllowBaseDomain &&
+				(name == role.AllowedBaseDomain ||
+					(isEmail && emailDomain == role.AllowedBaseDomain)) {
 				continue
 			}
 
@@ -392,7 +411,7 @@ func generateCreationBundle(b *backend,
 	badName, err = validateNames(req, emailAddresses, role)
 	if len(badName) != 0 {
 		return nil, certutil.UserError{Err: fmt.Sprintf(
-			"name %s not allowed by this role", badName)}
+			"email %s not allowed by this role", badName)}
 	} else if err != nil {
 		return nil, certutil.InternalError{Err: fmt.Sprintf(
 			"error validating name %s: %s", badName, err)}

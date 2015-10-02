@@ -1,12 +1,19 @@
 package pki
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"math"
-	"math/rand"
+	mathrand "math/rand"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -70,7 +77,8 @@ func TestBackend_roles(t *testing.T) {
 	}
 
 	testCase.Steps = append(testCase.Steps, generateCASteps(t)...)
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t)...)
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
@@ -83,10 +91,26 @@ func TestBackend_roles(t *testing.T) {
 }
 
 // Performs some validity checking on the returned bundles
-func checkCertsAndPrivateKey(keyType string, usage certUsage, validity time.Duration, certBundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
+func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage certUsage, validity time.Duration, certBundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
 	parsedCertBundle, err := certBundle.ToParsedCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing cert bundle: %s", err)
+	}
+
+	if key != nil {
+		switch keyType {
+		case "rsa":
+			parsedCertBundle.PrivateKeyType = certutil.RSAPrivateKey
+			parsedCertBundle.PrivateKey = key
+			parsedCertBundle.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(key.(*rsa.PrivateKey))
+		case "ec":
+			parsedCertBundle.PrivateKeyType = certutil.ECPrivateKey
+			parsedCertBundle.PrivateKey = key
+			parsedCertBundle.PrivateKeyBytes, err = x509.MarshalECPrivateKey(key.(*ecdsa.PrivateKey))
+			if err != nil {
+				return nil, fmt.Errorf("Error parsing EC key: %s", err)
+			}
+		}
 	}
 
 	switch {
@@ -287,7 +311,7 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 }
 
 // Generates steps to test out various role permutations
-func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
+func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
 		MaxTTL: "12h",
 	}
@@ -298,9 +322,17 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		Operation: logical.WriteOperation,
 		Path:      "roles/test",
 	}
-	issueTestStep := logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      "issue/test",
+	var issueTestStep logicaltest.TestStep
+	if useCSRs {
+		issueTestStep = logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "sign/test",
+		}
+	} else {
+		issueTestStep = logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "issue/test",
+		}
 	}
 
 	genericErrorOkCheck := func(resp *logical.Response) error {
@@ -330,14 +362,14 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
-	getCnCheck := func(name, keyType string, usage certUsage, validity time.Duration) logicaltest.TestCheckFunc {
+	getCnCheck := func(name, keyType string, key crypto.Signer, usage certUsage, validity time.Duration) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
 			if err != nil {
 				return err
 			}
-			parsedCertBundle, err := checkCertsAndPrivateKey(keyType, usage, validity, &certBundle)
+			parsedCertBundle, err := checkCertsAndPrivateKey(keyType, key, usage, validity, &certBundle)
 			if err != nil {
 				return fmt.Errorf("Error checking generated certificate: %s", err)
 			}
@@ -383,7 +415,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		cnMap := structs.New(commonNames).Map()
 		// For the number of tests being run, this is known to hit all
 		// of the various values below
-		mathRand := rand.New(rand.NewSource(1))
+		mathRand := mathrand.New(mathrand.NewSource(1))
 		for name, allowedInt := range cnMap {
 			roleVals.KeyType = "rsa"
 			roleVals.KeyBits = 2048
@@ -425,7 +457,43 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 			}
 
 			validity, _ := time.ParseDuration(roleVals.MaxTTL)
-			addTests(getCnCheck(issueVals.CommonName, roleVals.KeyType, usage, validity))
+			if useCSRs {
+				var privKey crypto.Signer
+				switch roleVals.KeyType {
+				case "rsa":
+					privKey, _ = rsa.GenerateKey(rand.Reader, roleVals.KeyBits)
+				case "ec":
+					var curve elliptic.Curve
+					switch roleVals.KeyBits {
+					case 224:
+						curve = elliptic.P224()
+					case 256:
+						curve = elliptic.P256()
+					case 384:
+						curve = elliptic.P384()
+					case 521:
+						curve = elliptic.P521()
+					}
+					privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
+				}
+				templ := &x509.CertificateRequest{
+					Subject: pkix.Name{
+						CommonName: issueVals.CommonName,
+					},
+				}
+				csr, err := x509.CreateCertificateRequest(rand.Reader, templ, privKey)
+				if err != nil {
+					t.Fatalf("Error creating certificate request: %s", err)
+				}
+				block := pem.Block{
+					Type:  "CERTIFICATE REQUEST",
+					Bytes: csr,
+				}
+				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+				addTests(getCnCheck(issueVals.CommonName, roleVals.KeyType, privKey, usage, validity))
+			} else {
+				addTests(getCnCheck(issueVals.CommonName, roleVals.KeyType, nil, usage, validity))
+			}
 		}
 	}
 

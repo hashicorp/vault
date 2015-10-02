@@ -421,4 +421,5 @@ type IssueData struct {
 	CommonName string `json:"common_name" structs:"common_name" mapstructure:"common_name"`
 	AltNames   string `json:"alt_names" structs:"alt_names" mapstructure:"alt_names"`
 	IPSANs     string `json:"ip_sans" structs:"ip_sans" mapstructure:"ip_sans"`
+	CSR        string `json:"csr" structs:"csr" mapstructure:"csr"`
 }
