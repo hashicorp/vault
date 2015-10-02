@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lib/pq"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/lib/pq"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -70,10 +70,12 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 			fmt.Errorf("configure the DB connection with config/connection first")
 	}
 
-	var conn string
-	if err := entry.DecodeJSON(&conn); err != nil {
+	var connConfig connectionConfig
+	if err := entry.DecodeJSON(&connConfig); err != nil {
 		return nil, err
 	}
+
+	conn := connConfig.ConnectionString
 
 	// Ensure timezone is set to UTC for all the conenctions
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
@@ -92,7 +94,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 
 	// Set some connection pool settings. We don't need much of this,
 	// since the request rate shouldn't be high.
-	b.db.SetMaxOpenConns(2)
+	b.db.SetMaxOpenConns(connConfig.MaxOpenConnections)
 
 	return b.db, nil
 }
