@@ -357,13 +357,14 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 
 	// Common names to test with the various role flags toggled
 	var commonNames struct {
-		Localhost         bool `structs:"localhost"`
-		BaseDomain        bool `structs:"foo.example.com"`
-		Wildcard          bool `structs:"*.example.com"`
-		Subdomain         bool `structs:"foo.bar.example.com"`
-		SubdomainWildcard bool `structs:"*.bar.example.com"`
-		NonHostname       bool `structs:"daɪˈɛrɨsɨs"`
-		AnyHost           bool `structs:"porkslap.beer"`
+		Localhost            bool `structs:"localhost"`
+		BaseDomain           bool `structs:"example.com"`
+		SubDomain            bool `structs:"foo.example.com"`
+		Wildcard             bool `structs:"*.example.com"`
+		SubSubdomain         bool `structs:"foo.bar.example.com"`
+		SubSubdomainWildcard bool `structs:"*.bar.example.com"`
+		NonHostname          bool `structs:"daɪˈɛrɨsɨs"`
+		AnyHost              bool `structs:"porkslap.beer"`
 	}
 
 	// Adds a series of tests based on the current selection of
@@ -436,13 +437,17 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		addCnTests()
 
 		roleVals.AllowedBaseDomain = "example.com"
-		commonNames.BaseDomain = true
+		commonNames.SubDomain = true
 		commonNames.Wildcard = true
 		addCnTests()
 
+		roleVals.AllowBaseDomain = true
+		commonNames.BaseDomain = true
+		addCnTests()
+
 		roleVals.AllowSubdomains = true
-		commonNames.Subdomain = true
-		commonNames.SubdomainWildcard = true
+		commonNames.SubSubdomain = true
+		commonNames.SubSubdomainWildcard = true
 		addCnTests()
 
 		roleVals.AllowAnyName = true

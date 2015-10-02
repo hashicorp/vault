@@ -46,7 +46,16 @@ name in a request`,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath this base domain, including
 the wildcard subdomain. See the documentation for more
-information.`,
+information. Note the difference between this and
+"allow_base_domain".`,
+			},
+
+			"allow_base_domain": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, clients can request certificates
+for the base domain itself, e.g. "example.com". Note
+the difference between this and "allowed_base_domain".`,
 			},
 
 			"allow_token_displayname": &framework.FieldSchema{
@@ -232,6 +241,7 @@ func (b *backend) pathRoleCreate(
 		TTL:                   data.Get("ttl").(string),
 		AllowLocalhost:        data.Get("allow_localhost").(bool),
 		AllowedBaseDomain:     data.Get("allowed_base_domain").(string),
+		AllowBaseDomain:       data.Get("allow_base_domain").(bool),
 		AllowTokenDisplayName: data.Get("allow_token_displayname").(bool),
 		AllowSubdomains:       data.Get("allow_subdomains").(bool),
 		AllowAnyName:          data.Get("allow_any_name").(bool),
@@ -319,6 +329,7 @@ type roleEntry struct {
 	TTL                   string `json:"ttl" structs:"ttl" mapstructure:"ttl"`
 	AllowLocalhost        bool   `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain     string `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowBaseDomain       bool   `json:"allow_base_domain" structs:"allow_base_domain" mapstructure:"allow_base_domain"`
 	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
 	AllowSubdomains       bool   `json:"allow_subdomains" structs:"allow_subdomains" mapstructure:"allow_subdomains"`
 	AllowAnyName          bool   `json:"allow_any_name" structs:"allow_any_name" mapstructure:"allow_any_name"`

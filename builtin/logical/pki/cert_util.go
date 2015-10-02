@@ -148,6 +148,10 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 		}
 
 		if len(role.AllowedBaseDomain) != 0 {
+			if name == role.AllowedBaseDomain && role.AllowBaseDomain {
+				continue
+			}
+
 			if strings.HasSuffix(name, "."+role.AllowedBaseDomain) {
 				if role.AllowSubdomains {
 					continue
