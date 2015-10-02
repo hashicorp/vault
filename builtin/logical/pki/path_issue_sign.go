@@ -21,19 +21,22 @@ request`,
 		Type: framework.TypeString,
 		Description: `The requested common name; if you want more than
 one, specify the alternative names in the
-alt_names map`,
+alt_names map. If email protection is enabled
+in the role, this may be an email address.`,
 	},
 
 	"alt_names": &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested Subject Alternative Names, if any,
-in a comma-delimited list`,
+in a comma-delimited list. If email protection
+is enabled for the role, this may contain
+email addresses.`,
 	},
 
 	"ip_sans": &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested IP SANs, if any, in a
-common-delimited list`,
+comma-delimited list`,
 	},
 
 	"ttl": &framework.FieldSchema{

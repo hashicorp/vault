@@ -345,11 +345,18 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 			if cert.Subject.CommonName != name {
 				return fmt.Errorf("Error: returned certificate has CN of %s but %s was requested", cert.Subject.CommonName, name)
 			}
-			if len(cert.DNSNames) != 1 {
-				return fmt.Errorf("Error: found more than one DNS SAN but only one was requested")
+			if len(cert.DNSNames)+len(cert.EmailAddresses) != 1 {
+				return fmt.Errorf("Error: found more than one DNS/Email SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
 			}
-			if cert.DNSNames[0] != name {
-				return fmt.Errorf("Error: returned certificate has a DNS SAN of %s but %s was requested", cert.DNSNames[0], name)
+			var retName string
+			if len(cert.DNSNames) > 0 {
+				retName = cert.DNSNames[0]
+			}
+			if len(cert.EmailAddresses) > 0 {
+				retName = cert.EmailAddresses[0]
+			}
+			if retName != name {
+				return fmt.Errorf("Error: returned certificate has a DNS SAN of %s but %s was requested", retName, name)
 			}
 			return nil
 		}
@@ -408,6 +415,9 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 
 			allowed := allowedInt.(bool)
 			issueVals.CommonName = name
+			if roleVals.EmailProtectionFlag {
+				issueVals.CommonName = "user@" + issueVals.CommonName
+			}
 			if allowed {
 				issueTestStep.ErrorOk = false
 			} else {
@@ -415,7 +425,7 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 			}
 
 			validity, _ := time.ParseDuration(roleVals.MaxTTL)
-			addTests(getCnCheck(name, roleVals.KeyType, usage, validity))
+			addTests(getCnCheck(issueVals.CommonName, roleVals.KeyType, usage, validity))
 		}
 	}
 
@@ -437,17 +447,15 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		addCnTests()
 
 		roleVals.AllowedBaseDomain = "example.com"
+		roleVals.AllowSubdomains = true
 		commonNames.SubDomain = true
 		commonNames.Wildcard = true
+		commonNames.SubSubdomain = true
+		commonNames.SubSubdomainWildcard = true
 		addCnTests()
 
 		roleVals.AllowBaseDomain = true
 		commonNames.BaseDomain = true
-		addCnTests()
-
-		roleVals.AllowSubdomains = true
-		commonNames.SubSubdomain = true
-		commonNames.SubSubdomainWildcard = true
 		addCnTests()
 
 		roleVals.AllowAnyName = true
@@ -459,7 +467,6 @@ func generateRoleSteps(t *testing.T) []logicaltest.TestStep {
 		commonNames.NonHostname = true
 		addCnTests()
 	}
-
 	// IP SAN tests
 	{
 		issueVals.IPSANs = "127.0.0.1,::1"

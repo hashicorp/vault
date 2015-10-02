@@ -34,15 +34,17 @@ const (
 )
 
 type certCreationBundle struct {
-	CAType        string
-	CommonNames   []string
-	PKIAddress    string
-	IPSANs        []net.IP
-	KeyType       string
-	KeyBits       int
-	SigningBundle *certutil.ParsedCertBundle
-	TTL           time.Duration
-	Usage         certUsage
+	CAType         string
+	CommonName     string
+	DNSNames       []string
+	EmailAddresses []string
+	IPAddresses    []net.IP
+	PKIAddress     string
+	KeyType        string
+	KeyBits        int
+	SigningBundle  *certutil.ParsedCertBundle
+	TTL            time.Duration
+	Usage          certUsage
 }
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
@@ -104,30 +106,45 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
-func validateCommonNames(req *logical.Request, commonNames []string, role *roleEntry) (string, error) {
+func validateNames(req *logical.Request, names []string, role *roleEntry) (string, error) {
 	hostnameRegex, err := regexp.Compile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	if err != nil {
-		return "", fmt.Errorf("Error compiling hostname regex: %s", err)
+		return "", fmt.Errorf("error compiling hostname regex: %s", err)
 	}
-	subdomainRegex, err := regexp.Compile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]))*$`)
-	if err != nil {
-		return "", fmt.Errorf("Error compiling subdomain regex: %s", err)
-	}
-	for _, name := range commonNames {
+	for _, name := range names {
 		if role.AllowLocalhost && name == "localhost" {
 			continue
 		}
 
 		sanitizedName := name
+		isEmail := false
 		isWildcard := false
-		if strings.HasPrefix(name, "*.") {
-			sanitizedName = name[2:]
+		var emailUserPart string
+		if strings.Contains(name, "@") {
+			if !role.EmailProtectionFlag {
+				return name, nil
+			}
+			splitEmail := strings.Split(name, "@")
+			if len(splitEmail) != 2 {
+				return name, nil
+			}
+			emailUserPart = splitEmail[0]
+			sanitizedName = splitEmail[1]
+			isEmail = true
+		}
+		if strings.HasPrefix(sanitizedName, "*.") {
+			sanitizedName = sanitizedName[2:]
 			isWildcard = true
 		}
 
 		if role.EnforceHostnames {
 			if !hostnameRegex.MatchString(sanitizedName) {
 				return name, nil
+			}
+			if isEmail {
+				if !hostnameRegex.MatchString(emailUserPart) {
+					return name, nil
+				}
 			}
 		}
 
@@ -136,12 +153,25 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 		}
 
 		if role.AllowTokenDisplayName {
+			// Don't check sanitized here because it needs to be exact
 			if name == req.DisplayName {
 				continue
 			}
 
 			if role.AllowSubdomains {
-				if strings.HasSuffix(name, "."+req.DisplayName) {
+				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) {
+					// Regex won't match empty string, so protected against
+					// someone trying to get base without it being allowed
+					trimmed := strings.TrimSuffix(sanitizedName, "."+req.DisplayName)
+					if hostnameRegex.MatchString(trimmed) {
+						continue
+					}
+				}
+
+				// The exception to matching the empty string is if it's *.
+				// which is pulled out of the sanitized name, so see if it's
+				// a wildcard matching the allowed base domain
+				if isWildcard && sanitizedName == role.AllowedBaseDomain {
 					continue
 				}
 			}
@@ -152,16 +182,15 @@ func validateCommonNames(req *logical.Request, commonNames []string, role *roleE
 				continue
 			}
 
-			if strings.HasSuffix(name, "."+role.AllowedBaseDomain) {
-				if role.AllowSubdomains {
-					continue
+			if role.AllowSubdomains {
+				if strings.HasSuffix(sanitizedName, "."+role.AllowedBaseDomain) {
+					trimmed := strings.TrimSuffix(sanitizedName, "."+role.AllowedBaseDomain)
+					if hostnameRegex.MatchString(trimmed) {
+						continue
+					}
 				}
 
-				if subdomainRegex.MatchString(strings.TrimSuffix(name, "."+role.AllowedBaseDomain)) {
-					continue
-				}
-
-				if isWildcard && role.AllowedBaseDomain == sanitizedName {
+				if isWildcard && sanitizedName == role.AllowedBaseDomain {
 					continue
 				}
 			}
@@ -203,7 +232,7 @@ func generateCSR(b *backend,
 	data *framework.FieldData) (*certutil.ParsedCSRBundle, error) {
 
 	creationBundle := &certCreationBundle{
-		CommonNames: []string{
+		DNSNames: []string{
 			fmt.Sprintf("intcsr-%s-%s", strings.TrimSuffix(req.MountPoint, "/"), uuid.GenerateUUID()),
 		},
 		KeyType: "rsa",
@@ -268,19 +297,29 @@ func generateCreationBundle(b *backend,
 		return nil, certutil.UserError{Err: "The common_name field is required"}
 	}
 
-	commonNames := []string{cn}
+	dnsNames := []string{}
+	emailAddresses := []string{}
+	if strings.Contains(cn, "@") {
+		emailAddresses = append(emailAddresses, cn)
+	} else {
+		dnsNames = append(dnsNames, cn)
+	}
 	cnAltInt, ok := data.GetOk("alt_names")
 	if ok {
 		cnAlt := cnAltInt.(string)
 		if len(cnAlt) != 0 {
 			for _, v := range strings.Split(cnAlt, ",") {
-				commonNames = append(commonNames, v)
+				if strings.Contains(v, "@") {
+					emailAddresses = append(emailAddresses, cn)
+				} else {
+					dnsNames = append(dnsNames, v)
+				}
 			}
 		}
 	}
 
 	// Get any IP SANs
-	ipSANs := []net.IP{}
+	ipAddresses := []net.IP{}
 	ipAltInt, ok := data.GetOk("ip_sans")
 	if ok {
 		ipAlt := ipAltInt.(string)
@@ -295,7 +334,7 @@ func generateCreationBundle(b *backend,
 					return nil, certutil.UserError{Err: fmt.Sprintf(
 						"the value '%s' is not a valid IP address", v)}
 				}
-				ipSANs = append(ipSANs, parsedIP)
+				ipAddresses = append(ipAddresses, parsedIP)
 			}
 		}
 	}
@@ -341,7 +380,16 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
-	badName, err := validateCommonNames(req, commonNames, role)
+	badName, err := validateNames(req, dnsNames, role)
+	if len(badName) != 0 {
+		return nil, certutil.UserError{Err: fmt.Sprintf(
+			"name %s not allowed by this role", badName)}
+	} else if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf(
+			"error validating name %s: %s", badName, err)}
+	}
+
+	badName, err = validateNames(req, emailAddresses, role)
 	if len(badName) != 0 {
 		return nil, certutil.UserError{Err: fmt.Sprintf(
 			"name %s not allowed by this role", badName)}
@@ -371,13 +419,15 @@ func generateCreationBundle(b *backend,
 	}
 
 	creationBundle := &certCreationBundle{
-		CommonNames:   commonNames,
-		IPSANs:        ipSANs,
-		KeyType:       role.KeyType,
-		KeyBits:       role.KeyBits,
-		SigningBundle: signingBundle,
-		TTL:           ttl,
-		Usage:         usage,
+		CommonName:     cn,
+		DNSNames:       dnsNames,
+		EmailAddresses: emailAddresses,
+		IPAddresses:    ipAddresses,
+		KeyType:        role.KeyType,
+		KeyBits:        role.KeyBits,
+		SigningBundle:  signingBundle,
+		TTL:            ttl,
+		Usage:          usage,
 	}
 
 	if isCA {
@@ -449,7 +499,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 
 	subject := pkix.Name{
 		SerialNumber: serialNumber.String(),
-		CommonName:   creationInfo.CommonNames[0],
+		CommonName:   creationInfo.CommonName,
 	}
 
 	certTemplate := &x509.Certificate{
@@ -460,10 +510,11 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		NotAfter:              time.Now().Add(creationInfo.TTL),
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		BasicConstraintsValid: true,
-		IsCA:         false,
-		SubjectKeyId: subjKeyID,
-		DNSNames:     creationInfo.CommonNames,
-		IPAddresses:  creationInfo.IPSANs,
+		IsCA:           false,
+		SubjectKeyId:   subjKeyID,
+		DNSNames:       creationInfo.DNSNames,
+		EmailAddresses: creationInfo.EmailAddresses,
+		IPAddresses:    creationInfo.IPAddresses,
 	}
 
 	if creationInfo.Usage&serverUsage != 0 {
@@ -547,7 +598,7 @@ func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, err
 
 	// Like many root CAs, other information is ignored
 	subject := pkix.Name{
-		CommonName: creationInfo.CommonNames[0],
+		CommonName: creationInfo.CommonName,
 	}
 
 	csrTemplate := &x509.CertificateRequest{
@@ -599,7 +650,7 @@ func signCertificate(creationInfo *certCreationBundle,
 
 	subject := pkix.Name{
 		SerialNumber: serialNumber.String(),
-		CommonName:   creationInfo.CommonNames[0],
+		CommonName:   creationInfo.CommonName,
 	}
 
 	marshaledKey, err := x509.MarshalPKIXPublicKey(csr.PublicKey)
@@ -616,10 +667,11 @@ func signCertificate(creationInfo *certCreationBundle,
 		NotAfter:              time.Now().Add(creationInfo.TTL),
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		BasicConstraintsValid: true,
-		IsCA:         false,
-		SubjectKeyId: subjKeyID[:],
-		DNSNames:     creationInfo.CommonNames,
-		IPAddresses:  creationInfo.IPSANs,
+		IsCA:           false,
+		SubjectKeyId:   subjKeyID[:],
+		DNSNames:       creationInfo.DNSNames,
+		EmailAddresses: creationInfo.EmailAddresses,
+		IPAddresses:    creationInfo.IPAddresses,
 	}
 
 	if creationInfo.Usage&serverUsage != 0 {
