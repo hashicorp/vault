@@ -17,6 +17,10 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "DB connection string",
 			},
+			"max_open_connections": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "Maximum number of open connections to database",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -32,8 +36,14 @@ func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connString := data.Get("value").(string)
 
+	maxOpenConns := data.Get("max_open_connections").(int)
+	if maxOpenConns == 0 {
+		maxOpenConns = 2
+	}
+
 	// Verify the string
 	db, err := sql.Open("mysql", connString)
+
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error validating connection info: %s", err)), nil
@@ -45,7 +55,10 @@ func (b *backend) pathConnectionWrite(
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("config/connection", connString)
+	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
+		ConnectionString:   connString,
+		MaxOpenConnections: maxOpenConns,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +69,11 @@ func (b *backend) pathConnectionWrite(
 	// Reset the DB connection
 	b.ResetDB()
 	return nil, nil
+}
+
+type connectionConfig struct {
+	ConnectionString   string `json:"value"`
+	MaxOpenConnections int    `json:"max_open_connections"`
 }
 
 const pathConfigConnectionHelpSyn = `
