@@ -124,6 +124,11 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 
+	ttl, _, err := b.SanitizeTTL(config.TTL.String(), config.MaxTTL.String())
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Policies: policiesList,
@@ -133,9 +138,9 @@ func (b *backend) pathLogin(
 			},
 			DisplayName: *user.Login,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         config.TTL,
-				GracePeriod: config.TTL / 10,
-				Renewable:   config.TTL > 0,
+				TTL:         ttl,
+				GracePeriod: ttl / 10,
+				Renewable:   ttl > 0,
 			},
 		},
 	}, nil

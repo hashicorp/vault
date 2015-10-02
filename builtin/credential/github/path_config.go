@@ -51,11 +51,31 @@ func (b *backend) pathConfigWrite(
 		}
 	}
 
-	ttlStr := data.Get("ttl").(string)
-	maxTTLStr := data.Get("max_ttl").(string)
-	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
+	var ttl time.Duration
+	var err error
+	ttlRaw, ok := data.GetOk("ttl")
+	if !ok {
+		ttl = b.System().DefaultLeaseTTL()
+	} else if len(ttlRaw.(string)) == 0 {
+		ttl = 0
+	} else {
+		ttl, err = time.ParseDuration(ttlRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid 'ttl':%s", err)), nil
+		}
+	}
+
+	var maxTTL time.Duration
+	maxTTLRaw, ok := data.GetOk("max_ttl")
+	if !ok {
+		maxTTL = b.System().MaxLeaseTTL()
+	} else if len(maxTTLRaw.(string)) == 0 {
+		maxTTL = 0
+	} else {
+		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid 'max_ttl':%s", err)), nil
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON("config", config{
