@@ -72,7 +72,8 @@ func (b *backend) pathConnectionWrite(
 }
 
 type connectionConfig struct {
-	ConnectionString   string `json:"value"`
+	// Deprecate "value" in coming releases
+	ConnectionString   string `json:"value" json:"connection_string"`
 	MaxOpenConnections int    `json:"max_open_connections"`
 }
 
