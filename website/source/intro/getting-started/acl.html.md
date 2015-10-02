@@ -37,6 +37,10 @@ path "secret/*" {
 path "secret/foo" {
   policy = "read"
 }
+
+path "auth/token/lookup-self" {
+  policy = "read"
+}
 ```
 
 The policy format uses a prefix matching system on the API path
@@ -73,7 +77,11 @@ back to a root user later.
 
 ```
 $ vault token-create -policy="secret"
-d97ef000-48cf-45d9-1907-3ea6ce298a29
+Key            	Value
+token          	d97ef000-48cf-45d9-1907-3ea6ce298a29
+token_duration 	2592000
+token_renewable	true
+token_policies 	[secret]
 
 $ vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
 Successfully authenticated! The policies that are associated
