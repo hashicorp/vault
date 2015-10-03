@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/otto/helper/uuid"
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
