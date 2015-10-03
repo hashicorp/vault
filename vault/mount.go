@@ -480,8 +480,8 @@ func (c *Core) setupMounts() error {
 		backend, err = c.newLogicalBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 		if err != nil {
 			c.logger.Printf(
-				"[ERR] core: failed to create mount entry %#v: %v",
-				entry, err)
+				"[ERR] core: failed to create mount entry %s: %v",
+				entry.Path, err)
 			return errLoadMountsFailed
 		}
 
@@ -497,7 +497,7 @@ func (c *Core) setupMounts() error {
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to mount entry %#v: %v", entry, err)
+			c.logger.Printf("[ERR] core: failed to mount entry %s: %v", entry.Path, err)
 			return errLoadMountsFailed
 		} else {
 			c.logger.Printf("[INFO] core: mounted backend of type %s at %s", entry.Type, view.prefix)

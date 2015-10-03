@@ -467,7 +467,7 @@ func (b *SystemBackend) handleMount(
 
 	// Attempt mount
 	if err := b.Core.mount(me); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: mount %#v failed: %v", me, err)
+		b.Backend.Logger().Printf("[ERR] sys: mount %s failed: %v", me.Path, err)
 		return handleError(err)
 	}
 
@@ -715,7 +715,7 @@ func (b *SystemBackend) handleEnableAuth(
 
 	// Attempt enabling
 	if err := b.Core.enableCredential(me); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: enable auth %#v failed: %v", me, err)
+		b.Backend.Logger().Printf("[ERR] sys: enable auth %s failed: %v", me.Path, err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -851,7 +851,7 @@ func (b *SystemBackend) handleEnableAudit(
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(me); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: enable audit %#v failed: %v", me, err)
+		b.Backend.Logger().Printf("[ERR] sys: enable audit %s failed: %v", me.Path, err)
 		return handleError(err)
 	}
 	return nil, nil

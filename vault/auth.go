@@ -245,8 +245,8 @@ func (c *Core) setupCredentials() error {
 		backend, err = c.newCredentialBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 		if err != nil {
 			c.logger.Printf(
-				"[ERR] core: failed to create credential entry %#v: %v",
-				entry, err)
+				"[ERR] core: failed to create credential entry %s: %v",
+				entry.Path, err)
 			return errLoadAuthFailed
 		}
 
@@ -254,7 +254,7 @@ func (c *Core) setupCredentials() error {
 		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, entry, view)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to mount auth entry %#v: %v", entry, err)
+			c.logger.Printf("[ERR] core: failed to mount auth entry %s: %v", entry.Path, err)
 			return errLoadAuthFailed
 		}
 

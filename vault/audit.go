@@ -180,8 +180,8 @@ func (c *Core) setupAudits() error {
 		audit, err := c.newAuditBackend(entry.Type, view, entry.Options)
 		if err != nil {
 			c.logger.Printf(
-				"[ERR] core: failed to create audit entry %#v: %v",
-				entry, err)
+				"[ERR] core: failed to create audit entry %s: %v",
+				entry.Path, err)
 			return errLoadAuditFailed
 		}
 
@@ -280,7 +280,7 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outer
 	defer a.l.RUnlock()
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Printf("[ERR] audit: panic logging: auth: %#v, req: %#v: %v", auth, req, r)
+			a.logger.Printf("[ERR] audit: panic logging: req path: %s", req.Path)
 			reterr = fmt.Errorf("panic generating audit log")
 		}
 	}()
@@ -312,7 +312,7 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 	defer a.l.RUnlock()
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Printf("[ERR] audit: panic logging: auth: %#v, req: %#v, resp: %#v: %v", auth, req, resp, r)
+			a.logger.Printf("[ERR] audit: panic logging: req path: %s: %v", req.Path, r)
 			reterr = fmt.Errorf("panic generating audit log")
 		}
 	}()
