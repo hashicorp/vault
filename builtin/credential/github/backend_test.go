@@ -1,6 +1,7 @@
 package github
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -8,6 +9,72 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
+
+func TestBackend_Config(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 2
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	login_data := map[string]interface{}{
+		"token": "25804d2e8674703adae786201cf5ed60fc6a2905",
+	}
+	config_data1 := map[string]interface{}{
+		"organization": "hashicorp",
+		"ttl":          "",
+		"max_ttl":      "",
+	}
+	expectedTTL1, _ := time.ParseDuration("24h0m0s")
+	config_data2 := map[string]interface{}{
+		"organization": "hashicorp",
+		"ttl":          "1h",
+		"max_ttl":      "2h",
+	}
+	expectedTTL2, _ := time.ParseDuration("1h0m0s")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  b,
+		Steps: []logicaltest.TestStep{
+			testConfigWrite(t, config_data1),
+			testLoginWrite(t, login_data, expectedTTL1.Nanoseconds()),
+			testConfigWrite(t, config_data2),
+			testLoginWrite(t, login_data, expectedTTL2.Nanoseconds()),
+		},
+	})
+}
+
+func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "login",
+		Data:      d,
+		Check: func(resp *logical.Response) error {
+			var actualTTL int64
+			actualTTL = resp.Auth.LeaseOptions.TTL.Nanoseconds()
+			if actualTTL != expectedTTL {
+				return fmt.Errorf("TTL mismatched. Expected: %d Actual: %d", expectedTTL, resp.Auth.LeaseOptions.TTL.Nanoseconds())
+			}
+			return nil
+		},
+	}
+}
+
+func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "config",
+		Data:      d,
+	}
+}
 
 func TestBackend_basic(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
