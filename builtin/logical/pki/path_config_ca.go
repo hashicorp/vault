@@ -209,6 +209,9 @@ func (b *backend) pathCAGenerateRoot(
 			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
 	}
 
+	if req.Data == nil {
+		req.Data = map[string]interface{}{}
+	}
 	req.Data["ca_type"] = "root"
 
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
@@ -322,6 +325,9 @@ func (b *backend) pathCAGenerateIntermediate(
 			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
 	}
 
+	if req.Data == nil {
+		req.Data = map[string]interface{}{}
+	}
 	req.Data["ca_type"] = "intermediate"
 
 	role := &roleEntry{
@@ -390,6 +396,9 @@ func (b *backend) pathCAGenerateIntermediate(
 func (b *backend) pathCASignWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+	if req.Data == nil {
+		req.Data = map[string]interface{}{}
+	}
 	req.Data["ca_type"] = "intermediate"
 
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
@@ -420,30 +429,15 @@ func (b *backend) pathCASignWrite(
 		EnforceHostnames: false,
 	}
 
-	maxSystemTTL := b.System().MaxLeaseTTL()
-
-	ttl := b.System().DefaultLeaseTTL()
-	if len(role.TTL) != 0 {
-		ttl, err = time.ParseDuration(role.TTL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid ttl: %s", err)), nil
-		}
-	}
-	if ttl > maxSystemTTL {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"ttl\" value must be less than mount max of %d seconds", maxSystemTTL/time.Second)), nil
-	}
-
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(req)
 	switch caErr.(type) {
 	case certutil.UserError:
 		return nil, certutil.UserError{Err: fmt.Sprintf(
-			"Could not fetch the CA certificate (was one set?): %s", caErr)}
+			"could not fetch the CA certificate (was one set?): %s", caErr)}
 	case certutil.InternalError:
 		return nil, certutil.InternalError{Err: fmt.Sprintf(
-			"Error fetching CA certificate: %s", caErr)}
+			"error fetching CA certificate: %s", caErr)}
 	}
 
 	parsedBundle, err := signCert(b, role, signingBundle, true, req, data)

@@ -120,7 +120,7 @@ MIIEowIBAAKCAQEA0cczc7Y2yIu7aD/IaDi23Io+tvvDS9XaXXDUFW1kqd58P83r
 ...
 3xhCNnZ3CMQaM2I48sloVK/XoikMLb5MZwOUQn/V+TrhWP4Lu7qD
 -----END RSA PRIVATE KEY-----
-serial         	5e:62:eb:2e:44:dd:04:83:8e:21:88:36:fc:15:ce:ed:da:1c:29:f5
+serial_number  	5e:62:eb:2e:44:dd:04:83:8e:21:88:36:fc:15:ce:ed:da:1c:29:f5
 ```
 
 Note that this is a write, not a read, to allow values to be passed in at request time.
@@ -402,7 +402,7 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
         "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAnVHfwoKsUG1GDVyWB1AFroaKl2ImMBO8EnvGLRrmobIkQvh+\n...\nQN351pgTphi6nlCkGPzkDuwvtxSxiCWXQcaxrHAL7MiJpPzkIBq1\n-----END RSA PRIVATE KEY-----\n",
         "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
         },
-        "auth": null
+      "auth": null
     }
     ```
 

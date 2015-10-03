@@ -399,6 +399,12 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
+	if signingBundle != nil &&
+		time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
+		return nil, certutil.UserError{Err: fmt.Sprintf(
+			"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
+	}
+
 	badName, err := validateNames(req, dnsNames, role)
 	if len(badName) != 0 {
 		return nil, certutil.UserError{Err: fmt.Sprintf(
@@ -415,12 +421,6 @@ func generateCreationBundle(b *backend,
 	} else if err != nil {
 		return nil, certutil.InternalError{Err: fmt.Sprintf(
 			"error validating name %s: %s", badName, err)}
-	}
-
-	if signingBundle != nil &&
-		time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
-		return nil, certutil.UserError{Err: fmt.Sprintf(
-			"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
 	}
 
 	var usage certUsage

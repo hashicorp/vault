@@ -50,7 +50,9 @@ func TestBackend_basic(t *testing.T) {
 
 	stepCount += len(testCase.Steps)
 
-	testCase.Steps = append(testCase.Steps, generateCASteps(t)...)
+	intdata := map[string]interface{}{}
+	reqdata := map[string]interface{}{}
+	testCase.Steps = append(testCase.Steps, generateCASteps(t, intdata, reqdata)...)
 
 	logicaltest.Test(t, testCase)
 }
@@ -76,7 +78,9 @@ func TestBackend_roles(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	testCase.Steps = append(testCase.Steps, generateCASteps(t)...)
+	intdata := map[string]interface{}{}
+	reqdata := map[string]interface{}{}
+	testCase.Steps = append(testCase.Steps, generateCASteps(t, intdata, reqdata)...)
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
@@ -169,7 +173,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage certUsage,
 
 // Generates steps to test out CA configuration -- certificates + CRL expiry,
 // and ensure that the certificates are readable after storing them
-func generateCASteps(t *testing.T) []logicaltest.TestStep {
+func generateCASteps(t *testing.T, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
@@ -305,6 +309,90 @@ func generateCASteps(t *testing.T) []logicaltest.TestStep {
 				return nil
 			},
 		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/generate/root/exported",
+			Data: map[string]interface{}{
+				"pki_address": "http://example.com/v1/mnt",
+				"common_name": "Root Cert",
+				"ttl":         "180h",
+			},
+			Check: func(resp *logical.Response) error {
+				intdata["root"] = resp.Data["certificate"].(string)
+				intdata["rootkey"] = resp.Data["private_key"].(string)
+				reqdata["pem_bundle"] = intdata["root"].(string) + "\n" + intdata["rootkey"].(string)
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/generate/intermediate/exported",
+			Check: func(resp *logical.Response) error {
+				intdata["intermediatecsr"] = resp.Data["csr"].(string)
+				intdata["intermediatekey"] = resp.Data["private_key"].(string)
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				delete(reqdata, "pem_bundle")
+				delete(reqdata, "ttl")
+				reqdata["csr"] = intdata["intermediatecsr"].(string)
+				reqdata["pki_address"] = "http://example.com/v1/mnt"
+				reqdata["common_name"] = "Intermediate Cert"
+				reqdata["ttl"] = "90h"
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/sign",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				intdata["intermediatecert"] = resp.Data["certificate"].(string)
+				delete(reqdata, "csr")
+				delete(reqdata, "pki_address")
+				delete(reqdata, "common_name")
+				delete(reqdata, "ttl")
+				reqdata["serial_number"] = resp.Data["serial_number"].(string)
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "revoke",
+			Data:      reqdata,
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "crl",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				crlBytes := resp.Data["http_raw_body"].([]byte)
+				certList, err := x509.ParseCRL(crlBytes)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				revokedList := certList.TBSCertList.RevokedCertificates
+				if len(revokedList) != 1 {
+					t.Fatalf("length of revoked list not 1; %d", len(revokedList))
+				}
+				revokedString := certutil.GetOctalFormatted(revokedList[0].SerialNumber.Bytes(), ":")
+				if revokedString != reqdata["serial_number"].(string) {
+					t.Fatalf("got serial %s, expecting %s", revokedString, reqdata["serial_number"].(string))
+				}
+				return nil
+			},
+		},
 	}
 
 	return ret
@@ -377,8 +465,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			if cert.Subject.CommonName != name {
 				return fmt.Errorf("Error: returned certificate has CN of %s but %s was requested", cert.Subject.CommonName, name)
 			}
-			if len(cert.DNSNames)+len(cert.EmailAddresses) != 1 {
-				return fmt.Errorf("Error: found more than one DNS/Email SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
+			if strings.Contains(cert.Subject.CommonName, "@") {
+				if len(cert.DNSNames) != 0 || len(cert.EmailAddresses) != 1 {
+					return fmt.Errorf("Error: found more than one DNS SAN or not one Email SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
+				}
+			} else {
+				if len(cert.DNSNames) != 1 || len(cert.EmailAddresses) != 0 {
+					return fmt.Errorf("Error: found more than one Email SAN or not one DNS SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
+				}
 			}
 			var retName string
 			if len(cert.DNSNames) > 0 {
