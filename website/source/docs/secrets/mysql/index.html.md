@@ -129,6 +129,16 @@ allowed to read.
       </li>
     </ul>
   </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">max_open_connections</span>
+        <span class="param-flags">optional</span>
+        Maximum number of open connections to the database.
+	Defaults to 2.
+      </li>
+    </ul>
+  </dd>
 
   <dt>Returns</dt>
   <dd>

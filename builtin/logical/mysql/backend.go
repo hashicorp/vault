@@ -68,9 +68,14 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 			fmt.Errorf("configure the DB connection with config/connection first")
 	}
 
-	var conn string
-	if err := entry.DecodeJSON(&conn); err != nil {
+	var connConfig connectionConfig
+	if err := entry.DecodeJSON(&connConfig); err != nil {
 		return nil, err
+	}
+
+	conn := connConfig.ConnectionString
+	if len(conn) == 0 {
+		conn = connConfig.ConnectionURL
 	}
 
 	b.db, err = sql.Open("mysql", conn)
@@ -80,7 +85,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 
 	// Set some connection pool settings. We don't need much of this,
 	// since the request rate shouldn't be high.
-	b.db.SetMaxOpenConns(2)
+	b.db.SetMaxOpenConns(connConfig.MaxOpenConnections)
 
 	return b.db, nil
 }

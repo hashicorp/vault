@@ -13,9 +13,19 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"value": &framework.FieldSchema{
+			"connection_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "DB connection string",
+			},
+			"value": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				DB connection string. Use 'connection_url' instead.
+			        This will be deprecated.`,
+			},
+			"max_open_connections": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "Maximum number of open connections to database",
 			},
 		},
 
@@ -31,9 +41,16 @@ func pathConfigConnection(b *backend) *framework.Path {
 func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connString := data.Get("value").(string)
+	connURL := data.Get("connection_url").(string)
+
+	maxOpenConns := data.Get("max_open_connections").(int)
+	if maxOpenConns == 0 {
+		maxOpenConns = 2
+	}
 
 	// Verify the string
 	db, err := sql.Open("mysql", connString)
+
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error validating connection info: %s", err)), nil
@@ -45,7 +62,11 @@ func (b *backend) pathConnectionWrite(
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("config/connection", connString)
+	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
+		ConnectionString:   connString,
+		ConnectionURL:      connURL,
+		MaxOpenConnections: maxOpenConns,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +77,13 @@ func (b *backend) pathConnectionWrite(
 	// Reset the DB connection
 	b.ResetDB()
 	return nil, nil
+}
+
+type connectionConfig struct {
+	ConnectionURL string `json:"connection_url"`
+	// Deprecate "value" in coming releases
+	ConnectionString   string `json:"value"`
+	MaxOpenConnections int    `json:"max_open_connections"`
 }
 
 const pathConfigConnectionHelpSyn = `
