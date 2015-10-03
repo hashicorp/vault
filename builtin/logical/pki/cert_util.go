@@ -34,7 +34,6 @@ const (
 )
 
 type certCreationBundle struct {
-	CAType         string
 	CommonName     string
 	DNSNames       []string
 	EmailAddresses []string
@@ -224,11 +223,11 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 func generateCert(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
-	isCA bool,
+	pkiAddress string,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, pkiAddress, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +245,6 @@ func generateCert(b *backend,
 func generateCSR(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
-	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCSRBundle, error) {
 
@@ -269,7 +267,7 @@ func generateCSR(b *backend,
 func signCert(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
-	isCA bool,
+	pkiAddress string,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
@@ -289,7 +287,7 @@ func signCert(b *backend,
 		return nil, certutil.UserError{Err: "certificate request could not be parsed"}
 	}
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, isCA, req, data)
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, pkiAddress, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +303,7 @@ func signCert(b *backend,
 func generateCreationBundle(b *backend,
 	role *roleEntry,
 	signingBundle *certutil.ParsedCertBundle,
-	isCA bool,
+	pkiAddress string,
 	req *logical.Request,
 	data *framework.FieldData) (*certCreationBundle, error) {
 	var err error
@@ -444,18 +442,10 @@ func generateCreationBundle(b *backend,
 		IPAddresses:    ipAddresses,
 		KeyType:        role.KeyType,
 		KeyBits:        role.KeyBits,
+		PKIAddress:     pkiAddress,
 		SigningBundle:  signingBundle,
 		TTL:            ttl,
 		Usage:          usage,
-	}
-
-	if isCA {
-		if _, ok := req.Data["ca_type"]; ok {
-			creationBundle.CAType = req.Data["ca_type"].(string)
-		}
-		if _, ok := req.Data["pki_address"]; ok {
-			creationBundle.PKIAddress = req.Data["pki_address"].(string)
-		}
 	}
 
 	return creationBundle, nil
@@ -650,8 +640,6 @@ func signCertificate(creationInfo *certCreationBundle,
 		return nil, certutil.UserError{Err: "nil signing bundle given to signCertificate"}
 	case csr == nil:
 		return nil, certutil.UserError{Err: "nil csr given to signCertificate"}
-	case creationInfo.CAType != "" && creationInfo.PKIAddress == "":
-		return nil, certutil.UserError{Err: "ca cert to sign but no PKI address given to signCertificate"}
 	}
 
 	err := csr.CheckSignature()
@@ -718,7 +706,7 @@ func signCertificate(creationInfo *certCreationBundle,
 
 	certTemplate.IssuingCertificateURL = caCert.IssuingCertificateURL
 
-	if creationInfo.CAType != "" && creationInfo.PKIAddress != "" {
+	if creationInfo.PKIAddress != "" {
 		certTemplate.CRLDistributionPoints = []string{
 			creationInfo.PKIAddress + "/crl",
 		}

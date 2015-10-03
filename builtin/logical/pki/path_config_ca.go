@@ -209,11 +209,6 @@ func (b *backend) pathCAGenerateRoot(
 			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
 	}
 
-	if req.Data == nil {
-		req.Data = map[string]interface{}{}
-	}
-	req.Data["ca_type"] = "root"
-
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
 	switch {
 	case len(pkiAddress) == 0:
@@ -232,8 +227,6 @@ func (b *backend) pathCAGenerateRoot(
 	if strings.HasSuffix(pkiAddress, "/") {
 		pkiAddress = pkiAddress[:len(pkiAddress)-1]
 	}
-
-	req.Data["pki_address"] = pkiAddress
 
 	role := &roleEntry{
 		TTL:              data.Get("ttl").(string),
@@ -256,7 +249,7 @@ func (b *backend) pathCAGenerateRoot(
 	}
 
 	var resp *logical.Response
-	parsedBundle, err := generateCert(b, role, nil, true, req, data)
+	parsedBundle, err := generateCert(b, role, nil, pkiAddress, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -325,11 +318,6 @@ func (b *backend) pathCAGenerateIntermediate(
 			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
 	}
 
-	if req.Data == nil {
-		req.Data = map[string]interface{}{}
-	}
-	req.Data["ca_type"] = "intermediate"
-
 	role := &roleEntry{
 		KeyType:          "rsa",
 		KeyBits:          data.Get("key_bits").(int),
@@ -350,7 +338,7 @@ func (b *backend) pathCAGenerateIntermediate(
 	}
 
 	var resp *logical.Response
-	parsedBundle, err := generateCSR(b, role, nil, true, req, data)
+	parsedBundle, err := generateCSR(b, role, nil, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -396,10 +384,6 @@ func (b *backend) pathCAGenerateIntermediate(
 func (b *backend) pathCASignWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	if req.Data == nil {
-		req.Data = map[string]interface{}{}
-	}
-	req.Data["ca_type"] = "intermediate"
 
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
 	switch {
@@ -420,8 +404,6 @@ func (b *backend) pathCASignWrite(
 		pkiAddress = pkiAddress[:len(pkiAddress)-1]
 	}
 
-	req.Data["pki_address"] = pkiAddress
-
 	role := &roleEntry{
 		TTL:              data.Get("ttl").(string),
 		AllowLocalhost:   true,
@@ -440,7 +422,7 @@ func (b *backend) pathCASignWrite(
 			"error fetching CA certificate: %s", caErr)}
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, true, req, data)
+	parsedBundle, err := signCert(b, role, signingBundle, pkiAddress, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
