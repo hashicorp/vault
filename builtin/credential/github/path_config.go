@@ -54,9 +54,7 @@ func (b *backend) pathConfigWrite(
 	var ttl time.Duration
 	var err error
 	ttlRaw, ok := data.GetOk("ttl")
-	if !ok {
-		ttl = b.System().DefaultLeaseTTL()
-	} else if len(ttlRaw.(string)) == 0 {
+	if !ok || len(ttlRaw.(string)) == 0 {
 		ttl = 0
 	} else {
 		ttl, err = time.ParseDuration(ttlRaw.(string))
@@ -67,9 +65,7 @@ func (b *backend) pathConfigWrite(
 
 	var maxTTL time.Duration
 	maxTTLRaw, ok := data.GetOk("max_ttl")
-	if !ok {
-		maxTTL = b.System().MaxLeaseTTL()
-	} else if len(maxTTLRaw.(string)) == 0 {
+	if !ok || len(maxTTLRaw.(string)) == 0 {
 		maxTTL = 0
 	} else {
 		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))

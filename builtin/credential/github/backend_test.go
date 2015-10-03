@@ -25,7 +25,8 @@ func TestBackend_Config(t *testing.T) {
 	}
 
 	login_data := map[string]interface{}{
-		"token": "25804d2e8674703adae786201cf5ed60fc6a2905",
+		// This token has to be replaced with a working token for the test to work.
+		"token": "4fb5f4f0738c7aea5ee06dd595f15236ea78918b",
 	}
 	config_data1 := map[string]interface{}{
 		"organization": "hashicorp",
@@ -39,25 +40,36 @@ func TestBackend_Config(t *testing.T) {
 		"max_ttl":      "2h",
 	}
 	expectedTTL2, _ := time.ParseDuration("1h0m0s")
+	config_data3 := map[string]interface{}{
+		"organization": "hashicorp",
+		"ttl":          "50h",
+		"max_ttl":      "50h",
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, config_data1),
-			testLoginWrite(t, login_data, expectedTTL1.Nanoseconds()),
+			testLoginWrite(t, login_data, expectedTTL1.Nanoseconds(), false),
 			testConfigWrite(t, config_data2),
-			testLoginWrite(t, login_data, expectedTTL2.Nanoseconds()),
+			testLoginWrite(t, login_data, expectedTTL2.Nanoseconds(), false),
+			testConfigWrite(t, config_data3),
+			testLoginWrite(t, login_data, 0, true),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "login",
+		ErrorOk:   true,
 		Data:      d,
 		Check: func(resp *logical.Response) error {
+			if resp.IsError() && expectFail {
+				return nil
+			}
 			var actualTTL int64
 			actualTTL = resp.Auth.LeaseOptions.TTL.Nanoseconds()
 			if actualTTL != expectedTTL {
