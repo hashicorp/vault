@@ -76,6 +76,9 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	}
 
 	conn := connConfig.ConnectionString
+	if len(conn) == 0 {
+		conn = connConfig.ConnectionURL
+	}
 
 	// Ensure timezone is set to UTC for all the conenctions
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
