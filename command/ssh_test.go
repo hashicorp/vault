@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"strings"
 	"testing"
 
@@ -57,7 +56,7 @@ var testAdminUser string
 
 // Starts the server and initializes the servers IP address,
 // port and usernames to be used by the test cases.
-func init() {
+func initTest() {
 	addr, err := vault.StartSSHHostTestServer()
 	if err != nil {
 		panic(fmt.Sprintf("Error starting mock server:%s", err))
@@ -66,16 +65,16 @@ func init() {
 	testIP = input[0]
 	testPort = input[1]
 
-	u, err := user.Current()
-	if err != nil {
-		panic(fmt.Sprintf("Error getting current username: '%s'", err))
+	testUserName := os.Getenv("VAULT_SSHTEST_USER")
+	if len(testUserName) == 0 {
+		panic("VAULT_SSHTEST_USER must be set to the desired user")
 	}
-	testUserName = u.Username
-	testAdminUser = u.Username
+	testAdminUser = testUserName
 }
 
 // This test is broken. Hence temporarily disabling it.
 func testSSH(t *testing.T) {
+	initTest()
 	// Add the SSH backend to the unsealed test core.
 	// This should be done before the unsealed core is created.
 	err := vault.AddTestLogicalBackend("ssh", logicalssh.Factory)

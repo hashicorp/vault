@@ -2,7 +2,7 @@ package ssh
 
 import (
 	"fmt"
-	"os/user"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -56,6 +56,7 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+	initTest()
 	defaultLeaseTTLVal := 2 * time.Minute
 	maxLeaseTTLVal := 10 * time.Minute
 	return Factory(&logical.BackendConfig{
@@ -77,7 +78,7 @@ var testDynamicRoleData map[string]interface{}
 
 // Starts the server and initializes the servers IP address,
 // port and usernames to be used by the test cases.
-func init() {
+func initTest() {
 	addr, err := vault.StartSSHHostTestServer()
 	if err != nil {
 		panic(fmt.Sprintf("error starting mock server:%s", err))
@@ -85,12 +86,11 @@ func init() {
 	input := strings.Split(addr, ":")
 	testIP = input[0]
 
-	u, err := user.Current()
-	if err != nil {
-		panic(fmt.Sprintf("error getting current username: '%s'", err))
+	testUserName := os.Getenv("VAULT_SSHTEST_USER")
+	if len(testUserName) == 0 {
+		panic("VAULT_SSHTEST_USER must be set to the desired user")
 	}
-	testUserName = u.Username
-	testAdminUser = u.Username
+	testAdminUser = testUserName
 
 	testOTPRoleData = map[string]interface{}{
 		"key_type":     testOTPKeyType,
