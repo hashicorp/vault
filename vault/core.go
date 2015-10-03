@@ -422,8 +422,8 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	// Create an audit trail of the response
 	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit response (request: %#v, response: %#v): %v",
-			req, resp, err)
+		c.logger.Printf("[ERR] core: failed to audit response (request path: %s): %v",
+			req.Path, err)
 		return nil, ErrInternalError
 	}
 
@@ -464,8 +464,8 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 
 		if err := c.auditBroker.LogRequest(auth, req, err); err != nil {
-			c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
-				req, err)
+			c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
+				req.Path, err)
 		}
 
 		return logical.ErrorResponse(err.Error()), nil, errType
@@ -476,8 +476,8 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 	// Create an audit trail of the request
 	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
-			req, err)
+		c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
+			req.Path, err)
 		return nil, auth, ErrInternalError
 	}
 
@@ -526,7 +526,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			if err != nil {
 				c.logger.Printf(
 					"[ERR] core: failed to register lease "+
-						"(request: %#v, response: %#v): %v", req, resp, err)
+						"(request path: %s): %v", req.Path, err)
 				return nil, auth, ErrInternalError
 			}
 			resp.Secret.LeaseID = leaseID
@@ -540,7 +540,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if !strings.HasPrefix(req.Path, "auth/token/") {
 			c.logger.Printf(
 				"[ERR] core: unexpected Auth response for non-token backend "+
-					"(request: %#v, response: %#v)", req, resp)
+					"(request path: %s)", req.Path)
 			return nil, auth, ErrInternalError
 		}
 
@@ -557,7 +557,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, resp.Auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
-				"(request: %#v, response: %#v): %v", req, resp, err)
+				"(request path: %s): %v", req.Path, err)
 			return nil, auth, ErrInternalError
 		}
 	}
@@ -573,8 +573,8 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 	// Create an audit trail of the request, auth is not available on login requests
 	if err := c.auditBroker.LogRequest(nil, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request (%#v): %v",
-			req, err)
+		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
+			req.Path, err)
 		return nil, nil, ErrInternalError
 	}
 
@@ -584,7 +584,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	// A login request should never return a secret!
 	if resp != nil && resp.Secret != nil {
 		c.logger.Printf("[ERR] core: unexpected Secret response for login path"+
-			"(request: %#v, response: %#v)", req, resp)
+			"(request path: %s)", req.Path)
 		return nil, nil, ErrInternalError
 	}
 
@@ -604,7 +604,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		sysView := c.router.MatchingSystemView(req.Path)
 		if sysView == nil {
 			c.logger.Printf("[ERR] core: unable to look up sys view for login path"+
-				"(request: %#v, response: %#v)", req, resp)
+				"(request path: %s)", req.Path)
 			return nil, nil, ErrInternalError
 		}
 
@@ -639,7 +639,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
-				"(request: %#v, response: %#v): %v", req, resp, err)
+				"(request path: %s): %v", req.Path, err)
 			return nil, auth, ErrInternalError
 		}
 
