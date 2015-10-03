@@ -721,7 +721,7 @@ func (ts *TokenStore) handleLookup(
 	}
 
 	// Generate a response. We purposely omit the parent reference otherwise
-	// you could escalade your privileges.
+	// you could escalate your privileges.
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"id":            out.ID,

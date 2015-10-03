@@ -202,12 +202,10 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	output := "Successfully authenticated!"
-	if secret.LeaseDuration > 0 {
-		output += fmt.Sprintf("\nThe token's lifetime is %d seconds.", secret.LeaseDuration)
-	}
-
+	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
+	output += fmt.Sprintf("\ntoken_duration: %d", int(secret.Data["ttl"].(float64)))
 	if len(policies) > 0 {
-		output += fmt.Sprintf("\nThe policies that are associated with this token\narelisted below:\n\n%s", strings.Join(policies, ", "))
+		output += fmt.Sprintf("\ntoken_policies: [%s]", strings.Join(policies, ", "))
 	}
 
 	c.Ui.Output(output)

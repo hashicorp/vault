@@ -124,6 +124,11 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 
+	ttl, _, err := b.SanitizeTTL(config.TTL.String(), config.MaxTTL.String())
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("[ERR]:%s", err)), nil
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Policies: policiesList,
@@ -132,6 +137,20 @@ func (b *backend) pathLogin(
 				"org":      *org.Login,
 			},
 			DisplayName: *user.Login,
+			LeaseOptions: logical.LeaseOptions{
+				TTL:         ttl,
+				GracePeriod: ttl / 10,
+				Renewable:   ttl > 0,
+			},
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	return framework.LeaseExtend(config.MaxTTL, 0, false)(req, d)
 }
