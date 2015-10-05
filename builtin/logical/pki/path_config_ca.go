@@ -45,6 +45,22 @@ creating a CSR for an intermediate CA.`,
 	},
 }
 
+var generateSchema = map[string]*framework.FieldSchema{
+	"exported": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Must be "internal" or "exported".
+If set to "exported", the generated private
+key will be returned. This is your *only*
+chance to retrieve the private key!`,
+	},
+
+	"key_bits": &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Default:     2048,
+		Description: `The number of bits to use for the private key.`,
+	},
+}
+
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
@@ -111,20 +127,8 @@ is used for generating the CA/CRL URLs in
 the certificate.`,
 	}
 
-	ret.Fields["exported"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported".
-If set to "exported", the generated private
-key will be returned. This is your *only*
-chance to retrieve the private key!`,
-	}
-
-	ret.Fields["key_bits"] = &framework.FieldSchema{
-		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
+	for k, v := range generateSchema {
+		ret.Fields[k] = v
 	}
 
 	return ret
@@ -134,7 +138,7 @@ func pathGenerateIntermediateCA(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "config/ca/generate/intermediate/" + framework.GenericNameRegex("exported"),
 
-		Fields: map[string]*framework.FieldSchema{},
+		Fields: generateSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathCAGenerateIntermediate,
@@ -142,22 +146,6 @@ func pathGenerateIntermediateCA(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathConfigCAGenerateHelpSyn,
 		HelpDescription: pathConfigCAGenerateHelpDesc,
-	}
-
-	ret.Fields["exported"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported".
-If set to "exported", the generated private
-key will be returned. This is your *only*
-chance to retrieve the private key!`,
-	}
-
-	ret.Fields["key_bits"] = &framework.FieldSchema{
-		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
 	}
 
 	return ret
@@ -238,8 +226,6 @@ func (b *backend) pathCAGenerateRoot(
 	}
 
 	switch role.KeyBits {
-	case 0:
-		role.KeyBits = 2048
 	case 1024:
 	case 2048:
 	case 4096:
