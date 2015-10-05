@@ -1529,7 +1529,7 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			}
 
 			if err := c.checkKeyUpgrades(); err != nil {
-				c.logger.Printf("[ERR] core: upgrade due to key rotation failed: %v", err)
+				c.logger.Printf("[ERR] core: key rotation periodic upgrade check failed: %v", err)
 			}
 		case <-stopCh:
 			return
