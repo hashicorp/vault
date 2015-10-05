@@ -252,7 +252,7 @@ func generateCSR(b *backend,
 		DNSNames: []string{
 			fmt.Sprintf("intcsr-%s-%s", strings.TrimSuffix(req.MountPoint, "/"), uuid.GenerateUUID()),
 		},
-		KeyType: "rsa",
+		KeyType: role.KeyType,
 		KeyBits: role.KeyBits,
 	}
 
@@ -512,7 +512,6 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 	}
 
 	certTemplate := &x509.Certificate{
-		SignatureAlgorithm:    x509.SHA256WithRSA,
 		SerialNumber:          serialNumber,
 		Subject:               subject,
 		NotBefore:             time.Now(),
@@ -541,6 +540,12 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 
 	var certBytes []byte
 	if creationInfo.SigningBundle != nil {
+		switch creationInfo.SigningBundle.PrivateKeyType {
+		case certutil.RSAPrivateKey:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case certutil.ECPrivateKey:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		}
 		caCert := creationInfo.SigningBundle.Certificate
 		subject.Country = caCert.Subject.Country
 		subject.Organization = caCert.Subject.Organization
@@ -552,6 +557,12 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		certTemplate.CRLDistributionPoints = caCert.CRLDistributionPoints
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	} else {
+		switch creationInfo.KeyType {
+		case "rsa":
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case "ec":
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		}
 		certTemplate.CRLDistributionPoints = []string{
 			creationInfo.PKIAddress + "/crl",
 		}
@@ -601,6 +612,31 @@ func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, err
 		}
 		result.PrivateKey = clientPrivKey
 		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
+	case "ec":
+		result.PrivateKeyType = certutil.ECPrivateKey
+		var curve elliptic.Curve
+		switch creationInfo.KeyBits {
+		case 224:
+			curve = elliptic.P224()
+		case 256:
+			curve = elliptic.P256()
+		case 384:
+			curve = elliptic.P384()
+		case 521:
+			curve = elliptic.P521()
+		default:
+			return nil, certutil.UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", creationInfo.KeyBits)}
+		}
+		clientPrivKey, err = ecdsa.GenerateKey(curve, rand.Reader)
+		if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating EC private key")}
+		}
+		result.PrivateKey = clientPrivKey
+		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
+		if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key")}
+		}
+
 	default:
 		return nil, certutil.UserError{Err: fmt.Sprintf("unsupported key type for CA generation: %s", creationInfo.KeyType)}
 	}
@@ -611,8 +647,14 @@ func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, err
 	}
 
 	csrTemplate := &x509.CertificateRequest{
-		SignatureAlgorithm: x509.SHA256WithRSA,
-		Subject:            subject,
+		Subject: subject,
+	}
+
+	switch creationInfo.KeyType {
+	case "rsa":
+		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+	case "ec":
+		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 	}
 
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, result.PrivateKey)
@@ -667,7 +709,6 @@ func signCertificate(creationInfo *certCreationBundle,
 	subjKeyID := sha1.Sum(marshaledKey)
 
 	certTemplate := &x509.Certificate{
-		SignatureAlgorithm:    x509.SHA256WithRSA,
 		SerialNumber:          serialNumber,
 		Subject:               subject,
 		NotBefore:             time.Now(),
@@ -679,6 +720,13 @@ func signCertificate(creationInfo *certCreationBundle,
 		DNSNames:       creationInfo.DNSNames,
 		EmailAddresses: creationInfo.EmailAddresses,
 		IPAddresses:    creationInfo.IPAddresses,
+	}
+
+	switch creationInfo.SigningBundle.PrivateKeyType {
+	case certutil.RSAPrivateKey:
+		certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+	case certutil.ECPrivateKey:
+		certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 	}
 
 	if creationInfo.Usage&serverUsage != 0 {

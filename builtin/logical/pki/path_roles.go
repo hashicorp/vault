@@ -284,19 +284,22 @@ func (b *backend) pathRoleCreate(
 		if len(entry.TTL) == 0 {
 			ttl = maxTTL
 		} else {
-			return logical.ErrorResponse("\"ttl\" value must be less than \"max_ttl\" and/or backend default max lease TTL value"), nil
+			return logical.ErrorResponse(
+				`"ttl" value must be less than "max_ttl" and/or backend default max lease TTL value`,
+			), nil
 		}
-	}
-
-	if len(entry.KeyType) == 0 {
-		entry.KeyType = "rsa"
-	}
-	if entry.KeyBits == 0 {
-		entry.KeyBits = 2048
 	}
 
 	switch entry.KeyType {
 	case "rsa":
+		switch entry.KeyBits {
+		case 1024:
+		case 2048:
+		case 4096:
+		case 8192:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for RSA key: %d", entry.KeyBits)), nil
+		}
 	case "ec":
 		switch entry.KeyBits {
 		case 224:
@@ -304,10 +307,10 @@ func (b *backend) pathRoleCreate(
 		case 384:
 		case 521:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("Unsupported bit length for EC key: %d", entry.KeyBits)), nil
+			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for EC key: %d", entry.KeyBits)), nil
 		}
 	default:
-		return logical.ErrorResponse(fmt.Sprintf("Unknown key type %s", entry.KeyType)), nil
+		return logical.ErrorResponse(fmt.Sprintf("unknown key type %s", entry.KeyType)), nil
 	}
 
 	// Store it

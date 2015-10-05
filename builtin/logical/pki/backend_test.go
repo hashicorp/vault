@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"math"
@@ -29,7 +30,8 @@ var (
 )
 
 // Performs basic tests on CA functionality
-func TestBackend_basic(t *testing.T) {
+// Uses the RSA CA key
+func TestBackend_RSAKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -52,14 +54,14 @@ func TestBackend_basic(t *testing.T) {
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
-	testCase.Steps = append(testCase.Steps, generateCASteps(t, intdata, reqdata)...)
+	testCase.Steps = append(testCase.Steps, generateCASteps(t, rsaCACert, rsaCAKey, intdata, reqdata)...)
 
 	logicaltest.Test(t, testCase)
 }
 
-// Generates and tests steps that walk through the various possibilities
-// of role flags to ensure that they are properly restricted
-func TestBackend_roles(t *testing.T) {
+// Performs basic tests on CA functionality
+// Uses the EC CA key
+func TestBackend_ECKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -78,9 +80,88 @@ func TestBackend_roles(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
+	stepCount += len(testCase.Steps)
+
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
-	testCase.Steps = append(testCase.Steps, generateCASteps(t, intdata, reqdata)...)
+	testCase.Steps = append(testCase.Steps, generateCASteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
+
+	logicaltest.Test(t, testCase)
+}
+
+// Generates and tests steps that walk through the various possibilities
+// of role flags to ensure that they are properly restricted
+// Uses the RSA CA key
+func TestBackend_RSARoles(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			logicaltest.TestStep{
+				Operation: logical.WriteOperation,
+				Path:      "config/ca/set",
+				Data: map[string]interface{}{
+					"pem_bundle": rsaCAKey + rsaCACert,
+				},
+			},
+		},
+	}
+
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		for i, v := range testCase.Steps {
+			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+		}
+	}
+
+	stepCount += len(testCase.Steps)
+
+	logicaltest.Test(t, testCase)
+}
+
+// Generates and tests steps that walk through the various possibilities
+// of role flags to ensure that they are properly restricted
+// Uses the EC CA key
+func TestBackend_ECRoles(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			logicaltest.TestStep{
+				Operation: logical.WriteOperation,
+				Path:      "config/ca/set",
+				Data: map[string]interface{}{
+					"pem_bundle": ecCAKey + ecCACert,
+				},
+			},
+		},
+	}
+
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
@@ -173,7 +254,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage certUsage,
 
 // Generates steps to test out CA configuration -- certificates + CRL expiry,
 // and ensure that the certificates are readable after storing them
-func generateCASteps(t *testing.T, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+func generateCASteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
@@ -310,6 +391,7 @@ func generateCASteps(t *testing.T, intdata, reqdata map[string]interface{}) []lo
 			},
 		},
 
+		// Test a bunch of generation stuff
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
 			Path:      "config/ca/generate/root/exported",
@@ -390,6 +472,128 @@ func generateCASteps(t *testing.T, intdata, reqdata map[string]interface{}) []lo
 				if revokedString != reqdata["serial_number"].(string) {
 					t.Fatalf("got serial %s, expecting %s", revokedString, reqdata["serial_number"].(string))
 				}
+				delete(reqdata, "serial_number")
+				return nil
+			},
+		},
+
+		// Do it all again, with EC keys and DER format
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/generate/root/exported",
+			Data: map[string]interface{}{
+				"pki_address": "http://example.com/v1/mnt",
+				"common_name": "Root Cert",
+				"ttl":         "180h",
+				"key_type":    "ec",
+				"key_bits":    384,
+				"format":      "der",
+			},
+			Check: func(resp *logical.Response) error {
+				certBytes, _ := base64.StdEncoding.DecodeString(resp.Data["certificate"].(string))
+				certPem := pem.EncodeToMemory(&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: certBytes,
+				})
+				keyBytes, _ := base64.StdEncoding.DecodeString(resp.Data["private_key"].(string))
+				keyPem := pem.EncodeToMemory(&pem.Block{
+					Type:  "EC PRIVATE KEY",
+					Bytes: keyBytes,
+				})
+				intdata["root"] = string(certPem)
+				intdata["rootkey"] = string(keyPem)
+				reqdata["pem_bundle"] = string(certPem) + "\n" + string(keyPem)
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/generate/intermediate/exported",
+			Data: map[string]interface{}{
+				"format":   "der",
+				"key_type": "ec",
+				"key_bits": 384,
+			},
+			Check: func(resp *logical.Response) error {
+				csrBytes, _ := base64.StdEncoding.DecodeString(resp.Data["csr"].(string))
+				csrPem := pem.EncodeToMemory(&pem.Block{
+					Type:  "CERTIFICATE REQUEST",
+					Bytes: csrBytes,
+				})
+				keyBytes, _ := base64.StdEncoding.DecodeString(resp.Data["private_key"].(string))
+				keyPem := pem.EncodeToMemory(&pem.Block{
+					Type:  "EC PRIVATE KEY",
+					Bytes: keyBytes,
+				})
+				intdata["intermediatecsr"] = string(csrPem)
+				intdata["intermediatekey"] = string(keyPem)
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				delete(reqdata, "pem_bundle")
+				delete(reqdata, "ttl")
+				reqdata["csr"] = intdata["intermediatecsr"].(string)
+				reqdata["pki_address"] = "http://example.com/v1/mnt"
+				reqdata["common_name"] = "Intermediate Cert"
+				reqdata["ttl"] = "90h"
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/sign",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				intdata["intermediatecert"] = resp.Data["certificate"].(string)
+				delete(reqdata, "csr")
+				delete(reqdata, "pki_address")
+				delete(reqdata, "common_name")
+				delete(reqdata, "ttl")
+				reqdata["serial_number"] = resp.Data["serial_number"].(string)
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "revoke",
+			Data:      reqdata,
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "crl",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				crlBytes := resp.Data["http_raw_body"].([]byte)
+				certList, err := x509.ParseCRL(crlBytes)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				revokedList := certList.TBSCertList.RevokedCertificates
+				if len(revokedList) != 2 {
+					t.Fatalf("length of revoked list not 2; %d", len(revokedList))
+				}
+				found := false
+				for _, revEntry := range revokedList {
+					revokedString := certutil.GetOctalFormatted(revEntry.SerialNumber.Bytes(), ":")
+					if revokedString == reqdata["serial_number"].(string) {
+						found = true
+
+					}
+				}
+				if !found {
+					t.Fatalf("did not find %s in CRL", reqdata["serial_number"].(string))
+				}
+				delete(reqdata, "serial_number")
 				return nil
 			},
 		},
@@ -401,7 +605,9 @@ func generateCASteps(t *testing.T, intdata, reqdata map[string]interface{}) []lo
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL: "12h",
+		MaxTTL:  "12h",
+		KeyType: "rsa",
+		KeyBits: 2048,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -665,7 +871,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 const (
-	caKey string = `-----BEGIN RSA PRIVATE KEY-----
+	rsaCAKey string = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA1eKB2nFbRqTFs7KyZjbzB5VRCBbnLZfEXVP1c3bHe+YGjlfl
 34cy52dmancUzOf1/Jfo+VglocjTLVy5wHSGJwQYs8b6pEuuvAVo/6wUL5Z7ZlQD
 R4kDe5Q+xgoRT6Bi/Bs57E+fNYgyUq/YAUY5WLuC+ZliCbJkLnb15ItuP1yVUTDX
@@ -693,7 +899,7 @@ udNtivO4LlRb/PJ+DK6afDyH8aJQdDqe3NpDvyrmKiMSYOY3iVFvan4tbIiofxdQ
 flwiZUzox814fzXbxheO9Cs6pXz7PUBVU4fN0Y/hXJCfRO4Ns9152A==
 -----END RSA PRIVATE KEY-----
 `
-	caCert string = `-----BEGIN CERTIFICATE-----
+	rsaCACert string = `-----BEGIN CERTIFICATE-----
 MIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV
 BAMMEFZhdWx0IFRlc3RpbmcgQ0EwHhcNMTUwNjAxMjA1MTUzWhcNMjUwNTI5MjA1
 MTUzWjAbMRkwFwYDVQQDDBBWYXVsdCBUZXN0aW5nIENBMIIBIjANBgkqhkiG9w0B
@@ -712,6 +918,35 @@ ABNBmSD6SSU2HKX1bFCBAAS3YHONE5o1K5tzwLsMl5uilNf+Wid3NjFnQ4KfuYI5
 loN/opnM6+a/O3Zua8RAuMMAv9wyqwn88aVuLvVzDNSMe5qC5kkuLGmRkNgY06rI
 S/fXIHIOldeQxgYCqhdVmcDWJ1PtVaDfBsKVpRg1GRU8LUGw2E4AY+twd+J2FBfa
 G/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==
+-----END CERTIFICATE-----
+`
+
+	ecCAKey string = `-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDBP/t89wrC0RFVs0N+jiRuGPptoxI1Iyu42/PzzZWMKYnO7yCWFG/Qv
+zC8cRa8PDqegBwYFK4EEACKhZANiAAQI9e8n9RD6gOd5YpWpDi5AoPbskxQSogxx
+dYFzzHwS0RYIucmlcJ2CuJQNc+9E4dUCMsYr2cAnCgA4iUHzGaje3Fa4O667LVH1
+imAyAj5nbfSd89iNzg4XNPkFjuVNBlE=
+-----END EC PRIVATE KEY-----
+`
+
+	ecCACert string = `-----BEGIN CERTIFICATE-----
+MIIDHzCCAqSgAwIBAgIUEQ4L+8Xl9+/uxU3MMCrd3Bw0HMcwCgYIKoZIzj0EAwIw
+XzEjMCEGA1UEAxMaVmF1bHQgRUMgdGVzdGluZyByb290IGNlcnQxODA2BgNVBAUT
+Lzk3MzY2MDk3NDQ1ODU2MDI3MDY5MDQ0MTkxNjIxODI4NjI0NjM0NTI5MTkzMTU5
+MB4XDTE1MTAwNTE2MzAwMFoXDTM1MDkzMDE2MzAwMFowXzEjMCEGA1UEAxMaVmF1
+bHQgRUMgdGVzdGluZyByb290IGNlcnQxODA2BgNVBAUTLzk3MzY2MDk3NDQ1ODU2
+MDI3MDY5MDQ0MTkxNjIxODI4NjI0NjM0NTI5MTkzMTU5MHYwEAYHKoZIzj0CAQYF
+K4EEACIDYgAECPXvJ/UQ+oDneWKVqQ4uQKD27JMUEqIMcXWBc8x8EtEWCLnJpXCd
+griUDXPvROHVAjLGK9nAJwoAOIlB8xmo3txWuDuuuy1R9YpgMgI+Z230nfPYjc4O
+FzT5BY7lTQZRo4IBHzCCARswDgYDVR0PAQH/BAQDAgGuMBMGA1UdJQQMMAoGCCsG
+AQUFBwMJMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFCIBqs15CiKuj7vqmIW5
+L07WSeLhMB8GA1UdIwQYMBaAFCIBqs15CiKuj7vqmIW5L07WSeLhMEIGCCsGAQUF
+BwEBBDYwNDAyBggrBgEFBQcwAoYmaHR0cDovL3ZhdWx0LmV4YW1wbGUuY29tL3Yx
+L3Jvb3Rwa2kvY2EwJQYDVR0RBB4wHIIaVmF1bHQgRUMgdGVzdGluZyByb290IGNl
+cnQwOAYDVR0fBDEwLzAtoCugKYYnaHR0cDovL3ZhdWx0LmV4YW1wbGUuY29tL3Yx
+L3Jvb3Rwa2kvY3JsMAoGCCqGSM49BAMCA2kAMGYCMQDRrxXskBtXjuZ1tUTk+qae
+3bNVE1oeTDJhe0m3KN7qTykSGslxfEjlv83GYXziiv0CMQDsqu1U9uXPn3ezSbgG
+O30prQ/sanDzNAeJhftoGtNPJDspwx0fzclHvKIhgl3JVUc=
 -----END CERTIFICATE-----
 `
 )

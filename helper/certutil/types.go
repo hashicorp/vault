@@ -23,19 +23,23 @@ type Secret struct {
 	Data map[string]interface{} `json:"data"`
 }
 
+// The type of of the Private Key referenced in CertBundle
+// and ParsedCertBundle. This uses colloquial names rather than
+// official names, to eliminate confusion
+type PrivateKeyType int
+
+const (
+	UnknownPrivateKey = iota
+	RSAPrivateKey
+	ECPrivateKey
+)
+
 // TLSUsage controls whether the intended usage of a *tls.Config
 // returned from ParsedCertBundle.GetTLSConfig is for server use,
 // client use, or both, which affects which values are set
 type TLSUsage int
 
-// The type of of the Private Key referenced in CertBundle
-// and ParsedCertBundle. This uses colloquial names rather than
-// official names, to eliminate confusion
 const (
-	UnknownPrivateKey = iota
-	RSAPrivateKey
-	ECPrivateKey
-
 	TLSUnknown TLSUsage = 0
 	TLSServer  TLSUsage = 1 << iota
 	TLSClient

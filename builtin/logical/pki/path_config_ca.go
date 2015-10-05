@@ -1,12 +1,12 @@
 package pki
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -29,7 +29,7 @@ in a comma-delimited list`,
 	"ip_sans": &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested IP SANs, if any, in a
-common-delimited list`,
+comma-delimited list`,
 	},
 
 	"ttl": &framework.FieldSchema{
@@ -43,6 +43,13 @@ this only has an effect when generating
 a CA cert or signing a CA cert, not when
 creating a CSR for an intermediate CA.`,
 	},
+
+	"format": &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "pem",
+		Description: `Format for returned data. Can be "pem" or "der";
+defaults to "pem".`,
+	},
 }
 
 var generateSchema = map[string]*framework.FieldSchema{
@@ -54,10 +61,19 @@ key will be returned. This is your *only*
 chance to retrieve the private key!`,
 	},
 
+	"key_type": &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "rsa",
+		Description: `The type of key to use; defaults to RSA. "rsa"
+and "ec" are the only valid values.`,
+	},
+
 	"key_bits": &framework.FieldSchema{
-		Type:        framework.TypeInt,
-		Default:     2048,
-		Description: `The number of bits to use for the private key.`,
+		Type:    framework.TypeInt,
+		Default: 2048,
+		Description: `The number of bits to use. You will almost
+certainly want to change this if you adjust
+the key_type.`,
 	},
 }
 
@@ -148,6 +164,13 @@ func pathGenerateIntermediateCA(b *backend) *framework.Path {
 		HelpDescription: pathConfigCAGenerateHelpDesc,
 	}
 
+	ret.Fields["format"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "pem",
+		Description: `Format for returned data. Can be "pem" or "der";
+defaults to "pem".`,
+	}
+
 	return ret
 }
 
@@ -158,7 +181,7 @@ func pathSignIntermediateCA(b *backend) *framework.Path {
 		Fields: rootAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathCASignWrite,
+			logical.WriteOperation: b.pathCASignIntermediate,
 		},
 
 		HelpSynopsis:    pathConfigCASignHelpSyn,
@@ -188,29 +211,47 @@ the certificate.`,
 func (b *backend) pathCAGenerateRoot(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	exported := data.Get("exported").(string)
-	switch exported {
+
+	var exported bool
+	exportedStr := data.Get("exported").(string)
+	switch exportedStr {
 	case "exported":
+		exported = true
 	case "internal":
 	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
+		return logical.ErrorResponse(
+			`The "exported" path parameter must be "internal" or "exported"`,
+		), nil
+	}
+
+	format := data.Get("format").(string)
+	switch format {
+	case "pem":
+	case "der":
+	default:
+		return logical.ErrorResponse(
+			`The "format" path parameter must be "pem" or "der"`,
+		), nil
 	}
 
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
 	switch {
 	case len(pkiAddress) == 0:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" cannot be empty")), nil
+		return logical.ErrorResponse(
+			`"pki_address" cannot be empty`,
+		), nil
 	case !strings.HasPrefix(pkiAddress, "http"):
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" must be a URL")), nil
+		return logical.ErrorResponse(
+			`"pki_address" must be a URL`,
+		), nil
 	case !strings.Contains(pkiAddress, "/v1/"):
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" needs to be the path to the PKI mount, not the base Vault path")), nil
+		return logical.ErrorResponse(
+			`"pki_address" needs to be the path to the PKI mount, not the base Vault path"`,
+		), nil
 	case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" needs to be the path to this mount")), nil
+		return logical.ErrorResponse(
+			`"pki_address" needs to be the path to this mount"`,
+		), nil
 	}
 	if strings.HasSuffix(pkiAddress, "/") {
 		pkiAddress = pkiAddress[:len(pkiAddress)-1]
@@ -218,20 +259,34 @@ func (b *backend) pathCAGenerateRoot(
 
 	role := &roleEntry{
 		TTL:              data.Get("ttl").(string),
-		KeyType:          "rsa",
+		KeyType:          data.Get("key_type").(string),
 		KeyBits:          data.Get("key_bits").(int),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		EnforceHostnames: false,
 	}
 
-	switch role.KeyBits {
-	case 1024:
-	case 2048:
-	case 4096:
+	switch role.KeyType {
+	case "rsa":
+		switch role.KeyBits {
+		case 1024:
+		case 2048:
+		case 4096:
+		case 8192:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for RSA key: %d", role.KeyBits)), nil
+		}
+	case "ec":
+		switch role.KeyBits {
+		case 224:
+		case 256:
+		case 384:
+		case 521:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for EC key: %d", role.KeyBits)), nil
+		}
 	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"key_bits\" must be 1024, 2048, or 4096")), nil
+		return logical.ErrorResponse(fmt.Sprintf("unknown key type %s", role.KeyType)), nil
 	}
 
 	var resp *logical.Response
@@ -247,21 +302,31 @@ func (b *backend) pathCAGenerateRoot(
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
+		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %s", err)
 	}
 
 	resp = &logical.Response{
 		Data: map[string]interface{}{
 			"serial_number": cb.SerialNumber,
-			"certificate":   cb.Certificate,
-			"issuing_ca":    cb.IssuingCA,
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 		},
 	}
 
-	if exported == "exported" {
-		resp.Data["private_key"] = cb.PrivateKey
-		resp.Data["private_key_type"] = cb.PrivateKeyType
+	switch format {
+	case "pem":
+		resp.Data["certificate"] = cb.Certificate
+		resp.Data["issuing_ca"] = cb.IssuingCA
+		if exported {
+			resp.Data["private_key"] = cb.PrivateKey
+			resp.Data["private_key_type"] = cb.PrivateKeyType
+		}
+	case "der":
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
+		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		if exported {
+			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+			resp.Data["private_key_type"] = cb.PrivateKeyType
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
@@ -295,32 +360,58 @@ func (b *backend) pathCAGenerateRoot(
 func (b *backend) pathCAGenerateIntermediate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
-	exported := data.Get("exported").(string)
-	switch exported {
+
+	var exported bool
+	exportedStr := data.Get("exported").(string)
+	switch exportedStr {
 	case "exported":
+		exported = true
 	case "internal":
 	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"The \"exported\" path parameter must be \"internal\" or \"exported\"")), nil
+		return logical.ErrorResponse(
+			`The "exported" path parameter must be "internal" or "exported"`,
+		), nil
+	}
+
+	format := data.Get("format").(string)
+	switch format {
+	case "pem":
+	case "der":
+	default:
+		return logical.ErrorResponse(
+			`The "format" path parameter must be "pem" or "der"`,
+		), nil
 	}
 
 	role := &roleEntry{
-		KeyType:          "rsa",
+		KeyType:          data.Get("key_type").(string),
 		KeyBits:          data.Get("key_bits").(int),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		EnforceHostnames: false,
 	}
 
-	switch role.KeyBits {
-	case 0:
-		role.KeyBits = 2048
-	case 1024:
-	case 2048:
-	case 4096:
+	switch role.KeyType {
+	case "rsa":
+		switch role.KeyBits {
+		case 1024:
+		case 2048:
+		case 4096:
+		case 8192:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for RSA key: %d", role.KeyBits)), nil
+		}
+	case "ec":
+		switch role.KeyBits {
+		case 224:
+		case 256:
+		case 384:
+		case 521:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for EC key: %d", role.KeyBits)), nil
+		}
 	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"key_bits\" must be 1024, 2048, or 4096")), nil
+		return logical.ErrorResponse(fmt.Sprintf("unknown key type %s", role.KeyType)), nil
 	}
 
 	var resp *logical.Response
@@ -340,14 +431,22 @@ func (b *backend) pathCAGenerateIntermediate(
 	}
 
 	resp = &logical.Response{
-		Data: map[string]interface{}{
-			"csr": csrb.CSR,
-		},
+		Data: map[string]interface{}{},
 	}
 
-	if exported == "exported" {
-		resp.Data["private_key"] = csrb.PrivateKey
-		resp.Data["private_key_type"] = csrb.PrivateKeyType
+	switch format {
+	case "pem":
+		resp.Data["csr"] = csrb.CSR
+		if exported {
+			resp.Data["private_key"] = csrb.PrivateKey
+			resp.Data["private_key_type"] = csrb.PrivateKeyType
+		}
+	case "der":
+		resp.Data["csr"] = base64.StdEncoding.EncodeToString(parsedBundle.CSRBytes)
+		if exported {
+			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+			resp.Data["private_key_type"] = csrb.PrivateKeyType
+		}
 	}
 
 	cb := &certutil.CertBundle{
@@ -367,24 +466,38 @@ func (b *backend) pathCAGenerateIntermediate(
 	return resp, nil
 }
 
-func (b *backend) pathCASignWrite(
+func (b *backend) pathCASignIntermediate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	format := data.Get("format").(string)
+	switch format {
+	case "pem":
+	case "der":
+	default:
+		return logical.ErrorResponse(
+			`The "format" path parameter must be "pem" or "der"`,
+		), nil
+	}
 
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
 	switch {
 	case len(pkiAddress) == 0:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" cannot be empty")), nil
+		return logical.ErrorResponse(
+			`"pki_address" cannot be empty`,
+		), nil
 	case !strings.HasPrefix(pkiAddress, "http"):
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" must be a URL")), nil
+		return logical.ErrorResponse(
+			`"pki_address" must be a URL`,
+		), nil
 	case !strings.Contains(pkiAddress, "/v1/"):
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" needs to be the path to the PKI mount, not the base Vault path")), nil
+		return logical.ErrorResponse(
+			`"pki_address" needs to be the path to the PKI mount, not the base Vault path`,
+		), nil
 	case strings.Contains(pkiAddress, "/v1/"+req.MountPoint):
-		return logical.ErrorResponse(fmt.Sprintf(
-			"\"pki_address\" needs to be the path to the destination mount, not the signing mount")), nil
+		return logical.ErrorResponse(
+			`"pki_address" needs to be the path to the destination mount, not the signing mount`,
+		), nil
 	}
 	if strings.HasSuffix(pkiAddress, "/") {
 		pkiAddress = pkiAddress[:len(pkiAddress)-1]
@@ -424,10 +537,22 @@ func (b *backend) pathCASignWrite(
 	}
 
 	resp := b.Secret(SecretCertsType).Response(
-		structs.New(cb).Map(),
+		map[string]interface{}{
+			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
+			"serial_number": cb.SerialNumber,
+		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
 		})
+
+	switch format {
+	case "pem":
+		resp.Data["certificate"] = cb.Certificate
+		resp.Data["issuing_ca"] = cb.IssuingCA
+	case "der":
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
+		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+	}
 
 	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 
@@ -501,14 +626,6 @@ func (b *backend) pathCASetWrite(
 		parsedBundle.PrivateKeyBytes == nil ||
 		len(parsedBundle.PrivateKeyBytes) == 0 {
 		return logical.ErrorResponse("No private key given and no matching key stored"), nil
-	}
-
-	// TODO?: CRLs can only be generated with RSA keys right now, in the
-	// Go standard library. The plubming is here to support non-RSA keys
-	// if the library gets support
-
-	if parsedBundle.PrivateKeyType != certutil.RSAPrivateKey {
-		return logical.ErrorResponse("Currently, only RSA keys are supported for the CA certificate"), nil
 	}
 
 	if !parsedBundle.Certificate.IsCA {

@@ -47,12 +47,12 @@ func ParseHexFormatted(in, sep string) []byte {
 // of the marshaled public key
 func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
-		return nil, InternalError{"Passed-in private key is nil"}
+		return nil, InternalError{"passed-in private key is nil"}
 	}
 
 	marshaledKey, err := x509.MarshalPKIXPublicKey(privateKey.Public())
 	if err != nil {
-		return nil, InternalError{fmt.Sprintf("Error marshalling public key: %s", err)}
+		return nil, InternalError{fmt.Sprintf("error marshalling public key: %s", err)}
 	}
 
 	subjKeyID := sha1.Sum(marshaledKey)
@@ -93,7 +93,7 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 		return ParsePKIMap(secret.Data)
 	}
 
-	return nil, UserError{"Unable to parse out of either secret data or a secret object"}
+	return nil, UserError{"unable to parse out of either secret data or a secret object"}
 }
 
 // ParsePEMBundle takes a string of concatenated PEM-format certificate
@@ -102,7 +102,7 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 // issuing certificate) and one private key.
 func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	if len(pemBundle) == 0 {
-		return nil, UserError{"Empty PEM bundle"}
+		return nil, UserError{"empty pem bundle"}
 	}
 
 	pemBytes := []byte(pemBundle)
@@ -112,12 +112,12 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	for {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
-			return nil, UserError{"No data found"}
+			return nil, UserError{"no data found"}
 		}
 
 		if signer, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
 			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
-				return nil, UserError{"More than one private key given; provide only one private key in the bundle"}
+				return nil, UserError{"more than one private key given; provide only one private key in the bundle"}
 			}
 			parsedBundle.PrivateKeyType = ECPrivateKey
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
@@ -125,7 +125,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 
 		} else if signer, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
 			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
-				return nil, UserError{"More than one private key given; provide only one private key in the bundle"}
+				return nil, UserError{"more than one private key given; provide only one private key in the bundle"}
 			}
 			parsedBundle.PrivateKeyType = RSAPrivateKey
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
@@ -134,7 +134,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			switch len(certificates) {
 			case 0:
-				return nil, UserError{"PEM block cannot be decoded to a private key or certificate"}
+				return nil, UserError{"pem block cannot be decoded to a private key or certificate"}
 
 			case 1:
 				if parsedBundle.Certificate != nil {
@@ -167,7 +167,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				}
 
 			default:
-				return nil, UserError{"Too many certificates given; provide a maximum of two certificates in the bundle"}
+				return nil, UserError{"too many certificates given; provide a maximum of two certificates in the bundle"}
 			}
 		}
 
