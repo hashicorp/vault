@@ -17,6 +17,7 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"certs/*",
+				"crlsets/*",
 			},
 
 			Unauthenticated: []string{
@@ -27,6 +28,7 @@ func Backend() *framework.Backend {
 		Paths: append([]*framework.Path{
 			pathLogin(&b),
 			pathCerts(&b),
+			pathCRLSets(&b),
 		}),
 
 		AuthRenew: b.pathLoginRenew,

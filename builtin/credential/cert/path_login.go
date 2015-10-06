@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -47,6 +48,14 @@ func (b *backend) pathLogin(
 	// If no trusted chain was found, client is not authenticated
 	if len(trustedChains) == 0 {
 		return logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
+	}
+
+	crlSetMatch, err := b.checkRevocation(req.Storage, trustedChains)
+	if err != nil {
+		return nil, fmt.Errorf("error checking revocation: %v", err)
+	}
+	if crlSetMatch != "" {
+		return logical.ErrorResponse(fmt.Sprintf("certificate in the chain has been revoked by set %s", crlSetMatch)), nil
 	}
 
 	// Match the trusted chain with the policy
@@ -128,6 +137,27 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 	return
 }
 
+func (b *backend) checkRevocation(store logical.Storage, chains [][]*x509.Certificate) (string, error) {
+	var revokedSerial RevokedSerial
+	var badCRLSet string
+	for _, chain := range chains {
+		for _, cert := range chain {
+			entry, err := store.Get("crlsets/serial/" + cert.SerialNumber.String())
+			if err != nil {
+				return "", fmt.Errorf("error looking up revoked serials: %v", err)
+			}
+			if entry != nil {
+				err := entry.DecodeJSON(&revokedSerial)
+				if err != nil {
+					return "", fmt.Errorf("error decoding revoked serial entry: %v", err)
+				}
+				badCRLSet = revokedSerial.CRLSet
+			}
+		}
+	}
+	return badCRLSet, nil
+}
+
 // parsePEM parses a PEM encoded x509 certificate
 func parsePEM(raw []byte) (certs []*x509.Certificate) {
 	for len(raw) > 0 {
@@ -136,7 +166,7 @@ func parsePEM(raw []byte) (certs []*x509.Certificate) {
 		if block == nil {
 			break
 		}
-		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+		if (block.Type != "CERTIFICATE" && block.Type != "TRUSTED CERTIFICATE") || len(block.Headers) != 0 {
 			continue
 		}
 
