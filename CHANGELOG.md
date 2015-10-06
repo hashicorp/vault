@@ -1,12 +1,22 @@
-## 0.4.0 (Unreleased)
+## 0.3.1 (October 6, 2015)
+
+SECURITY:
+
+ * core: In certain failure scenarios, the full values of requests and responses would be logged [GH-665]
+
+FEATURES:
+
+ * **Settable Maximum Open Connections**: The `mysql` and `postgresql` backends now allow setting the number of maximum open connections to the database, which was previously capped to 2. [GH-661]
+ * **Renewable Tokens for GitHub**: The `github` backend now supports specifying a TTL, enabling renewable tokens. [GH-664]
 
 BUG FIXES:
 
+ * dist: linux-amd64 distribution was dynamically linked [GH-656]
  * credential/github: Fix acceptance tests [GH-651]
 
 MISC:
 
- * Various minor documentation fixes and improvements [GH-649] [GH-650]
+ * Various minor documentation fixes and improvements [GH-649] [GH-650] [GH-654] [GH-663]
 
 ## 0.3.0 (September 28, 2015)
 
