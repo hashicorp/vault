@@ -1,3 +1,9 @@
+## 0.4.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
+
 ## 0.3.1 (October 6, 2015)
 
 SECURITY:

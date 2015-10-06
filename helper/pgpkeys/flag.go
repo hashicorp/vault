@@ -36,7 +36,12 @@ func (p *PubKeyFilesFlag) Set(value string) error {
 			return err
 		}
 
-		*p = append(*p, base64.StdEncoding.EncodeToString(buf.Bytes()))
+		_, err = base64.StdEncoding.DecodeString(buf.String())
+		if err == nil {
+			*p = append(*p, buf.String())
+		} else {
+			*p = append(*p, base64.StdEncoding.EncodeToString(buf.Bytes()))
+		}
 	}
 	return nil
 }
