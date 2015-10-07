@@ -43,6 +43,7 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 	config.Prefix = ""
 
 	input := make([]string, 0, 5)
+
 	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
 
 	if s.LeaseDuration > 0 {
@@ -69,6 +70,14 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 
 	for k, v := range s.Data {
 		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, v))
+	}
+
+	if len(s.Warnings) != 0 {
+		input = append(input, "")
+		input = append(input, "The following warnings were generated:")
+		for _, warning := range s.Warnings {
+			input = append(input, fmt.Sprintf("* %s", warning))
+		}
 	}
 
 	ui.Output(columnize.Format(input, config))

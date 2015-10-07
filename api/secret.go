@@ -15,6 +15,11 @@ type Secret struct {
 	// is arbitrary and up to the secret backend.
 	Data map[string]interface{} `json:"data"`
 
+	// Warnings contains any warnings related to the operation. These
+	// are not issues that caused the command to fail, but that the
+	// client should be aware of.
+	Warnings []string `json:"warnings"`
+
 	// Auth, if non-nil, means that there was authentication information
 	// attached to this response.
 	Auth *SecretAuth `json:"auth,omitempty"`

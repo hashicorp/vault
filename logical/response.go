@@ -40,6 +40,28 @@ type Response struct {
 	// This is only valid for credential backends. This will be blanked
 	// for any logical backend and ignored.
 	Redirect string
+
+	// Warnings allow operations or backends to return warnings in response
+	// to user actions without failing the action outright.
+	// Making it private helps ensure that it is easy for various parts of
+	// Vault (backend, core, etc.) to add warnings without accidentally
+	// replacing what exists.
+	warnings []string
+}
+
+func (r *Response) AddWarning(warning string) {
+	if r.warnings == nil {
+		r.warnings = make([]string, 0, 1)
+	}
+	r.warnings = append(r.warnings, warning)
+}
+
+func (r *Response) GetWarnings() []string {
+	return r.warnings
+}
+
+func (r *Response) ClearWarnings() {
+	r.warnings = make([]string, 0, 1)
 }
 
 // IsError returns true if this response seems to indicate an error.
