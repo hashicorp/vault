@@ -131,7 +131,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-self",
+				Pattern: "revoke-self$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.WriteOperation: t.handleRevokeSelf,
@@ -193,6 +193,28 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokePrefixHelp),
 				HelpDescription: strings.TrimSpace(tokenRevokePrefixHelp),
+			},
+
+			&framework.Path{
+				Pattern: "renew-self$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to renew",
+					},
+					"increment": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Description: "The desired increment in seconds to the token expiration",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleRenewSelf,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRenewSelfHelp),
+				HelpDescription: strings.TrimSpace(tokenRenewSelfHelp),
 			},
 
 			&framework.Path{
@@ -737,6 +759,12 @@ func (ts *TokenStore) handleLookup(
 	return resp, nil
 }
 
+func (ts *TokenStore) handleRenewSelf(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	data.Raw["token"] = req.ClientToken
+	return ts.handleRenew(req, data)
+}
+
 // handleRenew handles the auth/token/renew/id path for renewal of tokens.
 // This is used to prevent token expiration and revocation.
 func (ts *TokenStore) handleRenew(
@@ -793,5 +821,6 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
 	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
-	tokenRenewHelp        = `This endpoint will renew the token and prevent expiration.`
+	tokenRenewHelp        = `This endpoint will renew the given token and prevent expiration.`
+	tokenRenewSelfHelp    = `This endpoint will renew the token used to call it and prevent expiration.`
 )

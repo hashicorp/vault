@@ -2,7 +2,12 @@
 
 IMPROVEMENTS:
 
-* Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
+ * init: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
+ * core: Tokens can now renew themselves [GH-455]
+
+BUG FIXES:
+
+ * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
 
 ## 0.3.1 (October 6, 2015)
 
