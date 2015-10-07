@@ -117,6 +117,7 @@ import (
 
 const (
 	scratchByteArrayLen = 32
+	initCollectionCap   = 32 // 32 is defensive. 16 is preferred.
 
 	// Support encoding.(Binary|Text)(Unm|M)arshaler.
 	// This constant flag will enable or disable it.
@@ -147,6 +148,12 @@ const (
 
 	// if derefForIsEmptyValue, deref pointers and interfaces when checking isEmptyValue
 	derefForIsEmptyValue = false
+
+	// if resetSliceElemToZeroValue, then on decoding a slice, reset the element to a zero value first.
+	// Only concern is that, if the slice already contained some garbage, we will decode into that garbage.
+	// The chances of this are slim, so leave this "optimization".
+	// TODO: should this be true, to ensure that we always decode into a "zero" "empty" value?
+	resetSliceElemToZeroValue bool = false
 )
 
 var oneByteArr = [1]byte{0}
@@ -309,32 +316,41 @@ type RawExt struct {
 	Value interface{}
 }
 
-// Ext handles custom (de)serialization of custom types / extensions.
-type Ext interface {
+// BytesExt handles custom (de)serialization of types to/from []byte.
+// It is used by codecs (e.g. binc, msgpack, simple) which do custom serialization of the types.
+type BytesExt interface {
 	// WriteExt converts a value to a []byte.
-	// It is used by codecs (e.g. binc, msgpack, simple) which do custom serialization of the types.
 	WriteExt(v interface{}) []byte
 
 	// ReadExt updates a value from a []byte.
-	// It is used by codecs (e.g. binc, msgpack, simple) which do custom serialization of the types.
 	ReadExt(dst interface{}, src []byte)
+}
 
+// InterfaceExt handles custom (de)serialization of types to/from another interface{} value.
+// The Encoder or Decoder will then handle the further (de)serialization of that known type.
+//
+// It is used by codecs (e.g. cbor, json) which use the format to do custom serialization of the types.
+type InterfaceExt interface {
 	// ConvertExt converts a value into a simpler interface for easy encoding e.g. convert time.Time to int64.
-	// It is used by codecs (e.g. cbor) which use the format to do custom serialization of the types.
 	ConvertExt(v interface{}) interface{}
 
 	// UpdateExt updates a value from a simpler interface for easy decoding e.g. convert int64 to time.Time.
-	// It is used by codecs (e.g. cbor) which use the format to do custom serialization of the types.
 	UpdateExt(dst interface{}, src interface{})
 }
 
-// bytesExt is a wrapper implementation to support former AddExt exported method.
-type bytesExt struct {
+// Ext handles custom (de)serialization of custom types / extensions.
+type Ext interface {
+	BytesExt
+	InterfaceExt
+}
+
+// addExtWrapper is a wrapper implementation to support former AddExt exported method.
+type addExtWrapper struct {
 	encFn func(reflect.Value) ([]byte, error)
 	decFn func(reflect.Value, []byte) error
 }
 
-func (x bytesExt) WriteExt(v interface{}) []byte {
+func (x addExtWrapper) WriteExt(v interface{}) []byte {
 	// fmt.Printf(">>>>>>>>>> WriteExt: %T, %v\n", v, v)
 	bs, err := x.encFn(reflect.ValueOf(v))
 	if err != nil {
@@ -343,19 +359,55 @@ func (x bytesExt) WriteExt(v interface{}) []byte {
 	return bs
 }
 
-func (x bytesExt) ReadExt(v interface{}, bs []byte) {
+func (x addExtWrapper) ReadExt(v interface{}, bs []byte) {
 	// fmt.Printf(">>>>>>>>>> ReadExt: %T, %v\n", v, v)
 	if err := x.decFn(reflect.ValueOf(v), bs); err != nil {
 		panic(err)
 	}
 }
 
-func (x bytesExt) ConvertExt(v interface{}) interface{} {
+func (x addExtWrapper) ConvertExt(v interface{}) interface{} {
 	return x.WriteExt(v)
 }
 
-func (x bytesExt) UpdateExt(dest interface{}, v interface{}) {
+func (x addExtWrapper) UpdateExt(dest interface{}, v interface{}) {
 	x.ReadExt(dest, v.([]byte))
+}
+
+type setExtWrapper struct {
+	b BytesExt
+	i InterfaceExt
+}
+
+func (x *setExtWrapper) WriteExt(v interface{}) []byte {
+	if x.b == nil {
+		panic("BytesExt.WriteExt is not supported")
+	}
+	return x.b.WriteExt(v)
+}
+
+func (x *setExtWrapper) ReadExt(v interface{}, bs []byte) {
+	if x.b == nil {
+		panic("BytesExt.WriteExt is not supported")
+
+	}
+	x.b.ReadExt(v, bs)
+}
+
+func (x *setExtWrapper) ConvertExt(v interface{}) interface{} {
+	if x.i == nil {
+		panic("InterfaceExt.ConvertExt is not supported")
+
+	}
+	return x.i.ConvertExt(v)
+}
+
+func (x *setExtWrapper) UpdateExt(dest interface{}, v interface{}) {
+	if x.i == nil {
+		panic("InterfaceExxt.UpdateExt is not supported")
+
+	}
+	x.i.UpdateExt(dest, v)
 }
 
 // type errorString string
@@ -412,7 +464,7 @@ type extTypeTagFn struct {
 
 type extHandle []*extTypeTagFn
 
-// DEPRECATED: AddExt is deprecated in favor of SetExt. It exists for compatibility only.
+// DEPRECATED: Use SetBytesExt or SetInterfaceExt on the Handle instead.
 //
 // AddExt registes an encode and decode function for a reflect.Type.
 // AddExt internally calls SetExt.
@@ -424,10 +476,10 @@ func (o *extHandle) AddExt(
 	if encfn == nil || decfn == nil {
 		return o.SetExt(rt, uint64(tag), nil)
 	}
-	return o.SetExt(rt, uint64(tag), bytesExt{encfn, decfn})
+	return o.SetExt(rt, uint64(tag), addExtWrapper{encfn, decfn})
 }
 
-// SetExt registers a tag and Ext for a reflect.Type.
+// DEPRECATED: Use SetBytesExt or SetInterfaceExt on the Handle instead.
 //
 // Note that the type must be a named type, and specifically not
 // a pointer or Interface. An error is returned if that is not honored.
@@ -825,7 +877,7 @@ func panicToErr(err *error) {
 // 	panic(fmt.Errorf("%s: "+format, params2...))
 // }
 
-func isMutableKind(k reflect.Kind) (v bool) {
+func isImmutableKind(k reflect.Kind) (v bool) {
 	return false ||
 		k == reflect.Int ||
 		k == reflect.Int8 ||

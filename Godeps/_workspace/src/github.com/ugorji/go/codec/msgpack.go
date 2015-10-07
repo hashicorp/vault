@@ -24,6 +24,7 @@ import (
 	"io"
 	"math"
 	"net/rpc"
+	"reflect"
 )
 
 const (
@@ -724,6 +725,10 @@ func (h *MsgpackHandle) newEncDriver(e *Encoder) encDriver {
 
 func (h *MsgpackHandle) newDecDriver(d *Decoder) decDriver {
 	return &msgpackDecDriver{d: d, r: d.r, h: h, br: d.bytes}
+}
+
+func (h *MsgpackHandle) SetBytesExt(rt reflect.Type, tag uint64, ext BytesExt) (err error) {
+	return h.SetExt(rt, tag, &setExtWrapper{b: ext})
 }
 
 //--------------------------------------------------

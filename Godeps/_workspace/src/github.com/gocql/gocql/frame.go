@@ -55,21 +55,21 @@ type frameOp byte
 const (
 	// header ops
 	opError         frameOp = 0x00
-	opStartup               = 0x01
-	opReady                 = 0x02
-	opAuthenticate          = 0x03
-	opOptions               = 0x05
-	opSupported             = 0x06
-	opQuery                 = 0x07
-	opResult                = 0x08
-	opPrepare               = 0x09
-	opExecute               = 0x0A
-	opRegister              = 0x0B
-	opEvent                 = 0x0C
-	opBatch                 = 0x0D
-	opAuthChallenge         = 0x0E
-	opAuthResponse          = 0x0F
-	opAuthSuccess           = 0x10
+	opStartup       frameOp = 0x01
+	opReady         frameOp = 0x02
+	opAuthenticate  frameOp = 0x03
+	opOptions       frameOp = 0x05
+	opSupported     frameOp = 0x06
+	opQuery         frameOp = 0x07
+	opResult        frameOp = 0x08
+	opPrepare       frameOp = 0x09
+	opExecute       frameOp = 0x0A
+	opRegister      frameOp = 0x0B
+	opEvent         frameOp = 0x0C
+	opBatch         frameOp = 0x0D
+	opAuthChallenge frameOp = 0x0E
+	opAuthResponse  frameOp = 0x0F
+	opAuthSuccess   frameOp = 0x10
 )
 
 func (f frameOp) String() string {
@@ -121,17 +121,17 @@ const (
 
 	// rows flags
 	flagGlobalTableSpec int = 0x01
-	flagHasMorePages        = 0x02
-	flagNoMetaData          = 0x04
+	flagHasMorePages    int = 0x02
+	flagNoMetaData      int = 0x04
 
 	// query flags
 	flagValues                byte = 0x01
-	flagSkipMetaData               = 0x02
-	flagPageSize                   = 0x04
-	flagWithPagingState            = 0x08
-	flagWithSerialConsistency      = 0x10
-	flagDefaultTimestamp           = 0x20
-	flagWithNameValues             = 0x40
+	flagSkipMetaData          byte = 0x02
+	flagPageSize              byte = 0x04
+	flagWithPagingState       byte = 0x08
+	flagWithSerialConsistency byte = 0x10
+	flagDefaultTimestamp      byte = 0x20
+	flagWithNameValues        byte = 0x40
 
 	// header flags
 	flagCompress      byte = 0x01

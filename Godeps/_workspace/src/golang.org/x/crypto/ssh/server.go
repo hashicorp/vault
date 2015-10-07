@@ -66,9 +66,11 @@ type ServerConfig struct {
 	// attempts.
 	AuthLogCallback func(conn ConnMetadata, method string, err error)
 
-	// ServerVersion is the version identification string to
-	// announce in the public handshake.
+	// ServerVersion is the version identification string to announce in
+	// the public handshake.
 	// If empty, a reasonable default is used.
+	// Note that RFC 4253 section 4.2 requires that this string start with
+	// "SSH-2.0-".
 	ServerVersion string
 }
 

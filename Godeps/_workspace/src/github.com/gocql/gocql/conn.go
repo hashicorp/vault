@@ -350,6 +350,14 @@ func (c *Conn) serve() {
 	c.closeWithError(err)
 }
 
+func (c *Conn) discardFrame(head frameHeader) error {
+	_, err := io.CopyN(ioutil.Discard, c, int64(head.length))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Conn) recv() error {
 	// not safe for concurrent reads
 
@@ -369,11 +377,7 @@ func (c *Conn) recv() error {
 		return fmt.Errorf("gocql: frame header stream is beyond call exepected bounds: %d", head.stream)
 	} else if head.stream == -1 {
 		// TODO: handle cassandra event frames, we shouldnt get any currently
-		_, err := io.CopyN(ioutil.Discard, c, int64(head.length))
-		if err != nil {
-			return err
-		}
-		return nil
+		return c.discardFrame(head)
 	} else if head.stream <= 0 {
 		// reserved stream that we dont use, probably due to a protocol error
 		// or a bug in Cassandra, this should be an error, parse it and return.
@@ -396,6 +400,11 @@ func (c *Conn) recv() error {
 	}
 
 	call := &c.calls[head.stream]
+	if call == nil || call.framer == nil {
+		log.Printf("gocql: received response for stream which has no handler: header=%v\n", head)
+		return c.discardFrame(head)
+	}
+
 	err = call.framer.readFrame(&head)
 	if err != nil {
 		// only net errors should cause the connection to be closed. Though

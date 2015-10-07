@@ -3,8 +3,9 @@
 
 package codec
 
-// This json support uses base64 encoding for bytes, because you cannot
+// By default, this json support uses base64 encoding for bytes, because you cannot
 // store and read any arbitrary string in json (only unicode).
+// However, the user can configre how to encode/decode bytes.
 //
 // This library specifically supports UTF-8 for encoding and decoding only.
 //
@@ -36,7 +37,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 	"strconv"
+	"sync"
 	"unicode/utf16"
 	"unicode/utf8"
 )
@@ -132,10 +135,20 @@ func (x *jsonStackElem) sep() (c byte) {
 		}
 	}
 	x.so = !x.so
-	if x.sr {
-		x.sr = false
-	}
+	// Note: Anything more, and this function doesn't inline. Keep it tight.
+	// if x.sr {
+	// 	x.sr = false
+	// }
 	return
+}
+
+const jsonStackPoolArrayLen = 32
+
+// pool used to prevent constant allocation of stacks.
+var jsonStackPool = sync.Pool{
+	New: func() interface{} {
+		return new([jsonStackPoolArrayLen]jsonStackElem)
+	},
 }
 
 // jsonStack contains the stack for tracking the state of the container (branch).
@@ -143,19 +156,28 @@ func (x *jsonStackElem) sep() (c byte) {
 type jsonStack struct {
 	s  []jsonStackElem // stack for map or array end tag. map=}, array=]
 	sc *jsonStackElem  // pointer to current (top) element on the stack.
+	sp *[jsonStackPoolArrayLen]jsonStackElem
 }
 
 func (j *jsonStack) start(c byte) {
+	if j.s == nil {
+		// j.s = make([]jsonStackElem, 0, 8)
+		j.sp = jsonStackPool.Get().(*[jsonStackPoolArrayLen]jsonStackElem)
+		j.s = j.sp[:0]
+	}
 	j.s = append(j.s, jsonStackElem{st: c})
 	j.sc = &(j.s[len(j.s)-1])
 }
 
 func (j *jsonStack) end() {
 	l := len(j.s) - 1 // length of new stack after pop'ing
-	j.s = j.s[:l]
 	if l == 0 {
+		jsonStackPool.Put(j.sp)
+		j.s = nil
+		j.sp = nil
 		j.sc = nil
 	} else {
+		j.s = j.s[:l]
 		j.sc = &(j.s[l-1])
 	}
 	//j.sc = &(j.s[len(j.s)-1])
@@ -167,6 +189,7 @@ type jsonEncDriver struct {
 	h  *JsonHandle
 	b  [64]byte // scratch
 	bs []byte   // scratch
+	se setExtWrapper
 	s  jsonStack
 	noBuiltInTypes
 }
@@ -282,6 +305,11 @@ func (e *jsonEncDriver) EncodeSymbol(v string) {
 }
 
 func (e *jsonEncDriver) EncodeStringBytes(c charEncoding, v []byte) {
+	// if encoding raw bytes and RawBytesExt is configured, use it to encode
+	if c == c_RAW && e.se.i != nil {
+		e.EncodeExt(v, 0, &e.se, e.e)
+		return
+	}
 	if c := e.s.sc.sep(); c != 0 {
 		e.w.writen1(c)
 	}
@@ -473,8 +501,11 @@ type jsonDecDriver struct {
 	ct   valueType // container type. one of unset, array or map.
 	bstr [8]byte   // scratch used for string \UXXX parsing
 	b    [64]byte  // scratch
+	b2   [64]byte
 
 	wsSkipped bool // whitespace skipped
+
+	se setExtWrapper
 
 	s jsonStack
 
@@ -876,17 +907,26 @@ func (d *jsonDecDriver) DecodeExt(rv interface{}, xtag uint64, ext Ext) (realxta
 }
 
 func (d *jsonDecDriver) DecodeBytes(bs []byte, isstring, zerocopy bool) (bsOut []byte) {
+	// if decoding into raw bytes, and the RawBytesExt is configured, use it to decode.
+	if !isstring && d.se.i != nil {
+		bsOut = bs
+		d.DecodeExt(&bsOut, 0, &d.se)
+		return
+	}
 	if c := d.s.sc.sep(); c != 0 {
 		d.expectChar(c)
 	}
-	// zerocopy doesn't matter for json, as the bytes must be parsed.
 	bs0 := d.appendStringAsBytes(d.b[:0])
+	// if isstring, then just return the bytes, even if it is using the scratch buffer.
+	// the bytes will be converted to a string as needed.
 	if isstring {
 		return bs0
 	}
 	slen := base64.StdEncoding.DecodedLen(len(bs0))
-	if cap(bs) >= slen {
+	if slen <= cap(bs) {
 		bsOut = bs[:slen]
+	} else if zerocopy && slen <= cap(d.b2) {
+		bsOut = d.b2[:slen]
 	} else {
 		bsOut = make([]byte, slen)
 	}
@@ -1053,7 +1093,8 @@ func (d *jsonDecDriver) DecodeNaked() (v interface{}, vt valueType, decodeFurthe
 //
 // Json is comprehensively supported:
 //    - decodes numbers into interface{} as int, uint or float64
-//    - encodes and decodes []byte using base64 Std Encoding
+//    - configurable way to encode/decode []byte .
+//      by default, encodes and decodes []byte using base64 Std Encoding
 //    - UTF-8 support for encoding and decoding
 //
 // It has better performance than the json library in the standard library,
@@ -1067,17 +1108,27 @@ func (d *jsonDecDriver) DecodeNaked() (v interface{}, vt valueType, decodeFurthe
 type JsonHandle struct {
 	BasicHandle
 	textEncodingType
+	// RawBytesExt, if configured, is used to encode and decode raw bytes in a custom way.
+	// If not configured, raw bytes are encoded to/from base64 text.
+	RawBytesExt InterfaceExt
 }
 
 func (h *JsonHandle) newEncDriver(e *Encoder) encDriver {
-	return &jsonEncDriver{e: e, w: e.w, h: h}
+	hd := jsonEncDriver{e: e, w: e.w, h: h}
+	hd.se.i = h.RawBytesExt
+	return &hd
 }
 
 func (h *JsonHandle) newDecDriver(d *Decoder) decDriver {
 	// d := jsonDecDriver{r: r.(*bytesDecReader), h: h}
 	hd := jsonDecDriver{d: d, r: d.r, h: h}
+	hd.se.i = h.RawBytesExt
 	hd.n.bytes = d.b[:]
 	return &hd
+}
+
+func (h *JsonHandle) SetInterfaceExt(rt reflect.Type, tag uint64, ext InterfaceExt) (err error) {
+	return h.SetExt(rt, tag, &setExtWrapper{i: ext})
 }
 
 var jsonEncodeTerminate = []byte{' '}

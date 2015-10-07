@@ -57,8 +57,20 @@ func (h *noopDrv) newDecDriver(_ *Decoder) decDriver { return h }
 // --- encDriver
 
 // stack functions (for map and array)
-func (h *noopDrv) start(b bool) { h.mks = append(h.mks, b); h.mk = b }
-func (h *noopDrv) end()         { h.mks = h.mks[:len(h.mks)-1]; h.mk = h.mks[len(h.mks)-1] }
+func (h *noopDrv) start(b bool) {
+	// println("start", len(h.mks)+1)
+	h.mks = append(h.mks, b)
+	h.mk = b
+}
+func (h *noopDrv) end() {
+	// println("end: ", len(h.mks)-1)
+	h.mks = h.mks[:len(h.mks)-1]
+	if len(h.mks) > 0 {
+		h.mk = h.mks[len(h.mks)-1]
+	} else {
+		h.mk = false
+	}
+}
 
 func (h *noopDrv) EncodeBuiltin(rt uintptr, v interface{}) {}
 func (h *noopDrv) EncodeNil()                              {}
@@ -93,7 +105,7 @@ func (h *noopDrv) DecodeString() (s string)                   { return h.S[h.m(8
 
 func (h *noopDrv) DecodeBytes(bs []byte, isstring, zerocopy bool) []byte { return h.B[h.m(len(h.B))] }
 
-func (h *noopDrv) ReadEnd() { h.start(true) }
+func (h *noopDrv) ReadEnd() { h.end() }
 
 // toggle map/slice
 func (h *noopDrv) ReadMapStart() int   { h.start(true); return h.m(10) }

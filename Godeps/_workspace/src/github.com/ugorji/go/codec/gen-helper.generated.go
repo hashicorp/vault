@@ -213,3 +213,8 @@ func (f genHelperDecoder) DecExt(v interface{}) (r bool) {
 	}
 	return false
 }
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperDecoder) DecInferLen(clen, maxlen, unit int) (rvlen int, truncated bool) {
+	return decInferLen(clen, maxlen, unit)
+}
