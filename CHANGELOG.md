@@ -1,5 +1,9 @@
 ## 0.4.0 (Unreleased)
 
+DEPRECATIONS/BREAKING CHANGES:
+
+ * Policy Name Casing: Policy names are now normalized to lower-case on write, helping prevent accidental case mismatches. For backwards compatibility, policy names are not normalized when reading or deleting. [GH-676]
+
 IMPROVEMENTS:
 
  * init: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]

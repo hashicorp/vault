@@ -783,7 +783,7 @@ func (b *SystemBackend) handlePolicySet(
 	}
 
 	// Override the name
-	parse.Name = name
+	parse.Name = strings.ToLower(name)
 
 	// Update the policy
 	if err := b.Core.policy.SetPolicy(parse); err != nil {
