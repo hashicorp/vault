@@ -14,7 +14,10 @@ func TestParseSecret(t *testing.T) {
 	"lease_duration": 10,
 	"data": {
 		"key": "value"
-	}
+	},
+	"warnings": [
+		"a warning!"
+	]
 }`)
 
 	secret, err := ParseSecret(strings.NewReader(raw))
@@ -28,6 +31,9 @@ func TestParseSecret(t *testing.T) {
 		LeaseDuration: 10,
 		Data: map[string]interface{}{
 			"key": "value",
+		},
+		Warnings: []string{
+			"a warning!",
 		},
 	}
 	if !reflect.DeepEqual(secret, expected) {
