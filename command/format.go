@@ -74,7 +74,7 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 
 	if len(s.Warnings) != 0 {
 		input = append(input, "")
-		input = append(input, "The following warnings were generated:")
+		input = append(input, "The following warnings were returned from the Vault server:")
 		for _, warning := range s.Warnings {
 			input = append(input, fmt.Sprintf("* %s", warning))
 		}
