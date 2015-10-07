@@ -49,6 +49,7 @@ type Response struct {
 	warnings []string
 }
 
+// AddWarning adds a warning into the response's warning list
 func (r *Response) AddWarning(warning string) {
 	if r.warnings == nil {
 		r.warnings = make([]string, 0, 1)
@@ -56,10 +57,12 @@ func (r *Response) AddWarning(warning string) {
 	r.warnings = append(r.warnings, warning)
 }
 
-func (r *Response) GetWarnings() []string {
+// Warnings returns the list of warnings set on the response
+func (r *Response) Warnings() []string {
 	return r.warnings
 }
 
+// ClearWarnings clears the response's warning list
 func (r *Response) ClearWarnings() {
 	r.warnings = make([]string, 0, 1)
 }

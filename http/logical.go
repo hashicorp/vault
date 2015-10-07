@@ -98,7 +98,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 
 		logicalResp := &LogicalResponse{
 			Data:     resp.Data,
-			Warnings: resp.GetWarnings(),
+			Warnings: resp.Warnings(),
 		}
 		if resp.Secret != nil {
 			logicalResp.LeaseID = resp.Secret.LeaseID
