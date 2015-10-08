@@ -2,18 +2,19 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
- * Policy Name Casing: Policy names are now normalized to lower-case on write, helping prevent accidental case mismatches. For backwards compatibility, policy names are not normalized when reading or deleting. [GH-676]
+ * Policy Name Casing: Policy names are now normalized to lower-case on write, helping prevent accidental case mismatches. For backwards compatibility, policy names are not currently normalized when reading or deleting. [GH-676]
 
 IMPROVEMENTS:
 
+ * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
  * core: Tokens can now renew themselves [GH-455]
- * core: Stale leader entries will now be reaped [GH-679]
- * init: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
+ * core: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
  * logical: Responses now contain a "warnings" key containing a list of warnings returned from the server. These are conditions that did not require failing an operation, but of which the client should be aware. [GH-676]
 
 BUG FIXES:
 
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
+ * core: Stale leader entries will now be reaped [GH-679]
 
 ## 0.3.1 (October 6, 2015)
 
