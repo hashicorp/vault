@@ -8,12 +8,15 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
 	errRedirect            = errors.New("redirect")
 	defaultHTTPClientSetup sync.Once
-	defaultHTTPClient      = &http.Client{}
+	defaultHTTPClient      = &http.Client{
+		Timeout: time.Second * 5,
+	}
 )
 
 // Config is used to configure the creation of the client.
