@@ -33,7 +33,7 @@ example.hcl
 example.vault.d
 
 # Ruby
-website/vendor/ruby
+website/vendor
 website/.bundle
 website/build
 
