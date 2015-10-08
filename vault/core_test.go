@@ -1204,7 +1204,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Give time for the entries to clear out; it is conservative at 1/second
-	time.Sleep(7 * time.Second)
+	time.Sleep(10 * leaderPrefixCleanDelay)
 
 	entries, err = core2.barrier.List(coreLeaderPrefix)
 	if err != nil {
