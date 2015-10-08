@@ -19,7 +19,7 @@ while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
 DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 
 # Copy into tmpdir
-rsync -avP $DIR/website/ $DEPLOY/
+cp -R $DIR/website/* $DEPLOY/
 
 # Change into that directory
 pushd $DEPLOY &>/dev/null
