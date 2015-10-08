@@ -15,7 +15,7 @@ var (
 	errRedirect            = errors.New("redirect")
 	defaultHTTPClientSetup sync.Once
 	defaultHTTPClient      = &http.Client{
-		Timeout: time.Second * 5,
+		Timeout: time.Second * 30,
 	}
 )
 
