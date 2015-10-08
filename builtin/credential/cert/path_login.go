@@ -50,12 +50,14 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
-	crlSetMatch, err := b.checkRevocation(req.Storage, trustedChains)
+	validChain, err := b.checkRevocation(req.Storage, trustedChains)
 	if err != nil {
 		return nil, fmt.Errorf("error checking revocation: %v", err)
 	}
-	if crlSetMatch != "" {
-		return logical.ErrorResponse(fmt.Sprintf("certificate in the chain has been revoked by set %s", crlSetMatch)), nil
+	if !validChain {
+		return logical.ErrorResponse(
+			"no chain containing non-revoked certificates could be found for this login certificate",
+		), nil
 	}
 
 	// Match the trusted chain with the policy
@@ -137,25 +139,37 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 	return
 }
 
-func (b *backend) checkRevocation(store logical.Storage, chains [][]*x509.Certificate) (string, error) {
-	var revokedSerial RevokedSerial
-	var badCRLSet string
+func (b *backend) checkRevocation(store logical.Storage, chains [][]*x509.Certificate) (bool, error) {
+	var revokedSerialInfo RevokedSerialInfo
+	var badChain bool
 	for _, chain := range chains {
+		badChain = false
 		for _, cert := range chain {
-			entry, err := store.Get("crlsets/serial/" + cert.SerialNumber.String())
+			entry, err := store.Get("crls/serial/" + cert.SerialNumber.String())
 			if err != nil {
-				return "", fmt.Errorf("error looking up revoked serials: %v", err)
+				return false, fmt.Errorf("error looking up revoked serials: %v", err)
 			}
 			if entry != nil {
-				err := entry.DecodeJSON(&revokedSerial)
+				err := entry.DecodeJSON(&revokedSerialInfo)
 				if err != nil {
-					return "", fmt.Errorf("error decoding revoked serial entry: %v", err)
+					return false, fmt.Errorf("error decoding revoked serial entry: %v", err)
 				}
-				badCRLSet = revokedSerial.CRLSet
+				if len(revokedSerialInfo) > 0 {
+					// At least one active CRL is revoking this cert, so try the next chain
+					badChain = true
+					break
+				} else {
+					// We shouldn't have a stored entry with zero sets referring to it,
+					// so it was accidentally orphaned; delete it
+					store.Delete("crls/serial/" + cert.SerialNumber.String())
+				}
 			}
 		}
+		if !badChain {
+			return true, nil
+		}
 	}
-	return badCRLSet, nil
+	return false, nil
 }
 
 // parsePEM parses a PEM encoded x509 certificate

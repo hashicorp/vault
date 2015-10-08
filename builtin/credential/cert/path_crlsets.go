@@ -6,13 +6,14 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathCRLSets(b *backend) *framework.Path {
+func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "crlsets/" + framework.GenericNameRegex("name"),
+		Pattern: "crls/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -22,33 +23,100 @@ func pathCRLSets(b *backend) *framework.Path {
 			"crl": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The public certificate that should be trusted.
-Must be x509 PEM encoded.`,
+May be DER or PEM encoded. Note: the expiration time
+is ignored; if the CRL is no longer valid, delete it
+using the same name as specified here.`,
+			},
+
+			"serial": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `If specified, for a read, information for this
+serial will be returned rather than the named CRL.
+CRL. For a delete, only this serial will be removed
+from the named CRL entry. This can be a hex-formatted
+string separated by : or -, or an integer string;
+this will be assumed to be base 10 unless prefixed
+by "0x" for base 16 or "0" for base 8.`,
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.DeleteOperation: b.pathCRLSetDelete,
-			logical.ReadOperation:   b.pathCRLSetRead,
-			logical.WriteOperation:  b.pathCRLSetWrite,
+			logical.DeleteOperation: b.pathCRLDelete,
+			logical.ReadOperation:   b.pathCRLRead,
+			logical.WriteOperation:  b.pathCRLWrite,
 		},
 
-		HelpSynopsis:    pathCRLSetsHelpSyn,
-		HelpDescription: pathCRLSetsHelpDesc,
+		HelpSynopsis:    pathCRLsHelpSyn,
+		HelpDescription: pathCRLsHelpDesc,
 	}
 }
 
-func (b *backend) pathCRLSetDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// FIXME: There should be a path, or a value to this path, to clear out
-	// an individual serial in case of an index out-of-sync issue
-	err := req.Storage.Delete("cert/" + strings.ToLower(d.Get("name").(string)))
-	if err != nil {
-		return nil, err
+func parseSerialString(input string) (*big.Int, error) {
+	ret := &big.Int{}
+
+	switch {
+	case strings.Count(input, ":") > 0:
+		serialBytes := certutil.ParseHexFormatted(input, ":")
+		if serialBytes == nil {
+			return nil, fmt.Errorf("error parsing serial %s", input)
+		}
+		ret.SetBytes(serialBytes)
+	case strings.Count(input, "-") > 0:
+		serialBytes := certutil.ParseHexFormatted(input, "-")
+		if serialBytes == nil {
+			return nil, fmt.Errorf("error parsing serial %s", input)
+		}
+		ret.SetBytes(serialBytes)
+	default:
+		var success bool
+		ret, success = ret.SetString(input, 0)
+		if !success {
+			return nil, fmt.Errorf("error parsing serial %s", input)
+		}
 	}
+
+	return ret, nil
+}
+
+func (b *backend) pathCRLDelete(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := strings.ToLower(d.Get("name").(string))
+	if name == "" {
+		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
+	}
+
+	serialStr := d.Get("serial").(string)
+
+	if serialStr != "" {
+		serial, err := parseSerialString(serialStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		err = b.deleteSerial(req.Storage, name, serial)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"error deleting serial %s from CRL %s: %s", serial, name, err),
+			), nil
+		}
+		return nil, nil
+	}
+
+	// deleteIndex is best effort to ensure it removes as much as possible if there is
+	// a problem, so it does not currently return an error
+	b.deleteIndex(req.Storage, name)
+
+	err := req.Storage.Delete("crls/set/" + name)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"error deleting set %s: %s", name, err),
+		), nil
+	}
+
 	return nil, nil
 }
 
-func (b *backend) pathCRLSetRead(
+func (b *backend) pathCRLRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
@@ -68,9 +136,12 @@ func (b *backend) pathCRLSetRead(
 	*/
 }
 
-func (b *backend) pathCRLSetWrite(
+func (b *backend) pathCRLWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
+	if name == "" {
+		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
+	}
 	crl := d.Get("crl").(string)
 
 	certList, err := x509.ParseCRL([]byte(crl))
@@ -81,7 +152,7 @@ func (b *backend) pathCRLSetWrite(
 		return logical.ErrorResponse("parsed CRL is nil"), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("crlsets/set/"+name, crl)
+	entry, err := logical.StorageEntryJSON("crls/set/"+name, crl)
 	if err != nil {
 		return nil, err
 	}
@@ -94,15 +165,15 @@ func (b *backend) pathCRLSetWrite(
 	// the certs individually for storage efficiency but ensure we can
 	// clean up properly. So use it to clean up.
 	// N.B.: This is best-effort. The worst thing that can happen is
-	// some wasted storage
-	b.cleanIndex(req.Storage, name)
+	// some wasted storage.
+	b.deleteIndex(req.Storage, name)
 
 	crlSetIndex := []*big.Int{}
 	for _, revokedCert := range certList.TBSCertList.RevokedCertificates {
 		crlSetIndex = append(crlSetIndex, revokedCert.SerialNumber)
 	}
 
-	entry, err = logical.StorageEntryJSON("crlsets/index/"+name, crlSetIndex)
+	entry, err = logical.StorageEntryJSON("crls/index/"+name, crlSetIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +182,9 @@ func (b *backend) pathCRLSetWrite(
 	}
 
 	for _, revokedSerial := range crlSetIndex {
-		entry, err = logical.StorageEntryJSON("crlsets/serial/"+revokedSerial.String(),
-			&RevokedSerial{
-				CRLSet: name,
+		entry, err = logical.StorageEntryJSON("crls/serial/"+revokedSerial.String(),
+			&RevokedSerialInfo{
+				name: nil,
 			})
 		if err != nil {
 			return nil, err
@@ -126,8 +197,8 @@ func (b *backend) pathCRLSetWrite(
 	return nil, nil
 }
 
-func (b *backend) cleanIndex(storage logical.Storage, name string) {
-	entry, err := storage.Get("crlsets/index/" + name)
+func (b *backend) deleteIndex(storage logical.Storage, name string) {
+	entry, err := storage.Get("crls/index/" + name)
 	if err != nil {
 		return
 	}
@@ -136,30 +207,96 @@ func (b *backend) cleanIndex(storage logical.Storage, name string) {
 	}
 
 	crlSetIndex := []*big.Int{}
+	var revokedSerialInfo RevokedSerialInfo
+
 	err = entry.DecodeJSON(&crlSetIndex)
 	if err != nil {
 		goto destroyIndex
 	}
 
 	for _, serial := range crlSetIndex {
-		storage.Delete("crlsets/serial/" + serial.String())
+		entry, err := storage.Get("crls/serial/" + serial.String())
+		if err != nil {
+			goto deleteSerial
+		}
+		err = entry.DecodeJSON(&revokedSerialInfo)
+		// In theory we could now delete the serial when it still exists in a CRL set,
+		// but if we can't decode it something is wrong with the entry anyways, and
+		// we're not going to be able to decode it when checking revocation either.
+		if err != nil {
+			goto deleteSerial
+		}
+
+		delete(revokedSerialInfo, name)
+		if len(revokedSerialInfo) > 0 {
+			entry, err = logical.StorageEntryJSON("crls/serial/"+serial.String(), revokedSerialInfo)
+			if err != nil {
+				continue
+			}
+			storage.Put(entry)
+			continue
+		}
+	deleteSerial:
+		storage.Delete("crls/serial/" + serial.String())
 	}
 
 destroyIndex:
-	storage.Delete("crlsets/index/" + name)
+	storage.Delete("crls/index/" + name)
+
 	return
 }
 
-type RevokedSerial struct {
-	CRLSet string `json:"crlset"`
+func (b *backend) deleteSerial(storage logical.Storage, name string, serial *big.Int) error {
+	var revokedSerialInfo RevokedSerialInfo
+	entry, err := storage.Get("crls/serial/" + serial.String())
+	if err != nil {
+		return fmt.Errorf("error retrieving entry for serial %s: %s", serial, err)
+	}
+	if entry == nil {
+		return nil
+	}
+
+	err = entry.DecodeJSON(&revokedSerialInfo)
+	// In theory we could now delete the serial when it still exists in a CRL set,
+	// but if we can't decode it something is wrong with the entry anyways, and
+	// we're not going to be able to decode it when checking revocation either.
+	if err != nil {
+		goto deleteSerial
+	}
+
+	delete(revokedSerialInfo, name)
+
+	if len(revokedSerialInfo) > 0 {
+		entry, err := logical.StorageEntryJSON("crls/serial/"+serial.String(), revokedSerialInfo)
+		if err != nil {
+			return fmt.Errorf("error creating updated storage entry for serial %s: %s", serial, err)
+		}
+		err = storage.Put(entry)
+		if err != nil {
+			return fmt.Errorf("error storing updated entry for serial %s: %s", serial, err)
+		}
+
+		return nil
+
+	}
+
+deleteSerial:
+	err = storage.Delete("crls/serial/" + serial.String())
+	if err != nil {
+		return fmt.Errorf("error deleting serial entry for serial %s: %s", serial, err)
+	}
+
+	return nil
 }
 
+type RevokedSerialInfo map[string]interface{}
+
 //FIXME
-const pathCRLSetsHelpSyn = `
+const pathCRLsHelpSyn = `
 Manage trusted certificates used for authentication.
 `
 
-const pathCRLSetsHelpDesc = `
+const pathCRLsHelpDesc = `
 This endpoint allows you to create, read, update, and delete trusted certificates
 that are allowed to authenticate.
 

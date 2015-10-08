@@ -28,7 +28,7 @@ func Backend() *framework.Backend {
 		Paths: append([]*framework.Path{
 			pathLogin(&b),
 			pathCerts(&b),
-			pathCRLSets(&b),
+			pathCRLs(&b),
 		}),
 
 		AuthRenew: b.pathLoginRenew,
