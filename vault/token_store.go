@@ -46,6 +46,8 @@ type TokenStore struct {
 	expiration *ExpirationManager
 
 	cubbyholeBackend *CubbyholeBackend
+
+	policyLookupFunc func() ([]string, error)
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -57,6 +59,10 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	// Initialize the store
 	t := &TokenStore{
 		view: view,
+	}
+
+	if c.policy != nil {
+		t.policyLookupFunc = c.policy.ListPolicies
 	}
 
 	// Setup the salt
@@ -634,6 +640,23 @@ func (ts *TokenStore) handleCreate(
 			},
 			ClientToken: te.ID,
 		},
+	}
+
+	if ts.policyLookupFunc != nil {
+		availPolicies, err := ts.policyLookupFunc()
+		if err == nil {
+			policies := map[string]bool{}
+			if availPolicies != nil && len(availPolicies) > 0 {
+				for _, p := range availPolicies {
+					policies[p] = true
+				}
+			}
+			for _, p := range te.Policies {
+				if !policies[p] {
+					resp.AddWarning(fmt.Sprintf("policy \"%s\" does not exist", p))
+				}
+			}
+		}
 	}
 
 	return resp, nil

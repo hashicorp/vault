@@ -1,5 +1,12 @@
 package logical
 
+import (
+	"fmt"
+	"reflect"
+
+	"github.com/mitchellh/copystructure"
+)
+
 const (
 	// HTTPContentType can be specified in the Data field of a Response
 	// so that the HTTP front end can specify a custom Content-Type associated
@@ -40,6 +47,72 @@ type Response struct {
 	// This is only valid for credential backends. This will be blanked
 	// for any logical backend and ignored.
 	Redirect string
+
+	// Warnings allow operations or backends to return warnings in response
+	// to user actions without failing the action outright.
+	// Making it private helps ensure that it is easy for various parts of
+	// Vault (backend, core, etc.) to add warnings without accidentally
+	// replacing what exists.
+	warnings []string
+}
+
+func init() {
+	copystructure.Copiers[reflect.TypeOf(Response{})] = func(v interface{}) (interface{}, error) {
+		input := v.(Response)
+		ret := Response{
+			Redirect: input.Redirect,
+		}
+
+		if input.Secret != nil {
+			retSec, err := copystructure.Copy(input.Secret)
+			if err != nil {
+				return nil, fmt.Errorf("error copying Secret: %v", err)
+			}
+			ret.Secret = retSec.(*Secret)
+		}
+
+		if input.Auth != nil {
+			retAuth, err := copystructure.Copy(input.Auth)
+			if err != nil {
+				return nil, fmt.Errorf("error copying Secret: %v", err)
+			}
+			ret.Auth = retAuth.(*Auth)
+		}
+
+		if input.Data != nil {
+			retData, err := copystructure.Copy(&input.Data)
+			if err != nil {
+				return nil, fmt.Errorf("error copying Secret: %v", err)
+			}
+			ret.Data = retData.(map[string]interface{})
+		}
+
+		if input.Warnings() != nil {
+			for _, warning := range input.Warnings() {
+				ret.AddWarning(warning)
+			}
+		}
+
+		return &ret, nil
+	}
+}
+
+// AddWarning adds a warning into the response's warning list
+func (r *Response) AddWarning(warning string) {
+	if r.warnings == nil {
+		r.warnings = make([]string, 0, 1)
+	}
+	r.warnings = append(r.warnings, warning)
+}
+
+// Warnings returns the list of warnings set on the response
+func (r *Response) Warnings() []string {
+	return r.warnings
+}
+
+// ClearWarnings clears the response's warning list
+func (r *Response) ClearWarnings() {
+	r.warnings = make([]string, 0, 1)
 }
 
 // IsError returns true if this response seems to indicate an error.
