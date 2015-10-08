@@ -6,8 +6,9 @@ DEPRECATIONS/BREAKING CHANGES:
 
 IMPROVEMENTS:
 
- * init: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
  * core: Tokens can now renew themselves [GH-455]
+ * core: Stale leader entries will now be reaped [GH-679]
+ * init: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
  * logical: Responses now contain a "warnings" key containing a list of warnings returned from the server. These are conditions that did not require failing an operation, but of which the client should be aware. [GH-676]
 
 BUG FIXES:

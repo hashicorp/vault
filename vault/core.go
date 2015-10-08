@@ -239,6 +239,10 @@ type Core struct {
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
+	// leaderPrefixCleanupCh is used to stop
+	// the leader prefix cleansing operation
+	leaderPrefixCleanupCh chan struct{}
+
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
@@ -1603,6 +1607,8 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 // advertiseLeader is used to advertise the current node as leader
 func (c *Core) advertiseLeader(uuid string) error {
+	c.leaderPrefixCleanupCh = make(chan struct{})
+	go c.cleanLeaderPrefix(uuid)
 	ent := &Entry{
 		Key:   coreLeaderPrefix + uuid,
 		Value: []byte(c.advertiseAddr),
@@ -1610,8 +1616,35 @@ func (c *Core) advertiseLeader(uuid string) error {
 	return c.barrier.Put(ent)
 }
 
+func (c *Core) cleanLeaderPrefix(uuid string) {
+	keys, err := c.barrier.List(coreLeaderPrefix)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to list entries in core/leader: %v", err)
+		return
+	}
+	if len(keys) == 0 {
+		c.logger.Print("[ERR] core: found no entries under core/leader (should have found our own)")
+		return
+	}
+	for {
+		select {
+		case <-time.After(time.Second):
+			if keys[0] != uuid {
+				c.barrier.Delete(coreLeaderPrefix + keys[0])
+			}
+			keys = keys[1:]
+			if len(keys) == 0 {
+				return
+			}
+		case <-c.leaderPrefixCleanupCh:
+			return
+		}
+	}
+}
+
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
+	close(c.leaderPrefixCleanupCh)
 	key := coreLeaderPrefix + uuid
 	return c.barrier.Delete(key)
 }

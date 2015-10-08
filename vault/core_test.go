@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/otto/helper/uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -1065,6 +1066,152 @@ func TestCore_LimitedUseToken(t *testing.T) {
 	_, err = c.HandleRequest(req)
 	if err != logical.ErrPermissionDenied {
 		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestCore_CleanLeaderPrefix(t *testing.T) {
+	// Create the first core and initialize it
+	inm := physical.NewInmemHA()
+	advertiseOriginal := "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: advertiseOriginal,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	key, root := TestCoreInit(t, core)
+	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err := core.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	// Wait for core to become active
+	testWaitActive(t, core)
+
+	// Ensure that the original clean function has stopped running
+	time.Sleep(2 * time.Second)
+
+	// Put several random entries
+	for i := 0; i < 5; i++ {
+		core.barrier.Put(&Entry{
+			Key:   coreLeaderPrefix + uuid.GenerateUUID(),
+			Value: []byte(uuid.GenerateUUID()),
+		})
+	}
+
+	entries, err := core.barrier.List(coreLeaderPrefix)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(entries) != 6 {
+		t.Fatalf("wrong number of core leader prefix entries, got %d", len(entries))
+	}
+
+	// Check the leader is local
+	isLeader, advertise, err := core.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isLeader {
+		t.Fatalf("should be leader")
+	}
+	if advertise != advertiseOriginal {
+		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
+	// Create a second core, attached to same in-memory store
+	advertiseOriginal2 := "http://127.0.0.1:8500"
+	core2, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		AdvertiseAddr: advertiseOriginal2,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err = core2.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	// Core2 should be in standby
+	standby, err := core2.Standby()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !standby {
+		t.Fatalf("should be standby")
+	}
+
+	// Check the leader is not local
+	isLeader, advertise, err = core2.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if isLeader {
+		t.Fatalf("should not be leader")
+	}
+	if advertise != advertiseOriginal {
+		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
+	// Seal the first core, should step down
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Core should be in standby
+	standby, err = core.Standby()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !standby {
+		t.Fatalf("should be standby")
+	}
+
+	// Wait for core2 to become active
+	testWaitActive(t, core2)
+
+	// Check the leader is local
+	isLeader, advertise, err = core2.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isLeader {
+		t.Fatalf("should be leader")
+	}
+	if advertise != advertiseOriginal2 {
+		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
+	// Give time for the entries to clear out; it is conservative at 1/second
+	time.Sleep(7 * time.Second)
+
+	entries, err = core2.barrier.List(coreLeaderPrefix)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("wrong number of core leader prefix entries, got %d", len(entries))
 	}
 }
 
