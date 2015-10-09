@@ -812,7 +812,7 @@ func (ts *TokenStore) handleRenew(
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
-	// Revoke the token and its children
+	// Renew the token and its children
 	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest

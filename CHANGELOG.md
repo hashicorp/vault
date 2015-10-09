@@ -13,6 +13,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api: API client now checks for a 301 response for redirects. Vault doesn't generate these, but in certain conditions Go's internal HTTP handler can generate them, leading to client errors.
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
  * core: Stale leader entries will now be reaped [GH-679]
 

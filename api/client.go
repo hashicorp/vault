@@ -163,7 +163,7 @@ START:
 	}
 
 	// Check for a redirect, only allowing for a single redirect
-	if (resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 {
+	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 {
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
