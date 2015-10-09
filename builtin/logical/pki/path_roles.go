@@ -139,6 +139,14 @@ and "ec" are the only valid values.`,
 certainly want to change this if you adjust
 the key_type.`,
 			},
+
+			"use_csr_common_name": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `If set, when used with a signing profile,
+the common name in the CSR will be used. This
+does *not* include any requested Subject Alternative
+Names.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -253,6 +261,7 @@ func (b *backend) pathRoleCreate(
 		EmailProtectionFlag:   data.Get("email_protection_flag").(bool),
 		KeyType:               data.Get("key_type").(string),
 		KeyBits:               data.Get("key_bits").(int),
+		UseCSRCommonName:      data.Get("use_csr_common_name").(bool),
 	}
 
 	var maxTTL time.Duration
@@ -342,6 +351,7 @@ type roleEntry struct {
 	ClientFlag            bool   `json:"client_flag" structs:"client_flag" mapstructure:"client_flag"`
 	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
 	EmailProtectionFlag   bool   `json:"email_protection_flag" structs:"email_protection_flag" mapstructure:"email_protection_flag"`
+	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 }

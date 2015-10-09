@@ -38,17 +38,26 @@ type certCreationBundle struct {
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
-	PKIAddress     string
+	IsCA           bool
 	KeyType        string
 	KeyBits        int
-	SigningBundle  *certutil.ParsedCertBundle
+	SigningBundle  *caInfoBundle
 	TTL            time.Duration
 	Usage          certUsage
+
+	// This is only used when generating a self-signed root;
+	// otherwise the address in the caInfoBundle is used, if set
+	PKIAddress string
+}
+
+type caInfoBundle struct {
+	certutil.ParsedCertBundle
+	PKIAddress string
 }
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(req *logical.Request) (*certutil.ParsedCertBundle, error) {
+func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 	bundleEntry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
 		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch local CA certificate/key: %s", err)}
@@ -71,7 +80,17 @@ func fetchCAInfo(req *logical.Request) (*certutil.ParsedCertBundle, error) {
 		return nil, certutil.InternalError{Err: "Stored CA information not able to be parsed"}
 	}
 
-	return parsedBundle, nil
+	caInfo := &caInfoBundle{*parsedBundle, ""}
+
+	pkiAddress, err := req.Storage.Get("config/pki_address")
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch local PKI Address: %s", err)}
+	}
+	if pkiAddress != nil {
+		caInfo.PKIAddress = string(pkiAddress.Value)
+	}
+
+	return caInfo, nil
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -222,14 +241,20 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 
 func generateCert(b *backend,
 	role *roleEntry,
-	signingBundle *certutil.ParsedCertBundle,
+	signingBundle *caInfoBundle,
+	isCA bool,
 	pkiAddress string,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, pkiAddress, req, data)
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, nil, req, data)
 	if err != nil {
 		return nil, err
+	}
+
+	if isCA {
+		creationBundle.IsCA = isCA
+		creationBundle.PKIAddress = pkiAddress
 	}
 
 	parsedBundle, err := createCertificate(creationBundle)
@@ -244,7 +269,7 @@ func generateCert(b *backend,
 // It skips some sanity checks.
 func generateCSR(b *backend,
 	role *roleEntry,
-	signingBundle *certutil.ParsedCertBundle,
+	signingBundle *caInfoBundle,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCSRBundle, error) {
 
@@ -266,8 +291,8 @@ func generateCSR(b *backend,
 
 func signCert(b *backend,
 	role *roleEntry,
-	signingBundle *certutil.ParsedCertBundle,
-	pkiAddress string,
+	signingBundle *caInfoBundle,
+	isCA bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
@@ -287,10 +312,12 @@ func signCert(b *backend,
 		return nil, certutil.UserError{Err: "certificate request could not be parsed"}
 	}
 
-	creationBundle, err := generateCreationBundle(b, role, signingBundle, pkiAddress, req, data)
+	creationBundle, err := generateCreationBundle(b, role, signingBundle, csr, req, data)
 	if err != nil {
 		return nil, err
 	}
+
+	creationBundle.IsCA = isCA
 
 	parsedBundle, err := signCertificate(creationBundle, csr)
 	if err != nil {
@@ -302,8 +329,8 @@ func signCert(b *backend,
 
 func generateCreationBundle(b *backend,
 	role *roleEntry,
-	signingBundle *certutil.ParsedCertBundle,
-	pkiAddress string,
+	signingBundle *caInfoBundle,
+	csr *x509.CertificateRequest,
 	req *logical.Request,
 	data *framework.FieldData) (*certCreationBundle, error) {
 	var err error
@@ -311,7 +338,15 @@ func generateCreationBundle(b *backend,
 	// Get the common name(s)
 	cn := data.Get("common_name").(string)
 	if len(cn) == 0 {
-		return nil, certutil.UserError{Err: "The common_name field is required"}
+		if csr != nil {
+			if role.UseCSRCommonName {
+				cn = csr.Subject.CommonName
+			} else {
+				return nil, certutil.UserError{Err: `The common_name field must be supplied when "use_csr_common_name" is not specified in the role`}
+			}
+		} else {
+			return nil, certutil.UserError{Err: "The common_name field is required"}
+		}
 	}
 
 	dnsNames := []string{}
@@ -442,7 +477,6 @@ func generateCreationBundle(b *backend,
 		IPAddresses:    ipAddresses,
 		KeyType:        role.KeyType,
 		KeyBits:        role.KeyBits,
-		PKIAddress:     pkiAddress,
 		SigningBundle:  signingBundle,
 		TTL:            ttl,
 		Usage:          usage,
@@ -554,20 +588,30 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		subject.Province = caCert.Subject.Province
 		subject.StreetAddress = caCert.Subject.StreetAddress
 		subject.PostalCode = caCert.Subject.PostalCode
-		certTemplate.CRLDistributionPoints = caCert.CRLDistributionPoints
+		if creationInfo.SigningBundle.PKIAddress != "" {
+			certTemplate.CRLDistributionPoints = []string{
+				creationInfo.SigningBundle.PKIAddress + "/crl",
+			}
+			certTemplate.IssuingCertificateURL = []string{
+				creationInfo.SigningBundle.PKIAddress + "/ca",
+			}
+		}
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	} else {
+		// Creating a self-signed root
 		switch creationInfo.KeyType {
 		case "rsa":
 			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 		case "ec":
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
-		certTemplate.CRLDistributionPoints = []string{
-			creationInfo.PKIAddress + "/crl",
-		}
-		certTemplate.IssuingCertificateURL = []string{
-			creationInfo.PKIAddress + "/ca",
+		if creationInfo.PKIAddress != "" {
+			certTemplate.CRLDistributionPoints = []string{
+				creationInfo.PKIAddress + "/crl",
+			}
+			certTemplate.IssuingCertificateURL = []string{
+				creationInfo.PKIAddress + "/ca",
+			}
 		}
 		certTemplate.IsCA = true
 		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
@@ -752,17 +796,19 @@ func signCertificate(creationInfo *certCreationBundle,
 	subject.StreetAddress = caCert.Subject.StreetAddress
 	subject.PostalCode = caCert.Subject.PostalCode
 
-	certTemplate.IssuingCertificateURL = caCert.IssuingCertificateURL
-
-	if creationInfo.PKIAddress != "" {
+	if creationInfo.SigningBundle.PKIAddress != "" {
 		certTemplate.CRLDistributionPoints = []string{
-			creationInfo.PKIAddress + "/crl",
+			creationInfo.SigningBundle.PKIAddress + "/crl",
 		}
+		certTemplate.IssuingCertificateURL = []string{
+			creationInfo.SigningBundle.PKIAddress + "/ca",
+		}
+	}
+
+	if creationInfo.IsCA {
 		certTemplate.IsCA = true
 		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
-	} else {
-		certTemplate.CRLDistributionPoints = caCert.CRLDistributionPoints
 	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)

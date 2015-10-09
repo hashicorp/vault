@@ -16,8 +16,10 @@ var rootAndSignSchema = map[string]*framework.FieldSchema{
 	"common_name": &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested common name; if you want more than
-one, specify the alternative names in the
-alt_names map`,
+one, specify the alternative names in the alt_names
+map. If not specified when signing, the common
+name will be taken from the CSR; other names
+must still be specified in alt_names or ip_sans.`,
 	},
 
 	"alt_names": &framework.FieldSchema{
@@ -107,6 +109,19 @@ secret key and certificate, or, if a
 CSR was generated with the "generate"
 endpoint, just the signed certificate.`,
 			},
+
+			"pki_address": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `The base URL of the PKI mount, e.g.
+"https://vault.example.com/v1/pki".
+For HA setups, the given host name
+should be the address that can always
+be used to contact the leader, as this is
+is used for generating the CA/CRL URLs in
+the certificate. If empty, no CA/CRL
+information will be encoded into
+certificates.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -140,7 +155,9 @@ For HA setups, the given host name
 should be the address that can always
 be used to contact the leader, as this is
 is used for generating the CA/CRL URLs in
-the certificate.`,
+the certificate. If empty, no CA/CRL
+information will be encoded into
+certificates.`,
 	}
 
 	for k, v := range generateSchema {
@@ -188,18 +205,6 @@ func pathSignIntermediateCA(b *backend) *framework.Path {
 		HelpDescription: pathConfigCASignHelpDesc,
 	}
 
-	ret.Fields["pki_address"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The base URL of the *destination*
-PKI mount, e.g.
-"https://vault.example.com/v1/intermediate_pki".
-For HA setups, the given host name
-should be the address that can always
-be used to contact the leader, as this is
-is used for generating the CA/CRL URLs in
-the certificate.`,
-	}
-
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: `PEM-format CSR to be signed.`,
@@ -237,16 +242,10 @@ func (b *backend) pathCAGenerateRoot(
 	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
 	switch {
 	case len(pkiAddress) == 0:
-		return logical.ErrorResponse(
-			`"pki_address" cannot be empty`,
-		), nil
+		break
 	case !strings.HasPrefix(pkiAddress, "http"):
 		return logical.ErrorResponse(
 			`"pki_address" must be a URL`,
-		), nil
-	case !strings.Contains(pkiAddress, "/v1/"):
-		return logical.ErrorResponse(
-			`"pki_address" needs to be the path to the PKI mount, not the base Vault path"`,
 		), nil
 	case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
 		return logical.ErrorResponse(
@@ -290,7 +289,7 @@ func (b *backend) pathCAGenerateRoot(
 	}
 
 	var resp *logical.Response
-	parsedBundle, err := generateCert(b, role, nil, pkiAddress, req, data)
+	parsedBundle, err := generateCert(b, role, nil, true, pkiAddress, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -338,8 +337,15 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, err
 	}
 
+	entry.Key = "config/pki_address"
+	entry.Value = []byte(pkiAddress)
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
+
 	// For ease of later use, also store just the certificate at a known
-	// location, plus a blank CRL
+	// location, plus a fresh CRL
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
 	err = req.Storage.Put(entry)
@@ -347,9 +353,7 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, err
 	}
 
-	entry.Key = "crl"
-	entry.Value = []byte{}
-	err = req.Storage.Put(entry)
+	err = buildCRL(b, req)
 	if err != nil {
 		return nil, err
 	}
@@ -480,34 +484,15 @@ func (b *backend) pathCASignIntermediate(
 		), nil
 	}
 
-	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
-	switch {
-	case len(pkiAddress) == 0:
-		return logical.ErrorResponse(
-			`"pki_address" cannot be empty`,
-		), nil
-	case !strings.HasPrefix(pkiAddress, "http"):
-		return logical.ErrorResponse(
-			`"pki_address" must be a URL`,
-		), nil
-	case !strings.Contains(pkiAddress, "/v1/"):
-		return logical.ErrorResponse(
-			`"pki_address" needs to be the path to the PKI mount, not the base Vault path`,
-		), nil
-	case strings.Contains(pkiAddress, "/v1/"+req.MountPoint):
-		return logical.ErrorResponse(
-			`"pki_address" needs to be the path to the destination mount, not the signing mount`,
-		), nil
-	}
-	if strings.HasSuffix(pkiAddress, "/") {
-		pkiAddress = pkiAddress[:len(pkiAddress)-1]
-	}
-
 	role := &roleEntry{
 		TTL:              data.Get("ttl").(string),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		EnforceHostnames: false,
+	}
+
+	if cn := data.Get("common_name").(string); len(cn) == 0 {
+		role.UseCSRCommonName = true
 	}
 
 	var caErr error
@@ -521,7 +506,7 @@ func (b *backend) pathCASignIntermediate(
 			"error fetching CA certificate: %s", caErr)}
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, pkiAddress, req, data)
+	parsedBundle, err := signCert(b, role, signingBundle, true, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -568,8 +553,8 @@ func (b *backend) pathCASignIntermediate(
 }
 
 func (b *backend) pathCASetWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	pemBundle := d.Get("pem_bundle").(string)
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	pemBundle := data.Get("pem_bundle").(string)
 
 	parsedBundle, err := certutil.ParsePEMBundle(pemBundle)
 	if err != nil {
@@ -585,6 +570,23 @@ func (b *backend) pathCASetWrite(
 	if parsedBundle.Certificate == nil && parsedBundle.IssuingCA != nil {
 		parsedBundle.Certificate = parsedBundle.IssuingCA
 		parsedBundle.CertificateBytes = parsedBundle.IssuingCABytes
+	}
+
+	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
+	switch {
+	case len(pkiAddress) == 0:
+		break
+	case !strings.HasPrefix(pkiAddress, "http"):
+		return logical.ErrorResponse(
+			`"pki_address" must be a URL`,
+		), nil
+	case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
+		return logical.ErrorResponse(
+			`"pki_address" needs to be the path to this mount"`,
+		), nil
+	}
+	if strings.HasSuffix(pkiAddress, "/") {
+		pkiAddress = pkiAddress[:len(pkiAddress)-1]
 	}
 
 	cb := &certutil.CertBundle{}
@@ -646,8 +648,15 @@ func (b *backend) pathCASetWrite(
 		return nil, err
 	}
 
+	entry.Key = "config/pki_address"
+	entry.Value = []byte(pkiAddress)
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
+
 	// For ease of later use, also store just the certificate at a known
-	// location, plus a blank CRL
+	// location, plus a fresh CRL
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
 	err = req.Storage.Put(entry)
@@ -655,14 +664,9 @@ func (b *backend) pathCASetWrite(
 		return nil, err
 	}
 
-	entry.Key = "crl"
-	entry.Value = []byte{}
-	err = req.Storage.Put(entry)
-	if err != nil {
-		return nil, err
-	}
+	err = buildCRL(b, req)
 
-	return nil, nil
+	return nil, err
 }
 
 const pathConfigCASetHelpSyn = `
