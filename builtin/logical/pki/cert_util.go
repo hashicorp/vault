@@ -48,6 +48,9 @@ type certCreationBundle struct {
 	// This is only used when generating a self-signed root;
 	// otherwise the address in the caInfoBundle is used, if set
 	PKIAddress string
+
+	// Only used when signing a CA cert
+	UseCSRSubject bool
 }
 
 type caInfoBundle struct {
@@ -293,6 +296,7 @@ func signCert(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
 	isCA bool,
+	useCSRSubject bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
@@ -317,7 +321,10 @@ func signCert(b *backend,
 		return nil, err
 	}
 
-	creationBundle.IsCA = isCA
+	if isCA {
+		creationBundle.IsCA = isCA
+		creationBundle.UseCSRSubject = useCSRSubject
+	}
 
 	parsedBundle, err := signCertificate(creationBundle, csr)
 	if err != nil {
@@ -759,11 +766,17 @@ func signCertificate(creationInfo *certCreationBundle,
 		NotAfter:              time.Now().Add(creationInfo.TTL),
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		BasicConstraintsValid: true,
-		IsCA:           false,
-		SubjectKeyId:   subjKeyID[:],
-		DNSNames:       creationInfo.DNSNames,
-		EmailAddresses: creationInfo.EmailAddresses,
-		IPAddresses:    creationInfo.IPAddresses,
+		IsCA:         false,
+		SubjectKeyId: subjKeyID[:],
+	}
+
+	if creationInfo.UseCSRSubject {
+		certTemplate.Subject = csr.Subject
+		certTemplate.Subject.SerialNumber = serialNumber.String()
+	} else {
+		certTemplate.DNSNames = creationInfo.DNSNames
+		certTemplate.EmailAddresses = creationInfo.EmailAddresses
+		certTemplate.IPAddresses = creationInfo.IPAddresses
 	}
 
 	switch creationInfo.SigningBundle.PrivateKeyType {

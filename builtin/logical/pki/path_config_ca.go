@@ -210,6 +210,15 @@ func pathSignIntermediateCA(b *backend) *framework.Path {
 		Description: `PEM-format CSR to be signed.`,
 	}
 
+	ret.Fields["use_csr_subject"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `If true, the subject information,
+including names and alternate names,
+will be preserved from the CSR rather
+than using values provided in the
+other parameters to this path.`,
+	}
+
 	return ret
 }
 
@@ -506,7 +515,9 @@ func (b *backend) pathCASignIntermediate(
 			"error fetching CA certificate: %s", caErr)}
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, true, req, data)
+	useCSRValues := data.Get("use_csr_subject").(bool)
+
+	parsedBundle, err := signCert(b, role, signingBundle, true, useCSRValues, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
