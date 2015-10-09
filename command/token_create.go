@@ -97,14 +97,16 @@ Token Options:
 
   -id="7699125c-d8...."   The token value that clients will use to authenticate
                           with vault. If not provided this defaults to a 36
-                          character UUID. A root token is required to specify 
+                          character UUID. A root token is required to specify
                           the ID of a token.
 
   -display-name="name"    A display name to associate with this token. This
                           is a non-security sensitive value used to help
                           identify created secrets, i.e. prefixes.
 
-  -lease="1h"             Lease to associate with the token. This option enables
+  -lease="1h"             Deprecated; use "-ttl" instead.
+
+  -ttl="1h"               TTL to associate with the token. This option enables
                           the tokens to be renewable.
 
   -metadata="key=value"   Metadata to associate with the token. This shows

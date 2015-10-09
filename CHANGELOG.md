@@ -17,6 +17,10 @@ BUG FIXES:
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
  * core: Stale leader entries will now be reaped [GH-679]
 
+MISC:
+
+ * Various documentation fixes and improvements [GH-688]
+
 ## 0.3.1 (October 6, 2015)
 
 SECURITY:
