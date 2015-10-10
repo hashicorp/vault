@@ -63,8 +63,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:  b.handleMountConfig,
-					logical.WriteOperation: b.handleMountTune,
+					logical.ReadOperation:  b.handleMountTuneRead,
+					logical.WriteOperation: b.handleMountTuneWrite,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
@@ -523,8 +523,8 @@ func (b *SystemBackend) handleRemount(
 	return nil, nil
 }
 
-// handleMountConfig is used to get config settings on a backend
-func (b *SystemBackend) handleMountConfig(
+// handleMountTuneRead is used to get config settings on a backend
+func (b *SystemBackend) handleMountTuneRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
@@ -554,8 +554,8 @@ func (b *SystemBackend) handleMountConfig(
 	return resp, nil
 }
 
-// handleMountTune is used to set config settings on a backend
-func (b *SystemBackend) handleMountTune(
+// handleMountTuneWrite is used to set config settings on a backend
+func (b *SystemBackend) handleMountTuneWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
