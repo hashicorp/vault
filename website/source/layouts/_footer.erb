@@ -8,7 +8,7 @@
 						<li class="li-under"><a href="/community.html">Community</a></li>
 						<li class="li-under"><a href="/security.html">Security</a></li>
 						<% if current_page.url != '/' %>
-							<li class="li-under"><a href="https://github.com/hashicorp/vault/<%= github_path current_page %>">Edit this page</a></li>
+							<li class="li-under"><a href="<%= github_url :current_page %>">Edit this page</a></li>
 						<% end %>
 					</ul>
 				</div>

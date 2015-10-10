@@ -1,11 +1,8 @@
 {{var "v"}} := *{{ .Varname }}
 {{var "l"}} := r.ReadMapStart()
 if {{var "v"}} == nil {
-	if {{var "l"}} > 0 {
-		{{var "v"}} = make(map[{{ .KTyp }}]{{ .Typ }}, {{var "l"}})
-	} else {
-		{{var "v"}} = make(map[{{ .KTyp }}]{{ .Typ }}) // supports indefinite-length, etc
-	}
+	{{var "rl"}}, _ := z.DecInferLen({{var "l"}}, z.DecBasicHandle().MaxInitLen, {{ .Size }})
+	{{var "v"}} = make(map[{{ .KTyp }}]{{ .Typ }}, {{var "rl"}})
 	*{{ .Varname }} = {{var "v"}}
 }
 if {{var "l"}} > 0  {

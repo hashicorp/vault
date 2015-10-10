@@ -81,6 +81,7 @@ type TokenCreateRequest struct {
 	Policies    []string          `json:"policies,omitempty"`
 	Metadata    map[string]string `json:"meta,omitempty"`
 	Lease       string            `json:"lease,omitempty"`
+	TTL         string            `json:"ttl,omitempty"`
 	NoParent    bool              `json:"no_parent,omitempty"`
 	DisplayName string            `json:"display_name"`
 	NumUses     int               `json:"num_uses"`

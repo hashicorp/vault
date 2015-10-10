@@ -62,12 +62,12 @@ type Logger interface {
 }
 
 type Conn struct {
-	lastZxid  int64
-	sessionID int64
-	state     State // must be 32-bit aligned
-	xid       uint32
-	timeout   int32 // session timeout in milliseconds
-	passwd    []byte
+	lastZxid         int64
+	sessionID        int64
+	state            State // must be 32-bit aligned
+	xid              uint32
+	sessionTimeoutMs int32 // session timeout in milliseconds
+	passwd           []byte
 
 	dialer          Dialer
 	servers         []string
@@ -140,8 +140,6 @@ func ConnectWithDialer(servers []string, sessionTimeout time.Duration, dialer Di
 		return nil, nil, errors.New("zk: server list must not be empty")
 	}
 
-	recvTimeout := sessionTimeout * 2 / 3
-
 	srvs := make([]string, len(servers))
 
 	for i, addr := range servers {
@@ -168,19 +166,18 @@ func ConnectWithDialer(servers []string, sessionTimeout time.Duration, dialer Di
 		state:           StateDisconnected,
 		eventChan:       ec,
 		shouldQuit:      make(chan struct{}),
-		recvTimeout:     recvTimeout,
-		pingInterval:    recvTimeout / 2,
 		connectTimeout:  1 * time.Second,
 		sendChan:        make(chan *request, sendChanSize),
 		requests:        make(map[int32]*request),
 		watchers:        make(map[watchPathType][]chan Event),
 		passwd:          emptyPassword,
-		timeout:         int32(sessionTimeout.Nanoseconds() / 1e6),
 		logger:          DefaultLogger,
 
 		// Debug
 		reconnectDelay: 0,
 	}
+	conn.setTimeouts(int32(sessionTimeout / time.Millisecond))
+
 	go func() {
 		conn.loop()
 		conn.flushRequests(ErrClosing)
@@ -210,6 +207,13 @@ func (c *Conn) SetLogger(l Logger) {
 	c.logger = l
 }
 
+func (c *Conn) setTimeouts(sessionTimeoutMs int32) {
+	c.sessionTimeoutMs = sessionTimeoutMs
+	sessionTimeout := time.Duration(sessionTimeoutMs) * time.Millisecond
+	c.recvTimeout = sessionTimeout * 2 / 3
+	c.pingInterval = c.recvTimeout / 2
+}
+
 func (c *Conn) setState(state State) {
 	atomic.StoreInt32((*int32)(&c.state), int32(state))
 	select {
@@ -220,9 +224,9 @@ func (c *Conn) setState(state State) {
 }
 
 func (c *Conn) connect() error {
-	c.setState(StateConnecting)
 	for {
 		c.serverIndex = (c.serverIndex + 1) % len(c.servers)
+		c.setState(StateConnecting)
 		if c.serverIndex == c.lastServerIndex {
 			c.flushUnsentRequests(ErrNoServer)
 			select {
@@ -242,6 +246,7 @@ func (c *Conn) connect() error {
 		if err == nil {
 			c.conn = zkConn
 			c.setState(StateConnected)
+			c.logger.Printf("Connected to %s", c.servers[c.serverIndex])
 			return nil
 		}
 
@@ -259,24 +264,29 @@ func (c *Conn) loop() {
 		err := c.authenticate()
 		switch {
 		case err == ErrSessionExpired:
+			c.logger.Printf("Authentication failed: %s", err)
 			c.invalidateWatches(err)
 		case err != nil && c.conn != nil:
+			c.logger.Printf("Authentication failed: %s", err)
 			c.conn.Close()
 		case err == nil:
+			c.logger.Printf("Authenticated: id=%d, timeout=%d", c.sessionID, c.sessionTimeoutMs)
 			c.lastServerIndex = c.serverIndex
 			closeChan := make(chan struct{}) // channel to tell send loop stop
 			var wg sync.WaitGroup
 
 			wg.Add(1)
 			go func() {
-				c.sendLoop(c.conn, closeChan)
+				err := c.sendLoop(c.conn, closeChan)
+				c.logger.Printf("Send loop terminated: err=%v", err)
 				c.conn.Close() // causes recv loop to EOF/exit
 				wg.Done()
 			}()
 
 			wg.Add(1)
 			go func() {
-				err = c.recvLoop(c.conn)
+				err := c.recvLoop(c.conn)
+				c.logger.Printf("Recv loop terminated: err=%v", err)
 				if err == nil {
 					panic("zk: recvLoop should never return nil error")
 				}
@@ -284,15 +294,11 @@ func (c *Conn) loop() {
 				wg.Done()
 			}()
 
+			c.sendSetWatches()
 			wg.Wait()
 		}
 
 		c.setState(StateDisconnected)
-
-		// Yeesh
-		if err != io.EOF && err != ErrSessionExpired && !strings.Contains(err.Error(), "use of closed network connection") {
-			c.logger.Printf(err.Error())
-		}
 
 		select {
 		case <-c.shouldQuit:
@@ -399,12 +405,11 @@ func (c *Conn) sendSetWatches() {
 func (c *Conn) authenticate() error {
 	buf := make([]byte, 256)
 
-	// connect request
-
+	// Encode and send a connect request.
 	n, err := encodePacket(buf[4:], &connectRequest{
 		ProtocolVersion: protocolVersion,
 		LastZxidSeen:    c.lastZxid,
-		TimeOut:         c.timeout,
+		TimeOut:         c.sessionTimeoutMs,
 		SessionID:       c.sessionID,
 		Passwd:          c.passwd,
 	})
@@ -421,23 +426,12 @@ func (c *Conn) authenticate() error {
 		return err
 	}
 
-	c.sendSetWatches()
-
-	// connect response
-
-	// package length
+	// Receive and decode a connect response.
 	c.conn.SetReadDeadline(time.Now().Add(c.recvTimeout * 10))
 	_, err = io.ReadFull(c.conn, buf[:4])
 	c.conn.SetReadDeadline(time.Time{})
 	if err != nil {
-		// Sometimes zookeeper just drops connection on invalid session data,
-		// we prefer to drop session and start from scratch when that event
-		// occurs instead of dropping into loop of connect/disconnect attempts
-		c.sessionID = 0
-		c.passwd = emptyPassword
-		c.lastZxid = 0
-		c.setState(StateExpired)
-		return ErrSessionExpired
+		return err
 	}
 
 	blen := int(binary.BigEndian.Uint32(buf[:4]))
@@ -463,7 +457,7 @@ func (c *Conn) authenticate() error {
 		return ErrSessionExpired
 	}
 
-	c.timeout = r.TimeOut
+	c.setTimeouts(r.TimeOut)
 	c.sessionID = r.SessionID
 	c.passwd = r.Passwd
 	c.setState(StateHasSession)
@@ -854,7 +848,7 @@ func (c *Conn) Multi(ops ...interface{}) ([]MultiResponse, error) {
 		case *CheckVersionRequest:
 			opCode = opCheck
 		default:
-			return nil, fmt.Errorf("uknown operation type %T", op)
+			return nil, fmt.Errorf("unknown operation type %T", op)
 		}
 		req.Ops = append(req.Ops, multiRequestOp{multiHeader{opCode, false, -1}, op})
 	}

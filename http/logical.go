@@ -96,7 +96,10 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 			return
 		}
 
-		logicalResp := &LogicalResponse{Data: resp.Data}
+		logicalResp := &LogicalResponse{
+			Data:     resp.Data,
+			Warnings: resp.Warnings(),
+		}
 		if resp.Secret != nil {
 			logicalResp.LeaseID = resp.Secret.LeaseID
 			logicalResp.Renewable = resp.Secret.Renewable
@@ -196,6 +199,7 @@ type LogicalResponse struct {
 	Renewable     bool                   `json:"renewable"`
 	LeaseDuration int                    `json:"lease_duration"`
 	Data          map[string]interface{} `json:"data"`
+	Warnings      []string               `json:"warnings"`
 	Auth          *Auth                  `json:"auth"`
 }
 

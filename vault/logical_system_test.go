@@ -445,7 +445,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 	// Create the policy
 	rules := `path "foo/" { policy = "read" }`
-	req := logical.TestRequest(t, logical.WriteOperation, "policy/foo")
+	req := logical.TestRequest(t, logical.WriteOperation, "policy/Foo")
 	req.Data["rules"] = rules
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -468,6 +468,13 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// Read, and make sure that case has been normalized
+	req = logical.TestRequest(t, logical.ReadOperation, "policy/Foo")
+	resp, err = b.HandleRequest(req)
+	if resp != nil {
+		t.Fatalf("err: expected nil response, got %#v", *resp)
 	}
 
 	// List the policies

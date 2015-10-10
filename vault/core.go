@@ -52,6 +52,10 @@ const (
 	// keyRotateGracePeriod is how long we allow an upgrade path
 	// for standby instances before we delete the upgrade keys
 	keyRotateGracePeriod = 2 * time.Minute
+
+	// leaderPrefixCleanDelay is how long to wait between deletions
+	// of orphaned leader keys, to prevent slamming the backend.
+	leaderPrefixCleanDelay = 200 * time.Millisecond
 )
 
 var (
@@ -496,8 +500,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			ttl := sysView.DefaultLeaseTTL()
-			resp.Secret.TTL = ttl
+			resp.Secret.TTL = sysView.DefaultLeaseTTL()
 		}
 
 		// Limit the lease duration
@@ -544,14 +547,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			return nil, auth, ErrInternalError
 		}
 
-		// Set the default lease if non-provided, root tokens are exempt
+		sysView := c.router.MatchingSystemView(req.Path)
+		if sysView == nil {
+			c.logger.Println("[ERR] core: unable to retrieve system view from router")
+			return nil, auth, ErrInternalError
+		}
+
+		// Apply the default lease if none given
 		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.TTL = c.defaultLeaseTTL
+			resp.Auth.TTL = sysView.DefaultLeaseTTL()
 		}
 
 		// Limit the lease duration
-		if resp.Auth.TTL > c.maxLeaseTTL {
-			resp.Auth.TTL = c.maxLeaseTTL
+		maxTTL := sysView.MaxLeaseTTL()
+		if resp.Auth.TTL > maxTTL {
+			resp.Auth.TTL = maxTTL
 		}
 
 		// Register with the expiration manager
@@ -1454,16 +1464,16 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		}
 
 		// Attempt the acquisition
-		leaderCh := c.acquireLock(lock, stopCh)
+		leaderLostCh := c.acquireLock(lock, stopCh)
 
 		// Bail if we are being shutdown
-		if leaderCh == nil {
+		if leaderLostCh == nil {
 			return
 		}
 		c.logger.Printf("[INFO] core: acquired lock, enabling active operation")
 
 		// Advertise ourself as leader
-		if err := c.advertiseLeader(uuid); err != nil {
+		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
 			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
 			lock.Unlock()
 			continue
@@ -1486,7 +1496,7 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 
 		// Monitor a loss of leadership
 		select {
-		case <-leaderCh:
+		case <-leaderLostCh:
 			c.logger.Printf("[WARN] core: leadership lost, stopping active operation")
 		case <-stopCh:
 			c.logger.Printf("[WARN] core: stopping active operation")
@@ -1529,7 +1539,7 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			}
 
 			if err := c.checkKeyUpgrades(); err != nil {
-				c.logger.Printf("[ERR] core: upgrade due to key rotation failed: %v", err)
+				c.logger.Printf("[ERR] core: key rotation periodic upgrade check failed: %v", err)
 			}
 		case <-stopCh:
 			return
@@ -1582,13 +1592,13 @@ func (c *Core) scheduleUpgradeCleanup() error {
 	return nil
 }
 
-// acquireLock blocks until the lock is acquired, returning the leaderCh
+// acquireLock blocks until the lock is acquired, returning the leaderLostCh
 func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan struct{} {
 	for {
 		// Attempt lock acquisition
-		leaderCh, err := lock.Lock(stopCh)
+		leaderLostCh, err := lock.Lock(stopCh)
 		if err == nil {
-			return leaderCh
+			return leaderLostCh
 		}
 
 		// Retry the acquisition
@@ -1602,12 +1612,32 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 }
 
 // advertiseLeader is used to advertise the current node as leader
-func (c *Core) advertiseLeader(uuid string) error {
+func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error {
+	go c.cleanLeaderPrefix(uuid, leaderLostCh)
 	ent := &Entry{
 		Key:   coreLeaderPrefix + uuid,
 		Value: []byte(c.advertiseAddr),
 	}
 	return c.barrier.Put(ent)
+}
+
+func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
+	keys, err := c.barrier.List(coreLeaderPrefix)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to list entries in core/leader: %v", err)
+		return
+	}
+	for len(keys) > 0 {
+		select {
+		case <-time.After(leaderPrefixCleanDelay):
+			if keys[0] != uuid {
+				c.barrier.Delete(coreLeaderPrefix + keys[0])
+			}
+			keys = keys[1:]
+		case <-leaderLostCh:
+			return
+		}
+	}
 }
 
 // clearLeader is used to clear our leadership entry

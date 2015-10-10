@@ -22,20 +22,17 @@ const maxSessionKeySizeInBytes = 64
 // 4880, section 5.3.
 type SymmetricKeyEncrypted struct {
 	CipherFunc   CipherFunction
-	Encrypted    bool
-	Key          []byte // Empty unless Encrypted is false.
 	s2k          func(out, in []byte)
 	encryptedKey []byte
 }
 
 const symmetricKeyEncryptedVersion = 4
 
-func (ske *SymmetricKeyEncrypted) parse(r io.Reader) (err error) {
+func (ske *SymmetricKeyEncrypted) parse(r io.Reader) error {
 	// RFC 4880, section 5.3.
 	var buf [2]byte
-	_, err = readFull(r, buf[:])
-	if err != nil {
-		return
+	if _, err := readFull(r, buf[:]); err != nil {
+		return err
 	}
 	if buf[0] != symmetricKeyEncryptedVersion {
 		return errors.UnsupportedError("SymmetricKeyEncrypted version")
@@ -46,9 +43,10 @@ func (ske *SymmetricKeyEncrypted) parse(r io.Reader) (err error) {
 		return errors.UnsupportedError("unknown cipher: " + strconv.Itoa(int(buf[1])))
 	}
 
+	var err error
 	ske.s2k, err = s2k.Parse(r)
 	if err != nil {
-		return
+		return err
 	}
 
 	encryptedKey := make([]byte, maxSessionKeySizeInBytes)
@@ -56,9 +54,9 @@ func (ske *SymmetricKeyEncrypted) parse(r io.Reader) (err error) {
 	// out. If it exists then we limit it to maxSessionKeySizeInBytes.
 	n, err := readFull(r, encryptedKey)
 	if err != nil && err != io.ErrUnexpectedEOF {
-		return
+		return err
 	}
-	err = nil
+
 	if n != 0 {
 		if n == maxSessionKeySizeInBytes {
 			return errors.UnsupportedError("oversized encrypted session key")
@@ -66,42 +64,35 @@ func (ske *SymmetricKeyEncrypted) parse(r io.Reader) (err error) {
 		ske.encryptedKey = encryptedKey[:n]
 	}
 
-	ske.Encrypted = true
-
-	return
+	return nil
 }
 
-// Decrypt attempts to decrypt an encrypted session key. If it returns nil,
-// ske.Key will contain the session key.
-func (ske *SymmetricKeyEncrypted) Decrypt(passphrase []byte) error {
-	if !ske.Encrypted {
-		return nil
-	}
-
+// Decrypt attempts to decrypt an encrypted session key and returns the key and
+// the cipher to use when decrypting a subsequent Symmetrically Encrypted Data
+// packet.
+func (ske *SymmetricKeyEncrypted) Decrypt(passphrase []byte) ([]byte, CipherFunction, error) {
 	key := make([]byte, ske.CipherFunc.KeySize())
 	ske.s2k(key, passphrase)
 
 	if len(ske.encryptedKey) == 0 {
-		ske.Key = key
-	} else {
-		// the IV is all zeros
-		iv := make([]byte, ske.CipherFunc.blockSize())
-		c := cipher.NewCFBDecrypter(ske.CipherFunc.new(key), iv)
-		c.XORKeyStream(ske.encryptedKey, ske.encryptedKey)
-		ske.CipherFunc = CipherFunction(ske.encryptedKey[0])
-		if ske.CipherFunc.blockSize() == 0 {
-			return errors.UnsupportedError("unknown cipher: " + strconv.Itoa(int(ske.CipherFunc)))
-		}
-		ske.CipherFunc = CipherFunction(ske.encryptedKey[0])
-		ske.Key = ske.encryptedKey[1:]
-		if len(ske.Key)%ske.CipherFunc.blockSize() != 0 {
-			ske.Key = nil
-			return errors.StructuralError("length of decrypted key not a multiple of block size")
-		}
+		return key, ske.CipherFunc, nil
 	}
 
-	ske.Encrypted = false
-	return nil
+	// the IV is all zeros
+	iv := make([]byte, ske.CipherFunc.blockSize())
+	c := cipher.NewCFBDecrypter(ske.CipherFunc.new(key), iv)
+	plaintextKey := make([]byte, len(ske.encryptedKey))
+	c.XORKeyStream(plaintextKey, ske.encryptedKey)
+	cipherFunc := CipherFunction(plaintextKey[0])
+	if cipherFunc.blockSize() == 0 {
+		return nil, ske.CipherFunc, errors.UnsupportedError("unknown cipher: " + strconv.Itoa(int(ske.CipherFunc)))
+	}
+	plaintextKey = plaintextKey[1:]
+	if l := len(plaintextKey); l == 0 || l%cipherFunc.blockSize() != 0 {
+		return nil, cipherFunc, errors.StructuralError("length of decrypted key not a multiple of block size")
+	}
+
+	return plaintextKey, cipherFunc, nil
 }
 
 // SerializeSymmetricKeyEncrypted serializes a symmetric key packet to w. The

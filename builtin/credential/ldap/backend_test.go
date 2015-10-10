@@ -3,14 +3,31 @@ package ldap
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
 
+func factory(t *testing.T) logical.Backend {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+	return b
+}
+
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
+	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
@@ -25,7 +42,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_groupCrud(t *testing.T) {
-	b := Backend()
+	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
@@ -171,18 +188,18 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 }
 
 func TestLDAPEscape(t *testing.T) {
-  testcases := map[string]string {
-    "#test": "\\#test",
-    "test,hello": "test\\,hello",
-    "test,hel+lo": "test\\,hel\\+lo",
-    "test\\hello": "test\\\\hello",
-    "  test  ": "\\  test \\ ",
-  }
+	testcases := map[string]string{
+		"#test":       "\\#test",
+		"test,hello":  "test\\,hello",
+		"test,hel+lo": "test\\,hel\\+lo",
+		"test\\hello": "test\\\\hello",
+		"  test  ":    "\\  test \\ ",
+	}
 
-  for test, answer := range testcases {
-    res := EscapeLDAPValue(test)
-    if res != answer {
-      t.Errorf("Failed to escape %s: %s != %s\n", test, res, answer)
-    }
-  }
+	for test, answer := range testcases {
+		res := EscapeLDAPValue(test)
+		if res != answer {
+			t.Errorf("Failed to escape %s: %s != %s\n", test, res, answer)
+		}
+	}
 }

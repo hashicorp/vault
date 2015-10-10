@@ -58,15 +58,13 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 		},
 	}
 
-	if b.generateLeases {
-		b.Backend.Secrets = []*framework.Secret{
-			&framework.Secret{
-				Type: "generic",
+	b.Backend.Secrets = []*framework.Secret{
+		&framework.Secret{
+			Type: "generic",
 
-				Renew:  b.handleRead,
-				Revoke: b.handleRevoke,
-			},
-		}
+			Renew:  b.handleRead,
+			Revoke: b.handleRevoke,
+		},
 	}
 
 	if conf == nil {

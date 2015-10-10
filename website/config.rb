@@ -10,6 +10,8 @@ activate :hashicorp do |h|
   h.bintray_repo    = "mitchellh/vault"
   h.bintray_user    = "mitchellh"
   h.bintray_key     = ENV["BINTRAY_API_KEY"]
+  h.github_slug     = "hashicorp/vault"
+  h.website_root    = "website"
 
   h.minify_javascript = false
 end

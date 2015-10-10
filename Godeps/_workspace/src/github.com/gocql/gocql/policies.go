@@ -161,6 +161,11 @@ func (t *tokenAwareHostPolicy) resetTokenRing() {
 func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 	if qry == nil {
 		return t.fallback.Pick(qry)
+	} else if qry.binding != nil && len(qry.values) == 0 {
+		// If this query was created using session.Bind we wont have the query
+		// values yet, so we have to pass down to the next policy.
+		// TODO: Remove this and handle this case
+		return t.fallback.Pick(qry)
 	}
 
 	routingKey, err := qry.GetRoutingKey()

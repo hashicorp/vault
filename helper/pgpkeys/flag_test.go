@@ -19,7 +19,7 @@ func TestPubKeyFilesFlag_implements(t *testing.T) {
 	}
 }
 
-func TestPubKeyFilesFlagSet(t *testing.T) {
+func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "vault-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %s", err)
@@ -68,6 +68,44 @@ func TestPubKeyFilesFlagSet(t *testing.T) {
 		t.Fatalf("Bad: %#v", pkf)
 	}
 }
+
+func TestPubKeyFilesFlagSetB64(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "vault-test")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %s", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	err = ioutil.WriteFile(tempDir+"/pubkey1", []byte(pubKey1), 0755)
+	if err != nil {
+		t.Fatalf("Error writing pub key 1 to temp file: %s", err)
+	}
+	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0755)
+	if err != nil {
+		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
+	}
+    err = ioutil.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0755)
+	if err != nil {
+		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
+	}
+
+	pkf := new(PubKeyFilesFlag)
+	err = pkf.Set(tempDir + "/pubkey1,@" + tempDir + "/pubkey2")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	err = pkf.Set(tempDir + "/pubkey3")
+	if err == nil {
+		t.Fatalf("err: should not have been able to set a second value")
+	}
+
+	expected := []string{pubKey1, pubKey2}
+	if !reflect.DeepEqual(pkf.String(), fmt.Sprint(expected)) {
+        t.Fatalf("bad: got %s, expected %s", pkf.String(), fmt.Sprint(expected))
+	}
+}
+
 
 const pubKey1 = `mQENBFXbjPUBCADjNjCUQwfxKL+RR2GA6pv/1K+zJZ8UWIF9S0lk7cVIEfJiprzzwiMwBS5cD0da
 rGin1FHvIWOZxujA7oW0O2TUuatqI3aAYDTfRYurh6iKLC+VS+F7H+/mhfFvKmgr0Y5kDCF1j0T/

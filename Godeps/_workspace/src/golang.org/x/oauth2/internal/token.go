@@ -92,7 +92,6 @@ func (e *expirationTime) UnmarshalJSON(b []byte) error {
 var brokenAuthHeaderProviders = []string{
 	"https://accounts.google.com/",
 	"https://www.googleapis.com/",
-	"https://github.com/",
 	"https://api.instagram.com/",
 	"https://www.douban.com/",
 	"https://api.dropbox.com/",
@@ -110,6 +109,7 @@ var brokenAuthHeaderProviders = []string{
 	"https://test-sandbox.auth.corp.google.com",
 	"https://user.gini.net/",
 	"https://api.netatmo.net/",
+	"https://slack.com/",
 }
 
 // providerAuthHeaderWorks reports whether the OAuth2 server identified by the tokenURL

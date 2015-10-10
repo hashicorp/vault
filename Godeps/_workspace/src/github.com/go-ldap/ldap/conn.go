@@ -8,11 +8,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"gopkg.in/asn1-ber.v1"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"gopkg.in/asn1-ber.v1"
 )
 
 const (

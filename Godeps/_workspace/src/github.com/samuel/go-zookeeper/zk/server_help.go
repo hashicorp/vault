@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -88,7 +89,7 @@ func StartTestCluster(size int, stdout, stderr io.Writer) (*TestCluster, error) 
 		})
 	}
 	success = true
-	time.Sleep(time.Second) // Give the server time to become active. Should probably actually attempt to connect to verify.
+	time.Sleep(3 * time.Second) // Give the server time to become active. Should probably actually attempt to connect to verify.
 	return cluster, nil
 }
 
@@ -116,4 +117,24 @@ func (ts *TestCluster) Stop() error {
 	}
 	defer os.RemoveAll(ts.Path)
 	return nil
+}
+
+func (tc *TestCluster) StartServer(server string) {
+	for _, s := range tc.Servers {
+		if strings.HasSuffix(server, fmt.Sprintf(":%d", s.Port)) {
+			s.Srv.Start()
+			return
+		}
+	}
+	panic(fmt.Sprintf("Unknown server: %s", server))
+}
+
+func (tc *TestCluster) StopServer(server string) {
+	for _, s := range tc.Servers {
+		if strings.HasSuffix(server, fmt.Sprintf(":%d", s.Port)) {
+			s.Srv.Stop()
+			return
+		}
+	}
+	panic(fmt.Sprintf("Unknown server: %s", server))
 }

@@ -965,6 +965,51 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	// Create new token
+	root, err := ts.RootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create a new token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/root", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Get the original expire time to compare
+	originalExpire := auth.ExpirationTime()
+
+	beforeRenew := time.Now().UTC()
+	req := logical.TestRequest(t, logical.WriteOperation, "renew-self")
+	req.ClientToken = auth.ClientToken
+	req.Data["increment"] = "3600s"
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	// Get the new expire time
+	newExpire := resp.Auth.ExpirationTime()
+	if newExpire.Before(originalExpire) {
+		t.Fatalf("should expire later: %s %s", newExpire, originalExpire)
+	}
+	if newExpire.Before(beforeRenew.Add(time.Hour)) {
+		t.Fatalf("should have at least an hour: %s %s", newExpire, beforeRenew)
+	}
+}
+
 func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root

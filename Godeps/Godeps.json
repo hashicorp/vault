@@ -15,68 +15,63 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/endpoints",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/ec2query",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/query",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/rest",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/restxml",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/xml/xmlutil",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/internal/signer/v4",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/iam",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/s3",
-			"Comment": "v0.9.9-3-g7553d52",
-			"Rev": "7553d5227962c0f226768d0435881e99ec0cab35"
+			"Comment": "v0.9.13",
+			"Rev": "f28e73d4791500a90d49190e0a01b769748cc2a8"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-etcd/etcd",
 			"Comment": "v2.0.0-34-gde3514f",
 			"Rev": "de3514f25635bbfb024fdaf2a8d5f67378492675"
-		},
-		{
-			"ImportPath": "github.com/dgrijalva/jwt-go",
-			"Comment": "v2.3.0-4-gc1da563",
-			"Rev": "c1da56349675b292d3200463e2c88b9aa5e02391"
 		},
 		{
 			"ImportPath": "github.com/duosecurity/duo_api_golang",
@@ -88,8 +83,8 @@
 		},
 		{
 			"ImportPath": "github.com/go-ldap/ldap",
-			"Comment": "v1-24-g12f2865",
-			"Rev": "12f28659a82ac70ca6f3fafd977c0e2fdc144f53"
+			"Comment": "v2.1",
+			"Rev": "90b1711ae8a4d6aef7576dfe0bc48def3f3ffcf4"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
@@ -98,8 +93,8 @@
 		},
 		{
 			"ImportPath": "github.com/gocql/gocql",
-			"Comment": "1st_gen_framing-268-g2641ef0",
-			"Rev": "2641ef08fabdc0182465a14a4f23f1521acb2834"
+			"Comment": "1st_gen_framing-277-g7ac7761",
+			"Rev": "7ac77618338ef076ba157eeae4716fa4966410e0"
 		},
 		{
 			"ImportPath": "github.com/golang/snappy",
@@ -115,8 +110,8 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/consul/api",
-			"Comment": "v0.5.2-313-gde08067",
-			"Rev": "de080672fee9e6104572eeea89eccdca135bb918"
+			"Comment": "v0.5.2-322-g78aa6f1",
+			"Rev": "78aa6f1443ba506e8c9bc88b6f4448ad6fee325f"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/errwrap",
@@ -148,8 +143,8 @@
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Comment": "go1.0-cutoff-59-gb269bd0",
-			"Rev": "b269bd035a727d6c1081f76e7a239a1b00674c40"
+			"Comment": "go1.0-cutoff-60-gffe986a",
+			"Rev": "ffe986aba3e6cfcded8b06615965941408891ef0"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/cli",
@@ -178,11 +173,11 @@
 		},
 		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
-			"Rev": "177002e16a0061912f02377e2dd8951a8b3551bc"
+			"Rev": "913027ed60abbe2436b35cf960193b06b00105cf"
 		},
 		{
 			"ImportPath": "github.com/ugorji/go/codec",
-			"Rev": "1d5269ed4e89d423d40362a0914e1c99adb13cc8"
+			"Rev": "45ce7596ace4534e47b69051a92aef7b64ec7b3f"
 		},
 		{
 			"ImportPath": "github.com/vaughan0/go-ini",
@@ -190,40 +185,40 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/bcrypt",
-			"Rev": "aedad9a179ec1ea11b7064c57cbc6dc30d7724ec"
+			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/blowfish",
-			"Rev": "aedad9a179ec1ea11b7064c57cbc6dc30d7724ec"
+			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",
-			"Rev": "aedad9a179ec1ea11b7064c57cbc6dc30d7724ec"
+			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
-			"Rev": "aedad9a179ec1ea11b7064c57cbc6dc30d7724ec"
+			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp",
-			"Rev": "aedad9a179ec1ea11b7064c57cbc6dc30d7724ec"
+			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh",
-			"Rev": "aedad9a179ec1ea11b7064c57cbc6dc30d7724ec"
+			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
+			"Rev": "47990a1ba55743e6ef1affd3a14e5bac8553615d"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
-			"Rev": "82de3fe653a61c1b0174fba87c5f1ca06226ed51"
+			"Rev": "2fbf3d7329d847b125188ad64b68cfb1f548938a"
 		},
 		{
 			"ImportPath": "gopkg.in/asn1-ber.v1",
-			"Comment": "v1",
-			"Rev": "9eae18c3681ae3d3c677ac2b80a8fe57de45fc09"
+			"Comment": "v1.1",
+			"Rev": "4e86f4367175e39f69d9358a5f17b4dda270378d"
 		},
 		{
 			"ImportPath": "gopkg.in/inf.v0",

@@ -32,7 +32,7 @@ func New(config *aws.Config) *EC2 {
 		ServiceInfo: serviceinfo.ServiceInfo{
 			Config:      defaults.DefaultConfig.Merge(config),
 			ServiceName: "ec2",
-			APIVersion:  "2015-04-15",
+			APIVersion:  "2015-10-01",
 		},
 	}
 	service.Initialize()

@@ -46,6 +46,8 @@ type TokenStore struct {
 	expiration *ExpirationManager
 
 	cubbyholeBackend *CubbyholeBackend
+
+	policyLookupFunc func() ([]string, error)
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -57,6 +59,10 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	// Initialize the store
 	t := &TokenStore{
 		view: view,
+	}
+
+	if c.policy != nil {
+		t.policyLookupFunc = c.policy.ListPolicies
 	}
 
 	// Setup the salt
@@ -131,7 +137,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-self",
+				Pattern: "revoke-self$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.WriteOperation: t.handleRevokeSelf,
@@ -193,6 +199,28 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokePrefixHelp),
 				HelpDescription: strings.TrimSpace(tokenRevokePrefixHelp),
+			},
+
+			&framework.Path{
+				Pattern: "renew-self$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to renew",
+					},
+					"increment": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Description: "The desired increment in seconds to the token expiration",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleRenewSelf,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRenewSelfHelp),
+				HelpDescription: strings.TrimSpace(tokenRenewSelfHelp),
 			},
 
 			&framework.Path{
@@ -614,6 +642,23 @@ func (ts *TokenStore) handleCreate(
 		},
 	}
 
+	if ts.policyLookupFunc != nil {
+		availPolicies, err := ts.policyLookupFunc()
+		if err == nil {
+			policies := map[string]bool{}
+			if availPolicies != nil && len(availPolicies) > 0 {
+				for _, p := range availPolicies {
+					policies[p] = true
+				}
+			}
+			for _, p := range te.Policies {
+				if !policies[p] {
+					resp.AddWarning(fmt.Sprintf("policy \"%s\" does not exist", p))
+				}
+			}
+		}
+	}
+
 	return resp, nil
 }
 
@@ -737,6 +782,12 @@ func (ts *TokenStore) handleLookup(
 	return resp, nil
 }
 
+func (ts *TokenStore) handleRenewSelf(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	data.Raw["token"] = req.ClientToken
+	return ts.handleRenew(req, data)
+}
+
 // handleRenew handles the auth/token/renew/id path for renewal of tokens.
 // This is used to prevent token expiration and revocation.
 func (ts *TokenStore) handleRenew(
@@ -761,7 +812,7 @@ func (ts *TokenStore) handleRenew(
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
-	// Revoke the token and its children
+	// Renew the token and its children
 	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -793,5 +844,6 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
 	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
-	tokenRenewHelp        = `This endpoint will renew the token and prevent expiration.`
+	tokenRenewHelp        = `This endpoint will renew the given token and prevent expiration.`
+	tokenRenewSelfHelp    = `This endpoint will renew the token used to call it and prevent expiration.`
 )

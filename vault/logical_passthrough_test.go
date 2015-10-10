@@ -166,6 +166,25 @@ func TestPassthroughBackend_List(t *testing.T) {
 	test(b)
 }
 
+func TestPassthroughBackend_Revoke(t *testing.T) {
+	test := func(b logical.Backend) {
+		req := logical.TestRequest(t, logical.RevokeOperation, "generic")
+		req.Secret = &logical.Secret{
+			InternalData: map[string]interface{}{
+				"secret_type": "generic",
+			},
+		}
+
+		if _, err := b.HandleRequest(req); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+	b := testPassthroughBackend()
+	test(b)
+	b = testPassthroughLeasedBackend()
+	test(b)
+}
+
 func testPassthroughBackend() logical.Backend {
 	b, _ := PassthroughBackendFactory(&logical.BackendConfig{
 		Logger: nil,

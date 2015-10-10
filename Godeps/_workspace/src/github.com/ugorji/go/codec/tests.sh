@@ -24,17 +24,18 @@ _run() {
         esac
     done
     # shift $((OPTIND-1))
-    echo ">>>>>>> tags: $ztags"
+    printf '............. TAGS: %s .............\n' "$ztags"
+    # echo ">>>>>>> TAGS: $ztags"
     
     OPTIND=1
     while getopts "xurtcinsvg" flag
     do
         case "x$flag" in 
-            'xt') echo ">>>>>>> REGULAR    "; go test "-tags=$ztags" "$zverbose" ; sleep 2 ;;
-            'xc') echo ">>>>>>> CANONICAL  "; go test "-tags=$ztags" "$zverbose" -tc; sleep 2 ;;
-            'xi') echo ">>>>>>> I/O        "; go test "-tags=$ztags" "$zverbose" -ti; sleep 2 ;;
-            'xn') echo ">>>>>>> NO_SYMBOLS "; go test "-tags=$ztags" "$zverbose" -tn; sleep 2 ;;
-            'xs') echo ">>>>>>> TO_ARRAY   "; go test "-tags=$ztags" "$zverbose" -ts; sleep 2 ;;
+            'xt') printf ">>>>>>> REGULAR    : "; go test "-tags=$ztags" "$zverbose" ; sleep 2 ;;
+            'xc') printf ">>>>>>> CANONICAL  : "; go test "-tags=$ztags" "$zverbose" -tc; sleep 2 ;;
+            'xi') printf ">>>>>>> I/O        : "; go test "-tags=$ztags" "$zverbose" -ti; sleep 2 ;;
+            'xn') printf ">>>>>>> NO_SYMBOLS : "; go test "-tags=$ztags" "$zverbose" -tn; sleep 2 ;;
+            'xs') printf ">>>>>>> TO_ARRAY   : "; go test "-tags=$ztags" "$zverbose" -ts; sleep 2 ;;
             *) ;;
         esac
     done
@@ -43,7 +44,7 @@ _run() {
     OPTIND=1
 }
 
-echo ">>>>>>> RUNNING VARIATIONS OF TESTS"    
+# echo ">>>>>>> RUNNING VARIATIONS OF TESTS"    
 if [[ "x$@" = x ]]; then
     # r, x, g, gu
     _run "-rtcins"

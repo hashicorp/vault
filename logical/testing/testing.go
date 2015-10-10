@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -299,8 +300,14 @@ func TestCheckAuth(policies []string) TestCheckFunc {
 		if resp == nil || resp.Auth == nil {
 			return fmt.Errorf("no auth in response")
 		}
-		if !reflect.DeepEqual(resp.Auth.Policies, policies) {
-			return fmt.Errorf("invalid policies: %#v", resp.Auth.Policies)
+		expected := make([]string, len(policies))
+		copy(expected, policies)
+		sort.Strings(expected)
+		ret := make([]string, len(resp.Auth.Policies))
+		copy(ret, resp.Auth.Policies)
+		sort.Strings(ret)
+		if !reflect.DeepEqual(ret, expected) {
+			return fmt.Errorf("invalid policies: expected %#v, got %#v", expected, ret)
 		}
 
 		return nil

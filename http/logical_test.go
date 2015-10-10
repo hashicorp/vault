@@ -27,19 +27,21 @@ func TestLogical(t *testing.T) {
 	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
 
 	var actual map[string]interface{}
+	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"renewable":      false,
 		"lease_duration": float64((30 * 24 * time.Hour) / time.Second),
 		"data": map[string]interface{}{
 			"data": "bar",
 		},
-		"auth": nil,
+		"auth":     nil,
+		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual, "lease_id")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v %#v", actual, expected)
+		t.Fatalf("bad:\nactual:\n%#v\nexpected:\n%#v", actual, expected)
 	}
 
 	// DELETE
@@ -109,6 +111,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	//// READ to standby
 	resp = testHttpGet(t, root, addr2+"/v1/auth/token/lookup-self")
 	var actual map[string]interface{}
+	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"renewable":      false,
 		"lease_duration": float64(0),
@@ -121,7 +124,8 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"id":           root,
 			"ttl":          float64(0),
 		},
-		"auth": nil,
+		"warnings": nilWarnings,
+		"auth":     nil,
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -162,12 +166,13 @@ func TestLogical_CreateToken(t *testing.T) {
 			"lease_duration": float64(0),
 			"renewable":      false,
 		},
+		"warnings": []interface{}{"policy \"root\" does not exist"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v %#v", actual, expected)
+		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
 	}
 }
 

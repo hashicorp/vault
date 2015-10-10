@@ -67,5 +67,5 @@ func (ts *jwtAccessTokenSource) Token() (*oauth2.Token, error) {
 	if err != nil {
 		return nil, fmt.Errorf("google: could not encode JWT: %v", err)
 	}
-	return &oauth2.Token{AccessToken: msg, TokenType: "Bearer"}, nil
+	return &oauth2.Token{AccessToken: msg, TokenType: "Bearer", Expiry: exp}, nil
 }

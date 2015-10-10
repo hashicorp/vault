@@ -9,7 +9,7 @@ if [ -z $VERSION ]; then
 fi
 
 # Make sure we have a bintray API key
-if [ -z $BINTRAY_API_KEY ] && [ ! -z $NOBINTRAY ]; then
+if [ -z $BINTRAY_API_KEY ] && [ ! -z $BINTRAY ]; then
     echo "Please set your bintray API key in the BINTRAY_API_KEY env var."
     exit 1
 fi
@@ -53,7 +53,7 @@ if [ -z $NOSIGN ]; then
 fi
 
 # Upload
-if [ ! -z $NOBINTRAY ]; then
+if [ ! -z $BINTRAY ]; then
   for ARCHIVE in ./pkg/dist/*; do
     ARCHIVE_NAME=$(basename ${ARCHIVE})
 

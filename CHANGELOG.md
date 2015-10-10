@@ -1,12 +1,47 @@
 ## 0.4.0 (Unreleased)
 
+DEPRECATIONS/BREAKING CHANGES:
+
+ * Policy Name Casing: Policy names are now normalized to lower-case on write, helping prevent accidental case mismatches. For backwards compatibility, policy names are not currently normalized when reading or deleting. [GH-676]
+
+IMPROVEMENTS:
+
+ * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
+ * core: Tokens can now renew themselves [GH-455]
+ * core: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
+ * logical: Responses now contain a "warnings" key containing a list of warnings returned from the server. These are conditions that did not require failing an operation, but of which the client should be aware. [GH-676]
+
 BUG FIXES:
 
+ * api: API client now checks for a 301 response for redirects. Vault doesn't generate these, but in certain conditions Go's internal HTTP handler can generate them, leading to client errors.
+ * cli: `token-create` now supports the `ttl` parameter in addition to the deprecated `lease` parameter. [GH-688]
+ * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
+ * core: Stale leader entries will now be reaped [GH-679]
+ * core: Using `mount-tune` on the auth/token path did not take effect. [GH-688]
+
+MISC:
+
+ * Various documentation fixes and improvements [GH-688]
+
+## 0.3.1 (October 6, 2015)
+
+SECURITY:
+
+ * core: In certain failure scenarios, the full values of requests and responses would be logged [GH-665]
+
+FEATURES:
+
+ * **Settable Maximum Open Connections**: The `mysql` and `postgresql` backends now allow setting the number of maximum open connections to the database, which was previously capped to 2. [GH-661]
+ * **Renewable Tokens for GitHub**: The `github` backend now supports specifying a TTL, enabling renewable tokens. [GH-664]
+
+BUG FIXES:
+
+ * dist: linux-amd64 distribution was dynamically linked [GH-656]
  * credential/github: Fix acceptance tests [GH-651]
 
 MISC:
 
- * Various minor documentation fixes and improvements [GH-649] [GH-650]
+ * Various minor documentation fixes and improvements [GH-649] [GH-650] [GH-654] [GH-663]
 
 ## 0.3.0 (September 28, 2015)
 
