@@ -500,8 +500,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 		// Apply the default lease if none given
 		if resp.Secret.TTL == 0 {
-			ttl := sysView.DefaultLeaseTTL()
-			resp.Secret.TTL = ttl
+			resp.Secret.TTL = sysView.DefaultLeaseTTL()
 		}
 
 		// Limit the lease duration
@@ -548,14 +547,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			return nil, auth, ErrInternalError
 		}
 
-		// Set the default lease if non-provided, root tokens are exempt
+		sysView := c.router.MatchingSystemView(req.Path)
+		if sysView == nil {
+			c.logger.Println("[ERR] core: unable to retrieve system view from router")
+			return nil, auth, ErrInternalError
+		}
+
+		// Apply the default lease if none given
 		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.TTL = c.defaultLeaseTTL
+			resp.Auth.TTL = sysView.DefaultLeaseTTL()
 		}
 
 		// Limit the lease duration
-		if resp.Auth.TTL > c.maxLeaseTTL {
-			resp.Auth.TTL = c.maxLeaseTTL
+		maxTTL := sysView.MaxLeaseTTL()
+		if resp.Auth.TTL > maxTTL {
+			resp.Auth.TTL = maxTTL
 		}
 
 		// Register with the expiration manager
