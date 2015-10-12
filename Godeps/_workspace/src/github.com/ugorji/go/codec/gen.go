@@ -144,6 +144,7 @@ type genRunner struct {
 	xs string // top level variable/constant suffix
 	hn string // fn helper type name
 
+	ti *TypeInfos
 	// rr *rand.Rand // random generator for file-specific types
 }
 
@@ -151,7 +152,7 @@ type genRunner struct {
 // type passed. All the types must be in the same package.
 //
 // Library users: *DO NOT USE IT DIRECTLY. IT WILL CHANGE CONTINOUSLY WITHOUT NOTICE.*
-func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, typ ...reflect.Type) {
+func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, ti *TypeInfos, typ ...reflect.Type) {
 	if len(typ) == 0 {
 		return
 	}
@@ -168,6 +169,10 @@ func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, typ ...ref
 		ts:     []reflect.Type{},
 		bp:     genImportPath(typ[0]),
 		xs:     uid,
+		ti:     ti, //TODO: make it configurable
+	}
+	if x.ti == nil {
+		x.ti = defTypeInfos
 	}
 	if x.xs == "" {
 		rr := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -756,7 +761,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 	// replicate code in kStruct i.e. for each field, deref type to non-pointer, and call x.enc on it
 
 	// if t === type currently running selfer on, do for all
-	ti := getTypeInfo(rtid, t)
+	ti := x.ti.get(rtid, t)
 	i := x.varsfx()
 	sepVarname := genTempVarPfx + "sep" + i
 	numfieldsvar := genTempVarPfx + "q" + i
@@ -1328,7 +1333,7 @@ func (x *genRunner) decMapFallback(varname string, rtid uintptr, t reflect.Type)
 }
 
 func (x *genRunner) decStructMapSwitch(kName string, varname string, rtid uintptr, t reflect.Type) {
-	ti := getTypeInfo(rtid, t)
+	ti := x.ti.get(rtid, t)
 	tisfi := ti.sfip // always use sequence from file. decStruct expects same thing.
 	x.line("switch (" + kName + ") {")
 	for _, si := range tisfi {
@@ -1426,7 +1431,7 @@ func (x *genRunner) decStructMap(varname, lenvarname string, rtid uintptr, t ref
 func (x *genRunner) decStructArray(varname, lenvarname, breakString string, rtid uintptr, t reflect.Type) {
 	tpfx := genTempVarPfx
 	i := x.varsfx()
-	ti := getTypeInfo(rtid, t)
+	ti := x.ti.get(rtid, t)
 	tisfi := ti.sfip // always use sequence from file. decStruct expects same thing.
 	x.linef("var %sj%s int", tpfx, i)
 	x.linef("var %sb%s bool", tpfx, i) // break

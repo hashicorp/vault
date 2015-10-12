@@ -91,6 +91,8 @@ func Marshal(info TypeInfo, value interface{}) ([]byte, error) {
 		return marshalVarint(info, value)
 	case TypeInet:
 		return marshalInet(info, value)
+	case TypeTuple:
+		return marshalTuple(info, value)
 	case TypeUDT:
 		return marshalUDT(info, value)
 	}
@@ -1192,6 +1194,37 @@ func unmarshalInet(info TypeInfo, data []byte, value interface{}) error {
 		return nil
 	}
 	return unmarshalErrorf("cannot unmarshal %s into %T", info, value)
+}
+
+func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
+	tuple := info.(TupleTypeInfo)
+	switch v := value.(type) {
+	case []interface{}:
+		var buf []byte
+
+		if len(v) != len(tuple.Elems) {
+			return nil, unmarshalErrorf("cannont marshal tuple: wrong number of elements")
+		}
+
+		for i, elem := range v {
+			data, err := Marshal(tuple.Elems[i], elem)
+			if err != nil {
+				return nil, err
+			}
+
+			n := len(data)
+			buf = append(buf, byte(n>>24),
+				byte(n>>16),
+				byte(n>>8),
+				byte(n))
+
+			buf = append(buf, data...)
+		}
+
+		return buf, nil
+	}
+
+	return nil, unmarshalErrorf("cannot marshal %T into %s", value, tuple)
 }
 
 // currently only support unmarshal into a list of values, this makes it possible

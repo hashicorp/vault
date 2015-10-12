@@ -1309,7 +1309,7 @@ func (d *Decoder) getDecFn(rt reflect.Type, checkFastpath, checkCodecSelfer bool
 	}
 
 	// debugf("\tCreating new dec fn for type: %v\n", rt)
-	ti := getTypeInfo(rtid, rt)
+	ti := d.h.getTypeInfo(rtid, rt)
 	fi := &(fn.i)
 	fi.d = d
 	fi.ti = ti

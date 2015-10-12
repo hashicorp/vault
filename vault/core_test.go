@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/otto/helper/uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )

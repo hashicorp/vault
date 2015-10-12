@@ -996,7 +996,7 @@ func (e *Encoder) getEncFn(rtid uintptr, rt reflect.Type, checkFastpath, checkCo
 		fn = &(e.s[len(e.s)-1]).fn
 	}
 
-	ti := getTypeInfo(rtid, rt)
+	ti := e.h.getTypeInfo(rtid, rt)
 	fi := &(fn.i)
 	fi.e = e
 	fi.ti = ti

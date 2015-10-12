@@ -9,7 +9,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/uuid"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"

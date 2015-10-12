@@ -212,9 +212,6 @@ var (
 	bigen               = binary.BigEndian
 	structInfoFieldName = "_struct"
 
-	cachedTypeInfo      = make(map[uintptr]*typeInfo, 64)
-	cachedTypeInfoMutex sync.RWMutex
-
 	// mapStrIntfTyp = reflect.TypeOf(map[string]interface{}(nil))
 	intfSliceTyp = reflect.TypeOf([]interface{}(nil))
 	intfTyp      = intfSliceTyp.Elem()
@@ -256,6 +253,8 @@ var (
 	noFieldNameToStructFieldInfoErr = errors.New("no field name passed to parseStructFieldInfo")
 )
 
+var defTypeInfos = NewTypeInfos([]string{"codec", "json"})
+
 // Selfer defines methods by which a value can encode or decode itself.
 //
 // Any type which implements Selfer will be able to encode or decode itself.
@@ -281,6 +280,11 @@ type MapBySlice interface {
 //
 // BasicHandle encapsulates the common options and extension functions.
 type BasicHandle struct {
+	// TypeInfos is used to get the type info for any type.
+	//
+	// If not configure, the default TypeInfos is used, which uses struct tag keys: codec, json
+	TypeInfos *TypeInfos
+
 	extHandle
 	EncodeOptions
 	DecodeOptions
@@ -288,6 +292,13 @@ type BasicHandle struct {
 
 func (x *BasicHandle) getBasicHandle() *BasicHandle {
 	return x
+}
+
+func (x *BasicHandle) getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
+	if x.TypeInfos != nil {
+		return x.TypeInfos.get(rtid, rt)
+	}
+	return defTypeInfos.get(rtid, rt)
 }
 
 // Handle is the interface for a specific encoding format.
@@ -695,28 +706,48 @@ func (ti *typeInfo) indexForEncName(name string) int {
 	return -1
 }
 
-func getStructTag(t reflect.StructTag) (s string) {
+// TypeInfos caches typeInfo for each type on first inspection.
+//
+// It is configured with a set of tag keys, which are used to get
+// configuration for the type.
+type TypeInfos struct {
+	infos map[uintptr]*typeInfo
+	mu    sync.RWMutex
+	tags  []string
+}
+
+// NewTypeInfos creates a TypeInfos given a set of struct tags keys.
+//
+// This allows users customize the struct tag keys which contain configuration
+// of their types.
+func NewTypeInfos(tags []string) *TypeInfos {
+	return &TypeInfos{tags: tags, infos: make(map[uintptr]*typeInfo, 64)}
+}
+
+func (x *TypeInfos) structTag(t reflect.StructTag) (s string) {
 	// check for tags: codec, json, in that order.
 	// this allows seamless support for many configured structs.
-	s = t.Get("codec")
-	if s == "" {
-		s = t.Get("json")
+	for _, x := range x.tags {
+		s = t.Get(x)
+		if s != "" {
+			return s
+		}
 	}
 	return
 }
 
-func getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
+func (x *TypeInfos) get(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 	var ok bool
-	cachedTypeInfoMutex.RLock()
-	pti, ok = cachedTypeInfo[rtid]
-	cachedTypeInfoMutex.RUnlock()
+	x.mu.RLock()
+	pti, ok = x.infos[rtid]
+	x.mu.RUnlock()
 	if ok {
 		return
 	}
 
-	cachedTypeInfoMutex.Lock()
-	defer cachedTypeInfoMutex.Unlock()
-	if pti, ok = cachedTypeInfo[rtid]; ok {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if pti, ok = x.infos[rtid]; ok {
 		return
 	}
 
@@ -768,11 +799,11 @@ func getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 	if rt.Kind() == reflect.Struct {
 		var siInfo *structFieldInfo
 		if f, ok := rt.FieldByName(structInfoFieldName); ok {
-			siInfo = parseStructFieldInfo(structInfoFieldName, getStructTag(f.Tag))
+			siInfo = parseStructFieldInfo(structInfoFieldName, x.structTag(f.Tag))
 			ti.toArray = siInfo.toArray
 		}
 		sfip := make([]*structFieldInfo, 0, rt.NumField())
-		rgetTypeInfo(rt, nil, make(map[string]bool, 16), &sfip, siInfo)
+		x.rget(rt, nil, make(map[string]bool, 16), &sfip, siInfo)
 
 		ti.sfip = make([]*structFieldInfo, len(sfip))
 		ti.sfi = make([]*structFieldInfo, len(sfip))
@@ -781,11 +812,11 @@ func getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 		copy(ti.sfi, sfip)
 	}
 	// sfi = sfip
-	cachedTypeInfo[rtid] = pti
+	x.infos[rtid] = pti
 	return
 }
 
-func rgetTypeInfo(rt reflect.Type, indexstack []int, fnameToHastag map[string]bool,
+func (x *TypeInfos) rget(rt reflect.Type, indexstack []int, fnameToHastag map[string]bool,
 	sfi *[]*structFieldInfo, siInfo *structFieldInfo,
 ) {
 	for j := 0; j < rt.NumField(); j++ {
@@ -794,7 +825,7 @@ func rgetTypeInfo(rt reflect.Type, indexstack []int, fnameToHastag map[string]bo
 		if tk := f.Type.Kind(); tk == reflect.Func {
 			continue
 		}
-		stag := getStructTag(f.Tag)
+		stag := x.structTag(f.Tag)
 		if stag == "-" {
 			continue
 		}
@@ -825,7 +856,7 @@ func rgetTypeInfo(rt reflect.Type, indexstack []int, fnameToHastag map[string]bo
 				copy(indexstack2, indexstack)
 				indexstack2[len(indexstack)] = j
 				// indexstack2 := append(append(make([]int, 0, len(indexstack)+4), indexstack...), j)
-				rgetTypeInfo(ft, indexstack2, fnameToHastag, sfi, siInfo)
+				x.rget(ft, indexstack2, fnameToHastag, sfi, siInfo)
 				continue
 			}
 		}

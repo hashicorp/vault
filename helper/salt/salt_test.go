@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/uuid"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 

@@ -142,7 +142,7 @@ _codegenerators() {
     then
         true && \
             echo "codecgen - !unsafe ... " && \
-            codecgen  -rt codecgen -t 'x,codecgen,!unsafe' -o values_codecgen${zsfx} -d 1978 $zfin && \
+            codecgen -rt codecgen -t 'x,codecgen,!unsafe' -o values_codecgen${zsfx} -d 1978 $zfin && \
             echo "codecgen - unsafe ... " && \
             codecgen  -u -rt codecgen -t 'x,codecgen,unsafe' -o values_codecgen_unsafe${zsfx} -d 1978 $zfin && \
             echo "msgp ... " && \
