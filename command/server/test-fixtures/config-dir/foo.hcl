@@ -1,3 +1,4 @@
+disable_cache = true
 disable_mlock = true
 
 backend "consul" {

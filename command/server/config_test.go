@@ -36,6 +36,7 @@ func TestLoadConfigFile(t *testing.T) {
 			DisableHostname: false,
 		},
 
+		DisableCache: true,
 		DisableMlock: true,
 
 		MaxLeaseTTL:        10 * time.Hour,
@@ -128,6 +129,7 @@ func TestLoadConfigDir(t *testing.T) {
 	}
 
 	expected := &Config{
+		DisableCache: true,
 		DisableMlock: true,
 
 		Listeners: []*Listener{
