@@ -38,7 +38,9 @@ writing one or more hosts, a username, and a password:
 
 ```text
 $ vault write cassandra/config/connection \
-    hosts=localhost username=cassandra password=cassandra
+    hosts=localhost \
+    username=cassandra \
+    password=cassandra
 ```
 
 In this case, we've configured Vault with the user "cassandra" and password "cassandra",
@@ -258,12 +260,12 @@ subpath for interactive help output.
 
     ```javascript
     {
-        "data": {
-            "creation_cql": "CREATE USER...",
-            "revocation_cql": "DROP USER...",
-            "lease": "12h",
-            "lease_grace_period": "1h"
-        }
+      "data": {
+        "creation_cql": "CREATE USER...",
+        "revocation_cql": "DROP USER...",
+        "lease": "12h",
+        "lease_grace_period": "1h"
+      }
     }
     ```
 
@@ -321,10 +323,10 @@ subpath for interactive help output.
 
     ```javascript
     {
-        "data": {
-            "username": "vault-root-1430158508-126",
-            "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
-        }
+      "data": {
+        "username": "vault-root-1430158508-126",
+        "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
+      }
     }
     ```
 

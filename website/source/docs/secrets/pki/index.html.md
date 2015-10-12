@@ -74,7 +74,8 @@ Successfully mounted 'pki' at 'pki'!
 Next, Vault must be configured with a root certificate and associated private key. This is done by writing the contents of a file or *stdin*:
 
 ```text
-$ vault write pki/config/ca pem_bundle="@ca_bundle.pem"
+$ vault write pki/config/ca \
+    pem_bundle="@ca_bundle.pem"
 Success! Data written to: pki/config/ca
 ```
 
@@ -99,7 +100,8 @@ Success! Data written to: pki/roles/example-dot-com
 By writing to the `roles/example-dot-com` path we are defining the `example-dot-com` role. To generate a new set of credentials, we simply write to the `issue` endpoint with that role name: Vault is now configured to create and manage certificates!
 
 ```text
-$ vault write pki/issue/example-dot-com common_name=blah.example.com
+$ vault write pki/issue/example-dot-com \
+    common_name=blah.example.com
 Key            	Value
 lease_id       	pki/issue/example-dot-com/819393b5-e1a1-9efd-b72f-4dc3a1972e31
 lease_duration 	259200
@@ -195,9 +197,9 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
 
     ```javascript
     {
-        "data": {
-            "certificate": "-----BEGIN CERTIFICATE-----\nMIIGmDCCBYCgAwIBAgIHBzEB3fTzhTANBgkqhkiG9w0BAQsFADCBjDELMAkGA1UE\n..."
-        }
+      "data": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIGmDCCBYCgAwIBAgIHBzEB3fTzhTANBgkqhkiG9w0BAQsFADCBjDELMAkGA1UE\n..."
+      }
     }
     ...
     ```
@@ -218,14 +220,20 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
     command similar to the following:<br/>
 
     ```text
-    curl -X POST --data "@cabundle.json" http://127.0.0.1:8200/v1/pki/config/ca -H X-Vault-Token:06b9d...
+    $ curl \
+        -H "X-Vault-Token:06b9d..." \
+        -X POST \
+        --data "@cabundle.json" \
+        http://127.0.0.1:8200/v1/pki/config/ca
     ```
 
     Note that if you provide the data through the HTTP API it must be
     JSON-formatted, with newlines replaced with `\n`, like so:
 
-    ```text
-    { "pem_bundle": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END CERTIFICATE-----" }
+    ```javascript
+    {
+      "pem_bundle": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END CERTIFICATE-----"
+    }
     ```
   </dd>
 
@@ -314,13 +322,13 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
   <dt>Returns</dt>
   <dd>
 
-  ```javascript
-  {
+    ```javascript
+    {
       "data": {
-          "success": true
+        "success": true
       }
-  }
-  ```
+    }
+    ```
 
   </dd>
 </dl>
@@ -383,20 +391,20 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
   <dt>Returns</dt>
   <dd>
 
-  ```javascript
-  {
+    ```javascript
+    {
       "lease_id": "pki/issue/test/7ad6cfa5-f04f-c62a-d477-f33210475d05",
       "renewable": false,
       "lease_duration": 21600,
       "data": {
-          "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
-          "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
-          "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAnVHfwoKsUG1GDVyWB1AFroaKl2ImMBO8EnvGLRrmobIkQvh+\n...\nQN351pgTphi6nlCkGPzkDuwvtxSxiCWXQcaxrHAL7MiJpPzkIBq1\n-----END RSA PRIVATE KEY-----\n",
-          "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
-      },
-      "auth": null
-  }
-  ```
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+        "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAnVHfwoKsUG1GDVyWB1AFroaKl2ImMBO8EnvGLRrmobIkQvh+\n...\nQN351pgTphi6nlCkGPzkDuwvtxSxiCWXQcaxrHAL7MiJpPzkIBq1\n-----END RSA PRIVATE KEY-----\n",
+        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+        },
+        "auth": null
+    }
+    ```
 
   </dd>
 </dl>
@@ -434,13 +442,14 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
 
   <dt>Returns</dt>
   <dd>
-  ```javascript
-  {
+
+    ```javascript
+    {
       "data": {
-          "revocation_time": 1433269787
+        "revocation_time": 1433269787
       }
-  }
-  ```
+    }
+    ```
   </dd>
 </dl>
 
@@ -603,21 +612,21 @@ If you get stuck at any time, simply run `vault path-help pki` or with a subpath
 
     ```javascript
     {
-        "data": {
-            "allow_any_name": false,
-            "allow_ip_sans": true,
-            "allow_localhost": true,
-            "allow_subdomains": false,
-            "allow_token_displayname": false,
-            "allowed_base_domain": "example.com",
-            "client_flag": true,
-            "code_signing_flag": false,
-            "key_bits": 2048,
-            "key_type": "rsa",
-            "ttl": "6h",
-            "max_ttl": "12h",
-            "server_flag": true
-        }
+      "data": {
+        "allow_any_name": false,
+        "allow_ip_sans": true,
+        "allow_localhost": true,
+        "allow_subdomains": false,
+        "allow_token_displayname": false,
+        "allowed_base_domain": "example.com",
+        "client_flag": true,
+        "code_signing_flag": false,
+        "key_bits": 2048,
+        "key_type": "rsa",
+        "ttl": "6h",
+        "max_ttl": "12h",
+        "server_flag": true
+      }
     }
     ```
 

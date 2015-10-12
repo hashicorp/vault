@@ -49,7 +49,7 @@ Prior to using the GitHub auth backend, it must be configured. To
 configure it, use the `/config` endpoint with the following arguments:
 
   * `organization` (string, required) - The organization name a user must
-       be a part of to authenticate.
+     be a part of to authenticate.
 
 ###Generate a GitHub Personal Access Token
 Access your Personal Access Tokens in GitHub at [https://github.com/settings/tokens](https://github.com/settings/tokens).

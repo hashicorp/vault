@@ -18,7 +18,7 @@ $ curl http://127.0.0.1:8200/v1/sys/init
 This will return a JSON response:
 
 ```javascript
-{"initialized":true}
+{ "initialized": true }
 ```
 
 ## Accessing Secrets via the REST APIs
@@ -72,9 +72,9 @@ Using the unseal key (not the root token) from above, you can unseal the Vault v
 
 ```
 $ curl \
-  -X PUT \
-  -d '{"key": "69cf1c12a1f65dddd19472330b28cf4e95c657dfbe545877e5765d25d0592b16"}' \
-  http://127.0.0.1:8200/v1/sys/unseal
+    -X PUT \
+    -d '{"key": "69cf1c12a1f65dddd19472330b28cf4e95c657dfbe545877e5765d25d0592b16"}' \
+    http://127.0.0.1:8200/v1/sys/unseal
 ```
 
 Note that you should replace `69cf1c1...` with the generated key from your output. This will return a JSON response:
@@ -94,10 +94,10 @@ We can enable an authentication backend with the following `curl` command:
 
 ```
 $ curl \
-  -X POST \
-  -H "X-Vault-Token:$VAULT_TOKEN" \
-  -d '{"type":"app-id"}' \
-  http://127.0.0.1:8200/v1/sys/auth/app-id
+    -X POST \
+    -H "X-Vault-Token:$VAULT_TOKEN" \
+    -d '{"type":"app-id"}' \
+    http://127.0.0.1:8200/v1/sys/auth/app-id
 ```
 
 Notice that the request to the app-id endpoint needed an authentication token. In this case we are passing the root token generated when we started the Vault server. We could also generate tokens using any other authentication mechanisms, but we will use the root token for simplicity.
@@ -108,10 +108,10 @@ First, we need to associate the application with a particular [ACL policy](/docs
 
 ```
 $ curl \
-  -X POST \
-  -H "X-Vault-Token:$VAULT_TOKEN" \
-  -d '{"value":"root", "display_name":"demo"}' \
-  http://localhost:8200/v1/auth/app-id/map/app-id/152AEA38-85FB-47A8-9CBD-612D645BFACA
+    -X POST \
+    -H "X-Vault-Token:$VAULT_TOKEN" \
+    -d '{"value":"root", "display_name":"demo"}' \
+    http://localhost:8200/v1/auth/app-id/map/app-id/152AEA38-85FB-47A8-9CBD-612D645BFACA
 ```
 
 Note that `152AEA38-85FB-47A8-9CBD-612D645BFACA` is a randomly generated UUID. You can use any tool to generate a UUID, but make sure it is unique.
@@ -120,19 +120,19 @@ Next we need to map the application to a particular "user". In Vault, this is ac
 
 ```
 $ curl \
-  -X POST \
-  -H "X-Vault-Token:$VAULT_TOKEN" \
-  -d '{"value":"152AEA38-85FB-47A8-9CBD-612D645BFACA"}' \
-  http://localhost:8200/v1/auth/app-id/map/user-id/5ADF8218-D7FB-4089-9E38-287465DBF37E
+    -X POST \
+    -H "X-Vault-Token:$VAULT_TOKEN" \
+    -d '{"value":"152AEA38-85FB-47A8-9CBD-612D645BFACA"}' \
+    http://localhost:8200/v1/auth/app-id/map/user-id/5ADF8218-D7FB-4089-9E38-287465DBF37E
 ```
 
 Now your app can identify itself via the app-id and user-id and get access to Vault. The first step is to authenticate:
 
 ```
 $ curl \
-  -X POST \
-  -d '{"app_id":"152AEA38-85FB-47A8-9CBD-612D645BFACA", "user_id": "5ADF8218-D7FB-4089-9E38-287465DBF37E"}' \
-  "http://127.0.0.1:8200/v1/auth/app-id/login"
+    -X POST \
+    -d '{"app_id":"152AEA38-85FB-47A8-9CBD-612D645BFACA", "user_id": "5ADF8218-D7FB-4089-9E38-287465DBF37E"}' \
+    "http://127.0.0.1:8200/v1/auth/app-id/login"
 ```
 
 This will return a response that looks like the following:
@@ -168,19 +168,19 @@ Be sure to replace this with the value returned from your API response. We can n
 
 ```
 $ curl \
-  -X POST \
-  -H "X-Vault-Token:$VAULT_TOKEN" \
-  -H 'Content-type: application/json' \
-  -d '{"bar":"baz"}' \
-  http://127.0.0.1:8200/v1/secret/foo
+    -X POST \
+    -H "X-Vault-Token:$VAULT_TOKEN" \
+    -H 'Content-type: application/json' \
+    -d '{"bar":"baz"}' \
+    http://127.0.0.1:8200/v1/secret/foo
 ```
 
 This will create a new secret named "foo" with the given JSON contents. We can read this value back with the same token:
 
 ```
 $ curl \
-  -H "X-Vault-Token:$VAULT_TOKEN" \
-  http://127.0.0.1:8200/v1/secret/foo
+    -H "X-Vault-Token:$VAULT_TOKEN" \
+    http://127.0.0.1:8200/v1/secret/foo
 ```
 
 This should return a response like this:

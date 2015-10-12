@@ -46,20 +46,20 @@ The response will be in JSON. For example:
 
 ```javascript
 {
-  "lease_id":"",
-  "renewable":false,
-  "lease_duration":0,
-  "data":null,
-  "auth":{
-    "client_token":"c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
-    "policies":[
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "auth": {
+    "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
+    "policies": [
       "root"
     ],
-    "metadata":{
-      "username":"mitchellh"
+    "metadata": {
+      "username": "mitchellh"
     },
-    "lease_duration":0,
-    "renewable":false
+    "lease_duration": 0,
+    "renewable": false
   }
 }
 ```
@@ -87,13 +87,13 @@ Use `vault path-help` for more details.
 
 ```
 $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
-		userattr=uid \
-        userdn="dc=example,dc=com" \
-        groupdn="dc=example,dc=com" \
-        upndomain="forumsys.com" \
-        certificate=@ldap_ca_cert.pem \
-        insecure_tls=false \
-        starttls=true
+    userattr=uid \
+    userdn="dc=example,dc=com" \
+    groupdn="dc=example,dc=com" \
+    upndomain="forumsys.com" \
+    certificate=@ldap_ca_cert.pem \
+    insecure_tls=false \
+    starttls=true
 ...
 ```
 

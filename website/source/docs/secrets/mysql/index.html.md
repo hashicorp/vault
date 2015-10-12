@@ -40,7 +40,8 @@ Next, we must configure Vault to know how to connect to the MySQL
 instance. This is done by providing a DSN (Data Source Name):
 
 ```
-$ vault write mysql/config/connection value="root:root@tcp(192.168.33.10:3306)/"
+$ vault write mysql/config/connection \
+    value="root:root@tcp(192.168.33.10:3306)/"
 Success! Data written to: mysql/config/connection
 ```
 
@@ -53,7 +54,9 @@ Optionally, we can configure the lease settings for credentials generated
 by Vault. This is done by writing to the `config/lease` key:
 
 ```
-$ vault write mysql/config/lease lease=1h lease_max=24h
+$ vault write mysql/config/lease \
+    lease=1h \
+    lease_max=24h
 Success! Data written to: mysql/config/lease
 ```
 
@@ -67,7 +70,8 @@ to a policy used to generate those credentials. For example, lets create
 a "readonly" role:
 
 ```
-$ vault write mysql/roles/readonly sql="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';"
+$ vault write mysql/roles/readonly \
+    sql="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';"
 Success! Data written to: mysql/roles/readonly
 ```
 
@@ -245,9 +249,9 @@ allowed to read.
 
     ```javascript
     {
-        "data": {
-            "sql": "CREATE USER..."
-        }
+      "data": {
+        "sql": "CREATE USER..."
+      }
     }
     ```
 
@@ -305,10 +309,10 @@ allowed to read.
 
     ```javascript
     {
-        "data": {
-            "username": "root-aefa635a-18",
-            "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
-        }
+      "data": {
+        "username": "root-aefa635a-18",
+        "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
+      }
     }
     ```
 

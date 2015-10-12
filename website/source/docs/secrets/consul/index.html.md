@@ -31,7 +31,9 @@ Next, we must configure Vault to know how to contact Consul.
 This is done by writing the access information:
 
 ```
-$ vault write consul/config/access address=127.0.0.1:8500 token=root
+$ vault write consul/config/access \
+    address=127.0.0.1:8500 \
+    token=root
 Success! Data written to: consul/config/access
 ```
 
@@ -181,9 +183,9 @@ Permission denied
 
     ```javascript
     {
-        "data": {
-            "policy": "abcdef="
-        }
+      "data": {
+        "policy": "abcdef="
+      }
     }
     ```
 
@@ -240,9 +242,9 @@ Permission denied
 
     ```javascript
     {
-        "data": {
-            "token": "973a31ea-1ec4-c2de-0f63-623f477c2510"
-        }
+      "data": {
+        "token": "973a31ea-1ec4-c2de-0f63-623f477c2510"
+      }
     }
     ```
 

@@ -22,7 +22,8 @@ to discover the paths.
 To write data to Vault, you use `vault write`. It is very easy to use:
 
 ```
-$ vault write secret/password value=itsasecret
+$ vault write secret/password \
+    value=itsasecret
 ...
 ```
 
@@ -30,7 +31,9 @@ The above writes a value to `secret/password`. As mentioned in the getting
 started guide, multiple values can also be written:
 
 ```
-$ vault write secret/password value=itsasecret username=something
+$ vault write secret/password \
+    value=itsasecret \
+    username=something
 ...
 ```
 

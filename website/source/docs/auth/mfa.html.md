@@ -61,7 +61,7 @@ options to behave differently (see Duo configuration below).
 
 ### Duo
 
-The Duo MFA type is configured through two paths: `duo/config` and `duo/access`. 
+The Duo MFA type is configured through two paths: `duo/config` and `duo/access`.
 
 `duo/access` contains connection information for the Duo Auth API. To configure:
 
