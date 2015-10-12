@@ -19,6 +19,7 @@ BUG FIXES:
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
  * core: Stale leader entries will now be reaped [GH-679]
  * core: Using `mount-tune` on the auth/token path did not take effect. [GH-688]
+ * core: Fix a potential race condition when (un)sealing the vault with metrics enabled [GH-694]
 
 MISC:
 
