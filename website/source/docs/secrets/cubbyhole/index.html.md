@@ -34,7 +34,8 @@ As an example, we can write a new key "foo" to the `cubbyhole` backend, which
 is mounted at `cubbyhole/`:
 
 ```
-$ vault write cubbyhole/foo zip=zap
+$ vault write cubbyhole/foo \
+    zip=zap
 Success! Data written to: cubbyhole/foo
 ```
 
@@ -74,17 +75,17 @@ As expected, the value previously set is returned to us.
   <dt>Returns</dt>
   <dd>
 
-  ```javascript
-  {
+    ```javascript
+    {
       "auth": null,
       "data": {
-          "foo": "bar"
+        "foo": "bar"
       },
       "lease_duration": 0,
       "lease_id": "",
       "renewable": false
-  }
-  ```
+    }
+    ```
 
   </dd>
 </dl>
