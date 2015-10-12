@@ -548,8 +548,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 	}
 
 	subject := pkix.Name{
-		SerialNumber: serialNumber.String(),
-		CommonName:   creationInfo.CommonName,
+		CommonName: creationInfo.CommonName,
 	}
 
 	certTemplate := &x509.Certificate{
@@ -749,8 +748,7 @@ func signCertificate(creationInfo *certCreationBundle,
 	}
 
 	subject := pkix.Name{
-		SerialNumber: serialNumber.String(),
-		CommonName:   creationInfo.CommonName,
+		CommonName: creationInfo.CommonName,
 	}
 
 	marshaledKey, err := x509.MarshalPKIXPublicKey(csr.PublicKey)
@@ -772,7 +770,6 @@ func signCertificate(creationInfo *certCreationBundle,
 
 	if creationInfo.UseCSRSubject {
 		certTemplate.Subject = csr.Subject
-		certTemplate.Subject.SerialNumber = serialNumber.String()
 	} else {
 		certTemplate.DNSNames = creationInfo.DNSNames
 		certTemplate.EmailAddresses = creationInfo.EmailAddresses
