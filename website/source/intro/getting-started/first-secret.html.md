@@ -63,8 +63,6 @@ As you might expect, secrets can be read with `vault read`:
 ```
 $ vault read secret/hello
 Key             Value
-lease_id        secret/hello/d57fe039-1eef-9f4a-f3c9-63e2b29002b8
-lease_duration  2592000
 excited         yes
 value           world
 ```
@@ -80,8 +78,8 @@ a tool like `jq`, you can output the data in JSON format:
 ```
 $ vault read -format=json secret/hello
 {
-  "lease_id": "secret/hello/25f33857-15ed-b62b-dac6-4b29bb8e8bef",
-  "lease_duration": 2592000,
+  "lease_id": "",
+  "lease_duration": 0,
   "renewable": false,
   "data": {
     "excited": "yes",
@@ -90,7 +88,12 @@ $ vault read -format=json secret/hello
 }
 ```
 
-This contains some extra information, but you can see our data mirrored
+This contains some extra information; many backends create leases for secrets
+that allow time-limited access other systems, and in those cases `lease_id` would
+contain a lease identifier and `lease_duration` would contain the length of time
+for which the lease is valid, in seconds.
+
+You can see our data mirrored
 here as well. The JSON output is very useful for scripts. For example below
 we use the `jq` tool to extract the "excited" value:
 

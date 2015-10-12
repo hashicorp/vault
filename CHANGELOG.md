@@ -21,7 +21,7 @@ BUG FIXES:
 
 MISC:
 
- * Various documentation fixes and improvements [GH-688]
+ * Various documentation fixes and improvements [GH-685] [GH-688]
 
 ## 0.3.1 (October 6, 2015)
 
