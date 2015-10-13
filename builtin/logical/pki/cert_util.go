@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -50,7 +50,7 @@ type certCreationBundle struct {
 	PKIAddress string
 
 	// Only used when signing a CA cert
-	UseCSRSubject bool
+	UseCSRValues bool
 }
 
 type caInfoBundle struct {
@@ -296,7 +296,7 @@ func signCert(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
 	isCA bool,
-	useCSRSubject bool,
+	useCSRValues bool,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
@@ -323,7 +323,7 @@ func signCert(b *backend,
 
 	if isCA {
 		creationBundle.IsCA = isCA
-		creationBundle.UseCSRSubject = useCSRSubject
+		creationBundle.UseCSRValues = useCSRValues
 	}
 
 	parsedBundle, err := signCertificate(creationBundle, csr)
@@ -435,7 +435,7 @@ func generateCreationBundle(b *backend,
 			ttl = maxTTL
 		} else {
 			return nil, certutil.UserError{Err: fmt.Sprintf(
-				"ttl is larger than maximum allowed by this role")}
+				"ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
 		}
 	}
 
@@ -586,14 +586,9 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		case certutil.ECPrivateKey:
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
+
 		caCert := creationInfo.SigningBundle.Certificate
-		subject.Country = caCert.Subject.Country
-		subject.Organization = caCert.Subject.Organization
-		subject.OrganizationalUnit = caCert.Subject.OrganizationalUnit
-		subject.Locality = caCert.Subject.Locality
-		subject.Province = caCert.Subject.Province
-		subject.StreetAddress = caCert.Subject.StreetAddress
-		subject.PostalCode = caCert.Subject.PostalCode
+
 		if creationInfo.SigningBundle.PKIAddress != "" {
 			certTemplate.CRLDistributionPoints = []string{
 				creationInfo.SigningBundle.PKIAddress + "/crl",
@@ -747,33 +742,23 @@ func signCertificate(creationInfo *certCreationBundle,
 		return nil, certutil.InternalError{Err: fmt.Sprintf("error getting random serial number")}
 	}
 
-	subject := pkix.Name{
-		CommonName: creationInfo.CommonName,
-	}
-
 	marshaledKey, err := x509.MarshalPKIXPublicKey(csr.PublicKey)
 	if err != nil {
 		return nil, certutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
 	}
 	subjKeyID := sha1.Sum(marshaledKey)
 
+	subject := pkix.Name{
+		CommonName: creationInfo.CommonName,
+	}
+
 	certTemplate := &x509.Certificate{
 		SerialNumber:          serialNumber,
 		Subject:               subject,
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(creationInfo.TTL),
-		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		BasicConstraintsValid: true,
-		IsCA:         false,
-		SubjectKeyId: subjKeyID[:],
-	}
-
-	if creationInfo.UseCSRSubject {
-		certTemplate.Subject = csr.Subject
-	} else {
-		certTemplate.DNSNames = creationInfo.DNSNames
-		certTemplate.EmailAddresses = creationInfo.EmailAddresses
-		certTemplate.IPAddresses = creationInfo.IPAddresses
+		SubjectKeyId:          subjKeyID[:],
 	}
 
 	switch creationInfo.SigningBundle.PrivateKeyType {
@@ -783,28 +768,46 @@ func signCertificate(creationInfo *certCreationBundle,
 		certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 	}
 
-	if creationInfo.Usage&serverUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
-	}
-	if creationInfo.Usage&clientUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
-	}
-	if creationInfo.Usage&codeSigningUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
-	}
-	if creationInfo.Usage&emailProtectionUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	if creationInfo.UseCSRValues {
+		certTemplate.Subject = csr.Subject
+
+		certTemplate.DNSNames = csr.DNSNames
+		certTemplate.EmailAddresses = csr.EmailAddresses
+		certTemplate.IPAddresses = csr.IPAddresses
+
+		if creationInfo.IsCA {
+			certTemplate.IsCA = true
+			certTemplate.ExtraExtensions = csr.Extensions
+		}
+	} else {
+		certTemplate.DNSNames = creationInfo.DNSNames
+		certTemplate.EmailAddresses = creationInfo.EmailAddresses
+		certTemplate.IPAddresses = creationInfo.IPAddresses
+
+		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement)
+
+		if creationInfo.Usage&serverUsage != 0 {
+			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+		}
+		if creationInfo.Usage&clientUsage != 0 {
+			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+		}
+		if creationInfo.Usage&codeSigningUsage != 0 {
+			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+		}
+		if creationInfo.Usage&emailProtectionUsage != 0 {
+			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+		}
+
+		if creationInfo.IsCA {
+			certTemplate.IsCA = true
+			certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+		}
 	}
 
 	var certBytes []byte
 	caCert := creationInfo.SigningBundle.Certificate
-	subject.Country = caCert.Subject.Country
-	subject.Organization = caCert.Subject.Organization
-	subject.OrganizationalUnit = caCert.Subject.OrganizationalUnit
-	subject.Locality = caCert.Subject.Locality
-	subject.Province = caCert.Subject.Province
-	subject.StreetAddress = caCert.Subject.StreetAddress
-	subject.PostalCode = caCert.Subject.PostalCode
 
 	if creationInfo.SigningBundle.PKIAddress != "" {
 		certTemplate.CRLDistributionPoints = []string{
@@ -813,12 +816,6 @@ func signCertificate(creationInfo *certCreationBundle,
 		certTemplate.IssuingCertificateURL = []string{
 			creationInfo.SigningBundle.PKIAddress + "/ca",
 		}
-	}
-
-	if creationInfo.IsCA {
-		certTemplate.IsCA = true
-		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
 	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)
