@@ -145,16 +145,14 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 		emailDomain := name
 		isEmail := false
 		isWildcard := false
-		var emailUserPart string
 		if strings.Contains(name, "@") {
-			if !role.EmailProtectionFlag {
+			if !role.EmailProtectionFlag && !role.AllowAnyName {
 				return name, nil
 			}
 			splitEmail := strings.Split(name, "@")
 			if len(splitEmail) != 2 {
 				return name, nil
 			}
-			emailUserPart = splitEmail[0]
 			sanitizedName = splitEmail[1]
 			emailDomain = splitEmail[1]
 			isEmail = true
@@ -168,11 +166,10 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			if !hostnameRegex.MatchString(sanitizedName) {
 				return name, nil
 			}
-			if isEmail {
-				if !hostnameRegex.MatchString(emailUserPart) {
-					return name, nil
-				}
-			}
+		}
+
+		if role.AllowAnyName {
+			continue
 		}
 
 		if role.AllowLocalhost {
@@ -197,10 +194,6 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 					continue
 				}
 			}
-		}
-
-		if role.AllowAnyName {
-			continue
 		}
 
 		if role.AllowTokenDisplayName {
@@ -509,7 +502,7 @@ func generateCreationBundle(b *backend,
 				OCSPServers:            []string{},
 			}
 		}
-		signingBundle.URLs = entries
+		creationBundle.URLs = entries
 	}
 
 	return creationBundle, nil
