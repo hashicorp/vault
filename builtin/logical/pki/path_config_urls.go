@@ -11,49 +11,34 @@ import (
 
 func pathConfigURLs(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config/urls/" + framework.GenericNameRegex("urltype"),
+		Pattern: "config/urls",
 		Fields: map[string]*framework.FieldSchema{
-			"urltype": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The type of URL to set. Can be "issuing"
-to set the issuing certificate URL,
-"crl" to set the CRL distribution
-points, or "ocsp" to set the OCSP
-servers. These values will be
-recorded into issues certificates.
-Only valid for write and delete
-operations; read will return all
-URL types.`,
-			},
-			"urls": &framework.FieldSchema{
+			"issuing_certificates": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Comma-separated list of URLs to be used
-for the type specified.`,
+for the issuing certificate attribute`,
+			},
+
+			"crl_distribution_points": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Comma-separated list of URLs to be used
+for the CRL distribution points attribute`,
+			},
+
+			"ocsp_servers": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Comma-separated list of URLs to be used
+for the OCSP servers attribute`,
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation:  b.pathWriteURL,
-			logical.ReadOperation:   b.pathReadURL,
-			logical.DeleteOperation: b.pathDeleteURL,
+			logical.WriteOperation: b.pathWriteURL,
+			logical.ReadOperation:  b.pathReadURL,
 		},
 
 		HelpSynopsis:    pathConfigURLsHelpSyn,
 		HelpDescription: pathConfigURLsHelpDesc,
-	}
-}
-
-func checkURLType(urlType string) *logical.Response {
-	switch urlType {
-	case "issuing":
-		return nil
-	case "crl":
-		return nil
-	case "ocsp":
-		return nil
-	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"'%s' is not a valid type; must be 'issuing', 'crl', or 'ocsp'", urlType))
 	}
 }
 
@@ -91,33 +76,6 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 	return nil
 }
 
-func (b *backend) pathDeleteURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	urlType := data.Get("urlType").(string)
-	if err := checkURLType(urlType); err != nil {
-		return err, nil
-	}
-
-	entries, err := getURLs(req)
-	if err != nil {
-		return nil, err
-	}
-	if entries == nil {
-		return nil, nil
-	}
-
-	switch urlType {
-	case "issuing":
-		entries.IssuingCertificateURLs = []string{}
-	case "crl":
-		entries.CRLDistributionPoints = []string{}
-	case "ocsp":
-		entries.OCSPServers = []string{}
-	}
-
-	return nil, writeURLs(req, entries)
-}
-
 func (b *backend) pathReadURL(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entries, err := getURLs(req)
@@ -137,36 +95,28 @@ func (b *backend) pathReadURL(
 
 func (b *backend) pathWriteURL(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	urlType := data.Get("urlType").(string)
-	if err := checkURLType(urlType); err != nil {
-		return err, nil
-	}
-
-	urls := data.Get("urls").(string)
-	if urls == "" {
-		return logical.ErrorResponse("'urls' cannot be empty"), nil
-	}
-
-	splitURLs := strings.Split(urls, ",")
-
 	entries, err := getURLs(req)
 	if err != nil {
 		return nil, err
 	}
 	if entries == nil {
 		entries = &urlEntries{
-			IssuingCertificateURLs: []string{},
-			CRLDistributionPoints:  []string{},
-			OCSPServers:            []string{},
+			IssuingCertificates:   []string{},
+			CRLDistributionPoints: []string{},
+			OCSPServers:           []string{},
 		}
 	}
 
-	switch urlType {
-	case "issuing":
-		entries.IssuingCertificateURLs = splitURLs
-	case "crl":
+	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
+		splitURLs := strings.Split(urlsInt.(string), ",")
+		entries.IssuingCertificates = splitURLs
+	}
+	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
+		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.CRLDistributionPoints = splitURLs
-	case "ocsp":
+	}
+	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
+		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.OCSPServers = splitURLs
 	}
 
@@ -174,9 +124,9 @@ func (b *backend) pathWriteURL(
 }
 
 type urlEntries struct {
-	IssuingCertificateURLs []string `json:"issuing_certificate_urls" structs:"issuing_certificate_urls" mapstructure:"issuing_certificate_urls"`
-	CRLDistributionPoints  []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
-	OCSPServers            []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
+	IssuingCertificates   []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
+	CRLDistributionPoints []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
+	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
 const pathConfigURLsHelpSyn = `

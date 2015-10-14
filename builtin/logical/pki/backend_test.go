@@ -119,6 +119,34 @@ func TestBackend_CSRValues(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_URLsCRUD(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
+	}
+
+	stepCount += len(testCase.Steps)
+
+	intdata := map[string]interface{}{}
+	reqdata := map[string]interface{}{}
+	testCase.Steps = append(testCase.Steps, generateURLSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
+
+	logicaltest.Test(t, testCase)
+}
+
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
@@ -280,6 +308,114 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage certUsage,
 	}
 
 	return parsedCertBundle, nil
+}
+
+func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+
+	expected := urlEntries{
+		IssuingCertificates: []string{
+			"http://example.com/ca1",
+			"http://example.com/ca2",
+		},
+		CRLDistributionPoints: []string{
+			"http://example.com/crl1",
+			"http://example.com/crl2",
+		},
+		OCSPServers: []string{
+			"http://example.com/ocsp1",
+			"http://example.com/ocsp2",
+		},
+	}
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "my@example.com",
+		},
+	}
+
+	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
+	csr, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv)
+	csrPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csr,
+	})
+
+	ret := []logicaltest.TestStep{
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/generate/root/exported",
+			Data: map[string]interface{}{
+				"common_name": "Root Cert",
+				"ttl":         "180h",
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/urls",
+			Data: map[string]interface{}{
+				"issuing_certificates":    strings.Join(expected.IssuingCertificates, ","),
+				"crl_distribution_points": strings.Join(expected.CRLDistributionPoints, ","),
+				"ocsp_servers":            strings.Join(expected.OCSPServers, ","),
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/urls",
+			Check: func(resp *logical.Response) error {
+				if resp.Data == nil {
+					return fmt.Errorf("no data returned")
+				}
+				var entries urlEntries
+				err := mapstructure.Decode(resp.Data, &entries)
+				if err != nil {
+					return err
+				}
+
+				if !reflect.DeepEqual(entries, expected) {
+					return fmt.Errorf("expected urls\n%#v\ndoes not match provided\n%#v\n", expected, entries)
+				}
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/sign",
+			Data: map[string]interface{}{
+				"use_csr_values": true,
+				"csr":            string(csrPem),
+				"format":         "der",
+			},
+			Check: func(resp *logical.Response) error {
+				certString := resp.Data["certificate"].(string)
+				if certString == "" {
+					return fmt.Errorf("no certificate returned")
+				}
+				certBytes, _ := base64.StdEncoding.DecodeString(certString)
+				certs, err := x509.ParseCertificates(certBytes)
+				if err != nil {
+					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+				}
+				if len(certs) != 1 {
+					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
+				}
+				cert := certs[0]
+
+				switch {
+				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
+				case !reflect.DeepEqual(expected.CRLDistributionPoints, cert.CRLDistributionPoints):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
+				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
+				}
+				return nil
+			},
+		},
+	}
+	return ret
 }
 
 func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {

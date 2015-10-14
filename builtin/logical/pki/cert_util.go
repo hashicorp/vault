@@ -94,9 +94,9 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 	}
 	if entries == nil {
 		entries = &urlEntries{
-			IssuingCertificateURLs: []string{},
-			CRLDistributionPoints:  []string{},
-			OCSPServers:            []string{},
+			IssuingCertificates:   []string{},
+			CRLDistributionPoints: []string{},
+			OCSPServers:           []string{},
 		}
 	}
 	caInfo.URLs = entries
@@ -497,9 +497,9 @@ func generateCreationBundle(b *backend,
 		}
 		if entries == nil {
 			entries = &urlEntries{
-				IssuingCertificateURLs: []string{},
-				CRLDistributionPoints:  []string{},
-				OCSPServers:            []string{},
+				IssuingCertificates:   []string{},
+				CRLDistributionPoints: []string{},
+				OCSPServers:           []string{},
 			}
 		}
 		creationBundle.URLs = entries
@@ -594,7 +594,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
 	}
 
-	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificateURLs
+	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
 	certTemplate.OCSPServer = creationInfo.URLs.OCSPServers
 
@@ -814,7 +814,7 @@ func signCertificate(creationInfo *certCreationBundle,
 	var certBytes []byte
 	caCert := creationInfo.SigningBundle.Certificate
 
-	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificateURLs
+	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
 	certTemplate.OCSPServer = creationInfo.SigningBundle.URLs.OCSPServers
 
