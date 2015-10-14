@@ -4,80 +4,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
-
-var rootAndSignSchema = map[string]*framework.FieldSchema{
-	"common_name": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested common name; if you want more than
-one, specify the alternative names in the alt_names
-map. If not specified when signing, the common
-name will be taken from the CSR; other names
-must still be specified in alt_names or ip_sans.`,
-	},
-
-	"alt_names": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested Subject Alternative Names, if any,
-in a comma-delimited list`,
-	},
-
-	"ip_sans": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested IP SANs, if any, in a
-comma-delimited list`,
-	},
-
-	"ttl": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested Time To Live for the certificate;
-sets the expiration date. If not specified
-the role default, backend default, or system
-default TTL is used, in that order. Cannot
-be larger than the mount max TTL. Note:
-this only has an effect when generating
-a CA cert or signing a CA cert, not when
-creating a CSR for an intermediate CA.`,
-	},
-
-	"format": &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "pem",
-		Description: `Format for returned data. Can be "pem" or "der";
-defaults to "pem".`,
-	},
-}
-
-var generateSchema = map[string]*framework.FieldSchema{
-	"exported": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Must be "internal" or "exported".
-If set to "exported", the generated private
-key will be returned. This is your *only*
-chance to retrieve the private key!`,
-	},
-
-	"key_type": &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "rsa",
-		Description: `The type of key to use; defaults to RSA. "rsa"
-and "ec" are the only valid values.`,
-	},
-
-	"key_bits": &framework.FieldSchema{
-		Type:    framework.TypeInt,
-		Default: 2048,
-		Description: `The number of bits to use. You will almost
-certainly want to change this if you adjust
-the key_type.`,
-	},
-}
 
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
@@ -109,19 +41,6 @@ secret key and certificate, or, if a
 CSR was generated with the "generate"
 endpoint, just the signed certificate.`,
 			},
-
-			"pki_address": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The base URL of the PKI mount, e.g.
-"https://vault.example.com/v1/pki".
-For HA setups, the given host name
-should be the address that can always
-be used to contact the leader, as this is
-is used for generating the CA/CRL URLs in
-the certificate. If empty, no CA/CRL
-information will be encoded into
-certificates.`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -145,19 +64,6 @@ func pathGenerateRootCA(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathConfigCAGenerateHelpSyn,
 		HelpDescription: pathConfigCAGenerateHelpDesc,
-	}
-
-	ret.Fields["pki_address"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The base URL of the PKI mount, e.g.
-"https://vault.example.com/v1/root_pki".
-For HA setups, the given host name
-should be the address that can always
-be used to contact the leader, as this is
-is used for generating the CA/CRL URLs in
-the certificate. If empty, no CA/CRL
-information will be encoded into
-certificates.`,
 	}
 
 	for k, v := range generateSchema {
@@ -252,23 +158,6 @@ func (b *backend) pathCAGenerateRoot(
 		), nil
 	}
 
-	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
-	switch {
-	case len(pkiAddress) == 0:
-		break
-	case !strings.HasPrefix(pkiAddress, "http"):
-		return logical.ErrorResponse(
-			`"pki_address" must be a URL`,
-		), nil
-	case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
-		return logical.ErrorResponse(
-			`"pki_address" needs to be the path to this mount"`,
-		), nil
-	}
-	if strings.HasSuffix(pkiAddress, "/") {
-		pkiAddress = pkiAddress[:len(pkiAddress)-1]
-	}
-
 	role := &roleEntry{
 		TTL:              data.Get("ttl").(string),
 		KeyType:          data.Get("key_type").(string),
@@ -302,7 +191,7 @@ func (b *backend) pathCAGenerateRoot(
 	}
 
 	var resp *logical.Response
-	parsedBundle, err := generateCert(b, role, nil, true, pkiAddress, req, data)
+	parsedBundle, err := generateCert(b, role, nil, true, req, data)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -345,13 +234,6 @@ func (b *backend) pathCAGenerateRoot(
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
-	if err != nil {
-		return nil, err
-	}
-
-	entry.Key = "config/pki_address"
-	entry.Value = []byte(pkiAddress)
 	err = req.Storage.Put(entry)
 	if err != nil {
 		return nil, err
@@ -587,23 +469,6 @@ func (b *backend) pathCASetWrite(
 		parsedBundle.CertificateBytes = parsedBundle.IssuingCABytes
 	}
 
-	pkiAddress := strings.ToLower(data.Get("pki_address").(string))
-	switch {
-	case len(pkiAddress) == 0:
-		break
-	case !strings.HasPrefix(pkiAddress, "http"):
-		return logical.ErrorResponse(
-			`"pki_address" must be a URL`,
-		), nil
-	case !strings.Contains(pkiAddress, "/v1/"+req.MountPoint[:len(req.MountPoint)-1]):
-		return logical.ErrorResponse(
-			`"pki_address" needs to be the path to this mount"`,
-		), nil
-	}
-	if strings.HasSuffix(pkiAddress, "/") {
-		pkiAddress = pkiAddress[:len(pkiAddress)-1]
-	}
-
 	cb := &certutil.CertBundle{}
 	entry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
@@ -658,13 +523,6 @@ func (b *backend) pathCASetWrite(
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
-	if err != nil {
-		return nil, err
-	}
-
-	entry.Key = "config/pki_address"
-	entry.Value = []byte(pkiAddress)
 	err = req.Storage.Put(entry)
 	if err != nil {
 		return nil, err
@@ -729,3 +587,70 @@ generated by the certificate's destination mount.
 Use the "config/ca/set" endpoint to load the signed certificate
 into Vault another Vault mount.
 `
+
+var rootAndSignSchema = map[string]*framework.FieldSchema{
+	"common_name": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested common name; if you want more than
+one, specify the alternative names in the alt_names
+map. If not specified when signing, the common
+name will be taken from the CSR; other names
+must still be specified in alt_names or ip_sans.`,
+	},
+
+	"alt_names": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested Subject Alternative Names, if any,
+in a comma-delimited list`,
+	},
+
+	"ip_sans": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested IP SANs, if any, in a
+comma-delimited list`,
+	},
+
+	"ttl": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested Time To Live for the certificate;
+sets the expiration date. If not specified
+the role default, backend default, or system
+default TTL is used, in that order. Cannot
+be larger than the mount max TTL. Note:
+this only has an effect when generating
+a CA cert or signing a CA cert, not when
+creating a CSR for an intermediate CA.`,
+	},
+
+	"format": &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "pem",
+		Description: `Format for returned data. Can be "pem" or "der";
+defaults to "pem".`,
+	},
+}
+
+var generateSchema = map[string]*framework.FieldSchema{
+	"exported": &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Must be "internal" or "exported".
+If set to "exported", the generated private
+key will be returned. This is your *only*
+chance to retrieve the private key!`,
+	},
+
+	"key_type": &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "rsa",
+		Description: `The type of key to use; defaults to RSA. "rsa"
+and "ec" are the only valid values.`,
+	},
+
+	"key_bits": &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 2048,
+		Description: `The number of bits to use. You will almost
+certainly want to change this if you adjust
+the key_type.`,
+	},
+}

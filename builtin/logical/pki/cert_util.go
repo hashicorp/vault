@@ -51,11 +51,14 @@ type certCreationBundle struct {
 
 	// Only used when signing a CA cert
 	UseCSRValues bool
+
+	// URLs to encode into the certificate
+	URLs *urlEntries
 }
 
 type caInfoBundle struct {
 	certutil.ParsedCertBundle
-	PKIAddress string
+	URLs *urlEntries
 }
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
@@ -63,15 +66,15 @@ type caInfoBundle struct {
 func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 	bundleEntry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch local CA certificate/key: %s", err)}
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch local CA certificate/key: %v", err)}
 	}
 	if bundleEntry == nil {
-		return nil, certutil.UserError{Err: fmt.Sprintf("Backend must be configured with a CA certificate/key")}
+		return nil, certutil.UserError{Err: "Backend must be configured with a CA certificate/key"}
 	}
 
 	var bundle certutil.CertBundle
 	if err := bundleEntry.DecodeJSON(&bundle); err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to decode local CA certificate/key: %s", err)}
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to decode local CA certificate/key: %v", err)}
 	}
 
 	parsedBundle, err := bundle.ToParsedCertBundle()
@@ -83,15 +86,20 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 		return nil, certutil.InternalError{Err: "Stored CA information not able to be parsed"}
 	}
 
-	caInfo := &caInfoBundle{*parsedBundle, ""}
+	caInfo := &caInfoBundle{*parsedBundle, nil}
 
-	pkiAddress, err := req.Storage.Get("config/pki_address")
+	entries, err := getURLs(req)
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch local PKI Address: %s", err)}
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch URL information: %v", err)}
 	}
-	if pkiAddress != nil {
-		caInfo.PKIAddress = string(pkiAddress.Value)
+	if entries == nil {
+		entries = &urlEntries{
+			IssuingCertificateURLs: []string{},
+			CRLDistributionPoints:  []string{},
+			OCSPServers:            []string{},
+		}
 	}
+	caInfo.URLs = entries
 
 	return caInfo, nil
 }
@@ -246,7 +254,6 @@ func generateCert(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
 	isCA bool,
-	pkiAddress string,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
@@ -257,7 +264,6 @@ func generateCert(b *backend,
 
 	if isCA {
 		creationBundle.IsCA = isCA
-		creationBundle.PKIAddress = pkiAddress
 	}
 
 	parsedBundle, err := createCertificate(creationBundle)
@@ -489,6 +495,23 @@ func generateCreationBundle(b *backend,
 		Usage:          usage,
 	}
 
+	if signingBundle != nil {
+		creationBundle.URLs = signingBundle.URLs
+	} else {
+		entries, err := getURLs(req)
+		if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch URL information: %v", err)}
+		}
+		if entries == nil {
+			entries = &urlEntries{
+				IssuingCertificateURLs: []string{},
+				CRLDistributionPoints:  []string{},
+				OCSPServers:            []string{},
+			}
+		}
+		signingBundle.URLs = entries
+	}
+
 	return creationBundle, nil
 }
 
@@ -578,6 +601,10 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
 	}
 
+	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificateURLs
+	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
+	certTemplate.OCSPServer = creationInfo.URLs.OCSPServers
+
 	var certBytes []byte
 	if creationInfo.SigningBundle != nil {
 		switch creationInfo.SigningBundle.PrivateKeyType {
@@ -589,14 +616,6 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 
 		caCert := creationInfo.SigningBundle.Certificate
 
-		if creationInfo.SigningBundle.PKIAddress != "" {
-			certTemplate.CRLDistributionPoints = []string{
-				creationInfo.SigningBundle.PKIAddress + "/crl",
-			}
-			certTemplate.IssuingCertificateURL = []string{
-				creationInfo.SigningBundle.PKIAddress + "/ca",
-			}
-		}
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	} else {
 		// Creating a self-signed root
@@ -606,14 +625,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		case "ec":
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
-		if creationInfo.PKIAddress != "" {
-			certTemplate.CRLDistributionPoints = []string{
-				creationInfo.PKIAddress + "/crl",
-			}
-			certTemplate.IssuingCertificateURL = []string{
-				creationInfo.PKIAddress + "/ca",
-			}
-		}
+
 		certTemplate.IsCA = true
 		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
@@ -809,14 +821,9 @@ func signCertificate(creationInfo *certCreationBundle,
 	var certBytes []byte
 	caCert := creationInfo.SigningBundle.Certificate
 
-	if creationInfo.SigningBundle.PKIAddress != "" {
-		certTemplate.CRLDistributionPoints = []string{
-			creationInfo.SigningBundle.PKIAddress + "/crl",
-		}
-		certTemplate.IssuingCertificateURL = []string{
-			creationInfo.SigningBundle.PKIAddress + "/ca",
-		}
-	}
+	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificateURLs
+	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
+	certTemplate.OCSPServer = creationInfo.SigningBundle.URLs.OCSPServers
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)
 

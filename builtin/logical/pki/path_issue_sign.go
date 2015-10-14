@@ -122,7 +122,7 @@ func (b *backend) pathIssueSignCert(
 	if useCSR {
 		parsedBundle, err = signCert(b, role, signingBundle, false, false, req, data)
 	} else {
-		parsedBundle, err = generateCert(b, role, signingBundle, false, "", req, data)
+		parsedBundle, err = generateCert(b, role, signingBundle, false, req, data)
 	}
 	if err != nil {
 		switch err.(type) {
