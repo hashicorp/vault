@@ -60,7 +60,7 @@ func getURLs(req *logical.Request) (*urlEntries, error) {
 }
 
 func writeURLs(req *logical.Request, entries *urlEntries) error {
-	entry, err := logical.StorageEntryJSON("urls", &entries)
+	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
 	}
@@ -136,8 +136,9 @@ Set the URLs for the issuing CA, CRL distribution points, and OCSP servers.
 const pathConfigURLsHelpDesc = `
 This path allows you to set the issuing CA, CRL distribution points, and
 OCSP server URLs that will be encoded into issued certificates. If these
-values are not set (or are set and then deleted), no such information will
-be encoded in the issued certificates.
+values are not set, no such information will be encoded in the issued
+certificates. To delete URLs, simply re-set the appropriate value with an
+empty string.
 
 Multiple URLs can be specified for each type; use commas to separate them.
 `

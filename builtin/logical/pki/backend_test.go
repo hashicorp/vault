@@ -147,6 +147,34 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_PathLengthCRUD(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
+	}
+
+	stepCount += len(testCase.Steps)
+
+	intdata := map[string]interface{}{}
+	reqdata := map[string]interface{}{}
+	testCase.Steps = append(testCase.Steps, generatePathLengthSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
+
+	logicaltest.Test(t, testCase)
+}
+
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
@@ -410,6 +438,161 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
+				}
+				return nil
+			},
+		},
+	}
+	return ret
+}
+
+func generatePathLengthSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+
+	maxPathLength := 2
+
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "my@example.com",
+		},
+	}
+
+	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
+	csr, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv)
+	csrPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csr,
+	})
+
+	ret := []logicaltest.TestStep{
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/generate/root/exported",
+			Data: map[string]interface{}{
+				"common_name": "Root Cert",
+				"ttl":         "180h",
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/pathlength",
+			Data: map[string]interface{}{
+				"max_path_length": maxPathLength,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/pathlength",
+			Check: func(resp *logical.Response) error {
+				if resp.Data == nil {
+					return fmt.Errorf("no data returned")
+				}
+				var pathLenEntry pathLengthEntry
+				err := mapstructure.Decode(resp.Data, &pathLenEntry)
+				if err != nil {
+					return err
+				}
+
+				expected := pathLengthEntry{
+					MaxPathLength: maxPathLength,
+				}
+				if !reflect.DeepEqual(pathLenEntry, expected) {
+					return fmt.Errorf("expected urls\n%#v\ndoes not match provided\n%#v\n", expected, pathLenEntry)
+				}
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "config/pathlength",
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/pathlength",
+			Check: func(resp *logical.Response) error {
+				if resp != nil {
+					return fmt.Errorf("data was returned: %#v", resp)
+				}
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/pathlength",
+			Data: map[string]interface{}{
+				"max_path_length": maxPathLength,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/sign",
+			Data: map[string]interface{}{
+				"use_csr_values": true,
+				"csr":            string(csrPem),
+				"format":         "der",
+			},
+			Check: func(resp *logical.Response) error {
+				certString := resp.Data["certificate"].(string)
+				if certString == "" {
+					return fmt.Errorf("no certificate returned")
+				}
+				certBytes, _ := base64.StdEncoding.DecodeString(certString)
+				certs, err := x509.ParseCertificates(certBytes)
+				if err != nil {
+					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+				}
+				if len(certs) != 1 {
+					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
+				}
+				cert := certs[0]
+
+				if cert.MaxPathLen != maxPathLength {
+					return fmt.Errorf("bad max path length of %d, expected %d", cert.MaxPathLen, maxPathLength)
+				}
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/pathlength",
+			Data: map[string]interface{}{
+				"max_path_length": 0,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/sign",
+			Data: map[string]interface{}{
+				"use_csr_values": true,
+				"csr":            string(csrPem),
+				"format":         "der",
+			},
+			Check: func(resp *logical.Response) error {
+				certString := resp.Data["certificate"].(string)
+				if certString == "" {
+					return fmt.Errorf("no certificate returned")
+				}
+				certBytes, _ := base64.StdEncoding.DecodeString(certString)
+				certs, err := x509.ParseCertificates(certBytes)
+				if err != nil {
+					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+				}
+				if len(certs) != 1 {
+					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
+				}
+				cert := certs[0]
+
+				if cert.MaxPathLen != 0 || !cert.MaxPathLenZero {
+					return fmt.Errorf("bad values: max path length of %d, expected %d, cert max path length zero %t, expected %t", cert.MaxPathLen, maxPathLength, cert.MaxPathLenZero, true)
 				}
 				return nil
 			},

@@ -44,6 +44,7 @@ func Backend() *framework.Backend {
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
+			pathConfigPathLength(&b),
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),

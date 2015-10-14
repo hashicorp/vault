@@ -54,11 +54,15 @@ type certCreationBundle struct {
 
 	// URLs to encode into the certificate
 	URLs *urlEntries
+
+	// The maximum path length to encode
+	MaxPathLength int
 }
 
 type caInfoBundle struct {
 	certutil.ParsedCertBundle
-	URLs *urlEntries
+	URLs          *urlEntries
+	MaxPathLength int
 }
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
@@ -86,7 +90,7 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 		return nil, certutil.InternalError{Err: "Stored CA information not able to be parsed"}
 	}
 
-	caInfo := &caInfoBundle{*parsedBundle, nil}
+	caInfo := &caInfoBundle{*parsedBundle, nil, -1}
 
 	entries, err := getURLs(req)
 	if err != nil {
@@ -100,6 +104,16 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 		}
 	}
 	caInfo.URLs = entries
+
+	pathLenEntry, err := getPathLengthEntry(req)
+	if err != nil {
+		return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch path length information: %v", err)}
+	}
+	if pathLenEntry == nil {
+		caInfo.MaxPathLength = -1
+	} else {
+		caInfo.MaxPathLength = pathLenEntry.MaxPathLength
+	}
 
 	return caInfo, nil
 }
@@ -490,6 +504,7 @@ func generateCreationBundle(b *backend,
 
 	if signingBundle != nil {
 		creationBundle.URLs = signingBundle.URLs
+		creationBundle.MaxPathLength = signingBundle.MaxPathLength
 	} else {
 		entries, err := getURLs(req)
 		if err != nil {
@@ -503,6 +518,16 @@ func generateCreationBundle(b *backend,
 			}
 		}
 		creationBundle.URLs = entries
+
+		pathLenEntry, err := getPathLengthEntry(req)
+		if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf("Unable to fetch path length information: %v", err)}
+		}
+		if pathLenEntry == nil {
+			creationBundle.MaxPathLength = -1
+		} else {
+			creationBundle.MaxPathLength = pathLenEntry.MaxPathLength
+		}
 	}
 
 	return creationBundle, nil
@@ -597,6 +622,13 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
 	certTemplate.OCSPServer = creationInfo.URLs.OCSPServers
+
+	if creationInfo.MaxPathLength == 0 {
+		certTemplate.MaxPathLen = 0
+		certTemplate.MaxPathLenZero = true
+	} else {
+		certTemplate.MaxPathLen = creationInfo.MaxPathLength
+	}
 
 	var certBytes []byte
 	if creationInfo.SigningBundle != nil {
@@ -817,6 +849,13 @@ func signCertificate(creationInfo *certCreationBundle,
 	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
 	certTemplate.OCSPServer = creationInfo.SigningBundle.URLs.OCSPServers
+
+	if creationInfo.MaxPathLength == 0 {
+		certTemplate.MaxPathLen = 0
+		certTemplate.MaxPathLenZero = true
+	} else {
+		certTemplate.MaxPathLen = creationInfo.MaxPathLength
+	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)
 
