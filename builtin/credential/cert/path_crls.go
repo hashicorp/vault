@@ -179,7 +179,10 @@ func (b *backend) pathCRLRead(
 		}
 
 		ret := findSerialInCRLs(serial)
-		retData = structs.New(&ret).Map()
+		retData = map[string]interface{}{}
+		for k, v := range ret {
+			retData[k] = v
+		}
 	} else {
 		crl, ok := crls[name]
 		if !ok {

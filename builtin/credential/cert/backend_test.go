@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/mitchellh/mapstructure"
 )
 
 func testFactory(t *testing.T) logical.Backend {
@@ -17,6 +18,7 @@ func testFactory(t *testing.T) logical.Backend {
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
+		StorageView: &logical.InmemStorage{},
 	})
 	if err != nil {
 		t.Fatal("error: %s", err)
@@ -32,6 +34,10 @@ func TestBackend_basic_CA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	crl, err := ioutil.ReadFile("../../../test/ca/root.crl")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -41,6 +47,12 @@ func TestBackend_basic_CA(t *testing.T) {
 			testAccStepCertTTL(t, "web", ca, "foo"),
 			testAccStepLogin(t, connState),
 			testAccStepCertNoLease(t, "web", ca, "foo"),
+			testAccStepLoginDefaultLease(t, connState),
+			testAccStepAddCRL(t, crl, connState),
+			testAccStepReadCRL(t, connState),
+			testAccStepReadCRLSerial(t, connState),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepDeleteCRL(t, connState),
 			testAccStepLoginDefaultLease(t, connState),
 		},
 	})
@@ -73,6 +85,72 @@ func TestBackend_untrusted(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 		},
 	})
+}
+
+func testAccStepAddCRL(t *testing.T, crl []byte, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "crls/test",
+		ConnState: &connState,
+		Data: map[string]interface{}{
+			"crl": crl,
+		},
+	}
+}
+
+func testAccStepReadCRL(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "crls/test",
+		ConnState: &connState,
+		Check: func(resp *logical.Response) error {
+			crlInfo := CRLInfo{}
+			err := mapstructure.Decode(resp.Data, &crlInfo)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if len(crlInfo.Serials) != 1 {
+				t.Fatalf("bad: expected CRL with length 1, got %d", len(crlInfo.Serials))
+			}
+			if _, ok := crlInfo.Serials["13"]; !ok {
+				t.Fatalf("bad: serial number 13 not found in CRL")
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepReadCRLSerial(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "crls/test",
+		ConnState: &connState,
+		Data: map[string]interface{}{
+			"serial": "13",
+		},
+		Check: func(resp *logical.Response) error {
+			serialInfo := map[string]RevokedSerialInfo{}
+			err := mapstructure.Decode(resp.Data, &serialInfo)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if len(serialInfo) != 1 {
+				t.Fatalf("bad: expected info with length 1, got %d", len(serialInfo))
+			}
+			if _, ok := serialInfo["test"]; !ok {
+				t.Fatalf("bad: CRL \"test\" not found in info")
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.DeleteOperation,
+		Path:      "crls/test",
+		ConnState: &connState,
+	}
 }
 
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
