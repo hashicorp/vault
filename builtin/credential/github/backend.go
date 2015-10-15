@@ -54,7 +54,7 @@ type backend struct {
 // Client returns the GitHub client to communicate to GitHub via the
 // configured settings.
 func (b *backend) Client(token string) (*github.Client, error) {
-	var tc *http.Client
+	tc := &http.Client{}
 	if token != "" {
 		tc = oauth2.NewClient(oauth2.NoContext, &tokenSource{Value: token})
 	}

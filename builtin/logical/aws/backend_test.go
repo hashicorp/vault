@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -97,6 +98,7 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 			awsConfig := &aws.Config{
 				Credentials: creds,
 				Region:      aws.String("us-east-1"),
+				HTTPClient:  &http.Client{},
 			}
 			client := ec2.New(awsConfig)
 

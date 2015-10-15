@@ -26,7 +26,7 @@ func TestBackend_Config(t *testing.T) {
 
 	login_data := map[string]interface{}{
 		// This token has to be replaced with a working token for the test to work.
-		"token": "4fb5f4f0738c7aea5ee06dd595f15236ea78918b",
+		"token": os.Getenv("GITHUB_TOKEN"),
 	}
 	config_data1 := map[string]interface{}{
 		"organization": "hashicorp",
