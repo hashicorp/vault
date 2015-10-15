@@ -6,7 +6,11 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b, err := Backend().Setup(conf)
+	if err != nil {
+		return b, err
+	}
+	return b, populateCRLs(conf.StorageView)
 }
 
 func Backend() *framework.Backend {
@@ -17,7 +21,7 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"certs/*",
-				"crlsets/*",
+				"crls/*",
 			},
 
 			Unauthenticated: []string{

@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -50,10 +49,7 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
-	validChain, err := b.checkRevocation(req.Storage, trustedChains)
-	if err != nil {
-		return nil, fmt.Errorf("error checking revocation: %v", err)
-	}
+	validChain := b.checkForValidChain(req.Storage, trustedChains)
 	if !validChain {
 		return logical.ErrorResponse(
 			"no chain containing non-revoked certificates could be found for this login certificate",
@@ -139,37 +135,22 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 	return
 }
 
-func (b *backend) checkRevocation(store logical.Storage, chains [][]*x509.Certificate) (bool, error) {
-	var revokedSerialInfo RevokedSerialInfo
+func (b *backend) checkForValidChain(store logical.Storage, chains [][]*x509.Certificate) bool {
 	var badChain bool
 	for _, chain := range chains {
 		badChain = false
 		for _, cert := range chain {
-			entry, err := store.Get("crls/serial/" + cert.SerialNumber.String())
-			if err != nil {
-				return false, fmt.Errorf("error looking up revoked serials: %v", err)
-			}
-			if entry != nil {
-				err := entry.DecodeJSON(&revokedSerialInfo)
-				if err != nil {
-					return false, fmt.Errorf("error decoding revoked serial entry: %v", err)
-				}
-				if len(revokedSerialInfo) > 0 {
-					// At least one active CRL is revoking this cert, so try the next chain
-					badChain = true
-					break
-				} else {
-					// We shouldn't have a stored entry with zero sets referring to it,
-					// so it was accidentally orphaned; delete it
-					store.Delete("crls/serial/" + cert.SerialNumber.String())
-				}
+			badCRLs := findSerialInCRLs(cert.SerialNumber)
+			if len(badCRLs) != 0 {
+				badChain = true
+				break
 			}
 		}
 		if !badChain {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 // parsePEM parses a PEM encoded x509 certificate
