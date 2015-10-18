@@ -39,7 +39,7 @@ func (b *SystemBackend) tuneMountTTLs(path string, meConfig *MountConfig, newDef
 
 	if newDefault != nil {
 		if meConfig.MaxLeaseTTL == 0 {
-			if *newDefault > b.Core.maxLeaseTTL {
+			if newMax == nil && *newDefault > b.Core.maxLeaseTTL {
 				return fmt.Errorf("new backend default lease TTL of %d greater than system max lease TTL of %d",
 					int(newDefault.Seconds()), int(b.Core.maxLeaseTTL.Seconds()))
 			}

@@ -30,7 +30,7 @@ on every path, use `vault path-help` after mounting the backend.
 The `ssh` backend is not mounted by default and needs to be explicitly mounted.
 This is a common step for both OTP and Dynamic Key types.
 
-```shell
+```text
 $ vault mount ssh
 Successfully mounted 'ssh' at 'ssh'!
 ```
@@ -69,8 +69,11 @@ Create a role with the `key_type` parameter set to `otp`. All of the machines
 represented by the role's CIDR list should have helper properly installed and
 configured.
 
-```shell
-$ vault write ssh/roles/otp_key_role key_type=otp default_user=username cidr_list=x.x.x.x/y,m.m.m.m/n
+```text
+$ vault write ssh/roles/otp_key_role \
+    key_type=otp \
+    default_user=username \
+    cidr_list=x.x.x.x/y,m.m.m.m/n
 Success! Data written to: ssh/roles/otp_key_role
 ```
 
@@ -78,7 +81,7 @@ Success! Data written to: ssh/roles/otp_key_role
 
 Create an OTP credential for an IP that belongs to `otp_key_role`.
 
-```shell
+```text
 $ vault write ssh/creds/otp_key_role ip=x.x.x.x
 Key            	Value
 lease_id       	ssh/creds/otp_key_role/73bbf513-9606-4bec-816c-5a2f009765a5
@@ -93,7 +96,7 @@ key_type       	otp
 
 ### Establish an SSH session
 
-```shell
+```text
 $ ssh username@localhost
 Password: <Enter OTP>
 username@ip:~$
@@ -104,7 +107,7 @@ username@ip:~$
 A single CLI command can be used to create a new OTP and invoke SSH with the
 correct paramters to connect to the host.
 
-```shell
+```text
 $ vault ssh -role otp_key_role username@x.x.x.x
 OTP for the session is `b4d47e1b-4879-5f4e-ce5c-7988d7986f37`
 [Note: Install `sshpass` to automate typing in OTP]
@@ -113,7 +116,7 @@ Password: <Enter OTP>
 
 The OTP will be entered automatically using `sshpass` if it is installed.
 
-```shell
+```text
 $ vault ssh -role otp_key_role username@x.x.x.x
 username@ip:~$
 ```
@@ -183,8 +186,9 @@ First, however, the shared secret key must be specified.
 Register a key with a name; this key must have administrative capabilities
 on the remote hosts.
 
-```shell
-$ vault write ssh/keys/dev_key key=@dev_shared_key.pem
+```text
+$ vault write ssh/keys/dev_key \
+    key=@dev_shared_key.pem
 ```
 
 #### Create a Role
@@ -192,8 +196,13 @@ $ vault write ssh/keys/dev_key key=@dev_shared_key.pem
 Next, create a role. All of the machines contained within this CIDR block list
 should be accessible using the registered shared secret key.
 
-```shell
-$ vault write ssh/roles/dynamic_key_role key_type=dynamic key=dev_key admin_user=username default_user=username cidr_list=x.x.x.x/y
+```text
+$ vault write ssh/roles/dynamic_key_role \
+    key_type=dynamic \
+    key=dev_key \
+    admin_user=username \
+    default_user=username \
+    cidr_list=x.x.x.x/y
 Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
@@ -212,7 +221,7 @@ To see the default, see [linux_install_script.go](https://github.com/hashicorp/v
 Create a dynamic key for an IP that is covered by `dynamic_key_role`'s CIDR
 list.
 
-```shell
+```text
 $ vault write ssh/creds/dynamic_key_role ip=x.x.x.x
 Key            	Value
 lease_id       	ssh/creds/dynamic_key_role/8c4d2042-23bc-d6a8-42c2-6ff01cb83cf8
@@ -256,7 +265,7 @@ username       	username
 Save the key to a file (e.g. `dyn_key.pem`) and then use it to establish an
 SSH session.
 
-```shell
+```text
 $ ssh -i dyn_key.pem username@ip
 username@ip:~$
 ```
@@ -266,7 +275,7 @@ username@ip:~$
 Creation of new key, saving to a file, and using it to establish an SSH session
 can all be done with a single Vault CLI command.
 
-```shell
+```text
 $ vault ssh -role dynamic_key_role username@ip
 username@ip:~$
 ```
@@ -468,24 +477,25 @@ username@ip:~$
 
 ```json
 {
-		"admin_user": "username",
-		"cidr_list": "x.x.x.x/y",
-		"default_user": "username",
-		"key": "<key name>",
-		"key_type": "dynamic",
-		"port": 22
+  "admin_user": "username",
+  "cidr_list": "x.x.x.x/y",
+  "default_user": "username",
+  "key": "<key name>",
+  "key_type": "dynamic",
+  "port": 22
 }
 ```
+
   </dd>
 
   <dd>For an OTP role:
 
 ```json
 {
-		"cidr_list": "x.x.x.x/y",
-		"default_user": "username",
-		"key_type": "otp",
-		"port": 22
+  "cidr_list": "x.x.x.x/y",
+  "default_user": "username",
+  "key_type": "otp",
+  "port": 22
 }
 ```
   </dd>

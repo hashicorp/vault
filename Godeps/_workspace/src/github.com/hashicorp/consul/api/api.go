@@ -119,7 +119,7 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "127.0.0.1:8500",
 		Scheme:     "http",
-		HttpClient: http.DefaultClient,
+		HttpClient: &http.Client{},
 	}
 
 	if addr := os.Getenv("CONSUL_HTTP_ADDR"); addr != "" {

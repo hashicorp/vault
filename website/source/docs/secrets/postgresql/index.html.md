@@ -251,9 +251,9 @@ subpath for interactive help output.
 
     ```javascript
     {
-        "data": {
-            "sql": "CREATE USER..."
-        }
+      "data": {
+        "sql": "CREATE USER..."
+      }
     }
     ```
 
@@ -311,10 +311,10 @@ subpath for interactive help output.
 
     ```javascript
     {
-        "data": {
-            "username": "root-1430158508-126",
-            "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
-        }
+      "data": {
+        "username": "root-1430158508-126",
+        "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
+      }
     }
     ```
 

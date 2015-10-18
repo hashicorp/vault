@@ -23,8 +23,8 @@ passwords from an external source.
 
 ```
 $ vault auth -method=userpass \
-  username=foo \
-  password=bar
+    username=foo \
+    password=bar
 ```
 
 #### Via the API
@@ -42,20 +42,20 @@ The response will be in JSON. For example:
 
 ```javascript
 {
-  "lease_id":"",
-  "renewable":false,
-  "lease_duration":0,
-  "data":null,
-  "auth":{
-    "client_token":"c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
-    "policies":[
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "auth": {
+    "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
+    "policies": [
       "root"
     ],
-    "metadata":{
-      "username":"mitchellh"
+    "metadata": {
+      "username": "mitchellh"
     },
-    "lease_duration":0,
-    "renewable":false
+    "lease_duration": 0,
+    "renewable": false
   }
 }
 ```
@@ -83,7 +83,9 @@ users that are allowed to authenticate. An example is shown below.
 Use `vault path-help` for more details.
 
 ```
-$ vault write auth/userpass/users/mitchellh password=foo policies=root
+$ vault write auth/userpass/users/mitchellh \
+    password=foo \
+    policies=root
 ...
 ```
 

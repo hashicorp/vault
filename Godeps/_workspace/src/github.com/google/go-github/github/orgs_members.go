@@ -172,7 +172,7 @@ func (s *OrganizationsService) ConcealMembership(org, user string) (*Response, e
 // ListOrgMembershipsOptions specifies optional parameters to the
 // OrganizationsService.ListOrgMemberships method.
 type ListOrgMembershipsOptions struct {
-	// Filter memberships to include only those withe the specified state.
+	// Filter memberships to include only those with the specified state.
 	// Possible values are: "active", "pending".
 	State string `url:"state,omitempty"`
 

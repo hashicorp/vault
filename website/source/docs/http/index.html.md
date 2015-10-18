@@ -63,10 +63,10 @@ This maps to `secret/foo` where `foo` is the key in the `secret/` backend/
 Here is an example of reading a secret using cURL:
 
 ```shell
-curl \
-  -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
-  -X GET \
-   http://127.0.0.1:8200/v1/secret/foo
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    -X GET \
+    http://127.0.0.1:8200/v1/secret/foo
 ```
 
 To write a secret, issue a POST on the following URL:
@@ -86,12 +86,12 @@ with a JSON body like:
 Here is an example of writing a secret using cURL:
 
 ```shell
-curl \
-  -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d '{"value":"bar"}' \
-  http://127.0.0.1:8200/v1/secret/baz
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d '{"value":"bar"}' \
+    http://127.0.0.1:8200/v1/secret/baz
 ```
 
 For more examples, please look at the Vault API client.

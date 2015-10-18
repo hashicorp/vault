@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/uuid"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -77,6 +77,8 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 // setupExpiration is invoked after we've loaded the mount table to
 // initialize the expiration manager
 func (c *Core) setupExpiration() error {
+	c.metricsMutex.Lock()
+	defer c.metricsMutex.Unlock()
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
@@ -101,6 +103,8 @@ func (c *Core) stopExpiration() error {
 		if err := c.expiration.Stop(); err != nil {
 			return err
 		}
+		c.metricsMutex.Lock()
+		defer c.metricsMutex.Unlock()
 		c.expiration = nil
 	}
 	return nil

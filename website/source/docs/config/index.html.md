@@ -42,6 +42,10 @@ to specify where the configuration is.
   "tcp" is currently the only option available. A full reference for the
    inner syntax is below.
 
+* `disable_cache` (optional) - A boolean. If true, this will disable the
+  read cache used by the physical storage subsystem. This will very
+  significantly impact performance.
+
 * `disable_mlock` (optional) - A boolean. If true, this will disable the
   server from executing the `mlock` syscall to prevent memory from being
   swapped to disk. This is not recommended in production (see below).

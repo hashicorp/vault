@@ -37,8 +37,7 @@ type Key struct {
 
 // Serialize is used to create a byte encoded key
 func (k *Key) Serialize() ([]byte, error) {
-	buf, err := json.Marshal(k)
-	return buf, err
+	return json.Marshal(k)
 }
 
 // DeserializeKey is used to deserialize and return a new key
@@ -74,7 +73,7 @@ func (k *Keyring) Clone() *Keyring {
 
 // AddKey adds a new key to the keyring
 func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
-	// Ensure there is no confict
+	// Ensure there is no conflict
 	if exist, ok := k.keys[key.Term]; ok {
 		if !bytes.Equal(key.Value, exist.Value) {
 			return nil, fmt.Errorf("Conflicting key for term %d already installed", key.Term)

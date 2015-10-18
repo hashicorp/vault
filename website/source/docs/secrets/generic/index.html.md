@@ -39,7 +39,9 @@ As an example, we can write a new key "foo" to the generic backend
 mounted at "secret/" by default:
 
 ```
-$ vault write secret/foo zip=zap ttl=1h
+$ vault write secret/foo \
+    zip=zap \
+    ttl=1h
 Success! Data written to: secret/foo
 ```
 
@@ -48,10 +50,10 @@ We can test this by doing a read:
 
 ```
 $ vault read secret/foo
-Key           	Value
-ttl_seconds	3600
-ttl		1h
-zip           	zap
+Key             Value
+ttl_seconds     3600
+ttl             1h
+zip             zap
 ```
 
 As expected, we get the value previously set back as well as our custom TTL
@@ -85,16 +87,16 @@ seconds (one hour) as specified.
 
   ```javascript
   {
-      "auth": null,
-      "data": {
-          "foo": "bar"
-      },
-      "lease_duration": 2592000,
-      "lease_id": "",
-      "renewable": false
+    "auth": null,
+    "data": {
+      "foo": "bar"
+    },
+    "lease_duration": 2592000,
+    "lease_id": "",
+    "renewable": false
   }
   ```
-  
+
   </dd>
 </dl>
 

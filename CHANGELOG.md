@@ -7,8 +7,10 @@ DEPRECATIONS/BREAKING CHANGES:
 IMPROVEMENTS:
 
  * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
+ * core: The physical storage read cache can now be disabled via "disable_cache" [GH-674]
  * core: Tokens can now renew themselves [GH-455]
  * core: Base64-encoded PGP keys can be used with the CLI for `init` and `rekey` operations [GH-653]
+ * logical: Allow `.` in path-based variables in many more locations [GH-244]
  * logical: Responses now contain a "warnings" key containing a list of warnings returned from the server. These are conditions that did not require failing an operation, but of which the client should be aware. [GH-676]
 
 BUG FIXES:
@@ -18,10 +20,11 @@ BUG FIXES:
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
  * core: Stale leader entries will now be reaped [GH-679]
  * core: Using `mount-tune` on the auth/token path did not take effect. [GH-688]
+ * core: Fix a potential race condition when (un)sealing the vault with metrics enabled [GH-694]
 
 MISC:
 
- * Various documentation fixes and improvements [GH-688]
+ * Various documentation fixes and improvements [GH-685] [GH-688]
 
 ## 0.3.1 (October 6, 2015)
 

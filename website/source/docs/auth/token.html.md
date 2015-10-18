@@ -118,11 +118,11 @@ of the header should be "X-Vault-Token" and the value should be the token.
       ```javascript
     {
       "auth": {
-          "client_token": "ABCD",
-          "policies": ["web", "stage"],
-          "metadata": {"user": "armon"},
-          "lease_duration": 3600,
-          "renewable": true,
+        "client_token": "ABCD",
+        "policies": ["web", "stage"],
+        "metadata": {"user": "armon"},
+        "lease_duration": 3600,
+        "renewable": true,
       }
     }
     ```
@@ -346,11 +346,11 @@ of the header should be "X-Vault-Token" and the value should be the token.
     ```javascript
     {
       "auth": {
-          "client_token": "ABCD",
-          "policies": ["web", "stage"],
-          "metadata": {"user": "armon"},
-          "lease_duration": 3600,
-          "renewable": true,
+        "client_token": "ABCD",
+        "policies": ["web", "stage"],
+        "metadata": {"user": "armon"},
+        "lease_duration": 3600,
+        "renewable": true,
       }
     }
     ```

@@ -17,10 +17,10 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -242,6 +242,10 @@ type Core struct {
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
+
+	// metricsMutex is used to prevent a race condition between
+	// metrics emission and sealing leading to a nil pointer
+	metricsMutex sync.Mutex
 
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
@@ -1651,7 +1655,11 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 	for {
 		select {
 		case <-time.After(time.Second):
-			c.expiration.emitMetrics()
+			c.metricsMutex.Lock()
+			if c.expiration != nil {
+				c.expiration.emitMetrics()
+			}
+			c.metricsMutex.Unlock()
 		case <-stopCh:
 			return
 		}

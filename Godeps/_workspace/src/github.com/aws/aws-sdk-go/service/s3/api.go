@@ -2177,6 +2177,9 @@ type CopyObjectOutput struct {
 	// (e.g., AES256, aws:kms).
 	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"ServerSideEncryption"`
 
+	// Version ID of the newly created copy.
+	VersionId *string `location:"header" locationName:"x-amz-version-id" type:"string"`
+
 	metadataCopyObjectOutput `json:"-" xml:"-"`
 }
 
@@ -6578,6 +6581,10 @@ type UploadPartInput struct {
 	// key was transmitted without error.
 	SSECustomerKeyMD5 *string `location:"header" locationName:"x-amz-server-side-encryption-customer-key-MD5" type:"string"`
 
+	// The Server-side encryption algorithm used when storing this object in S3
+	// (e.g., AES256).
+	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"UploadPartRequestServerSideEncryption"`
+
 	// Upload ID identifying the multipart upload whose part is being uploaded.
 	UploadId *string `location:"querystring" locationName:"uploadId" type:"string" required:"true"`
 
@@ -6931,4 +6938,11 @@ const (
 	TypeAmazonCustomerByEmail = "AmazonCustomerByEmail"
 	// @enum Type
 	TypeGroup = "Group"
+)
+
+// The Server-side encryption algorithm used when storing this object in S3
+// (e.g., AES256).
+const (
+	// @enum UploadPartRequestServerSideEncryption
+	UploadPartRequestServerSideEncryptionAes256 = "AES256"
 )

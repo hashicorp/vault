@@ -18,6 +18,7 @@ type Config struct {
 	Listeners []*Listener `hcl:"-"`
 	Backend   *Backend    `hcl:"-"`
 
+	DisableCache bool `hcl:"disable_cache"`
 	DisableMlock bool `hcl:"disable_mlock"`
 
 	Telemetry *Telemetry `hcl:"telemetry"`
@@ -31,6 +32,7 @@ type Config struct {
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig() *Config {
 	return &Config{
+		DisableCache: false,
 		DisableMlock: true,
 
 		Backend: &Backend{
@@ -106,7 +108,12 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Telemetry = c2.Telemetry
 	}
 
-	// merging this boolean via an OR operation
+	// merging these booleans via an OR operation
+	result.DisableCache = c.DisableCache
+	if c2.DisableCache {
+		result.DisableCache = c2.DisableCache
+	}
+
 	result.DisableMlock = c.DisableMlock
 	if c2.DisableMlock {
 		result.DisableMlock = c2.DisableMlock

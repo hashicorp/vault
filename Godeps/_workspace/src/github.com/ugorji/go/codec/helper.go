@@ -101,6 +101,7 @@ package codec
 // check for these error conditions.
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/binary"
 	"errors"
@@ -212,9 +213,6 @@ var (
 	bigen               = binary.BigEndian
 	structInfoFieldName = "_struct"
 
-	cachedTypeInfo      = make(map[uintptr]*typeInfo, 64)
-	cachedTypeInfoMutex sync.RWMutex
-
 	// mapStrIntfTyp = reflect.TypeOf(map[string]interface{}(nil))
 	intfSliceTyp = reflect.TypeOf([]interface{}(nil))
 	intfTyp      = intfSliceTyp.Elem()
@@ -256,6 +254,8 @@ var (
 	noFieldNameToStructFieldInfoErr = errors.New("no field name passed to parseStructFieldInfo")
 )
 
+var defTypeInfos = NewTypeInfos([]string{"codec", "json"})
+
 // Selfer defines methods by which a value can encode or decode itself.
 //
 // Any type which implements Selfer will be able to encode or decode itself.
@@ -281,6 +281,11 @@ type MapBySlice interface {
 //
 // BasicHandle encapsulates the common options and extension functions.
 type BasicHandle struct {
+	// TypeInfos is used to get the type info for any type.
+	//
+	// If not configure, the default TypeInfos is used, which uses struct tag keys: codec, json
+	TypeInfos *TypeInfos
+
 	extHandle
 	EncodeOptions
 	DecodeOptions
@@ -288,6 +293,13 @@ type BasicHandle struct {
 
 func (x *BasicHandle) getBasicHandle() *BasicHandle {
 	return x
+}
+
+func (x *BasicHandle) getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
+	if x.TypeInfos != nil {
+		return x.TypeInfos.get(rtid, rt)
+	}
+	return defTypeInfos.get(rtid, rt)
 }
 
 // Handle is the interface for a specific encoding format.
@@ -695,28 +707,48 @@ func (ti *typeInfo) indexForEncName(name string) int {
 	return -1
 }
 
-func getStructTag(t reflect.StructTag) (s string) {
+// TypeInfos caches typeInfo for each type on first inspection.
+//
+// It is configured with a set of tag keys, which are used to get
+// configuration for the type.
+type TypeInfos struct {
+	infos map[uintptr]*typeInfo
+	mu    sync.RWMutex
+	tags  []string
+}
+
+// NewTypeInfos creates a TypeInfos given a set of struct tags keys.
+//
+// This allows users customize the struct tag keys which contain configuration
+// of their types.
+func NewTypeInfos(tags []string) *TypeInfos {
+	return &TypeInfos{tags: tags, infos: make(map[uintptr]*typeInfo, 64)}
+}
+
+func (x *TypeInfos) structTag(t reflect.StructTag) (s string) {
 	// check for tags: codec, json, in that order.
 	// this allows seamless support for many configured structs.
-	s = t.Get("codec")
-	if s == "" {
-		s = t.Get("json")
+	for _, x := range x.tags {
+		s = t.Get(x)
+		if s != "" {
+			return s
+		}
 	}
 	return
 }
 
-func getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
+func (x *TypeInfos) get(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 	var ok bool
-	cachedTypeInfoMutex.RLock()
-	pti, ok = cachedTypeInfo[rtid]
-	cachedTypeInfoMutex.RUnlock()
+	x.mu.RLock()
+	pti, ok = x.infos[rtid]
+	x.mu.RUnlock()
 	if ok {
 		return
 	}
 
-	cachedTypeInfoMutex.Lock()
-	defer cachedTypeInfoMutex.Unlock()
-	if pti, ok = cachedTypeInfo[rtid]; ok {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if pti, ok = x.infos[rtid]; ok {
 		return
 	}
 
@@ -768,11 +800,11 @@ func getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 	if rt.Kind() == reflect.Struct {
 		var siInfo *structFieldInfo
 		if f, ok := rt.FieldByName(structInfoFieldName); ok {
-			siInfo = parseStructFieldInfo(structInfoFieldName, getStructTag(f.Tag))
+			siInfo = parseStructFieldInfo(structInfoFieldName, x.structTag(f.Tag))
 			ti.toArray = siInfo.toArray
 		}
 		sfip := make([]*structFieldInfo, 0, rt.NumField())
-		rgetTypeInfo(rt, nil, make(map[string]bool, 16), &sfip, siInfo)
+		x.rget(rt, nil, make(map[string]bool, 16), &sfip, siInfo)
 
 		ti.sfip = make([]*structFieldInfo, len(sfip))
 		ti.sfi = make([]*structFieldInfo, len(sfip))
@@ -781,11 +813,11 @@ func getTypeInfo(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 		copy(ti.sfi, sfip)
 	}
 	// sfi = sfip
-	cachedTypeInfo[rtid] = pti
+	x.infos[rtid] = pti
 	return
 }
 
-func rgetTypeInfo(rt reflect.Type, indexstack []int, fnameToHastag map[string]bool,
+func (x *TypeInfos) rget(rt reflect.Type, indexstack []int, fnameToHastag map[string]bool,
 	sfi *[]*structFieldInfo, siInfo *structFieldInfo,
 ) {
 	for j := 0; j < rt.NumField(); j++ {
@@ -794,7 +826,7 @@ func rgetTypeInfo(rt reflect.Type, indexstack []int, fnameToHastag map[string]bo
 		if tk := f.Type.Kind(); tk == reflect.Func {
 			continue
 		}
-		stag := getStructTag(f.Tag)
+		stag := x.structTag(f.Tag)
 		if stag == "-" {
 			continue
 		}
@@ -825,7 +857,7 @@ func rgetTypeInfo(rt reflect.Type, indexstack []int, fnameToHastag map[string]bo
 				copy(indexstack2, indexstack)
 				indexstack2[len(indexstack)] = j
 				// indexstack2 := append(append(make([]int, 0, len(indexstack)+4), indexstack...), j)
-				rgetTypeInfo(ft, indexstack2, fnameToHastag, sfi, siInfo)
+				x.rget(ft, indexstack2, fnameToHastag, sfi, siInfo)
 				continue
 			}
 		}
@@ -944,3 +976,114 @@ func (_ checkOverflow) SignedInt(v uint64) (i int64, overflow bool) {
 	i = int64(v)
 	return
 }
+
+// ------------------ SORT -----------------
+
+func isNaN(f float64) bool { return f != f }
+
+// -----------------------
+
+type intSlice []int64
+type uintSlice []uint64
+type floatSlice []float64
+type boolSlice []bool
+type stringSlice []string
+type bytesSlice [][]byte
+
+func (p intSlice) Len() int           { return len(p) }
+func (p intSlice) Less(i, j int) bool { return p[i] < p[j] }
+func (p intSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p uintSlice) Len() int           { return len(p) }
+func (p uintSlice) Less(i, j int) bool { return p[i] < p[j] }
+func (p uintSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p floatSlice) Len() int { return len(p) }
+func (p floatSlice) Less(i, j int) bool {
+	return p[i] < p[j] || isNaN(p[i]) && !isNaN(p[j])
+}
+func (p floatSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
+func (p stringSlice) Len() int           { return len(p) }
+func (p stringSlice) Less(i, j int) bool { return p[i] < p[j] }
+func (p stringSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p bytesSlice) Len() int           { return len(p) }
+func (p bytesSlice) Less(i, j int) bool { return bytes.Compare(p[i], p[j]) == -1 }
+func (p bytesSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p boolSlice) Len() int           { return len(p) }
+func (p boolSlice) Less(i, j int) bool { return !p[i] && p[j] }
+func (p boolSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// ---------------------
+
+type intRv struct {
+	v int64
+	r reflect.Value
+}
+type intRvSlice []intRv
+type uintRv struct {
+	v uint64
+	r reflect.Value
+}
+type uintRvSlice []uintRv
+type floatRv struct {
+	v float64
+	r reflect.Value
+}
+type floatRvSlice []floatRv
+type boolRv struct {
+	v bool
+	r reflect.Value
+}
+type boolRvSlice []boolRv
+type stringRv struct {
+	v string
+	r reflect.Value
+}
+type stringRvSlice []stringRv
+type bytesRv struct {
+	v []byte
+	r reflect.Value
+}
+type bytesRvSlice []bytesRv
+
+func (p intRvSlice) Len() int           { return len(p) }
+func (p intRvSlice) Less(i, j int) bool { return p[i].v < p[j].v }
+func (p intRvSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p uintRvSlice) Len() int           { return len(p) }
+func (p uintRvSlice) Less(i, j int) bool { return p[i].v < p[j].v }
+func (p uintRvSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p floatRvSlice) Len() int { return len(p) }
+func (p floatRvSlice) Less(i, j int) bool {
+	return p[i].v < p[j].v || isNaN(p[i].v) && !isNaN(p[j].v)
+}
+func (p floatRvSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
+func (p stringRvSlice) Len() int           { return len(p) }
+func (p stringRvSlice) Less(i, j int) bool { return p[i].v < p[j].v }
+func (p stringRvSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p bytesRvSlice) Len() int           { return len(p) }
+func (p bytesRvSlice) Less(i, j int) bool { return bytes.Compare(p[i].v, p[j].v) == -1 }
+func (p bytesRvSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (p boolRvSlice) Len() int           { return len(p) }
+func (p boolRvSlice) Less(i, j int) bool { return !p[i].v && p[j].v }
+func (p boolRvSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// -----------------
+
+type bytesI struct {
+	v []byte
+	i interface{}
+}
+
+type bytesISlice []bytesI
+
+func (p bytesISlice) Len() int           { return len(p) }
+func (p bytesISlice) Less(i, j int) bool { return bytes.Compare(p[i].v, p[j].v) == -1 }
+func (p bytesISlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }

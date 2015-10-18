@@ -144,6 +144,7 @@ type genRunner struct {
 	xs string // top level variable/constant suffix
 	hn string // fn helper type name
 
+	ti *TypeInfos
 	// rr *rand.Rand // random generator for file-specific types
 }
 
@@ -151,7 +152,7 @@ type genRunner struct {
 // type passed. All the types must be in the same package.
 //
 // Library users: *DO NOT USE IT DIRECTLY. IT WILL CHANGE CONTINOUSLY WITHOUT NOTICE.*
-func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, typ ...reflect.Type) {
+func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, ti *TypeInfos, typ ...reflect.Type) {
 	if len(typ) == 0 {
 		return
 	}
@@ -168,6 +169,10 @@ func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, typ ...ref
 		ts:     []reflect.Type{},
 		bp:     genImportPath(typ[0]),
 		xs:     uid,
+		ti:     ti,
+	}
+	if x.ti == nil {
+		x.ti = defTypeInfos
 	}
 	if x.xs == "" {
 		rr := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -756,7 +761,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 	// replicate code in kStruct i.e. for each field, deref type to non-pointer, and call x.enc on it
 
 	// if t === type currently running selfer on, do for all
-	ti := getTypeInfo(rtid, t)
+	ti := x.ti.get(rtid, t)
 	i := x.varsfx()
 	sepVarname := genTempVarPfx + "sep" + i
 	numfieldsvar := genTempVarPfx + "q" + i
@@ -923,6 +928,7 @@ func (x *genRunner) encListFallback(varname string, t reflect.Type) {
 }
 
 func (x *genRunner) encMapFallback(varname string, t reflect.Type) {
+	// TODO: expand this to handle canonical.
 	i := x.varsfx()
 	x.line("r.EncodeMapStart(len(" + varname + "))")
 	x.linef("for %sk%s, %sv%s := range %s {", genTempVarPfx, i, genTempVarPfx, i, varname)
@@ -1296,8 +1302,24 @@ func (x *genRunner) decMapFallback(varname string, rtid uintptr, t reflect.Type)
 	}
 	telem := t.Elem()
 	tkey := t.Key()
-	ts := tstruc{genTempVarPfx, x.varsfx(), varname, x.genTypeName(tkey), x.genTypeName(telem), int(telem.Size() + tkey.Size())}
+	ts := tstruc{
+		genTempVarPfx, x.varsfx(), varname, x.genTypeName(tkey),
+		x.genTypeName(telem), int(telem.Size() + tkey.Size()),
+	}
+
 	funcs := make(template.FuncMap)
+	funcs["decElemZero"] = func() string {
+		return x.genZeroValueR(telem)
+	}
+	funcs["decElemKindImmutable"] = func() bool {
+		return genIsImmutable(telem)
+	}
+	funcs["decElemKindPtr"] = func() bool {
+		return telem.Kind() == reflect.Ptr
+	}
+	funcs["decElemKindIntf"] = func() bool {
+		return telem.Kind() == reflect.Interface
+	}
 	funcs["decLineVarK"] = func(varname string) string {
 		x.decVar(varname, tkey, false)
 		return ""
@@ -1328,7 +1350,7 @@ func (x *genRunner) decMapFallback(varname string, rtid uintptr, t reflect.Type)
 }
 
 func (x *genRunner) decStructMapSwitch(kName string, varname string, rtid uintptr, t reflect.Type) {
-	ti := getTypeInfo(rtid, t)
+	ti := x.ti.get(rtid, t)
 	tisfi := ti.sfip // always use sequence from file. decStruct expects same thing.
 	x.line("switch (" + kName + ") {")
 	for _, si := range tisfi {
@@ -1426,7 +1448,7 @@ func (x *genRunner) decStructMap(varname, lenvarname string, rtid uintptr, t ref
 func (x *genRunner) decStructArray(varname, lenvarname, breakString string, rtid uintptr, t reflect.Type) {
 	tpfx := genTempVarPfx
 	i := x.varsfx()
-	ti := getTypeInfo(rtid, t)
+	ti := x.ti.get(rtid, t)
 	tisfi := ti.sfip // always use sequence from file. decStruct expects same thing.
 	x.linef("var %sj%s int", tpfx, i)
 	x.linef("var %sb%s bool", tpfx, i) // break
@@ -1721,6 +1743,8 @@ func genInternalDecCommandAsString(s string) string {
 		return "uint32(dd.DecodeUint(32))"
 	case "uint64":
 		return "dd.DecodeUint(64)"
+	case "uintptr":
+		return "uintptr(dd.DecodeUint(uintBitsize))"
 	case "int":
 		return "int(dd.DecodeInt(intBitsize))"
 	case "int8":
@@ -1741,9 +1765,24 @@ func genInternalDecCommandAsString(s string) string {
 	case "bool":
 		return "dd.DecodeBool()"
 	default:
-		panic(errors.New("unknown type for decode: " + s))
+		panic(errors.New("gen internal: unknown type for decode: " + s))
 	}
+}
 
+func genInternalSortType(s string, elem bool) string {
+	for _, v := range [...]string{"int", "uint", "float", "bool", "string"} {
+		if strings.HasPrefix(s, v) {
+			if elem {
+				if v == "int" || v == "uint" || v == "float" {
+					return v + "64"
+				} else {
+					return v
+				}
+			}
+			return v + "Slice"
+		}
+	}
+	panic("sorttype: unexpected type: " + s)
 }
 
 // var genInternalMu sync.Mutex
@@ -1762,6 +1801,7 @@ func genInternalInit() {
 		"uint16",
 		"uint32",
 		"uint64",
+		"uintptr",
 		"int",
 		"int8",
 		"int16",
@@ -1779,6 +1819,7 @@ func genInternalInit() {
 		"uint16",
 		"uint32",
 		"uint64",
+		"uintptr",
 		"int",
 		"int8",
 		"int16",
@@ -1798,6 +1839,7 @@ func genInternalInit() {
 		"uint16":      2,
 		"uint32":      4,
 		"uint64":      8,
+		"uintptr":     1 * wordSizeBytes,
 		"int":         1 * wordSizeBytes,
 		"int8":        1,
 		"int16":       2,
@@ -1832,16 +1874,18 @@ func genInternalInit() {
 	funcs["encmd"] = genInternalEncCommandAsString
 	funcs["decmd"] = genInternalDecCommandAsString
 	funcs["zerocmd"] = genInternalZeroValue
+	funcs["hasprefix"] = strings.HasPrefix
+	funcs["sorttype"] = genInternalSortType
 
 	genInternalV = gt
 	genInternalTmplFuncs = funcs
 }
 
-// GenInternalGoFile is used to generate source files from templates.
+// genInternalGoFile is used to generate source files from templates.
 // It is run by the program author alone.
 // Unfortunately, it has to be exported so that it can be called from a command line tool.
 // *** DO NOT USE ***
-func GenInternalGoFile(r io.Reader, w io.Writer, safe bool) (err error) {
+func genInternalGoFile(r io.Reader, w io.Writer, safe bool) (err error) {
 	genInternalOnce.Do(genInternalInit)
 
 	gt := genInternalV

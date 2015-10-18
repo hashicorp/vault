@@ -50,6 +50,13 @@ func readline(f *os.File) (string, error) {
 			break
 		}
 
+		// ASCII code 3 is what is sent for a Ctrl-C while reading raw.
+		// If we see that, then get the interrupt. We have to do this here
+		// because terminals in raw mode won't catch it at the shell level.
+		if buf[0] == 3 {
+			return "", ErrInterrupted
+		}
+
 		resultBuf = append(resultBuf, buf[0])
 	}
 

@@ -33,13 +33,13 @@ description: |-
 	<dt>Returns</dt>
 	<dd>
 
-```
-{
-    "initialized": true,
-    "sealed": false,
-    "standby": false
-}
-```
+    ```javascript
+    {
+      "initialized": true,
+      "sealed": false,
+      "standby": false
+    }
+    ```
 
     Status Codes:
 

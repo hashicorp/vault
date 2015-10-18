@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/uuid"
+	"github.com/hashicorp/uuid"
 )
 
 // mockRollback returns a mock rollback manager

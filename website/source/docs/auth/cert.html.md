@@ -21,8 +21,8 @@ from an external source.
 
 ### Via the CLI
 ```
-vault auth -method=cert \
-  -ca-cert=ca.pem -client-cert=cert.pem -client-key=key.pem
+$ vault auth -method=cert \
+    -ca-cert=ca.pem -client-cert=cert.pem -client-key=key.pem
 ```
 
 ### Via the API
@@ -31,8 +31,8 @@ certificate and when the login endpoint is hit, the auth backend will determine
 if there is a matching trusted certificate to authenticate the client.
 
 ```
-curl --cacert ca.pem --cert cert.pem --key key.pem \
-  $VAULT_ADDR/v1/auth/cert/login -XPOST
+$ curl --cacert ca.pem --cert cert.pem --key key.pem \
+    $VAULT_ADDR/v1/auth/cert/login -XPOST
 ```
 
 ## Configuration
@@ -57,7 +57,11 @@ trusted certificates that are allowed to authenticate. An example is shown below
 Use `vault path-help` for more details.
 
 ```
-$ vault write auth/cert/certs/web display_name=web policies=web,prod certificate=@web-cert.pem lease=3600
+$ vault write auth/cert/certs/web \
+    display_name=web \
+    policies=web,prod \
+    certificate=@web-cert.pem \
+    lease=3600
 ...
 ```
 

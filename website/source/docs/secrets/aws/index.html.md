@@ -116,27 +116,27 @@ The root credentials need permission to perform various IAM actions. These are t
 
 ```javascript
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iam:CreateAccessKey",
-                "iam:CreateUser",
-                "iam:PutUserPolicy",
-                "iam:ListGroupsForUser",
-                "iam:ListUserPolicies",
-                "iam:ListAccessKeys",
-                "iam:DeleteAccessKey",
-                "iam:DeleteUserPolicy",
-                "iam:RemoveUserFromGroup",
-                "iam:DeleteUser"
-            ],
-            "Resource": [
-                "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
-            ]
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateAccessKey",
+        "iam:CreateUser",
+        "iam:PutUserPolicy",
+        "iam:ListGroupsForUser",
+        "iam:ListUserPolicies",
+        "iam:ListAccessKeys",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUserPolicy",
+        "iam:RemoveUserFromGroup",
+        "iam:DeleteUser"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
+      ]
+    }
+  ]
 }
 ```
 
@@ -286,9 +286,9 @@ interactive help output.
 
     ```javascript
     {
-        "data": {
-            "policy": "..."
-        }
+      "data": {
+        "policy": "..."
+      }
     }
     ```
 
@@ -346,10 +346,10 @@ interactive help output.
 
     ```javascript
     {
-        "data": {
-            "access_key": "...",
-            "secret_key": "..."
-        }
+      "data": {
+        "access_key": "...",
+        "secret_key": "..."
+      }
     }
     ```
 

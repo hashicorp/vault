@@ -183,16 +183,17 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>
 
     ```javascript
-    "data": {
+    {
+      "data": {
         "cipher_mode": "aes-gcm",
         "deletion_allowed": false,
         "derived": false,
         "keys": {
-            "1": 1442851412
+          "1": 1442851412
         },
-    {
         "min_decryption_version": 0,
         "name": "foo"
+      }
     }
     ```
 
@@ -337,9 +338,9 @@ only encrypt or decrypt using the named keys they need access to.
 
     ```javascript
     {
-        "data": {
-            "ciphertext": "vault:v1:abcdefgh"
-        }
+      "data": {
+        "ciphertext": "vault:v1:abcdefgh"
+      }
     }
     ```
 
@@ -383,9 +384,9 @@ only encrypt or decrypt using the named keys they need access to.
 
     ```javascript
     {
-        "data": {
-            "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo="
-        }
+      "data": {
+        "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo="
+      }
     }
     ```
 
@@ -432,7 +433,7 @@ only encrypt or decrypt using the named keys they need access to.
     ```javascript
     {
       "data": {
-          "ciphertext": "vault:v2:abcdefgh"
+        "ciphertext": "vault:v2:abcdefgh"
       }
     }
     ```
@@ -489,10 +490,10 @@ only encrypt or decrypt using the named keys they need access to.
 
     ```javascript
     {
-        "data": {
-            "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo=",
-            "ciphertext": "vault:v1:abcdefgh"
-        }
+      "data": {
+        "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveAo=",
+        "ciphertext": "vault:v1:abcdefgh"
+      }
     }
     ```
 

@@ -156,10 +156,10 @@ type IssueListByRepoOptions struct {
 	// any assigned user.
 	Assignee string `url:"assignee,omitempty"`
 
-	// Assignee filters issues based on their creator.
+	// Creator filters issues based on their creator.
 	Creator string `url:"creator,omitempty"`
 
-	// Assignee filters issues to those mentioned a specific user.
+	// Mentioned filters issues to those mentioned a specific user.
 	Mentioned string `url:"mentioned,omitempty"`
 
 	// Labels filters issues based on their label.

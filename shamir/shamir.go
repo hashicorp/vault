@@ -200,7 +200,7 @@ func Combine(parts [][]byte) ([]byte, error) {
 	for i, part := range parts {
 		samp := part[firstPartLen-1]
 		if exists := checkMap[samp]; exists {
-			return nil, fmt.Errorf("duplicte part detected")
+			return nil, fmt.Errorf("duplicate part detected")
 		}
 		checkMap[samp] = true
 		x_samples[i] = samp
