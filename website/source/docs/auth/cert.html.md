@@ -17,6 +17,19 @@ The trusted certificates and CAs are configured directly to the auth
 backend using the `certs/` path. This backend cannot read trusted certificates
 from an external source.
 
+CA certs are associated with a role; role names and CRL names are normalized to lower-case.
+
+## Revocation Checking
+
+Since Vault 0.4, the backend supports revocation checking. An authorised user can submit PEM-formatted CRLs identified by a given name; these can be updated or deleted at will. When there are CRLs present, at the time of client authentication:
+
+* If the client presents any chain where no certificate in the chain matches a revoked serial number, authentication is allowed
+* If there is no chain presented by the client without a revoked serial number, authentication is denied
+
+This method provides good security while also allowing for flexibility. For instance, if an intermediate CA is going to be retired, a client can be configured with two certificate chains: one that contains the initial intermediate CA in the path, and the other that contains the replacement. When the initial intermediate CA is revoked, the chain containing the replacement will still allow the client to successfully authenticate.
+
+**N.B.**: Matching is performed by *serial number only*. For most CAs, including Vault's `pki` backend, multiple CRLs can successfully be used as serial numbers are globally unique. However, since RFCs only specify that serial numbers must be unique per-CA, some CAs issue serial numbers in-order, which may cause clashes if attempting to use CRLs from two such CAs in the same mount of the backend. The workaround here is to mount multiple copies of the `cert` backend, configure each with one CA/CRL, and have clients connect to the appropriate mount.
+
 ## Authentication
 
 ### Via the CLI
@@ -61,12 +74,276 @@ $ vault write auth/cert/certs/web \
     display_name=web \
     policies=web,prod \
     certificate=@web-cert.pem \
-    lease=3600
+    ttl=1h
 ...
 ```
 
 The above creates a new trusted certificate "web" with same display name
 and the "web" and "prod" policies. The certificate (public key) used to verify
-clients is given by the "web-cert.pem" file. Lastly, an optional lease value
-can be provided in seconds to limit the lease period.
+clients is given by the "web-cert.pem" file. Lastly, an optional `ttl` value
+can be provided in seconds to limit the lease duration.
 
+#### Via the API
+
+The token is set directly as a header for the HTTP API. The name
+of the header should be "X-Vault-Token" and the value should be the token.
+
+## API
+
+### /auth/cert/certs
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the named role and CA cert from the backend mount.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/certs/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Gets information associated with the named role.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/certs/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----",
+        "display_name": "test",
+        "policies": "",
+        "ttl": 2592000
+      },
+      "warnings": null,
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Sets a CA cert and associated parameters in a role name.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/certs/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">certificate</span>
+        <span class="param-flags">required</span>
+        The PEM-format CA certificate.
+      </li>
+      <li>
+        <span class="param">policies</span>
+        <span class="param-flags">required</span>
+        A comma-separated list of policies to set on tokens issued when
+        authenticating against this CA certificate.
+      </li>
+      <li>
+        <span class="param">display_name</span>
+        <span class="param-flags">optional</span>
+        The `display_name` to set on tokens issued when authenticating
+        against this CA certificate. If not set, defaults to the name
+        of the role.
+      </li>
+      <li>
+        <span class="param">ttl</span>
+        <span class="param-flags">optional</span>
+        The TTL period of the token, provided as "1h", where hour is
+        the largest suffix. If not provided, the token is valid for the
+        the mount or system default TTL time, in that order.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+### /auth/cert/crls
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the named CRL from the backend mount.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/crls/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Gets information associated with the named CRL (currently, the serial numbers contained within).
+    As the serials can be integers up to an arbitrary size, these are returned as strings.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/certs/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+        "auth": null, 
+        "data": {
+            "serials": {
+                "13": {}
+            }
+        }, 
+        "lease_duration": 0, 
+        "lease_id": "", 
+        "renewable": false, 
+        "warnings": null
+    }
+
+    ```
+
+  </dd>
+</dl>
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Sets a named CRL.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/crls/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">crl</span>
+        <span class="param-flags">required</span>
+        The PEM-format CRL.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+### /auth/cert/login
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Log in and fetch a token. If there is a valid chain to a CA configured in the backend,
+    a token will be issued.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/login`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "auth": {
+        "client_token": "ABCD",
+        "policies": ["web", "stage"],
+        "lease_duration": 3600,
+        "renewable": true,
+      }
+    }
+    ```
+
+  </dd>
+</dl>

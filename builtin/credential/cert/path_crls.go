@@ -29,16 +29,6 @@ May be DER or PEM encoded. Note: the expiration time
 is ignored; if the CRL is no longer valid, delete it
 using the same name as specified here.`,
 			},
-
-			"serial": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `If specified, for a read, information for this
-serial will be returned rather than the named CRL.
-This can be a hex-formatted string separated
-by : or -, or an integer string; this will be
-assumed to be base 10 unless prefixed by "0x"
-for base 16 or "0" for base 8.`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -162,9 +152,8 @@ func (b *backend) pathCRLDelete(
 func (b *backend) pathCRLRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
-	serialStr := d.Get("serial").(string)
-	if name == "" && serialStr == "" {
-		return logical.ErrorResponse(`"name" or "serial" parameter must be set`), nil
+	if name == "" {
+		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
 	crlUpdateMutex.RLock()
@@ -172,27 +161,14 @@ func (b *backend) pathCRLRead(
 
 	var retData map[string]interface{}
 
-	if serialStr != "" {
-		serial, err := parseSerialString(serialStr)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
-		ret := findSerialInCRLs(serial)
-		retData = map[string]interface{}{}
-		for k, v := range ret {
-			retData[k] = v
-		}
-	} else {
-		crl, ok := crls[name]
-		if !ok {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"no such CRL %s", name,
-			)), nil
-		}
-
-		retData = structs.New(&crl).Map()
+	crl, ok := crls[name]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"no such CRL %s", name,
+		)), nil
 	}
+
+	retData = structs.New(&crl).Map()
 
 	return &logical.Response{
 		Data: retData,

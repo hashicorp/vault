@@ -6,6 +6,13 @@ DEPRECATIONS/BREAKING CHANGES:
    helping prevent accidental case mismatches. For backwards compatibility,
 policy names are not currently normalized when reading or deleting. [GH-676]
 
+FEATURES:
+
+ * **CRL Checking for Certificate Authentication**: The `cert` backend now
+   supports pushing CRLs into the mount and using the contained serial numbers
+for revocation checking. See the documentation for the `cert` backend for more
+info. [GH-330]
+
 IMPROVEMENTS:
 
  * api: API client now uses a 60 second timeout instead of indefinite [GH-681]
