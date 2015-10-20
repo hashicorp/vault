@@ -61,15 +61,14 @@ type SSHAgentConfig struct {
 
 // TLSClient returns a HTTP client that uses TLS verification (TLS 1.2) for a given
 // certificate pool.
-func (c *SSHAgentConfig) TLSClient(certPool *x509.CertPool) *http.Client {
+func (c *SSHAgentConfig) SetTLSParameters(clientConfig *Config, certPool *x509.CertPool) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.TLSSkipVerify,
 		MinVersion:         tls.VersionTLS12,
 		RootCAs:            certPool,
 	}
 
-	client := *http.DefaultClient
-	client.Transport = &http.Transport{
+	clientConfig.HttpClient.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		Dial: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -78,26 +77,6 @@ func (c *SSHAgentConfig) TLSClient(certPool *x509.CertPool) *http.Client {
 		TLSClientConfig:     tlsConfig,
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
-
-	// From https://github.com/michiwend/gomusicbrainz/pull/4/files
-	defaultRedirectLimit := 30
-
-	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		if len(via) > defaultRedirectLimit {
-			return fmt.Errorf("%d consecutive requests(redirects)", len(via))
-		}
-		if len(via) == 0 {
-			// No redirects
-			return nil
-		}
-		// mutate the subsequent redirect requests with the first Header
-		if token := via[0].Header.Get("X-Vault-Token"); len(token) != 0 {
-			req.Header.Set("X-Vault-Token", token)
-		}
-		return nil
-	}
-
-	return &client
 }
 
 // NewClient returns a new client for the configuration. This client will be used by the
@@ -124,8 +103,8 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 			return nil, err
 		}
 
-		// Change the configuration to have an HTTP client with TLS enabled.
-		clientConfig.HttpClient = c.TLSClient(certPool)
+		// Enable TLS on the HTTP client information
+		c.SetTLSParameters(clientConfig, certPool)
 	}
 
 	// Creating the client object for the given configuration

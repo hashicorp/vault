@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 )
 
 func testHttpGet(t *testing.T, token string, addr string) *http.Response {
@@ -46,7 +47,9 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 		req.Header.Set("X-Vault-Token", token)
 	}
 
-	client := http.DefaultClient
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+	}
 
 	// From https://github.com/michiwend/gomusicbrainz/pull/4/files
 	defaultRedirectLimit := 30

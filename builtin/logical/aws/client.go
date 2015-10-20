@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -29,6 +30,7 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 	awsConfig := &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(config.Region),
+		HTTPClient:  &http.Client{},
 	}
 	return iam.New(awsConfig), nil
 }
