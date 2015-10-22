@@ -42,18 +42,14 @@ Finally, the `-policy` flag can be used to set the policies associated
 with the token. Learn more about policies on the
 [policies concepts](/docs/concepts/policies.html) page.
 
-## Token Leases
+## Token Time-To-Live and Leases
 
-Every token has a lease associated with it. These leases behave in much
-the same way as [leases for secrets](/docs/concepts/lease.html). After
-the lease period is up, the token will no longer function. In addition
-to no longer functioning, Vault will revoke it.
+Every non-root token has a time-to-live (TTL) associated with it.  After the
+TTL is up, the token will no longer function. In addition to no longer
+functioning, Vault will revoke it.
 
-If a lease is associated with the token, in order to avoid your token being
-revoked, the `vault token-renew` command should be periodically used to renew
-the lease.
-
-After a token is revoked, all of the secrets in use by that token will
-also be revoked. Therefore, if a user requests AWS access keys, for example,
-then after the token expires the AWS access keys will also be expired even
-if they had remaining lease time.
+When a token is revoked, any leases associated with the token will be revoked
+as well, even if the TTLs on the individual leases are not yet up. For example,
+if a user requests AWS access keys, after the token expires the AWS access keys
+will also be revoked. In order to avoid your token being revoked, the `vault
+token-renew` command should be periodically used to renew the token.
