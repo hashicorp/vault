@@ -89,7 +89,7 @@ $ vault read -format=json secret/hello
 ```
 
 This contains some extra information; many backends create leases for secrets
-that allow time-limited access other systems, and in those cases `lease_id` would
+that allow time-limited access to other systems, and in those cases `lease_id` would
 contain a lease identifier and `lease_duration` would contain the length of time
 for which the lease is valid, in seconds.
 
