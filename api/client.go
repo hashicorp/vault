@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 var (
@@ -38,10 +40,10 @@ type Config struct {
 func DefaultConfig() *Config {
 	config := &Config{
 		Address: "https://127.0.0.1:8200",
-		HttpClient: &http.Client{
-			Timeout: time.Second * 60,
-		},
+
+		HttpClient: cleanhttp.DefaultClient(),
 	}
+	config.HttpClient.Timeout = time.Second * 60
 
 	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
 		config.Address = addr
