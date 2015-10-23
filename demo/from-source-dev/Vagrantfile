@@ -92,10 +92,10 @@ def configure(config)
 end
 
 ## Look for a Vagrantfile.local to load
-local_vagrantfile = "#{__FILE__}.local"
-if File.exists?(local_vagrantfile)
- eval File.read(local_vagrantfile)
-end
+#local_vagrantfile = "#{__FILE__}.local"
+#if File.exists?(local_vagrantfile)
+# eval File.read(local_vagrantfile)
+#end
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   configure config
