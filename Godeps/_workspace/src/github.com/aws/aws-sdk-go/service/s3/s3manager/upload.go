@@ -14,19 +14,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
 
-// The maximum allowed number of parts in a multi-part upload on Amazon S3.
+// MaxUploadParts is the maximum allowed number of parts in a multi-part upload
+// on Amazon S3.
 var MaxUploadParts = 10000
 
-// The minimum allowed part size when uploading a part to Amazon S3.
+// MinUploadPartSize is the minimum allowed part size when uploading a part to
+// Amazon S3.
 var MinUploadPartSize int64 = 1024 * 1024 * 5
 
-// The default part size to buffer chunks of a payload into.
+// DefaultUploadPartSize is the default part size to buffer chunks of a
+// payload into.
 var DefaultUploadPartSize = MinUploadPartSize
 
-// The default number of goroutines to spin up when using Upload().
+// DefaultUploadConcurrency is the default number of goroutines to spin up when
+// using Upload().
 var DefaultUploadConcurrency = 5
 
-// The default set of options used when opts is nil in Upload().
+// DefaultUploadOptions is the default set of options used when opts is nil in
+// Upload().
 var DefaultUploadOptions = &UploadOptions{
 	PartSize:          DefaultUploadPartSize,
 	Concurrency:       DefaultUploadConcurrency,

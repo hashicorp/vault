@@ -40,10 +40,6 @@ function run_tests() {
 		rm -rf $HOME/.ccm/test/node1/data/system_auth
 	fi
 
-	ccm start -v
-	ccm status
-	ccm node1 nodetool status
-
 	local proto=2
 	if [[ $version == 1.2.* ]]; then
 		proto=1
@@ -53,7 +49,12 @@ function run_tests() {
 		proto=3
 	elif [[ $version == 2.2.* ]]; then
 		proto=4
+		ccm updateconf 'enable_user_defined_functions: true'
 	fi
+
+	ccm start -v
+	ccm status
+	ccm node1 nodetool status
 
 	if [ "$auth" = true ]
 	then
@@ -61,7 +62,7 @@ function run_tests() {
     	go test -v . -timeout 15s -run=TestAuthentication -tags integration -runssl -runauth -proto=$proto -cluster=$(ccm liveset) -clusterSize=$clusterSize -autowait=1000ms
 	else
 
-		go test -timeout 5m -tags integration -cover -v -runssl -proto=$proto -rf=3 -cluster=$(ccm liveset) -clusterSize=$clusterSize -autowait=2000ms -compressor=snappy ./... | tee results.txt
+		go test -timeout 5m -tags integration -v -gocql.timeout=10s -runssl -proto=$proto -rf=3 -cluster=$(ccm liveset) -clusterSize=$clusterSize -autowait=2000ms -compressor=snappy ./...
 
 		if [ ${PIPESTATUS[0]} -ne 0 ]; then
 			echo "--- FAIL: ccm status follows:"
@@ -70,13 +71,6 @@ function run_tests() {
 			ccm node1 showlog > status.log
 			cat status.log
 			echo "--- FAIL: Received a non-zero exit code from the go test execution, please investigate this"
-			exit 1
-		fi
-
-		cover=`cat results.txt | grep coverage: | grep -o "[0-9]\{1,3\}" | head -n 1`
-
-		if [[ $cover -lt "55" ]]; then
-			echo "--- FAIL: expected coverage of at least 60 %, but coverage was $cover %"
 			exit 1
 		fi
 	fi

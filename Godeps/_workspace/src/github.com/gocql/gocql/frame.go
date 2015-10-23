@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -176,6 +177,31 @@ func (c Consistency) String() string {
 		return "LOCAL_ONE"
 	default:
 		return fmt.Sprintf("UNKNOWN_CONS_0x%x", uint16(c))
+	}
+}
+
+func ParseConsistency(s string) Consistency {
+	switch strings.ToUpper(s) {
+	case "ANY":
+		return Any
+	case "ONE":
+		return One
+	case "TWO":
+		return Two
+	case "THREE":
+		return Three
+	case "QUORUM":
+		return Quorum
+	case "ALL":
+		return All
+	case "LOCAL_QUORUM":
+		return LocalQuorum
+	case "EACH_QUORUM":
+		return EachQuorum
+	case "LOCAL_ONE":
+		return LocalOne
+	default:
+		panic("invalid consistency: " + s)
 	}
 }
 
@@ -500,7 +526,7 @@ func (f *framer) parseErrorFrame() frame {
 		stmtId := f.readShortBytes()
 		return &RequestErrUnprepared{
 			errorFrame:  errD,
-			StatementId: stmtId,
+			StatementId: copyBytes(stmtId), // defensivly copy
 		}
 	case errReadFailure:
 		res := &RequestErrReadFailure{
@@ -1371,6 +1397,17 @@ func (f *framer) writeBatchFrame(streamID int, w *writeBatchFrame) error {
 	return f.finishWrite()
 }
 
+type writeOptionsFrame struct{}
+
+func (w *writeOptionsFrame) writeFrame(framer *framer, streamID int) error {
+	return framer.writeOptionsFrame(streamID, w)
+}
+
+func (f *framer) writeOptionsFrame(stream int, _ *writeOptionsFrame) error {
+	f.writeHeader(f.flags, opOptions, stream)
+	return f.finishWrite()
+}
+
 func (f *framer) readByte() byte {
 	if len(f.rbuf) < 1 {
 		panic(fmt.Errorf("not enough bytes in buffer to read byte require 1 got: %d", len(f.rbuf)))
@@ -1466,13 +1503,7 @@ func (f *framer) readBytes() []byte {
 		panic(fmt.Errorf("not enough bytes in buffer to read bytes require %d got: %d", size, len(f.rbuf)))
 	}
 
-	// we cant make assumptions about the length of the life of the supplied byte
-	// slice so we defensivly copy it out of the underlying buffer. This has the
-	// downside of increasing allocs per read but will provide much greater memory
-	// safety. The allocs can hopefully be improved in the future.
-	// TODO: dont copy into a new slice
-	l := make([]byte, size)
-	copy(l, f.rbuf[:size])
+	l := f.rbuf[:size]
 	f.rbuf = f.rbuf[size:]
 
 	return l
@@ -1484,8 +1515,7 @@ func (f *framer) readShortBytes() []byte {
 		panic(fmt.Errorf("not enough bytes in buffer to read short bytes: require %d got %d", size, len(f.rbuf)))
 	}
 
-	l := make([]byte, size)
-	copy(l, f.rbuf[:size])
+	l := f.rbuf[:size]
 	f.rbuf = f.rbuf[size:]
 
 	return l

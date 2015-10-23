@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 )
 
-//RetryableQuery is an interface that represents a query or batch statement that
-//exposes the correct functions for the retry policy logic to evaluate correctly.
+// RetryableQuery is an interface that represents a query or batch statement that
+// exposes the correct functions for the retry policy logic to evaluate correctly.
 type RetryableQuery interface {
 	Attempts() int
 	GetConsistency() Consistency
@@ -48,8 +48,8 @@ func (s *SimpleRetryPolicy) Attempt(q RetryableQuery) bool {
 	return q.Attempts() <= s.NumRetries
 }
 
-//HostSelectionPolicy is an interface for selecting
-//the most appropriate host to execute a given query.
+// HostSelectionPolicy is an interface for selecting
+// the most appropriate host to execute a given query.
 type HostSelectionPolicy interface {
 	SetHosts
 	SetPartitioner
@@ -57,11 +57,12 @@ type HostSelectionPolicy interface {
 	Pick(*Query) NextHost
 }
 
-//NextHost is an iteration function over picked hosts
+// NextHost is an iteration function over picked hosts
 type NextHost func() *HostInfo
 
-//NewRoundRobinHostPolicy is a round-robin load balancing policy
-func NewRoundRobinHostPolicy() HostSelectionPolicy {
+// RoundRobinHostPolicy is a round-robin load balancing policy, where each host
+// is tried sequentially for each query.
+func RoundRobinHostPolicy() HostSelectionPolicy {
 	return &roundRobinHostPolicy{hosts: []HostInfo{}}
 }
 
@@ -105,8 +106,10 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 	}
 }
 
-//NewTokenAwareHostPolicy is a token aware host selection policy
-func NewTokenAwareHostPolicy(fallback HostSelectionPolicy) HostSelectionPolicy {
+// TokenAwareHostPolicy is a token aware host selection policy, where hosts are
+// selected based on the partition key, so queries are sent to the host which
+// owns the partition. Fallback is used when routing information is not available.
+func TokenAwareHostPolicy(fallback HostSelectionPolicy) HostSelectionPolicy {
 	return &tokenAwareHostPolicy{fallback: fallback, hosts: []HostInfo{}}
 }
 
@@ -227,8 +230,10 @@ type roundRobinConnPolicy struct {
 	mu    sync.RWMutex
 }
 
-func NewRoundRobinConnPolicy() ConnSelectionPolicy {
-	return &roundRobinConnPolicy{}
+func RoundRobinConnPolicy() func() ConnSelectionPolicy {
+	return func() ConnSelectionPolicy {
+		return &roundRobinConnPolicy{}
+	}
 }
 
 func (r *roundRobinConnPolicy) SetConns(conns []*Conn) {

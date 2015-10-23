@@ -24,20 +24,19 @@ type ringDescriber struct {
 	closeChan       chan bool
 }
 
-func (r *ringDescriber) GetHosts() (
-	hosts []HostInfo,
-	partitioner string,
-	err error,
-) {
+func (r *ringDescriber) GetHosts() (hosts []HostInfo, partitioner string, err error) {
 	// we need conn to be the same because we need to query system.peers and system.local
 	// on the same node to get the whole cluster
-	conn := r.session.Pool.Pick(nil)
-	if conn == nil {
+
+	iter := r.session.control.query("SELECT data_center, rack, host_id, tokens, partitioner FROM system.local")
+	if iter == nil {
 		return r.prevHosts, r.prevPartitioner, nil
 	}
 
-	query := r.session.Query("SELECT data_center, rack, host_id, tokens, partitioner FROM system.local")
-	iter := conn.executeQuery(query)
+	conn := r.session.pool.Pick(nil)
+	if conn == nil {
+		return r.prevHosts, r.prevPartitioner, nil
+	}
 
 	host := HostInfo{}
 	iter.Scan(&host.DataCenter, &host.Rack, &host.HostId, &host.Tokens, &partitioner)
@@ -57,8 +56,10 @@ func (r *ringDescriber) GetHosts() (
 
 	hosts = []HostInfo{host}
 
-	query = r.session.Query("SELECT peer, data_center, rack, host_id, tokens FROM system.peers")
-	iter = conn.executeQuery(query)
+	iter = r.session.control.query("SELECT peer, data_center, rack, host_id, tokens FROM system.peers")
+	if iter == nil {
+		return r.prevHosts, r.prevPartitioner, nil
+	}
 
 	host = HostInfo{}
 	for iter.Scan(&host.Peer, &host.DataCenter, &host.Rack, &host.HostId, &host.Tokens) {
@@ -97,21 +98,21 @@ func (h *ringDescriber) run(sleep time.Duration) {
 	}
 
 	for {
+		// if we have 0 hosts this will return the previous list of hosts to
+		// attempt to reconnect to the cluster otherwise we would never find
+		// downed hosts again, could possibly have an optimisation to only
+		// try to add new hosts if GetHosts didnt error and the hosts didnt change.
+		hosts, partitioner, err := h.GetHosts()
+		if err != nil {
+			log.Println("RingDescriber: unable to get ring topology:", err)
+			continue
+		}
+
+		h.session.pool.SetHosts(hosts)
+		h.session.pool.SetPartitioner(partitioner)
+
 		select {
 		case <-time.After(sleep):
-			// if we have 0 hosts this will return the previous list of hosts to
-			// attempt to reconnect to the cluster otherwise we would never find
-			// downed hosts again, could possibly have an optimisation to only
-			// try to add new hosts if GetHosts didnt error and the hosts didnt change.
-			hosts, partitioner, err := h.GetHosts()
-			if err != nil {
-				log.Println("RingDescriber: unable to get ring topology:", err)
-			} else {
-				h.session.Pool.SetHosts(hosts)
-				if v, ok := h.session.Pool.(SetPartitioner); ok {
-					v.SetPartitioner(partitioner)
-				}
-			}
 		case <-h.closeChan:
 			return
 		}

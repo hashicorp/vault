@@ -1356,7 +1356,16 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 		if !f.IsValid() {
 			return nil, marshalErrorf("cannot marshal %T into %s", value, info)
 		} else if f.Kind() == reflect.Ptr {
-			f = f.Elem()
+			if f.IsNil() {
+				n := -1
+				buf = append(buf, byte(n>>24),
+					byte(n>>16),
+					byte(n>>8),
+					byte(n))
+				continue
+			} else {
+				f = f.Elem()
+			}
 		}
 
 		data, err := Marshal(e.Type, f.Interface())
