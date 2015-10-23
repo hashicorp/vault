@@ -52,7 +52,10 @@ configure it, use the `/config` endpoint with the following arguments:
      be a part of to authenticate.
   * `base_url` (string, optional) - For GitHub Enterprise or other API-compatible
      servers, the base URL to access the server.
-
+  * `max_ttl` (string, optional) - Maximum duration after which authentication will be expired.
+     This must be a string in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
+  * `ttl` (string, optional) - Duration after which authentication will be expired.
+     This must be a string in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
 
 ###Generate a GitHub Personal Access Token
 Access your Personal Access Tokens in GitHub at [https://github.com/settings/tokens](https://github.com/settings/tokens).
