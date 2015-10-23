@@ -39,7 +39,7 @@ website/build
 
 # Vagrant
 .vagrant/
-Vagrantfile
+#Vagrantfile  # removed from ignore list
 
 # Configs
 *.hcl
@@ -54,3 +54,4 @@ tags
 # Editor backups
 *~
 *.sw[a-z]
+demo/HA-example/Vagrantfile
