@@ -50,6 +50,9 @@ configure it, use the `/config` endpoint with the following arguments:
 
   * `organization` (string, required) - The organization name a user must
      be a part of to authenticate.
+  * `base_url` (string, optional) - For GitHub Enterprise or other API-compatible
+     servers, the base URL to access the server.
+
 
 ###Generate a GitHub Personal Access Token
 Access your Personal Access Tokens in GitHub at [https://github.com/settings/tokens](https://github.com/settings/tokens).
