@@ -37,7 +37,7 @@ generate them, leading to client errors.
 
 MISC:
 
- * Various documentation fixes and improvements [GH-685] [GH-688]
+ * Various documentation fixes and improvements [GH-685] [GH-688] [GH-715]
 
 ## 0.3.1 (October 6, 2015)
 
