@@ -1,15 +1,22 @@
 #What is this configuration about?
 
-This is a single vm(ubuntu/trusty64) with a standalone Vault server in "demo mode" built from the most current source code.
-This is intended to be the fastest, and simplest way to PLAY with vault.
-This should not ever be used for any real secrets. This is a demo/experment environment and is NOT SECURE or production ready.
-It is however built from the latest source and should be an easy path to put your hands on vault for the first time. :)
+This is a set of four (4) vm (ubuntu/trusty64) hosts.
+* Two are Vault servers in "NON-demo, HR clustered mode". Each Vault server is built from the most current source code.
+* The other two are [Consul](https://www.consul.io/) servers that can provide HA storage for the Vault servers.
+
+This is intended to be an example of how you *might* start to build your production environment.
+This should not ever be used for any real secrets. This is a demo/experment environment and should NOT AUTOMATICALLY BE CONSIDERED SECURE or production ready.
+It is however built from the latest Vault source and should be an easy path to put your hands on vault in a "potentially production usable" form for the first time. :)
 
 * Howto get the party started?:
   * Install the required host OS software ( [vagrantup](https://vagrantup.com) and [Virtualbox](https://virtualbox.org/) )
   * cd <into this directory>
-  * vagrant up
-  * vagrant ssh
+  * vagrant up  (And wait for a while for the 4 vm's to be created and the products to be installed and configured. Estimated: ??(10-40)?? minutes to complete this step.)
+  *
+    * vagrant ssh vault1
+    * vagrant ssh vault2
+    * vagrant ssh consul1
+    * vagrant ssh consul1
 <p><div>
 # Start the server in demo mode and route stdout to a log file in /tmp<br/>
 # This lets you keep using the same shell. <br/>
