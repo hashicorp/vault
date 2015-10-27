@@ -44,6 +44,9 @@ website/build
 # Configs
 *.hcl
 
+# ignore my local notes files.
+local.*
+
 .DS_Store
 .idea
 
@@ -54,4 +57,3 @@ tags
 # Editor backups
 *~
 *.sw[a-z]
-demo/HA-example/Vagrantfile

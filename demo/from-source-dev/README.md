@@ -9,6 +9,7 @@ It is however built from the latest source and should be an easy path to put you
   * Install the required host OS software ( [vagrantup](https://vagrantup.com) and [Virtualbox](https://virtualbox.org/) )
   * cd <into this directory>
   * vagrant up
+ <p>Note: The first "vagrant up" takes a few (6+) minutes. It downloads are needed dependencies, current vault source code and compiles it. The duration depends on the speed of your host, guest OS and network. </p>
   * vagrant ssh
 <p><div>
 # Start the server in demo mode and route stdout to a log file in /tmp<br/>
