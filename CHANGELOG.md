@@ -11,6 +11,8 @@ IMPROVEMENTS:
  * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
  * core: The physical storage read cache can now be disabled via
    "disable_cache" [GH-674]
+ * core: The unsealing process can now be reset midway through (this feature
+   was documented before, but not enabled) [GH-695]
  * core: Tokens can now renew themselves [GH-455]
  * core: Base64-encoded PGP keys can be used with the CLI for `init` and
    `rekey` operations [GH-653]

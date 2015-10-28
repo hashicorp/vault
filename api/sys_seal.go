@@ -2,15 +2,7 @@ package api
 
 func (c *Sys) SealStatus() (*SealStatusResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/seal-status")
-	resp, err := c.c.RawRequest(r)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var result SealStatusResponse
-	err = resp.DecodeJSON(&result)
-	return &result, err
+	return sealStatusRequest(c, r)
 }
 
 func (c *Sys) Seal() error {
@@ -22,6 +14,17 @@ func (c *Sys) Seal() error {
 	return err
 }
 
+func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
+	body := map[string]interface{}{"reset": true}
+
+	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
+	if err := r.SetJSONBody(body); err != nil {
+		return nil, err
+	}
+
+	return sealStatusRequest(c, r)
+}
+
 func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
 	body := map[string]interface{}{"key": shard}
 
@@ -30,6 +33,10 @@ func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
 		return nil, err
 	}
 
+	return sealStatusRequest(c, r)
+}
+
+func sealStatusRequest(c *Sys, r *Request) (*SealStatusResponse, error) {
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return nil, err

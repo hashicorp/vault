@@ -50,29 +50,42 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
-		if req.Key == "" {
+		if !req.Reset && req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must specified in request body as JSON"))
+				errors.New("'key' must specified in request body as JSON, or 'reset' set to true"))
 			return
 		}
 
-		// Decode the key, which is hex encoded
-		key, err := hex.DecodeString(req.Key)
-		if err != nil {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'key' must be a valid hex-string"))
-			return
-		}
-
-		// Attempt the unseal
-		if _, err := core.Unseal(key); err != nil {
-			// Ignore ErrInvalidKey because its a user error that we
-			// mask away. We just show them the seal status.
-			if !errwrap.ContainsType(err, new(vault.ErrInvalidKey)) {
+		if req.Reset {
+			sealed, err := core.Sealed()
+			if err != nil {
 				respondError(w, http.StatusInternalServerError, err)
 				return
+			}
+			if !sealed {
+				respondError(w, http.StatusBadRequest, errors.New("vault is unsealed"))
+				return
+			}
+			core.ResetUnsealProcess()
+		} else {
+			// Decode the key, which is hex encoded
+			key, err := hex.DecodeString(req.Key)
+			if err != nil {
+				respondError(
+					w, http.StatusBadRequest,
+					errors.New("'key' must be a valid hex-string"))
+				return
+			}
+
+			// Attempt the unseal
+			if _, err := core.Unseal(key); err != nil {
+				// Ignore ErrInvalidKey because its a user error that we
+				// mask away. We just show them the seal status.
+				if !errwrap.ContainsType(err, new(vault.ErrInvalidKey)) {
+					respondError(w, http.StatusInternalServerError, err)
+					return
+				}
 			}
 		}
 
@@ -126,5 +139,6 @@ type SealStatusResponse struct {
 }
 
 type UnsealRequest struct {
-	Key string
+	Key   string
+	Reset bool
 }

@@ -46,33 +46,36 @@ func (c *UnsealCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-
-	value := c.Key
-	if len(args) > 0 {
-		value = args[0]
-	}
-	if value == "" {
-		fmt.Printf("Key (will be hidden): ")
-		value, err = password.Read(os.Stdin)
-		fmt.Printf("\n")
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error attempting to ask for password. The raw error message\n"+
-					"is shown below, but the most common reason for this error is\n"+
-					"that you attempted to pipe a value into unseal or you're\n"+
-					"executing `vault unseal` from outside of a terminal.\n\n"+
-					"You should use `vault unseal` from a terminal for maximum\n"+
-					"security. If this isn't an option, the unseal key can be passed\n"+
-					"in using the first parameter.\n\n"+
-					"Raw error: %s", err))
-			return 1
+	if reset {
+		sealStatus, err = client.Sys().ResetUnsealProcess()
+	} else {
+		value := c.Key
+		if len(args) > 0 {
+			value = args[0]
 		}
+		if value == "" {
+			fmt.Printf("Key (will be hidden): ")
+			value, err = password.Read(os.Stdin)
+			fmt.Printf("\n")
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf(
+					"Error attempting to ask for password. The raw error message\n"+
+						"is shown below, but the most common reason for this error is\n"+
+						"that you attempted to pipe a value into unseal or you're\n"+
+						"executing `vault unseal` from outside of a terminal.\n\n"+
+						"You should use `vault unseal` from a terminal for maximum\n"+
+						"security. If this isn't an option, the unseal key can be passed\n"+
+						"in using the first parameter.\n\n"+
+						"Raw error: %s", err))
+				return 1
+			}
+		}
+		sealStatus, err = client.Sys().Unseal(strings.TrimSpace(value))
 	}
 
-	status, err := client.Sys().Unseal(strings.TrimSpace(value))
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
-			"Error attempting unseal: %s", err))
+			"Error: %s", err))
 		return 1
 	}
 
@@ -81,10 +84,10 @@ func (c *UnsealCommand) Run(args []string) int {
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
 			"Unseal Progress: %d",
-		status.Sealed,
-		status.N,
-		status.T,
-		status.Progress,
+		sealStatus.Sealed,
+		sealStatus.N,
+		sealStatus.T,
+		sealStatus.Progress,
 	))
 
 	return 0
