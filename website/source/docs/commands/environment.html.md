@@ -21,7 +21,7 @@ The following table describes them:
   </tr>
   <tr>
     <td><tt>VAULT_TOKEN</tt></td>
-    <td>The Vault authentication token.  If not specified, the token located in <tt>$HOME/.vault-token<tt> will be used if it exists.</td>
+    <td>The Vault authentication token.  If not specified, the token located in <tt>$HOME/.vault-token</tt> will be used if it exists.</td>
   </tr>
   <tr>
     <td><tt>VAULT_ADDR</tt></td>
