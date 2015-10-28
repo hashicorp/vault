@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"runtime"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/logutils"
@@ -132,6 +132,7 @@ func (c *ServerCommand) Run(args []string) int {
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             logger,
+		DisableCache:       config.DisableCache,
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
