@@ -52,6 +52,10 @@ echo "### LAST build a dev build of the repo"
 echo "###"
 make dev
 echo "###"
+echo "### Copy a possible Vault server config file into /etc/vault.conf"
+echo "###"
+sudo cp /vagrant/etc_vault.conf /etc/vault.conf
+echo "###"
 echo "### Record when the env was provisioned in /etc/vagrant_provisioned_at"
 echo "###"
 sudo touch /etc/vagrant_provisioned_at

@@ -81,58 +81,13 @@ def configure(config)
     vb.customize ["modifyvm", :id, "--memory", mem]
     vb.customize ["modifyvm", :id, "--cpus", cpus]
   end
-
-#  config.vm.provision "shell" do |shell|
-#    vagrant_shell_scripts_configure(
-#      shell, File.join(ROOT_PATH, "scripts"), "provision.sh", {}
-#	  # run shell command "go version" to show the version of go that was installed
-#	  shell, inline: "go version"
-#    )
-  #end
 end
 
-## Look for a Vagrantfile.local to load
-#local_vagrantfile = "#{__FILE__}.local"
-#if File.exists?(local_vagrantfile)
-# eval File.read(local_vagrantfile)
-#end
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   configure config
   configure_extra config
 end
-
-# pulled this "in line script" to provision_vault.sh (remove later)
-# need to write this to build vault from source :)
-# $script = <<SCRIPT_VAULT
-# echo Starting embedded Vagrantfile provisioning...
-# # make sure the os is up to date on patches
-# echo make sure the os is up to date on patches
-# sudo apt-get update -y
-# # this package is not good enough. :( go is not a high enough version from this package (as of 2015.10.01)
-# #sudo apt-get install golang-go -y
-# # so go get a higher version from the go project and build it
-# echo get go from https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz
-# cd ~
-# echo cd ~
-# curl -O https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz
-# sudo tar -C /usr/local -xzf go1.5.1.linux-amd64.tar.gz
-# echo export PATH=$PATH:/usr/local/go/bin >> ~/.bashrc
-# # setting GOBIN is not requried after go 1.0, it defaults to $GOROOT/bin
-# #echo "export export GOBIN='/usr/bin/go'" >> ~/.bashrc
-# echo export GOPATH=$HOME/work >> ~/.bashrc
-# source ~/.bashrc
-# echo export PATH=$PATH:$GOPATH/bin >> ~/.bashrc
-# source ~/.bashrc
-# mkdir -p  $GOPATH/src/github.com/hashicorp/vault/
-# cd $GOPATH
-# sudo apt-get install git -y
-# git clone https://github.com/hashicorp/vault $GOPATH/src/github.com/hashicorp/vault
-# cd $GOPATH/src/github.com/hashicorp/vault
-# make bootstrap
-# make dev
-# date > /etc/vagrant_provisioned_at
-# SCRIPT_VAULT
 
 #  # Provisioning
 Vagrant.configure("2") do |config|
