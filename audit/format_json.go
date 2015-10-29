@@ -41,10 +41,11 @@ func (f *FormatJSON) FormatRequest(
 		},
 
 		Request: JSONRequest{
-			Operation:  req.Operation,
-			Path:       req.Path,
-			Data:       req.Data,
-			RemoteAddr: getRemoteAddr(req),
+			ClientToken: req.ClientToken,
+			Operation:   req.Operation,
+			Path:        req.Path,
+			Data:        req.Data,
+			RemoteAddr:  getRemoteAddr(req),
 		},
 	})
 }
@@ -114,11 +115,11 @@ func (f *FormatJSON) FormatResponse(
 
 // JSONRequest is the structure of a request audit log entry in JSON.
 type JSONRequestEntry struct {
-	Time    string       `json:"time"`
-	Type    string       `json:"type"`
-	Auth    JSONAuth     `json:"auth"`
-	Request JSONRequest  `json:"request"`
-	Error   string       `json:"error"`
+	Time    string      `json:"time"`
+	Type    string      `json:"type"`
+	Auth    JSONAuth    `json:"auth"`
+	Request JSONRequest `json:"request"`
+	Error   string      `json:"error"`
 }
 
 // JSONResponseEntry is the structure of a response audit log entry in JSON.
@@ -132,10 +133,11 @@ type JSONResponseEntry struct {
 }
 
 type JSONRequest struct {
-	Operation  logical.Operation      `json:"operation"`
-	Path       string                 `json:"path"`
-	Data       map[string]interface{} `json:"data"`
-	RemoteAddr string                 `json:"remote_address"`
+	Operation   logical.Operation      `json:"operation"`
+	ClientToken string                 `json:"client_token"`
+	Path        string                 `json:"path"`
+	Data        map[string]interface{} `json:"data"`
+	RemoteAddr  string                 `json:"remote_address"`
 }
 
 type JSONResponse struct {
@@ -163,5 +165,3 @@ func getRemoteAddr(req *logical.Request) string {
 	}
 	return ""
 }
-
-
