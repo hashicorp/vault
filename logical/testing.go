@@ -3,6 +3,7 @@ package logical
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 // TestRequest is a helper to create a purely in-memory Request struct.
@@ -58,4 +59,18 @@ func TestStorage(t *testing.T, s Storage) {
 	if len(keys) > 0 {
 		t.Fatalf("should have no keys to start: %#v", keys)
 	}
+}
+
+// TestBackend is a helper that can be used from unit tests to setup
+// backend tests
+func TestBackend(factory Factory) (Backend, error) {
+
+	b, err := factory(&BackendConfig{
+		System: &StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+	})
+
+	return b, err
 }
