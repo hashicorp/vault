@@ -85,7 +85,7 @@ succeed and exit with exit code 0. If you see an error about opening
 a connection, make sure you copied and executed the `export VAULT_ADDR...`
 command from above properly.
 
-If it ran successful, the output should look like below:
+If it ran successfully, the output should look like below:
 
 ```
 $ vault status

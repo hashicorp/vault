@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -23,7 +24,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 	}
 	req.Header.Set(AuthHeaderName, token)
 
-	client := &http.Client{}
+	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)

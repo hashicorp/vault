@@ -3572,23 +3572,23 @@ func (c *IAM) SimulateCustomPolicyRequest(input *SimulateCustomPolicyInput) (req
 	return
 }
 
-// Simulate a set of IAM policies against a list of API actions and AWS resources
-// to determine the policies' effective permissions. The policies are provided
-// as a list of strings.
+// Simulate how a set of IAM policies and optionally a resource-based policy
+// works with a list of API actions and AWS resources to determine the policies'
+// effective permissions. The policies are provided as strings.
 //
-// The simulation does not perform the API actions, it only checks the authorization
+// The simulation does not perform the API actions; it only checks the authorization
 // to determine if the simulated policies allow or deny the actions.
 //
 // If you want to simulate existing policies attached to an IAM user, group,
 // or role, use SimulatePrincipalPolicy instead.
 //
 // Context keys are variables maintained by AWS and its services that provide
-// details about the context of an API query request, and can be evaluated by
-// using the Condition element of an IAM policy. To get the list of context
-// keys required by the policies to simulate them correctly, use GetContextKeysForCustomPolicy.
+// details about the context of an API query request. You can use the Condition
+// element of an IAM policy to evaluate context keys. To get the list of context
+// keys that the policies require for correct simulation, use GetContextKeysForCustomPolicy.
 //
-// If the output is long, you can paginate the results using the MaxItems and
-// Marker parameters.
+// If the output is long, you can use MaxItems and Marker parameters to paginate
+// the results.
 func (c *IAM) SimulateCustomPolicy(input *SimulateCustomPolicyInput) (*SimulatePolicyResponse, error) {
 	req, out := c.SimulateCustomPolicyRequest(input)
 	err := req.Send()
@@ -3615,15 +3615,18 @@ func (c *IAM) SimulatePrincipalPolicyRequest(input *SimulatePrincipalPolicyInput
 	return
 }
 
-// Simulate the set of IAM policies attached to an IAM entity against a list
-// of API actions and AWS resources to determine the policies' effective permissions.
-// The entity can be an IAM user, group, or role. If you specify a user, then
-// the simulation also includes all of the policies attached to groups that
-// the user is a member of.
+// Simulate how a set of IAM policies attached to an IAM entity works with a
+// list of API actions and AWS resources to determine the policies' effective
+// permissions. The entity can be an IAM user, group, or role. If you specify
+// a user, then the simulation also includes all of the policies that are attached
+// to groups that the user belongs to .
 //
 // You can optionally include a list of one or more additional policies specified
 // as strings to include in the simulation. If you want to simulate only policies
 // specified as strings, use SimulateCustomPolicy instead.
+//
+// You can also optionally include one resource-based policy to be evaluated
+// with each of the resources included in the simulation.
 //
 // The simulation does not perform the API actions, it only checks the authorization
 // to determine if the simulated policies allow or deny the actions.
@@ -3633,12 +3636,12 @@ func (c *IAM) SimulatePrincipalPolicyRequest(input *SimulatePrincipalPolicyInput
 // allowing them to use SimulateCustomPolicy instead.
 //
 // Context keys are variables maintained by AWS and its services that provide
-// details about the context of an API query request, and can be evaluated by
-// using the Condition element of an IAM policy. To get the list of context
-// keys required by the policies to simulate them correctly, use GetContextKeysForPrincipalPolicy.
+// details about the context of an API query request. You can use the Condition
+// element of an IAM policy to evaluate context keys. To get the list of context
+// keys that the policies require for correct simulation, use GetContextKeysForPrincipalPolicy.
 //
-// If the output is long, you can paginate the results using the MaxItems and
-// Marker parameters.
+// If the output is long, you can use the MaxItems and Marker parameters to
+// paginate the results.
 func (c *IAM) SimulatePrincipalPolicy(input *SimulatePrincipalPolicyInput) (*SimulatePolicyResponse, error) {
 	req, out := c.SimulatePrincipalPolicyRequest(input)
 	err := req.Send()
@@ -6335,6 +6338,14 @@ type EvaluationResult struct {
 	// The result of the simulation.
 	EvalDecision *string `type:"string" required:"true" enum:"PolicyEvaluationDecisionType"`
 
+	// Additional details about the results of the evaluation decision. When there
+	// are both IAM policies and resource policies, this parameter explains how
+	// each set of policies contributes to the final evaluation decision. When simulating
+	// cross-account access to a resource, both the resource-based policy and the
+	// caller's IAM policy must grant access. See How IAM Roles Differ from Resource-based
+	// Policies
+	EvalDecisionDetails map[string]*string `type:"map"`
+
 	// The ARN of the resource that the indicated API action was tested on.
 	EvalResourceName *string `min:"1" type:"string" required:"true"`
 
@@ -6471,19 +6482,19 @@ type GetAccountAuthorizationDetailsInput struct {
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataGetAccountAuthorizationDetailsInput `json:"-" xml:"-"`
@@ -6901,19 +6912,19 @@ type GetGroupInput struct {
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataGetGroupInput `json:"-" xml:"-"`
@@ -7757,19 +7768,19 @@ func (s InstanceProfile) GoString() string {
 type ListAccessKeysInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user.
@@ -7829,19 +7840,19 @@ func (s ListAccessKeysOutput) GoString() string {
 type ListAccountAliasesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataListAccountAliasesInput `json:"-" xml:"-"`
@@ -7902,19 +7913,19 @@ type ListAttachedGroupPoliciesInput struct {
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
@@ -7975,19 +7986,19 @@ func (s ListAttachedGroupPoliciesOutput) GoString() string {
 type ListAttachedRolePoliciesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
@@ -8051,19 +8062,19 @@ func (s ListAttachedRolePoliciesOutput) GoString() string {
 type ListAttachedUserPoliciesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
@@ -8134,19 +8145,19 @@ type ListEntitiesForPolicyInput struct {
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
@@ -8223,19 +8234,19 @@ type ListGroupPoliciesInput struct {
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataListGroupPoliciesInput `json:"-" xml:"-"`
@@ -8292,19 +8303,19 @@ func (s ListGroupPoliciesOutput) GoString() string {
 type ListGroupsForUserInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user to list groups for.
@@ -8364,19 +8375,19 @@ func (s ListGroupsForUserOutput) GoString() string {
 type ListGroupsInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example, the prefix /division_abc/subdivision_xyz/
@@ -8440,19 +8451,19 @@ func (s ListGroupsOutput) GoString() string {
 type ListInstanceProfilesForRoleInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the role to list instance profiles for.
@@ -8512,19 +8523,19 @@ func (s ListInstanceProfilesForRoleOutput) GoString() string {
 type ListInstanceProfilesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example, the prefix /application_abc/component_xyz/
@@ -8588,19 +8599,19 @@ func (s ListInstanceProfilesOutput) GoString() string {
 type ListMFADevicesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user whose MFA devices you want to list.
@@ -8700,19 +8711,19 @@ func (s ListOpenIDConnectProvidersOutput) GoString() string {
 type ListPoliciesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// A flag to filter the results to only the attached policies.
@@ -8789,19 +8800,19 @@ func (s ListPoliciesOutput) GoString() string {
 type ListPolicyVersionsInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
@@ -8869,19 +8880,19 @@ func (s ListPolicyVersionsOutput) GoString() string {
 type ListRolePoliciesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the role to list policies for.
@@ -8941,19 +8952,19 @@ func (s ListRolePoliciesOutput) GoString() string {
 type ListRolesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example, the prefix /application_abc/component_xyz/
@@ -9057,19 +9068,19 @@ func (s ListSAMLProvidersOutput) GoString() string {
 type ListSSHPublicKeysInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the IAM user to list SSH public keys for. If none is specified,
@@ -9131,19 +9142,19 @@ func (s ListSSHPublicKeysOutput) GoString() string {
 type ListServerCertificatesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example: /company/servercerts
@@ -9207,19 +9218,19 @@ func (s ListServerCertificatesOutput) GoString() string {
 type ListSigningCertificatesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user.
@@ -9279,19 +9290,19 @@ func (s ListSigningCertificatesOutput) GoString() string {
 type ListUserPoliciesInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user to list policies for.
@@ -9351,19 +9362,19 @@ func (s ListUserPoliciesOutput) GoString() string {
 type ListUsersInput struct {
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The path prefix for filtering the results. For example: /division_abc/subdivision_xyz/,
@@ -9432,19 +9443,19 @@ type ListVirtualMFADevicesInput struct {
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	metadataListVirtualMFADevicesInput `json:"-" xml:"-"`
@@ -10693,35 +10704,48 @@ func (s SigningCertificate) GoString() string {
 
 type SimulateCustomPolicyInput struct {
 	// A list of names of API actions to evaluate in the simulation. Each action
-	// is evaluated for each resource. Each action must include the service identifier,
-	// such as iam:CreateUser.
+	// is evaluated against each resource. Each action must include the service
+	// identifier, such as iam:CreateUser.
 	ActionNames []*string `type:"list" required:"true"`
 
-	// A list of context keys and corresponding values that are used by the simulation.
+	// The ARN of the user that you want to use as the simulated caller of the APIs.
+	// CallerArn is required if you include a ResourcePolicy so that the policy's
+	// Principal element has a value to use in evaluating the policy.
+	//
+	// You can specify only the ARN of an IAM user. You cannot specify the ARN
+	// of an assumed role, federated user, or a service principal.
+	CallerArn *string `min:"1" type:"string"`
+
+	// A list of context keys and corresponding values for the simulation to use.
 	// Whenever a context key is evaluated by a Condition element in one of the
 	// simulated IAM permission policies, the corresponding value is supplied.
 	ContextEntries []*ContextEntry `type:"list"`
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// A list of policy documents to include in the simulation. Each document is
 	// specified as a string containing the complete, valid JSON text of an IAM
-	// policy.
+	// policy. Do not include any resource-based policies in this parameter. Any
+	// resource-based policy must be submitted with the ResourcePolicy parameter.
+	// The policies cannot be "scope-down" policies, such as you could include in
+	// a call to GetFederationToken (http://docs.aws.amazon.com/IAM/latest/APIReference/API_GetFederationToken.html)
+	// or one of the AssumeRole (http://docs.aws.amazon.com/IAM/latest/APIReference/API_AssumeRole.html)
+	// APIs to restrict what a user can do while using the temporary credentials.
 	PolicyInputList []*string `type:"list" required:"true"`
 
 	// A list of ARNs of AWS resources to include in the simulation. If this parameter
@@ -10729,7 +10753,30 @@ type SimulateCustomPolicyInput struct {
 	// the ActionNames parameter is evaluated for each resource in this list. The
 	// simulation determines the access result (allowed or denied) of each combination
 	// and reports it in the response.
+	//
+	// The simulation does not automatically retrieve policies for the specified
+	// resources. If you want to include a resource policy in the simulation, then
+	// you must include the policy as a string in the ResourcePolicy parameter.
+	//
+	// If you include a ResourcePolicy, then it must be applicable to all of the
+	// resources included in the simulation or you receive an invalid input error.
 	ResourceArns []*string `type:"list"`
+
+	// An AWS account ID that specifies the owner of any simulated resource that
+	// does not identify its owner in the resource ARN, such as an S3 bucket or
+	// object. If ResourceOwner is specified, it is also used as the account owner
+	// of any ResourcePolicy included in the simulation. If the ResourceOwner parameter
+	// is not specified, then the owner of the resources and the resource policy
+	// defaults to the account of the identity provided in CallerArn. This parameter
+	// is required only if you specify a resource-based policy and account that
+	// owns the resource is different from the account that owns the simulated calling
+	// user CallerArn.
+	ResourceOwner *string `min:"1" type:"string"`
+
+	// A resource-based policy to include in the simulation provided as a string.
+	// Each resource in the simulation is treated as if it had this policy attached.
+	// You can include only one resource-based policy in a simulation.
+	ResourcePolicy *string `min:"1" type:"string"`
 
 	metadataSimulateCustomPolicyInput `json:"-" xml:"-"`
 }
@@ -10789,26 +10836,41 @@ type SimulatePrincipalPolicyInput struct {
 	// such as iam:CreateUser.
 	ActionNames []*string `type:"list" required:"true"`
 
-	// A list of context keys and corresponding values that are used by the simulation.
+	// The ARN of the user that you want to specify as the simulated caller of the
+	// APIs. If you do not specify a CallerArn, it defaults to the ARN of the user
+	// that you specify in PolicySourceArn, if you specified a user. If you include
+	// both a PolicySourceArn (for example, arn:aws:iam::123456789012:user/David)
+	// and a CallerArn (for example, arn:aws:iam::123456789012:user/Bob), the result
+	// is that you simulate calling the APIs as Bob, as if Bob had David's policies.
+	//
+	// You can specify only the ARN of an IAM user. You cannot specify the ARN
+	// of an assumed role, federated user, or a service principal.
+	//
+	// CallerArn is required if you include a ResourcePolicy and the PolicySourceArn
+	// is not the ARN for an IAM user. This is required so that the resource-based
+	// policy's Principal element has a value to use in evaluating the policy.
+	CallerArn *string `min:"1" type:"string"`
+
+	// A list of context keys and corresponding values for the simulation to use.
 	// Whenever a context key is evaluated by a Condition element in one of the
-	// simulated IAM permission policies, the corresponding value is supplied.
+	// simulated policies, the corresponding value is supplied.
 	ContextEntries []*ContextEntry `type:"list"`
 
 	// Use this parameter only when paginating results and only after you receive
 	// a response indicating that the results are truncated. Set it to the value
-	// of the Marker element in the response you received to inform the next call
-	// about where to start.
+	// of the Marker element in the response that you received to indicate where
+	// the next call should start.
 	Marker *string `min:"1" type:"string"`
 
 	// Use this only when paginating results to indicate the maximum number of items
-	// you want in the response. If there are additional items beyond the maximum
-	// you specify, the IsTruncated response element is true.
+	// you want in the response. If additional items exist beyond the maximum you
+	// specify, the IsTruncated response element is true.
 	//
 	// This parameter is optional. If you do not include it, it defaults to 100.
 	// Note that IAM might return fewer results, even when there are more results
-	// available. If this is the case, the IsTruncated response element returns
-	// true and Marker contains a value to include in the subsequent call that tells
-	// the service where to continue from.
+	// available. In that case, the IsTruncated response element returns true and
+	// Marker contains a value to include in the subsequent call that tells the
+	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// An optional list of additional policy documents to include in the simulation.
@@ -10818,9 +10880,9 @@ type SimulatePrincipalPolicyInput struct {
 
 	// The Amazon Resource Name (ARN) of a user, group, or role whose policies you
 	// want to include in the simulation. If you specify a user, group, or role,
-	// the simulation includes all policies associated with that entity. If you
-	// specify a user, the simulation also includes all policies attached to any
-	// groups the user is a member of.
+	// the simulation includes all policies that are associated with that entity.
+	// If you specify a user, the simulation also includes all policies that are
+	// attached to any groups the user belongs to.
 	PolicySourceArn *string `min:"20" type:"string" required:"true"`
 
 	// A list of ARNs of AWS resources to include in the simulation. If this parameter
@@ -10828,7 +10890,27 @@ type SimulatePrincipalPolicyInput struct {
 	// the ActionNames parameter is evaluated for each resource in this list. The
 	// simulation determines the access result (allowed or denied) of each combination
 	// and reports it in the response.
+	//
+	// The simulation does not automatically retrieve policies for the specified
+	// resources. If you want to include a resource policy in the simulation, then
+	// you must include the policy as a string in the ResourcePolicy parameter.
 	ResourceArns []*string `type:"list"`
+
+	// An AWS account ID that specifies the owner of any simulated resource that
+	// does not identify its owner in the resource ARN, such as an S3 bucket or
+	// object. If ResourceOwner is specified, it is also used as the account owner
+	// of any ResourcePolicy included in the simulation. If the ResourceOwner parameter
+	// is not specified, then the owner of the resources and the resource policy
+	// defaults to the account of the identity provided in CallerArn. This parameter
+	// is required only if you specify a resource-based policy and account that
+	// owns the resource is different from the account that owns the simulated calling
+	// user CallerArn.
+	ResourceOwner *string `min:"1" type:"string"`
+
+	// A resource-based policy to include in the simulation provided as a string.
+	// Each resource in the simulation is treated as if it had this policy attached.
+	// You can include only one resource-based policy in a simulation.
+	ResourcePolicy *string `min:"1" type:"string"`
 
 	metadataSimulatePrincipalPolicyInput `json:"-" xml:"-"`
 }
@@ -11830,6 +11912,8 @@ const (
 	PolicySourceTypeAwsManaged = "aws-managed"
 	// @enum PolicySourceType
 	PolicySourceTypeUserManaged = "user-managed"
+	// @enum PolicySourceType
+	PolicySourceTypeResource = "resource"
 	// @enum PolicySourceType
 	PolicySourceTypeNone = "none"
 )

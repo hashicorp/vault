@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -131,6 +132,7 @@ func (c *ServerCommand) Run(args []string) int {
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             logger,
+		DisableCache:       config.DisableCache,
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
@@ -149,6 +151,13 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 
+		export := "export"
+		quote := "'"
+		if runtime.GOOS == "windows" {
+			export = "set"
+			quote = ""
+		}
+
 		c.Ui.Output(fmt.Sprintf(
 			"==> WARNING: Dev mode is enabled!\n\n"+
 				"In this mode, Vault is completely in-memory and unsealed.\n"+
@@ -157,7 +166,7 @@ func (c *ServerCommand) Run(args []string) int {
 				"immediately begin using the Vault CLI.\n\n"+
 				"The only step you need to take is to set the following\n"+
 				"environment variables:\n\n"+
-				"    export VAULT_ADDR='http://127.0.0.1:8200'\n\n"+
+				"    "+export+" VAULT_ADDR="+quote+"http://127.0.0.1:8200"+quote+"\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
 				"Unseal Key: %s\nRoot Token: %s\n",

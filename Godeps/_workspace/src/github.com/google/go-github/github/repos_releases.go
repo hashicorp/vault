@@ -8,6 +8,7 @@ package github
 import (
 	"errors"
 	"fmt"
+	"io"
 	"mime"
 	"os"
 	"path/filepath"
@@ -209,6 +210,29 @@ func (s *RepositoriesService) GetReleaseAsset(owner, repo string, id int) (*Rele
 		return nil, resp, nil
 	}
 	return asset, resp, err
+}
+
+// DownloadReleaseAsset downloads a release asset.
+//
+// DownloadReleaseAsset returns an io.ReadCloser that reads the contents of the
+// specified release asset. It is the caller's responsibility to close the ReadCloser.
+//
+// GitHub API docs : http://developer.github.com/v3/repos/releases/#get-a-single-release-asset
+func (s *RepositoriesService) DownloadReleaseAsset(owner, repo string, id int) (io.ReadCloser, error) {
+	u := fmt.Sprintf("repos/%s/%s/releases/assets/%d", owner, repo, id)
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", defaultMediaType)
+
+	resp, err := s.client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
 
 // EditReleaseAsset edits a repository release asset.

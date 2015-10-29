@@ -957,6 +957,17 @@ func (c *Core) SecretProgress() int {
 	return len(c.unlockParts)
 }
 
+// ResetUnsealProcess removes the current unlock parts from memory, to reset
+// the unsealing process
+func (c *Core) ResetUnsealProcess() {
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	if !c.sealed {
+		return
+	}
+	c.unlockParts = nil
+}
+
 // Unseal is used to provide one of the key parts to unseal the Vault.
 //
 // They key given as a parameter will automatically be zerod after

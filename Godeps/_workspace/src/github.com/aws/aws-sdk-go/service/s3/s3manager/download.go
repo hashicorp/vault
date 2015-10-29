@@ -13,13 +13,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
 
-// The default range of bytes to get at a time when using Download().
+// DefaultDownloadPartSize is the default range of bytes to get at a time when
+// using Download().
 var DefaultDownloadPartSize int64 = 1024 * 1024 * 5
 
-// The default number of goroutines to spin up when using Download().
+// DefaultDownloadConcurrency is the default number of goroutines to spin up
+// when using Download().
 var DefaultDownloadConcurrency = 5
 
-// The default set of options used when opts is nil in Download().
+// DefaultDownloadOptions is the default set of options used when opts is nil
+// in Download().
 var DefaultDownloadOptions = &DownloadOptions{
 	PartSize:    DefaultDownloadPartSize,
 	Concurrency: DefaultDownloadConcurrency,

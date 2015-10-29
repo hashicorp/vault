@@ -9,14 +9,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 var (
-	errRedirect            = errors.New("redirect")
-	defaultHTTPClientSetup sync.Once
-	defaultHTTPClient      = &http.Client{
-		Timeout: time.Second * 30,
-	}
+	errRedirect = errors.New("redirect")
 )
 
 // Config is used to configure the creation of the client.
@@ -30,6 +28,8 @@ type Config struct {
 	// HttpClient is the HTTP client to use, which will currently always have the
 	// same values as http.DefaultClient. This is used to control redirect behavior.
 	HttpClient *http.Client
+
+	redirectSetup sync.Once
 }
 
 // DefaultConfig returns a default configuration for the client. It is
@@ -39,9 +39,11 @@ type Config struct {
 // setting the `VAULT_ADDR` environment variable.
 func DefaultConfig() *Config {
 	config := &Config{
-		Address:    "https://127.0.0.1:8200",
-		HttpClient: defaultHTTPClient,
+		Address: "https://127.0.0.1:8200",
+
+		HttpClient: cleanhttp.DefaultClient(),
 	}
+	config.HttpClient.Timeout = time.Second * 60
 
 	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
 		config.Address = addr
@@ -69,14 +71,21 @@ func NewClient(c *Config) (*Client, error) {
 		return nil, err
 	}
 
-	if c.HttpClient == defaultHTTPClient {
-		defaultHTTPClientSetup.Do(func() {
-			// Ensure redirects are not automatically followed
-			c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-				return errRedirect
-			}
-		})
+	if c.HttpClient == nil {
+		c.HttpClient = DefaultConfig().HttpClient
 	}
+
+	redirFunc := func() {
+		// Ensure redirects are not automatically followed
+		// Note that this is sane for the API client as it has its own
+		// redirect handling logic (and thus also for command/meta),
+		// but in e.g. http_test actual redirect handling is necessary
+		c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return errRedirect
+		}
+	}
+
+	c.redirectSetup.Do(redirFunc)
 
 	client := &Client{
 		addr:   u,

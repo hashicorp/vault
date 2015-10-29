@@ -311,6 +311,52 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
+### /auth/token/renew-self
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+	Renews a lease associated with the callign token. This is used to prevent
+	the expiration of a token, and the automatic revocation of it. Token
+	renewal is possible only if there is a lease associated with it.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/renew-self`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">increment</span>
+        <span class="param-flags">optional</span>
+            An optional requested lease increment can be provided. This
+            increment may be ignored.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "auth": {
+        "client_token": "ABCD",
+        "policies": ["web", "stage"],
+        "metadata": {"user": "armon"},
+        "lease_duration": 3600,
+        "renewable": true,
+      }
+    }
+    ```
+  </dd>
+</dl>
+
 ### /auth/token/renew/
 #### POST
 
@@ -356,4 +402,4 @@ of the header should be "X-Vault-Token" and the value should be the token.
     ```
   </dd>
 </dl>
-</div>
+

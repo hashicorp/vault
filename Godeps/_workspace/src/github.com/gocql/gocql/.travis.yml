@@ -13,10 +13,14 @@ env:
   global:
     - GOMAXPROCS=2
   matrix:
-    - CASS=2.0.17 AUTH=false
-    - CASS=2.1.9  AUTH=false
-    - CASS=2.1.9  AUTH=true
-    - CASS=2.2.1  AUTH=false
+    - CASS=2.0.17
+      AUTH=false
+    - CASS=2.1.11
+      AUTH=false
+    - CASS=2.1.11
+      AUTH=true
+    - CASS=2.2.3
+      AUTH=false
 
 go:
   - 1.4
@@ -35,7 +39,7 @@ install:
 script:
   - set -e
   - go test -v -tags unit
-  - PATH=$PATH:$HOME/.local/bin bash -x integration.sh $CASS $AUTH
+  - PATH=$PATH:$HOME/.local/bin bash integration.sh $CASS $AUTH
   - go vet .
 
 notifications:

@@ -2,11 +2,11 @@ package physical
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
-	"net/http"
-	"io/ioutil"
 
 	"crypto/tls"
 	"crypto/x509"
@@ -43,6 +43,7 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 
 	// Configure the client
 	consulConf := api.DefaultConfig()
+
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 	}
@@ -95,7 +96,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	}
 
 	_, okCert := conf["tls_cert_file"]
-	_, okKey  := conf["tls_key_file"]
+	_, okKey := conf["tls_key_file"]
 
 	if okCert && okKey {
 		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])

@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 // QueryOptions are used to parameterize a query
@@ -119,7 +121,7 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "127.0.0.1:8500",
 		Scheme:     "http",
-		HttpClient: &http.Client{},
+		HttpClient: cleanhttp.DefaultClient(),
 	}
 
 	if addr := os.Getenv("CONSUL_HTTP_ADDR"); addr != "" {
@@ -198,12 +200,12 @@ func NewClient(config *Config) (*Client, error) {
 	}
 
 	if parts := strings.SplitN(config.Address, "unix://", 2); len(parts) == 2 {
+		trans := cleanhttp.DefaultTransport()
+		trans.Dial = func(_, _ string) (net.Conn, error) {
+			return net.Dial("unix", parts[1])
+		}
 		config.HttpClient = &http.Client{
-			Transport: &http.Transport{
-				Dial: func(_, _ string) (net.Conn, error) {
-					return net.Dial("unix", parts[1])
-				},
-			},
+			Transport: trans,
 		}
 		config.Address = parts[1]
 	}

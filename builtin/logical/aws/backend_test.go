@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -97,6 +98,7 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 			awsConfig := &aws.Config{
 				Credentials: creds,
 				Region:      aws.String("us-east-1"),
+				HTTPClient:  cleanhttp.DefaultClient(),
 			}
 			client := ec2.New(awsConfig)
 

@@ -180,3 +180,9 @@ func (iter *Iter) MapScan(m map[string]interface{}) bool {
 	}
 	return false
 }
+
+func copyBytes(p []byte) []byte {
+	b := make([]byte, len(p))
+	copy(b, p)
+	return b
+}

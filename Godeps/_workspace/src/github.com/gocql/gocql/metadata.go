@@ -335,30 +335,18 @@ func componentColumnCountOfType(columns map[string]*ColumnMetadata, kind string)
 }
 
 // query only for the keyspace metadata for the specified keyspace from system.schema_keyspace
-func getKeyspaceMetadata(
-	session *Session,
-	keyspaceName string,
-) (*KeyspaceMetadata, error) {
-	query := session.Query(
-		`
+func getKeyspaceMetadata(session *Session, keyspaceName string) (*KeyspaceMetadata, error) {
+	const stmt = `
 		SELECT durable_writes, strategy_class, strategy_options
 		FROM system.schema_keyspaces
-		WHERE keyspace_name = ?
-		`,
-		keyspaceName,
-	)
-	// Set a routing key to avoid GetRoutingKey from computing the routing key
-	// TODO use a separate connection (pool) for system keyspace queries.
-	query.RoutingKey([]byte{})
+		WHERE keyspace_name = ?`
 
 	keyspace := &KeyspaceMetadata{Name: keyspaceName}
 	var strategyOptionsJSON []byte
 
-	err := query.Scan(
-		&keyspace.DurableWrites,
-		&keyspace.StrategyClass,
-		&strategyOptionsJSON,
-	)
+	iter := session.control.query(stmt, keyspaceName)
+	iter.Scan(&keyspace.DurableWrites, &keyspace.StrategyClass, &strategyOptionsJSON)
+	err := iter.Close()
 	if err != nil {
 		return nil, fmt.Errorf("Error querying keyspace schema: %v", err)
 	}
@@ -431,11 +419,7 @@ func getTableMetadata(session *Session, keyspaceName string) ([]TableMetadata, e
 		}
 	}
 
-	// Set a routing key to avoid GetRoutingKey from computing the routing key
-	// TODO use a separate connection (pool) for system keyspace queries.
-	query := session.Query(stmt, keyspaceName)
-	query.RoutingKey([]byte{})
-	iter := query.Iter()
+	iter := session.control.query(stmt, keyspaceName)
 
 	tables := []TableMetadata{}
 	table := TableMetadata{Keyspace: keyspaceName}
@@ -560,11 +544,7 @@ func getColumnMetadata(
 
 	var indexOptionsJSON []byte
 
-	query := session.Query(stmt, keyspaceName)
-	// Set a routing key to avoid GetRoutingKey from computing the routing key
-	// TODO use a separate connection (pool) for system keyspace queries.
-	query.RoutingKey([]byte{})
-	iter := query.Iter()
+	iter := session.control.query(stmt, keyspaceName)
 
 	for scan(iter, &column, &indexOptionsJSON) {
 		var err error
