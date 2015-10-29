@@ -123,16 +123,17 @@ func (b *PassthroughBackend) handleRead(
 
 	// Check if there is a ttl key
 	var ttl string
-	ttl, _ = rawData["lease"].(string)
+	ttl, _ = rawData["ttl"].(string)
 	if len(ttl) == 0 {
-		ttl, _ = rawData["ttl"].(string)
+		ttl, _ = rawData["lease"].(string)
 	}
-
 	ttlDuration := b.System().DefaultLeaseTTL()
 	if len(ttl) != 0 {
-		ttlDuration, err = time.ParseDuration(ttl)
+		parsedDuration, err := time.ParseDuration(ttl)
 		if err != nil {
-			return logical.ErrorResponse("failed to parse ttl for entry"), nil
+			resp.AddWarning(fmt.Sprintf("failed to parse stored ttl '%s' for entry; using default", ttl))
+		} else {
+			ttlDuration = parsedDuration
 		}
 		if b.generateLeases {
 			resp.Secret.Renewable = true
@@ -149,6 +150,23 @@ func (b *PassthroughBackend) handleWrite(
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
+	}
+
+	// Check if there is a ttl key; verify parseability if so
+	var ttl string
+	ttl = data.Get("ttl").(string)
+	if len(ttl) == 0 {
+		ttl = data.Get("lease").(string)
+	}
+	if len(ttl) != 0 {
+		_, err := time.ParseDuration(ttl)
+		if err != nil {
+			return logical.ErrorResponse("failed to parse ttl for entry"), nil
+		}
+		// Verify that ttl isn't the *only* thing we have
+		if len(req.Data) == 1 {
+			return nil, fmt.Errorf("missing data; only ttl found")
+		}
 	}
 
 	// JSON encode the data

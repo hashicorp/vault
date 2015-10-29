@@ -36,6 +36,9 @@ generate them, leading to client errors.
    enabled [GH-694]
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
+ * secret/generic: Validate given duration at write time, not just read time;
+   if stored durations are not parseable, return a warning and the default
+   duration rather than an error [GH-718]
 
 MISC:
 
