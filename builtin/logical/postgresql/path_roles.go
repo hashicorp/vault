@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	_ "github.com/lib/pq"
 )
 
 func pathRoles(b *backend) *framework.Path {
@@ -147,6 +146,6 @@ Example of a decent SQL query to use:
 	  VALID UNTIL '{{expiration}}';
 	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 
-Note the above user would be able to access everything. In schema dc1.
-For more complex GRANT clauses, see the PostgreSQL manuel.
+Note the above user would be able to access everything in schema public.
+For more complex GRANT clauses, see the PostgreSQL manual.
 `
