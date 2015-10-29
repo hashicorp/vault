@@ -19,6 +19,10 @@ of these backends at different mount points as you like.
 Writing to a key in the `secret/` backend will replace the old value;
 sub-fields are not merged together.
 
+**Note**: Path and key names are _not_ obfuscated or encrypted; only the values
+set on keys are. You should not store sensitive information as part of a
+secret's path.
+
 ## Quick Start
 
 The generic backend allows for writing keys with arbitrary values. A `ttl` value
