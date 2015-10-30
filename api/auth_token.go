@@ -25,8 +25,37 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *TokenAuth) LookupSelf() (*Secret, error) {
+	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-self")
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew/"+token)
+
+	body := map[string]interface{}{"increment": increment}
+	if err := r.SetJSONBody(body); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
+	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
 
 	body := map[string]interface{}{"increment": increment}
 	if err := r.SetJSONBody(body); err != nil {
@@ -55,6 +84,17 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 
 func (c *TokenAuth) RevokePrefix(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-prefix/"+token)
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func (c *TokenAuth) RevokeSelf() error {
+	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return err
