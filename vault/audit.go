@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
 )
 

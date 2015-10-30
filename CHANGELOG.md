@@ -9,6 +9,9 @@ policy names are not currently normalized when reading or deleting. [GH-676]
 IMPROVEMENTS:
 
  * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
+ * audit: HMAC-SHA256'd client tokens are now stored with each request entry.
+   Previously they were only displayed at creation time; this allows much
+   better traceability of client actions. [GH-713]
  * core: The physical storage read cache can now be disabled via
    "disable_cache" [GH-674]
  * core: The unsealing process can now be reset midway through (this feature
