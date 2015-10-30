@@ -56,11 +56,14 @@ Root Token: 79bd8011-af5a-f147-557e-c58be4fedf6c
 ...
 ```
 
-You should see output similar to that above. As you can see, when you
-start a dev server, Vault warns you loudly. The dev server stores all
-its data in-memory (but still encrypted), listens on localhost without TLS, and
-automatically unseals and shows you the unseal key and root access key.
-We'll go over what all this means shortly.
+You should see output similar to that above. Vault does not fork, so it will
+continue to run in the foreground; to connect to it with later commands, open
+another shell.
+
+As you can see, when you start a dev server, Vault warns you loudly. The dev
+server stores all its data in-memory (but still encrypted), listens on
+localhost without TLS, and automatically unseals and shows you the unseal key
+and root access key.  We'll go over what all this means shortly.
 
 The important thing about the dev server is that it is meant for
 development only. **Do not run the dev server in production.** Even if it
