@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"crypto/subtle"
 	"encoding/hex"
-	"fmt"
 	"net"
 	"strings"
 
@@ -36,8 +35,7 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	appId := data.Get("app_id").(string)
 	userId := data.Get("user_id").(string)
 
@@ -46,45 +44,26 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("missing 'app_id' or 'user_id'"), nil
 	}
 
-	// Look up the apps that this user is allowed to access
-	appsMap, err := b.MapUserId.Get(req.Storage, userId)
+	user, err := b.User(req.Storage, userId)
 	if err != nil {
 		return nil, err
 	}
-	if appsMap == nil {
-		return logical.ErrorResponse("invalid user ID or app ID"), nil
-	}
 
 	// If there is a CIDR block restriction, check that
-	if raw, ok := appsMap["cidr_block"]; ok {
-		_, cidr, err := net.ParseCIDR(raw.(string))
-		if err != nil {
-			return nil, fmt.Errorf("invalid restriction cidr: %s", err)
-		}
-
+	if user.CidrBlock != nil {
 		var addr string
 		if req.Connection != nil {
 			addr = req.Connection.RemoteAddr
 		}
-		if addr == "" || !cidr.Contains(net.ParseIP(addr)) {
+		if addr == "" || !user.CidrBlock.Contains(net.ParseIP(addr)) {
 			return logical.ErrorResponse("unauthorized source address"), nil
 		}
 	}
 
-	appsRaw, ok := appsMap["value"]
-	if !ok {
-		appsRaw = ""
-	}
-
-	apps, ok := appsRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("internal error: mapping is not a string")
-	}
-
 	// Verify that the app is in the list
 	found := false
-	appIdBytes := []byte(appId)
-	for _, app := range strings.Split(apps, ",") {
+	appIdBytes := []byte(strings.Join(user.AppIds, ","))
+	for _, app := range user.AppIds {
 		match := []byte(strings.TrimSpace(app))
 		// Protect against a timing attack with the app_id comparison
 		if subtle.ConstantTimeCompare(match, appIdBytes) == 1 {
@@ -95,25 +74,15 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("invalid user ID or app ID"), nil
 	}
 
-	// Get the raw data associated with the app
-	appRaw, err := b.MapAppId.Get(req.Storage, appId)
+	app, err := b.App(req.Storage, appId)
 	if err != nil {
 		return nil, err
-	}
-	if appRaw == nil {
-		return logical.ErrorResponse("invalid user ID or app ID"), nil
 	}
 
 	// Get the policies associated with the app
 	policies, err := b.MapAppId.Policies(req.Storage, appId)
 	if err != nil {
 		return nil, err
-	}
-
-	// Check if we have a display name
-	var displayName string
-	if raw, ok := appRaw["display_name"]; ok {
-		displayName = raw.(string)
 	}
 
 	// Store hashes of the app ID and user ID for the metadata
@@ -126,11 +95,38 @@ func (b *backend) pathLogin(
 
 	return &logical.Response{
 		Auth: &logical.Auth{
-			DisplayName: displayName,
+			DisplayName: app.DisplayName,
 			Policies:    policies,
 			Metadata:    metadata,
+			LeaseOptions: logical.LeaseOptions{
+				TTL:         app.TTL,
+				GracePeriod: app.TTL / 10,
+				Renewable:   app.Renewable,
+			},
+			InternalData: map[string]interface{}{
+				"user-id": userId,
+				"app-id": appId,
+			},
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	appId, ok := req.Auth.InternalData["app-id"].(string)
+	if ! ok {
+		return logical.ErrorResponse("could not find the app-id for the token provided"), nil
+	}
+
+	app, err := b.App(req.Storage, appId)
+	if err != nil {
+		return nil, err
+	}
+
+	if ! app.Renewable {
+		return logical.ErrorResponse("lease is not renewable"), nil
+	}
+
+	return framework.LeaseExtend(app.MaxTTL, 0, false)(req, d)
 }
 
 const pathLoginSyn = `

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"time"
 )
 
 func TestBackend_basic(t *testing.T) {
@@ -44,6 +45,17 @@ func TestBackend_displayName(t *testing.T) {
 			testAccLoginInvalid(t),
 			testAccStepDeleteUserId(t),
 			testAccLoginDeleted(t),
+		},
+	})
+}
+
+func TestBackend_ttls(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testAccStepMapAppIdTTLs(t),
+			testAccStepMapUserId(t),
+			testAccLoginTTLs(t, "tubbin"),
 		},
 	})
 }
@@ -129,6 +141,20 @@ func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
 	}
 }
 
+func testAccStepMapAppIdTTLs(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "map/app-id/foo",
+		Data: map[string]interface{}{
+			"display_name": "tubbin",
+			"value":        "foo,bar",
+			"ttl":			"100s",
+			"max_ttl":		"200s",
+			"renewable":	true,
+		},
+	}
+}
+
 func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -170,6 +196,26 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 		Check: logicaltest.TestCheckMulti(
 			logicaltest.TestCheckAuth([]string{"bar", "foo"}),
 			logicaltest.TestCheckAuthDisplayName(display),
+		),
+	}
+}
+
+func testAccLoginTTLs(t *testing.T, display string) logicaltest.TestStep {
+	duration, _ := time.ParseDuration("100s")
+
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "login",
+		Data: map[string]interface{}{
+			"app_id":  "foo",
+			"user_id": "42",
+		},
+		Unauthenticated: true,
+
+		Check: logicaltest.TestCheckMulti(
+			logicaltest.TestCheckAuth([]string{"bar", "foo"}),
+			logicaltest.TestCheckAuthDisplayName(display),
+			logicaltest.TestCheckAuthTTLs(duration),
 		),
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
+	"time"
 )
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
@@ -323,6 +324,16 @@ func TestCheckAuthDisplayName(n string) TestCheckFunc {
 		}
 		if n != "" && resp.Auth.DisplayName != "mnt-"+n {
 			return fmt.Errorf("invalid display name: %#v", resp.Auth.DisplayName)
+		}
+
+		return nil
+	}
+}
+
+func TestCheckAuthTTLs(t time.Duration) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		if resp.Auth.TTL.String() != t.String() {
+			return fmt.Errorf("response ttl %s did not match %s", resp.Auth.TTL.String(), t.String())
 		}
 
 		return nil

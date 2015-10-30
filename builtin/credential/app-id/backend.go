@@ -6,6 +6,10 @@ import (
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"time"
+	"strconv"
+	"strings"
+	"net"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -36,11 +40,28 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 					Type:        framework.TypeString,
 					Description: "A name to map to this app ID for logs.",
 				},
-
 				"value": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Policies for the app ID.",
 				},
+				"ttl": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "The lease duration which decides login expiration",
+				},
+				"max_ttl": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "Maximum duration after which login should expire",
+				},
+				"renewable": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     "",
+					Description: "Whether or not auth leases can be renewed",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.WriteOperation: b.validateWriteAppId,
 			},
 		},
 		DefaultKey: "default",
@@ -71,12 +92,14 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			},
 		},
 
-		Paths: framework.PathAppend([]*framework.Path{
-			pathLogin(&b),
-		},
+		Paths: framework.PathAppend(
+			[]*framework.Path{
+				pathLogin(&b),
+			},
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
 		),
+		AuthRenew: b.pathLoginRenew,
 	}
 
 	// Since the salt is new in 0.2, we need to handle this by migrating
@@ -98,6 +121,21 @@ type backend struct {
 	Salt      *salt.Salt
 	MapAppId  *framework.PolicyMap
 	MapUserId *framework.PathMap
+}
+
+func (b *backend) validateWriteAppId(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ttlStr := d.Get("ttl").(string)
+	maxTTLStr := d.Get("max_ttl").(string)
+	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
+
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
+	}
+
+	d.Raw["ttl"] = ttl.String()
+	d.Raw["max_ttl"] = maxTTL.String()
+
+	return nil, nil
 }
 
 // upgradeToSalted is used to upgrade the non-salted keys prior to
@@ -159,6 +197,114 @@ func (b *backend) upgradeToSalted(view logical.Storage) error {
 		}
 	}
 	return nil
+}
+
+type AppEntry struct {
+	DisplayName string
+
+	Renewable bool
+
+	Policies []string
+
+	// Duration after which the user will be revoked unless renewed
+	TTL time.Duration
+
+	// Maximum duration for which user can be valid
+	MaxTTL time.Duration
+}
+
+type UserEntry struct {
+	CidrBlock	*net.IPNet
+	AppIds		[]string
+}
+
+// Provides an AppEntry object for the app-id data stored in the backend
+func (b *backend) App(s logical.Storage, appId string) (*AppEntry, error) {
+	// Get the raw data associated with the app
+	appRaw, err := b.MapAppId.Get(s, appId)
+
+	if err != nil {
+		return nil, err
+	}
+	if appRaw == nil {
+		return nil, fmt.Errorf("invalid app ID or user ID")
+	}
+
+	var renewable bool
+	renewableStr, ok := appRaw["renewable"].(string)
+	if ok {
+		renewable, err = strconv.ParseBool(renewableStr)
+		if err != nil {
+			renewable = false
+		}
+	}
+
+	ttlStr, ok := appRaw["ttl"].(string)
+	if !ok {
+		ttlStr = ""
+	}
+
+	maxTTLStr, ok := appRaw["max_ttl"].(string)
+	if !ok {
+		maxTTLStr = ""
+	}
+
+	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
+	if err != nil {
+		return nil, err
+	}
+
+	policesStr, ok := appRaw["value"].(string)
+	if ! ok {
+		return nil, fmt.Errorf("could not compute policies")
+	}
+	policies := strings.Split(policesStr, ",")
+	for i, p := range policies {
+		policies[i] = strings.TrimSpace(p)
+	}
+
+	displayName, ok := appRaw["display_name"].(string)
+	if ! ok {
+		displayName = ""
+	}
+
+	return &AppEntry{
+		DisplayName: displayName,
+		Renewable: renewable,
+		TTL: ttl,
+		MaxTTL: maxTTL,
+		Policies: policies,
+	}, nil
+}
+
+// Provides a UserEntry object for the user-id data stored in the backend
+func (b *backend) User(s logical.Storage, userId string) (*UserEntry, error) {
+	// Get the raw data associated with the app
+	userRaw, err := b.MapUserId.Get(s, userId)
+	if err != nil {
+		return nil, err
+	}
+	if userRaw == nil {
+		return nil, fmt.Errorf("invalid app ID or user ID")
+	}
+
+	apps, ok := userRaw["value"].(string)
+	if ! ok {
+		apps = ""
+	}
+
+	var cidr *net.IPNet
+	if raw, ok := userRaw["cidr_block"].(string); ok {
+		_, cidr, err = net.ParseCIDR(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid restriction cidr: %s", err)
+		}
+	}
+
+	return &UserEntry{
+		CidrBlock: cidr,
+		AppIds: strings.Split(apps, ","),
+	}, nil
 }
 
 const backendHelp = `
