@@ -28,6 +28,8 @@ BUG FIXES:
 generate them, leading to client errors.
  * cli: `token-create` now supports the `ttl` parameter in addition to the
    deprecated `lease` parameter. [GH-688]
+ * core: Return data from `generic` backends on the last use of a limited-use
+   token [GH-615]
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
  * core: Stale leader entries will now be reaped [GH-679]
  * core: Using `mount-tune` on the auth/token path did not take effect.
