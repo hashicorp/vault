@@ -506,3 +506,5 @@ type IAMAPI interface {
 
 	UploadSigningCertificate(*iam.UploadSigningCertificateInput) (*iam.UploadSigningCertificateOutput, error)
 }
+
+var _ IAMAPI = (*iam.IAM)(nil)

@@ -177,7 +177,7 @@ func (l *Conn) StartTLS(config *tls.Config) error {
 		ber.PrintPacket(packet)
 	}
 
-	if packet.Children[1].Children[0].Value.(int64) == LDAPResultSuccess {
+	if resultCode, message := getLDAPResultCode(packet); resultCode == LDAPResultSuccess {
 		conn := tls.Client(l.conn, config)
 
 		if err := conn.Handshake(); err != nil {
@@ -188,11 +188,7 @@ func (l *Conn) StartTLS(config *tls.Config) error {
 		l.isTLS = true
 		l.conn = conn
 	} else {
-		// https://tools.ietf.org/html/rfc4511#section-4.1.9
-		// Children[1].Children[2] is the diagnosticMessage which is guaranteed to exist.
-		return NewError(
-			uint8(packet.Children[1].Children[0].Value.(int64)),
-			fmt.Errorf("ldap: cannot StartTLS (%s)", packet.Children[1].Children[2].Value.(string)))
+		return NewError(resultCode, fmt.Errorf("ldap: cannot StartTLS (%s)", message))
 	}
 	go l.reader()
 

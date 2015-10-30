@@ -23,7 +23,7 @@ func unmarshalError(r *request.Request) {
 
 	if r.HTTPResponse.StatusCode == http.StatusMovedPermanently {
 		r.Error = awserr.New("BucketRegionError",
-			fmt.Sprintf("incorrect region, the bucket is not in '%s' region", aws.StringValue(r.Service.Config.Region)), nil)
+			fmt.Sprintf("incorrect region, the bucket is not in '%s' region", aws.StringValue(r.Config.Region)), nil)
 		return
 	}
 

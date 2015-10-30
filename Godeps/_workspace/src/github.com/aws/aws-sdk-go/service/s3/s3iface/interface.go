@@ -242,3 +242,5 @@ type S3API interface {
 
 	UploadPartCopy(*s3.UploadPartCopyInput) (*s3.UploadPartCopyOutput, error)
 }
+
+var _ S3API = (*s3.S3)(nil)

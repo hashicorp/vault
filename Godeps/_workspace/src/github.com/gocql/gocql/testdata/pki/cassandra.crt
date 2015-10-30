@@ -1,0 +1,83 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 2 (0x2)
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=cassandra
+        Validity
+            Not Before: Sep 19 21:18:48 2014 GMT
+            Not After : Sep 16 21:18:48 2024 GMT
+        Subject: CN=cassandra
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+            RSA Public Key: (2048 bit)
+                Modulus (2048 bit):
+                    00:e5:9c:20:9e:de:98:73:44:41:0d:37:4c:62:c3:
+                    9f:87:5f:9b:4f:aa:cf:f6:90:6e:a5:e0:89:88:7a:
+                    00:c6:bb:d7:80:87:69:2e:fa:f0:35:59:80:6e:82:
+                    25:c8:b3:6c:f6:a4:97:97:93:93:ea:f0:70:70:a4:
+                    e1:b7:aa:da:c1:99:66:9b:93:04:3a:ce:0b:83:07:
+                    06:22:3d:a6:db:7f:68:0f:49:80:bd:86:a8:bb:54:
+                    6d:38:5f:0f:b0:fa:1b:97:24:ae:cc:9d:37:98:7e:
+                    76:cc:e3:1b:45:1b:21:25:17:02:c0:1a:c5:fb:76:
+                    c3:8b:93:d7:c5:85:14:0a:5c:a4:12:e7:18:69:98:
+                    f5:76:cd:78:cd:99:5a:29:65:f1:68:20:97:d3:be:
+                    09:b3:68:1b:f2:a3:a2:9a:73:58:53:7e:ed:86:32:
+                    a3:5a:d5:46:03:f9:b3:b4:ec:63:71:ba:bb:fb:6f:
+                    f9:82:63:e4:55:47:7a:7a:e4:7b:17:6b:d7:e6:cf:
+                    3b:c9:ab:0c:30:15:c9:ed:c7:d6:fc:b6:72:b2:14:
+                    7d:c7:f3:7f:8a:f4:63:70:64:8e:0f:db:e8:3a:45:
+                    47:cd:b9:7b:ae:c8:31:c1:52:d1:3e:34:12:b7:73:
+                    e7:ba:89:86:9a:36:ed:a0:5a:69:d0:d4:e3:b6:16:
+                    85:af
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                4A:D3:EC:63:07:E0:8F:1A:4E:F5:09:43:90:9F:7A:C5:31:D1:8F:D8
+            X509v3 Authority Key Identifier: 
+                keyid:8C:7C:E7:D2:76:05:89:71:1A:23:5B:D4:59:B4:51:E2:5C:0A:5C:E8
+                DirName:/CN=cassandra
+                serial:82:9B:01:78:1E:9B:0B:23
+
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+    Signature Algorithm: sha256WithRSAEncryption
+        ac:bc:80:82:2d:6d:f1:a0:46:eb:00:05:d2:25:9a:83:66:57:
+        40:51:6e:ff:db:e3:28:04:7b:16:63:74:ec:55:a0:c0:5b:47:
+        13:e1:5a:a5:6d:22:d0:e5:fe:c1:51:e8:f6:c6:9c:f9:be:b7:
+        be:82:14:e4:a0:b2:0b:9f:ee:68:bc:ac:17:0d:13:50:c6:9e:
+        52:91:8c:a0:98:db:4e:2d:f6:3d:6e:85:0a:bb:b9:dd:01:bf:
+        ad:52:dd:6e:e4:41:01:a5:93:58:dd:3f:cf:bf:15:e6:25:aa:
+        a0:4f:98:0d:75:8a:3f:5b:ba:67:37:f6:b1:0b:3f:21:34:97:
+        50:9a:85:97:2b:b6:05:41:9a:f3:cf:c4:92:23:06:ab:3e:87:
+        98:30:eb:cb:d3:83:ab:04:7d:5c:b9:f0:12:d1:43:b3:c5:7d:
+        33:9a:2e:2b:80:3a:66:be:f1:8c:08:37:7a:93:9c:9b:60:60:
+        53:71:16:70:86:df:ca:5f:a9:0b:e2:8b:3d:af:02:62:3b:61:
+        30:da:53:89:e3:d8:0b:88:04:9a:93:6a:f6:28:f8:dd:0d:8f:
+        0c:82:5b:c0:e5:f8:0d:ad:06:76:a7:3b:4b:ae:54:37:25:15:
+        f5:0c:67:0f:77:c5:c4:97:68:09:c3:02:a7:a0:46:10:1c:d1:
+        95:3a:4c:94
+-----BEGIN CERTIFICATE-----
+MIIDOTCCAiGgAwIBAgIBAjANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDEwljYXNz
+YW5kcmEwHhcNMTQwOTE5MjExODQ4WhcNMjQwOTE2MjExODQ4WjAUMRIwEAYDVQQD
+EwljYXNzYW5kcmEwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDlnCCe
+3phzREENN0xiw5+HX5tPqs/2kG6l4ImIegDGu9eAh2ku+vA1WYBugiXIs2z2pJeX
+k5Pq8HBwpOG3qtrBmWabkwQ6zguDBwYiPabbf2gPSYC9hqi7VG04Xw+w+huXJK7M
+nTeYfnbM4xtFGyElFwLAGsX7dsOLk9fFhRQKXKQS5xhpmPV2zXjNmVopZfFoIJfT
+vgmzaBvyo6Kac1hTfu2GMqNa1UYD+bO07GNxurv7b/mCY+RVR3p65HsXa9fmzzvJ
+qwwwFcntx9b8tnKyFH3H83+K9GNwZI4P2+g6RUfNuXuuyDHBUtE+NBK3c+e6iYaa
+Nu2gWmnQ1OO2FoWvAgMBAAGjgZUwgZIwCQYDVR0TBAIwADAdBgNVHQ4EFgQUStPs
+YwfgjxpO9QlDkJ96xTHRj9gwRAYDVR0jBD0wO4AUjHzn0nYFiXEaI1vUWbRR4lwK
+XOihGKQWMBQxEjAQBgNVBAMTCWNhc3NhbmRyYYIJAIKbAXgemwsjMBMGA1UdJQQM
+MAoGCCsGAQUFBwMBMAsGA1UdDwQEAwIFoDANBgkqhkiG9w0BAQsFAAOCAQEArLyA
+gi1t8aBG6wAF0iWag2ZXQFFu/9vjKAR7FmN07FWgwFtHE+FapW0i0OX+wVHo9sac
++b63voIU5KCyC5/uaLysFw0TUMaeUpGMoJjbTi32PW6FCru53QG/rVLdbuRBAaWT
+WN0/z78V5iWqoE+YDXWKP1u6Zzf2sQs/ITSXUJqFlyu2BUGa88/EkiMGqz6HmDDr
+y9ODqwR9XLnwEtFDs8V9M5ouK4A6Zr7xjAg3epOcm2BgU3EWcIbfyl+pC+KLPa8C
+YjthMNpTiePYC4gEmpNq9ij43Q2PDIJbwOX4Da0Gdqc7S65UNyUV9QxnD3fFxJdo
+CcMCp6BGEBzRlTpMlA==
+-----END CERTIFICATE-----
