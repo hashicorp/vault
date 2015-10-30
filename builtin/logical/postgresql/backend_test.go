@@ -13,25 +13,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var (
-	username string
-	db       *sql.DB
-)
-
 func TestBackend_basic(t *testing.T) {
 	b, _ := Factory(logical.TestBackendConfig())
-
-	conn, err := pq.ParseURL(os.Getenv("PG_URL"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	conn += " timezone=utc"
-
-	db, err = sql.Open("postgres", conn)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -106,13 +89,24 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
-			username = d.Username
 			log.Printf("[WARN] Generated credentials: %v", d)
+
+			conn, err := pq.ParseURL(os.Getenv("PG_URL"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			conn += " timezone=utc"
+
+			db, err := sql.Open("postgres", conn)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			returnedRows := func() int {
 				stmt, err := db.Prepare(fmt.Sprintf(
 					"SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee='%s';",
-					username))
+					d.Username))
 				if err != nil {
 					return -1
 				}
@@ -136,12 +130,12 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 
-			resp, err := b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(&logical.Request{
 				Operation: logical.RevokeOperation,
 				Secret: &logical.Secret{
 					InternalData: map[string]interface{}{
 						"secret_type": "creds",
-						"username":    username,
+						"username":    d.Username,
 					},
 				},
 			})
