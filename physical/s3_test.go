@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -17,8 +18,7 @@ func TestS3Backend(t *testing.T) {
 		t.SkipNow()
 	}
 
-	credentialChain := defaults.DefaultChainCredentials
-	creds, err := credentialChain.Get()
+	creds, err := credentials.NewEnvCredentials().Get()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -28,10 +28,10 @@ func TestS3Backend(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	s3conn := s3.New(&aws.Config{
-		Credentials: defaults.DefaultChainCredentials,
+	s3conn := s3.New(session.New(&aws.Config{
+		Credentials: credentials.NewEnvCredentials(),
 		Region:      aws.String(region),
-	})
+	}))
 
 	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	bucket := fmt.Sprintf("vault-s3-testacc-%d", randInt)
