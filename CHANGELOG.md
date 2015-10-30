@@ -8,7 +8,9 @@ policy names are not currently normalized when reading or deleting. [GH-676]
 
 IMPROVEMENTS:
 
- * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
+ * api: API client now uses a 60 second timeout instead of indefinite [GH-681]
+ * api: Implement LookupSelf, RenewSelf, and RevokeSelf functions for auth
+   tokens [GH-739]
  * audit: HMAC-SHA256'd client tokens are now stored with each request entry.
    Previously they were only displayed at creation time; this allows much
    better traceability of client actions. [GH-713]

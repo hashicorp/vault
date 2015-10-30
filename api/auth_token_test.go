@@ -79,4 +79,18 @@ func TestAuthTokenRenew(t *testing.T) {
 	if secret.Auth.Renewable != true {
 		t.Error("expected lease to be renewable")
 	}
+
+	// Do the same thing with the self variant
+	secret, err = client.Auth().Token().RenewSelf(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Auth.LeaseDuration != 3600 {
+		t.Errorf("expected 1h, got %q", secret.Auth.LeaseDuration)
+	}
+
+	if secret.Auth.Renewable != true {
+		t.Error("expected lease to be renewable")
+	}
 }
