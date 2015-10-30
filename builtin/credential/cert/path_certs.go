@@ -42,7 +42,7 @@ seconds. Defaults to system/backend default TTL.`,
 			},
 
 			"ttl": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeDurationSecond,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
@@ -142,15 +142,9 @@ func (b *backend) pathCertWrite(
 	// Parse the lease duration or default to backend/system default
 	var err error
 	maxTTL := b.System().MaxLeaseTTL()
-	ttlStr := d.Get("ttl").(string)
-	var ttl time.Duration
-	if len(ttlStr) == 0 {
+	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
+	if ttl == time.Duration(0) {
 		ttl = time.Second * time.Duration(d.Get("lease").(int))
-	} else {
-		ttl, err = time.ParseDuration(ttlStr)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Failed to parse ttl of %d", ttlStr)), nil
-		}
 	}
 	if ttl > maxTTL {
 		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than current mount/system default of %d seconds", ttl/time.Second, maxTTL/time.Second)), nil
