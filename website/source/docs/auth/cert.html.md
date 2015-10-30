@@ -13,22 +13,45 @@ Name: `cert`
 The "cert" auth backend allows authentication using SSL/TLS client certificates
 which are either signed by a CA or self-signed.
 
-The trusted certificates and CAs are configured directly to the auth
-backend using the `certs/` path. This backend cannot read trusted certificates
-from an external source.
+The trusted certificates and CAs are configured directly to the auth backend
+using the `certs/` path. This backend cannot read trusted certificates from an
+external source.
 
-CA certs are associated with a role; role names and CRL names are normalized to lower-case.
+CA certs are associated with a role; role names and CRL names are normalized to
+lower-case.
 
 ## Revocation Checking
 
-Since Vault 0.4, the backend supports revocation checking. An authorised user can submit PEM-formatted CRLs identified by a given name; these can be updated or deleted at will. When there are CRLs present, at the time of client authentication:
+Since Vault 0.4, the backend supports revocation checking.
 
-* If the client presents any chain where no certificate in the chain matches a revoked serial number, authentication is allowed
-* If there is no chain presented by the client without a revoked serial number, authentication is denied
+An authorised user can submit PEM-formatted CRLs identified by a given name;
+these can be updated or deleted at will. (Note: Vault **does not** fetch CRLs;
+the CRLs themselves and any updates must be pushed into Vault when desired,
+such as via a `cron` job that fetches them from the source and pushes them into
+Vault.)
 
-This method provides good security while also allowing for flexibility. For instance, if an intermediate CA is going to be retired, a client can be configured with two certificate chains: one that contains the initial intermediate CA in the path, and the other that contains the replacement. When the initial intermediate CA is revoked, the chain containing the replacement will still allow the client to successfully authenticate.
+When there are CRLs present, at the time of client authentication:
 
-**N.B.**: Matching is performed by *serial number only*. For most CAs, including Vault's `pki` backend, multiple CRLs can successfully be used as serial numbers are globally unique. However, since RFCs only specify that serial numbers must be unique per-CA, some CAs issue serial numbers in-order, which may cause clashes if attempting to use CRLs from two such CAs in the same mount of the backend. The workaround here is to mount multiple copies of the `cert` backend, configure each with one CA/CRL, and have clients connect to the appropriate mount.
+* If the client presents any chain where no certificate in the chain matches a
+  revoked serial number, authentication is allowed
+* If there is no chain presented by the client without a revoked serial number,
+  authentication is denied
+
+This method provides good security while also allowing for flexibility. For
+instance, if an intermediate CA is going to be retired, a client can be
+configured with two certificate chains: one that contains the initial
+intermediate CA in the path, and the other that contains the replacement. When
+the initial intermediate CA is revoked, the chain containing the replacement
+will still allow the client to successfully authenticate.
+
+**N.B.**: Matching is performed by *serial number only*. For most CAs,
+including Vault's `pki` backend, multiple CRLs can successfully be used as
+serial numbers are globally unique. However, since RFCs only specify that
+serial numbers must be unique per-CA, some CAs issue serial numbers in-order,
+which may cause clashes if attempting to use CRLs from two such CAs in the same
+mount of the backend. The workaround here is to mount multiple copies of the
+`cert` backend, configure each with one CA/CRL, and have clients connect to the
+appropriate mount.
 
 ## Authentication
 
