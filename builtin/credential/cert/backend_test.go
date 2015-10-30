@@ -34,10 +34,6 @@ func TestBackend_basic_CA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	crl, err := ioutil.ReadFile("../../../test/ca/root.crl")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -48,9 +44,29 @@ func TestBackend_basic_CA(t *testing.T) {
 			testAccStepLogin(t, connState),
 			testAccStepCertNoLease(t, "web", ca, "foo"),
 			testAccStepLoginDefaultLease(t, connState),
+		},
+	})
+}
+
+// Test CRL behavior
+func TestBackend_CRLs(t *testing.T) {
+	connState := testConnState(t, "../../../test/key/ourdomain.cer",
+		"../../../test/key/ourdomain.key")
+	ca, err := ioutil.ReadFile("../../../test/ca/root.cer")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	crl, err := ioutil.ReadFile("../../../test/ca/root.crl")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCertNoLease(t, "web", ca, "foo"),
+			testAccStepLoginDefaultLease(t, connState),
 			testAccStepAddCRL(t, crl, connState),
 			testAccStepReadCRL(t, connState),
-			testAccStepReadCRLSerial(t, connState),
 			testAccStepLoginInvalid(t, connState),
 			testAccStepDeleteCRL(t, connState),
 			testAccStepLoginDefaultLease(t, connState),
@@ -114,31 +130,6 @@ func testAccStepReadCRL(t *testing.T, connState tls.ConnectionState) logicaltest
 			}
 			if _, ok := crlInfo.Serials["13"]; !ok {
 				t.Fatalf("bad: serial number 13 not found in CRL")
-			}
-			return nil
-		},
-	}
-}
-
-func testAccStepReadCRLSerial(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.ReadOperation,
-		Path:      "crls/test",
-		ConnState: &connState,
-		Data: map[string]interface{}{
-			"serial": "13",
-		},
-		Check: func(resp *logical.Response) error {
-			serialInfo := map[string]RevokedSerialInfo{}
-			err := mapstructure.Decode(resp.Data, &serialInfo)
-			if err != nil {
-				t.Fatalf("err: %v", err)
-			}
-			if len(serialInfo) != 1 {
-				t.Fatalf("bad: expected info with length 1, got %d", len(serialInfo))
-			}
-			if _, ok := serialInfo["test"]; !ok {
-				t.Fatalf("bad: CRL \"test\" not found in info")
 			}
 			return nil
 		},

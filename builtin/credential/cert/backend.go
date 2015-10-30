@@ -1,19 +1,22 @@
 package cert
 
 import (
+	"sync"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	b, err := Backend().Setup(conf)
+	b := Backend()
+	_, err := b.Setup(conf)
 	if err != nil {
 		return b, err
 	}
-	return b, populateCRLs(conf.StorageView)
+	return b, b.populateCRLs(conf.StorageView)
 }
 
-func Backend() *framework.Backend {
+func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -38,12 +41,18 @@ func Backend() *framework.Backend {
 		AuthRenew: b.pathLoginRenew,
 	}
 
-	return b.Backend
+	b.crls = map[string]CRLInfo{}
+	b.crlUpdateMutex = &sync.RWMutex{}
+
+	return &b
 }
 
 type backend struct {
 	*framework.Backend
 	MapCertId *framework.PathMap
+
+	crls           map[string]CRLInfo
+	crlUpdateMutex *sync.RWMutex
 }
 
 const backendHelp = `

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"sync"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
@@ -42,14 +41,9 @@ using the same name as specified here.`,
 	}
 }
 
-var (
-	crls           = map[string]CRLInfo{}
-	crlUpdateMutex = &sync.RWMutex{}
-)
-
-func populateCRLs(storage logical.Storage) error {
-	crlUpdateMutex.Lock()
-	defer crlUpdateMutex.Unlock()
+func (b *backend) populateCRLs(storage logical.Storage) error {
+	b.crlUpdateMutex.Lock()
+	defer b.crlUpdateMutex.Unlock()
 
 	keys, err := storage.List("crls/")
 	if err != nil {
@@ -72,17 +66,17 @@ func populateCRLs(storage logical.Storage) error {
 		if err != nil {
 			return fmt.Errorf("error decoding CRL %s: %v", key, err)
 		}
-		crls[key] = crlInfo
+		b.crls[key] = crlInfo
 	}
 
 	return nil
 }
 
-func findSerialInCRLs(serial *big.Int) map[string]RevokedSerialInfo {
-	crlUpdateMutex.RLock()
-	defer crlUpdateMutex.RUnlock()
+func (b *backend) findSerialInCRLs(serial *big.Int) map[string]RevokedSerialInfo {
+	b.crlUpdateMutex.RLock()
+	defer b.crlUpdateMutex.RUnlock()
 	ret := map[string]RevokedSerialInfo{}
-	for key, crl := range crls {
+	for key, crl := range b.crls {
 		if crl.Serials == nil {
 			continue
 		}
@@ -127,10 +121,10 @@ func (b *backend) pathCRLDelete(
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
 
-	crlUpdateMutex.Lock()
-	defer crlUpdateMutex.Unlock()
+	b.crlUpdateMutex.Lock()
+	defer b.crlUpdateMutex.Unlock()
 
-	_, ok := crls[name]
+	_, ok := b.crls[name]
 	if !ok {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"no such CRL %s", name,
@@ -144,7 +138,7 @@ func (b *backend) pathCRLDelete(
 		), nil
 	}
 
-	delete(crls, name)
+	delete(b.crls, name)
 
 	return nil, nil
 }
@@ -156,12 +150,12 @@ func (b *backend) pathCRLRead(
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
-	crlUpdateMutex.RLock()
-	defer crlUpdateMutex.RUnlock()
+	b.crlUpdateMutex.RLock()
+	defer b.crlUpdateMutex.RUnlock()
 
 	var retData map[string]interface{}
 
-	crl, ok := crls[name]
+	crl, ok := b.crls[name]
 	if !ok {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"no such CRL %s", name,
@@ -191,8 +185,8 @@ func (b *backend) pathCRLWrite(
 		return logical.ErrorResponse("parsed CRL is nil"), nil
 	}
 
-	crlUpdateMutex.Lock()
-	defer crlUpdateMutex.Unlock()
+	b.crlUpdateMutex.Lock()
+	defer b.crlUpdateMutex.Unlock()
 
 	crlInfo := CRLInfo{
 		Serials: map[string]RevokedSerialInfo{},
@@ -209,7 +203,7 @@ func (b *backend) pathCRLWrite(
 		return nil, err
 	}
 
-	crls[name] = crlInfo
+	b.crls[name] = crlInfo
 
 	return nil, nil
 }

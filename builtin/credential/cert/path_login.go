@@ -140,7 +140,7 @@ func (b *backend) checkForValidChain(store logical.Storage, chains [][]*x509.Cer
 	for _, chain := range chains {
 		badChain = false
 		for _, cert := range chain {
-			badCRLs := findSerialInCRLs(cert.SerialNumber)
+			badCRLs := b.findSerialInCRLs(cert.SerialNumber)
 			if len(badCRLs) != 0 {
 				badChain = true
 				break

@@ -249,7 +249,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/cert/certs/<name>`</dd>
+  <dd>`/auth/cert/crls/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
