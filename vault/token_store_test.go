@@ -52,7 +52,7 @@ func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
 func TestTokenStore_RootToken(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
-	te, err := ts.RootToken()
+	te, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	c, ts, _ := mockTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.Create(ent); err != nil {
+	if err := ts.create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID == "" {
@@ -112,7 +112,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
 	}
-	if err := ts.Create(ent); err != nil {
+	if err := ts.create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID != "foobarbaz" {
@@ -170,7 +170,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 
 	// Create a retstricted token
 	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
-	if err := ts.Create(ent); err != nil {
+	if err := ts.create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -213,7 +213,7 @@ func TestTokenStore_Revoke(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.Create(ent); err != nil {
+	if err := ts.create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -243,7 +243,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, nil)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.Create(ent); err != nil {
+	if err := ts.create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -289,12 +289,12 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.Create(ent); err != nil {
+	if err := ts.create(ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent2 := &TokenEntry{Parent: ent.ID}
-	if err := ts.Create(ent2); err != nil {
+	if err := ts.create(ent2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -316,22 +316,22 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
 	ent1 := &TokenEntry{}
-	if err := ts.Create(ent1); err != nil {
+	if err := ts.create(ent1); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent2 := &TokenEntry{Parent: ent1.ID}
-	if err := ts.Create(ent2); err != nil {
+	if err := ts.create(ent2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent3 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.Create(ent3); err != nil {
+	if err := ts.create(ent3); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent4 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.Create(ent4); err != nil {
+	if err := ts.create(ent4); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -360,22 +360,22 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
 	ent1 := &TokenEntry{}
-	if err := ts.Create(ent1); err != nil {
+	if err := ts.create(ent1); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent2 := &TokenEntry{Parent: ent1.ID}
-	if err := ts.Create(ent2); err != nil {
+	if err := ts.create(ent2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent3 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.Create(ent3); err != nil {
+	if err := ts.create(ent3); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent4 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.Create(ent4); err != nil {
+	if err := ts.create(ent4); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -859,7 +859,7 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.RootToken()
+	root, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -926,7 +926,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.RootToken()
+	root, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -970,7 +970,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.RootToken()
+	root, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

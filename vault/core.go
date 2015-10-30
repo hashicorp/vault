@@ -642,7 +642,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
-		if err := c.tokenStore.Create(&te); err != nil {
+		if err := c.tokenStore.create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
 			return nil, auth, ErrInternalError
 		}
@@ -839,7 +839,7 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.RootToken()
+	rootToken, err := c.tokenStore.rootToken()
 	if err != nil {
 		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
 		return nil, err

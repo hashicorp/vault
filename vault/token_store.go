@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -278,14 +278,14 @@ func (ts *TokenStore) SaltID(id string) string {
 }
 
 // RootToken is used to generate a new token with root privileges and no parent
-func (ts *TokenStore) RootToken() (*TokenEntry, error) {
+func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	te := &TokenEntry{
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",
 		CreationTime: time.Now().Unix(),
 	}
-	if err := ts.Create(te); err != nil {
+	if err := ts.create(te); err != nil {
 		return nil, err
 	}
 	return te, nil
@@ -293,7 +293,7 @@ func (ts *TokenStore) RootToken() (*TokenEntry, error) {
 
 // Create is used to create a new token entry. The entry is assigned
 // a newly generated ID if not provided.
-func (ts *TokenStore) Create(entry *TokenEntry) error {
+func (ts *TokenStore) create(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
@@ -622,7 +622,7 @@ func (ts *TokenStore) handleCreate(
 	}
 
 	// Create the token
-	if err := ts.Create(&te); err != nil {
+	if err := ts.create(&te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
