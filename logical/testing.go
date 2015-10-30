@@ -3,6 +3,7 @@ package logical
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 // TestRequest is a helper to create a purely in-memory Request struct.
@@ -57,5 +58,21 @@ func TestStorage(t *testing.T, s Storage) {
 	}
 	if len(keys) > 0 {
 		t.Fatalf("should have no keys to start: %#v", keys)
+	}
+}
+
+func TestSystemView() *StaticSystemView {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 2
+	return &StaticSystemView{
+		DefaultLeaseTTLVal: defaultLeaseTTLVal,
+		MaxLeaseTTLVal:     maxLeaseTTLVal,
+	}
+}
+
+func TestBackendConfig() *BackendConfig {
+	return &BackendConfig{
+		Logger: nil,
+		System: TestSystemView(),
 	}
 }
