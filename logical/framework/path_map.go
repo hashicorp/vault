@@ -41,7 +41,7 @@ func (p *PathMap) init() {
 }
 
 // pathStruct returns the pathStruct for this mapping
-func (p *PathMap) pathStruct(k string) *PathStruct {
+func (p *PathMap) pathStruct(k string, applySalt bool) *PathStruct {
 	p.once.Do(p.init)
 
 	// If we don't care about casing, store everything lowercase
@@ -50,7 +50,7 @@ func (p *PathMap) pathStruct(k string) *PathStruct {
 	}
 
 	// If we have a salt, apply it before lookup
-	if p.Salt != nil {
+	if p.Salt != nil && applySalt == true {
 		k = p.Salt.SaltID(k)
 	}
 
@@ -62,17 +62,17 @@ func (p *PathMap) pathStruct(k string) *PathStruct {
 
 // Get reads a value out of the mapping
 func (p *PathMap) Get(s logical.Storage, k string) (map[string]interface{}, error) {
-	return p.pathStruct(k).Get(s)
+	return p.pathStruct(k, true).Get(s)
 }
 
 // Put writes a value into the mapping
 func (p *PathMap) Put(s logical.Storage, k string, v map[string]interface{}) error {
-	return p.pathStruct(k).Put(s, v)
+	return p.pathStruct(k, true).Put(s, v)
 }
 
 // Delete removes a value from the mapping
 func (p *PathMap) Delete(s logical.Storage, k string) error {
-	return p.pathStruct(k).Delete(s)
+	return p.pathStruct(k, true).Delete(s)
 }
 
 // List reads the keys under a given path
@@ -132,14 +132,30 @@ func (p *PathMap) Paths() []*Path {
 	}
 }
 
-func (p *PathMap) pathList(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	keys, err := req.Storage.List(req.Path)
+func (p *PathMap) pathList(req *logical.Request, d *FieldData) (*logical.Response, error) {
+	rootPath := fmt.Sprintf("struct/%s/", req.Path)
+	keys, err := req.Storage.List(rootPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return logical.ListResponse(keys), nil
+	var out []string
+	for _, key := range keys {
+		val, err := p.pathStruct(key, false).Get(req.Storage)
+
+		if err != nil {
+			return nil, err
+		}
+
+		app, ok := val["key"].(string)
+		if ! ok {
+			return nil, fmt.Errorf("Could not decode app")
+		}
+
+		out = append(out, app)
+	}
+
+	return logical.ListResponse(out), nil
 }
 
 func (p *PathMap) pathSingleRead(
