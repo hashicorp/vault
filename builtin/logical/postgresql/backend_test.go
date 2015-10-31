@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -8,11 +9,12 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 )
 
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
+	b, _ := Factory(logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -20,13 +22,14 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, "web"),
+			testAccStepReadCreds(t, b, "web"),
 		},
 	})
+
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	b := Backend()
+	b, _ := Factory(logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -74,7 +77,7 @@ func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -87,6 +90,68 @@ func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 				return err
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
+
+			conn, err := pq.ParseURL(os.Getenv("PG_URL"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			conn += " timezone=utc"
+
+			db, err := sql.Open("postgres", conn)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			returnedRows := func() int {
+				stmt, err := db.Prepare(fmt.Sprintf(
+					"SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee='%s';",
+					d.Username))
+				if err != nil {
+					return -1
+				}
+				defer stmt.Close()
+
+				rows, err := stmt.Query()
+				if err != nil {
+					return -1
+				}
+				defer rows.Close()
+
+				i := 0
+				for rows.Next() {
+					i++
+				}
+				return i
+			}
+
+			userRows := returnedRows()
+			if userRows != 1 {
+				t.Fatalf("did not get expected number of rows, got %d", userRows)
+			}
+
+			resp, err = b.HandleRequest(&logical.Request{
+				Operation: logical.RevokeOperation,
+				Secret: &logical.Secret{
+					InternalData: map[string]interface{}{
+						"secret_type": "creds",
+						"username":    d.Username,
+					},
+				},
+			})
+			if err != nil {
+				return err
+			}
+			if resp != nil {
+				if resp.IsError() {
+					return fmt.Errorf("Error on resp: %#v", *resp)
+				}
+			}
+
+			userRows = returnedRows()
+			if userRows != 0 {
+				t.Fatalf("did not get expected number of rows, got %d", userRows)
+			}
 
 			return nil
 		},

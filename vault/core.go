@@ -447,10 +447,14 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		defer func() {
 			// Attempt to use the token (decrement num_uses)
 			// If a secret was generated and num_uses is currently 1, it will be
-			// immediately revoked; in that case, don't return the generated
+			// immediately revoked; in that case, don't return the leased
 			// credentials as they are now invalid.
-			if retResp != nil && te != nil && te.NumUses == 1 && retResp.Secret != nil {
-				retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so generated credentials were immediately revoked.")
+			if retResp != nil &&
+				te != nil && te.NumUses == 1 &&
+				retResp.Secret != nil &&
+				// Some backends return a TTL even without a Lease ID
+				retResp.Secret.LeaseID != "" {
+				retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
 			}
 			if err := c.tokenStore.UseToken(te); err != nil {
 				c.logger.Printf("[ERR] core: failed to use token: %v", err)
@@ -642,7 +646,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
-		if err := c.tokenStore.Create(&te); err != nil {
+		if err := c.tokenStore.create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
 			return nil, auth, ErrInternalError
 		}
@@ -839,7 +843,7 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.RootToken()
+	rootToken, err := c.tokenStore.rootToken()
 	if err != nil {
 		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
 		return nil, err

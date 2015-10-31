@@ -8,7 +8,12 @@ policy names are not currently normalized when reading or deleting. [GH-676]
 
 IMPROVEMENTS:
 
- * api: API client now uses a 30 second timeout instead of indefinite [GH-681]
+ * api: API client now uses a 60 second timeout instead of indefinite [GH-681]
+ * api: Implement LookupSelf, RenewSelf, and RevokeSelf functions for auth
+   tokens [GH-739]
+ * audit: HMAC-SHA256'd client tokens are now stored with each request entry.
+   Previously they were only displayed at creation time; this allows much
+   better traceability of client actions. [GH-713]
  * core: The physical storage read cache can now be disabled via
    "disable_cache" [GH-674]
  * core: The unsealing process can now be reset midway through (this feature
@@ -28,6 +33,8 @@ BUG FIXES:
 generate them, leading to client errors.
  * cli: `token-create` now supports the `ttl` parameter in addition to the
    deprecated `lease` parameter. [GH-688]
+ * core: Return data from `generic` backends on the last use of a limited-use
+   token [GH-615]
  * core: Fix upgrade path for leases created in `generic` prior to 0.3 [GH-673]
  * core: Stale leader entries will now be reaped [GH-679]
  * core: Using `mount-tune` on the auth/token path did not take effect.
@@ -36,10 +43,16 @@ generate them, leading to client errors.
    enabled [GH-694]
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
+ * secret/generic: Validate given duration at write time, not just read time;
+   if stored durations are not parseable, return a warning and the default
+   duration rather than an error [GH-718]
+ * secret/postgresql: Revoke permissions before dropping a user or revocation
+   may fail [GH-699]
 
 MISC:
 
- * Various documentation fixes and improvements [GH-685] [GH-688] [GH-715]
+ * Various documentation fixes and improvements [GH-685] [GH-688] [GH-697]
+   [GH-710] [GH-715]
 
 ## 0.3.1 (October 6, 2015)
 

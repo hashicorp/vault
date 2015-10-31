@@ -43,7 +43,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	// otherwise it will be too late to catch later without problems
 	// (ref: https://github.com/hashicorp/vault/issues/550)
 	if err := b.open(); err != nil {
-		return nil, fmt.Errorf("sanity check failed; unable to open given path for writing")
+		return nil, fmt.Errorf("sanity check failed; unable to open %s for writing", path)
 	}
 
 	return b, nil

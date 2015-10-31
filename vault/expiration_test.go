@@ -117,7 +117,7 @@ func TestExpiration_Register(t *testing.T) {
 
 func TestExpiration_RegisterAuth(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.RootToken()
+	root, err := exp.tokenStore.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 
 func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.RootToken()
+	root, err := exp.tokenStore.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -380,7 +380,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 
 func TestExpiration_RenewToken(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.RootToken()
+	root, err := exp.tokenStore.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -411,7 +411,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 
 func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.RootToken()
+	root, err := exp.tokenStore.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -652,7 +652,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 
 func TestExpiration_revokeEntry_token(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.RootToken()
+	root, err := exp.tokenStore.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
