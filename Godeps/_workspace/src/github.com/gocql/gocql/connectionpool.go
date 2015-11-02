@@ -58,6 +58,8 @@ func setupTLSConfig(sslOpts *SslOptions) (*tls.Config, error) {
 }
 
 type policyConnPool struct {
+	session *Session
+
 	port     int
 	numConns int
 	connCfg  *ConnConfig
@@ -69,13 +71,15 @@ type policyConnPool struct {
 	hostConnPools map[string]*hostConnPool
 }
 
-func newPolicyConnPool(cfg *ClusterConfig, hostPolicy HostSelectionPolicy,
+func newPolicyConnPool(session *Session, hostPolicy HostSelectionPolicy,
 	connPolicy func() ConnSelectionPolicy) (*policyConnPool, error) {
 
 	var (
 		err       error
 		tlsConfig *tls.Config
 	)
+
+	cfg := session.cfg
 
 	if cfg.SslOpts != nil {
 		tlsConfig, err = setupTLSConfig(cfg.SslOpts)
@@ -86,6 +90,7 @@ func newPolicyConnPool(cfg *ClusterConfig, hostPolicy HostSelectionPolicy,
 
 	// create the pool
 	pool := &policyConnPool{
+		session:  session,
 		port:     cfg.Port,
 		numConns: cfg.NumConns,
 		connCfg: &ConnConfig{
@@ -116,6 +121,7 @@ func newPolicyConnPool(cfg *ClusterConfig, hostPolicy HostSelectionPolicy,
 
 func (p *policyConnPool) SetHosts(hosts []HostInfo) {
 	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	toRemove := make(map[string]struct{})
 	for addr := range p.hostConnPools {
@@ -130,6 +136,7 @@ func (p *policyConnPool) SetHosts(hosts []HostInfo) {
 		if !exists {
 			// create a connection pool for the host
 			pool = newHostConnPool(
+				p.session,
 				hosts[i].Peer,
 				p.port,
 				p.numConns,
@@ -153,7 +160,6 @@ func (p *policyConnPool) SetHosts(hosts []HostInfo) {
 	// update the policy
 	p.hostPolicy.SetHosts(hosts)
 
-	p.mu.Unlock()
 }
 
 func (p *policyConnPool) SetPartitioner(partitioner string) {
@@ -180,19 +186,28 @@ func (p *policyConnPool) Pick(qry *Query) (SelectedHost, *Conn) {
 	)
 
 	p.mu.RLock()
+	defer p.mu.RUnlock()
 	for conn == nil {
 		host = nextHost()
 		if host == nil {
 			break
+		} else if host.Info() == nil {
+			panic(fmt.Sprintf("policy %T returned no host info: %+v", p.hostPolicy, host))
 		}
-		conn = p.hostConnPools[host.Info().Peer].Pick(qry)
+
+		pool, ok := p.hostConnPools[host.Info().Peer]
+		if !ok {
+			continue
+		}
+
+		conn = pool.Pick(qry)
 	}
-	p.mu.RUnlock()
 	return host, conn
 }
 
 func (p *policyConnPool) Close() {
 	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	// remove the hosts from the policy
 	p.hostPolicy.SetHosts([]HostInfo{})
@@ -202,12 +217,12 @@ func (p *policyConnPool) Close() {
 		delete(p.hostConnPools, addr)
 		pool.Close()
 	}
-	p.mu.Unlock()
 }
 
 // hostConnPool is a connection pool for a single host.
 // Connection selection is based on a provided ConnSelectionPolicy
 type hostConnPool struct {
+	session  *Session
 	host     string
 	port     int
 	addr     string
@@ -222,10 +237,11 @@ type hostConnPool struct {
 	filling bool
 }
 
-func newHostConnPool(host string, port int, size int, connCfg *ConnConfig,
+func newHostConnPool(session *Session, host string, port, size int, connCfg *ConnConfig,
 	keyspace string, policy ConnSelectionPolicy) *hostConnPool {
 
 	pool := &hostConnPool{
+		session:  session,
 		host:     host,
 		port:     port,
 		addr:     JoinHostPort(host, port),
@@ -395,7 +411,7 @@ func (pool *hostConnPool) fillingStopped() {
 // create a new connection to the host and add it to the pool
 func (pool *hostConnPool) connect() error {
 	// try to connect
-	conn, err := Connect(pool.addr, pool.connCfg, pool)
+	conn, err := Connect(pool.addr, pool.connCfg, pool, pool.session)
 	if err != nil {
 		return err
 	}

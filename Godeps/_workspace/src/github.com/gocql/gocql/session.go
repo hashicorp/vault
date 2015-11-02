@@ -75,7 +75,7 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		pageSize: cfg.PageSize,
 	}
 
-	pool, err := cfg.PoolConfig.buildPool(&s.cfg)
+	pool, err := cfg.PoolConfig.buildPool(s)
 	if err != nil {
 		return nil, err
 	}

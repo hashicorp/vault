@@ -94,11 +94,11 @@ func (r *roundRobinHostPolicy) SetPartitioner(partitioner string) {
 func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 	// i is used to limit the number of attempts to find a host
 	// to the number of hosts known to this policy
-	var i uint32 = 0
+	var i uint32
 	return func() SelectedHost {
 		r.mu.RLock()
+		defer r.mu.RUnlock()
 		if len(r.hosts) == 0 {
-			r.mu.RUnlock()
 			return nil
 		}
 
@@ -110,7 +110,6 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 			host = &r.hosts[(pos)%uint32(len(r.hosts))]
 			i++
 		}
-		r.mu.RUnlock()
 		return selectedRoundRobinHost{host}
 	}
 }

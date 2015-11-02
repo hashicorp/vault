@@ -83,8 +83,8 @@
 		},
 		{
 			"ImportPath": "github.com/go-ldap/ldap",
-			"Comment": "v2.1-2-gd57f702",
-			"Rev": "d57f702d9f8a22278428abed6c025621ab657fd6"
+			"Comment": "v2.1-4-g71555ef",
+			"Rev": "71555ef0e2f6f27e05878527b32030134d4f8774"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
@@ -93,8 +93,8 @@
 		},
 		{
 			"ImportPath": "github.com/gocql/gocql",
-			"Comment": "1st_gen_framing-339-ga13e827",
-			"Rev": "a13e827ba9f379ea13199708c1b262a5d30b95a9"
+			"Comment": "1st_gen_framing-350-g5ea083a",
+			"Rev": "5ea083a90be27963d1ffe34899c5aca5796bf4b0"
 		},
 		{
 			"ImportPath": "github.com/golang/snappy",
@@ -114,8 +114,8 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/consul/api",
-			"Comment": "v0.6.0-rc1-3-g921602b",
-			"Rev": "921602b565b04d59ac634d53542d05dfd93a6ca3"
+			"Comment": "v0.6.0-rc1-4-gcf1b9fe",
+			"Rev": "cf1b9fe0741e373125e23c10af233a7f67427a68"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/errwrap",
@@ -147,8 +147,8 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/serf/coordinate",
-			"Comment": "v0.6.4-141-gc952108",
-			"Rev": "c9521088072459c5113a5e78e353b0b5b5ceec58"
+			"Comment": "v0.6.4-144-ge53c5ef",
+			"Rev": "e53c5ef9c9b74fdb39baf2906a0fb9d7635bde46"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/uuid",
@@ -226,7 +226,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "c95266fa704a83c2716406ae957772a273e1380d"
+			"Rev": "b4e17d61b15679caf2335da776c614169a1b4643"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",

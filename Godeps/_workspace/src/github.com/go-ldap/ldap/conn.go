@@ -54,6 +54,8 @@ type Conn struct {
 	messageMutex        sync.Mutex
 }
 
+var _ Client = &Conn{}
+
 // DefaultTimeout is a package-level variable that sets the timeout value
 // used for the Dial and DialTLS methods.
 //

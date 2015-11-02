@@ -88,7 +88,7 @@ func (c *controlConn) reconnect(refreshring bool) {
 		return
 	}
 
-	newConn, err := Connect(conn.addr, conn.cfg, c)
+	newConn, err := Connect(conn.addr, conn.cfg, c, c.session)
 	if err != nil {
 		host.Mark(err)
 		// TODO: add log handler for things like this
@@ -103,7 +103,7 @@ func (c *controlConn) reconnect(refreshring bool) {
 		oldConn.Close()
 	}
 
-	if refreshring {
+	if refreshring && c.session.cfg.DiscoverHosts {
 		c.session.hostSource.refreshRing()
 	}
 }
@@ -135,18 +135,15 @@ func (c *controlConn) writeFrame(w frameWriter) (frame, error) {
 	return framer.parseFrame()
 }
 
-// query will return nil if the connection is closed or nil
-func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter) {
-	q := c.session.Query(statement, values...).Consistency(One)
-
+func (c *controlConn) withConn(fn func(*Conn) *Iter) *Iter {
 	const maxConnectAttempts = 5
 	connectAttempts := 0
 
-	for {
+	for i := 0; i < maxConnectAttempts; i++ {
 		conn := c.conn.Load().(*Conn)
 		if conn == nil {
 			if connectAttempts > maxConnectAttempts {
-				return &Iter{err: errNoControl}
+				break
 			}
 
 			connectAttempts++
@@ -155,7 +152,21 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 			continue
 		}
 
-		iter = conn.executeQuery(q)
+		return fn(conn)
+	}
+
+	return &Iter{err: errNoControl}
+}
+
+// query will return nil if the connection is closed or nil
+func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter) {
+	q := c.session.Query(statement, values...).Consistency(One)
+
+	for {
+		iter = c.withConn(func(conn *Conn) *Iter {
+			return conn.executeQuery(q)
+		})
+
 		q.attempts++
 		if iter.err == nil || !c.retry.Attempt(q) {
 			break
@@ -165,57 +176,10 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 	return
 }
 
-func (c *controlConn) awaitSchemaAgreement() (err error) {
-
-	const (
-		// TODO(zariel): if we export this make this configurable
-		maxWaitTime = 60 * time.Second
-
-		peerSchemas  = "SELECT schema_version FROM system.peers"
-		localSchemas = "SELECT schema_version FROM system.local WHERE key='local'"
-	)
-
-	endDeadline := time.Now().Add(maxWaitTime)
-
-	for time.Now().Before(endDeadline) {
-		iter := c.query(peerSchemas)
-
-		versions := make(map[string]struct{})
-
-		var schemaVersion string
-		for iter.Scan(&schemaVersion) {
-			versions[schemaVersion] = struct{}{}
-			schemaVersion = ""
-		}
-
-		if err = iter.Close(); err != nil {
-			goto cont
-		}
-
-		iter = c.query(localSchemas)
-		for iter.Scan(&schemaVersion) {
-			versions[schemaVersion] = struct{}{}
-			schemaVersion = ""
-		}
-
-		if err = iter.Close(); err != nil {
-			goto cont
-		}
-
-		if len(versions) <= 1 {
-			return nil
-		}
-
-	cont:
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	if err != nil {
-		return
-	}
-
-	// not exported
-	return errors.New("gocql: cluster schema versions not consistent")
+func (c *controlConn) awaitSchemaAgreement() error {
+	return c.withConn(func(conn *Conn) *Iter {
+		return &Iter{err: conn.awaitSchemaAgreement()}
+	}).err
 }
 
 func (c *controlConn) addr() string {
@@ -231,4 +195,4 @@ func (c *controlConn) close() {
 	close(c.quit)
 }
 
-var errNoControl = errors.New("gocql: no controll connection available")
+var errNoControl = errors.New("gocql: no control connection available")

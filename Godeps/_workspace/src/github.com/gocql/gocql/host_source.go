@@ -35,7 +35,7 @@ type ringDescriber struct {
 }
 
 func checkSystemLocal(control *controlConn) (bool, error) {
-	iter := control.query("SELECT rpc_address FROM system.local")
+	iter := control.query("SELECT broadcast_address FROM system.local")
 	if err := iter.err; err != nil {
 		if errf, ok := err.(*errorFrame); ok {
 			if errf.code == errSyntax {
@@ -58,7 +58,7 @@ func (r *ringDescriber) GetHosts() (hosts []HostInfo, partitioner string, err er
 	const (
 		legacyLocalQuery = "SELECT data_center, rack, host_id, tokens, partitioner FROM system.local"
 		// only supported in 2.2.0, 2.1.6, 2.0.16
-		localQuery = "SELECT rpc_address, data_center, rack, host_id, tokens, partitioner FROM system.local"
+		localQuery = "SELECT broadcast_address, data_center, rack, host_id, tokens, partitioner FROM system.local"
 	)
 
 	var localHost HostInfo
