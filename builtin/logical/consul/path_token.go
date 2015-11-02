@@ -42,6 +42,10 @@ func (b *backend) pathTokenRead(
 		return nil, err
 	}
 
+	if result.TokenType == "" {
+		result.TokenType = "client"
+	}
+
 	// Get the consul client
 	c, err := client(req.Storage)
 	if err != nil {
@@ -53,7 +57,7 @@ func (b *backend) pathTokenRead(
 	// Create it
 	token, _, err := c.ACL().Create(&api.ACLEntry{
 		Name:  tokenName,
-		Type:  "client",
+		Type:  result.TokenType,
 		Rules: result.Policy,
 	}, nil)
 	if err != nil {
