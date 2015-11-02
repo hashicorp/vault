@@ -20,9 +20,14 @@ VAGRANTFILE_API_VERSION = "2"
 def configure_extra(config)
 end
 
-def configure(config)
-  config.vm.box = "ubuntu/trusty64"
 
+
+def configure(config)
+  # pick the default vm image to use
+  config.vm.box = "ubuntu/trusty64"
+  # a name for vagrant to use for this host (instead of "default")
+  config.vm.define "vault-demo"
+  
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
@@ -92,5 +97,6 @@ end
 #  # Provisioning
 Vagrant.configure("2") do |config|
   #config.vm.provision "shell", inline: $script
+  config.vm.hostname="vault-demo"
   config.vm.provision "shell", path: "provision_vault.sh", privileged: false
 end
