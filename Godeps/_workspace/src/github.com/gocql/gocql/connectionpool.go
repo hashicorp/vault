@@ -171,11 +171,11 @@ func (p *policyConnPool) Size() int {
 	return count
 }
 
-func (p *policyConnPool) Pick(qry *Query) *Conn {
+func (p *policyConnPool) Pick(qry *Query) (SelectedHost, *Conn) {
 	nextHost := p.hostPolicy.Pick(qry)
 
 	var (
-		host *HostInfo
+		host SelectedHost
 		conn *Conn
 	)
 
@@ -185,10 +185,10 @@ func (p *policyConnPool) Pick(qry *Query) *Conn {
 		if host == nil {
 			break
 		}
-		conn = p.hostConnPools[host.Peer].Pick(qry)
+		conn = p.hostConnPools[host.Info().Peer].Pick(qry)
 	}
 	p.mu.RUnlock()
-	return conn
+	return host, conn
 }
 
 func (p *policyConnPool) Close() {

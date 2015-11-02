@@ -238,14 +238,16 @@ func (s *OrganizationsService) GetOrgMembership(user, org string) (*Membership, 
 // GitHub API docs: https://developer.github.com/v3/orgs/members/#add-or-update-organization-membership
 // GitHub API docs: https://developer.github.com/v3/orgs/members/#edit-your-organization-membership
 func (s *OrganizationsService) EditOrgMembership(user, org string, membership *Membership) (*Membership, *Response, error) {
-	var u string
+	var u, method string
 	if user != "" {
 		u = fmt.Sprintf("orgs/%v/memberships/%v", org, user)
+		method = "PUT"
 	} else {
 		u = fmt.Sprintf("user/memberships/orgs/%v", org)
+		method = "PATCH"
 	}
 
-	req, err := s.client.NewRequest("PATCH", u, membership)
+	req, err := s.client.NewRequest(method, u, membership)
 	if err != nil {
 		return nil, nil, err
 	}

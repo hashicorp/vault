@@ -758,3 +758,5 @@ type EC2API interface {
 
 	UnmonitorInstances(*ec2.UnmonitorInstancesInput) (*ec2.UnmonitorInstancesOutput, error)
 }
+
+var _ EC2API = (*ec2.EC2)(nil)

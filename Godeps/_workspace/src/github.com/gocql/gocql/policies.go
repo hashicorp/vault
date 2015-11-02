@@ -8,6 +8,8 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+
+	"github.com/hailocab/go-hostpool"
 )
 
 // RetryableQuery is an interface that represents a query or batch statement that
@@ -57,8 +59,15 @@ type HostSelectionPolicy interface {
 	Pick(*Query) NextHost
 }
 
+// SelectedHost is an interface returned when picking a host from a host
+// selection policy.
+type SelectedHost interface {
+	Info() *HostInfo
+	Mark(error)
+}
+
 // NextHost is an iteration function over picked hosts
-type NextHost func() *HostInfo
+type NextHost func() SelectedHost
 
 // RoundRobinHostPolicy is a round-robin load balancing policy, where each host
 // is tried sequentially for each query.
@@ -86,7 +95,7 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 	// i is used to limit the number of attempts to find a host
 	// to the number of hosts known to this policy
 	var i uint32 = 0
-	return func() *HostInfo {
+	return func() SelectedHost {
 		r.mu.RLock()
 		if len(r.hosts) == 0 {
 			r.mu.RUnlock()
@@ -102,8 +111,22 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 			i++
 		}
 		r.mu.RUnlock()
-		return host
+		return selectedRoundRobinHost{host}
 	}
+}
+
+// selectedRoundRobinHost is a host returned by the roundRobinHostPolicy and
+// implements the SelectedHost interface
+type selectedRoundRobinHost struct {
+	info *HostInfo
+}
+
+func (host selectedRoundRobinHost) Info() *HostInfo {
+	return host.info
+}
+
+func (host selectedRoundRobinHost) Mark(err error) {
+	// noop
 }
 
 // TokenAwareHostPolicy is a token aware host selection policy, where hosts are
@@ -195,10 +218,10 @@ func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 		hostReturned bool
 		fallbackIter NextHost
 	)
-	return func() *HostInfo {
+	return func() SelectedHost {
 		if !hostReturned {
 			hostReturned = true
-			return host
+			return selectedTokenAwareHost{host}
 		}
 
 		// fallback
@@ -209,12 +232,103 @@ func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 		fallbackHost := fallbackIter()
 
 		// filter the token aware selected hosts from the fallback hosts
-		if fallbackHost == host {
+		if fallbackHost.Info() == host {
 			fallbackHost = fallbackIter()
 		}
 
 		return fallbackHost
 	}
+}
+
+// selectedTokenAwareHost is a host returned by the tokenAwareHostPolicy and
+// implements the SelectedHost interface
+type selectedTokenAwareHost struct {
+	info *HostInfo
+}
+
+func (host selectedTokenAwareHost) Info() *HostInfo {
+	return host.info
+}
+
+func (host selectedTokenAwareHost) Mark(err error) {
+	// noop
+}
+
+// HostPoolHostPolicy is a host policy which uses the bitly/go-hostpool library
+// to distribute queries between hosts and prevent sending queries to
+// unresponsive hosts. When creating the host pool that is passed to the policy
+// use an empty slice of hosts as the hostpool will be populated later by gocql.
+// See below for examples of usage:
+//
+//     // Create host selection policy using a simple host pool
+//     cluster.PoolConfig.HostSelectionPolicy = HostPoolHostPolicy(hostpool.New(nil))
+//
+//     // Create host selection policy using an epsilon greddy pool
+//     cluster.PoolConfig.HostSelectionPolicy = HostPoolHostPolicy(
+//         hostpool.NewEpsilonGreedy(nil, 0, &hostpool.LinearEpsilonValueCalculator{}),
+//     )
+//
+func HostPoolHostPolicy(hp hostpool.HostPool) HostSelectionPolicy {
+	return &hostPoolHostPolicy{hostMap: map[string]HostInfo{}, hp: hp}
+}
+
+type hostPoolHostPolicy struct {
+	hp      hostpool.HostPool
+	hostMap map[string]HostInfo
+	mu      sync.RWMutex
+}
+
+func (r *hostPoolHostPolicy) SetHosts(hosts []HostInfo) {
+	peers := make([]string, len(hosts))
+	hostMap := make(map[string]HostInfo, len(hosts))
+
+	for i, host := range hosts {
+		peers[i] = host.Peer
+		hostMap[host.Peer] = host
+	}
+
+	r.mu.Lock()
+	r.hp.SetHosts(peers)
+	r.hostMap = hostMap
+	r.mu.Unlock()
+}
+
+func (r *hostPoolHostPolicy) SetPartitioner(partitioner string) {
+	// noop
+}
+
+func (r *hostPoolHostPolicy) Pick(qry *Query) NextHost {
+	return func() SelectedHost {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
+
+		if len(r.hostMap) == 0 {
+			return nil
+		}
+
+		hostR := r.hp.Get()
+		host, ok := r.hostMap[hostR.Host()]
+		if !ok {
+			return nil
+		}
+
+		return selectedHostPoolHost{&host, hostR}
+	}
+}
+
+// selectedHostPoolHost is a host returned by the hostPoolHostPolicy and
+// implements the SelectedHost interface
+type selectedHostPoolHost struct {
+	info  *HostInfo
+	hostR hostpool.HostPoolResponse
+}
+
+func (host selectedHostPoolHost) Info() *HostInfo {
+	return host.info
+}
+
+func (host selectedHostPoolHost) Mark(err error) {
+	host.hostR.Mark(err)
 }
 
 //ConnSelectionPolicy is an interface for selecting an

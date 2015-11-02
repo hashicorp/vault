@@ -4,12 +4,11 @@ package iam
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/client/metadata"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/service"
-	"github.com/aws/aws-sdk-go/aws/service/serviceinfo"
-	"github.com/aws/aws-sdk-go/internal/protocol/query"
-	"github.com/aws/aws-sdk-go/internal/signer/v4"
+	"github.com/aws/aws-sdk-go/private/protocol/query"
+	"github.com/aws/aws-sdk-go/private/signer/v4"
 )
 
 // AWS Identity and Access Management (IAM) is a web service that you can use
@@ -60,40 +59,64 @@ import (
 // secure your AWS resources.   Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html).
 // This set of topics walk you through the process of signing a request using
 // an access key ID and secret access key.
+//The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
 type IAM struct {
-	*service.Service
+	*client.Client
 }
 
-// Used for custom service initialization logic
-var initService func(*service.Service)
+// Used for custom client initialization logic
+var initClient func(*client.Client)
 
 // Used for custom request initialization logic
 var initRequest func(*request.Request)
 
-// New returns a new IAM client.
-func New(config *aws.Config) *IAM {
-	service := &service.Service{
-		ServiceInfo: serviceinfo.ServiceInfo{
-			Config:      defaults.DefaultConfig.Merge(config),
-			ServiceName: "iam",
-			APIVersion:  "2010-05-08",
-		},
+// A ServiceName is the name of the service the client will make API calls to.
+const ServiceName = "iam"
+
+// New creates a new instance of the IAM client with a session.
+// If additional configuration is needed for the client instance use the optional
+// aws.Config parameter to add your extra config.
+//
+// Example:
+//     // Create a IAM client from just a session.
+//     svc := iam.New(mySession)
+//
+//     // Create a IAM client with additional configuration
+//     svc := iam.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
+func New(p client.ConfigProvider, cfgs ...*aws.Config) *IAM {
+	c := p.ClientConfig(ServiceName, cfgs...)
+	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion)
+}
+
+// newClient creates, initializes and returns a new service client instance.
+func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion string) *IAM {
+	svc := &IAM{
+		Client: client.New(
+			cfg,
+			metadata.ClientInfo{
+				ServiceName:   ServiceName,
+				SigningRegion: signingRegion,
+				Endpoint:      endpoint,
+				APIVersion:    "2010-05-08",
+			},
+			handlers,
+		),
 	}
-	service.Initialize()
 
 	// Handlers
-	service.Handlers.Sign.PushBack(v4.Sign)
-	service.Handlers.Build.PushBack(query.Build)
-	service.Handlers.Unmarshal.PushBack(query.Unmarshal)
-	service.Handlers.UnmarshalMeta.PushBack(query.UnmarshalMeta)
-	service.Handlers.UnmarshalError.PushBack(query.UnmarshalError)
+	svc.Handlers.Sign.PushBack(v4.Sign)
+	svc.Handlers.Build.PushBack(query.Build)
+	svc.Handlers.Unmarshal.PushBack(query.Unmarshal)
+	svc.Handlers.UnmarshalMeta.PushBack(query.UnmarshalMeta)
+	svc.Handlers.UnmarshalError.PushBack(query.UnmarshalError)
 
-	// Run custom service initialization if present
-	if initService != nil {
-		initService(service)
+	// Run custom client initialization if present
+	if initClient != nil {
+		initClient(svc.Client)
 	}
 
-	return &IAM{service}
+	return svc
 }
 
 // newRequest creates a new request for a IAM operation and runs any

@@ -282,7 +282,10 @@ func (mc *mysqlConn) writeAuthPacket(cipher []byte) error {
 	}
 
 	// Filler [23 bytes] (all 0x00)
-	pos := 13 + 23
+	pos := 13
+	for ; pos < 13+23; pos++ {
+		data[pos] = 0
+	}
 
 	// User [null terminated string]
 	if len(mc.cfg.user) > 0 {

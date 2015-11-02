@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -65,10 +66,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 		&ec2rolecreds.EC2RoleProvider{},
 	})
 
-	s3conn := s3.New(&aws.Config{
+	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: creds,
 		Region:      aws.String(region),
-	})
+	}))
 
 	_, err := s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
 	if err != nil {

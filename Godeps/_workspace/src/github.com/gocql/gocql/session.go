@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -80,7 +81,7 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 	}
 	s.pool = pool
 
-	//See if there are any connections in the pool
+	// See if there are any connections in the pool
 	if pool.Size() == 0 {
 		s.Close()
 		return nil, ErrNoConnectionsStarted
@@ -88,10 +89,8 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 
 	s.routingKeyInfoCache.lru = lru.New(cfg.MaxRoutingKeyInfo)
 
-	if !cfg.disableControlConn {
-		s.control = createControlConn(s)
-	}
-
+	// I think it might be a good idea to simplify this and make it always discover
+	// hosts, maybe with more filters.
 	if cfg.DiscoverHosts {
 		s.hostSource = &ringDescriber{
 			session:    s,
@@ -99,7 +98,25 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 			rackFilter: cfg.Discovery.RackFilter,
 			closeChan:  make(chan bool),
 		}
+	}
 
+	if !cfg.disableControlConn {
+		s.control = createControlConn(s)
+		s.control.reconnect(false)
+
+		// need to setup host source to check for rpc_address in system.local
+		localHasRPCAddr, err := checkSystemLocal(s.control)
+		if err != nil {
+			log.Printf("gocql: unable to verify if system.local table contains rpc_address, falling back to connection address: %v", err)
+		}
+
+		if cfg.DiscoverHosts {
+			s.hostSource.localHasRpcAddr = localHasRPCAddr
+		}
+	}
+
+	if cfg.DiscoverHosts {
+		s.hostSource.refreshRing()
 		go s.hostSource.run(cfg.Discovery.Sleep)
 	}
 
@@ -218,7 +235,7 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 	qry.attempts = 0
 	qry.totalLatency = 0
 	for {
-		conn := s.pool.Pick(qry)
+		host, conn := s.pool.Pick(qry)
 
 		//Assign the error unavailable to the iterator
 		if conn == nil {
@@ -237,8 +254,12 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 
 		//Exit for loop if the query was successful
 		if iter.err == nil {
+			host.Mark(iter.err)
 			break
 		}
+
+		// Mark host as ok
+		host.Mark(nil)
 
 		if qry.rt == nil || !qry.rt.Attempt(qry) {
 			break
@@ -306,7 +327,7 @@ func (s *Session) routingKeyInfo(stmt string) (*routingKeyInfo, error) {
 	)
 
 	// get the query info for the statement
-	conn := s.pool.Pick(nil)
+	host, conn := s.pool.Pick(nil)
 	if conn == nil {
 		// no connections
 		inflight.err = ErrNoConnections
@@ -319,8 +340,12 @@ func (s *Session) routingKeyInfo(stmt string) (*routingKeyInfo, error) {
 	if inflight.err != nil {
 		// don't cache this error
 		s.routingKeyInfoCache.Remove(stmt)
+		host.Mark(inflight.err)
 		return nil, inflight.err
 	}
+
+	// Mark host as OK
+	host.Mark(nil)
 
 	if len(info.Args) == 0 {
 		// no arguments, no routing key, and no error
@@ -401,7 +426,7 @@ func (s *Session) executeBatch(batch *Batch) (*Iter, error) {
 	batch.attempts = 0
 	batch.totalLatency = 0
 	for {
-		conn := s.pool.Pick(nil)
+		host, conn := s.pool.Pick(nil)
 
 		//Assign the error unavailable and break loop
 		if conn == nil {
@@ -414,8 +439,12 @@ func (s *Session) executeBatch(batch *Batch) (*Iter, error) {
 		batch.attempts++
 		//Exit loop if operation executed correctly
 		if err == nil {
+			host.Mark(err)
 			return iter, err
 		}
+
+		// Mark host as OK
+		host.Mark(nil)
 
 		if batch.rt == nil || !batch.rt.Attempt(batch) {
 			break

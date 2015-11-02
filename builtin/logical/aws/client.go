@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
@@ -32,5 +33,6 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 		Region:      aws.String(config.Region),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
-	return iam.New(awsConfig), nil
+
+	return iam.New(session.New(awsConfig)), nil
 }
