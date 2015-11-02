@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
@@ -1357,8 +1358,13 @@ func (c *Core) RekeyCancel() error {
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
-func (c *Core) postUnseal() error {
+func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+	defer func() {
+		if retErr != nil {
+			c.preSeal()
+		}
+	}()
 	c.logger.Printf("[INFO] core: post-unseal setup starting")
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
@@ -1388,13 +1394,13 @@ func (c *Core) postUnseal() error {
 		return err
 	}
 	if err := c.setupPolicyStore(); err != nil {
-		return nil
+		return err
 	}
 	if err := c.loadCredentials(); err != nil {
-		return nil
+		return err
 	}
 	if err := c.setupCredentials(); err != nil {
-		return nil
+		return err
 	}
 	if err := c.setupExpiration(); err != nil {
 		return err
@@ -1413,7 +1419,7 @@ func (c *Core) postUnseal() error {
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
-func (c *Core) preSeal() error {
+func (c *Core) preSeal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Printf("[INFO] core: pre-seal teardown starting")
 
@@ -1426,28 +1432,28 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 	if err := c.teardownAudits(); err != nil {
-		return err
+		retErr = errwrap.Wrapf("[ERR] error tearing down audits: {{err}}", err)
 	}
 	if err := c.stopExpiration(); err != nil {
-		return err
+		retErr = errwrap.Wrapf("[ERR] error stopping expiration: {{err}}", err)
 	}
 	if err := c.teardownCredentials(); err != nil {
-		return err
+		retErr = errwrap.Wrapf("[ERR] error tearing down credentials: {{err}}", err)
 	}
 	if err := c.teardownPolicyStore(); err != nil {
-		return err
+		retErr = errwrap.Wrapf("[ERR] error tearing down policy store: {{err}}", err)
 	}
 	if err := c.stopRollback(); err != nil {
-		return err
+		retErr = errwrap.Wrapf("[ERR] error stopping rollback: {{err}}", err)
 	}
 	if err := c.unloadMounts(); err != nil {
-		return err
+		retErr = errwrap.Wrapf("[ERR] error unloading mounts: {{err}}", err)
 	}
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
 	c.logger.Printf("[INFO] core: pre-seal teardown complete")
-	return nil
+	return retErr
 }
 
 // runStandby is a long running routine that is used when an HA backend
@@ -1529,16 +1535,15 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		// Attempt the pre-seal process
 		c.stateLock.Lock()
 		c.standby = true
-		err = c.preSeal()
+		preSealErr := c.preSeal()
 		c.stateLock.Unlock()
 
 		// Give up leadership
 		lock.Unlock()
 
 		// Check for a failure to prepare to seal
-		if err := c.preSeal(); err != nil {
+		if preSealErr != nil {
 			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
-			continue
 		}
 	}
 }
