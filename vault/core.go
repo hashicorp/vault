@@ -18,6 +18,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
@@ -1419,7 +1420,7 @@ func (c *Core) postUnseal() (retErr error) {
 
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
-func (c *Core) preSeal() (retErr error) {
+func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Printf("[INFO] core: pre-seal teardown starting")
 
@@ -1431,29 +1432,30 @@ func (c *Core) preSeal() (retErr error) {
 		close(c.metricsCh)
 		c.metricsCh = nil
 	}
+	var result error
 	if err := c.teardownAudits(); err != nil {
-		retErr = errwrap.Wrapf("[ERR] error tearing down audits: {{err}}", err)
+		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down audits: {{err}}", err))
 	}
 	if err := c.stopExpiration(); err != nil {
-		retErr = errwrap.Wrapf("[ERR] error stopping expiration: {{err}}", err)
+		result = multierror.Append(result, errwrap.Wrapf("[ERR] error stopping expiration: {{err}}", err))
 	}
 	if err := c.teardownCredentials(); err != nil {
-		retErr = errwrap.Wrapf("[ERR] error tearing down credentials: {{err}}", err)
+		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down credentials: {{err}}", err))
 	}
 	if err := c.teardownPolicyStore(); err != nil {
-		retErr = errwrap.Wrapf("[ERR] error tearing down policy store: {{err}}", err)
+		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down policy store: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
-		retErr = errwrap.Wrapf("[ERR] error stopping rollback: {{err}}", err)
+		result = multierror.Append(result, errwrap.Wrapf("[ERR] error stopping rollback: {{err}}", err))
 	}
 	if err := c.unloadMounts(); err != nil {
-		retErr = errwrap.Wrapf("[ERR] error unloading mounts: {{err}}", err)
+		result = multierror.Append(result, errwrap.Wrapf("[ERR] error unloading mounts: {{err}}", err))
 	}
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
 	c.logger.Printf("[INFO] core: pre-seal teardown complete")
-	return retErr
+	return result
 }
 
 // runStandby is a long running routine that is used when an HA backend
