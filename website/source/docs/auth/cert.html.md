@@ -284,15 +284,15 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
     ```javascript
     {
-        "auth": null, 
+        "auth": null,
         "data": {
             "serials": {
                 "13": {}
             }
-        }, 
-        "lease_duration": 0, 
-        "lease_id": "", 
-        "renewable": false, 
+        },
+        "lease_duration": 0,
+        "lease_id": "",
+        "renewable": false,
         "warnings": null
     }
 
