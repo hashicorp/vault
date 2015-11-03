@@ -40,21 +40,24 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
 ## API
 
-### /auth/token/create
+### /auth/token/create[-orphan]
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
     Creates a new token. Certain options are only available to
-    when called by a root token.
+    when called by a root token. If used via the
+	`/auth/token/create-orphan` endpoint, a root token is not
+	required to create an orphan token (otherwise set with the
+	`no_parent` option).
   </dd>
 
   <dt>Method</dt>
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/create`</dd>
+  <dd>`/auth/token/create[-orphan]`</dd>
 
   <dt>Parameters</dt>
   <dd>
