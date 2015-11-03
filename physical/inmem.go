@@ -11,30 +11,40 @@ import (
 // for testing and development situations where the data is not
 // expected to be durable.
 type InmemBackend struct {
-	root *radix.Tree
-	l    sync.RWMutex
+	root       *radix.Tree
+	l          sync.RWMutex
+	permitPool *PermitPool
 }
 
 // NewInmem constructs a new in-memory backend
 func NewInmem() *InmemBackend {
 	in := &InmemBackend{
-		root: radix.New(),
+		root:       radix.New(),
+		permitPool: NewPermitPool(DefaultParallelOperations),
 	}
 	return in
 }
 
 // Put is used to insert or update an entry
 func (i *InmemBackend) Put(entry *Entry) error {
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	i.l.Lock()
 	defer i.l.Unlock()
+
 	i.root.Insert(entry.Key, entry)
 	return nil
 }
 
 // Get is used to fetch an entry
 func (i *InmemBackend) Get(key string) (*Entry, error) {
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	i.l.RLock()
 	defer i.l.RUnlock()
+
 	if raw, ok := i.root.Get(key); ok {
 		return raw.(*Entry), nil
 	}
@@ -43,8 +53,12 @@ func (i *InmemBackend) Get(key string) (*Entry, error) {
 
 // Delete is used to permanently delete an entry
 func (i *InmemBackend) Delete(key string) error {
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	i.l.Lock()
 	defer i.l.Unlock()
+
 	i.root.Delete(key)
 	return nil
 }
@@ -52,6 +66,9 @@ func (i *InmemBackend) Delete(key string) error {
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
 func (i *InmemBackend) List(prefix string) ([]string, error) {
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	i.l.RLock()
 	defer i.l.RUnlock()
 
