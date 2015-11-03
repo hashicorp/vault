@@ -1,6 +1,10 @@
 package physical
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/abiosoft/semaphore"
+)
 
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
@@ -85,4 +89,33 @@ var BuiltinBackends = map[string]Factory{
 	"s3":        newS3Backend,
 	"etcd":      newEtcdBackend,
 	"mysql":     newMySQLBackend,
+}
+
+// PermitPool is a wrapper around a semaphore library to keep things
+// agnostic
+type PermitPool struct {
+	s *semaphore.Semaphore
+}
+
+// NewPermitPool returns a new permit pool with the provided
+// number of permits
+func NewPermitPool(permits int) *PermitPool {
+	// the semaphore library panics if it's less than 1,
+	// so instead use something sane
+	if permits < 1 {
+		permits = 64
+	}
+	return &PermitPool{
+		s: semaphore.New(permits),
+	}
+}
+
+// Acquire returns when a permit has been acquired
+func (c *PermitPool) Acquire() {
+	c.s.Acquire()
+}
+
+// Release returns a permit to the pool
+func (c *PermitPool) Release() {
+	c.s.Release()
 }

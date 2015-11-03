@@ -25,6 +25,9 @@ IMPROVEMENTS:
  * logical: Responses now contain a "warnings" key containing a list of
    warnings returned from the server. These are conditions that did not require
 failing an operation, but of which the client should be aware. [GH-676]
+ * physical/consul: Consul now uses a connection pool to limit the number of
+   outstanding operations, improving behavior when a lot of operations must
+   happen at once [GH-677]
 
 BUG FIXES:
 

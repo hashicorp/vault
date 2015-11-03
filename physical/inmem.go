@@ -11,14 +11,16 @@ import (
 // for testing and development situations where the data is not
 // expected to be durable.
 type InmemBackend struct {
-	root *radix.Tree
-	l    sync.RWMutex
+	root       *radix.Tree
+	l          sync.RWMutex
+	permitPool *PermitPool
 }
 
 // NewInmem constructs a new in-memory backend
 func NewInmem() *InmemBackend {
 	in := &InmemBackend{
-		root: radix.New(),
+		root:       radix.New(),
+		permitPool: NewPermitPool(64),
 	}
 	return in
 }
@@ -27,6 +29,10 @@ func NewInmem() *InmemBackend {
 func (i *InmemBackend) Put(entry *Entry) error {
 	i.l.Lock()
 	defer i.l.Unlock()
+
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	i.root.Insert(entry.Key, entry)
 	return nil
 }
@@ -35,6 +41,10 @@ func (i *InmemBackend) Put(entry *Entry) error {
 func (i *InmemBackend) Get(key string) (*Entry, error) {
 	i.l.RLock()
 	defer i.l.RUnlock()
+
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	if raw, ok := i.root.Get(key); ok {
 		return raw.(*Entry), nil
 	}
@@ -45,6 +55,10 @@ func (i *InmemBackend) Get(key string) (*Entry, error) {
 func (i *InmemBackend) Delete(key string) error {
 	i.l.Lock()
 	defer i.l.Unlock()
+
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
+
 	i.root.Delete(key)
 	return nil
 }
@@ -54,6 +68,9 @@ func (i *InmemBackend) Delete(key string) error {
 func (i *InmemBackend) List(prefix string) ([]string, error) {
 	i.l.RLock()
 	defer i.l.RUnlock()
+
+	i.permitPool.Acquire()
+	defer i.permitPool.Release()
 
 	var out []string
 	seen := make(map[string]interface{})
