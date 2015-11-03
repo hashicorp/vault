@@ -45,6 +45,7 @@ generate them, leading to client errors.
    could fail to revert to a clean state [GH-733]
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
+ * credential/token: Allow creating orphan tokens via an API path [GH-748]
  * secret/generic: Validate given duration at write time, not just read time;
    if stored durations are not parseable, return a warning and the default
    duration rather than an error [GH-718]

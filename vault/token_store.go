@@ -90,6 +90,17 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 		Paths: []*framework.Path{
 			&framework.Path{
+				Pattern: "create-orphan$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: t.handleCreateOrphan,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
+				HelpDescription: strings.TrimSpace(tokenCreateOrphanHelp),
+			},
+
+			&framework.Path{
 				Pattern: "create$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -501,9 +512,23 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	return nil
 }
 
-// handleCreate handles the auth/token/create path for creation of new tokens
+// handleCreate handles the auth/token/create path for creation of new orphan
+// tokens
+func (ts *TokenStore) handleCreateOrphan(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return ts.handleCreateCommon(req, d, true)
+}
+
+// handleCreate handles the auth/token/create path for creation of new non-orphan
+// tokens
 func (ts *TokenStore) handleCreate(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return ts.handleCreateCommon(req, d, false)
+}
+
+// handleCreateCommon handles the auth/token/create path for creation of new tokens
+func (ts *TokenStore) handleCreateCommon(
+	req *logical.Request, d *framework.FieldData, orphan bool) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(req.ClientToken)
 	if err != nil || parent == nil {
@@ -586,6 +611,11 @@ func (ts *TokenStore) handleCreate(
 		}
 
 		te.Parent = ""
+	} else {
+		// This comes from create-orphan, which can be properly ACLd
+		if orphan {
+			te.Parent = ""
+		}
 	}
 
 	// Parse the TTL/lease if any
@@ -839,6 +869,7 @@ Client tokens are used to identify a client and to allow Vault to associate poli
 which are enforced on every request. This backend also allows for generating sub-tokens as well
 as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp       = `The token create path is used to create new tokens.`
+	tokenCreateOrphanHelp = `The token create path is used to create new orphan tokens.`
 	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
 	tokenRevokeHelp       = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
