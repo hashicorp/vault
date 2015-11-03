@@ -19,8 +19,18 @@ func pathRoles() *framework.Path {
 			},
 
 			"policy": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Policy document, base64 encoded.",
+				Type: framework.TypeString,
+				Description: `Policy document, base64 encoded. Required
+for 'client' tokens.`,
+			},
+
+			"token_type": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "client",
+				Description: `Which type of token to create: 'client'
+or 'management'. If a 'management' token,
+the "policy" parameter is not required.
+Defaults to 'client'.`,
 			},
 
 			"lease": &framework.FieldSchema{
@@ -54,23 +64,49 @@ func pathRolesRead(
 		return nil, err
 	}
 
+	if result.TokenType == "" {
+		result.TokenType = "client"
+	}
+
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"policy": base64.StdEncoding.EncodeToString([]byte(result.Policy)),
-			"lease":  result.Lease.String(),
+			"lease":      result.Lease.String(),
+			"token_type": result.TokenType,
 		},
+	}
+	if result.Policy != "" {
+		resp.Data["policy"] = base64.StdEncoding.EncodeToString([]byte(result.Policy))
 	}
 	return resp, nil
 }
 
 func pathRolesWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	tokenType := d.Get("token_type").(string)
+
+	switch tokenType {
+	case "client":
+	case "management":
+	default:
+		return logical.ErrorResponse(
+			"token_type must be \"client\" or \"management\""), nil
+	}
+
 	name := d.Get("name").(string)
-	policyRaw, err := base64.StdEncoding.DecodeString(d.Get("policy").(string))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error decoding policy base64: %s", err)), nil
+	policy := d.Get("policy").(string)
+	var policyRaw []byte
+	var err error
+	if tokenType != "management" {
+		if policy == "" {
+			return logical.ErrorResponse(
+				"policy cannot be empty when not using management tokens"), nil
+		}
+		policyRaw, err = base64.StdEncoding.DecodeString(d.Get("policy").(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error decoding policy base64: %s", err)), nil
+		}
 	}
 	lease, err := time.ParseDuration(d.Get("lease").(string))
 	if err != nil || lease == time.Duration(0) {
@@ -78,8 +114,9 @@ func pathRolesWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
-		Policy: string(policyRaw),
-		Lease:  lease,
+		Policy:    string(policyRaw),
+		Lease:     lease,
+		TokenType: tokenType,
 	})
 	if err != nil {
 		return nil, err
@@ -102,6 +139,7 @@ func pathRolesDelete(
 }
 
 type roleConfig struct {
-	Policy string        `json:"policy"`
-	Lease  time.Duration `json:"lease"`
+	Policy    string        `json:"policy"`
+	Lease     time.Duration `json:"lease"`
+	TokenType string        `json:"token_type"`
 }

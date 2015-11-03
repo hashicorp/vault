@@ -31,10 +31,11 @@ IMPROVEMENTS:
  * logical: Allow `.` in path-based variables in many more locations [GH-244]
  * logical: Responses now contain a "warnings" key containing a list of
    warnings returned from the server. These are conditions that did not require
-failing an operation, but of which the client should be aware. [GH-676]
+   failing an operation, but of which the client should be aware. [GH-676]
  * physical/consul: Consul now uses a connection pool to limit the number of
    outstanding operations, improving behavior when a lot of operations must
    happen at once [GH-677]
+ * secret/consul: Management tokens can now be created [GH-714]
 
 BUG FIXES:
 
