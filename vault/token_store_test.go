@@ -662,6 +662,27 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create-orphan")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"foo"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, _ := ts.Lookup(resp.Auth.ClientToken)
+	if out.Parent != "" {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
