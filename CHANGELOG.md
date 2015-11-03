@@ -41,6 +41,8 @@ generate them, leading to client errors.
    [GH-688]
  * core: Fix a potential race condition when (un)sealing the vault with metrics
    enabled [GH-694]
+ * core: Fix an error that could happen in some failure scenarios where Vault
+   could fail to revert to a clean state [GH-733]
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
  * secret/generic: Validate given duration at write time, not just read time;
