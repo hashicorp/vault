@@ -27,11 +27,11 @@ func NewInmem() *InmemBackend {
 
 // Put is used to insert or update an entry
 func (i *InmemBackend) Put(entry *Entry) error {
-	i.l.Lock()
-	defer i.l.Unlock()
-
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
+
+	i.l.Lock()
+	defer i.l.Unlock()
 
 	i.root.Insert(entry.Key, entry)
 	return nil
@@ -39,11 +39,11 @@ func (i *InmemBackend) Put(entry *Entry) error {
 
 // Get is used to fetch an entry
 func (i *InmemBackend) Get(key string) (*Entry, error) {
-	i.l.RLock()
-	defer i.l.RUnlock()
-
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
+
+	i.l.RLock()
+	defer i.l.RUnlock()
 
 	if raw, ok := i.root.Get(key); ok {
 		return raw.(*Entry), nil
@@ -53,11 +53,11 @@ func (i *InmemBackend) Get(key string) (*Entry, error) {
 
 // Delete is used to permanently delete an entry
 func (i *InmemBackend) Delete(key string) error {
-	i.l.Lock()
-	defer i.l.Unlock()
-
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
+
+	i.l.Lock()
+	defer i.l.Unlock()
 
 	i.root.Delete(key)
 	return nil
@@ -66,11 +66,11 @@ func (i *InmemBackend) Delete(key string) error {
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
 func (i *InmemBackend) List(prefix string) ([]string, error) {
-	i.l.RLock()
-	defer i.l.RUnlock()
-
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
+
+	i.l.RLock()
+	defer i.l.RUnlock()
 
 	var out []string
 	seen := make(map[string]interface{})

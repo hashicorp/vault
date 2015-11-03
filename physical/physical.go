@@ -6,6 +6,8 @@ import (
 	"github.com/abiosoft/semaphore"
 )
 
+const DefaultParallelOperations = 128
+
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
 // data outside of Vault. As such, it is completely untrusted,
@@ -103,7 +105,7 @@ func NewPermitPool(permits int) *PermitPool {
 	// the semaphore library panics if it's less than 1,
 	// so instead use something sane
 	if permits < 1 {
-		permits = 64
+		permits = DefaultParallelOperations
 	}
 	return &PermitPool{
 		s: semaphore.New(permits),
