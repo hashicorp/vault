@@ -28,8 +28,9 @@ func TestConsulBackend(t *testing.T) {
 	}()
 
 	b, err := NewBackend("consul", map[string]string{
-		"address": addr,
-		"path":    randPath,
+		"address":      addr,
+		"path":         randPath,
+		"max_parallel": "256",
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -58,8 +59,9 @@ func TestConsulHABackend(t *testing.T) {
 	}()
 
 	b, err := NewBackend("consul", map[string]string{
-		"address": addr,
-		"path":    randPath,
+		"address":      addr,
+		"path":         randPath,
+		"max_parallel": "-1",
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)

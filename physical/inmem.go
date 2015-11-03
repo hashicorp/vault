@@ -20,7 +20,7 @@ type InmemBackend struct {
 func NewInmem() *InmemBackend {
 	in := &InmemBackend{
 		root:       radix.New(),
-		permitPool: NewPermitPool(64),
+		permitPool: NewPermitPool(DefaultParallelOperations),
 	}
 	return in
 }

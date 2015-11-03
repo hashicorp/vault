@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/errwrap"
 )
 
 // ConsulBackend is a physical backend that stores data at specific
@@ -71,7 +73,16 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 
 	client, err := api.NewClient(consulConf)
 	if err != nil {
-		return nil, fmt.Errorf("client setup failed: %v", err)
+		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+	}
+
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
 	}
 
 	// Setup the backend
@@ -79,7 +90,7 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 		path:       path,
 		client:     client,
 		kv:         client.KV(),
-		permitPool: NewPermitPool(64),
+		permitPool: NewPermitPool(maxParInt),
 	}
 	return c, nil
 }
