@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	// errLoadAuthFailed if loadCreddentials encounters an error
+	// errLoadAuthFailed if loadCredentials encounters an error
 	errLoadAuthFailed = errors.New("failed to setup auth table")
 )
 
@@ -203,6 +203,7 @@ func (c *Core) loadCredentials() error {
 	// Create and persist the default auth table
 	c.auth = defaultAuthTable()
 	if err := c.persistAuth(c.auth); err != nil {
+		c.logger.Printf("[ERR] core: failed to persist auth table: %v", err)
 		return errLoadAuthFailed
 	}
 	return nil
