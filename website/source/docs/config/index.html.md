@@ -178,6 +178,8 @@ For S3, the following options are supported:
 
   * `session_token` - (optional) The AWS session_token. It can also be sourced from the AWS_SESSION_TOKEN environment variable.
 
+  * `endpoint` - (optional) An alternative (AWS compatible) S3 endpoint to use. It can also be sourced from the AWS_S3_ENDPOINT environment variable.  
+
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
 
 If you are running your Vault server on an EC2 instance, you can also make use

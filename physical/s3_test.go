@@ -23,6 +23,10 @@ func TestS3Backend(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// If the variable is empty or doesn't exist, the default
+	// AWS endpoints will be used
+	endpoint := os.Getenv("AWS_S3_ENDPOINT")
+
 	region := os.Getenv("AWS_DEFAULT_REGION")
 	if region == "" {
 		region = "us-east-1"
@@ -30,6 +34,7 @@ func TestS3Backend(t *testing.T) {
 
 	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: credentials.NewEnvCredentials(),
+		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 	}))
 
