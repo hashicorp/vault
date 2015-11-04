@@ -49,7 +49,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	}
 	endpoint, ok := conf["endpoint"]
 	if !ok {
-		endpoint = ""
+		endpoint = os.Getenv("AWS_S3_ENDPOINT")
 	}
 	region, ok := conf["region"]
 	if !ok {
