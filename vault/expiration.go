@@ -195,7 +195,7 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	}
 
 	// Delete the secondary index
-	if err := m.indexByToken(le.ClientToken, le.LeaseID); err != nil {
+	if err := m.removeIndexByToken(le.ClientToken, le.LeaseID); err != nil {
 		return err
 	}
 
@@ -387,7 +387,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Maintain secondary index by token
-	if err := m.indexByToken(le.ClientToken, le.LeaseID); err != nil {
+	if err := m.createIndexByToken(le.ClientToken, le.LeaseID); err != nil {
 		return "", err
 	}
 
@@ -567,8 +567,8 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 	return nil
 }
 
-// indexByToken creates a secondary index from the token to a lease entry
-func (m *ExpirationManager) indexByToken(token, leaseID string) error {
+// createIndexByToken creates a secondary index from the token to a lease entry
+func (m *ExpirationManager) createIndexByToken(token, leaseID string) error {
 	ent := logical.StorageEntry{
 		Key:   m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID),
 		Value: []byte(leaseID),
@@ -577,6 +577,16 @@ func (m *ExpirationManager) indexByToken(token, leaseID string) error {
 		return fmt.Errorf("failed to persist lease index entry: %v", err)
 	}
 	return nil
+}
+
+// indexByToken looks up the secondary index from the token to a lease entry
+func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.StorageEntry, error) {
+	key := m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID)
+	entry, err := m.tokenView.Get(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to look up secondary index entry")
+	}
+	return entry, nil
 }
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
