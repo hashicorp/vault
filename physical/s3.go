@@ -47,6 +47,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	if !ok {
 		session_token = ""
 	}
+	endpoint, ok := conf["endpoint"]
+	if !ok {
+		endpoint = ""
+	}
 	region, ok := conf["region"]
 	if !ok {
 		region = os.Getenv("AWS_DEFAULT_REGION")
@@ -68,6 +72,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 
 	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: creds,
+		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 	}))
 
