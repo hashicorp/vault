@@ -6,10 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/abiosoft/semaphore",
-			"Rev": "9e8892d1cf5b56ae0f766596f83776619865594a"
-		},
-		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "6c5fa0d8f48f4661c9ba8709799c88d425ad20f0"
 		},

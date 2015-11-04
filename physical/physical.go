@@ -1,10 +1,6 @@
 package physical
 
-import (
-	"fmt"
-
-	"github.com/abiosoft/semaphore"
-)
+import "fmt"
 
 const DefaultParallelOperations = 128
 
@@ -96,28 +92,26 @@ var BuiltinBackends = map[string]Factory{
 // PermitPool is a wrapper around a semaphore library to keep things
 // agnostic
 type PermitPool struct {
-	s *semaphore.Semaphore
+	sem chan int
 }
 
 // NewPermitPool returns a new permit pool with the provided
 // number of permits
 func NewPermitPool(permits int) *PermitPool {
-	// the semaphore library panics if it's less than 1,
-	// so instead use something sane
 	if permits < 1 {
 		permits = DefaultParallelOperations
 	}
 	return &PermitPool{
-		s: semaphore.New(permits),
+		sem: make(chan int, permits),
 	}
 }
 
 // Acquire returns when a permit has been acquired
 func (c *PermitPool) Acquire() {
-	c.s.Acquire()
+	c.sem <- 1
 }
 
 // Release returns a permit to the pool
 func (c *PermitPool) Release() {
-	c.s.Release()
+	<-c.sem
 }
