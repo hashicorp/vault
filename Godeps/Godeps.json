@@ -6,6 +6,10 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/abiosoft/semaphore",
+			"Rev": "9e8892d1cf5b56ae0f766596f83776619865594a"
+		},
+		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "6c5fa0d8f48f4661c9ba8709799c88d425ad20f0"
 		},
@@ -15,58 +19,58 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/endpoints",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/ec2query",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/query",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/rest",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/restxml",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/signer/v4",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/iam",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/s3",
-			"Comment": "v0.10.0-6-g83bae04",
-			"Rev": "83bae04b770b2b9aae4c946f795149d294e147d3"
+			"Comment": "v0.10.2",
+			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-etcd/etcd",
@@ -93,8 +97,8 @@
 		},
 		{
 			"ImportPath": "github.com/gocql/gocql",
-			"Comment": "1st_gen_framing-350-g5ea083a",
-			"Rev": "5ea083a90be27963d1ffe34899c5aca5796bf4b0"
+			"Comment": "1st_gen_framing-357-gcddf562",
+			"Rev": "cddf562e0697543762f743d7e73458346f4fcae4"
 		},
 		{
 			"ImportPath": "github.com/golang/snappy",
@@ -190,7 +194,7 @@
 		},
 		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
-			"Rev": "913027ed60abbe2436b35cf960193b06b00105cf"
+			"Rev": "218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f"
 		},
 		{
 			"ImportPath": "github.com/ugorji/go/codec",
@@ -202,27 +206,27 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/bcrypt",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
+			"Rev": "575fdbe86e5dd89229707ebec0575ce7d088a4a6"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/blowfish",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
+			"Rev": "575fdbe86e5dd89229707ebec0575ce7d088a4a6"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
+			"Rev": "575fdbe86e5dd89229707ebec0575ce7d088a4a6"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
+			"Rev": "575fdbe86e5dd89229707ebec0575ce7d088a4a6"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
+			"Rev": "575fdbe86e5dd89229707ebec0575ce7d088a4a6"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh",
-			"Rev": "c8b9e6388ef638d5a8a9d865c634befdc46a6784"
+			"Rev": "575fdbe86e5dd89229707ebec0575ce7d088a4a6"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
