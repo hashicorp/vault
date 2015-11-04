@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -87,6 +88,39 @@ func (b *backend) secretAccessKeysCreate(
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error creating access keys: %s", err)), nil
+	}
+
+	// IAM is eventually consistent, so give it time to settle; if it doesn't
+	// within a reasonable time, error out. 20 should be plenty.
+	loops := 10
+	for {
+		loops--
+		if loops == 0 {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"IAM failed to report a valid user")), nil
+		}
+		guo, err := client.GetUser(&iam.GetUserInput{
+			UserName: aws.String(username),
+		})
+		if err != nil {
+			awsErr, ok := err.(awserr.Error)
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf(
+					"unexpected error type returned from AWS SDK: %T, err is %v", err, err),
+				), nil
+			}
+			if awsErr.Code() != "NoSuchEntity" {
+				return logical.ErrorResponse(fmt.Sprintf(
+					"unexpected error returned from AWS: %v", err),
+				), nil
+			}
+		} else {
+			if guo.User == nil {
+				return logical.ErrorResponse(fmt.Sprintf(
+					"user returned from AWS was nil")), nil
+			}
+		}
+		time.Sleep(2 * time.Second)
 	}
 
 	// Remove the WAL entry, we succeeded! If we fail, we don't return
