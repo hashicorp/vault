@@ -164,7 +164,7 @@ For etcd, the following options are supported:
 
   * `address` (optional) - The address(es) of the etcd instance(s) to talk to.
       Can be comma separated list (protocol://host:port) of many etcd instances.
-      Defaults to "http://localhost:4001" if not specified.
+      Defaults to "http://localhost:2379" if not specified.
 
 #### Backend Reference: S3
 
