@@ -4,14 +4,17 @@ DEPRECATIONS/BREAKING CHANGES:
 
  * Policy Name Casing: Policy names are now normalized to lower-case on write,
    helping prevent accidental case mismatches. For backwards compatibility,
-policy names are not currently normalized when reading or deleting. [GH-676]
+   policy names are not currently normalized when reading or deleting. [GH-676]
+ * Default etcd port number: the default connection string for the `etcd`
+   physical store uses port 2379 instead of port 4001, which is the port used
+   by the supported version 2.x of etcd. [GH-753]
 
 FEATURES:
 
  * **CRL Checking for Certificate Authentication**: The `cert` backend now
    supports pushing CRLs into the mount and using the contained serial numbers
-for revocation checking. See the documentation for the `cert` backend for more
-info. [GH-330]
+   for revocation checking. See the documentation for the `cert` backend for
+   more info. [GH-330]
 
 IMPROVEMENTS:
 

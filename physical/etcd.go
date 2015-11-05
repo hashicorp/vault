@@ -75,7 +75,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	}
 
 	// Set a default machines list and check for an overriding address value.
-	machines := "http://128.0.0.1:4001"
+	machines := "http://128.0.0.1:2379"
 	if address, ok := conf["address"]; ok {
 		machines = address
 	}
@@ -300,6 +300,7 @@ func (c *EtcdLock) periodicallyRenewSemaphoreKey(stopCh chan struct{}) {
 		}
 	}
 }
+
 // watchForKeyRemoval continuously watches a single non-directory key starting
 // from the provided etcd index and closes the provided channel when it's
 // deleted, expires, or appears to be missing.
