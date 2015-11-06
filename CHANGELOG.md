@@ -42,6 +42,8 @@ IMPROVEMENTS:
    happen at once [GH-677]
  * physical/s3: The S3 endpoint can now be configured, allowing using
    S3-API-compatible storage solutions [GH-750]
+ * physical/s3: The S3 bucket can now be configured with the `AWS_S3_BUCKET`
+   environment variable [GH-758]
  * secret/consul: Management tokens can now be created [GH-714]
 
 BUG FIXES:
