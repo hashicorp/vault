@@ -237,7 +237,7 @@ type Core struct {
 	rollback *RollbackManager
 
 	// policy store is used to manage named ACL policies
-	policy *PolicyStore
+	policyStore *PolicyStore
 
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
@@ -697,7 +697,7 @@ func (c *Core) checkToken(
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := c.policy.ACL(te.Policies...)
+	acl, err := c.policyStore.ACL(te.Policies...)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
 		return nil, nil, ErrInternalError

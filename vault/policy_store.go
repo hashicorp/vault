@@ -49,14 +49,25 @@ func (c *Core) setupPolicyStore() error {
 	view := c.systemBarrierView.SubView(policySubPath)
 
 	// Create the policy store
-	c.policy = NewPolicyStore(view)
+	c.policyStore = NewPolicyStore(view)
+
+	/*
+		// Ensure that the default policy exists, and if not, create it
+		policy, err := c.policyStore.GetPolicy("default")
+		if err != nil {
+			return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
+		}
+		   if policy == nil {
+		   		c.policyStore.createDefaultPolicy()
+		   	}
+	*/
 	return nil
 }
 
 // teardownPolicyStore is used to reverse setupPolicyStore
 // when the vault is being sealed.
 func (c *Core) teardownPolicyStore() error {
-	c.policy = nil
+	c.policyStore = nil
 	return nil
 }
 
@@ -187,3 +198,9 @@ func (ps *PolicyStore) ACL(names ...string) (*ACL, error) {
 	}
 	return acl, nil
 }
+
+/*
+func (ps *PolicyStore) createDefaultPolicy() error {
+	return nil
+}
+*/

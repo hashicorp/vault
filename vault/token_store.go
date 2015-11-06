@@ -61,8 +61,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		view: view,
 	}
 
-	if c.policy != nil {
-		t.policyLookupFunc = c.policy.GetPolicy
+	if c.policyStore != nil {
+		t.policyLookupFunc = c.policyStore.GetPolicy
 	}
 
 	// Setup the salt

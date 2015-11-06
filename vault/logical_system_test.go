@@ -682,7 +682,7 @@ func TestSystemBackend_rawWrite(t *testing.T) {
 	}
 
 	// Read the policy!
-	p, err := c.policy.GetPolicy("test")
+	p, err := c.policyStore.GetPolicy("test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -709,7 +709,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 
 	// set the policy!
 	p := &Policy{Name: "test"}
-	err := c.policy.SetPolicy(p)
+	err := c.policyStore.SetPolicy(p)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -725,8 +725,8 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	}
 
 	// Policy should be gone
-	c.policy.lru.Purge()
-	out, err := c.policy.GetPolicy("test")
+	c.policyStore.lru.Purge()
+	out, err := c.policyStore.GetPolicy("test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
