@@ -32,7 +32,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 
 	bucket, ok := conf["bucket"]
 	if !ok {
-		return nil, fmt.Errorf("'bucket' must be set")
+		bucket = os.Getenv("AWS_S3_BUCKET")
+		if bucket == "" {
+			return nil, fmt.Errorf("'bucket' must be set")
+		}
 	}
 
 	access_key, ok := conf["access_key"]
