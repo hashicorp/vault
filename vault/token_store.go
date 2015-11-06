@@ -47,7 +47,7 @@ type TokenStore struct {
 
 	cubbyholeBackend *CubbyholeBackend
 
-	policyLookupFunc func() ([]string, error)
+	policyLookupFunc func(string) (*Policy, error)
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -62,7 +62,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	}
 
 	if c.policy != nil {
-		t.policyLookupFunc = c.policy.ListPolicies
+		t.policyLookupFunc = c.policy.GetPolicy
 	}
 
 	// Setup the salt
@@ -673,18 +673,13 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	if ts.policyLookupFunc != nil {
-		availPolicies, err := ts.policyLookupFunc()
-		if err == nil {
-			policies := map[string]bool{}
-			if availPolicies != nil && len(availPolicies) > 0 {
-				for _, p := range availPolicies {
-					policies[p] = true
-				}
+		for _, p := range te.Policies {
+			policy, err := ts.policyLookupFunc(p)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("could not look up policy %s", p)), nil
 			}
-			for _, p := range te.Policies {
-				if !policies[p] {
-					resp.AddWarning(fmt.Sprintf("policy \"%s\" does not exist", p))
-				}
+			if policy == nil {
+				resp.AddWarning(fmt.Sprintf("policy \"%s\" does not exist", p))
 			}
 		}
 	}
