@@ -81,6 +81,8 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	}
 	machinesParsed := strings.Split(machines, EtcdMachineDelimiter)
 
+	// Create a new client from the supplied address and attempt to sync with the
+	// cluster.
 	var client *etcd.Client
 	cert, has_cert := conf["tls_cert_file"]
 	key, has_key := conf["tls_key_file"]
@@ -92,8 +94,6 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 			return nil, err
 		}
 	} else {
-		// Create a new client from the supplied addres and attempt to sync with the
-		// cluster.
 		client = etcd.NewClient(machinesParsed)
 	}
 	if !client.SyncCluster() {
