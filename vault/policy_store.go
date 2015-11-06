@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
 )
@@ -51,16 +52,17 @@ func (c *Core) setupPolicyStore() error {
 	// Create the policy store
 	c.policyStore = NewPolicyStore(view)
 
-	/*
-		// Ensure that the default policy exists, and if not, create it
-		policy, err := c.policyStore.GetPolicy("default")
+	// Ensure that the default policy exists, and if not, create it
+	policy, err := c.policyStore.GetPolicy("default")
+	if err != nil {
+		return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
+	}
+	if policy == nil {
+		err := c.policyStore.createDefaultPolicy()
 		if err != nil {
-			return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
+			return err
 		}
-		   if policy == nil {
-		   		c.policyStore.createDefaultPolicy()
-		   	}
-	*/
+	}
 	return nil
 }
 
@@ -169,6 +171,9 @@ func (ps *PolicyStore) DeletePolicy(name string) error {
 	if name == "root" {
 		return fmt.Errorf("cannot delete root policy")
 	}
+	if name == "default" {
+		return fmt.Errorf("cannot delete default policy")
+	}
 	if err := ps.view.Delete(name); err != nil {
 		return fmt.Errorf("failed to delete policy: %v", err)
 	}
@@ -199,8 +204,28 @@ func (ps *PolicyStore) ACL(names ...string) (*ACL, error) {
 	return acl, nil
 }
 
-/*
 func (ps *PolicyStore) createDefaultPolicy() error {
-	return nil
+	policy, err := Parse(`
+path "auth/token/lookup-self" {
+	policy = "read"
 }
-*/
+
+path "auth/token/renew-self" {
+	policy = "write"
+}
+
+path "auth/token/revoke-self" {
+	policy = "write"
+}
+`)
+	if err != nil {
+		return errwrap.Wrapf("error parsing default policy: {{err}}", err)
+	}
+
+	if policy == nil {
+		return fmt.Errorf("parsing default policy resulted in nil policy")
+	}
+
+	policy.Name = "default"
+	return ps.SetPolicy(policy)
+}

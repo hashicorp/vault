@@ -602,6 +602,9 @@ func (ts *TokenStore) handleCreateCommon(
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
 	te.Policies = data.Policies
+	if !strListSubset(te.Policies, []string{"root"}) {
+		te.Policies = append(te.Policies, "default")
+	}
 
 	// Only allow an orphan token if the client has sudo policy
 	if data.NoParent {

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -821,7 +821,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	expect := &TokenEntry{
 		ID:       clientToken,
 		Parent:   "",
-		Policies: []string{"foo", "bar"},
+		Policies: []string{"foo", "bar", "default"},
 		Path:     "auth/foo/login",
 		Meta: map[string]string{
 			"user": "armon",
@@ -1020,7 +1020,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	expect := &TokenEntry{
 		ID:           clientToken,
 		Parent:       root,
-		Policies:     []string{"foo"},
+		Policies:     []string{"foo", "default"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
 		CreationTime: te.CreationTime,

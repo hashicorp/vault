@@ -648,6 +648,10 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
+		if !strListSubset(te.Policies, []string{"root"}) {
+			te.Policies = append(te.Policies, "default")
+		}
+
 		if err := c.tokenStore.create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
 			return nil, auth, ErrInternalError
