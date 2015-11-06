@@ -1,17 +1,30 @@
 package api
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
 )
+
+const EnvVaultAddress = "VAULT_ADDR"
+const EnvVaultCACert = "VAULT_CACERT"
+const EnvVaultCAPath = "VAULT_CAPATH"
+const EnvVaultClientCert = "VAULT_CLIENT_CERT"
+const EnvVaultClientKey = "VAULT_CLIENT_KEY"
+const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 
 var (
 	errRedirect = errors.New("redirect")
@@ -44,12 +57,97 @@ func DefaultConfig() *Config {
 		HttpClient: cleanhttp.DefaultClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
+	transport := config.HttpClient.Transport.(*http.Transport)
+	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.TLSClientConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
 
-	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
-		config.Address = addr
+	if v := os.Getenv(EnvVaultAddress); v != "" {
+		config.Address = v
 	}
 
 	return config
+}
+
+// ReadEnvironment reads configuration information from the
+// environment. If there is an error, no configuration value
+// is updated.
+func (c *Config) ReadEnvironment() error {
+	var envAddress string
+	var envCACert string
+	var envCAPath string
+	var envClientCert string
+	var envClientKey string
+	var envInsecure bool
+	var foundInsecure bool
+
+	var newCertPool *x509.CertPool
+	var clientCert tls.Certificate
+	var foundClientCert bool
+
+	if v := os.Getenv(EnvVaultAddress); v != "" {
+		envAddress = v
+	}
+	if v := os.Getenv(EnvVaultCACert); v != "" {
+		envCACert = v
+	}
+	if v := os.Getenv(EnvVaultCAPath); v != "" {
+		envCAPath = v
+	}
+	if v := os.Getenv(EnvVaultClientCert); v != "" {
+		envClientCert = v
+	}
+	if v := os.Getenv(EnvVaultClientKey); v != "" {
+		envClientKey = v
+	}
+	if v := os.Getenv(EnvVaultInsecure); v != "" {
+		var err error
+		envInsecure, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("Could not parse VAULT_SKIP_VERIFY")
+		}
+		foundInsecure = true
+	}
+	// If we need custom TLS configuration, then set it
+	if envCACert != "" || envCAPath != "" || envClientCert != "" || envClientKey != "" || envInsecure {
+		var err error
+		if envCACert != "" {
+			newCertPool, err = LoadCACert(envCACert)
+		} else if envCAPath != "" {
+			newCertPool, err = LoadCAPath(envCAPath)
+		}
+		if err != nil {
+			return fmt.Errorf("Error setting up CA path: %s", err)
+		}
+
+		if envClientCert != "" && envClientKey != "" {
+			clientCert, err = tls.LoadX509KeyPair(envClientCert, envClientKey)
+			if err != nil {
+				return err
+			}
+			foundClientCert = true
+		} else if envClientCert != "" || envClientKey != "" {
+			return fmt.Errorf("Both client cert and client key must be provided")
+		}
+	}
+
+	if envAddress != "" {
+		c.Address = envAddress
+	}
+
+	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
+	if foundInsecure {
+		clientTLSConfig.InsecureSkipVerify = envInsecure
+	}
+	if newCertPool != nil {
+		clientTLSConfig.RootCAs = newCertPool
+	}
+	if foundClientCert {
+		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
+	}
+
+	return nil
 }
 
 // Client is the client to the Vault API. Create a client with
@@ -66,6 +164,7 @@ type Client struct {
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
 func NewClient(c *Config) (*Client, error) {
+
 	u, err := url.Parse(c.Address)
 	if err != nil {
 		return nil, err
@@ -202,4 +301,75 @@ START:
 	}
 
 	return result, nil
+}
+
+// Loads the certificate from given path and creates a certificate pool from it.
+func LoadCACert(path string) (*x509.CertPool, error) {
+	certs, err := loadCertFromPEM(path)
+	if err != nil {
+		return nil, err
+	}
+
+	result := x509.NewCertPool()
+	for _, cert := range certs {
+		result.AddCert(cert)
+	}
+
+	return result, nil
+}
+
+// Loads the certificates present in the given directory and creates a
+// certificate pool from it.
+func LoadCAPath(path string) (*x509.CertPool, error) {
+	result := x509.NewCertPool()
+	fn := func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		certs, err := loadCertFromPEM(path)
+		if err != nil {
+			return err
+		}
+
+		for _, cert := range certs {
+			result.AddCert(cert)
+		}
+		return nil
+	}
+
+	return result, filepath.Walk(path, fn)
+}
+
+// Creates a certificate from the given path
+func loadCertFromPEM(path string) ([]*x509.Certificate, error) {
+	pemCerts, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	certs := make([]*x509.Certificate, 0, 5)
+	for len(pemCerts) > 0 {
+		var block *pem.Block
+		block, pemCerts = pem.Decode(pemCerts)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+			continue
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		certs = append(certs, cert)
+	}
+
+	return certs, nil
 }

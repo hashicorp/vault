@@ -9,26 +9,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 )
-
-// EnvVaultAddress can be used to set the address of Vault
-const EnvVaultAddress = "VAULT_ADDR"
-const EnvVaultCACert = "VAULT_CACERT"
-const EnvVaultCAPath = "VAULT_CAPATH"
-const EnvVaultClientCert = "VAULT_CLIENT_CERT"
-const EnvVaultClientKey = "VAULT_CLIENT_KEY"
-const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 
 // FlagSetFlags is an enum to define what flags are present in the
 // default FlagSet returned by Meta.FlagSet.
@@ -67,51 +57,40 @@ type Meta struct {
 // flag settings for this command.
 func (m *Meta) Client() (*api.Client, error) {
 	config := api.DefaultConfig()
-	if v := os.Getenv(EnvVaultAddress); v != "" {
-		config.Address = v
+
+	err := config.ReadEnvironment()
+	if err != nil {
+		return nil, errwrap.Wrapf("error reading environment: {{err}}", err)
 	}
+
 	if m.flagAddress != "" {
 		config.Address = m.flagAddress
 	}
 	if m.ForceAddress != "" {
 		config.Address = m.ForceAddress
 	}
-	if v := os.Getenv(EnvVaultCACert); v != "" {
-		m.flagCACert = v
-	}
-	if v := os.Getenv(EnvVaultCAPath); v != "" {
-		m.flagCAPath = v
-	}
-	if v := os.Getenv(EnvVaultClientCert); v != "" {
-		m.flagClientCert = v
-	}
-	if v := os.Getenv(EnvVaultClientKey); v != "" {
-		m.flagClientKey = v
-	}
-	if v := os.Getenv(EnvVaultInsecure); v != "" {
-		var err error
-		m.flagInsecure, err = strconv.ParseBool(v)
-		if err != nil {
-			return nil, fmt.Errorf("Invalid value passed in for -insecure flag: %s", err)
-		}
-	}
 	// If we need custom TLS configuration, then set it
 	if m.flagCACert != "" || m.flagCAPath != "" || m.flagClientCert != "" || m.flagClientKey != "" || m.flagInsecure {
+		// We may have set items from the environment so start with the
+		// existing TLS config
+		tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
+
 		var certPool *x509.CertPool
 		var err error
 		if m.flagCACert != "" {
-			certPool, err = m.loadCACert(m.flagCACert)
+			certPool, err = api.LoadCACert(m.flagCACert)
 		} else if m.flagCAPath != "" {
-			certPool, err = m.loadCAPath(m.flagCAPath)
+			certPool, err = api.LoadCAPath(m.flagCAPath)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("Error setting up CA path: %s", err)
+			return nil, errwrap.Wrapf("Error setting up CA path: {{err}}", err)
 		}
 
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: m.flagInsecure,
-			MinVersion:         tls.VersionTLS12,
-			RootCAs:            certPool,
+		if certPool != nil {
+			tlsConfig.RootCAs = certPool
+		}
+		if m.flagInsecure {
+			tlsConfig.InsecureSkipVerify = true
 		}
 
 		if m.flagClientCert != "" && m.flagClientKey != "" {
@@ -123,20 +102,6 @@ func (m *Meta) Client() (*api.Client, error) {
 		} else if m.flagClientCert != "" || m.flagClientKey != "" {
 			return nil, fmt.Errorf("Both client cert and client key must be provided")
 		}
-
-		client := &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				Dial: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}).Dial,
-				TLSClientConfig:     tlsConfig,
-				TLSHandshakeTimeout: 10 * time.Second,
-			},
-		}
-
-		config.HttpClient = client
 	}
 
 	// Build the client
