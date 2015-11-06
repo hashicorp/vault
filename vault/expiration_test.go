@@ -665,9 +665,26 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		Path:       "foo/bar",
-		IssueTime:  time.Now(),
-		ExpireTime: time.Now(),
+		ClientToken: root.ID,
+		Path:        "foo/bar",
+		IssueTime:   time.Now(),
+		ExpireTime:  time.Now(),
+	}
+
+	if err := exp.persistEntry(le); err != nil {
+		t.Fatalf("error persisting entry: %v", err)
+	}
+	if err := exp.createIndexByToken(le.ClientToken, le.LeaseID); err != nil {
+		t.Fatalf("error creating secondary index: %v", err)
+	}
+	exp.updatePending(le, le.Auth.LeaseTotal())
+
+	indexEntry, err := exp.indexByToken(le.ClientToken, le.LeaseID)
+	if err != nil {
+		t.Fatalf("err: %v")
+	}
+	if indexEntry == nil {
+		t.Fatalf("err: should have found a secondary index entry")
 	}
 
 	err = exp.revokeEntry(le)
@@ -675,12 +692,20 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := exp.tokenStore.Lookup(root.ID)
+	out, err := exp.tokenStore.Lookup(le.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if out != nil {
 		t.Fatalf("bad: %v", out)
+	}
+
+	indexEntry, err = exp.indexByToken(le.ClientToken, le.LeaseID)
+	if err != nil {
+		t.Fatalf("err: %v")
+	}
+	if indexEntry != nil {
+		t.Fatalf("err: should not have found a secondary index entry")
 	}
 }
 
