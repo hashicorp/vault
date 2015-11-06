@@ -79,10 +79,23 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	if address, ok := conf["address"]; ok {
 		machines = address
 	}
+	machinesParsed := strings.Split(machines, EtcdMachineDelimiter)
 
-	// Create a new client from the supplied addres and attempt to sync with the
-	// cluster.
-	client := etcd.NewClient(strings.Split(machines, EtcdMachineDelimiter))
+	var client *etcd.Client
+	cert, has_cert := conf["tls_cert_file"]
+	key, has_key := conf["tls_key_file"]
+	ca, has_ca := conf["tls_ca_file"]
+	if has_cert || has_key || has_ca {
+		var err error
+		client, err = etcd.NewTLSClient(machinesParsed, cert, key, ca)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Create a new client from the supplied addres and attempt to sync with the
+		// cluster.
+		client = etcd.NewClient(machinesParsed)
+	}
 	if !client.SyncCluster() {
 		return nil, EtcdSyncClusterError
 	}
