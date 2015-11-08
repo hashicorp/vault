@@ -63,7 +63,7 @@ type PoolConfig struct {
 	ConnSelectionPolicy func() ConnSelectionPolicy
 }
 
-func (p PoolConfig) buildPool(cfg *ClusterConfig) (*policyConnPool, error) {
+func (p PoolConfig) buildPool(session *Session) (*policyConnPool, error) {
 	hostSelection := p.HostSelectionPolicy
 	if hostSelection == nil {
 		hostSelection = RoundRobinHostPolicy()
@@ -74,7 +74,7 @@ func (p PoolConfig) buildPool(cfg *ClusterConfig) (*policyConnPool, error) {
 		connSelection = RoundRobinConnPolicy()
 	}
 
-	return newPolicyConnPool(cfg, hostSelection, connSelection)
+	return newPolicyConnPool(session, hostSelection, connSelection)
 }
 
 // ClusterConfig is a struct to configure the default cluster implementation
@@ -107,6 +107,10 @@ type ClusterConfig struct {
 	// configuration of host selection and connection selection policies.
 	PoolConfig PoolConfig
 
+	// The maximum amount of time to wait for schema agreement in a cluster after
+	// receiving a schema change frame. (deault: 60s)
+	MaxWaitSchemaAgreement time.Duration
+
 	// internal config for testing
 	disableControlConn bool
 }
@@ -114,18 +118,19 @@ type ClusterConfig struct {
 // NewCluster generates a new config for the default cluster implementation.
 func NewCluster(hosts ...string) *ClusterConfig {
 	cfg := &ClusterConfig{
-		Hosts:             hosts,
-		CQLVersion:        "3.0.0",
-		ProtoVersion:      2,
-		Timeout:           600 * time.Millisecond,
-		Port:              9042,
-		NumConns:          2,
-		Consistency:       Quorum,
-		DiscoverHosts:     false,
-		MaxPreparedStmts:  defaultMaxPreparedStmts,
-		MaxRoutingKeyInfo: 1000,
-		PageSize:          5000,
-		DefaultTimestamp:  true,
+		Hosts:                  hosts,
+		CQLVersion:             "3.0.0",
+		ProtoVersion:           2,
+		Timeout:                600 * time.Millisecond,
+		Port:                   9042,
+		NumConns:               2,
+		Consistency:            Quorum,
+		DiscoverHosts:          false,
+		MaxPreparedStmts:       defaultMaxPreparedStmts,
+		MaxRoutingKeyInfo:      1000,
+		PageSize:               5000,
+		DefaultTimestamp:       true,
+		MaxWaitSchemaAgreement: 60 * time.Second,
 	}
 	return cfg
 }

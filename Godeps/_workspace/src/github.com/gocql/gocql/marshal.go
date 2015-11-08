@@ -1213,11 +1213,7 @@ func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
 			}
 
 			n := len(data)
-			buf = append(buf, byte(n>>24),
-				byte(n>>16),
-				byte(n>>8),
-				byte(n))
-
+			buf = appendInt(buf, int32(n))
 			buf = append(buf, data...)
 		}
 
@@ -1290,11 +1286,7 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 			}
 
 			n := len(data)
-			buf = append(buf, byte(n>>24),
-				byte(n>>16),
-				byte(n>>8),
-				byte(n))
-
+			buf = appendInt(buf, int32(n))
 			buf = append(buf, data...)
 		}
 
@@ -1313,11 +1305,7 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 			}
 
 			n := len(data)
-			buf = append(buf, byte(n>>24),
-				byte(n>>16),
-				byte(n>>8),
-				byte(n))
-
+			buf = appendInt(buf, int32(n))
 			buf = append(buf, data...)
 		}
 
@@ -1354,14 +1342,11 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 		}
 
 		if !f.IsValid() {
-			return nil, marshalErrorf("cannot marshal %T into %s", value, info)
+			buf = appendInt(buf, -1)
+			continue
 		} else if f.Kind() == reflect.Ptr {
 			if f.IsNil() {
-				n := -1
-				buf = append(buf, byte(n>>24),
-					byte(n>>16),
-					byte(n>>8),
-					byte(n))
+				buf = appendInt(buf, -1)
 				continue
 			} else {
 				f = f.Elem()
@@ -1374,11 +1359,7 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 		}
 
 		n := len(data)
-		buf = append(buf, byte(n>>24),
-			byte(n>>16),
-			byte(n>>8),
-			byte(n))
-
+		buf = appendInt(buf, int32(n))
 		buf = append(buf, data...)
 	}
 

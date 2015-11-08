@@ -24,7 +24,7 @@ func dnsCompatibleBucketName(bucket string) bool {
 // the host. This is false if S3ForcePathStyle is explicitly set or if the
 // bucket is not DNS compatible.
 func hostStyleBucketName(r *request.Request, bucket string) bool {
-	if aws.BoolValue(r.Service.Config.S3ForcePathStyle) {
+	if aws.BoolValue(r.Config.S3ForcePathStyle) {
 		return false
 	}
 

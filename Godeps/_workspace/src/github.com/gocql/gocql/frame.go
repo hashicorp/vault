@@ -1579,25 +1579,22 @@ func (f *framer) writeByte(b byte) {
 	f.wbuf = append(f.wbuf, b)
 }
 
-// these are protocol level binary types
-func (f *framer) writeInt(n int32) {
-	f.wbuf = append(f.wbuf,
-		byte(n>>24),
+func appendShort(p []byte, n uint16) []byte {
+	return append(p,
+		byte(n>>8),
+		byte(n),
+	)
+}
+
+func appendInt(p []byte, n int32) []byte {
+	return append(p, byte(n>>24),
 		byte(n>>16),
 		byte(n>>8),
-		byte(n),
-	)
+		byte(n))
 }
 
-func (f *framer) writeShort(n uint16) {
-	f.wbuf = append(f.wbuf,
-		byte(n>>8),
-		byte(n),
-	)
-}
-
-func (f *framer) writeLong(n int64) {
-	f.wbuf = append(f.wbuf,
+func appendLong(p []byte, n int64) []byte {
+	return append(p,
 		byte(n>>56),
 		byte(n>>48),
 		byte(n>>40),
@@ -1607,6 +1604,19 @@ func (f *framer) writeLong(n int64) {
 		byte(n>>8),
 		byte(n),
 	)
+}
+
+// these are protocol level binary types
+func (f *framer) writeInt(n int32) {
+	f.wbuf = appendInt(f.wbuf, n)
+}
+
+func (f *framer) writeShort(n uint16) {
+	f.wbuf = appendShort(f.wbuf, n)
+}
+
+func (f *framer) writeLong(n int64) {
+	f.wbuf = appendLong(f.wbuf, n)
 }
 
 func (f *framer) writeString(s string) {

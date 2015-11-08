@@ -36,7 +36,7 @@ func NewWithEvict(size int, onEvicted func(key interface{}, value interface{})) 
 	c := &Cache{
 		size:      size,
 		evictList: list.New(),
-		items:     make(map[interface{}]*list.Element, size),
+		items:     make(map[interface{}]*list.Element),
 		onEvicted: onEvicted,
 	}
 	return c, nil

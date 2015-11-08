@@ -59,7 +59,7 @@ var reStatusCode = regexp.MustCompile(`^(\d{3})`)
 // SendHandler is a request handler to send service request using HTTP client.
 var SendHandler = request.NamedHandler{"core.SendHandler", func(r *request.Request) {
 	var err error
-	r.HTTPResponse, err = r.Service.Config.HTTPClient.Do(r.HTTPRequest)
+	r.HTTPResponse, err = r.Config.HTTPClient.Do(r.HTTPRequest)
 	if err != nil {
 		// Capture the case where url.Error is returned for error processing
 		// response. e.g. 301 without location header comes back as string
@@ -110,13 +110,13 @@ var AfterRetryHandler = request.NamedHandler{"core.AfterRetryHandler", func(r *r
 
 	if r.WillRetry() {
 		r.RetryDelay = r.RetryRules(r)
-		r.Service.Config.SleepDelay(r.RetryDelay)
+		r.Config.SleepDelay(r.RetryDelay)
 
 		// when the expired token exception occurs the credentials
 		// need to be expired locally so that the next request to
 		// get credentials will trigger a credentials refresh.
 		if r.IsErrorExpired() {
-			r.Service.Config.Credentials.Expire()
+			r.Config.Credentials.Expire()
 		}
 
 		r.RetryCount++
@@ -128,9 +128,9 @@ var AfterRetryHandler = request.NamedHandler{"core.AfterRetryHandler", func(r *r
 // appropriate Region and Endpoint set. Will set r.Error if the endpoint or
 // region is not valid.
 var ValidateEndpointHandler = request.NamedHandler{"core.ValidateEndpointHandler", func(r *request.Request) {
-	if r.Service.SigningRegion == "" && aws.StringValue(r.Service.Config.Region) == "" {
+	if r.ClientInfo.SigningRegion == "" && aws.StringValue(r.Config.Region) == "" {
 		r.Error = aws.ErrMissingRegion
-	} else if r.Service.Endpoint == "" {
+	} else if r.ClientInfo.Endpoint == "" {
 		r.Error = aws.ErrMissingEndpoint
 	}
 }}

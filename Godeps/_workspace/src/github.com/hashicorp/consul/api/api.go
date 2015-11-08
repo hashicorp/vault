@@ -44,6 +44,12 @@ type QueryOptions struct {
 	// Token is used to provide a per-request ACL token
 	// which overrides the agent's default token.
 	Token string
+
+	// Near is used to provide a node name that will sort the results
+	// in ascending order based on the estimated round trip time from
+	// that node. Setting this to "_agent" will use the agent's node
+	// for the sort.
+	Near string
 }
 
 // WriteOptions are used to parameterize a write
@@ -249,6 +255,9 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	}
 	if q.Token != "" {
 		r.params.Set("token", q.Token)
+	}
+	if q.Near != "" {
+		r.params.Set("near", q.Near)
 	}
 }
 
