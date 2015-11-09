@@ -1036,6 +1036,45 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 }
 
+// Check that we handle excluding the default policy
+func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	// Create a new credential
+	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"foo"}
+	req.Data["no_default_policy"] = true
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Ensure we got a new client token back
+	clientToken := resp.Auth.ClientToken
+	if clientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Check the policy and metadata
+	te, err := c.tokenStore.Lookup(clientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	expect := &TokenEntry{
+		ID:           clientToken,
+		Parent:       root,
+		Policies:     []string{"foo"},
+		Path:         "auth/token/create",
+		DisplayName:  "token",
+		CreationTime: te.CreationTime,
+		TTL:          time.Hour * 24 * 30,
+	}
+	if !reflect.DeepEqual(te, expect) {
+		t.Fatalf("Bad: %#v expect: %#v", te, expect)
+	}
+}
+
 func TestCore_LimitedUseToken(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 

@@ -547,14 +547,15 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Read and parse the fields
 	var data struct {
-		ID          string
-		Policies    []string
-		Metadata    map[string]string `mapstructure:"meta"`
-		NoParent    bool              `mapstructure:"no_parent"`
-		Lease       string
-		TTL         string
-		DisplayName string `mapstructure:"display_name"`
-		NumUses     int    `mapstructure:"num_uses"`
+		ID              string
+		Policies        []string
+		Metadata        map[string]string `mapstructure:"meta"`
+		NoParent        bool              `mapstructure:"no_parent"`
+		NoDefaultPolicy bool              `mapstructure:"no_default_policy"`
+		Lease           string
+		TTL             string
+		DisplayName     string `mapstructure:"display_name"`
+		NumUses         int    `mapstructure:"num_uses"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -602,7 +603,7 @@ func (ts *TokenStore) handleCreateCommon(
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
 	te.Policies = data.Policies
-	if !strListSubset(te.Policies, []string{"root"}) {
+	if !strListSubset(te.Policies, []string{"root"}) && !data.NoDefaultPolicy {
 		te.Policies = append(te.Policies, "default")
 	}
 

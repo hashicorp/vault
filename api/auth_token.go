@@ -117,12 +117,13 @@ func (c *TokenAuth) RevokeTree(token string) error {
 
 // TokenCreateRequest is the options structure for creating a token.
 type TokenCreateRequest struct {
-	ID          string            `json:"id,omitempty"`
-	Policies    []string          `json:"policies,omitempty"`
-	Metadata    map[string]string `json:"meta,omitempty"`
-	Lease       string            `json:"lease,omitempty"`
-	TTL         string            `json:"ttl,omitempty"`
-	NoParent    bool              `json:"no_parent,omitempty"`
-	DisplayName string            `json:"display_name"`
-	NumUses     int               `json:"num_uses"`
+	ID              string            `json:"id,omitempty"`
+	Policies        []string          `json:"policies,omitempty"`
+	Metadata        map[string]string `json:"meta,omitempty"`
+	Lease           string            `json:"lease,omitempty"`
+	TTL             string            `json:"ttl,omitempty"`
+	NoParent        bool              `json:"no_parent,omitempty"`
+	NoDefaultPolicy bool              `json:"no_default_policy,omitempty"`
+	DisplayName     string            `json:"display_name"`
+	NumUses         int               `json:"num_uses"`
 }

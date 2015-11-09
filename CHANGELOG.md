@@ -25,7 +25,9 @@ FEATURES:
    which allows a token to retrieve its own information, and `revoke-self` and
    `renew-self`, which are self-explanatory. If your existing Vault
    installation contains a policy called `default`, it will not be overridden,
-   but it will be added to each new token created. [GH-732]
+   but it will be added to each new token created. You can override this
+   behavior when using manual token creation (i.e. not via an authentication
+   backend) by setting the "no_default_policy" flag to true. [GH-732]
 
 IMPROVEMENTS:
 
