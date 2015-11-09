@@ -12,12 +12,9 @@ import (
 
 func TestSystemBackend_RootPaths(t *testing.T) {
 	expected := []string{
-		"mounts/*",
 		"auth/*",
 		"remount",
 		"revoke-prefix/*",
-		"policy",
-		"policy/*",
 		"audit",
 		"audit/*",
 		"seal",
