@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,6 +32,39 @@ import (
 	"github.com/mitchellh/cli"
 )
 
+func GetVersion() string {
+	if GitDescribe != "" {
+		return GitDescribe
+	} else {
+		return Version
+	}
+}
+
+func GetVersionPrerelease() string {
+	if VersionPrerelease != "" {
+		return VersionPrerelease
+	} else {
+		return "dev"
+	}
+}
+
+func GetVersionString() string {
+	var versionString bytes.Buffer
+	var version = GetVersion()
+	var versionPrerelease = GetVersionPrerelease()
+
+	fmt.Fprintf(&versionString, "Vault v%s", version)
+	if versionPrerelease != "" {
+		fmt.Fprintf(&versionString, "-%s", versionPrerelease)
+
+		if GitCommit != "" {
+			fmt.Fprintf(&versionString, " (%s)", GitCommit)
+		}
+	}
+
+	return versionString.String()
+}
+
 // Commands returns the mapping of CLI commands for Vault. The meta
 // parameter lets you set meta options for all commands.
 func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
@@ -44,6 +79,11 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			ErrorWriter: os.Stderr,
 		}
 	}
+
+	meta.Version = GetVersion()
+	meta.VersionPrerelease = GetVersionPrerelease()
+	meta.Revision = GitCommit
+	meta.VersionString = GetVersionString()
 
 	return map[string]cli.CommandFactory{
 		"init": func() (cli.Command, error) {
