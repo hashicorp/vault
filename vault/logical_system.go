@@ -29,12 +29,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
-				"mounts/*",
 				"auth/*",
 				"remount",
 				"revoke-prefix/*",
-				"policy",
-				"policy/*",
 				"audit",
 				"audit/*",
 				"seal", // Must be set for Core.Seal() logic
