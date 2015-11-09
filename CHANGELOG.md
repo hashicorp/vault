@@ -8,6 +8,9 @@ DEPRECATIONS/BREAKING CHANGES:
  * Default etcd port number: the default connection string for the `etcd`
    physical store uses port 2379 instead of port 4001, which is the port used
    by the supported version 2.x of etcd. [GH-753]
+ * As noted below in the FEATURES section, if your Vault installation contains
+   a policy called `default`, new tokens created will inherit this policy
+   automatically.
 
 FEATURES:
 
@@ -15,6 +18,16 @@ FEATURES:
    supports pushing CRLs into the mount and using the contained serial numbers
    for revocation checking. See the documentation for the `cert` backend for
    more info. [GH-330]
+ * **Default Policy**: Vault now ensures that a policy named `default` is added
+   to every token. This policy cannot be deleted, but it can be modified
+   (including to an empty policy). There are three endpoints allowed in the
+   default `default` policy, related to token self-management: `lookup-self`,
+   which allows a token to retrieve its own information, and `revoke-self` and
+   `renew-self`, which are self-explanatory. If your existing Vault
+   installation contains a policy called `default`, it will not be overridden,
+   but it will be added to each new token created. You can override this
+   behavior when using manual token creation (i.e. not via an authentication
+   backend) by setting the "no_default_policy" flag to true. [GH-732]
 
 IMPROVEMENTS:
 

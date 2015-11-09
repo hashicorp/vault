@@ -17,7 +17,7 @@ func TestSysPolicies(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"root"},
+		"policies": []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -61,7 +61,7 @@ func TestSysWritePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"foo", "root"},
+		"policies": []interface{}{"default", "foo", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -88,7 +88,7 @@ func TestSysDeletePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"root"},
+		"policies": []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
