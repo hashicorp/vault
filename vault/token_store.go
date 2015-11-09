@@ -800,10 +800,16 @@ func (ts *TokenStore) handleLookup(
 			"meta":          out.Meta,
 			"display_name":  out.DisplayName,
 			"num_uses":      out.NumUses,
+			"orphan":        false,
 			"creation_time": int(out.CreationTime),
 			"ttl":           int(out.TTL.Seconds()),
 		},
 	}
+
+	if out.Parent == "" {
+		resp.Data["orphan"] = true
+	}
+
 	return resp, nil
 }
 
