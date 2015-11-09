@@ -7,6 +7,7 @@ import (
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
+	"github.com/hashicorp/vault/version"
 
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -267,20 +268,11 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 		},
 
 		"version": func() (cli.Command, error) {
-			ver := Version
-			rel := VersionPrerelease
-			if GitDescribe != "" {
-				ver = GitDescribe
-			}
-			if GitDescribe == "" && rel == "" && VersionPrerelease != "" {
-				rel = "dev"
-			}
+			versionInfo := version.GetVersion()
 
 			return &command.VersionCommand{
-				Revision:          GitCommit,
-				Version:           ver,
-				VersionPrerelease: rel,
-				Ui:                meta.Ui,
+				VersionInfo: versionInfo,
+				Ui:          meta.Ui,
 			}, nil
 		},
 

@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 )
 
 // ServerCommand is a Command that starts the Vault server.
@@ -230,6 +231,9 @@ func (c *ServerCommand) Run(args []string) int {
 	for _, ln := range lns {
 		go server.Serve(ln)
 	}
+
+	infoKeys = append(infoKeys, "version")
+	info["version"] = version.GetVersion().String()
 
 	// Server configuration output
 	padding := 18

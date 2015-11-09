@@ -33,6 +33,7 @@ IMPROVEMENTS:
  * core: Tokens can now renew themselves [GH-455]
  * core: Base64-encoded PGP keys can be used with the CLI for `init` and
    `rekey` operations [GH-653]
+ * core: Print version on startup [GH-765]
  * credential/token: Display whether or not a token is an orphan in the output
    of a lookup call [GH-766]
  * logical: Allow `.` in path-based variables in many more locations [GH-244]
