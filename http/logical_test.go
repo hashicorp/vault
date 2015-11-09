@@ -121,6 +121,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"path":         "auth/token/root",
 			"policies":     []interface{}{"root"},
 			"display_name": "root",
+			"orphan":       true,
 			"id":           root,
 			"ttl":          float64(0),
 		},
