@@ -36,6 +36,11 @@ type Meta struct {
 	ClientToken string
 	Ui          cli.Ui
 
+	Revision          string
+	Version           string
+	VersionPrerelease string
+	VersionString     string
+
 	// The things below can be set, but aren't common
 	ForceAddress string  // Address to force for API clients
 	ForceConfig  *Config // Force a config, don't load from disk

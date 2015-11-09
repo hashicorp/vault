@@ -178,12 +178,13 @@ func (c *ServerCommand) Run(args []string) int {
 	// Compile server information for output later
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
+	info["version"] = c.Meta.VersionString
 	info["backend"] = config.Backend.Type
 	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock)
-	infoKeys = append(infoKeys, "log level", "mlock", "backend")
+	infoKeys = append(infoKeys, "version", "log level", "mlock", "backend")
 
 	// If the backend supports HA, then note it
 	if _, ok := backend.(physical.HABackend); ok {
