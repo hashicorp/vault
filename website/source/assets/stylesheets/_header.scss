@@ -1,122 +1,54 @@
 //
 // Header
+// - Project Specific
+// - edits should be made here
 // --------------------------------------------------
 
 #header {
-    position: relative;
-    color: $white;
-    text-rendering: optimizeLegibility;
-    margin-bottom: 0;
-    /* opacity: 0;
-    @include translate3d(0, -10px, 0); */
-    transition: all 1s ease;
-
-    /* &.showit{
-        opacity: 1;
-        @include translate3d(0, 0px, 0);
-        transition: all 1s ease;
-    } */
-
-    &.navbar-static-top{
-        height:70px;
-        z-index: 1000;
+  .navbar-brand {
+    .logo{
+      width: $project-logo-width;
+      padding-left: 50px;
+      font-size: 0;
+      text-transform: uppercase;
+      background: image-url('../images/logo-header.png') 0 0 no-repeat;
+      @include img-retina("../images/logo-header.png", "../images/logo-header@2x.png", $project-logo-width, $project-logo-height);
+      background-position: 0 46%;
     }
+  }
 
-    .navbar-header{
+  .by-hashicorp{
+    @include project-by-hashicorp-style();
+  }
 
-        .navbar-toggle{
-            padding-right: 15px;
-            margin-top: 26px;
-            margin-bottom: 14px;
-            margin-right: 0;
-            //border: 2px solid $white;
-            border-radius: 0;
-            .icon-bar{
-                border: 1px solid $black;
-                border-radius: 0;
-            }
-        }
-    }
+  .buttons{
+    margin-top: 2px; //baseline everything
+  }
+}
 
-
+@media (max-width: 414px) {
+  #header {
     .navbar-brand {
-        display: inline-block;
-        padding: 0;
-        margin: 30px 10px 0 0 ;
+      .logo{
+        width: $project-logo-width * .8;
+        @include img-retina("../images/logo-header.png", "../images/logo-header@2x.png", $project-logo-width * .8, $project-logo-height * .8);
 
-        .logo{
-            display: inline-block;
-            width: 24px;
-            height: 23px;
-            padding: 0;
-            line-height: 23px;
-            text-indent: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            background: image-url('../images/logo-icon.png') 0 0 no-repeat;
-            @include img-retina("../images/logo-icon.png", "../images/logo-icon@2x.png", 24px, 23px);
+        img{
+          //width: 72px;
+          //height: 14px;
         }
+      }
     }
-
-    .main-links.navbar-nav{
-        margin-top: 28px;
-
-        li > a {
-            @include v-nav-style();
-        }
-    }
-
-    .buttons{
-        .navbar-nav{
-            margin-top: 25px;
-            margin-left: 30px;
-            @include btn-shadow();
-
-            li{
-                border: 1px solid $light-gray;
-
-                &.first{
-                    border-right: none;
-                }
-            }
-
-            li > a {
-                color: $gray;
-                font-size: 14px;
-                font-weight: 400;
-                padding: 4px 20px;
-                @include transition( color 0.3s ease );
-            }
-        }
-    }
-
-    .nav > li > a:hover, .nav > li > a:focus {
-        background-color: transparent;
-        color: $black;
-        @include transition( color 0.3s ease );
-    }
+  }
 }
 
-@media (min-width: 992px) {
-
-}
-
-@media (max-width: 992px) {
-
-}
-
-@media (max-width: 768px) {
-
-}
-
-@media (max-width: 763px) {
-    .navbar-static-top {
-        .nav-white {
-            background-color:rgba(0,0,0,0.5);
-        }
-    }
-}
 
 @media (max-width: 320px) {
+  #header {
+    .navbar-brand {
+      .logo{
 
+      }
+    }
+  }
 }

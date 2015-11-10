@@ -1,26 +1,40 @@
-	<div id="footer">
-		<div class="container">
-			<div class="row">
-				<div class="col-md-offset-1 col-md-5 col-sm-6 col-xs-12">
-					<ul class="footer-links nav navbar-nav">
-						<li class="li-under"><a href="/intro/index.html">Intro</a></li>
-						<li class="li-under"><a href="/docs/index.html">Docs</a></li>
-						<li class="li-under"><a href="/community.html">Community</a></li>
-						<li class="li-under"><a href="/security.html">Security</a></li>
-						<% if current_page.url != '/' %>
-							<li class="li-under"><a href="<%= github_url :current_page %>">Edit this page</a></li>
-						<% end %>
-					</ul>
-				</div>
-				<div class="footer-hashi col-md-5 col-sm-6 col-xs-12">
-					<div class="pull-right">
-						<span>A <a href="https://www.hashicorp.com">HashiCorp</a> Project.</span>
-						<a class="hashi-logo" href="https://www.hashicorp.com"><i class="hashi-logo"></i></a>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+  <div id="footer" class="navigation">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-offset-1 col-md-10 col-xs-12">
+          <% if current_page.url != '/' %>
+            <div class="edit-page-link"><a href="<%= github_url :current_page %>">Edit this page</a></div>
+          <% end %>
+          <div class="footer-links">
+            <ul class="main-links nav navbar-nav">
+              <li><a href="/intro/index.html">Intro</a></li>
+              <li><a href="/docs/index.html">Docs</a></li>
+              <li><a href="/community.html">Community</a></li>
+              <li><a href="/security.html">Security</a></li>
+            </ul>
+            <ul class="external-links nav navbar-nav">
+              <li class="first download">
+                <a href="/downloads.html"><%= partial "layouts/svg/svg-download" %>Download</a>
+              </li>
+              <li class="github">
+                <a href="https://github.com/hashicorp/vault"><%= partial "layouts/svg/svg-github" %>GitHub</a>
+              </li>
+            </ul>
+          </  div>
+          <div class="footer-hashi pull-right">
+            <div class="">
+              <a class="hashicorp-project" href="https://www.hashicorp.com">
+                <span class="project-text">A </span>
+                <%= partial "layouts/svg/svg-by-hashicorp" %>
+                <span class="project-text">Project</span>
+                <%= partial "layouts/svg/svg-hashicorp-logo" %>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>

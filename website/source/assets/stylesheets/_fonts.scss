@@ -24,3 +24,23 @@
   font-family: $font-family-open-sans;
   font-weight: $font-weight-open;
 }
+
+@mixin lato-light() {
+  font-family: $font-family-lato;
+  font-weight: 300;
+}
+
+@mixin open-light() {
+  font-family: $font-family-open-sans;
+  font-weight: 300;
+}
+
+@mixin open() {
+  font-family: $font-family-open-sans;
+  font-weight: 400;
+}
+
+@mixin open-bold() {
+  font-family: $font-family-open-sans;
+  font-weight: 600;
+}
