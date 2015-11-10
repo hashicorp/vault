@@ -20,6 +20,18 @@ body.page-sub{
   }
 }
 
+.edit-page-link{
+  position: absolute;
+  top: -50px;
+  right: 15px;;
+
+  a{
+    text-transform: uppercase;
+    color: $black;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 992px) {
   .footer-links {
     display: block;
