@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
-	"strings"
 	"github.com/hashicorp/vault/vault"
+	"strings"
 )
 
 const (
@@ -98,7 +98,7 @@ func (c *PolicyListCommand) detailedOutput() int {
 		}
 
 		var deny, write, read, total, sudo int
-		deny, write, read, total,sudo = 0,0,0,0,0
+		deny, write, read, total, sudo = 0, 0, 0, 0, 0
 		pols := make(map[string]int)
 		for _, path := range pol.Paths {
 			if len(path.Prefix) > 0 {
@@ -121,7 +121,7 @@ func (c *PolicyListCommand) detailedOutput() int {
 			"%d. Name: '%s'. Total policies: %d", i+1, policy, total))
 		c.Ui.Output(fmt.Sprintf(
 			"deny: %d, write: %d, read: %d, sudo: %d\n", deny, write, read, sudo))
-		
+
 		output := ""
 		for pol, value := range pols {
 			output += fmt.Sprintf("%s: %d\n", pol, value)
