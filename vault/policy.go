@@ -67,7 +67,7 @@ func (p *PathPolicy) TakesPrecedence(other *PathPolicy) bool {
 		goto MC
 	}
 MC:
-  panic("missing case")
+	panic("missing case")
 
 }
 
