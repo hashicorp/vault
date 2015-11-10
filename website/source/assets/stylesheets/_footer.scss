@@ -1,118 +1,62 @@
 body.page-sub{
-    #footer{
-        padding: 0 0 40px 0;
-        .col-md-5{
-            padding-top: 40px;
-            border-top: 1px solid $faint-gray;
-        }
+  #footer{
+    padding: 0 0 40px 0;
+    .col-md-10{
+      padding-top: 40px;
+      border-top: 1px solid $faint-gray;
     }
+  }
 }
 
 #footer{
-    padding: 40px 0;
-    color: black;
+  padding: 64px 0;
 
-    .footer-links{
-        margin-bottom: 20px;
+  .hashicorp-project{
+    margin-top: 24px;
+  }
 
-        .li-under a:hover::after,
-        .li-under a:focus::after {
-            opacity: 1;
-            -webkit-transform: skewY(15deg) translateY(8px);
-            -moz-transform: skewY(15deg) translateY(8px);
-            transform: skewY(15deg) translateY(8px);
-        }
-
-        .li-under a::after {
-            background-color: $purple;
-        }
-
-        li{
-            a{
-                @include v-nav-style();
-            }
-        }
-    }
-
-    .pull-right{
-        padding-right: 15px;
-    }
-
-    .footer-hashi{
-        font-size: 12px;
-
-        a{
-            color: black;
-            font-weight: 600;
-        }
-
-        span{
-            margin-right: 4px;
-        }
-
-        .hashi-logo{
-            display: inline-block;
-            vertical-align: middle;
-            i{
-                display: inline-block;
-                margin-top: -6px;
-                width: 16px;
-                height: 17px;
-                background: image-url('../images/icon-hashicorp-logo.png') 0 0 no-repeat;
-                @include img-retina('../images/icon-hashicorp-logo.png', '../images/icon-hashicorp-logo@2x.png', 16px, 17px);
-            }
-        }
-    }
+  .pull-right{
+    padding-right: 15px;
+  }
 }
 
 @media (max-width: 992px) {
+  .footer-links {
+    display: block;
+    text-align: center;
 
-}
-
-@media (max-width: 768px) {
-
-    body.page-sub{
-        #footer{
-            .col-md-5{
-                &:last-child{
-                    padding-top: 0;
-                    border-top: none;
-                }
-            }
-        }
+    ul{
+      display: inline-block;;
+      float: none !important;
     }
 
-    #footer{
-        padding: 100px 0 40px;
-        text-align: center;
-
-        .footer-links{
-            float: none;
-            display: inline-block;
-        }
-
-        .footer-hashi {
-            float: none;
-            display: inline-block;
-
-            .pull-right{
-                float: none !important;
-            }
-        }
+    .footer-hashi{
+      display: block;
+      float: none !important;
     }
+  }
 }
 
-@media (max-width: 320px) {
+@media (max-width: 414px) {
+  #footer{
+    ul{
+      display: block;
+      li{
+        display: block;
+        float: none;
+      }
 
-    #footer{
-        text-align: center;
-
-        .footer-links{
-            .li-under{
-                float: none !important;
-            }
+      &.external-links{
+        li{
+          svg{
+            position: relative;
+            left: 0;
+            top: 2px;
+            margin-top: 0;
+            margin-right: 4px;
+          }
         }
+      }
     }
+  }
 }
-
-
