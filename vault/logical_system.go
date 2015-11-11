@@ -364,12 +364,13 @@ type SystemBackend struct {
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.mounts.Lock()
-	defer b.Core.mounts.Unlock()
+	b.Core.mountsLock.RLock()
+	defer b.Core.mountsLock.RUnlock()
 
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
 	}
+
 	for _, entry := range b.Core.mounts.Entries {
 		info := map[string]interface{}{
 			"type":        entry.Type,
@@ -613,10 +614,13 @@ func (b *SystemBackend) handleMountTuneWrite(
 		}
 
 		if newDefault != nil || newMax != nil {
+			b.Core.mountsLock.Lock()
 			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
+				b.Core.mountsLock.Unlock()
 				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
 				return handleError(err)
 			}
+			b.Core.mountsLock.Unlock()
 		}
 	}
 
@@ -673,8 +677,8 @@ func (b *SystemBackend) handleRevokePrefix(
 // handleAuthTable handles the "auth" endpoint to provide the auth table
 func (b *SystemBackend) handleAuthTable(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.auth.Lock()
-	defer b.Core.auth.Unlock()
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
 
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
@@ -802,8 +806,8 @@ func (b *SystemBackend) handlePolicyDelete(
 // handleAuditTable handles the "audit" endpoint to provide the audit table
 func (b *SystemBackend) handleAuditTable(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.audit.Lock()
-	defer b.Core.audit.Unlock()
+	b.Core.auditLock.RLock()
+	defer b.Core.auditLock.RUnlock()
 
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),

@@ -31,9 +31,6 @@ var (
 
 // enableCredential is used to enable a new credential backend
 func (c *Core) enableCredential(entry *MountEntry) error {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -43,6 +40,9 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	if entry.Path == "/" {
 		return fmt.Errorf("backend path must be specified")
 	}
+
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
 
 	// Look for matching name
 	for _, ent := range c.auth.Entries {
@@ -77,6 +77,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	if err := c.persistAuth(newTable); err != nil {
 		return errors.New("failed to update auth table")
 	}
+
 	c.auth = newTable
 
 	// Mount the backend
@@ -91,9 +92,6 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 // disableCredential is used to disable an existing credential backend
 func (c *Core) disableCredential(path string) error {
-	c.auth.Lock()
-	defer c.auth.Unlock()
-
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -110,6 +108,9 @@ func (c *Core) disableCredential(path string) error {
 	if view == nil {
 		return fmt.Errorf("no matching backend")
 	}
+
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
@@ -156,15 +157,18 @@ func (c *Core) removeCredEntry(path string) error {
 	if err := c.persistAuth(newTable); err != nil {
 		return errors.New("failed to update auth table")
 	}
+
 	c.auth = newTable
+
 	return nil
 }
 
 // taintCredEntry is used to mark an entry in the auth table as tainted
 func (c *Core) taintCredEntry(path string) error {
 	// Taint the entry from the auth table
-	newTable := c.auth.ShallowClone()
-	found := newTable.SetTaint(path, true)
+	// We do this on the original since setting the taint operates
+	// on the entries which a shallow clone shares anyways
+	found := c.auth.SetTaint(path, true)
 
 	// Ensure there was a match
 	if !found {
@@ -172,27 +176,32 @@ func (c *Core) taintCredEntry(path string) error {
 	}
 
 	// Update the auth table
-	if err := c.persistAuth(newTable); err != nil {
+	if err := c.persistAuth(c.auth); err != nil {
 		return errors.New("failed to update auth table")
 	}
-	c.auth = newTable
+
 	return nil
 }
 
 // loadCredentials is invoked as part of postUnseal to load the auth table
 func (c *Core) loadCredentials() error {
+	authTable := &MountTable{}
 	// Load the existing mount table
 	raw, err := c.barrier.Get(coreAuthConfigPath)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to read auth table: %v", err)
 		return errLoadAuthFailed
 	}
+
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
+
 	if raw != nil {
-		c.auth = &MountTable{}
-		if err := json.Unmarshal(raw.Value, c.auth); err != nil {
+		if err := json.Unmarshal(raw.Value, authTable); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode auth table: %v", err)
 			return errLoadAuthFailed
 		}
+		c.auth = authTable
 	}
 
 	// Done if we have restored the auth table
@@ -238,6 +247,10 @@ func (c *Core) setupCredentials() error {
 	var backend logical.Backend
 	var view *BarrierView
 	var err error
+
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
+
 	for _, entry := range c.auth.Entries {
 		// Create a barrier view using the UUID
 		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
@@ -279,6 +292,9 @@ func (c *Core) setupCredentials() error {
 // teardownCredentials is used before we seal the vault to reset the credential
 // backends to their unloaded state. This is reversed by loadCredentials.
 func (c *Core) teardownCredentials() error {
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
+
 	c.auth = nil
 	c.tokenStore = nil
 	return nil

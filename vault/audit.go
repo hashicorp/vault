@@ -35,9 +35,6 @@ var (
 
 // enableAudit is used to enable a new audit backend
 func (c *Core) enableAudit(entry *MountEntry) error {
-	c.audit.Lock()
-	defer c.audit.Unlock()
-
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -47,6 +44,10 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	if entry.Path == "/" {
 		return fmt.Errorf("backend path must be specified")
 	}
+
+	// Update the audit table
+	c.auditLock.Lock()
+	defer c.auditLock.Unlock()
 
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
@@ -70,12 +71,12 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 		return err
 	}
 
-	// Update the audit table
 	newTable := c.audit.ShallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistAudit(newTable); err != nil {
 		return errors.New("failed to update audit table")
 	}
+
 	c.audit = newTable
 
 	// Register the backend
@@ -87,15 +88,15 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 
 // disableAudit is used to disable an existing audit backend
 func (c *Core) disableAudit(path string) error {
-	c.audit.Lock()
-	defer c.audit.Unlock()
-
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
 
 	// Remove the entry from the mount table
+	c.auditLock.Lock()
+	defer c.auditLock.Unlock()
+
 	newTable := c.audit.ShallowClone()
 	found := newTable.Remove(path)
 
@@ -108,6 +109,7 @@ func (c *Core) disableAudit(path string) error {
 	if err := c.persistAudit(newTable); err != nil {
 		return errors.New("failed to update audit table")
 	}
+
 	c.audit = newTable
 
 	// Unmount the backend
@@ -118,18 +120,24 @@ func (c *Core) disableAudit(path string) error {
 
 // loadAudits is invoked as part of postUnseal to load the audit table
 func (c *Core) loadAudits() error {
+	auditTable := &MountTable{}
+
 	// Load the existing audit table
 	raw, err := c.barrier.Get(coreAuditConfigPath)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to read audit table: %v", err)
 		return errLoadAuditFailed
 	}
+
+	c.auditLock.Lock()
+	defer c.auditLock.Unlock()
+
 	if raw != nil {
-		c.audit = &MountTable{}
-		if err := json.Unmarshal(raw.Value, c.audit); err != nil {
+		if err := json.Unmarshal(raw.Value, auditTable); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode audit table: %v", err)
 			return errLoadAuditFailed
 		}
+		c.audit = auditTable
 	}
 
 	// Done if we have restored the audit table
@@ -172,6 +180,10 @@ func (c *Core) persistAudit(table *MountTable) error {
 // initialize the audit backends
 func (c *Core) setupAudits() error {
 	broker := NewAuditBroker(c.logger)
+
+	c.auditLock.Lock()
+	defer c.auditLock.Unlock()
+
 	for _, entry := range c.audit.Entries {
 		// Create a barrier view using the UUID
 		view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
@@ -195,6 +207,9 @@ func (c *Core) setupAudits() error {
 // teardownAudit is used before we seal the vault to reset the audit
 // backends to their unloaded state. This is reversed by loadAudits.
 func (c *Core) teardownAudits() error {
+	c.auditLock.Lock()
+	defer c.auditLock.Unlock()
+
 	c.audit = nil
 	c.auditBroker = nil
 	return nil

@@ -25,8 +25,13 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		t.Fatalf("err: %s", err)
 	}
 
+	mountsMutex := &sync.RWMutex{}
+	mountsFunc := func() (*MountTable, *sync.RWMutex) {
+		return mounts, mountsMutex
+	}
+
 	logger := log.New(os.Stderr, "", log.LstdFlags)
-	rb := NewRollbackManager(logger, mounts, router)
+	rb := NewRollbackManager(logger, mountsFunc, router)
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }
