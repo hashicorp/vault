@@ -70,6 +70,12 @@ func pathGenerateRootCA(b *backend) *framework.Path {
 		ret.Fields[k] = v
 	}
 
+	ret.Fields["max_path_length"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Default:     -1,
+		Description: "The maximum allowable path length",
+	}
+
 	return ret
 }
 
@@ -77,7 +83,7 @@ func pathGenerateIntermediateCA(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "config/ca/generate/intermediate/" + framework.GenericNameRegex("exported"),
 
-		Fields: generateSchema,
+		Fields: rootAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathCAGenerateIntermediate,
@@ -87,11 +93,8 @@ func pathGenerateIntermediateCA(b *backend) *framework.Path {
 		HelpDescription: pathConfigCAGenerateHelpDesc,
 	}
 
-	ret.Fields["format"] = &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "pem",
-		Description: `Format for returned data. Can be "pem" or "der";
-defaults to "pem".`,
+	for k, v := range generateSchema {
+		ret.Fields[k] = v
 	}
 
 	return ret
@@ -113,11 +116,13 @@ func pathSignIntermediateCA(b *backend) *framework.Path {
 
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
+		Default:     "",
 		Description: `PEM-format CSR to be signed.`,
 	}
 
 	ret.Fields["use_csr_values"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
+		Type:    framework.TypeBool,
+		Default: false,
 		Description: `If true, then:
 1) Subject information, including names and alternate
 names, will be preserved from the CSR rather than
@@ -129,41 +134,46 @@ certs signed by this path; for instance,
 the non-repudiation flag.`,
 	}
 
+	ret.Fields["max_path_length"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Default:     -1,
+		Description: "The maximum allowable path length",
+	}
+
 	return ret
 }
 
-func (b *backend) pathCAGenerateRoot(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var err error
-
-	var exported bool
+func (b *backend) getGenerationParams(
+	data *framework.FieldData,
+) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
 		exported = true
 	case "internal":
 	default:
-		return logical.ErrorResponse(
-			`The "exported" path parameter must be "internal" or "exported"`,
-		), nil
+		errorResp = logical.ErrorResponse(
+			`The "exported" path parameter must be "internal" or "exported"`)
+		return
 	}
 
-	format := data.Get("format").(string)
+	format = data.Get("format").(string)
 	switch format {
 	case "pem":
 	case "der":
 	default:
-		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`,
-		), nil
+		errorResp = logical.ErrorResponse(
+			`The "format" path parameter must be "pem" or "der"`)
+		return
 	}
 
-	role := &roleEntry{
+	role = &roleEntry{
 		TTL:              data.Get("ttl").(string),
 		KeyType:          data.Get("key_type").(string),
 		KeyBits:          data.Get("key_bits").(int),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
+		AllowIPSANs:      true,
 		EnforceHostnames: false,
 	}
 
@@ -175,7 +185,9 @@ func (b *backend) pathCAGenerateRoot(
 		case 4096:
 		case 8192:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for RSA key: %d", role.KeyBits)), nil
+			errorResp = logical.ErrorResponse(fmt.Sprintf(
+				"unsupported bit length for RSA key: %d", role.KeyBits))
+			return
 		}
 	case "ec":
 		switch role.KeyBits {
@@ -184,10 +196,32 @@ func (b *backend) pathCAGenerateRoot(
 		case 384:
 		case 521:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for EC key: %d", role.KeyBits)), nil
+			errorResp = logical.ErrorResponse(fmt.Sprintf(
+				"unsupported bit length for EC key: %d", role.KeyBits))
+			return
 		}
 	default:
-		return logical.ErrorResponse(fmt.Sprintf("unknown key type %s", role.KeyType)), nil
+		errorResp = logical.ErrorResponse(fmt.Sprintf(
+			"unknown key type %s", role.KeyType))
+		return
+	}
+
+	return
+}
+
+func (b *backend) pathCAGenerateRoot(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var err error
+
+	exported, format, role, errorResp := b.getGenerationParams(data)
+	if errorResp != nil {
+		return errorResp, nil
+	}
+
+	maxPathLengthIface, ok := data.GetOk("max_path_length")
+	if ok {
+		maxPathLength := maxPathLengthIface.(int)
+		role.MaxPathLength = &maxPathLength
 	}
 
 	var resp *logical.Response
@@ -253,6 +287,10 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, err
 	}
 
+	if parsedBundle.Certificate.MaxPathLen == 0 {
+		resp.AddWarning("Max path length of the generated certificate is zero")
+	}
+
 	return resp, nil
 }
 
@@ -260,57 +298,9 @@ func (b *backend) pathCAGenerateIntermediate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	var exported bool
-	exportedStr := data.Get("exported").(string)
-	switch exportedStr {
-	case "exported":
-		exported = true
-	case "internal":
-	default:
-		return logical.ErrorResponse(
-			`The "exported" path parameter must be "internal" or "exported"`,
-		), nil
-	}
-
-	format := data.Get("format").(string)
-	switch format {
-	case "pem":
-	case "der":
-	default:
-		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`,
-		), nil
-	}
-
-	role := &roleEntry{
-		KeyType:          data.Get("key_type").(string),
-		KeyBits:          data.Get("key_bits").(int),
-		AllowLocalhost:   true,
-		AllowAnyName:     true,
-		EnforceHostnames: false,
-	}
-
-	switch role.KeyType {
-	case "rsa":
-		switch role.KeyBits {
-		case 1024:
-		case 2048:
-		case 4096:
-		case 8192:
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for RSA key: %d", role.KeyBits)), nil
-		}
-	case "ec":
-		switch role.KeyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for EC key: %d", role.KeyBits)), nil
-		}
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unknown key type %s", role.KeyType)), nil
+	exported, format, role, errorResp := b.getGenerationParams(data)
+	if errorResp != nil {
+		return errorResp, nil
 	}
 
 	var resp *logical.Response
@@ -383,6 +373,7 @@ func (b *backend) pathCASignIntermediate(
 		TTL:              data.Get("ttl").(string),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
+		AllowIPSANs:      true,
 		EnforceHostnames: false,
 	}
 
@@ -402,6 +393,12 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
+
+	maxPathLengthIface, ok := data.GetOk("max_path_length")
+	if ok {
+		maxPathLength := maxPathLengthIface.(int)
+		role.MaxPathLength = &maxPathLength
+	}
 
 	parsedBundle, err := signCert(b, role, signingBundle, true, useCSRValues, req, data)
 	if err != nil {
@@ -444,6 +441,10 @@ func (b *backend) pathCASignIntermediate(
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Unable to store certificate locally")
+	}
+
+	if parsedBundle.Certificate.MaxPathLen == 0 {
+		resp.AddWarning("Max path length of the signed certificate is zero")
 	}
 
 	return resp, nil
@@ -619,7 +620,7 @@ default TTL is used, in that order. Cannot
 be larger than the mount max TTL. Note:
 this only has an effect when generating
 a CA cert or signing a CA cert, not when
-creating a CSR for an intermediate CA.`,
+generating a CSR for an intermediate CA.`,
 	},
 
 	"format": &framework.FieldSchema{

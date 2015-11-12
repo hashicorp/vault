@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -47,6 +48,13 @@ the role default, backend default, or system
 default TTL is used, in that order. Cannot
 be later than the role max TTL.`,
 	},
+
+	"format": &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "pem",
+		Description: `Format for returned data. Can be "pem" or "der";
+defaults to "pem".`,
+	},
 }
 
 func pathIssue(b *backend) *framework.Path {
@@ -78,6 +86,7 @@ func pathSign(b *backend) *framework.Path {
 
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
+		Default:     "",
 		Description: `PEM-format CSR to be signed.`,
 	}
 
@@ -105,6 +114,15 @@ func (b *backend) pathIssueSignCert(
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
+	}
+
+	format := data.Get("format").(string)
+	switch format {
+	case "pem":
+	case "der":
+	default:
+		return logical.ErrorResponse(
+			`The "format" path parameter must be "pem" or "der"`), nil
 	}
 
 	var caErr error
@@ -143,6 +161,11 @@ func (b *backend) pathIssueSignCert(
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
 		})
+
+	if format == "der" {
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
+		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+	}
 
 	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 

@@ -141,7 +141,8 @@ the key_type.`,
 			},
 
 			"use_csr_common_name": &framework.FieldSchema{
-				Type: framework.TypeBool,
+				Type:    framework.TypeBool,
+				Default: false,
 				Description: `If set, when used with a signing profile,
 the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
@@ -354,6 +355,7 @@ type roleEntry struct {
 	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
+	MaxPathLength         *int   `json:"," structs:"," mapstructure:","`
 }
 
 const pathRoleHelpSyn = `
