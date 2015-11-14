@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"bufio"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -21,9 +22,10 @@ func TestBackend_basic(t *testing.T) {
 	config, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
+	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  Backend(),
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
@@ -32,13 +34,30 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_management(t *testing.T) {
+	config, process := testStartConsulServer(t)
+	defer testStopConsulServer(t, process)
+
+	b, _ := Factory(logical.TestBackendConfig())
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, config),
+			testAccStepWriteManagementPolicy(t, "test", ""),
+			testAccStepReadManagementToken(t, "test", config),
+		},
+	})
+}
+
 func TestBackend_crud(t *testing.T) {
 	_, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
+	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  Backend(),
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
 			testAccStepReadPolicy(t, "test", testPolicy, DefaultLeaseDuration),
@@ -51,9 +70,10 @@ func TestBackend_role_lease(t *testing.T) {
 	_, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
+	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  Backend(),
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, "6h"),
 			testAccStepReadPolicy(t, "test", testPolicy, 6*time.Hour),
@@ -85,12 +105,31 @@ func testStartConsulServer(t *testing.T) (map[string]interface{}, *os.Process) {
 		"consul", "agent",
 		"-server",
 		"-bootstrap",
+		"-advertise", "127.0.0.1",
 		"-config-file", tf.Name(),
 		"-data-dir", td)
+	stdout, _ := cmd.StdoutPipe()
+	stderr, _ := cmd.StderrPipe()
+	stdoutScanner := bufio.NewScanner(stdout)
+	stderrScanner := bufio.NewScanner(stderr)
+	stdoutScanFunc := func() {
+		for stdoutScanner.Scan() {
+			t.Logf("Consul stdout: %s\n", stdoutScanner.Text())
+		}
+	}
+	stderrScanFunc := func() {
+		for stderrScanner.Scan() {
+			t.Logf("Consul stderr: %s\n", stderrScanner.Text())
+		}
+	}
+	if os.Getenv("VAULT_VERBOSE_ACC_TESTS") != "" {
+		go stdoutScanFunc()
+		go stderrScanFunc()
+	}
+
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("error starting Consul: %s", err)
 	}
-
 	// Give Consul time to startup
 	time.Sleep(2 * time.Second)
 
@@ -157,6 +196,43 @@ func testAccStepReadToken(
 	}
 }
 
+func testAccStepReadManagementToken(
+	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "creds/" + name,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Token string `mapstructure:"token"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			log.Printf("[WARN] Generated token: %s", d.Token)
+
+			// Build a client and verify that the credentials work
+			config := api.DefaultConfig()
+			config.Address = conf["address"].(string)
+			config.Token = d.Token
+			client, err := api.NewClient(config)
+			if err != nil {
+				return err
+			}
+
+			log.Printf("[WARN] Verifying that the generated token works...")
+			_, _, err = client.ACL().Create(&api.ACLEntry{
+				Type: "management",
+				Name: "test2",
+			}, nil)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+}
+
 func testAccStepWritePolicy(t *testing.T, name string, policy string, lease string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -164,6 +240,17 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string, lease stri
 		Data: map[string]interface{}{
 			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
 			"lease":  lease,
+		},
+	}
+}
+
+func testAccStepWriteManagementPolicy(t *testing.T, name string, lease string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "roles/" + name,
+		Data: map[string]interface{}{
+			"token_type": "management",
+			"lease":      lease,
 		},
 	}
 }

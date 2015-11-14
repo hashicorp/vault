@@ -62,6 +62,9 @@ func TestCore_EnableCredential(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	c2.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
 	unseal, err := c2.Unseal(key)
 	if err != nil {
 		t.Fatalf("err: %v", err)

@@ -8,12 +8,15 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 )
 
 // GetOctalFormatted returns the byte buffer formatted in octal with
 // the specified separator between bytes.
+// FIXME: where did I originally copy this code from? This ain't octal, it's hex.
 func GetOctalFormatted(buf []byte, sep string) string {
 	var ret bytes.Buffer
 	for _, cur := range buf {
@@ -23,6 +26,21 @@ func GetOctalFormatted(buf []byte, sep string) string {
 		fmt.Fprintf(&ret, "%02x", cur)
 	}
 	return ret.String()
+}
+
+func ParseHexFormatted(in, sep string) []byte {
+	var ret bytes.Buffer
+	var err error
+	var inBits int64
+	inBytes := strings.Split(in, sep)
+	for _, inByte := range inBytes {
+		if inBits, err = strconv.ParseInt(inByte, 16, 8); err != nil {
+			return nil
+		} else {
+			ret.WriteByte(byte(inBits))
+		}
+	}
+	return ret.Bytes()
 }
 
 // GetSubjKeyID returns the subject key ID, e.g. the SHA1 sum

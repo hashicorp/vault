@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -41,9 +42,9 @@ seconds. Defaults to system/backend default TTL.`,
 			},
 
 			"ttl": &framework.FieldSchema{
-				Type: framework.TypeInt,
-				Description: `TTL time in seconds. Defaults to system/backend
-default TTL time.`,
+				Type: framework.TypeDurationSecond,
+				Description: `TTL for tokens issued by this backend.
+Defaults to system/backend default TTL time.`,
 			},
 		},
 
@@ -103,7 +104,7 @@ func (b *backend) pathCertRead(
 			"certificate":  cert.Certificate,
 			"display_name": cert.DisplayName,
 			"policies":     strings.Join(cert.Policies, ","),
-			"ttl":          duration,
+			"ttl":          duration / time.Second,
 		},
 	}, nil
 }
@@ -131,24 +132,29 @@ func (b *backend) pathCertWrite(
 		return logical.ErrorResponse("failed to parse certificate"), nil
 	}
 
-	// Parse the lease duration or default to backend/system default
-	leaseDur := time.Duration(0)
-	leaseSec := d.Get("ttl").(int)
-	if leaseSec == 0 {
-		leaseSec = d.Get("lease").(int)
-	}
-	if leaseSec > 0 {
-		leaseDur = time.Duration(leaseSec) * time.Second
-	}
-
-	// Store it
-	entry, err := logical.StorageEntryJSON("cert/"+name, &CertEntry{
+	certEntry := &CertEntry{
 		Name:        name,
 		Certificate: certificate,
 		DisplayName: displayName,
 		Policies:    policies,
-		TTL:         leaseDur,
-	})
+	}
+
+	// Parse the lease duration or default to backend/system default
+	var err error
+	maxTTL := b.System().MaxLeaseTTL()
+	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
+	if ttl == time.Duration(0) {
+		ttl = time.Second * time.Duration(d.Get("lease").(int))
+	}
+	if ttl > maxTTL {
+		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than current mount/system default of %d seconds", ttl/time.Second, maxTTL/time.Second)), nil
+	}
+	if ttl > time.Duration(0) {
+		certEntry.TTL = ttl
+	}
+
+	// Store it
+	entry, err := logical.StorageEntryJSON("cert/"+name, certEntry)
 	if err != nil {
 		return nil, err
 	}

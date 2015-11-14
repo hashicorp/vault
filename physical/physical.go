@@ -2,6 +2,8 @@ package physical
 
 import "fmt"
 
+const DefaultParallelOperations = 128
+
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
 // data outside of Vault. As such, it is completely untrusted,
@@ -63,7 +65,7 @@ type Entry struct {
 // Factory is the factory function to create a physical backend.
 type Factory func(map[string]string) (Backend, error)
 
-// NewBackend returns a new Bckend with the given type and configuration.
+// NewBackend returns a new backend with the given type and configuration.
 // The backend is looked up in the BuiltinBackends variable.
 func NewBackend(t string, conf map[string]string) (Backend, error) {
 	f, ok := BuiltinBackends[t]
@@ -85,4 +87,31 @@ var BuiltinBackends = map[string]Factory{
 	"s3":        newS3Backend,
 	"etcd":      newEtcdBackend,
 	"mysql":     newMySQLBackend,
+}
+
+// PermitPool is a wrapper around a semaphore library to keep things
+// agnostic
+type PermitPool struct {
+	sem chan int
+}
+
+// NewPermitPool returns a new permit pool with the provided
+// number of permits
+func NewPermitPool(permits int) *PermitPool {
+	if permits < 1 {
+		permits = DefaultParallelOperations
+	}
+	return &PermitPool{
+		sem: make(chan int, permits),
+	}
+}
+
+// Acquire returns when a permit has been acquired
+func (c *PermitPool) Acquire() {
+	c.sem <- 1
+}
+
+// Release returns a permit to the pool
+func (c *PermitPool) Release() {
+	<-c.sem
 }

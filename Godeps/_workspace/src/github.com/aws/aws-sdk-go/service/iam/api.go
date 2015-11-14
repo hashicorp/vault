@@ -2267,11 +2267,10 @@ func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *re
 	return
 }
 
-// Lists the account aliases associated with the account. For information about
-// using an AWS account alias, see Using an Alias for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
+// Lists the account alias associated with the account (Note: you can have only
+// one). For information about using an AWS account alias, see Using an Alias
+// for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
 // in the IAM User Guide.
-//
-//  You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListAccountAliases(input *ListAccountAliasesInput) (*ListAccountAliasesOutput, error) {
 	req, out := c.ListAccountAliasesRequest(input)
 	err := req.Send()
@@ -6343,11 +6342,11 @@ type EvaluationResult struct {
 	// each set of policies contributes to the final evaluation decision. When simulating
 	// cross-account access to a resource, both the resource-based policy and the
 	// caller's IAM policy must grant access. See How IAM Roles Differ from Resource-based
-	// Policies
+	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_compare-resource-policies.html)
 	EvalDecisionDetails map[string]*string `type:"map"`
 
 	// The ARN of the resource that the indicated API action was tested on.
-	EvalResourceName *string `min:"1" type:"string" required:"true"`
+	EvalResourceName *string `min:"1" type:"string"`
 
 	// A list of the statements in the input policies that determine the result
 	// for this scenario. Remember that even if multiple statements allow the action
@@ -6366,6 +6365,10 @@ type EvaluationResult struct {
 	// all of the conditions specified in the policies that would occur in a real
 	// world request.
 	MissingContextValues []*string `type:"list"`
+
+	// The individual results of the simulation of the API action specified in EvalActionName
+	// on each resource.
+	ResourceSpecificResults []*ResourceSpecificResult `type:"list"`
 
 	metadataEvaluationResult `json:"-" xml:"-"`
 }
@@ -6784,7 +6787,8 @@ func (s GetAccountSummaryOutput) GoString() string {
 
 type GetContextKeysForCustomPolicyInput struct {
 	// A list of policies for which you want list of context keys used in Condition
-	// elements.
+	// elements. Each document is specified as a string containing the complete,
+	// valid JSON text of an IAM policy.
 	PolicyInputList []*string `type:"list" required:"true"`
 
 	metadataGetContextKeysForCustomPolicyInput `json:"-" xml:"-"`
@@ -7874,7 +7878,8 @@ func (s ListAccountAliasesInput) GoString() string {
 
 // Contains the response to a successful ListAccountAliases request.
 type ListAccountAliasesOutput struct {
-	// A list of aliases associated with the account.
+	// A list of aliases associated with the account. AWS supports only one alias
+	// per account.
 	AccountAliases []*string `type:"list" required:"true"`
 
 	// A flag that indicates whether there are more items to return. If your results
@@ -9691,8 +9696,9 @@ type PasswordPolicy struct {
 	// Specifies whether IAM users are allowed to change their own password.
 	AllowUsersToChangePassword *bool `type:"boolean"`
 
-	// Specifies whether IAM users are required to change their password after a
-	// specified number of days.
+	// Indicates whether passwords in the account expire. Returns true if MaxPasswordAge
+	// is contains a value greater than 0. Returns false if MaxPasswordAge is 0
+	// or not present.
 	ExpirePasswords *bool `type:"boolean"`
 
 	// Specifies whether IAM users are prevented from setting a new password after
@@ -10269,6 +10275,55 @@ func (s RemoveUserFromGroupOutput) GoString() string {
 	return s.String()
 }
 
+// Contains the result of the simulation of a single API action call on a single
+// resource.
+//
+// This data type is used by a member of the EvaluationResult data type.
+type ResourceSpecificResult struct {
+	// Additional details about the results of the evaluation decision. When there
+	// are both IAM policies and resource policies, this parameter explains how
+	// each set of policies contributes to the final evaluation decision. When simulating
+	// cross-account access to a resource, both the resource-based policy and the
+	// caller's IAM policy must grant access.
+	EvalDecisionDetails map[string]*string `type:"map"`
+
+	// The result of the simulation of the simulated API action on the resource
+	// specified in EvalResourceName.
+	EvalResourceDecision *string `type:"string" required:"true" enum:"PolicyEvaluationDecisionType"`
+
+	// The name of the simulated resource, in Amazon Resource Name (ARN) format.
+	EvalResourceName *string `min:"1" type:"string" required:"true"`
+
+	// A list of the statements in the input policies that determine the result
+	// for this part of the simulation. Remember that even if multiple statements
+	// allow the action on the resource, if any statement denies that action, then
+	// the explicit deny overrides any allow, and the deny statement is the only
+	// entry included in the result.
+	MatchedStatements []*Statement `type:"list"`
+
+	// A list of context keys that are required by the included input policies but
+	// that were not provided by one of the input parameters. To discover the context
+	// keys used by a set of policies, you can call GetContextKeysForCustomPolicy
+	// or GetContextKeysForPrincipalPolicy.
+	MissingContextValues []*string `type:"list"`
+
+	metadataResourceSpecificResult `json:"-" xml:"-"`
+}
+
+type metadataResourceSpecificResult struct {
+	SDKShapeTraits bool `type:"structure"`
+}
+
+// String returns the string representation
+func (s ResourceSpecificResult) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ResourceSpecificResult) GoString() string {
+	return s.String()
+}
+
 type ResyncMFADeviceInput struct {
 	// An authentication code emitted by the device.
 	AuthenticationCode1 *string `min:"6" type:"string" required:"true"`
@@ -10762,6 +10817,47 @@ type SimulateCustomPolicyInput struct {
 	// resources included in the simulation or you receive an invalid input error.
 	ResourceArns []*string `type:"list"`
 
+	// Specifies the type of simulation to run. Different APIs that support resource-based
+	// policies require different combinations of resources. By specifying the type
+	// of simulation to run, you enable the policy simulator to enforce the presence
+	// of the required resources to ensure reliable simulation results. If your
+	// simulation does not match one of the following scenarios, then you can omit
+	// this parameter. The following list shows each of the supported scenario values
+	// and the resources that you must define to run the simulation.
+	//
+	// Each of the EC2 scenarios requires that you specify instance, image, and
+	// security-group resources. If your scenario includes an EBS volume, then you
+	// must specify that volume as a resource. If the EC2 scenario includes VPC,
+	// then you must supply the network-interface resource. If it includes an IP
+	// subnet, then you must specify the subnet resource. For more information on
+	// the EC2 scenario options, see Supported Platforms (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-supported-platforms.html)
+	// in the AWS EC2 User Guide.
+	//
+	//  EC2-Classic-InstanceStore
+	//
+	// instance, image, security-group
+	//
+	//  EC2-Classic-EBS
+	//
+	// instance, image, security-group, volume
+	//
+	//  EC2-VPC-InstanceStore
+	//
+	// instance, image, security-group, network-interface
+	//
+	//  EC2-VPC-InstanceStore-Subnet
+	//
+	// instance, image, security-group, network-interface, subnet
+	//
+	//  EC2-VPC-EBS
+	//
+	// instance, image, security-group, network-interface, volume
+	//
+	//  EC2-VPC-EBS-Subnet
+	//
+	// instance, image, security-group, network-interface, subnet, volume
+	ResourceHandlingOption *string `min:"1" type:"string"`
+
 	// An AWS account ID that specifies the owner of any simulated resource that
 	// does not identify its owner in the resource ARN, such as an S3 bucket or
 	// object. If ResourceOwner is specified, it is also used as the account owner
@@ -10895,6 +10991,47 @@ type SimulatePrincipalPolicyInput struct {
 	// resources. If you want to include a resource policy in the simulation, then
 	// you must include the policy as a string in the ResourcePolicy parameter.
 	ResourceArns []*string `type:"list"`
+
+	// Specifies the type of simulation to run. Different APIs that support resource-based
+	// policies require different combinations of resources. By specifying the type
+	// of simulation to run, you enable the policy simulator to enforce the presence
+	// of the required resources to ensure reliable simulation results. If your
+	// simulation does not match one of the following scenarios, then you can omit
+	// this parameter. The following list shows each of the supported scenario values
+	// and the resources that you must define to run the simulation.
+	//
+	// Each of the EC2 scenarios requires that you specify instance, image, and
+	// security-group resources. If your scenario includes an EBS volume, then you
+	// must specify that volume as a resource. If the EC2 scenario includes VPC,
+	// then you must supply the network-interface resource. If it includes an IP
+	// subnet, then you must specify the subnet resource. For more information on
+	// the EC2 scenario options, see Supported Platforms (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-supported-platforms.html)
+	// in the AWS EC2 User Guide.
+	//
+	//  EC2-Classic-InstanceStore
+	//
+	// instance, image, security-group
+	//
+	//  EC2-Classic-EBS
+	//
+	// instance, image, security-group, volume
+	//
+	//  EC2-VPC-InstanceStore
+	//
+	// instance, image, security-group, network-interface
+	//
+	//  EC2-VPC-InstanceStore-Subnet
+	//
+	// instance, image, security-group, network-interface, subnet
+	//
+	//  EC2-VPC-EBS
+	//
+	// instance, image, security-group, network-interface, volume
+	//
+	//  EC2-VPC-EBS-Subnet
+	//
+	// instance, image, security-group, network-interface, subnet, volume
+	ResourceHandlingOption *string `min:"1" type:"string"`
 
 	// An AWS account ID that specifies the owner of any simulated resource that
 	// does not identify its owner in the resource ARN, such as an S3 bucket or

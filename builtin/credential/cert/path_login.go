@@ -49,6 +49,13 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
+	validChain := b.checkForValidChain(req.Storage, trustedChains)
+	if !validChain {
+		return logical.ErrorResponse(
+			"no chain containing non-revoked certificates could be found for this login certificate",
+		), nil
+	}
+
 	// Match the trusted chain with the policy
 	matched := b.matchPolicy(trustedChains, trusted)
 	if matched == nil {
@@ -128,6 +135,24 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 	return
 }
 
+func (b *backend) checkForValidChain(store logical.Storage, chains [][]*x509.Certificate) bool {
+	var badChain bool
+	for _, chain := range chains {
+		badChain = false
+		for _, cert := range chain {
+			badCRLs := b.findSerialInCRLs(cert.SerialNumber)
+			if len(badCRLs) != 0 {
+				badChain = true
+				break
+			}
+		}
+		if !badChain {
+			return true
+		}
+	}
+	return false
+}
+
 // parsePEM parses a PEM encoded x509 certificate
 func parsePEM(raw []byte) (certs []*x509.Certificate) {
 	for len(raw) > 0 {
@@ -136,7 +161,7 @@ func parsePEM(raw []byte) (certs []*x509.Certificate) {
 		if block == nil {
 			break
 		}
-		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+		if (block.Type != "CERTIFICATE" && block.Type != "TRUSTED CERTIFICATE") || len(block.Headers) != 0 {
 			continue
 		}
 

@@ -29,12 +29,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
-				"mounts/*",
 				"auth/*",
 				"remount",
 				"revoke-prefix/*",
-				"policy",
-				"policy/*",
 				"audit",
 				"audit/*",
 				"seal", // Must be set for Core.Seal() logic
@@ -741,7 +738,7 @@ func (b *SystemBackend) handleDisableAuth(
 func (b *SystemBackend) handlePolicyList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the configured policies
-	policies, err := b.Core.policy.ListPolicies()
+	policies, err := b.Core.policyStore.ListPolicies()
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
@@ -753,7 +750,7 @@ func (b *SystemBackend) handlePolicyRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.Core.policy.GetPolicy(name)
+	policy, err := b.Core.policyStore.GetPolicy(name)
 	if err != nil {
 		return handleError(err)
 	}
@@ -786,7 +783,7 @@ func (b *SystemBackend) handlePolicySet(
 	parse.Name = strings.ToLower(name)
 
 	// Update the policy
-	if err := b.Core.policy.SetPolicy(parse); err != nil {
+	if err := b.Core.policyStore.SetPolicy(parse); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
@@ -796,7 +793,7 @@ func (b *SystemBackend) handlePolicySet(
 func (b *SystemBackend) handlePolicyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	if err := b.Core.policy.DeletePolicy(name); err != nil {
+	if err := b.Core.policyStore.DeletePolicy(name); err != nil {
 		return handleError(err)
 	}
 	return nil, nil

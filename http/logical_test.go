@@ -121,6 +121,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"path":         "auth/token/root",
 			"policies":     []interface{}{"root"},
 			"display_name": "root",
+			"orphan":       true,
 			"id":           root,
 			"ttl":          float64(0),
 		},
@@ -155,6 +156,7 @@ func TestLogical_CreateToken(t *testing.T) {
 	})
 
 	var actual map[string]interface{}
+	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"lease_id":       "",
 		"renewable":      false,
@@ -166,7 +168,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"lease_duration": float64(0),
 			"renewable":      false,
 		},
-		"warnings": []interface{}{"policy \"root\" does not exist"},
+		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

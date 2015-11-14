@@ -201,7 +201,6 @@ func (d *downloader) downloadPart(ch chan dlchunk) {
 
 	for {
 		chunk, ok := <-ch
-
 		if !ok {
 			break
 		}
@@ -240,12 +239,23 @@ func (d *downloader) getTotalBytes() int64 {
 	return d.totalBytes
 }
 
-// getTotalBytes is a thread-safe setter for setting the total byte status.
+// setTotalBytes is a thread-safe setter for setting the total byte status.
+// Will extract the object's total bytes from the Content-Range if the file
+// will be chunked, or Content-Length. Content-Length is used when the response
+// does not include a Content-Range. Meaning the object was not chunked. This
+// occurs when the full file fits within the PartSize directive.
 func (d *downloader) setTotalBytes(resp *s3.GetObjectOutput) {
 	d.m.Lock()
 	defer d.m.Unlock()
 
 	if d.totalBytes >= 0 {
+		return
+	}
+
+	if resp.ContentRange == nil {
+		// ContentRange is nil when the full file contents is provied, and
+		// is not chunked. Use ContentLength instead.
+		d.totalBytes = *resp.ContentLength
 		return
 	}
 

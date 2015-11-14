@@ -40,21 +40,24 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
 ## API
 
-### /auth/token/create
+### /auth/token/create[-orphan]
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
     Creates a new token. Certain options are only available to
-    when called by a root token.
+    when called by a root token. If used via the
+	`/auth/token/create-orphan` endpoint, a root token is not
+	required to create an orphan token (otherwise set with the
+	`no_parent` option).
   </dd>
 
   <dt>Method</dt>
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/create`</dd>
+  <dd>`/auth/token/create[-orphan]`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -83,6 +86,12 @@ of the header should be "X-Vault-Token" and the value should be the token.
         <span class="param-flags">optional</span>
         If true and set by a root caller, the token will not have the
         parent token of the caller. This creates a token with no parent.
+      </li>
+      <li>
+        <span class="param">no_default_profile</span>
+        <span class="param-flags">optional</span>
+        If true the `default` profile will not be a part of this token's
+        policy set.
       </li>
       <li>
         <span class="param">lease</span>

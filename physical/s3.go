@@ -32,7 +32,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 
 	bucket, ok := conf["bucket"]
 	if !ok {
-		return nil, fmt.Errorf("'bucket' must be set")
+		bucket = os.Getenv("AWS_S3_BUCKET")
+		if bucket == "" {
+			return nil, fmt.Errorf("'bucket' must be set")
+		}
 	}
 
 	access_key, ok := conf["access_key"]
@@ -46,6 +49,10 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	session_token, ok := conf["session_token"]
 	if !ok {
 		session_token = ""
+	}
+	endpoint, ok := conf["endpoint"]
+	if !ok {
+		endpoint = os.Getenv("AWS_S3_ENDPOINT")
 	}
 	region, ok := conf["region"]
 	if !ok {
@@ -68,6 +75,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 
 	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: creds,
+		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 	}))
 

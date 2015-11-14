@@ -52,7 +52,7 @@ func (c *UnmountCommand) Synopsis() string {
 
 func (c *UnmountCommand) Help() string {
 	helpText := `
-Usage: vault unmount [options] type
+Usage: vault unmount [options] path
 
   Unmount a secret backend.
 

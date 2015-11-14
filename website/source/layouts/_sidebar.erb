@@ -11,16 +11,15 @@
         </div>
     </div>
 
-    <!-- Sidebar navigation -->
-    <ul class="nav sidebar-nav">
+    <ul class="main nav sidebar-nav">
         <li class="first"><a href="/intro/index.html">Intro</a></li>
         <li class=""><a href="/docs/index.html">Docs</a></li>
-        <li class=""><a href="/community.html">Community</a></li>   
+        <li class=""><a href="/community.html">Community</a></li>
     </ul>
-
+    <div class="divider"></div>
     <!-- Sidebar navigation 2-->
-    <ul class="buttons-nav">
-        <li class="first"><a class="v-btn gray sml" href="/downloads.html">Download</a></li>
-        <li class=""><a class="v-btn gray sml" href="https://github.com/hashicorp/vault">GitHub</a></li>
-    </ul>        
+    <ul class="external nav sidebar-nav">
+        <li class="first"><a class="" href="/downloads.html"><%= partial "layouts/svg/svg-download" %>Download</a></li>
+        <li class=""><a class="" href="https://github.com/hashicorp/vault"><%= partial "layouts/svg/svg-github" %>GitHub</a></li>
+    </ul>
 </aside>

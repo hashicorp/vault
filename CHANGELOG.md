@@ -4,13 +4,38 @@ DEPRECATIONS/BREAKING CHANGES:
 
  * Policy Name Casing: Policy names are now normalized to lower-case on write,
    helping prevent accidental case mismatches. For backwards compatibility,
-policy names are not currently normalized when reading or deleting. [GH-676]
+   policy names are not currently normalized when reading or deleting. [GH-676]
+ * Default etcd port number: the default connection string for the `etcd`
+   physical store uses port 2379 instead of port 4001, which is the port used
+   by the supported version 2.x of etcd. [GH-753]
+ * As noted below in the FEATURES section, if your Vault installation contains
+   a policy called `default`, new tokens created will inherit this policy
+   automatically.
+
+FEATURES:
+
+ * **CRL Checking for Certificate Authentication**: The `cert` backend now
+   supports pushing CRLs into the mount and using the contained serial numbers
+   for revocation checking. See the documentation for the `cert` backend for
+   more info. [GH-330]
+ * **Default Policy**: Vault now ensures that a policy named `default` is added
+   to every token. This policy cannot be deleted, but it can be modified
+   (including to an empty policy). There are three endpoints allowed in the
+   default `default` policy, related to token self-management: `lookup-self`,
+   which allows a token to retrieve its own information, and `revoke-self` and
+   `renew-self`, which are self-explanatory. If your existing Vault
+   installation contains a policy called `default`, it will not be overridden,
+   but it will be added to each new token created. You can override this
+   behavior when using manual token creation (i.e. not via an authentication
+   backend) by setting the "no_default_policy" flag to true. [GH-732]
 
 IMPROVEMENTS:
 
  * api: API client now uses a 60 second timeout instead of indefinite [GH-681]
  * api: Implement LookupSelf, RenewSelf, and RevokeSelf functions for auth
    tokens [GH-739]
+ * api: Standardize environment variable reading logic inside the API; the CLI
+   now uses this but can still override via command-line parameters [GH-618]
  * audit: HMAC-SHA256'd client tokens are now stored with each request entry.
    Previously they were only displayed at creation time; this allows much
    better traceability of client actions. [GH-713]
@@ -21,10 +46,23 @@ IMPROVEMENTS:
  * core: Tokens can now renew themselves [GH-455]
  * core: Base64-encoded PGP keys can be used with the CLI for `init` and
    `rekey` operations [GH-653]
+ * core: Print version on startup [GH-765]
+ * core: Access to `sys/policy` and `sys/mounts` now uses the normal ACL system
+   instead of requiring a root token [GH-769]
+ * credential/token: Display whether or not a token is an orphan in the output
+   of a lookup call [GH-766]
  * logical: Allow `.` in path-based variables in many more locations [GH-244]
  * logical: Responses now contain a "warnings" key containing a list of
    warnings returned from the server. These are conditions that did not require
-failing an operation, but of which the client should be aware. [GH-676]
+   failing an operation, but of which the client should be aware. [GH-676]
+ * physical/consul: Consul now uses a connection pool to limit the number of
+   outstanding operations, improving behavior when a lot of operations must
+   happen at once [GH-677]
+ * physical/s3: The S3 endpoint can now be configured, allowing using
+   S3-API-compatible storage solutions [GH-750]
+ * physical/s3: The S3 bucket can now be configured with the `AWS_S3_BUCKET`
+   environment variable [GH-758]
+ * secret/consul: Management tokens can now be created [GH-714]
 
 BUG FIXES:
 
@@ -41,8 +79,12 @@ generate them, leading to client errors.
    [GH-688]
  * core: Fix a potential race condition when (un)sealing the vault with metrics
    enabled [GH-694]
+ * core: Fix an error that could happen in some failure scenarios where Vault
+   could fail to revert to a clean state [GH-733]
+ * core: Ensure secondary indexes are removed when a lease is expired [GH-749]
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
+ * credential/token: Allow creating orphan tokens via an API path [GH-748]
  * secret/generic: Validate given duration at write time, not just read time;
    if stored durations are not parseable, return a warning and the default
    duration rather than an error [GH-718]

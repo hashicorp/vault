@@ -99,3 +99,38 @@ func TestClientRedirect(t *testing.T) {
 		t.Fatalf("Bad: %s", buf.String())
 	}
 }
+
+func TestClientEnvSettings(t *testing.T) {
+	cwd, _ := os.Getwd()
+	oldCACert := os.Getenv(EnvVaultCACert)
+	oldCAPath := os.Getenv(EnvVaultCAPath)
+	oldClientCert := os.Getenv(EnvVaultClientCert)
+	oldClientKey := os.Getenv(EnvVaultClientKey)
+	oldSkipVerify := os.Getenv(EnvVaultInsecure)
+	os.Setenv("VAULT_CACERT", cwd+"/../test/key/ourdomain.cer")
+	os.Setenv("VAULT_CAPATH", cwd+"/../test/key")
+	os.Setenv("VAULT_CLIENT_CERT", cwd+"/../test/key/ourdomain.cer")
+	os.Setenv("VAULT_CLIENT_KEY", cwd+"/../test/key/ourdomain.key")
+	os.Setenv("VAULT_SKIP_VERIFY", "true")
+	defer os.Setenv("VAULT_CACERT", oldCACert)
+	defer os.Setenv("VAULT_CAPATH", oldCAPath)
+	defer os.Setenv("VAULT_CLIENT_CERT", oldClientCert)
+	defer os.Setenv("VAULT_CLIENT_KEY", oldClientKey)
+	defer os.Setenv("VAULT_SKIP_VERIFY", oldSkipVerify)
+
+	config := DefaultConfig()
+	if err := config.ReadEnvironment(); err != nil {
+		t.Fatalf("error reading environment: %v", err)
+	}
+
+	tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
+	if len(tlsConfig.RootCAs.Subjects()) == 0 {
+		t.Fatalf("bad: expected a cert pool with at least one subject")
+	}
+	if len(tlsConfig.Certificates) != 1 {
+		t.Fatalf("bad: expected client tls config to have a client certificate")
+	}
+	if tlsConfig.InsecureSkipVerify != true {
+		t.Fatalf("bad: %s", tlsConfig.InsecureSkipVerify)
+	}
+}

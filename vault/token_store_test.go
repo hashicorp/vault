@@ -662,6 +662,27 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
+	_, ts, root := mockTokenStore(t)
+
+	req := logical.TestRequest(t, logical.WriteOperation, "create-orphan")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"foo"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, _ := ts.Lookup(resp.Auth.ClientToken)
+	if out.Parent != "" {
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
@@ -845,12 +866,39 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
 		"display_name": "root",
+		"orphan":       true,
 		"num_uses":     0,
 		"ttl":          0,
 	}
 	delete(resp.Data, "creation_time")
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
+		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
+	}
+
+	testMakeToken(t, ts, root, "client", []string{"foo"})
+
+	req = logical.TestRequest(t, logical.ReadOperation, "lookup/client")
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	exp = map[string]interface{}{
+		"id":           "client",
+		"policies":     []string{"foo", "default"},
+		"path":         "auth/token/create",
+		"meta":         map[string]string(nil),
+		"display_name": "token",
+		"orphan":       false,
+		"num_uses":     0,
+		"ttl":          2592000,
+	}
+	delete(resp.Data, "creation_time")
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
 	}
 }
 
@@ -912,6 +960,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
 		"display_name": "root",
+		"orphan":       true,
 		"num_uses":     0,
 		"ttl":          0,
 	}

@@ -19,6 +19,9 @@ var Init = {
 		if (this.Pages[id]) {
 			this.Pages[id]();
 		}
+
+    //always initialize sidebar
+		Init.initializeSidebar();
 	},
 
 	initializeSidebar: function(){
@@ -44,12 +47,11 @@ var Init = {
 		    offset: function() {
 		    	return '25%';
 		    }
-		});			
-	},	
+		});
+	},
 
 	Pages: {
 		'page-home': function(){
-			Init.initializeSidebar();
 			Init.initializeDotLockup();
 			Init.initializeWaypoints();
 		}
