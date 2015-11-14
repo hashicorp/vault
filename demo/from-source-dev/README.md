@@ -16,10 +16,21 @@ It is however built from the latest source and should be an easy path to put you
 # This lets you keep using the same shell. <br/>
 # You can also opt to not do the redirect and start a second vagrant ssh shell
 </div></p>
+<p><div># Start a vault server in "dev" mode</div></p>
  * vault server -dev > /tmp/vault.dev.demo.log &
+<p><div># Init the server with only one key (never do this when using real secrets)</div></p>
+ * vault init -key-shares=1 -key-threshold=1
+<p><div># unseal the server with the 'Key 1' value that was created and returned above (Note: keep that string for as long as the virtual host exists)</div></p>
+  * vault unseal 0858e9935f377999fe68d999013b391e73ae47791af8423b2a023ad9b6258999
+<p><div># Auth with the 'Root Token' returned above (Note: keep that string for as long as the virtual host exists)</div></p>
+    * vault auth 8c02299d-6905-e176-99f1-4f0560eacb99
 <p><div># Then enter any other vault commands you want to....</div></p>
   * vault status
   * vault mounts
+  * vault audit-enable file path=/var/log/vault_audit.log,description="send to a file"
+  * vault policies
+  * vault policy-write lookup-self /vagrant/policy_lookup-self.hcl
+  * vault auth -methods
   * vault write secret/hello value=world excited=yes
   * vault read secret/hello
   * vault read -format=json secret/hello
