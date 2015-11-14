@@ -16,7 +16,6 @@ It is however built from the latest source and should be an easy path to put you
 # This lets you keep using the same shell. <br/>
 # You can also opt to not do the redirect and start a second vagrant ssh shell
 </div></p>
-<p><div># Start a vault server in "dev" mode</div></p>
  * vault server -dev > /tmp/vault.dev.demo.log &
 <p><div># Init the server with only one key (never do this when using real secrets)</div></p>
  * vault init -key-shares=1 -key-threshold=1
