@@ -47,6 +47,9 @@ website/build
 # ignore my local notes files.
 local.*
 
+# keep demo hcl
+!demo\from-source-dev\policy_lookup-self.hcl
+
 .DS_Store
 .idea
 
