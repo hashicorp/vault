@@ -87,6 +87,7 @@ var BuiltinBackends = map[string]Factory{
 	"s3":        newS3Backend,
 	"etcd":      newEtcdBackend,
 	"mysql":     newMySQLBackend,
+	"postgres":  newPostgreSQLBackend,
 }
 
 // PermitPool is a wrapper around a semaphore library to keep things
