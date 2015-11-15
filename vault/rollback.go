@@ -29,7 +29,12 @@ const (
 // is in-flight at any given time within a single seal/unseal phase.
 type RollbackManager struct {
 	logger *log.Logger
-	mounts *MountTable
+
+	// This gives the current mount table, plus a RWMutex that is
+	// locked for reading. It is up to the caller to RUnlock it
+	// when done with the mount table
+	mounts func() []*MountEntry
+
 	router *Router
 	period time.Duration
 
@@ -50,7 +55,7 @@ type rollbackState struct {
 }
 
 // NewRollbackManager is used to create a new rollback manager
-func NewRollbackManager(logger *log.Logger, mounts *MountTable, router *Router) *RollbackManager {
+func NewRollbackManager(logger *log.Logger, mounts func() []*MountEntry, router *Router) *RollbackManager {
 	r := &RollbackManager{
 		logger:     logger,
 		mounts:     mounts,
@@ -101,12 +106,12 @@ func (m *RollbackManager) run() {
 
 // triggerRollbacks is used to trigger the rollbacks across all the backends
 func (m *RollbackManager) triggerRollbacks() {
-	m.mounts.RLock()
-	defer m.mounts.RUnlock()
 	m.inflightLock.Lock()
 	defer m.inflightLock.Unlock()
 
-	for _, e := range m.mounts.Entries {
+	mounts := m.mounts()
+
+	for _, e := range mounts {
 		if _, ok := m.inflight[e.Path]; !ok {
 			m.startRollback(e.Path)
 		}
@@ -127,6 +132,8 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
+	m.logger.Printf("[DEBUG] rollback: attempting rollback on %s", path)
+
 	defer func() {
 		rs.lastError = err
 		rs.Done()
@@ -177,7 +184,16 @@ func (m *RollbackManager) Rollback(path string) error {
 
 // startRollback is used to start the rollback manager after unsealing
 func (c *Core) startRollback() error {
-	c.rollback = NewRollbackManager(c.logger, c.mounts, c.router)
+	mountsFunc := func() []*MountEntry {
+		ret := []*MountEntry{}
+		c.mountsLock.RLock()
+		defer c.mountsLock.RUnlock()
+		for _, entry := range c.mounts.Entries {
+			ret = append(ret, entry)
+		}
+		return ret
+	}
+	c.rollback = NewRollbackManager(c.logger, mountsFunc, c.router)
 	c.rollback.Start()
 	return nil
 }

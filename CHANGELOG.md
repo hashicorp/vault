@@ -82,6 +82,7 @@ generate them, leading to client errors.
  * core: Fix an error that could happen in some failure scenarios where Vault
    could fail to revert to a clean state [GH-733]
  * core: Ensure secondary indexes are removed when a lease is expired [GH-749]
+ * core: Ensure rollback manager uses an up-to-date mounts table [GH-771]
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
  * credential/token: Allow creating orphan tokens via an API path [GH-748]

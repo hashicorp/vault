@@ -214,13 +214,25 @@ type Core struct {
 	// configuration
 	mounts *MountTable
 
+	// mountsLock is used to ensure that the mounts table does not
+	// change underneath a calling function
+	mountsLock sync.RWMutex
+
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
 
+	// authLock is used to ensure that the auth table does not
+	// change underneath a calling function
+	authLock sync.RWMutex
+
 	// audit is loaded after unseal since it is a protected
 	// configuration
 	audit *MountTable
+
+	// auditLock is used to ensure that the audit table does not
+	// change underneath a calling function
+	auditLock sync.RWMutex
 
 	// auditBroker is used to ingest the audit events and fan
 	// out into the configured audit backends
