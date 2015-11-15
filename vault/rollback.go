@@ -33,7 +33,7 @@ type RollbackManager struct {
 	// This gives the current mount table, plus a RWMutex that is
 	// locked for reading. It is up to the caller to RUnlock it
 	// when done with the mount table
-	mounts func() (*MountTable, *sync.RWMutex)
+	mounts func() []*MountEntry
 
 	router *Router
 	period time.Duration
@@ -55,7 +55,7 @@ type rollbackState struct {
 }
 
 // NewRollbackManager is used to create a new rollback manager
-func NewRollbackManager(logger *log.Logger, mounts func() (*MountTable, *sync.RWMutex), router *Router) *RollbackManager {
+func NewRollbackManager(logger *log.Logger, mounts func() []*MountEntry, router *Router) *RollbackManager {
 	r := &RollbackManager{
 		logger:     logger,
 		mounts:     mounts,
@@ -109,14 +109,9 @@ func (m *RollbackManager) triggerRollbacks() {
 	m.inflightLock.Lock()
 	defer m.inflightLock.Unlock()
 
-	mounts, mountsLock := m.mounts()
-	mountsLock.RLock()
-	defer mountsLock.RUnlock()
-	if mounts == nil {
-		return
-	}
+	mounts := m.mounts()
 
-	for _, e := range mounts.Entries {
+	for _, e := range mounts {
 		if _, ok := m.inflight[e.Path]; !ok {
 			m.startRollback(e.Path)
 		}
@@ -189,8 +184,14 @@ func (m *RollbackManager) Rollback(path string) error {
 
 // startRollback is used to start the rollback manager after unsealing
 func (c *Core) startRollback() error {
-	mountsFunc := func() (*MountTable, *sync.RWMutex) {
-		return c.mounts, &c.mountsLock
+	mountsFunc := func() []*MountEntry {
+		ret := []*MountEntry{}
+		c.mountsLock.RLock()
+		defer c.mountsLock.RUnlock()
+		for _, entry := range c.mounts.Entries {
+			ret = append(ret, entry)
+		}
+		return ret
 	}
 	c.rollback = NewRollbackManager(c.logger, mountsFunc, c.router)
 	c.rollback.Start()

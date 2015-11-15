@@ -615,12 +615,11 @@ func (b *SystemBackend) handleMountTuneWrite(
 
 		if newDefault != nil || newMax != nil {
 			b.Core.mountsLock.Lock()
+			defer b.Core.mountsLock.Unlock()
 			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
-				b.Core.mountsLock.Unlock()
 				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
 				return handleError(err)
 			}
-			b.Core.mountsLock.Unlock()
 		}
 	}
 
