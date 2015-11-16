@@ -85,9 +85,9 @@ information.`,
 
 			"enforce_hostnames": &framework.FieldSchema{
 				Type:    framework.TypeBool,
-				Default: false,
+				Default: true,
 				Description: `If set, only valid host names are allowed for
-CN and SANs.`,
+CN and SANs. Defaults to true.`,
 			},
 
 			"allow_ip_sans": &framework.FieldSchema{
@@ -142,11 +142,11 @@ the key_type.`,
 
 			"use_csr_common_name": &framework.FieldSchema{
 				Type:    framework.TypeBool,
-				Default: false,
+				Default: true,
 				Description: `If set, when used with a signing profile,
 the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
-Names.`,
+Names. Defaults to true.`,
 			},
 		},
 

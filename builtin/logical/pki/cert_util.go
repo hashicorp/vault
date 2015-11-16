@@ -336,16 +336,16 @@ func generateCreationBundle(b *backend,
 	var err error
 
 	// Get the common name(s)
-	cn := data.Get("common_name").(string)
-	if len(cn) == 0 {
-		if csr != nil {
-			if role.UseCSRCommonName {
-				cn = csr.Subject.CommonName
-			} else {
-				return nil, certutil.UserError{Err: `the common_name field must be supplied when "use_csr_common_name" is not specified in the role`}
-			}
-		} else {
-			return nil, certutil.UserError{Err: "the common_name field is required"}
+	var cn string
+	if csr != nil {
+		if role.UseCSRCommonName {
+			cn = csr.Subject.CommonName
+		}
+	}
+	if cn == "" {
+		cn = data.Get("common_name").(string)
+		if cn == "" {
+			return nil, certutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
 		}
 	}
 

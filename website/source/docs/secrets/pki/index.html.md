@@ -348,7 +348,7 @@ subpath for interactive help output.
     Generates a new private key and a CSR for signing. If using Vault as a
     root, and for many other CAs, the various parameters on the final
     certificate are set at signing time and may or may not honor the parameters
-    set here. If the path ends with `external`, the private key will be
+    set here. If the path ends with `exported`, the private key will be
     returned in the response; if it is `internal` the private key will not be
     returned and *cannot be retrieved later*. <br /><br />This is mostly meant
     as a helper function, and not all possible parameters that can be set in a
@@ -427,7 +427,7 @@ subpath for interactive help output.
   <dt>Description</dt>
   <dd>
     Generates a new self-signed CA certificate and private key. If the path
-    ends with `external`, the private key will be returned in the response; if
+    ends with `exported`, the private key will be returned in the response; if
     it is `internal` the private key will not be returned and *cannot be
     retrieved later*. Distribution points use the values set via `config/urls`.
   </dd>
@@ -699,26 +699,19 @@ subpath for interactive help output.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Allows setting the duration for which the generated CRL should be marked
+    Allows getting the duration for which the generated CRL should be marked
     valid.
   </dd>
 
   <dt>Method</dt>
-  <dd>POST</dd>
+  <dd>GET</dd>
 
   <dt>URL</dt>
   <dd>`/pki/config/crl`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-      <li>
-        <span class="param">expiry</span>
-        <span class="param-flags">required</span>
-        The time until expiration. Defaults to `72h`.
-      </li>
-    </ul>
+    None
   </dd>
 
   <dt>Returns</dt>
@@ -1052,7 +1045,7 @@ subpath for interactive help output.
         <span class="param">enforce_hostnames</span>
         <span class="param-flags">optional</span>
         If set, only valid host names are allowed for CNs, DNS SANs, and the
-        host part of email addresses. Defaults to `false`.
+        host part of email addresses. Defaults to `true`.
       </li>
       <li>
         <span class="param">allow_ip_sans</span>
