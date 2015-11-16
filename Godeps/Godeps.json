@@ -69,9 +69,24 @@
 			"Rev": "aed0bed4103ed45330f4d116eeb73c88310f5b75"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-etcd/etcd",
-			"Comment": "v2.0.0-38-g003851b",
-			"Rev": "003851be7bb0694fe3cc457a49529a19388ee7cf"
+			"ImportPath": "github.com/coreos/etcd/client",
+			"Comment": "v2.3.0-alpha.0-40-g185097f",
+			"Rev": "185097ffaa627b909007e772c175e8fefac17af3"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/pkg/pathutil",
+			"Comment": "v2.3.0-alpha.0-40-g185097f",
+			"Rev": "185097ffaa627b909007e772c175e8fefac17af3"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/pkg/transport",
+			"Comment": "v2.3.0-alpha.0-40-g185097f",
+			"Rev": "185097ffaa627b909007e772c175e8fefac17af3"
+		},
+		{
+			"ImportPath": "github.com/coreos/etcd/pkg/types",
+			"Comment": "v2.3.0-alpha.0-40-g185097f",
+			"Rev": "185097ffaa627b909007e772c175e8fefac17af3"
 		},
 		{
 			"ImportPath": "github.com/duosecurity/duo_api_golang",

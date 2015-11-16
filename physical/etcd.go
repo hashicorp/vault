@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/coreos/go-etcd/etcd"
+	"github.com/coreos/etcd/client"
+	"github.com/coreos/etcd/pkg/transport"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -26,7 +28,7 @@ const (
 	EtcdMachineDelimiter = ","
 
 	// The lock TTL matches the default that Consul API uses, 15 seconds.
-	EtcdLockTTL = uint64(15)
+	EtcdLockTTL = 15 * time.Second
 
 	// The amount of time to wait between the semaphore key renewals
 	EtcdLockRenewInterval = 5 * time.Second
@@ -49,8 +51,8 @@ var (
 // errorIsMissingKey returns true if the given error is an etcd error with an
 // error code corresponding to a missing key.
 func errorIsMissingKey(err error) bool {
-	etcdErr, ok := err.(*etcd.EtcdError)
-	return ok && etcdErr.ErrorCode == 100
+	etcdErr, ok := err.(*client.Error)
+	return ok && etcdErr.Code == 100
 }
 
 // EtcdBackend is a physical backend that stores data at specific
@@ -58,7 +60,7 @@ func errorIsMissingKey(err error) bool {
 // it allows Vault to run on multiple machines in a highly-available manner.
 type EtcdBackend struct {
 	path   string
-	client *etcd.Client
+	kAPI   client.KeysAPI
 }
 
 // newEtcdBackend constructs a etcd backend using a given machine address.
@@ -83,27 +85,49 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 
 	// Create a new client from the supplied address and attempt to sync with the
 	// cluster.
-	var client *etcd.Client
-	cert, has_cert := conf["tls_cert_file"]
-	key, has_key := conf["tls_key_file"]
-	ca, has_ca := conf["tls_ca_file"]
-	if has_cert || has_key || has_ca {
-		var err error
-		client, err = etcd.NewTLSClient(machinesParsed, cert, key, ca)
-		if err != nil {
-			return nil, err
+	var cTransport client.CancelableTransport
+	cert, hasCert := conf["tls_cert_file"]
+	key, hasKey := conf["tls_key_file"]
+	ca, hasCa := conf["tls_ca_file"]
+	if (hasCert && hasKey) || hasCa {
+		var transportErr error
+		tls := transport.TLSInfo{
+			CAFile:   ca,
+			CertFile: cert,
+			KeyFile:  key,
+		}
+		cTransport, transportErr = transport.NewTransport(tls, 30 * time.Second)
+
+		if transportErr != nil {
+			return nil, transportErr
 		}
 	} else {
-		client = etcd.NewClient(machinesParsed)
+		cTransport = client.DefaultTransport
 	}
-	if !client.SyncCluster() {
+
+	cfg := client.Config{
+		Endpoints: machinesParsed,
+		Transport: cTransport,
+	}
+
+	c, err := client.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
+	syncErr := c.Sync(ctx)
+	cancel()
+	if syncErr != nil {
 		return nil, EtcdSyncClusterError
 	}
+
+	kAPI := client.NewKeysAPI(c)
 
 	// Setup the backend.
 	return &EtcdBackend{
 		path:   path,
-		client: client,
+		kAPI: kAPI,
 	}, nil
 }
 
@@ -111,7 +135,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 func (c *EtcdBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"etcd", "put"}, time.Now())
 	value := base64.StdEncoding.EncodeToString(entry.Value)
-	_, err := c.client.Set(c.nodePath(entry.Key), value, 0)
+	_, err := c.kAPI.Set(context.Background(), c.nodePath(entry.Key), value, nil)
 	return err
 }
 
@@ -119,7 +143,11 @@ func (c *EtcdBackend) Put(entry *Entry) error {
 func (c *EtcdBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"etcd", "get"}, time.Now())
 
-	response, err := c.client.Get(c.nodePath(key), false, false)
+	getOpts := &client.GetOptions{
+		Recursive: false,
+		Sort: false,
+	}
+	response, err := c.kAPI.Get(context.Background(), c.nodePath(key), getOpts)
 	if err != nil {
 		if errorIsMissingKey(err) {
 			return nil, nil
@@ -145,7 +173,10 @@ func (c *EtcdBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"etcd", "delete"}, time.Now())
 
 	// Remove the key, non-recursively.
-	_, err := c.client.Delete(c.nodePath(key), false)
+	delOpts := &client.DeleteOptions{
+		Recursive: false,
+	}
+	_, err := c.kAPI.Delete(context.Background(), c.nodePath(key), delOpts)
 	if err != nil && !errorIsMissingKey(err) {
 		return err
 	}
@@ -162,7 +193,11 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 
 	// Get the directory, non-recursively, from etcd. If the directory is
 	// missing, we just return an empty list of contents.
-	response, err := c.client.Get(path, true, false)
+	getOpts := &client.GetOptions{
+		Recursive: false,
+		Sort: true,
+	}
+	response, err := c.kAPI.Get(context.Background(), path, getOpts)
 	if err != nil {
 		if errorIsMissingKey(err) {
 			return []string{}, nil
@@ -207,7 +242,7 @@ func (b *EtcdBackend) nodePathLock(key string) string {
 // Lock is used for mutual exclusion based on the given key.
 func (c *EtcdBackend) LockWith(key, value string) (Lock, error) {
 	return &EtcdLock{
-		client:          c.client,
+		kAPI:            c.kAPI,
 		value:           value,
 		semaphoreDirKey: c.nodePathLock(key),
 	}, nil
@@ -215,7 +250,7 @@ func (c *EtcdBackend) LockWith(key, value string) (Lock, error) {
 
 // EtcdLock emplements a lock using and etcd backend.
 type EtcdLock struct {
-	client                               *etcd.Client
+	kAPI                                 client.KeysAPI
 	value, semaphoreDirKey, semaphoreKey string
 	lock                                 sync.Mutex
 }
@@ -226,36 +261,47 @@ func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
 	// request onto a semaphore. In the rest of the comments, we refer to the
 	// resulting key as a "semaphore key".
 	// https://coreos.com/etcd/docs/2.0.8/api.html#atomically-creating-in-order-keys
-	response, err := c.client.CreateInOrder(c.semaphoreDirKey, c.value, EtcdLockTTL)
+	opts := &client.CreateInOrderOptions{
+		TTL: EtcdLockTTL,
+	}
+	response, err := c.kAPI.CreateInOrder(context.Background(), c.semaphoreDirKey, c.value, opts)
 	if err != nil {
 		return "", 0, err
 	}
-	return response.Node.Key, response.EtcdIndex, nil
+	return response.Node.Key, response.Index, nil
 }
 
 // renewSemaphoreKey renews an existing semaphore key.
 func (c *EtcdLock) renewSemaphoreKey() (string, uint64, error) {
-	response, err := c.client.Update(c.semaphoreKey, c.value, EtcdLockTTL)
+	setOpts := &client.SetOptions{
+		TTL: EtcdLockTTL,
+		PrevExist: client.PrevExist,
+	}
+	response, err := c.kAPI.Set(context.Background(), c.semaphoreKey, c.value, setOpts)
 	if err != nil {
 		return "", 0, err
 	}
-	return response.Node.Key, response.EtcdIndex, nil
+	return response.Node.Key, response.Index, nil
 }
 
 // getSemaphoreKey determines which semaphore key holder has aquired the lock
 // and its value.
 func (c *EtcdLock) getSemaphoreKey() (string, string, uint64, error) {
 	// Get the list of waiters in order to see if we are next.
-	response, err := c.client.Get(c.semaphoreDirKey, true, false)
+	getOpts := &client.GetOptions{
+		Recursive: false,
+		Sort: true,
+	}
+	response, err := c.kAPI.Get(context.Background(), c.semaphoreDirKey, getOpts)
 	if err != nil {
 		return "", "", 0, err
 	}
 
 	// Make sure the list isn't empty.
 	if response.Node.Nodes.Len() == 0 {
-		return "", "", response.EtcdIndex, nil
+		return "", "", response.Index, nil
 	}
-	return response.Node.Nodes[0].Key, response.Node.Nodes[0].Value, response.EtcdIndex, nil
+	return response.Node.Nodes[0].Key, response.Node.Nodes[0].Value, response.Index, nil
 }
 
 // isHeld determines if we are the current holders of the lock.
@@ -322,7 +368,8 @@ func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan
 
 	for {
 		// Start a non-recursive watch of the given key.
-		response, err := c.client.Watch(key, etcdIndex, false, nil, nil)
+		w := c.kAPI.Watcher(key, &client.WatcherOptions{AfterIndex: etcdIndex, Recursive: false})
+		response, err := w.Next(context.TODO())
 		if err != nil {
 
 			// If the key is just missing, we can exit the loop.
@@ -350,7 +397,7 @@ func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan
 		}
 
 		// Update the etcd index.
-		etcdIndex = response.EtcdIndex + 1
+		etcdIndex = response.Index + 1
 	}
 
 	// Regardless of what happened, we need to close the close channel.
@@ -390,11 +437,12 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr 
 
 	// Create an etcd-compatible boolean stop channel from the provided
 	// interface stop channel.
-	boolStopCh := make(chan bool)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-stopCh
-		close(boolStopCh)
+		cancel()
 	}()
+	defer cancel()
 
 	// Create a channel to signal when we lose the semaphore key.
 	done := make(chan struct{})
@@ -410,16 +458,20 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr 
 	for semaphoreKey != currentSemaphoreKey {
 		var err error
 
-		// Start a watch of the entire lock directory, providing the stop channel.
-		response, err := c.client.Watch(c.semaphoreDirKey, currentEtcdIndex+1, true, nil, boolStopCh)
+		// Start a watch of the entire lock directory
+		w := c.kAPI.Watcher(c.semaphoreDirKey, &client.WatcherOptions{AfterIndex: currentEtcdIndex, Recursive: true})
+		response, err := w.Next(ctx)
 		if err != nil {
 
 			// If the error is not an etcd error, we can assume it's a notification
 			// of the stop channel having closed. In this scenario, we also want to
 			// remove our semaphore key as we are no longer waiting to aquire the
 			// lock.
-			if _, ok := err.(*etcd.EtcdError); !ok {
-				_, err = c.client.Delete(c.semaphoreKey, false)
+			if _, ok := err.(*client.Error); !ok {
+				delOpts := &client.DeleteOptions{
+					Recursive: false,
+				}
+				_, err = c.kAPI.Delete(context.Background(), c.semaphoreKey, delOpts)
 			}
 			return nil, err
 		}
@@ -438,7 +490,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr 
 		}
 	}
 
-	go c.watchForKeyRemoval(c.semaphoreKey, currentEtcdIndex+1, done)
+	go c.watchForKeyRemoval(c.semaphoreKey, currentEtcdIndex, done)
 	return done, nil
 }
 
@@ -457,7 +509,10 @@ func (c *EtcdLock) Unlock() error {
 	}
 
 	// Delete our semaphore key.
-	if _, err := c.client.Delete(c.semaphoreKey, false); err != nil {
+	delOpts := &client.DeleteOptions{
+		Recursive: false,
+	}
+	if _, err := c.kAPI.Delete(context.Background(), c.semaphoreKey, delOpts); err != nil {
 		return err
 	}
 	return nil
