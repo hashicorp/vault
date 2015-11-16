@@ -2,6 +2,7 @@ package pki
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/fatih/structs"
@@ -40,6 +41,16 @@ for the OCSP servers attribute`,
 		HelpSynopsis:    pathConfigURLsHelpSyn,
 		HelpDescription: pathConfigURLsHelpDesc,
 	}
+}
+
+func validateURLs(urls []string) (string, error) {
+	for _, curr := range urls {
+		if _, err := url.Parse(curr); err != nil {
+			return curr, err
+		}
+	}
+
+	return "", nil
 }
 
 func getURLs(req *logical.Request) (*urlEntries, error) {
@@ -110,14 +121,26 @@ func (b *backend) pathWriteURL(
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.IssuingCertificates = splitURLs
+		if badUrl, err := validateURLs(entries.CRLDistributionPoints); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"invalid URL found in issuing certificates; url is %s, error is %s", badUrl, err)), nil
+		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.CRLDistributionPoints = splitURLs
+		if badUrl, err := validateURLs(entries.CRLDistributionPoints); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"invalid URL found in CRL distribution points; url is %s, error is %s", badUrl, err)), nil
+		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.OCSPServers = splitURLs
+		if badUrl, err := validateURLs(entries.CRLDistributionPoints); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"invalid URL found in OCSP servers; url is %s, error is %s", badUrl, err)), nil
+		}
 	}
 
 	return nil, writeURLs(req, entries)
