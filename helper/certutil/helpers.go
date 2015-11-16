@@ -72,8 +72,7 @@ func ParsePKIMap(data map[string]interface{}) (*ParsedCertBundle, error) {
 	return result.ToParsedCertBundle()
 }
 
-// ParsePKIJSON takes a JSON-encoded string and returns a CertBundle
-// ParsedCertBundle.
+// ParsePKIJSON takes a JSON-encoded string and returns a ParsedCertBundle.
 //
 // This can be either the output of an
 // issue call from the PKI backend or just its data member; or,
