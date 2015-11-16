@@ -483,9 +483,6 @@ func generateCreationBundle(b *backend,
 	}
 
 	if signingBundle != nil {
-		if signingBundle.Certificate.MaxPathLen == 0 {
-			return nil, certutil.UserError{Err: "signing CA has a max path length of zero"}
-		}
 		creationBundle.URLs = signingBundle.URLs
 		if role.MaxPathLength != nil {
 			creationBundle.MaxPathLength = *role.MaxPathLength
@@ -493,8 +490,10 @@ func generateCreationBundle(b *backend,
 			switch {
 			case signingBundle.Certificate.MaxPathLen < 0:
 				creationBundle.MaxPathLength = -1
-			case signingBundle.Certificate.MaxPathLen == 0:
-				return nil, certutil.UserError{Err: "signing CA has a max path length of zero"}
+			case signingBundle.Certificate.MaxPathLen == 0 &&
+				signingBundle.Certificate.MaxPathLenZero:
+				// The signing function will ensure that we do not issue a CA cert
+				creationBundle.MaxPathLength = 0
 			default:
 				// If this takes it to zero, we handle this case later if
 				// necessary
@@ -846,6 +845,11 @@ func signCertificate(creationInfo *certCreationBundle,
 
 	if creationInfo.IsCA {
 		certTemplate.IsCA = true
+
+		if creationInfo.SigningBundle.Certificate.MaxPathLen == 0 &&
+			creationInfo.SigningBundle.Certificate.MaxPathLenZero {
+			return nil, certutil.UserError{Err: "signing certificate has a max path length of zero, and cannot issue further CA certificates"}
+		}
 
 		certTemplate.MaxPathLen = creationInfo.MaxPathLength
 		if certTemplate.MaxPathLen == 0 {

@@ -288,7 +288,7 @@ func (b *backend) pathCAGenerateRoot(
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
-		resp.AddWarning("Max path length of the generated certificate is zero")
+		resp.AddWarning("Max path length of the generated certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	return resp, nil
@@ -444,7 +444,7 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
-		resp.AddWarning("Max path length of the signed certificate is zero")
+		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	return resp, nil
