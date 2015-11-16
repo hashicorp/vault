@@ -11,56 +11,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-var issueAndSignSchema = map[string]*framework.FieldSchema{
-	"role": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The desired role with configuration for this
-request`,
-	},
-
-	"common_name": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested common name; if you want more than
-one, specify the alternative names in the
-alt_names map. If email protection is enabled
-in the role, this may be an email address.`,
-	},
-
-	"alt_names": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested Subject Alternative Names, if any,
-in a comma-delimited list. If email protection
-is enabled for the role, this may contain
-email addresses.`,
-	},
-
-	"ip_sans": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested IP SANs, if any, in a
-comma-delimited list`,
-	},
-
-	"ttl": &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `The requested Time To Live for the certificate;
-sets the expiration date. If not specified
-the role default, backend default, or system
-default TTL is used, in that order. Cannot
-be later than the role max TTL.`,
-	},
-
-	"format": &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "pem",
-		Description: `Format for returned data. Can be "pem" or "der";
-defaults to "pem".`,
-	},
-}
-
 func pathIssue(b *backend) *framework.Path {
-	return &framework.Path{
+	ret := &framework.Path{
 		Pattern: "issue/" + framework.GenericNameRegex("role"),
-		Fields:  issueAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathIssue,
@@ -69,12 +22,15 @@ func pathIssue(b *backend) *framework.Path {
 		HelpSynopsis:    pathIssueHelpSyn,
 		HelpDescription: pathIssueHelpDesc,
 	}
+
+	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+
+	return ret
 }
 
 func pathSign(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("role"),
-		Fields:  issueAndSignSchema,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.WriteOperation: b.pathSign,
@@ -83,6 +39,8 @@ func pathSign(b *backend) *framework.Path {
 		HelpSynopsis:    pathSignHelpSyn,
 		HelpDescription: pathSignHelpDesc,
 	}
+
+	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
 
 	ret.Fields["csr"] = &framework.FieldSchema{
 		Type:        framework.TypeString,

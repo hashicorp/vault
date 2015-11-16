@@ -59,6 +59,8 @@ type caInfoBundle struct {
 	URLs *urlEntries
 }
 
+var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
 func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
@@ -134,10 +136,6 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
 func validateNames(req *logical.Request, names []string, role *roleEntry) (string, error) {
-	hostnameRegex, err := regexp.Compile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
-	if err != nil {
-		return "", fmt.Errorf("error compiling hostname regex: %s", err)
-	}
 	for _, name := range names {
 		sanitizedName := name
 		emailDomain := name
@@ -255,6 +253,28 @@ func generateCert(b *backend,
 
 	if isCA {
 		creationBundle.IsCA = isCA
+
+		if signingBundle == nil {
+			// Generating a self-signed root certificate
+			entries, err := getURLs(req)
+			if err != nil {
+				return nil, certutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+			}
+			if entries == nil {
+				entries = &urlEntries{
+					IssuingCertificates:   []string{},
+					CRLDistributionPoints: []string{},
+					OCSPServers:           []string{},
+				}
+			}
+			creationBundle.URLs = entries
+
+			if role.MaxPathLength == nil {
+				creationBundle.MaxPathLength = -1
+			} else {
+				creationBundle.MaxPathLength = *role.MaxPathLength
+			}
+		}
 	}
 
 	parsedBundle, err := createCertificate(creationBundle)
@@ -267,7 +287,7 @@ func generateCert(b *backend,
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
-func generateCSR(b *backend,
+func generateIntermediateCSR(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
 	req *logical.Request,
@@ -482,43 +502,25 @@ func generateCreationBundle(b *backend,
 		Usage:          usage,
 	}
 
-	if signingBundle != nil {
-		creationBundle.URLs = signingBundle.URLs
-		if role.MaxPathLength != nil {
-			creationBundle.MaxPathLength = *role.MaxPathLength
-		} else {
-			switch {
-			case signingBundle.Certificate.MaxPathLen < 0:
-				creationBundle.MaxPathLength = -1
-			case signingBundle.Certificate.MaxPathLen == 0 &&
-				signingBundle.Certificate.MaxPathLenZero:
-				// The signing function will ensure that we do not issue a CA cert
-				creationBundle.MaxPathLength = 0
-			default:
-				// If this takes it to zero, we handle this case later if
-				// necessary
-				creationBundle.MaxPathLength = signingBundle.Certificate.MaxPathLen - 1
-			}
-		}
-	} else {
-		// Bundle for a self-signed root
-		entries, err := getURLs(req)
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-		}
-		if entries == nil {
-			entries = &urlEntries{
-				IssuingCertificates:   []string{},
-				CRLDistributionPoints: []string{},
-				OCSPServers:           []string{},
-			}
-		}
-		creationBundle.URLs = entries
+	if signingBundle == nil {
+		return creationBundle, nil
+	}
 
-		if role.MaxPathLength == nil {
+	creationBundle.URLs = signingBundle.URLs
+	if role.MaxPathLength != nil {
+		creationBundle.MaxPathLength = *role.MaxPathLength
+	} else {
+		switch {
+		case signingBundle.Certificate.MaxPathLen < 0:
 			creationBundle.MaxPathLength = -1
-		} else {
-			creationBundle.MaxPathLength = *role.MaxPathLength
+		case signingBundle.Certificate.MaxPathLen == 0 &&
+			signingBundle.Certificate.MaxPathLenZero:
+			// The signing function will ensure that we do not issue a CA cert
+			creationBundle.MaxPathLength = 0
+		default:
+			// If this takes it to zero, we handle this case later if
+			// necessary
+			creationBundle.MaxPathLength = signingBundle.Certificate.MaxPathLen - 1
 		}
 	}
 
