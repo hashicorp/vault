@@ -59,8 +59,9 @@ func errorIsMissingKey(err error) bool {
 // prefix within Etcd. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
 type EtcdBackend struct {
-	path   string
-	kAPI   client.KeysAPI
+	path       string
+	kAPI       client.KeysAPI
+	permitPool *PermitPool
 }
 
 // newEtcdBackend constructs a etcd backend using a given machine address.
@@ -128,6 +129,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	return &EtcdBackend{
 		path:   path,
 		kAPI: kAPI,
+		permitPool: NewPermitPool(DefaultParallelOperations),
 	}, nil
 }
 
@@ -135,6 +137,10 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 func (c *EtcdBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"etcd", "put"}, time.Now())
 	value := base64.StdEncoding.EncodeToString(entry.Value)
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
 	_, err := c.kAPI.Set(context.Background(), c.nodePath(entry.Key), value, nil)
 	return err
 }
@@ -142,6 +148,9 @@ func (c *EtcdBackend) Put(entry *Entry) error {
 // Get is used to fetch an entry.
 func (c *EtcdBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"etcd", "get"}, time.Now())
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
 
 	getOpts := &client.GetOptions{
 		Recursive: false,
@@ -172,6 +181,9 @@ func (c *EtcdBackend) Get(key string) (*Entry, error) {
 func (c *EtcdBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"etcd", "delete"}, time.Now())
 
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
 	// Remove the key, non-recursively.
 	delOpts := &client.DeleteOptions{
 		Recursive: false,
@@ -190,6 +202,9 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 
 	// Set a directory path from the given prefix.
 	path := c.nodePathDir(prefix)
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
 
 	// Get the directory, non-recursively, from etcd. If the directory is
 	// missing, we just return an empty list of contents.
