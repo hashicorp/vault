@@ -300,27 +300,8 @@ func (b *backend) pathRoleCreate(
 		}
 	}
 
-	switch entry.KeyType {
-	case "rsa":
-		switch entry.KeyBits {
-		case 1024:
-		case 2048:
-		case 4096:
-		case 8192:
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for RSA key: %d", entry.KeyBits)), nil
-		}
-	case "ec":
-		switch entry.KeyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported bit length for EC key: %d", entry.KeyBits)), nil
-		}
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unknown key type %s", entry.KeyType)), nil
+	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
+		return errResp, nil
 	}
 
 	// Store it

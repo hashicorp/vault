@@ -74,11 +74,8 @@ func (b *backend) pathIssueSignCert(
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
 	}
 
-	format := data.Get("format").(string)
-	switch format {
-	case "pem":
-	case "der":
-	default:
+	format := getFormat(data)
+	if format == "" {
 		return logical.ErrorResponse(
 			`The "format" path parameter must be "pem" or "der"`), nil
 	}

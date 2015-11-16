@@ -141,11 +141,8 @@ func (b *backend) getGenerationParams(
 		return
 	}
 
-	format = data.Get("format").(string)
-	switch format {
-	case "pem":
-	case "der":
-	default:
+	format = getFormat(data)
+	if format == "" {
 		errorResp = logical.ErrorResponse(
 			`The "format" path parameter must be "pem" or "der"`)
 		return
@@ -161,34 +158,7 @@ func (b *backend) getGenerationParams(
 		EnforceHostnames: false,
 	}
 
-	switch role.KeyType {
-	case "rsa":
-		switch role.KeyBits {
-		case 1024:
-		case 2048:
-		case 4096:
-		case 8192:
-		default:
-			errorResp = logical.ErrorResponse(fmt.Sprintf(
-				"unsupported bit length for RSA key: %d", role.KeyBits))
-			return
-		}
-	case "ec":
-		switch role.KeyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
-			errorResp = logical.ErrorResponse(fmt.Sprintf(
-				"unsupported bit length for EC key: %d", role.KeyBits))
-			return
-		}
-	default:
-		errorResp = logical.ErrorResponse(fmt.Sprintf(
-			"unknown key type %s", role.KeyType))
-		return
-	}
+	errorResp = validateKeyTypeLength(role.KeyType, role.KeyBits)
 
 	return
 }
@@ -322,10 +292,9 @@ func (b *backend) pathCAGenerateIntermediate(
 		}
 	}
 
-	cb := &certutil.CertBundle{
-		PrivateKey:     csrb.PrivateKey,
-		PrivateKeyType: csrb.PrivateKeyType,
-	}
+	cb := &certutil.CertBundle{}
+	cb.PrivateKey = csrb.PrivateKey
+	cb.PrivateKeyType = csrb.PrivateKeyType
 
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
@@ -343,11 +312,8 @@ func (b *backend) pathCASignIntermediate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	format := data.Get("format").(string)
-	switch format {
-	case "pem":
-	case "der":
-	default:
+	format := getFormat(data)
+	if format == "" {
 		return logical.ErrorResponse(
 			`The "format" path parameter must be "pem" or "der"`,
 		), nil

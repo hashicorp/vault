@@ -3,11 +3,16 @@ package certutil
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -176,4 +181,55 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	}
 
 	return parsedBundle, nil
+}
+
+func GeneratePrivateKey(keyType string, keyBits int, emb EmbeddedParsedPrivateKeyContainer) error {
+	var err error
+	result := &EmbeddedParsedPrivateKey{}
+
+	switch keyType {
+	case "rsa":
+		result.PrivateKeyType = RSAPrivateKey
+		result.PrivateKey, err = rsa.GenerateKey(rand.Reader, keyBits)
+		if err != nil {
+			return InternalError{Err: fmt.Sprintf("error generating RSA private key: %v", err)}
+		}
+		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(result.PrivateKey.(*rsa.PrivateKey))
+	case "ec":
+		result.PrivateKeyType = ECPrivateKey
+		var curve elliptic.Curve
+		switch keyBits {
+		case 224:
+			curve = elliptic.P224()
+		case 256:
+			curve = elliptic.P256()
+		case 384:
+			curve = elliptic.P384()
+		case 521:
+			curve = elliptic.P521()
+		default:
+			return UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", keyBits)}
+		}
+		result.PrivateKey, err = ecdsa.GenerateKey(curve, rand.Reader)
+		if err != nil {
+			return InternalError{Err: fmt.Sprintf("error generating EC private key: %v", err)}
+		}
+		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(result.PrivateKey.(*ecdsa.PrivateKey))
+		if err != nil {
+			return InternalError{Err: fmt.Sprintf("error marshalling EC private key: %v", err)}
+		}
+	default:
+		return UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
+	}
+
+	emb.SetParsedPrivateKey(result)
+	return nil
+}
+
+func GenerateSerialNumber() (*big.Int, error) {
+	serial, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	if err != nil {
+		return nil, InternalError{Err: fmt.Sprintf("error generating serial number: %v", err)}
+	}
+	return serial, nil
 }

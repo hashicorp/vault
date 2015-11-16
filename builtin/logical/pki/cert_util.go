@@ -1,17 +1,12 @@
 package pki
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"net"
 	"regexp"
 	"strings"
@@ -32,7 +27,7 @@ const (
 	caUsage
 )
 
-type certCreationBundle struct {
+type creationBundle struct {
 	CommonName     string
 	DNSNames       []string
 	EmailAddresses []string
@@ -60,6 +55,47 @@ type caInfoBundle struct {
 }
 
 var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+
+func getFormat(data *framework.FieldData) string {
+	format := data.Get("format").(string)
+	switch format {
+	case "pem":
+	case "der":
+	default:
+		format = ""
+	}
+	return format
+}
+
+func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
+	switch keyType {
+	case "rsa":
+		switch keyBits {
+		case 1024:
+		case 2048:
+		case 4096:
+		case 8192:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf(
+				"unsupported bit length for RSA key: %d", keyBits))
+		}
+	case "ec":
+		switch keyBits {
+		case 224:
+		case 256:
+		case 384:
+		case 521:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf(
+				"unsupported bit length for EC key: %d", keyBits))
+		}
+	default:
+		return logical.ErrorResponse(fmt.Sprintf(
+			"unknown key type %s", keyType))
+	}
+
+	return nil
+}
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
@@ -352,7 +388,7 @@ func generateCreationBundle(b *backend,
 	signingBundle *caInfoBundle,
 	csr *x509.CertificateRequest,
 	req *logical.Request,
-	data *framework.FieldData) (*certCreationBundle, error) {
+	data *framework.FieldData) (*creationBundle, error) {
 	var err error
 
 	// Get the common name(s)
@@ -490,7 +526,7 @@ func generateCreationBundle(b *backend,
 		usage = usage | emailProtectionUsage
 	}
 
-	creationBundle := &certCreationBundle{
+	creationBundle := &creationBundle{
 		CommonName:     cn,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
@@ -529,52 +565,20 @@ func generateCreationBundle(b *backend,
 
 // Performs the heavy lifting of creating a certificate. Returns
 // a fully-filled-in ParsedCertBundle.
-func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBundle, error) {
-	var clientPrivKey crypto.Signer
+func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle, error) {
 	var err error
 	result := &certutil.ParsedCertBundle{}
 
-	var serialNumber *big.Int
-	serialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	serialNumber, err := certutil.GenerateSerialNumber()
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("error getting random serial number")}
+		return nil, err
 	}
 
-	switch creationInfo.KeyType {
-	case "rsa":
-		result.PrivateKeyType = certutil.RSAPrivateKey
-		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating RSA private key")}
-		}
-		result.PrivateKey = clientPrivKey
-		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
-	case "ec":
-		result.PrivateKeyType = certutil.ECPrivateKey
-		var curve elliptic.Curve
-		switch creationInfo.KeyBits {
-		case 224:
-			curve = elliptic.P224()
-		case 256:
-			curve = elliptic.P256()
-		case 384:
-			curve = elliptic.P384()
-		case 521:
-			curve = elliptic.P521()
-		default:
-			return nil, certutil.UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", creationInfo.KeyBits)}
-		}
-		clientPrivKey, err = ecdsa.GenerateKey(curve, rand.Reader)
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating EC private key")}
-		}
-		result.PrivateKey = clientPrivKey
-		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key")}
-		}
-	default:
-		return nil, certutil.UserError{Err: fmt.Sprintf("unknown key type: %s", creationInfo.KeyType)}
+	resultIface := interface{}(result)
+	if err := certutil.GeneratePrivateKey(creationInfo.KeyType,
+		creationInfo.KeyBits,
+		resultIface.(certutil.EmbeddedParsedPrivateKeyContainer)); err != nil {
+		return nil, err
 	}
 
 	subjKeyID, err := certutil.GetSubjKeyID(result.PrivateKey)
@@ -628,7 +632,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 
 		caCert := creationInfo.SigningBundle.Certificate
 
-		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, clientPrivKey.Public(), creationInfo.SigningBundle.PrivateKey)
+		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	} else {
 		// Creating a self-signed root
 		if creationInfo.MaxPathLength == 0 {
@@ -648,7 +652,7 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 		certTemplate.IsCA = true
 		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
-		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, clientPrivKey.Public(), clientPrivKey)
+		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
 	}
 
 	if err != nil {
@@ -674,47 +678,15 @@ func createCertificate(creationInfo *certCreationBundle) (*certutil.ParsedCertBu
 
 // Creates a CSR. This is currently only meant for use when
 // generating an intermediate certificate.
-func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, error) {
-	var clientPrivKey crypto.Signer
+func createCSR(creationInfo *creationBundle) (*certutil.ParsedCSRBundle, error) {
 	var err error
 	result := &certutil.ParsedCSRBundle{}
 
-	switch creationInfo.KeyType {
-	case "rsa":
-		result.PrivateKeyType = certutil.RSAPrivateKey
-		clientPrivKey, err = rsa.GenerateKey(rand.Reader, creationInfo.KeyBits)
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating RSA private key")}
-		}
-		result.PrivateKey = clientPrivKey
-		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(clientPrivKey.(*rsa.PrivateKey))
-	case "ec":
-		result.PrivateKeyType = certutil.ECPrivateKey
-		var curve elliptic.Curve
-		switch creationInfo.KeyBits {
-		case 224:
-			curve = elliptic.P224()
-		case 256:
-			curve = elliptic.P256()
-		case 384:
-			curve = elliptic.P384()
-		case 521:
-			curve = elliptic.P521()
-		default:
-			return nil, certutil.UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", creationInfo.KeyBits)}
-		}
-		clientPrivKey, err = ecdsa.GenerateKey(curve, rand.Reader)
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("error generating EC private key")}
-		}
-		result.PrivateKey = clientPrivKey
-		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(clientPrivKey.(*ecdsa.PrivateKey))
-		if err != nil {
-			return nil, certutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key")}
-		}
-
-	default:
-		return nil, certutil.UserError{Err: fmt.Sprintf("unsupported key type for CA generation: %s", creationInfo.KeyType)}
+	resultIface := interface{}(result)
+	if err := certutil.GeneratePrivateKey(creationInfo.KeyType,
+		creationInfo.KeyBits,
+		resultIface.(certutil.EmbeddedParsedPrivateKeyContainer)); err != nil {
+		return nil, err
 	}
 
 	// Like many root CAs, other information is ignored
@@ -752,7 +724,7 @@ func createCSR(creationInfo *certCreationBundle) (*certutil.ParsedCSRBundle, err
 
 // Performs the heavy lifting of generating a certificate from a CSR.
 // Returns a ParsedCertBundle sans private keys.
-func signCertificate(creationInfo *certCreationBundle,
+func signCertificate(creationInfo *creationBundle,
 	csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, error) {
 	switch {
 	case creationInfo == nil:
@@ -770,10 +742,9 @@ func signCertificate(creationInfo *certCreationBundle,
 
 	result := &certutil.ParsedCertBundle{}
 
-	var serialNumber *big.Int
-	serialNumber, err = rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	serialNumber, err := certutil.GenerateSerialNumber()
 	if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("error getting random serial number")}
+		return nil, err
 	}
 
 	marshaledKey, err := x509.MarshalPKIXPublicKey(csr.PublicKey)
