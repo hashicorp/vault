@@ -3,6 +3,7 @@ package physical
 import (
 	"encoding/base64"
 	"errors"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -42,6 +43,7 @@ const (
 
 var (
 	EtcdSyncClusterError         = errors.New("client setup failed: unable to sync etcd cluster")
+	EtcdAddressError             = errors.New("client setup failed: address must be valid URL (ex. 'scheme://host:port')")
 	EtcdSemaphoreKeysEmptyError  = errors.New("lock queue is empty")
 	EtcdLockHeldError            = errors.New("lock already held")
 	EtcdLockNotHeldError         = errors.New("lock not held")
@@ -83,6 +85,14 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 		machines = address
 	}
 	machinesParsed := strings.Split(machines, EtcdMachineDelimiter)
+
+	// Verify that the machines are valid URLs
+	for _, machine := range machinesParsed {
+		_, urlErr := url.Parse(machine)
+		if urlErr != nil {
+			return nil, EtcdAddressError
+		}
+	}
 
 	// Create a new client from the supplied address and attempt to sync with the
 	// cluster.
