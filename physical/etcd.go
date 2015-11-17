@@ -88,8 +88,8 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 
 	// Verify that the machines are valid URLs
 	for _, machine := range machinesParsed {
-		_, urlErr := url.Parse(machine)
-		if urlErr != nil {
+		u, urlErr := url.Parse(machine)
+		if urlErr != nil || u.Scheme == "" {
 			return nil, EtcdAddressError
 		}
 	}
