@@ -183,6 +183,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	return parsedBundle, nil
 }
 
+// GeneratePrivateKey generates a private key with the specified type and key bits
 func GeneratePrivateKey(keyType string, keyBits int, emb EmbeddedParsedPrivateKeyContainer) error {
 	var err error
 	result := &EmbeddedParsedPrivateKey{}
@@ -226,10 +227,55 @@ func GeneratePrivateKey(keyType string, keyBits int, emb EmbeddedParsedPrivateKe
 	return nil
 }
 
+// GenerateSerialNumber generates a serial number suitable for a certificate
 func GenerateSerialNumber() (*big.Int, error) {
 	serial, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
 		return nil, InternalError{Err: fmt.Sprintf("error generating serial number: %v", err)}
 	}
 	return serial, nil
+}
+
+// ComparePublicKeys compares two public keys and returns true if they match
+func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
+	switch key1Iface.(type) {
+	case *rsa.PublicKey:
+		key1 := key1Iface.(*rsa.PublicKey)
+		key2, ok := key2Iface.(*rsa.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		if key1.N.Cmp(key2.N) != 0 ||
+			key1.E != key2.E {
+			return false, nil
+		}
+		return true, nil
+
+	case *ecdsa.PublicKey:
+		key1 := key1Iface.(*ecdsa.PublicKey)
+		key2, ok := key2Iface.(*ecdsa.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		if key1.X.Cmp(key2.X) != 0 ||
+			key1.Y.Cmp(key2.Y) != 0 {
+			return false, nil
+		}
+		key1Params := key1.Params()
+		key2Params := key2.Params()
+		if key1Params.P.Cmp(key2Params.P) != 0 ||
+			key1Params.N.Cmp(key2Params.N) != 0 ||
+			key1Params.B.Cmp(key2Params.B) != 0 ||
+			key1Params.Gx.Cmp(key2Params.Gx) != 0 ||
+			key1Params.Gy.Cmp(key2Params.Gy) != 0 ||
+			key1Params.BitSize != key2Params.BitSize {
+			return false, nil
+		}
+		return true, nil
+
+	default:
+		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
+	}
+
+	return false, fmt.Errorf("undefined error comparing public keys")
 }

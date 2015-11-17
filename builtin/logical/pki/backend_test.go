@@ -56,7 +56,7 @@ func TestBackend_RSAKey(t *testing.T) {
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
-	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, rsaCACert, rsaCAKey, intdata, reqdata)...)
+	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, rsaCACert, rsaCAKey, ecCACert, intdata, reqdata)...)
 
 	logicaltest.Test(t, testCase)
 }
@@ -86,7 +86,7 @@ func TestBackend_ECKey(t *testing.T) {
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
-	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
+	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, ecCACert, ecCAKey, rsaCACert, intdata, reqdata)...)
 
 	logicaltest.Test(t, testCase)
 }
@@ -480,6 +480,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				"max_path_length": 1,
 			},
 		},
+
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
 			Path:      "config/ca/sign",
@@ -533,7 +534,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 // Generates steps to test out CA configuration -- certificates + CRL expiry,
 // and ensure that the certificates are readable after storing them
-func generateCATestingSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
@@ -613,6 +614,18 @@ func generateCATestingSteps(t *testing.T, caCert, caKey string, intdata, reqdata
 
 		// Now test uploading when the private key is already stored, such
 		// as when uploading a CA signed as the result of a generated CSR
+		// First we test the wrong one, to ensure that the key comparator is
+		// working correctly
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data: map[string]interface{}{
+				"pem_bundle": otherCaCert,
+			},
+			ErrorOk: true,
+		},
+
+		// Now, the right one
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
 			Path:      "config/ca/set",

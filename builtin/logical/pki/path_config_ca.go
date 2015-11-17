@@ -3,7 +3,6 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -446,8 +445,12 @@ func (b *backend) pathCASetWrite(
 			}
 			// If true, the stored private key corresponds to the cert's
 			// public key, so fill it in
-			//panic(fmt.Sprintf("\nparsedCB.PrivateKey.Public().: %#v\nparsedBundle.Certificate.PublicKey"))
-			if reflect.DeepEqual(parsedCB.PrivateKey.Public(), parsedBundle.Certificate.PublicKey) {
+			equal, err := certutil.ComparePublicKeys(parsedCB.PrivateKey.Public(), parsedBundle.Certificate.PublicKey)
+			if err != nil {
+				return logical.ErrorResponse(
+					"stored public key does not match the public key on the certificate"), nil
+			}
+			if equal {
 				parsedBundle.PrivateKey = parsedCB.PrivateKey
 				parsedBundle.PrivateKeyType = parsedCB.PrivateKeyType
 				parsedBundle.PrivateKeyBytes = parsedCB.PrivateKeyBytes
