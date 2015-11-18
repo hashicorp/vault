@@ -296,8 +296,9 @@ subpath for interactive help output.
     containing the CA certificate and its private key, concatenated. Not needed
     if you are generating a self-signed root certificate, and not used if you
     have a signed intermediate CA certificate with a generated key (use the
-    `/pki/intermediate/set-signed` endpoint for that). <br /><br />The
-    information can be provided from a file via a `curl` command similar to the
+    `/pki/intermediate/set-signed` endpoint for that). _If you have already set
+    a certificate and key, they will be overridden._<br /><br />The information
+    can be provided from a file via a `curl` command similar to the
     following:<br/>
 
     ```text
@@ -580,11 +581,12 @@ subpath for interactive help output.
     Generates a new private key and a CSR for signing. If using Vault as a
     root, and for many other CAs, the various parameters on the final
     certificate are set at signing time and may or may not honor the parameters
-    set here. If the path ends with `exported`, the private key will be
-    returned in the response; if it is `internal` the private key will not be
-    returned and *cannot be retrieved later*. <br /><br />This is mostly meant
-    as a helper function, and not all possible parameters that can be set in a
-    CSR are supported.
+    set here. _This will overwrite any previously existing CA private key._ If
+    the path ends with `exported`, the private key will be returned in the
+    response; if it is `internal` the private key will not be returned and
+    *cannot be retrieved later*. <br /><br />This is mostly meant as a helper
+    function, and not all possible parameters that can be set in a CSR are
+    supported.
   </dd>
 
   <dt>Method</dt>
@@ -1029,7 +1031,8 @@ subpath for interactive help output.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Generates a new self-signed CA certificate and private key. If the path
+    Generates a new self-signed CA certificate and private key. _This will
+    overwrite any previously-existing private key and certificate._ If the path
     ends with `exported`, the private key will be returned in the response; if
     it is `internal` the private key will not be returned and *cannot be
     retrieved later*. Distribution points use the values set via `config/urls`.
