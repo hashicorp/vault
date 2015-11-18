@@ -268,3 +268,12 @@ func (r *Request) Send() error {
 
 	return nil
 }
+
+// AddToUserAgent adds the string to the end of the request's current user agent.
+func AddToUserAgent(r *Request, s string) {
+	curUA := r.HTTPRequest.Header.Get("User-Agent")
+	if len(curUA) > 0 {
+		s = curUA + " " + s
+	}
+	r.HTTPRequest.Header.Set("User-Agent", s)
+}

@@ -297,12 +297,7 @@ func marshalInt(info TypeInfo, value interface{}) ([]byte, error) {
 		return nil, nil
 	}
 
-	rv := reflect.ValueOf(value)
-	if rv.IsNil() {
-		return nil, nil
-	}
-
-	switch rv.Type().Kind() {
+	switch rv := reflect.ValueOf(value); rv.Type().Kind() {
 	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 		v := rv.Int()
 		if v > math.MaxInt32 || v < math.MinInt32 {
@@ -315,7 +310,12 @@ func marshalInt(info TypeInfo, value interface{}) ([]byte, error) {
 			return nil, marshalErrorf("marshal int: value %d out of range", v)
 		}
 		return encInt(int32(v)), nil
+	default:
+		if rv.IsNil() {
+			return nil, nil
+		}
 	}
+
 	return nil, marshalErrorf("can not marshal %T into %s", value, info)
 }
 

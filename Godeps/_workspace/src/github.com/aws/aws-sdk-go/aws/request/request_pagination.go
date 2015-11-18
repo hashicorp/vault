@@ -3,6 +3,7 @@ package request
 import (
 	"reflect"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 )
 
@@ -14,7 +15,7 @@ import (
 
 // HasNextPage returns true if this request has more pages of data available.
 func (r *Request) HasNextPage() bool {
-	return r.nextPageTokens() != nil
+	return len(r.nextPageTokens()) > 0
 }
 
 // nextPageTokens returns the tokens to use when asking for the next page of
@@ -25,11 +26,16 @@ func (r *Request) nextPageTokens() []interface{} {
 	}
 
 	if r.Operation.TruncationToken != "" {
-		tr := awsutil.ValuesAtAnyPath(r.Data, r.Operation.TruncationToken)
-		if tr == nil || len(tr) == 0 {
+		tr, _ := awsutil.ValuesAtPath(r.Data, r.Operation.TruncationToken)
+		if len(tr) == 0 {
 			return nil
 		}
+
 		switch v := tr[0].(type) {
+		case *bool:
+			if !aws.BoolValue(v) {
+				return nil
+			}
 		case bool:
 			if v == false {
 				return nil
@@ -37,35 +43,29 @@ func (r *Request) nextPageTokens() []interface{} {
 		}
 	}
 
-	found := false
-	tokens := make([]interface{}, len(r.Operation.OutputTokens))
-
-	for i, outToken := range r.Operation.OutputTokens {
-		v := awsutil.ValuesAtAnyPath(r.Data, outToken)
-		if v != nil && len(v) > 0 {
-			found = true
-			tokens[i] = v[0]
+	tokens := []interface{}{}
+	for _, outToken := range r.Operation.OutputTokens {
+		v, _ := awsutil.ValuesAtPath(r.Data, outToken)
+		if len(v) > 0 {
+			tokens = append(tokens, v[0])
 		}
 	}
 
-	if found {
-		return tokens
-	}
-	return nil
+	return tokens
 }
 
 // NextPage returns a new Request that can be executed to return the next
 // page of result data. Call .Send() on this request to execute it.
 func (r *Request) NextPage() *Request {
 	tokens := r.nextPageTokens()
-	if tokens == nil {
+	if len(tokens) == 0 {
 		return nil
 	}
 
 	data := reflect.New(reflect.TypeOf(r.Data).Elem()).Interface()
 	nr := New(r.Config, r.ClientInfo, r.Handlers, r.Retryer, r.Operation, awsutil.CopyOf(r.Params), data)
 	for i, intok := range nr.Operation.InputTokens {
-		awsutil.SetValueAtAnyPath(nr.Params, intok, tokens[i])
+		awsutil.SetValueAtPath(nr.Params, intok, tokens[i])
 	}
 	return nr
 }

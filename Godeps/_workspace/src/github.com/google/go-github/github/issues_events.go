@@ -52,6 +52,9 @@ type IssueEvent struct {
 	//
 	//     labeled
 	//       A label was added.
+	//
+	//     renamed
+	//       The issue title was changed.
 	Event *string `json:"event,omitempty"`
 
 	// The SHA of the commit that referenced this commit, if applicable.
@@ -60,8 +63,11 @@ type IssueEvent struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	Issue     *Issue     `json:"issue,omitempty"`
 
-	// Only present on 'labeled' events
+	// Only present on 'labeled' events.
 	Label *Label `json:"label,omitempty"`
+
+	// Only present on 'renamed' events.
+	Rename *Rename `json:"rename,omitempty"`
 }
 
 // ListIssueEvents lists events for the specified issue.
@@ -130,4 +136,14 @@ func (s *IssuesService) GetEvent(owner, repo string, id int) (*IssueEvent, *Resp
 	}
 
 	return event, resp, err
+}
+
+// Rename contains details for 'renamed' events.
+type Rename struct {
+	From *string `json:"from,omitempty"`
+	To   *string `json:"to,omitempty"`
+}
+
+func (r Rename) String() string {
+	return Stringify(r)
 }

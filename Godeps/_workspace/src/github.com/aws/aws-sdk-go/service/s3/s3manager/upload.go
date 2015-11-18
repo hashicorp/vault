@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
@@ -444,6 +445,7 @@ func (u *uploader) singlePart(buf io.ReadSeeker) (*UploadOutput, error) {
 	params.Body = buf
 
 	req, out := u.ctx.S3.PutObjectRequest(params)
+	req.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("S3Manager"))
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
@@ -486,8 +488,9 @@ func (u *multiuploader) upload(firstBuf io.ReadSeeker) (*UploadOutput, error) {
 	awsutil.Copy(params, u.in)
 
 	// Create the multipart
-	resp, err := u.ctx.S3.CreateMultipartUpload(params)
-	if err != nil {
+	req, resp := u.ctx.S3.CreateMultipartUploadRequest(params)
+	req.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("S3Manager"))
+	if err := req.Send(); err != nil {
 		return nil, err
 	}
 	u.uploadID = *resp.UploadId
@@ -579,15 +582,15 @@ func (u *multiuploader) readChunk(ch chan chunk) {
 // send performs an UploadPart request and keeps track of the completed
 // part information.
 func (u *multiuploader) send(c chunk) error {
-	resp, err := u.ctx.S3.UploadPart(&s3.UploadPartInput{
+	req, resp := u.ctx.S3.UploadPartRequest(&s3.UploadPartInput{
 		Bucket:     u.in.Bucket,
 		Key:        u.in.Key,
 		Body:       c.buf,
 		UploadId:   &u.uploadID,
 		PartNumber: &c.num,
 	})
-
-	if err != nil {
+	req.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("S3Manager"))
+	if err := req.Send(); err != nil {
 		return err
 	}
 
@@ -623,11 +626,13 @@ func (u *multiuploader) fail() {
 		return
 	}
 
-	u.ctx.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+	req, _ := u.ctx.S3.AbortMultipartUploadRequest(&s3.AbortMultipartUploadInput{
 		Bucket:   u.in.Bucket,
 		Key:      u.in.Key,
 		UploadId: &u.uploadID,
 	})
+	req.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("S3Manager"))
+	req.Send()
 }
 
 // complete successfully completes a multipart upload and returns the response.
@@ -640,13 +645,14 @@ func (u *multiuploader) complete() *s3.CompleteMultipartUploadOutput {
 	// Parts must be sorted in PartNumber order.
 	sort.Sort(u.parts)
 
-	resp, err := u.ctx.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+	req, resp := u.ctx.S3.CompleteMultipartUploadRequest(&s3.CompleteMultipartUploadInput{
 		Bucket:          u.in.Bucket,
 		Key:             u.in.Key,
 		UploadId:        &u.uploadID,
 		MultipartUpload: &s3.CompletedMultipartUpload{Parts: u.parts},
 	})
-	if err != nil {
+	req.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("S3Manager"))
+	if err := req.Send(); err != nil {
 		u.seterr(err)
 		u.fail()
 	}

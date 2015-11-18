@@ -94,7 +94,7 @@ func (r *roundRobinHostPolicy) SetPartitioner(partitioner string) {
 func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 	// i is used to limit the number of attempts to find a host
 	// to the number of hosts known to this policy
-	var i uint32
+	var i int
 	return func() SelectedHost {
 		r.mu.RLock()
 		defer r.mu.RUnlock()
@@ -102,14 +102,14 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 			return nil
 		}
 
-		var host *HostInfo
 		// always increment pos to evenly distribute traffic in case of
 		// failures
 		pos := atomic.AddUint32(&r.pos, 1)
-		if int(i) < len(r.hosts) {
-			host = &r.hosts[(pos)%uint32(len(r.hosts))]
-			i++
+		if i >= len(r.hosts) {
+			return nil
 		}
+		host := &r.hosts[(pos)%uint32(len(r.hosts))]
+		i++
 		return selectedRoundRobinHost{host}
 	}
 }
@@ -201,11 +201,9 @@ func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 		return t.fallback.Pick(qry)
 	}
 
-	var host *HostInfo
-
 	t.mu.RLock()
 	// TODO retrieve a list of hosts based on the replication strategy
-	host = t.tokenRing.GetHostForPartitionKey(routingKey)
+	host := t.tokenRing.GetHostForPartitionKey(routingKey)
 	t.mu.RUnlock()
 
 	if host == nil {

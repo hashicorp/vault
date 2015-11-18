@@ -62,6 +62,7 @@ package ldap
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"gopkg.in/asn1-ber.v1"
@@ -91,6 +92,26 @@ var DerefMap = map[int]string{
 	DerefInSearching:    "DerefInSearching",
 	DerefFindingBaseObj: "DerefFindingBaseObj",
 	DerefAlways:         "DerefAlways",
+}
+
+// NewEntry returns an Entry object with the specified distinguished name and attribute key-value pairs.
+// The map of attributes is accessed in alphabetical order of the keys in order to ensure that, for the
+// same input map of attributes, the output entry will contain the same order of attributes
+func NewEntry(dn string, attributes map[string][]string) *Entry {
+	var attributeNames []string
+	for attributeName := range attributes {
+		attributeNames = append(attributeNames, attributeName)
+	}
+	sort.Strings(attributeNames)
+
+	var encodedAttributes []*EntryAttribute
+	for _, attributeName := range attributeNames {
+		encodedAttributes = append(encodedAttributes, NewEntryAttribute(attributeName, attributes[attributeName]))
+	}
+	return &Entry{
+		DN:         dn,
+		Attributes: encodedAttributes,
+	}
 }
 
 type Entry struct {
@@ -143,6 +164,19 @@ func (e *Entry) PrettyPrint(indent int) {
 	fmt.Printf("%sDN: %s\n", strings.Repeat(" ", indent), e.DN)
 	for _, attr := range e.Attributes {
 		attr.PrettyPrint(indent + 2)
+	}
+}
+
+// NewEntryAttribute returns a new EntryAttribute with the desired key-value pair
+func NewEntryAttribute(name string, values []string) *EntryAttribute {
+	var bytes [][]byte
+	for _, value := range values {
+		bytes = append(bytes, []byte(value))
+	}
+	return &EntryAttribute{
+		Name:       name,
+		Values:     values,
+		ByteValues: bytes,
 	}
 }
 

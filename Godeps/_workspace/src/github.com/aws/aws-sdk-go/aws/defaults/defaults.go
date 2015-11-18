@@ -51,7 +51,7 @@ func Handlers() request.Handlers {
 	var handlers request.Handlers
 
 	handlers.Validate.PushBackNamed(corehandlers.ValidateEndpointHandler)
-	handlers.Build.PushBackNamed(corehandlers.UserAgentHandler)
+	handlers.Build.PushBackNamed(corehandlers.SDKVersionUserAgentHandler)
 	handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
 	handlers.Send.PushBackNamed(corehandlers.SendHandler)
 	handlers.AfterRetry.PushBackNamed(corehandlers.AfterRetryHandler)

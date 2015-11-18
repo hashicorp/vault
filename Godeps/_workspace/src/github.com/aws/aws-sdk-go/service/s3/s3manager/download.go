@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
@@ -213,7 +214,10 @@ func (d *downloader) downloadPart(ch chan dlchunk) {
 				chunk.start, chunk.start+chunk.size-1)
 			in.Range = &rng
 
-			resp, err := d.ctx.S3.GetObject(in)
+			req, resp := d.ctx.S3.GetObjectRequest(in)
+			req.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("S3Manager"))
+			err := req.Send()
+
 			if err != nil {
 				d.seterr(err)
 			} else {

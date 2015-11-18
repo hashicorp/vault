@@ -980,6 +980,7 @@ func (c *S3) ListMultipartUploads(input *ListMultipartUploadsInput) (*ListMultip
 
 func (c *S3) ListMultipartUploadsPages(input *ListMultipartUploadsInput, fn func(p *ListMultipartUploadsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListMultipartUploadsRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
 	return page.EachPage(func(p interface{}, lastPage bool) bool {
 		return fn(p.(*ListMultipartUploadsOutput), lastPage)
 	})
@@ -1020,6 +1021,7 @@ func (c *S3) ListObjectVersions(input *ListObjectVersionsInput) (*ListObjectVers
 
 func (c *S3) ListObjectVersionsPages(input *ListObjectVersionsInput, fn func(p *ListObjectVersionsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListObjectVersionsRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
 	return page.EachPage(func(p interface{}, lastPage bool) bool {
 		return fn(p.(*ListObjectVersionsOutput), lastPage)
 	})
@@ -1062,6 +1064,7 @@ func (c *S3) ListObjects(input *ListObjectsInput) (*ListObjectsOutput, error) {
 
 func (c *S3) ListObjectsPages(input *ListObjectsInput, fn func(p *ListObjectsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListObjectsRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
 	return page.EachPage(func(p interface{}, lastPage bool) bool {
 		return fn(p.(*ListObjectsOutput), lastPage)
 	})
@@ -1102,6 +1105,7 @@ func (c *S3) ListParts(input *ListPartsInput) (*ListPartsOutput, error) {
 
 func (c *S3) ListPartsPages(input *ListPartsInput, fn func(p *ListPartsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListPartsRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
 	return page.EachPage(func(p interface{}, lastPage bool) bool {
 		return fn(p.(*ListPartsOutput), lastPage)
 	})
@@ -6581,10 +6585,6 @@ type UploadPartInput struct {
 	// key was transmitted without error.
 	SSECustomerKeyMD5 *string `location:"header" locationName:"x-amz-server-side-encryption-customer-key-MD5" type:"string"`
 
-	// The Server-side encryption algorithm used when storing this object in S3
-	// (e.g., AES256).
-	ServerSideEncryption *string `location:"header" locationName:"x-amz-server-side-encryption" type:"string" enum:"UploadPartRequestServerSideEncryption"`
-
 	// Upload ID identifying the multipart upload whose part is being uploaded.
 	UploadId *string `location:"querystring" locationName:"uploadId" type:"string" required:"true"`
 
@@ -6938,11 +6938,4 @@ const (
 	TypeAmazonCustomerByEmail = "AmazonCustomerByEmail"
 	// @enum Type
 	TypeGroup = "Group"
-)
-
-// The Server-side encryption algorithm used when storing this object in S3
-// (e.g., AES256).
-const (
-	// @enum UploadPartRequestServerSideEncryption
-	UploadPartRequestServerSideEncryptionAes256 = "AES256"
 )
