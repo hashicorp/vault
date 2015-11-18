@@ -58,6 +58,8 @@ IMPROVEMENTS:
  * physical/consul: Consul now uses a connection pool to limit the number of
    outstanding operations, improving behavior when a lot of operations must
    happen at once [GH-677]
+ * physical/etcd: Support TLS-encrypted connections and use a connection pool
+   to limit the number of outstanding operations [GH-780]
  * physical/s3: The S3 endpoint can now be configured, allowing using
    S3-API-compatible storage solutions [GH-750]
  * physical/s3: The S3 bucket can now be configured with the `AWS_S3_BUCKET`
