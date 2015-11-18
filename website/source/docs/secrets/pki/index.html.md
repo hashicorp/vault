@@ -286,17 +286,19 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-### /pki/config/ca/set
+### /pki/config/ca
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Allows submitting the CA information via a PEM file containing the CA
-    certificate and its private key, concatenated.  If you generated an
-    intermediate CA CSR and received a signed certificate, you do not need to
-    include the private key in the PEM file. <br /><br />The information can
-    be provided from a file via a `curl` command similar to the following:<br/>
+    Allows submitting the CA information for the backend via a PEM file
+    containing the CA certificate and its private key, concatenated. Not needed
+    if you are generating a self-signed root certificate, and not used if you
+    have a signed intermediate CA certificate with a generated key (use the
+    `/pki/intermediate/set-signed` endpoint for that). <br /><br />The
+    information can be provided from a file via a `curl` command similar to the
+    following:<br/>
 
     ```text
     $ curl \
@@ -320,7 +322,7 @@ subpath for interactive help output.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/config/ca/set`</dd>
+  <dd>`/pki/config/ca`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -339,66 +341,26 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-### /pki/config/ca/generate/intermediate
-#### POST
+
+### /pki/config/crl
+#### GET
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Generates a new private key and a CSR for signing. If using Vault as a
-    root, and for many other CAs, the various parameters on the final
-    certificate are set at signing time and may or may not honor the parameters
-    set here. If the path ends with `exported`, the private key will be
-    returned in the response; if it is `internal` the private key will not be
-    returned and *cannot be retrieved later*. <br /><br />This is mostly meant
-    as a helper function, and not all possible parameters that can be set in a
-    CSR are supported.
+    Allows getting the duration for which the generated CRL should be marked
+    valid.
   </dd>
 
   <dt>Method</dt>
-  <dd>POST</dd>
+  <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/config/ca/generate/intermediate/[exported|internal]`</dd>
+  <dd>`/pki/config/crl`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">common_name</span>
-        <span class="param-flags">required</span>
-        The requested CN for the certificate.
-      </li>
-      <li>
-        <span class="param">alt_names</span>
-        <span class="param-flags">optional</span>
-        Requested Subject Alternative Names, in a comma-delimited list. These
-        can be host names or email addresses; they will be parsed into their
-        respective fields.
-      </li>
-      <li>
-        <span class="param">ip_sans</span>
-        <span class="param-flags">optional</span>
-        Requested IP Subject Alternative Names, in a comma-delimited list.
-      </li>
-      <li>
-      <span class="param">format</span>
-      <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
-      </li>
-      <li>
-        <span class="param">key_type</span>
-        <span class="param-flags">optional</span>
-        Desired key type; must be `rsa` or `ec`. Defaults to `rsa`.
-      </li>
-      <li>
-        <span class="param">key_bits</span>
-        <span class="param-flags">optional</span>
-        The number of bits to use. Defaults to `2048`. Must be changed to a
-        valid value if the `key_type` is `ec`.
-      </li>
-    </ul>
+    None
   </dd>
 
   <dt>Returns</dt>
@@ -408,9 +370,9 @@ subpath for interactive help output.
     {
       "lease_id": "",
       "renewable": false,
-      "lease_duration": 21600,
+      "lease_duration": 0,
       "data": {
-        "csr": "-----BEGIN CERTIFICATE REQUEST-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE REQUEST-----\n",
+          "expiry": "72h"
         },
       "auth": null
     }
@@ -419,192 +381,36 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-
-### /pki/config/ca/generate/root
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Generates a new self-signed CA certificate and private key. If the path
-    ends with `exported`, the private key will be returned in the response; if
-    it is `internal` the private key will not be returned and *cannot be
-    retrieved later*. Distribution points use the values set via `config/urls`.
+    Allows setting the duration for which the generated CRL should be marked
+    valid.
   </dd>
 
   <dt>Method</dt>
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/config/ca/generate/root/[exported|internal]`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">common_name</span>
-        <span class="param-flags">required</span>
-        The requested CN for the certificate.
-      </li>
-      <li>
-        <span class="param">alt_names</span>
-        <span class="param-flags">optional</span>
-        Requested Subject Alternative Names, in a comma-delimited list. These
-        can be host names or email addresses; they will be parsed into their
-        respective fields.
-      </li>
-      <li>
-        <span class="param">ip_sans</span>
-        <span class="param-flags">optional</span>
-        Requested IP Subject Alternative Names, in a comma-delimited list.
-      </li>
-      <li>
-      <span class="param">ttl</span>
-      <span class="param-flags">optional</span>
-        Requested Time To Live (after which the certificate will be expired).
-        This cannot be larger than the mount max (or, if not set, the system
-        max).
-      </li>
-      <li>
-      <span class="param">format</span>
-      <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
-      </li>
-      <li>
-        <span class="param">key_type</span>
-        <span class="param-flags">optional</span>
-        Desired key type; must be `rsa` or `ec`. Defaults to `rsa`.
-      </li>
-      <li>
-        <span class="param">key_bits</span>
-        <span class="param-flags">optional</span>
-        The number of bits to use. Defaults to `2048`. Must be changed to a
-        valid value if the `key_type` is `ec`.
-      </li>
-      <li>
-        <span class="param">max_path_length</span>
-        <span class="param-flags">optional</span>
-        If set, the maximum path length to encode in the generated certificate.
-        Defaults to `-1`, which means no limit. A limit of `0` means a literal
-        path length of zero.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "lease_id": "",
-      "renewable": false,
-      "lease_duration": 21600,
-      "data": {
-        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
-        "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
-        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
-        },
-      "auth": null
-    }
-    ```
-
-  </dd>
-</dl>
-
-### /pki/config/ca/sign
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Uses the configured CA certificate to issue a certificate with appropriate
-    values for acting as an intermediate CA. Distribution points use the values
-    set via `config/urls`. Values set in the CSR are ignored unless
-    `use_csr_values` is set to true, in which case the values from the CSR are
-    used verbatim.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/pki/config/ca/sign`</dd>
+  <dd>`/pki/config/crl`</dd>
 
   <dt>Parameters</dt>
   <dd>
     <ul>
       <li>
       <li>
-        <span class="param">csr</span>
+        <span class="param">expiry</span>
         <span class="param-flags">required</span>
-        The PEM-encoded CSR.
-      </li>
-        <span class="param">common_name</span>
-        <span class="param-flags">required</span>
-        The requested CN for the certificate.
-      </li>
-      <li>
-        <span class="param">alt_names</span>
-        <span class="param-flags">optional</span>
-        Requested Subject Alternative Names, in a comma-delimited list. These
-        can be host names or email addresses; they will be parsed into their
-        respective fields.
-      </li>
-      <li>
-        <span class="param">ip_sans</span>
-        <span class="param-flags">optional</span>
-        Requested IP Subject Alternative Names, in a comma-delimited list.
-      </li>
-      <li>
-      <span class="param">ttl</span>
-      <span class="param-flags">optional</span>
-        Requested Time To Live (after which the certificate will be expired).
-        This cannot be larger than the mount max (or, if not set, the system
-        max).
-      </li>
-      <li>
-      <span class="param">format</span>
-      <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
-      </li>
-      <li>
-        <span class="param">max_path_length</span>
-        <span class="param-flags">optional</span>
-        If set, the maximum path length to encode in the generated certificate.
-        Defaults to `-1`, which means no limit. A limit of `0` means a literal
-        path length of zero.
-      </li>
-      <li>
-        <span class="param">use_csr_values</span>
-        <span class="param-flags">optional</span>
-        If set to `true`, then: 1) Subject information, including names and
-        alternate names, will be preserved from the CSR rather than using the
-        values provided in the other parameters to this path; 2) Any key usages
-        (for instance, non-repudiation) requested in the CSR will be added to
-        the basic set of key usages used for CA certs signed by this path.
+        The time until expiration. Defaults to `72h`.
       </li>
     </ul>
   </dd>
 
   <dt>Returns</dt>
   <dd>
-
-    ```javascript
-    {
-      "lease_id": "pki/config/ca/sign/bc23e3c6-8dcd-48c6-f3af-dd2db7f815c2",
-      "renewable": false,
-      "lease_duration": 21600,
-      "data": {
-        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
-        "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
-        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
-        },
-      "auth": null
-    }
-    ```
-
+    A `204` response code.
   </dd>
 </dl>
 
@@ -693,78 +499,6 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-### /pki/config/crl
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Allows getting the duration for which the generated CRL should be marked
-    valid.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/pki/config/crl`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "lease_id": "",
-      "renewable": false,
-      "lease_duration": 0,
-      "data": {
-          "expiry": "72h"
-        },
-      "auth": null
-    }
-    ```
-
-  </dd>
-</dl>
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Allows setting the duration for which the generated CRL should be marked
-    valid.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/pki/config/crl`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-      <li>
-        <span class="param">expiry</span>
-        <span class="param-flags">required</span>
-        The time until expiration. Defaults to `72h`.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
 ### /pki/crl(/pem)
 #### GET
 
@@ -837,6 +571,118 @@ subpath for interactive help output.
   </dd>
 </dl>
 
+### /pki/intermediate/generate
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Generates a new private key and a CSR for signing. If using Vault as a
+    root, and for many other CAs, the various parameters on the final
+    certificate are set at signing time and may or may not honor the parameters
+    set here. If the path ends with `exported`, the private key will be
+    returned in the response; if it is `internal` the private key will not be
+    returned and *cannot be retrieved later*. <br /><br />This is mostly meant
+    as a helper function, and not all possible parameters that can be set in a
+    CSR are supported.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/intermediate/generate/[exported|internal]`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">common_name</span>
+        <span class="param-flags">required</span>
+        The requested CN for the certificate.
+      </li>
+      <li>
+        <span class="param">alt_names</span>
+        <span class="param-flags">optional</span>
+        Requested Subject Alternative Names, in a comma-delimited list. These
+        can be host names or email addresses; they will be parsed into their
+        respective fields.
+      </li>
+      <li>
+        <span class="param">ip_sans</span>
+        <span class="param-flags">optional</span>
+        Requested IP Subject Alternative Names, in a comma-delimited list.
+      </li>
+      <li>
+      <span class="param">format</span>
+      <span class="param-flags">optional</span>
+        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
+        `der`, the output is base64 encoded.
+      </li>
+      <li>
+        <span class="param">key_type</span>
+        <span class="param-flags">optional</span>
+        Desired key type; must be `rsa` or `ec`. Defaults to `rsa`.
+      </li>
+      <li>
+        <span class="param">key_bits</span>
+        <span class="param-flags">optional</span>
+        The number of bits to use. Defaults to `2048`. Must be changed to a
+        valid value if the `key_type` is `ec`.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 21600,
+      "data": {
+        "csr": "-----BEGIN CERTIFICATE REQUEST-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE REQUEST-----\n",
+        },
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
+### /pki/intermediate/set-signed
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows submitting the signed CA certificate corresponding to a private key generated via `/pki/intermediate/generate`. The certificate should be submitted in PEM format; see the documentation for `/pki/config/ca` for some hints on submitting.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/intermediate/set-signed`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">certificate</span>
+        <span class="param-flags">required</span>
+        The certificate in PEM format.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
 ### /pki/issue/
 #### POST
 
@@ -854,7 +700,7 @@ subpath for interactive help output.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/issue/<name>`</dd>
+  <dd>`/pki/issue/<role name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -977,7 +823,7 @@ subpath for interactive help output.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/roles/<name>`</dd>
+  <dd>`/pki/roles/<role name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1117,7 +963,7 @@ subpath for interactive help output.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/roles/<name>`</dd>
+  <dd>`/pki/roles/<role name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1164,7 +1010,7 @@ subpath for interactive help output.
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/roles/<name>`</dd>
+  <dd>`/pki/roles/<role name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1174,6 +1020,200 @@ subpath for interactive help output.
   <dt>Returns</dt>
   <dd>
     A `204` response code.
+  </dd>
+</dl>
+
+### /pki/root/generate
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Generates a new self-signed CA certificate and private key. If the path
+    ends with `exported`, the private key will be returned in the response; if
+    it is `internal` the private key will not be returned and *cannot be
+    retrieved later*. Distribution points use the values set via `config/urls`.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/root/generate/[exported|internal]`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">common_name</span>
+        <span class="param-flags">required</span>
+        The requested CN for the certificate.
+      </li>
+      <li>
+        <span class="param">alt_names</span>
+        <span class="param-flags">optional</span>
+        Requested Subject Alternative Names, in a comma-delimited list. These
+        can be host names or email addresses; they will be parsed into their
+        respective fields.
+      </li>
+      <li>
+        <span class="param">ip_sans</span>
+        <span class="param-flags">optional</span>
+        Requested IP Subject Alternative Names, in a comma-delimited list.
+      </li>
+      <li>
+      <span class="param">ttl</span>
+      <span class="param-flags">optional</span>
+        Requested Time To Live (after which the certificate will be expired).
+        This cannot be larger than the mount max (or, if not set, the system
+        max).
+      </li>
+      <li>
+      <span class="param">format</span>
+      <span class="param-flags">optional</span>
+        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
+        `der`, the output is base64 encoded.
+      </li>
+      <li>
+        <span class="param">key_type</span>
+        <span class="param-flags">optional</span>
+        Desired key type; must be `rsa` or `ec`. Defaults to `rsa`.
+      </li>
+      <li>
+        <span class="param">key_bits</span>
+        <span class="param-flags">optional</span>
+        The number of bits to use. Defaults to `2048`. Must be changed to a
+        valid value if the `key_type` is `ec`.
+      </li>
+      <li>
+        <span class="param">max_path_length</span>
+        <span class="param-flags">optional</span>
+        If set, the maximum path length to encode in the generated certificate.
+        Defaults to `-1`, which means no limit.  unless the signing certificate
+        has a maximum path length set, in which case the path length is set to
+        one less than that of the signing certificate.  A limit of `0` means a
+        literal path length of zero.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 21600,
+      "data": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+        "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+        },
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
+### /pki/root/sign-intermediate
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Uses the configured CA certificate to issue a certificate with appropriate
+    values for acting as an intermediate CA. Distribution points use the values
+    set via `config/urls`. Values set in the CSR are ignored unless
+    `use_csr_values` is set to true, in which case the values from the CSR are
+    used verbatim.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/root/sign-intermediate`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+      <li>
+        <span class="param">csr</span>
+        <span class="param-flags">required</span>
+        The PEM-encoded CSR.
+      </li>
+        <span class="param">common_name</span>
+        <span class="param-flags">required</span>
+        The requested CN for the certificate.
+      </li>
+      <li>
+        <span class="param">alt_names</span>
+        <span class="param-flags">optional</span>
+        Requested Subject Alternative Names, in a comma-delimited list. These
+        can be host names or email addresses; they will be parsed into their
+        respective fields.
+      </li>
+      <li>
+        <span class="param">ip_sans</span>
+        <span class="param-flags">optional</span>
+        Requested IP Subject Alternative Names, in a comma-delimited list.
+      </li>
+      <li>
+      <span class="param">ttl</span>
+      <span class="param-flags">optional</span>
+        Requested Time To Live (after which the certificate will be expired).
+        This cannot be larger than the mount max (or, if not set, the system
+        max).
+      </li>
+      <li>
+      <span class="param">format</span>
+      <span class="param-flags">optional</span>
+        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
+        `der`, the output is base64 encoded.
+      </li>
+      <li>
+        <span class="param">max_path_length</span>
+        <span class="param-flags">optional</span>
+        If set, the maximum path length to encode in the generated certificate.
+        Defaults to `-1`, which means no limit.  unless the signing certificate
+        has a maximum path length set, in which case the path length is set to
+        one less than that of the signing certificate.  A limit of `0` means a
+        literal path length of zero.
+      </li>
+      <li>
+        <span class="param">use_csr_values</span>
+        <span class="param-flags">optional</span>
+        If set to `true`, then: 1) Subject information, including names and
+        alternate names, will be preserved from the CSR rather than using the
+        values provided in the other parameters to this path; 2) Any key usages
+        (for instance, non-repudiation) requested in the CSR will be added to
+        the basic set of key usages used for CA certs signed by this path; 3)
+        Extensions requested in the CSR will be copied into the issued
+        certificate.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "pki/root/sign-intermediate/bc23e3c6-8dcd-48c6-f3af-dd2db7f815c2",
+      "renewable": false,
+      "lease_duration": 21600,
+      "data": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+        "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+        },
+      "auth": null
+    }
+    ```
+
   </dd>
 </dl>
 
@@ -1193,7 +1233,7 @@ subpath for interactive help output.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/sign/<name>`</dd>
+  <dd>`/pki/sign/<role name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1230,6 +1270,7 @@ subpath for interactive help output.
         value. If not provided, the role's `ttl` value will be used. Note that
         the role values default to system values if not explicitly set.
       </li>
+      <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
         Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
@@ -1244,6 +1285,70 @@ subpath for interactive help output.
     ```javascript
     {
       "lease_id": "pki/sign/test/7ad6cfa5-f04f-c62a-d477-f33210475d05",
+      "renewable": false,
+      "lease_duration": 21600,
+      "data": {
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+        "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+        },
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
+### /pki/sign-verbatim
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Signs a new certificate based upon the provided CSR. Values are taken
+    verbatim from the CSR; the _only_ restriction is that this endpoint will
+    refuse to issue an intermediate CA certificate (see the
+    `/pki/root/sign-intermediate` endpoint for that functionality.) _This is a
+    potentially dangerous endpoint and only highly trusted users should
+    have access._
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/sign-verbatim`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">csr</span>
+        <span class="param-flags">required</span>
+        The PEM-encoded CSR.
+      </li>
+      <li>
+      <span class="param">ttl</span>
+      <span class="param-flags">optional</span>
+        Requested Time To Live. Cannot be greater than the mount's `max_ttl`
+        value. If not provided, the mount's `ttl` value will be used, which
+        defaults to system values if not explicitly set.
+      </li>
+      <li>
+      <span class="param">format</span>
+      <span class="param-flags">optional</span>
+        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
+        `der`, the output is base64 encoded.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "pki/sign-verbatim/7ad6cfa5-f04f-c62a-d477-f33210475d05",
       "renewable": false,
       "lease_duration": 21600,
       "data": {

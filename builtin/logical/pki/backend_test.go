@@ -311,7 +311,6 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage certUsage,
 }
 
 func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-
 	expected := urlEntries{
 		IssuingCertificates: []string{
 			"http://example.com/ca1",
@@ -342,7 +341,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/root/exported",
+			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
 				"common_name": "Root Cert",
 				"ttl":         "180h",
@@ -382,7 +381,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/sign",
+			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"common_name": "Intermediate Cert",
 				"csr":         string(csrPem),
@@ -452,7 +451,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/root/exported",
+			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
 				"common_name":     "Root Cert",
 				"ttl":             "180h",
@@ -462,7 +461,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/sign",
+			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"use_csr_values": true,
 				"csr":            string(csrPem),
@@ -473,7 +472,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/root/exported",
+			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
 				"common_name":     "Root Cert",
 				"ttl":             "180h",
@@ -483,7 +482,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/sign",
+			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"use_csr_values": true,
 				"csr":            string(csrPem),
@@ -612,26 +611,25 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			},
 		},
 
-		// Now test uploading when the private key is already stored, such
-		// as when uploading a CA signed as the result of a generated CSR
-		// First we test the wrong one, to ensure that the key comparator is
-		// working correctly
-		logicaltest.TestStep{
-			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
-			Data: map[string]interface{}{
-				"pem_bundle": otherCaCert,
-			},
-			ErrorOk: true,
-		},
-
-		// Now, the right one
+		// Ensure that both parts of the PEM bundle are required
+		// Here, just the cert
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
 			Path:      "config/ca/set",
 			Data: map[string]interface{}{
 				"pem_bundle": caCert,
 			},
+			ErrorOk: true,
+		},
+
+		// Here, just the key
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data: map[string]interface{}{
+				"pem_bundle": caKey,
+			},
+			ErrorOk: true,
 		},
 
 		// Ensure we can fetch it back via unauthenticated means, in various formats
@@ -686,7 +684,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// Test a bunch of generation stuff
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/root/exported",
+			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
 				"common_name": "Root Cert",
 				"ttl":         "180h",
@@ -701,7 +699,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/intermediate/exported",
+			Path:      "intermediate/generate/exported",
 			Data: map[string]interface{}{
 				"common_name": "Intermediate Cert",
 			},
@@ -712,6 +710,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			},
 		},
 
+		// Re-load the root key in so we can sign it
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
 			Path:      "config/ca/set",
@@ -728,14 +727,38 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/sign",
+			Path:      "root/sign-intermediate",
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
-				intdata["intermediatecert"] = resp.Data["certificate"].(string)
 				delete(reqdata, "csr")
 				delete(reqdata, "common_name")
 				delete(reqdata, "ttl")
+				intdata["intermediatecert"] = resp.Data["certificate"].(string)
 				reqdata["serial_number"] = resp.Data["serial_number"].(string)
+				reqdata["certificate"] = resp.Data["certificate"].(string)
+				reqdata["pem_bundle"] = intdata["intermediatekey"].(string) + "\n" + resp.Data["certificate"].(string)
+				return nil
+			},
+		},
+
+		// First load in this way to populate the private key
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				delete(reqdata, "pem_bundle")
+				return nil
+			},
+		},
+
+		// Now test setting the intermediate, signed CA cert
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "intermediate/set-signed",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				delete(reqdata, "certificate")
 				return nil
 			},
 		},
@@ -772,7 +795,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// Do it all again, with EC keys and DER format
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/root/exported",
+			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
 				"common_name": "Root Cert",
 				"ttl":         "180h",
@@ -800,7 +823,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/generate/intermediate/exported",
+			Path:      "intermediate/generate/exported",
 			Data: map[string]interface{}{
 				"format":      "der",
 				"key_type":    "ec",
@@ -840,14 +863,38 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/sign",
+			Path:      "root/sign-intermediate",
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
-				intdata["intermediatecert"] = resp.Data["certificate"].(string)
 				delete(reqdata, "csr")
 				delete(reqdata, "common_name")
 				delete(reqdata, "ttl")
+				intdata["intermediatecert"] = resp.Data["certificate"].(string)
 				reqdata["serial_number"] = resp.Data["serial_number"].(string)
+				reqdata["certificate"] = resp.Data["certificate"].(string)
+				reqdata["pem_bundle"] = intdata["intermediatekey"].(string) + "\n" + resp.Data["certificate"].(string)
+				return nil
+			},
+		},
+
+		// First load in this way to populate the private key
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "config/ca/set",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				delete(reqdata, "pem_bundle")
+				return nil
+			},
+		},
+
+		// Now test setting the intermediate, signed CA cert
+		logicaltest.TestStep{
+			Operation: logical.WriteOperation,
+			Path:      "intermediate/set-signed",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				delete(reqdata, "certificate")
 				return nil
 			},
 		},

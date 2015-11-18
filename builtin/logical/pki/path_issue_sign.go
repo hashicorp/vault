@@ -51,18 +51,33 @@ func pathSign(b *backend) *framework.Path {
 	return ret
 }
 
+func pathSignVerbatim(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "sign-verbatim/" + framework.GenericNameRegex("role"),
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.WriteOperation: b.pathSignVerbatim,
+		},
+
+		HelpSynopsis:    pathSignHelpSyn,
+		HelpDescription: pathSignHelpDesc,
+	}
+
+	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+
+	ret.Fields["csr"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "",
+		Description: `PEM-format CSR to be signed. Values will be
+taken verbatim from the CSR, except for
+basic constraints.`,
+	}
+
+	return ret
+}
+
 func (b *backend) pathIssue(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.pathIssueSignCert(req, data, false)
-}
-
-func (b *backend) pathSign(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.pathIssueSignCert(req, data, true)
-}
-
-func (b *backend) pathIssueSignCert(
-	req *logical.Request, data *framework.FieldData, useCSR bool) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 
 	// Get the role
@@ -74,6 +89,42 @@ func (b *backend) pathIssueSignCert(
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
 	}
 
+	return b.pathIssueSignCert(req, data, role, false, false)
+}
+
+func (b *backend) pathSign(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role").(string)
+
+	// Get the role
+	role, err := b.getRole(req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
+	}
+
+	return b.pathIssueSignCert(req, data, role, true, false)
+}
+
+func (b *backend) pathSignVerbatim(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
+	ttl := b.System().DefaultLeaseTTL()
+	role := &roleEntry{
+		TTL:              ttl.String(),
+		AllowLocalhost:   true,
+		AllowAnyName:     true,
+		AllowIPSANs:      true,
+		EnforceHostnames: false,
+	}
+
+	return b.pathIssueSignCert(req, data, role, true, true)
+}
+
+func (b *backend) pathIssueSignCert(
+	req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
@@ -92,8 +143,9 @@ func (b *backend) pathIssueSignCert(
 	}
 
 	var parsedBundle *certutil.ParsedCertBundle
+	var err error
 	if useCSR {
-		parsedBundle, err = signCert(b, role, signingBundle, false, false, req, data)
+		parsedBundle, err = signCert(b, role, signingBundle, false, useCSRValues, req, data)
 	} else {
 		parsedBundle, err = generateCert(b, role, signingBundle, false, req, data)
 	}

@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -54,7 +55,19 @@ type caInfoBundle struct {
 	URLs *urlEntries
 }
 
-var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+var (
+	hostnameRegex                = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+)
+
+func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
+	for _, e := range extensions {
+		if e.Id.Equal(oid) {
+			return true
+		}
+	}
+	return false
+}
 
 func getFormat(data *framework.FieldData) string {
 	format := data.Get("format").(string)
@@ -370,10 +383,8 @@ func signCert(b *backend,
 		return nil, err
 	}
 
-	if isCA {
-		creationBundle.IsCA = isCA
-		creationBundle.UseCSRValues = useCSRValues
-	}
+	creationBundle.IsCA = isCA
+	creationBundle.UseCSRValues = useCSRValues
 
 	parsedBundle, err := signCertificate(creationBundle, csr)
 	if err != nil {
@@ -591,12 +602,11 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	}
 
 	certTemplate := &x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               subject,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(creationInfo.TTL),
-		KeyUsage:              x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
-		BasicConstraintsValid: true,
+		SerialNumber:   serialNumber,
+		Subject:        subject,
+		NotBefore:      time.Now(),
+		NotAfter:       time.Now().Add(creationInfo.TTL),
+		KeyUsage:       x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
 		DNSNames:       creationInfo.DNSNames,
@@ -649,6 +659,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
 
+		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = true
 		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
@@ -758,12 +769,11 @@ func signCertificate(creationInfo *creationBundle,
 	}
 
 	certTemplate := &x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               subject,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(creationInfo.TTL),
-		BasicConstraintsValid: true,
-		SubjectKeyId:          subjKeyID[:],
+		SerialNumber: serialNumber,
+		Subject:      subject,
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(creationInfo.TTL),
+		SubjectKeyId: subjKeyID[:],
 	}
 
 	switch creationInfo.SigningBundle.PrivateKeyType {
@@ -780,9 +790,13 @@ func signCertificate(creationInfo *creationBundle,
 		certTemplate.EmailAddresses = csr.EmailAddresses
 		certTemplate.IPAddresses = csr.IPAddresses
 
-		if creationInfo.IsCA {
-			certTemplate.ExtraExtensions = csr.Extensions
+		certTemplate.ExtraExtensions = csr.Extensions
+		// Do not sign a CA certificate if they didn't go through the sign-intermediate
+		// endpoint
+		if !creationInfo.IsCA && oidInExtensions(oidExtensionBasicConstraints, certTemplate.ExtraExtensions) {
+			return nil, certutil.UserError{Err: "will not sign a CSR asking for CA rights through this endpoint"}
 		}
+
 	} else {
 		certTemplate.DNSNames = creationInfo.DNSNames
 		certTemplate.EmailAddresses = creationInfo.EmailAddresses
@@ -817,6 +831,7 @@ func signCertificate(creationInfo *creationBundle,
 	certTemplate.OCSPServer = creationInfo.SigningBundle.URLs.OCSPServers
 
 	if creationInfo.IsCA {
+		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = true
 
 		if creationInfo.SigningBundle.Certificate.MaxPathLen == 0 &&

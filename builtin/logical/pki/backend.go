@@ -32,13 +32,14 @@ func Backend() *framework.Backend {
 
 		Paths: []*framework.Path{
 			pathRoles(&b),
-			pathGenerateRootCA(&b),
-			pathGenerateIntermediateCA(&b),
-			pathSignIntermediateCA(&b),
-			pathSetCA(&b),
+			pathGenerateRoot(&b),
+			pathGenerateIntermediate(&b),
+			pathSetSignedIntermediate(&b),
+			pathSignIntermediate(&b),
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
+			pathSignVerbatim(&b),
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
