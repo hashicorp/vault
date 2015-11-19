@@ -33,7 +33,7 @@ reference`,
 		},
 
 		DefaultDuration:    168 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
+		DefaultGracePeriod: time.Duration(0),
 
 		Revoke: b.secretCredsRevoke,
 	}

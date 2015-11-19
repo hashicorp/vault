@@ -394,6 +394,9 @@ func signCert(b *backend,
 	return parsedBundle, nil
 }
 
+// generateCreationBundle is a shared function that reads parameters supplied
+// from the various endpoints and generates a creationBundle with the
+// parameters that can be used to issue or sign
 func generateCreationBundle(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
@@ -401,140 +404,159 @@ func generateCreationBundle(b *backend,
 	req *logical.Request,
 	data *framework.FieldData) (*creationBundle, error) {
 	var err error
+	var ok bool
 
-	// Get the common name(s)
+	// Get the common name
 	var cn string
-	if csr != nil {
-		if role.UseCSRCommonName {
-			cn = csr.Subject.CommonName
+	{
+		if csr != nil {
+			if role.UseCSRCommonName {
+				cn = csr.Subject.CommonName
+			}
 		}
-	}
-	if cn == "" {
-		cn = data.Get("common_name").(string)
 		if cn == "" {
-			return nil, certutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
+			cn = data.Get("common_name").(string)
+			if cn == "" {
+				return nil, certutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
+			}
 		}
 	}
 
+	// Read in alternate names -- DNS and email addresses
 	dnsNames := []string{}
 	emailAddresses := []string{}
-	if strings.Contains(cn, "@") {
-		emailAddresses = append(emailAddresses, cn)
-	} else {
-		dnsNames = append(dnsNames, cn)
-	}
-	cnAltInt, ok := data.GetOk("alt_names")
-	if ok {
-		cnAlt := cnAltInt.(string)
-		if len(cnAlt) != 0 {
-			for _, v := range strings.Split(cnAlt, ",") {
-				if strings.Contains(v, "@") {
-					emailAddresses = append(emailAddresses, cn)
-				} else {
-					dnsNames = append(dnsNames, v)
-				}
-			}
-		}
-	}
-
-	// Get any IP SANs
-	ipAddresses := []net.IP{}
-	ipAltInt, ok := data.GetOk("ip_sans")
-	if ok {
-		ipAlt := ipAltInt.(string)
-		if len(ipAlt) != 0 {
-			if !role.AllowIPSANs {
-				return nil, certutil.UserError{Err: fmt.Sprintf(
-					"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
-			}
-			for _, v := range strings.Split(ipAlt, ",") {
-				parsedIP := net.ParseIP(v)
-				if parsedIP == nil {
-					return nil, certutil.UserError{Err: fmt.Sprintf(
-						"the value '%s' is not a valid IP address", v)}
-				}
-				ipAddresses = append(ipAddresses, parsedIP)
-			}
-		}
-	}
-
-	var ttlField string
-	ttlFieldInt, ok := data.GetOk("ttl")
-	if !ok {
-		ttlField = role.TTL
-	} else {
-		ttlField = ttlFieldInt.(string)
-	}
-
-	var ttl time.Duration
-	if len(ttlField) == 0 {
-		ttl = b.System().DefaultLeaseTTL()
-	} else {
-		ttl, err = time.ParseDuration(ttlField)
-		if err != nil {
-			return nil, certutil.UserError{Err: fmt.Sprintf(
-				"invalid requested ttl: %s", err)}
-		}
-	}
-
-	var maxTTL time.Duration
-	if len(role.MaxTTL) == 0 {
-		maxTTL = b.System().MaxLeaseTTL()
-	} else {
-		maxTTL, err = time.ParseDuration(role.MaxTTL)
-		if err != nil {
-			return nil, certutil.UserError{Err: fmt.Sprintf(
-				"invalid ttl: %s", err)}
-		}
-	}
-
-	if ttl > maxTTL {
-		// Don't error if they were using system defaults, only error if
-		// they specifically chose a bad TTL
-		if len(ttlField) == 0 {
-			ttl = maxTTL
+	{
+		if strings.Contains(cn, "@") {
+			emailAddresses = append(emailAddresses, cn)
 		} else {
+			dnsNames = append(dnsNames, cn)
+		}
+		cnAltInt, ok := data.GetOk("alt_names")
+		if ok {
+			cnAlt := cnAltInt.(string)
+			if len(cnAlt) != 0 {
+				for _, v := range strings.Split(cnAlt, ",") {
+					if strings.Contains(v, "@") {
+						emailAddresses = append(emailAddresses, cn)
+					} else {
+						dnsNames = append(dnsNames, v)
+					}
+				}
+			}
+		}
+
+		// Check for bad email and/or DNS names
+		badName, err := validateNames(req, dnsNames, role)
+		if len(badName) != 0 {
 			return nil, certutil.UserError{Err: fmt.Sprintf(
-				"ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
+				"name %s not allowed by this role", badName)}
+		} else if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf(
+				"error validating name %s: %s", badName, err)}
+		}
+
+		badName, err = validateNames(req, emailAddresses, role)
+		if len(badName) != 0 {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"email %s not allowed by this role", badName)}
+		} else if err != nil {
+			return nil, certutil.InternalError{Err: fmt.Sprintf(
+				"error validating name %s: %s", badName, err)}
 		}
 	}
 
-	if signingBundle != nil &&
-		time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
-		return nil, certutil.UserError{Err: fmt.Sprintf(
-			"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
+	// Get and verify any IP SANs
+	ipAddresses := []net.IP{}
+	var ipAltInt interface{}
+	{
+		ipAltInt, ok = data.GetOk("ip_sans")
+		if ok {
+			ipAlt := ipAltInt.(string)
+			if len(ipAlt) != 0 {
+				if !role.AllowIPSANs {
+					return nil, certutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+				}
+				for _, v := range strings.Split(ipAlt, ",") {
+					parsedIP := net.ParseIP(v)
+					if parsedIP == nil {
+						return nil, certutil.UserError{Err: fmt.Sprintf(
+							"the value '%s' is not a valid IP address", v)}
+					}
+					ipAddresses = append(ipAddresses, parsedIP)
+				}
+			}
+		}
 	}
 
-	badName, err := validateNames(req, dnsNames, role)
-	if len(badName) != 0 {
-		return nil, certutil.UserError{Err: fmt.Sprintf(
-			"name %s not allowed by this role", badName)}
-	} else if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf(
-			"error validating name %s: %s", badName, err)}
+	// Get the TTL and very it against the max allowed
+	var ttlField string
+	var ttl time.Duration
+	var maxTTL time.Duration
+	var ttlFieldInt interface{}
+	{
+		ttlFieldInt, ok = data.GetOk("ttl")
+		if !ok {
+			ttlField = role.TTL
+		} else {
+			ttlField = ttlFieldInt.(string)
+		}
+
+		if len(ttlField) == 0 {
+			ttl = b.System().DefaultLeaseTTL()
+		} else {
+			ttl, err = time.ParseDuration(ttlField)
+			if err != nil {
+				return nil, certutil.UserError{Err: fmt.Sprintf(
+					"invalid requested ttl: %s", err)}
+			}
+		}
+
+		if len(role.MaxTTL) == 0 {
+			maxTTL = b.System().MaxLeaseTTL()
+		} else {
+			maxTTL, err = time.ParseDuration(role.MaxTTL)
+			if err != nil {
+				return nil, certutil.UserError{Err: fmt.Sprintf(
+					"invalid ttl: %s", err)}
+			}
+		}
+
+		if ttl > maxTTL {
+			// Don't error if they were using system defaults, only error if
+			// they specifically chose a bad TTL
+			if len(ttlField) == 0 {
+				ttl = maxTTL
+			} else {
+				return nil, certutil.UserError{Err: fmt.Sprintf(
+					"ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
+			}
+		}
+
+		// If it's not self-signed, verify that the issued certificate won't be
+		// valid past the lifetime of the CA certificate
+		if signingBundle != nil &&
+			time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
+		}
 	}
 
-	badName, err = validateNames(req, emailAddresses, role)
-	if len(badName) != 0 {
-		return nil, certutil.UserError{Err: fmt.Sprintf(
-			"email %s not allowed by this role", badName)}
-	} else if err != nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf(
-			"error validating name %s: %s", badName, err)}
-	}
-
+	// Build up usages
 	var usage certUsage
-	if role.ServerFlag {
-		usage = usage | serverUsage
-	}
-	if role.ClientFlag {
-		usage = usage | clientUsage
-	}
-	if role.CodeSigningFlag {
-		usage = usage | codeSigningUsage
-	}
-	if role.EmailProtectionFlag {
-		usage = usage | emailProtectionUsage
+	{
+		if role.ServerFlag {
+			usage = usage | serverUsage
+		}
+		if role.ClientFlag {
+			usage = usage | clientUsage
+		}
+		if role.CodeSigningFlag {
+			usage = usage | codeSigningUsage
+		}
+		if role.EmailProtectionFlag {
+			usage = usage | emailProtectionUsage
+		}
 	}
 
 	creationBundle := &creationBundle{
@@ -549,11 +571,18 @@ func generateCreationBundle(b *backend,
 		Usage:          usage,
 	}
 
+	// Don't deal with URLs or max path length if it's self-signed, as these
+	// normally come from the signing bundle
 	if signingBundle == nil {
 		return creationBundle, nil
 	}
 
+	// This will have been read in from the getURLs function
 	creationBundle.URLs = signingBundle.URLs
+
+	// If the max path length in the role is not nil, it was specified at
+	// generation time with the max_path_length parameter; otherwise derive it
+	// from the signing certificate
 	if role.MaxPathLength != nil {
 		creationBundle.MaxPathLength = *role.MaxPathLength
 	} else {

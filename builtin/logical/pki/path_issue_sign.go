@@ -75,6 +75,8 @@ basic constraints.`,
 	return ret
 }
 
+// pathIssue issues a certificate and private key from given parameters,
+// subject to role restrictions
 func (b *backend) pathIssue(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
@@ -91,6 +93,8 @@ func (b *backend) pathIssue(
 	return b.pathIssueSignCert(req, data, role, false, false)
 }
 
+// pathSign issues a certificate from a submitted CSR, subject to role
+// restrictions
 func (b *backend) pathSign(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
@@ -107,6 +111,8 @@ func (b *backend) pathSign(
 	return b.pathIssueSignCert(req, data, role, true, false)
 }
 
+// pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
+// role restrictions
 func (b *backend) pathSignVerbatim(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 

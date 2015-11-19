@@ -158,6 +158,8 @@ Now, we generate our root certificate:
 ```text
 $ vault write pki/root/generate/internal common_name=myvault.com ttl=87600h
 Key             Value
+lease_id        pki/root/generate/internal/aa959dd4-467e-e5ff-642b-371add518b40
+lease_duration  315359999
 certificate     -----BEGIN CERTIFICATE-----
 MIIDvTCCAqWgAwIBAgIUAsza+fvOw+Xh9ifYQ0gNN0ruuWcwDQYJKoZIhvcNAQEL
 BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wHhcNMTUxMTE5MTYwNDU5WhcNMjUx
@@ -1124,7 +1126,6 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-
 #### DELETE
 
 <dl class="api">
@@ -1161,10 +1162,10 @@ subpath for interactive help output.
     overwrite any previously-existing private key and certificate._ If the path
     ends with `exported`, the private key will be returned in the response; if
     it is `internal` the private key will not be returned and *cannot be
-    retrieved later*. Distribution points use the values set via
-    `config/urls`. <br /><br />Vault does _not_ revoke this certificate (since
-    it could not sign the CRL with an expired certificate), however, this
-    endpoint does honor the maximum mount TTL.
+    retrieved later*. Distribution points use the values set via `config/urls`.
+    <br /><br />As with other issued certificates, Vault will automatically
+    revoke the generated root at the end of its lease period; the CA
+    certificate will sign its own CRL.
   </dd>
 
   <dt>Method</dt>
@@ -1234,9 +1235,9 @@ subpath for interactive help output.
 
     ```javascript
     {
-      "lease_id": "",
+      "lease_id": "pki/root/generate/internal/aa959dd4-467e-e5ff-642b-371add518b40",
+      "lease_duration": 315359999,
       "renewable": false,
-      "lease_duration": 21600,
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",

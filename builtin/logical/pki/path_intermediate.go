@@ -201,7 +201,7 @@ func (b *backend) pathSetSignedIntermediate(
 	}
 
 	// For ease of later use, also store just the certificate at a known
-	// location, plus a fresh CRL
+	// location
 	entry.Key = "ca"
 	entry.Value = inputBundle.CertificateBytes
 	err = req.Storage.Put(entry)
@@ -209,6 +209,7 @@ func (b *backend) pathSetSignedIntermediate(
 		return nil, err
 	}
 
+	// Build a fresh CRL
 	err = buildCRL(b, req)
 
 	return nil, err

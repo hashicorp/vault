@@ -82,7 +82,6 @@ func (b *backend) pathCAGenerateRoot(
 		role.MaxPathLength = &maxPathLength
 	}
 
-	var resp *logical.Response
 	parsedBundle, err := generateCert(b, role, nil, true, req, data)
 	if err != nil {
 		switch err.(type) {
@@ -98,17 +97,19 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %s", err)
 	}
 
-	resp = &logical.Response{
-		Data: map[string]interface{}{
-			"serial_number": cb.SerialNumber,
+	resp := b.Secret(SecretCertsType).Response(
+		map[string]interface{}{
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
+			"serial_number": cb.SerialNumber,
+			"certificate":   cb.Certificate,
+			"issuing_ca":    cb.IssuingCA,
 		},
-	}
+		map[string]interface{}{
+			"serial_number": cb.SerialNumber,
+		})
 
 	switch format {
 	case "pem":
-		resp.Data["certificate"] = cb.Certificate
-		resp.Data["issuing_ca"] = cb.IssuingCA
 		if exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
@@ -122,6 +123,9 @@ func (b *backend) pathCAGenerateRoot(
 		}
 	}
 
+	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+
+	// Store it as the CA bundle
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
@@ -131,8 +135,18 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, err
 	}
 
+	// Also store it as just the certificate identified by serial number, so it
+	// can be revoked
+	err = req.Storage.Put(&logical.StorageEntry{
+		Key:   "certs/" + cb.SerialNumber,
+		Value: parsedBundle.CertificateBytes,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Unable to store certificate locally")
+	}
+
 	// For ease of later use, also store just the certificate at a known
-	// location, plus a fresh CRL
+	// location
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
 	err = req.Storage.Put(entry)
@@ -140,6 +154,7 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, err
 	}
 
+	// Build a fresh CRL
 	err = buildCRL(b, req)
 	if err != nil {
 		return nil, err
@@ -213,16 +228,14 @@ func (b *backend) pathCASignIntermediate(
 		map[string]interface{}{
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
+			"certificate":   cb.Certificate,
+			"issuing_ca":    cb.IssuingCA,
 		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
 		})
 
-	switch format {
-	case "pem":
-		resp.Data["certificate"] = cb.Certificate
-		resp.Data["issuing_ca"] = cb.IssuingCA
-	case "der":
+	if format == "der" {
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
 	}
