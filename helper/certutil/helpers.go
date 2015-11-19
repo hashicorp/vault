@@ -184,20 +184,22 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 }
 
 // GeneratePrivateKey generates a private key with the specified type and key bits
-func GeneratePrivateKey(keyType string, keyBits int, emb EmbeddedParsedPrivateKeyContainer) error {
+func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer) error {
 	var err error
-	result := &EmbeddedParsedPrivateKey{}
+	var privateKeyType int
+	var privateKeyBytes []byte
+	var privateKey crypto.Signer
 
 	switch keyType {
 	case "rsa":
-		result.PrivateKeyType = RSAPrivateKey
-		result.PrivateKey, err = rsa.GenerateKey(rand.Reader, keyBits)
+		privateKeyType = RSAPrivateKey
+		privateKey, err = rsa.GenerateKey(rand.Reader, keyBits)
 		if err != nil {
 			return InternalError{Err: fmt.Sprintf("error generating RSA private key: %v", err)}
 		}
-		result.PrivateKeyBytes = x509.MarshalPKCS1PrivateKey(result.PrivateKey.(*rsa.PrivateKey))
+		privateKeyBytes = x509.MarshalPKCS1PrivateKey(privateKey.(*rsa.PrivateKey))
 	case "ec":
-		result.PrivateKeyType = ECPrivateKey
+		privateKeyType = ECPrivateKey
 		var curve elliptic.Curve
 		switch keyBits {
 		case 224:
@@ -211,11 +213,11 @@ func GeneratePrivateKey(keyType string, keyBits int, emb EmbeddedParsedPrivateKe
 		default:
 			return UserError{Err: fmt.Sprintf("unsupported bit length for EC key: %d", keyBits)}
 		}
-		result.PrivateKey, err = ecdsa.GenerateKey(curve, rand.Reader)
+		privateKey, err = ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
 			return InternalError{Err: fmt.Sprintf("error generating EC private key: %v", err)}
 		}
-		result.PrivateKeyBytes, err = x509.MarshalECPrivateKey(result.PrivateKey.(*ecdsa.PrivateKey))
+		privateKeyBytes, err = x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 		if err != nil {
 			return InternalError{Err: fmt.Sprintf("error marshalling EC private key: %v", err)}
 		}
@@ -223,7 +225,7 @@ func GeneratePrivateKey(keyType string, keyBits int, emb EmbeddedParsedPrivateKe
 		return UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
 	}
 
-	emb.SetParsedPrivateKey(result)
+	container.SetParsedPrivateKey(privateKey, privateKeyType, privateKeyBytes)
 	return nil
 }
 

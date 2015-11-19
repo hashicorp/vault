@@ -585,10 +585,9 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		return nil, err
 	}
 
-	resultIface := interface{}(result)
 	if err := certutil.GeneratePrivateKey(creationInfo.KeyType,
 		creationInfo.KeyBits,
-		resultIface.(certutil.EmbeddedParsedPrivateKeyContainer)); err != nil {
+		result); err != nil {
 		return nil, err
 	}
 
@@ -693,10 +692,9 @@ func createCSR(creationInfo *creationBundle) (*certutil.ParsedCSRBundle, error) 
 	var err error
 	result := &certutil.ParsedCSRBundle{}
 
-	resultIface := interface{}(result)
 	if err := certutil.GeneratePrivateKey(creationInfo.KeyType,
 		creationInfo.KeyBits,
-		resultIface.(certutil.EmbeddedParsedPrivateKeyContainer)); err != nil {
+		result); err != nil {
 		return nil, err
 	}
 
