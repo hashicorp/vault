@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -164,14 +163,26 @@ func (b *backend) pathIssueSignCert(
 	}
 
 	resp := b.Secret(SecretCertsType).Response(
-		structs.New(cb).Map(),
+		map[string]interface{}{
+			"certificate":   cb.Certificate,
+			"issuing_ca":    cb.IssuingCA,
+			"serial_number": cb.SerialNumber,
+		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
 		})
 
+	if !useCSR {
+		resp.Data["private_key"] = cb.PrivateKey
+		resp.Data["private_key_type"] = cb.PrivateKeyType
+	}
+
 	if format == "der" {
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		if !useCSR {
+			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+		}
 	}
 
 	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())

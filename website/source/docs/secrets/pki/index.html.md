@@ -99,13 +99,12 @@ is down.
 
 ### You must configure issuing/CRL/OCSP information *in advance*
 
-**N.B.**: This information is valid for 0.4+.
-
 This backend serves CRLs from a predictable location, but it is not possible
 for the backend to know where it is running. Therefore, you must configure
 desired URLs for the issuing certificate, CRL distribution points, and OCSP
 servers manually using the `config/urls` endpoint. It is supported to have more
-than one of each of these.
+than one of each of these by passing in the multiple URLs as a comma-separated
+string parameter.
 
 ### No OCSP support, yet
 
@@ -113,20 +112,16 @@ Vault's architecture does not currently allow for a binary protocol such as
 OCSP to be supported by a backend. As such, you should configure your software
 to use CRLs for revocation information, with a caching lifetime that feels good
 to you. Since you are following the advice above about keeping lifetimes short
-(right?), CRLs should not grow too large.
-
-If OCSP is important to you, you can configure alternate CRL and/or OCSP
-servers using `config/urls`.
+(right?), CRLs should not grow too large, however, you can configure alternate
+CRL and/or OCSP servers using `config/urls` if you wish.
 
 If you are using issued certificates for client authentication to Vault, note
-that as of 0.4, the `cert` authentication endpoint supports being pushed CRLs.
+that as of 0.4, the `cert` authentication endpoint supports being pushed CRLs,
+but it cannot read CRLs directly from this backend.
 
 ## Quick Start
 
-**N.B.**: This quick start assumes that you are pushing a CA certificate and
-private key in. Since 0.4 there are many different methods of getting CA
-information into the backend according to your needs, so please note that this
-is simply one example.
+#### Mount the backend
 
 The first step to using the PKI backend is to mount it. Unlike the `generic`
 backend, the `pki` backend is not mounted by default.
@@ -136,26 +131,98 @@ $ vault mount pki
 Successfully mounted 'pki' at 'pki'!
 ```
 
-Next, Vault must be configured with a CA certificate and associated private key. This is done by writing the contents of a file or *stdin*:
+#### Configure a CA certificate
+
+Next, Vault must be configured with a CA certificate and associated private
+key. We'll take advantage of the backend's self-signed root generation support,
+but Vault also supports generating an intermediate CA (with a CSR for signing)
+or setting a PEM-encoded certificate and private key bundle directly into the
+backend. 
+
+Generally you'll want a root certificate to only be used to sign CA
+intermediate certificates, but for this example we'll proceed as if you will
+issue certificates directly from the root. As it's a root, we'll want to set a
+long maximum life time for the certificate; since it honors the maximum mount
+TTL, first we adjust that:
 
 ```text
-$ vault write pki/config/ca \
-    pem_bundle="@ca_bundle.pem"
-Success! Data written to: pki/config/ca
+$ vault mount-tune -max-lease-ttl=87600h pki
+Successfully tuned mount 'pki'!
 ```
 
-or
+That sets the maximum TTL for secrets issued from the mount to 10 years. (Note
+that roles can further restrict the maximum TTL.)
 
-```
-$ cat bundle.pem | vault write pki/config/ca pem_bundle="-"
-Success! Data written to: pki/config/ca
+Now, we generate our root certificate:
+
+```text
+$ vault write pki/root/generate/internal common_name=myvault.com ttl=87600h
+Key             Value
+certificate     -----BEGIN CERTIFICATE-----
+MIIDvTCCAqWgAwIBAgIUAsza+fvOw+Xh9ifYQ0gNN0ruuWcwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wHhcNMTUxMTE5MTYwNDU5WhcNMjUx
+MTE2MTYwNDU5WjAWMRQwEgYDVQQDEwtteXZhdWx0LmNvbTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAMUhH4OLf/sa6GuJONGC/CWLY7nDbfH8jAaCKgqV
+eJ81KrmcgP8WPhoFsYHFQEQXQZcrJagwYfm19jYn3CaqrYPbciv9bcWi+ECxZV3x
+Hs/YdCFk7KgDGCci37w+cy6fSB943FKJqqVbvPv0odmq6LvgGGgneznvuvkIrOWG
+qVDrDdvbEZ01XAyzUQJaaiJXExN+6xm1HcBoypCP8ZjjnXHcFQvw2QBItLRU7iUd
+ESFgbrkrSPW3HA6KF0ov2qFMoHTiQ6aM4KaHPmXcFPicugYR9owZfZ4lwWJCqT7j
+EkhokaMgHnvyRScuiRZhQm8ppHZoYsqrc3glfEuxGHkS+0cCAwEAAaOCAQEwgf4w
+DgYDVR0PAQH/BAQDAgGuMBMGA1UdJQQMMAoGCCsGAQUFBwMJMA8GA1UdEwEB/wQF
+MAMBAf8wHQYDVR0OBBYEFLvAbt0eUUOoo7hjKiQM2bRqDKrZMB8GA1UdIwQYMBaA
+FLvAbt0eUUOoo7hjKiQM2bRqDKrZMDsGCCsGAQUFBwEBBC8wLTArBggrBgEFBQcw
+AoYfaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jYTAWBgNVHREEDzANggtt
+eXZhdWx0LmNvbTAxBgNVHR8EKjAoMCagJKAihiBodHRwOi8vMTI3LjAuMC4xOjgy
+MDAvdjEvcGtpL2NybDANBgkqhkiG9w0BAQsFAAOCAQEAVSgIRl6XJs95D7iXGzeQ
+Ab8OIei779k0pD7xxS/+knY3TM6733zL/LXs4BEL3wfcQWoDrMtCW0Ook455sAOE
+PSnTaZYQSH/F74VawWhSee4ZyiWq+sTUI4IzqYG3IS36mCyb0t6RxEb3aoQ87WHs
+BHIB6uWbj6WoGHYM8ESxY89aY9jnX3xSs1HuluVW1uPrpIoa/eudpyV40Y1+9RNM
+6fCX5LHGM7vKYxqvudYe+7G1MdKVBQg17h6XuieiUswVt2/HvDlNr+9DHrUla9Ve
+Ig43v+grirlG7DrAr6Aiu/MVWKJP6CvNwG/XzrGaqd6KqSsE+8oIGR9tCTuPxI6v
+SQ==
+-----END CERTIFICATE-----
+expiration      1.763309099e+09
+issuing_ca      -----BEGIN CERTIFICATE-----
+MIIDvTCCAqWgAwIBAgIUAsza+fvOw+Xh9ifYQ0gNN0ruuWcwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wHhcNMTUxMTE5MTYwNDU5WhcNMjUx
+MTE2MTYwNDU5WjAWMRQwEgYDVQQDEwtteXZhdWx0LmNvbTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAMUhH4OLf/sa6GuJONGC/CWLY7nDbfH8jAaCKgqV
+eJ81KrmcgP8WPhoFsYHFQEQXQZcrJagwYfm19jYn3CaqrYPbciv9bcWi+ECxZV3x
+Hs/YdCFk7KgDGCci37w+cy6fSB943FKJqqVbvPv0odmq6LvgGGgneznvuvkIrOWG
+qVDrDdvbEZ01XAyzUQJaaiJXExN+6xm1HcBoypCP8ZjjnXHcFQvw2QBItLRU7iUd
+ESFgbrkrSPW3HA6KF0ov2qFMoHTiQ6aM4KaHPmXcFPicugYR9owZfZ4lwWJCqT7j
+EkhokaMgHnvyRScuiRZhQm8ppHZoYsqrc3glfEuxGHkS+0cCAwEAAaOCAQEwgf4w
+DgYDVR0PAQH/BAQDAgGuMBMGA1UdJQQMMAoGCCsGAQUFBwMJMA8GA1UdEwEB/wQF
+MAMBAf8wHQYDVR0OBBYEFLvAbt0eUUOoo7hjKiQM2bRqDKrZMB8GA1UdIwQYMBaA
+FLvAbt0eUUOoo7hjKiQM2bRqDKrZMDsGCCsGAQUFBwEBBC8wLTArBggrBgEFBQcw
+AoYfaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jYTAWBgNVHREEDzANggtt
+eXZhdWx0LmNvbTAxBgNVHR8EKjAoMCagJKAihiBodHRwOi8vMTI3LjAuMC4xOjgy
+MDAvdjEvcGtpL2NybDANBgkqhkiG9w0BAQsFAAOCAQEAVSgIRl6XJs95D7iXGzeQ
+Ab8OIei779k0pD7xxS/+knY3TM6733zL/LXs4BEL3wfcQWoDrMtCW0Ook455sAOE
+PSnTaZYQSH/F74VawWhSee4ZyiWq+sTUI4IzqYG3IS36mCyb0t6RxEb3aoQ87WHs
+BHIB6uWbj6WoGHYM8ESxY89aY9jnX3xSs1HuluVW1uPrpIoa/eudpyV40Y1+9RNM
+6fCX5LHGM7vKYxqvudYe+7G1MdKVBQg17h6XuieiUswVt2/HvDlNr+9DHrUla9Ve
+Ig43v+grirlG7DrAr6Aiu/MVWKJP6CvNwG/XzrGaqd6KqSsE+8oIGR9tCTuPxI6v
+SQ==
+-----END CERTIFICATE-----
+serial_number   02:cc:da:f9:fb:ce:c3:e5:e1:f6:27:d8:43:48:0d:37:4a:ee:b9:67
 ```
 
-Although in this example the value being piped into *stdin* could be passed
-directly into the Vault CLI command, a more complex usage might be to use
-[Ansible](http://www.ansible.com) to securely store the certificate and private
-key in an `ansible-vault` file, then have an `ansible-playbook` command decrypt
-this value and pass it in to Vault.
+The returned certificate is purely informational; it and its private key are
+safely stored in the backend mount.
+
+#### Set URL configuration
+
+Generated certificates can have the CRL location and the location of the
+issuing certificate encoded. These values must be set manually, but can be
+changed at any time.
+
+```text
+$ vault write pki/config/urls issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
+Success! Data written to: pki/ca/urls
+```
+
+#### Configure a role
 
 The next step is to configure a role. A role is a logical name that maps to a
 policy used to generated those credentials. For example, let's create an
@@ -168,6 +235,8 @@ $ vault write pki/roles/example-dot-com \
 Success! Data written to: pki/roles/example-dot-com
 ```
 
+#### Generate credentials
+
 By writing to the `roles/example-dot-com` path we are defining the
 `example-dot-com` role. To generate a new set of credentials, we simply write
 to the `issue` endpoint with that role name: Vault is now configured to create
@@ -176,29 +245,85 @@ and manage certificates!
 ```text
 $ vault write pki/issue/example-dot-com \
     common_name=blah.example.com
-Key             Value
-lease_id        pki/issue/example-dot-com/819393b5-e1a1-9efd-b72f-4dc3a1972e31
-lease_duration  259200
-lease_renewable false
-certificate     -----BEGIN CERTIFICATE-----
-MIIECDCCAvKgAwIBAgIUXmLrLkTdBIOOIYg2/BXO7docKfUwCwYJKoZIhvcNAQEL
-...
-az3gfwlOqVTdgi/ZVAtIzhSEJ0OY136bq4NOaw==
+Key                     Value
+lease_id                pki/issue/example-dot-com/32db49a9-61dd-f9ca-f4a6-aaefafe53739
+lease_duration          259199
+lease_renewable         false
+EmbeddedPrivateKey      map[private_key:-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA760wGT6yzYx85rJZcfGSK59BN2G2GgJGs62VBdXGRFav5Ag1
+/nhMqq9Rs/TVm6pNF5iy4zRH+8PI63jQ1jbsMv5+IacJtg+M90GbSC4tGAT2HWdv
+8nx+2WfU0lsFm04wiy7xvDMixQmTSNwO+BrqkGZbf/1b6QealQxMih2XIZ/b+Pas
+dw9+Bps9i8DsqVkSuuQ+oiCU8mr/qb9LkxgSI2GzN8nD9sCYx8bGPX0ML0zrUX0P
+AwHo7ZXFRrV3ZGIrrPPrjPSWZd8hSQuBhkLWKAz9tcyighI4AH93IE7tCLCFljzB
+KT4ZTId9Izh+UHiCsZgnHTf8Oc8u9eWJvMnl9QIDAQABAoIBACdHBn7cm4i74Swd
+RjM6F242pwVgaetRPCzt4WIXamqAmkqQXejZ5haCrK0FDox4GDIpwAcj5jgIGcEd
+B3xTe9nPgvQY36qKWdubUMs/Zfxts7eV3+6pIFCYh3QBnqWY5rOoec0RxDzuGMjz
+5zAZmR8Y5x3Oc2V47YhHf7OSrdXAf6IDd4oDvzIO6JoYnTAE6VNBTRSrViyTmJ5c
+GTxQQZCroFKY1sg1rxRGEEyl4uRje5CbejEmPugEU6bawRYctNmFt8WZhKhbRx1j
+6L8HFvU84ldWgdBUxwk+rAdGHKuAGvObyt6OEu3rDIRGWIyM/c+qfQIARqIcbu2x
+JVrRnAECgYEA/cotIg6K/s/v+0zuf+VLcqGPjuRnVYH3IRMbaHxb2z23ojqwiDyF
+NO5rIIw8nswvmemECwchGwNd2QyiamNSjczqDgzlZQ4WnqPYvMRe6LqjPRNKevwu
+3bH5RK1Whs2347NtE2Hsr2yBjldPCpiBVMDRNWt5wNXwfvel/yMOL8ECgYEA8cOL
+0NUhyVk6l++oNE6J7C4NpZZuhnkWNnMPQS8bnAkapQF06/6VOLTovlJtWHPWqzfx
+IW4vjr4wBF5X5BSow8TmRVi/JRgYOx75/NhlQzrJ9xI7YZ2RLk4Bu7LlPIbAan9l
+mL8w9ggdtfzBY0AUrhFgt//MtZCb04GJK4r6wzUCgYEA7ByomMLG9gIm1rngOgTt
+iJxenyZILPlZHeBU44SvQO3OZpQLoPQNSg12hTVzQJnev2bNfiUH28XqDgD/KdN1
+/o7iQmglEztkN/tfrV9UnVjmfe/wnzL3tzHZItfRZGEH8EQB+sJkHWDpt6/qzYTM
+7jjlarmu8IUZ1kY4nYHTtQECgYB7JDQCAZ089oL+wqY1Rk/ACdEPp6jSO7jRsRdz
+BzCT8JsusqhAUCLniFYIIunpJM+R1GOwuHPmy/6fKwKvfMpdNNxpNAPgO/6TlnqU
+jBBAByC6BQJT/TLml/sQBNX4V1aIqC0yeSfSGV4wxPYnvIsMAnP2JIe7b1W/jHo2
+wIprhQKBgQCRj2D/ddj13lRuHSxDMcrk9P0IQvSK20LO5IMJ6edRxMXsKjuCQ0WR
+c4mibLD0DYNoT3fTad9at3QYD0GMuIfzPRpMAd1sIHIQRe/wjQY2zIpAC4yjFW8U
+Y/eFKpuvJIT6CPU1lNBZQFc1Td0bKpdTVlJyhOHQMqLrinuSXyWwaw==
+-----END RSA PRIVATE KEY----- private_key_type:rsa]
+certificate             -----BEGIN CERTIFICATE-----
+MIIDvzCCAqegAwIBAgIUE5fVBU0TBf6QJ7Z+Vc+0x865S1AwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wHhcNMTUxMTE5MTYxNTMyWhcNMTUx
+MTIyMTYxNTMyWjAbMRkwFwYDVQQDExBibGFoLmV4YW1wbGUuY29tMIIBIjANBgkq
+hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA760wGT6yzYx85rJZcfGSK59BN2G2GgJG
+s62VBdXGRFav5Ag1/nhMqq9Rs/TVm6pNF5iy4zRH+8PI63jQ1jbsMv5+IacJtg+M
+90GbSC4tGAT2HWdv8nx+2WfU0lsFm04wiy7xvDMixQmTSNwO+BrqkGZbf/1b6Qea
+lQxMih2XIZ/b+Pasdw9+Bps9i8DsqVkSuuQ+oiCU8mr/qb9LkxgSI2GzN8nD9sCY
+x8bGPX0ML0zrUX0PAwHo7ZXFRrV3ZGIrrPPrjPSWZd8hSQuBhkLWKAz9tcyighI4
+AH93IE7tCLCFljzBKT4ZTId9Izh+UHiCsZgnHTf8Oc8u9eWJvMnl9QIDAQABo4H/
+MIH8MA4GA1UdDwEB/wQEAwIDqDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUH
+AwIwHQYDVR0OBBYEFNz/tm08rZmd2QPuBIsuCqdgozSjMB8GA1UdIwQYMBaAFLvA
+bt0eUUOoo7hjKiQM2bRqDKrZMDsGCCsGAQUFBwEBBC8wLTArBggrBgEFBQcwAoYf
+aHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jYTAbBgNVHREEFDASghBibGFo
+LmV4YW1wbGUuY29tMDEGA1UdHwQqMCgwJqAkoCKGIGh0dHA6Ly8xMjcuMC4wLjE6
+ODIwMC92MS9wa2kvY3JsMA0GCSqGSIb3DQEBCwUAA4IBAQAC+Wbov3HfdZrvrG5i
+poODurUkcluxGBXNUjAcXR4IOne14eXszlo7Z3mJY32V4pWliQhYJTuknCC2c6l1
+Qgbr+Rw8iYqrap09osLws1vj1vAp6qwcNhjNlZveFBsBtUcgbF6t8JF2P8A11CR6
+G/y5jUSXUWTuXf+dD63DSzOlk8+F7ocduXsOLIBTSqQUQhn68zG4JQb020wbbCFI
+xHZgEdNedrqo96zhMVnoHbVqm+SnNv6QLHj/2HtSTHA6oICpVcXLtWk+WojViIpl
+eeMEKTzLWK53Ijv3bCGJD8YNc/RpzEAKaVUvYgQdSZvzDOfRs2rugYeq/vWH7h18
+rySo
 -----END CERTIFICATE-----
-issuing_ca      -----BEGIN CERTIFICATE-----
-MIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV
-...
+issuing_ca              -----BEGIN CERTIFICATE-----
+MIIDvTCCAqWgAwIBAgIUAsza+fvOw+Xh9ifYQ0gNN0ruuWcwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wHhcNMTUxMTE5MTYwNDU5WhcNMjUx
+MTE2MTYwNDU5WjAWMRQwEgYDVQQDEwtteXZhdWx0LmNvbTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAMUhH4OLf/sa6GuJONGC/CWLY7nDbfH8jAaCKgqV
+eJ81KrmcgP8WPhoFsYHFQEQXQZcrJagwYfm19jYn3CaqrYPbciv9bcWi+ECxZV3x
+Hs/YdCFk7KgDGCci37w+cy6fSB943FKJqqVbvPv0odmq6LvgGGgneznvuvkIrOWG
+qVDrDdvbEZ01XAyzUQJaaiJXExN+6xm1HcBoypCP8ZjjnXHcFQvw2QBItLRU7iUd
+ESFgbrkrSPW3HA6KF0ov2qFMoHTiQ6aM4KaHPmXcFPicugYR9owZfZ4lwWJCqT7j
+EkhokaMgHnvyRScuiRZhQm8ppHZoYsqrc3glfEuxGHkS+0cCAwEAAaOCAQEwgf4w
+DgYDVR0PAQH/BAQDAgGuMBMGA1UdJQQMMAoGCCsGAQUFBwMJMA8GA1UdEwEB/wQF
+MAMBAf8wHQYDVR0OBBYEFLvAbt0eUUOoo7hjKiQM2bRqDKrZMB8GA1UdIwQYMBaA
+FLvAbt0eUUOoo7hjKiQM2bRqDKrZMDsGCCsGAQUFBwEBBC8wLTArBggrBgEFBQcw
+AoYfaHR0cDovLzEyNy4wLjAuMTo4MjAwL3YxL3BraS9jYTAWBgNVHREEDzANggtt
+eXZhdWx0LmNvbTAxBgNVHR8EKjAoMCagJKAihiBodHRwOi8vMTI3LjAuMC4xOjgy
+MDAvdjEvcGtpL2NybDANBgkqhkiG9w0BAQsFAAOCAQEAVSgIRl6XJs95D7iXGzeQ
+Ab8OIei779k0pD7xxS/+knY3TM6733zL/LXs4BEL3wfcQWoDrMtCW0Ook455sAOE
+PSnTaZYQSH/F74VawWhSee4ZyiWq+sTUI4IzqYG3IS36mCyb0t6RxEb3aoQ87WHs
+BHIB6uWbj6WoGHYM8ESxY89aY9jnX3xSs1HuluVW1uPrpIoa/eudpyV40Y1+9RNM
+6fCX5LHGM7vKYxqvudYe+7G1MdKVBQg17h6XuieiUswVt2/HvDlNr+9DHrUla9Ve
+Ig43v+grirlG7DrAr6Aiu/MVWKJP6CvNwG/XzrGaqd6KqSsE+8oIGR9tCTuPxI6v
+SQ==
 -----END CERTIFICATE-----
-private_key     -----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEA0cczc7Y2yIu7aD/IaDi23Io+tvvDS9XaXXDUFW1kqd58P83r
-...
-3xhCNnZ3CMQaM2I48sloVK/XoikMLb5MZwOUQn/V+TrhWP4Lu7qD
------END RSA PRIVATE KEY-----
-serial_number   5e:62:eb:2e:44:dd:04:83:8e:21:88:36:fc:15:ce:ed:da:1c:29:f5
+serial_number           13:97:d5:05:4d:13:05:fe:90:27:b6:7e:55:cf:b4:c7:ce:b9:4b:50
 ```
-
-Note that this is a write, not a read, to allow values to be passed in at
-request time.
 
 Vault has now generated a new set of credentials using the `example-dot-com`
 role configuration. Here we see the dynamically generated private key and
@@ -416,6 +541,7 @@ subpath for interactive help output.
 </dl>
 
 ### /pki/config/urls
+
 #### GET
 
 <dl class="api">
@@ -425,7 +551,7 @@ subpath for interactive help output.
   </dd>
 
   <dt>Method</dt>
-  <dd>POST</dd>
+  <dd>GET</dd>
 
   <dt>URL</dt>
   <dd>`/pki/config/urls`</dd>
@@ -1035,7 +1161,10 @@ subpath for interactive help output.
     overwrite any previously-existing private key and certificate._ If the path
     ends with `exported`, the private key will be returned in the response; if
     it is `internal` the private key will not be returned and *cannot be
-    retrieved later*. Distribution points use the values set via `config/urls`.
+    retrieved later*. Distribution points use the values set via
+    `config/urls`. <br /><br />Vault does _not_ revoke this certificate (since
+    it could not sign the CRL with an expired certificate), however, this
+    endpoint does honor the maximum mount TTL.
   </dd>
 
   <dt>Method</dt>

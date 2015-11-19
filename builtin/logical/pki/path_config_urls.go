@@ -2,9 +2,9 @@ package pki
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -43,14 +43,14 @@ for the OCSP servers attribute`,
 	}
 }
 
-func validateURLs(urls []string) (string, error) {
+func validateURLs(urls []string) string {
 	for _, curr := range urls {
-		if _, err := url.Parse(curr); err != nil {
-			return curr, err
+		if !govalidator.IsURL(curr) {
+			return curr
 		}
 	}
 
-	return "", nil
+	return ""
 }
 
 func getURLs(req *logical.Request) (*urlEntries, error) {
@@ -121,25 +121,25 @@ func (b *backend) pathWriteURL(
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.IssuingCertificates = splitURLs
-		if badUrl, err := validateURLs(entries.CRLDistributionPoints); err != nil {
+		if badUrl := validateURLs(entries.IssuingCertificates); badUrl != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in issuing certificates; url is %s, error is %s", badUrl, err)), nil
+				"invalid URL found in issuing certificates: %s", badUrl)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.CRLDistributionPoints = splitURLs
-		if badUrl, err := validateURLs(entries.CRLDistributionPoints); err != nil {
+		if badUrl := validateURLs(entries.CRLDistributionPoints); badUrl != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in CRL distribution points; url is %s, error is %s", badUrl, err)), nil
+				"invalid URL found in CRL distribution points: %s", badUrl)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.OCSPServers = splitURLs
-		if badUrl, err := validateURLs(entries.CRLDistributionPoints); err != nil {
+		if badUrl := validateURLs(entries.OCSPServers); badUrl != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in OCSP servers; url is %s, error is %s", badUrl, err)), nil
+				"invalid URL found in OCSP servers: %s", badUrl)), nil
 		}
 	}
 

@@ -336,7 +336,7 @@ type roleEntry struct {
 	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength         *int   `json:"," structs:"," mapstructure:","`
+	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
 }
 
 const pathRoleHelpSyn = `
