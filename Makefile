@@ -4,7 +4,8 @@ EXTERNAL_TOOLS=\
 	github.com/tools/godep \
 	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/cover \
-	golang.org/x/tools/cmd/vet
+	golang.org/x/tools/cmd/vet \
+	gopkg.in/mgo.v2
 
 default: test
 
