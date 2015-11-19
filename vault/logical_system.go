@@ -264,6 +264,28 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 			},
 
 			&framework.Path{
+				Pattern: "audit-hash/(?P<path>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["audit_path"][0]),
+					},
+
+					"input": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.WriteOperation: b.handleAuditHash,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "audit$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -822,6 +844,32 @@ func (b *SystemBackend) handleAuditTable(
 	return resp, nil
 }
 
+// handleAuditHash is used to fetch the hash of the given input data with the
+// specified audit backend's salt
+func (b *SystemBackend) handleAuditHash(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	input := data.Get("input").(string)
+	if input == "" {
+		return logical.ErrorResponse("the \"input\" parameter is empty"), nil
+	}
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	hash, err := b.Core.auditBroker.GetHash(path, input)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"hash": hash,
+		},
+	}, nil
+}
+
 // handleEnableAudit is used to enable a new audit backend
 func (b *SystemBackend) handleEnableAudit(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1164,6 +1212,11 @@ or delete a policy.
 
 	"policy-rules": {
 		`The rules of the policy. Either given in HCL or JSON format.`,
+		"",
+	},
+
+	"audit-hash": {
+		"The hash of the given string via the given audit backend",
 		"",
 	},
 

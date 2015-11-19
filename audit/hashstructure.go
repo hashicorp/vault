@@ -10,6 +10,11 @@ import (
 	"github.com/mitchellh/reflectwalk"
 )
 
+// HashString hashes the given opaque string and returns it
+func HashString(salter *salt.Salt, data string) string {
+	return salter.GetIdentifiedHMAC(data)
+}
+
 // Hash will hash the given type. This has built-in support for auth,
 // requests, and responses. If it is a type that isn't recognized, then
 // it will be passed through.

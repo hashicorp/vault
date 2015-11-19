@@ -39,6 +39,9 @@ IMPROVEMENTS:
  * audit: HMAC-SHA256'd client tokens are now stored with each request entry.
    Previously they were only displayed at creation time; this allows much
    better traceability of client actions. [GH-713]
+ * audit: There is now a `sys/audit-hash` endpoint that can be used to generate
+   an HMAC-SHA256'd value from provided data using the given audit backend's
+   salt [GH-784]
  * core: The physical storage read cache can now be disabled via
    "disable_cache" [GH-674]
  * core: The unsealing process can now be reset midway through (this feature
