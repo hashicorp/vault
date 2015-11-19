@@ -31,7 +31,7 @@ testacc: generate
 
 # testrace runs the race checker
 testrace: generate
-	TF_ACC= godep go test -race $(TEST) $(TESTARGS)
+	CGO_ENABLED=1 TF_ACC= godep go test -race $(TEST) $(TESTARGS)
 
 cover:
 	./scripts/coverage.sh --html

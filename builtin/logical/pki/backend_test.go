@@ -169,7 +169,7 @@ func TestBackend_RSARoles(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.WriteOperation,
-				Path:      "config/ca/set",
+				Path:      "config/ca",
 				Data: map[string]interface{}{
 					"pem_bundle": rsaCAKey + rsaCACert,
 				},
@@ -212,7 +212,7 @@ func TestBackend_ECRoles(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.WriteOperation,
-				Path:      "config/ca/set",
+				Path:      "config/ca",
 				Data: map[string]interface{}{
 					"pem_bundle": ecCAKey + ecCACert,
 				},
@@ -537,7 +537,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data: map[string]interface{}{
 				"pem_bundle": caKey + caCert,
 			},
@@ -615,7 +615,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// Here, just the cert
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data: map[string]interface{}{
 				"pem_bundle": caCert,
 			},
@@ -625,7 +625,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// Here, just the key
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data: map[string]interface{}{
 				"pem_bundle": caKey,
 			},
@@ -713,7 +713,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// Re-load the root key in so we can sign it
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
 				delete(reqdata, "pem_bundle")
@@ -744,7 +744,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// First load in this way to populate the private key
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
 				delete(reqdata, "pem_bundle")
@@ -849,7 +849,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
 				delete(reqdata, "pem_bundle")
@@ -880,7 +880,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		// First load in this way to populate the private key
 		logicaltest.TestStep{
 			Operation: logical.WriteOperation,
-			Path:      "config/ca/set",
+			Path:      "config/ca",
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
 				delete(reqdata, "pem_bundle")

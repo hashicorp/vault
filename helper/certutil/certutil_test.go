@@ -327,33 +327,37 @@ func TestTLSConfig(t *testing.T) {
 }
 
 func refreshRSACertBundle() *CertBundle {
-	return &CertBundle{
+	ret := &CertBundle{
 		Certificate: certRSAPem,
-		PrivateKey:  privRSAKeyPem,
 		IssuingCA:   issuingCaPem,
 	}
+	ret.PrivateKey = privRSAKeyPem
+	return ret
 }
 
 func refreshECCertBundle() *CertBundle {
-	return &CertBundle{
+	ret := &CertBundle{
 		Certificate: certECPem,
-		PrivateKey:  privECKeyPem,
 		IssuingCA:   issuingCaPem,
 	}
+	ret.PrivateKey = privECKeyPem
+	return ret
 }
 
 func refreshRSACSRBundle() *CSRBundle {
-	return &CSRBundle{
-		CSR:        csrRSAPem,
-		PrivateKey: privRSAKeyPem,
+	ret := &CSRBundle{
+		CSR: csrRSAPem,
 	}
+	ret.PrivateKey = privRSAKeyPem
+	return ret
 }
 
 func refreshECCSRBundle() *CSRBundle {
-	return &CSRBundle{
-		CSR:        csrECPem,
-		PrivateKey: privECKeyPem,
+	ret := &CSRBundle{
+		CSR: csrECPem,
 	}
+	ret.PrivateKey = privECKeyPem
+	return ret
 }
 
 const (
