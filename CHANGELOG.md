@@ -14,6 +14,10 @@ DEPRECATIONS/BREAKING CHANGES:
 
 FEATURES:
 
+ * **Significantly Enhanced PKI Backend**: The `pki` backend can now generate
+   and sign root CA certificates and intermediate CA CSRs. It can also now sign
+   submitted client CSRs, as well as a significant number of other
+   enhancements. See the updated documentation for the full API. [GH-666]
  * **CRL Checking for Certificate Authentication**: The `cert` backend now
    supports pushing CRLs into the mount and using the contained serial numbers
    for revocation checking. See the documentation for the `cert` backend for
