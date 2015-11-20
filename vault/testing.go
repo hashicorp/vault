@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
@@ -58,6 +60,19 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 func TestCore(t *testing.T) *Core {
 	noopAudits := map[string]audit.Factory{
 		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
+			view := &logical.InmemStorage{}
+			view.Put(&logical.StorageEntry{
+				Key:   "salt",
+				Value: []byte("foo"),
+			})
+			var err error
+			config.Salt, err = salt.NewSalt(view, &salt.Config{
+				HMAC:     sha256.New,
+				HMACType: "hmac-sha256",
+			})
+			if err != nil {
+				t.Fatal("error getting new salt: %v", err)
+			}
 			return &noopAudit{
 				Config: config,
 			}, nil
@@ -245,6 +260,10 @@ func AddTestLogicalBackend(name string, factory logical.Factory) error {
 
 type noopAudit struct {
 	Config *audit.BackendConfig
+}
+
+func (n *noopAudit) GetHash(data string) string {
+	return n.Config.Salt.GetIdentifiedHMAC(data)
 }
 
 func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, e error) error {

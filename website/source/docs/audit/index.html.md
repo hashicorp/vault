@@ -25,11 +25,11 @@ interaction with Vault. The data in the request and the data in the
 response (including secrets and authentication tokens) will be hashed
 with a salt using HMAC-SHA256.
 
-<!---
-The purpose of the hash is so that secrets aren't in plaintext within
-your audit logs. However, you're still able to check the value of
-secrets by SHA-ing it yourself.
---->
+The purpose of the hash is so that secrets aren't in plaintext within your
+audit logs. However, you're still able to check the value of secrets by
+generating HMACs yourself; this can be done with the audit backend's hash
+function and salt by using the `/sys/audit-hash` API endpoint (see the
+documentation for more details).
 
 ## Enabling/Disabling Audit Backends
 
