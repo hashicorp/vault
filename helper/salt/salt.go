@@ -110,18 +110,18 @@ func (s *Salt) SaltID(id string) string {
 	return SaltID(s.salt, id, s.config.HashFunc)
 }
 
-// GetHMAC is used to apply a salt and hash function to an ID to make sure
-// it is not reversible, with an additional HMAC
-func (s *Salt) GetHMAC(id string) string {
+// GetHMAC is used to apply a salt and hash function to data to make sure it is
+// not reversible, with an additional HMAC
+func (s *Salt) GetHMAC(data string) string {
 	hm := hmac.New(s.config.HMAC, []byte(s.salt))
-	hm.Write([]byte(id))
+	hm.Write([]byte(data))
 	return hex.EncodeToString(hm.Sum(nil))
 }
 
-// GetIdentifiedHMAC is used to apply a salt and hash function to an ID to make sure
-// it is not reversible, with an additional HMAC, and ID prepended
-func (s *Salt) GetIdentifiedHMAC(id string) string {
-	return s.hmacType + ":" + s.GetHMAC(id)
+// GetIdentifiedHMAC is used to apply a salt and hash function to data to make
+// sure it is not reversible, with an additional HMAC, and ID prepended
+func (s *Salt) GetIdentifiedHMAC(data string) string {
+	return s.hmacType + ":" + s.GetHMAC(data)
 }
 
 // DidGenerate returns if the underlying salt value was generated
