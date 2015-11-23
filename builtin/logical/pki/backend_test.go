@@ -1085,7 +1085,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			allowed := allowedInt.(bool)
 			issueVals.CommonName = name
 			if roleVals.EmailProtectionFlag {
-				issueVals.CommonName = "user@" + issueVals.CommonName
+				if !strings.HasPrefix(name, "*") {
+					issueVals.CommonName = "user@" + issueVals.CommonName
+				}
 			}
 			if allowed {
 				issueTestStep.ErrorOk = false

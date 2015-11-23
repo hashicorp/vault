@@ -190,10 +190,14 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 		emailDomain := name
 		isEmail := false
 		isWildcard := false
+
+		// If it has an @, assume it is an email address and separate out the
+		// user from the hostname portion so that we can act on the hostname.
+		// Note that this matches behavior from the alt_names parameter. If it
+		// ends up being problematic for users, I guess that could be separated
+		// into dns_names and email_names in the future to be explicit, but I
+		// don't think this is likely.
 		if strings.Contains(name, "@") {
-			if !role.EmailProtectionFlag && !role.AllowAnyName {
-				return name, nil
-			}
 			splitEmail := strings.Split(name, "@")
 			if len(splitEmail) != 2 {
 				return name, nil
@@ -202,66 +206,107 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			emailDomain = splitEmail[1]
 			isEmail = true
 		}
+
+		// If we have an asterisk as the first part of the domain name, mark it
+		// as wildcard and set the sanitized name to the remainder of the
+		// domain
 		if strings.HasPrefix(sanitizedName, "*.") {
 			sanitizedName = sanitizedName[2:]
 			isWildcard = true
 		}
 
+		// Email addresses using wildcard domain names do not make sense
+		if isEmail && isWildcard {
+			return name, nil
+		}
+
+		// AllowAnyName is checked after this because EnforceHostnames still
+		// applies when allowing any name. Also, we check the sanitized name to
+		// ensure that we are not either checking a full email address or a
+		// wildcard prefix.
 		if role.EnforceHostnames {
 			if !hostnameRegex.MatchString(sanitizedName) {
 				return name, nil
 			}
 		}
 
+		// Self-explanatory
 		if role.AllowAnyName {
 			continue
 		}
 
+		// The following blocks all work the same basic way:
+		// 1) If a role allows a certain class of base (localhost, token
+		// display name, role-configured base domain), perform further tests
+		//
+		// 2) If there is a perfect match on either the name itself or it's an
+		// email address with a perfect match on the hostname portion, allow it
+		//
+		// 3) If subdomains are allowed, we check based on the sanitized name;
+		// note that if not a wildcard, will be equivalent to the email domain
+		// for email checks, and we already checked above for both a wildcard
+		// and email address being present in the same name
+		// 3a) First we check for a non-wildcard subdomain, as in <name>.<base>
+		// 3b) Then we check if it's a wildcard and the base domain is a match
+		//
+		// Variances are noted in-line
+
 		if role.AllowLocalhost {
-			if name == "localhost" || (isEmail && emailDomain == "localhost") {
+			if name == "localhost" ||
+				name == "localdomain" ||
+				(isEmail && emailDomain == "localhost") ||
+				(isEmail && emailDomain == "localdomain") {
 				continue
 			}
 
 			if role.AllowSubdomains {
-				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) {
-					// Regex won't match empty string, so protected against
-					// someone trying to get base without it being allowed
-					trimmed := strings.TrimSuffix(sanitizedName, "."+req.DisplayName)
-					if hostnameRegex.MatchString(trimmed) {
-						continue
-					}
+				// It is possible, if unlikely, to have a subdomain of "localhost"
+				if strings.HasSuffix(sanitizedName, ".localhost") ||
+					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
+					continue
 				}
 
-				// The exception to matching the empty string is if it's *.
-				// which is pulled out of the sanitized name, so see if it's
-				// a wildcard matching the allowed base domain
-				if isWildcard && sanitizedName == role.AllowedBaseDomain {
+				// A subdomain of "localdomain" is also not entirely uncommon
+				if strings.HasSuffix(sanitizedName, ".localdomain") ||
+					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
 					continue
 				}
 			}
 		}
 
 		if role.AllowTokenDisplayName {
-			// Don't check sanitized here because it needs to be exact
-			if name == req.DisplayName || (isEmail && emailDomain == req.DisplayName) {
+			if name == req.DisplayName {
 				continue
 			}
 
 			if role.AllowSubdomains {
-				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) {
-					trimmed := strings.TrimSuffix(sanitizedName, "."+req.DisplayName)
-					if hostnameRegex.MatchString(trimmed) {
-						continue
+				if isEmail {
+					// If it's an email address, we need to parse the token
+					// display name in order to do a proper comparison of the
+					// subdomain
+					if strings.Contains(req.DisplayName, "@") {
+						splitDisplay := strings.Split(req.DisplayName, "@")
+						if len(splitDisplay) == 2 {
+							// Compare the sanitized name against the hostname
+							// portion of the email address in the roken
+							// display name
+							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
+								continue
+							}
+						}
 					}
 				}
 
-				if isWildcard && sanitizedName == role.AllowedBaseDomain {
+				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) ||
+					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
 					continue
 				}
 			}
 		}
 
 		if len(role.AllowedBaseDomain) != 0 {
+			// First, allow an exact match of the base domain if that role flag
+			// is enabled
 			if role.AllowBaseDomain &&
 				(name == role.AllowedBaseDomain ||
 					(isEmail && emailDomain == role.AllowedBaseDomain)) {
@@ -269,14 +314,8 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			}
 
 			if role.AllowSubdomains {
-				if strings.HasSuffix(sanitizedName, "."+role.AllowedBaseDomain) {
-					trimmed := strings.TrimSuffix(sanitizedName, "."+role.AllowedBaseDomain)
-					if hostnameRegex.MatchString(trimmed) {
-						continue
-					}
-				}
-
-				if isWildcard && sanitizedName == role.AllowedBaseDomain {
+				if strings.HasSuffix(sanitizedName, "."+role.AllowedBaseDomain) ||
+					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
 					continue
 				}
 			}
@@ -427,6 +466,11 @@ func generateCreationBundle(b *backend,
 	emailAddresses := []string{}
 	{
 		if strings.Contains(cn, "@") {
+			// Note: emails are not disallowed if the role's email protection
+			// flag is false, because they may well be included for
+			// informational purposes; it is up to the verifying party to
+			// ensure that email addresses in a subject alternate name can be
+			// used for the purpose for which they are presented
 			emailAddresses = append(emailAddresses, cn)
 		} else {
 			dnsNames = append(dnsNames, cn)
