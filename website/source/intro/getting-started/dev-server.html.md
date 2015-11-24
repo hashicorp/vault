@@ -75,6 +75,7 @@ else:
 
   1. Copy and run the `export VAULT_ADDR ...` command from your terminal
      output. This will configure the Vault client to talk to our dev server.
+    *Note*: In Windows, run `set VAULT_ADDR ...` without quotes.
 
   2. Save the unseal key somewhere. Don't worry about _how_ to save this
      securely. For now, just save it anywhere.
