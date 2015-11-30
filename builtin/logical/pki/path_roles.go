@@ -58,14 +58,6 @@ for the base domain itself, e.g. "example.com". Note
 the difference between this and "allowed_base_domain".`,
 			},
 
-			"allow_token_displayname": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
-				Description: `If set, clients can request certificates for
-matching the value of the Display Name on the requesting
-token. See the documentation for more information.`,
-			},
-
 			"allow_subdomains": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: false,
@@ -246,23 +238,22 @@ func (b *backend) pathRoleCreate(
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		MaxTTL:                data.Get("max_ttl").(string),
-		TTL:                   data.Get("ttl").(string),
-		AllowLocalhost:        data.Get("allow_localhost").(bool),
-		AllowedBaseDomain:     data.Get("allowed_base_domain").(string),
-		AllowBaseDomain:       data.Get("allow_base_domain").(bool),
-		AllowTokenDisplayName: data.Get("allow_token_displayname").(bool),
-		AllowSubdomains:       data.Get("allow_subdomains").(bool),
-		AllowAnyName:          data.Get("allow_any_name").(bool),
-		EnforceHostnames:      data.Get("enforce_hostnames").(bool),
-		AllowIPSANs:           data.Get("allow_ip_sans").(bool),
-		ServerFlag:            data.Get("server_flag").(bool),
-		ClientFlag:            data.Get("client_flag").(bool),
-		CodeSigningFlag:       data.Get("code_signing_flag").(bool),
-		EmailProtectionFlag:   data.Get("email_protection_flag").(bool),
-		KeyType:               data.Get("key_type").(string),
-		KeyBits:               data.Get("key_bits").(int),
-		UseCSRCommonName:      data.Get("use_csr_common_name").(bool),
+		MaxTTL:              data.Get("max_ttl").(string),
+		TTL:                 data.Get("ttl").(string),
+		AllowLocalhost:      data.Get("allow_localhost").(bool),
+		AllowedBaseDomain:   data.Get("allowed_base_domain").(string),
+		AllowBaseDomain:     data.Get("allow_base_domain").(bool),
+		AllowSubdomains:     data.Get("allow_subdomains").(bool),
+		AllowAnyName:        data.Get("allow_any_name").(bool),
+		EnforceHostnames:    data.Get("enforce_hostnames").(bool),
+		AllowIPSANs:         data.Get("allow_ip_sans").(bool),
+		ServerFlag:          data.Get("server_flag").(bool),
+		ClientFlag:          data.Get("client_flag").(bool),
+		CodeSigningFlag:     data.Get("code_signing_flag").(bool),
+		EmailProtectionFlag: data.Get("email_protection_flag").(bool),
+		KeyType:             data.Get("key_type").(string),
+		KeyBits:             data.Get("key_bits").(int),
+		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
 	}
 
 	var maxTTL time.Duration

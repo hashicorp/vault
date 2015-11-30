@@ -936,7 +936,7 @@ subpath for interactive help output.
   <dt>Description</dt>
   <dd>
     Creates or updates the role definition. Note that the
-    `allowed_base_domain`, `allow_token_displayname`, `allow_subdomains`, and
+    `allowed_base_domain`, `allow_subdomains`, and
     `allow_any_name` attributes are additive; between them nearly and across
     multiple roles nearly any issuing policy can be accommodated.
     `server_flag`, `client_flag`, and `code_signing_flag` are additive as well.
@@ -987,13 +987,6 @@ subpath for interactive help output.
         <span class="param-flags">optional</span>
         If set, clients can request certificates matching the value of the
         actual base domain. Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_token_displayname</span>
-        <span class="param-flags">optional</span>
-        If set, clients can request certificates matching the value of Display
-        Name from the requesting token. Remember, this stacks with the other CN
-        options, including `allow_subdomains`. Defaults to `false`.
       </li>
       <li>
         <span class="param">allow_subdomains</span>
@@ -1105,7 +1098,6 @@ subpath for interactive help output.
         "allow_ip_sans": true,
         "allow_localhost": true,
         "allow_subdomains": false,
-        "allow_token_displayname": false,
         "allowed_base_domain": "example.com",
         "client_flag": true,
         "code_signing_flag": false,

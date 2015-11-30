@@ -11,6 +11,11 @@ DEPRECATIONS/BREAKING CHANGES:
  * As noted below in the FEATURES section, if your Vault installation contains
    a policy called `default`, new tokens created will inherit this policy
    automatically.
+ * In the PKI backend, the token display name is no longer a valid option for
+   providing a base domain for issuance. Since this name is prepended with the
+   name of the authentication backend that issued it, it provided a faulty
+   use-case at best and a confusing experience at worst. We hope to figure out
+   a better per-token value in a future release.
 
 FEATURES:
 
