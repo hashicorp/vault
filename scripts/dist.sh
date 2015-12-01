@@ -22,11 +22,15 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 # Change into that dir because we expect that
 cd $DIR
 
+if [ -z $RELBRANCH ]; then
+  RELBRANCH=master
+fi
+
 # Tag, unless told not to
 if [ -z $NOTAG ]; then
   echo "==> Tagging..."
   git commit --allow-empty -a --gpg-sign=348FFC4C -m "Cut version $VERSION"
-  git tag -a -m "Version $VERSION" -s -u 348FFC4C "v${VERSION}" master
+  git tag -a -m "Version $VERSION" -s -u 348FFC4C "v${VERSION}" $RELBRANCH
 fi
 
 # Build the packages
