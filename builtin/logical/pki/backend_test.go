@@ -993,14 +993,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
-	getCnCheck := func(name, keyType string, key crypto.Signer, usage certUsage, validity time.Duration) logicaltest.TestCheckFunc {
+	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage certUsage, validity time.Duration) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
 			err := mapstructure.Decode(resp.Data, &certBundle)
 			if err != nil {
 				return err
 			}
-			parsedCertBundle, err := checkCertsAndPrivateKey(keyType, key, usage, validity, &certBundle)
+			parsedCertBundle, err := checkCertsAndPrivateKey(role.KeyType, key, usage, validity, &certBundle)
 			if err != nil {
 				return fmt.Errorf("Error checking generated certificate: %s", err)
 			}
@@ -1034,7 +1034,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	// Common names to test with the various role flags toggled
 	var commonNames struct {
 		Localhost            bool `structs:"localhost"`
-		BaseDomain           bool `structs:"example.com"`
+		BareDomain           bool `structs:"example.com"`
+		SecondDomain         bool `structs:"foobar.com"`
 		SubDomain            bool `structs:"foo.example.com"`
 		Wildcard             bool `structs:"*.example.com"`
 		SubSubdomain         bool `structs:"foo.bar.example.com"`
@@ -1129,9 +1130,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					Bytes: csr,
 				}
 				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
-				addTests(getCnCheck(issueVals.CommonName, roleVals.KeyType, privKey, usage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, privKey, usage, validity))
 			} else {
-				addTests(getCnCheck(issueVals.CommonName, roleVals.KeyType, nil, usage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, usage, validity))
 			}
 		}
 	}
@@ -1150,10 +1151,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		commonNames.Localhost = true
 		addCnTests()
 
-		roleVals.AllowedBaseDomain = "foobar.com"
+		roleVals.AllowedDomains = "foobar.com"
 		addCnTests()
 
-		roleVals.AllowedBaseDomain = "example.com"
+		roleVals.AllowedDomains = "example.com"
 		roleVals.AllowSubdomains = true
 		commonNames.SubDomain = true
 		commonNames.Wildcard = true
@@ -1161,8 +1162,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		commonNames.SubSubdomainWildcard = true
 		addCnTests()
 
-		roleVals.AllowBaseDomain = true
-		commonNames.BaseDomain = true
+		roleVals.AllowedDomains = "foobar.com,example.com"
+		commonNames.SecondDomain = true
+		roleVals.AllowBareDomains = true
+		commonNames.BareDomain = true
 		addCnTests()
 
 		roleVals.AllowAnyName = true

@@ -11,11 +11,18 @@ DEPRECATIONS/BREAKING CHANGES:
  * As noted below in the FEATURES section, if your Vault installation contains
    a policy called `default`, new tokens created will inherit this policy
    automatically.
- * In the PKI backend, the token display name is no longer a valid option for
-   providing a base domain for issuance. Since this name is prepended with the
-   name of the authentication backend that issued it, it provided a faulty
-   use-case at best and a confusing experience at worst. We hope to figure out
-   a better per-token value in a future release.
+ * In the PKI backend there have been a few minor breaking changes:
+   * The token display name is no longer a valid option for providing a base
+   domain for issuance. Since this name is prepended with the name of the
+   authentication backend that issued it, it provided a faulty use-case at best
+   and a confusing experience at worst. We hope to figure out a better
+   per-token value in a future release.
+   * The `allowed_base_domain` parameter has been changed to `allowed_domains`,
+   which accepts a comma-separated list of domains. This allows issuing
+   certificates with DNS subjects across multiple domains. If you had a
+   configured `allowed_base_domain` parameter, it will be migrated
+   automatically when the role is read (either via a normal read, or via
+   issuing a certificate).
 
 FEATURES:
 

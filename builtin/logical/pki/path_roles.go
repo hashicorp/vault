@@ -2,6 +2,7 @@ package pki
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -40,22 +41,23 @@ the value of max_ttl.`,
 name in a request`,
 			},
 
-			"allowed_base_domain": &framework.FieldSchema{
+			"allowed_domains": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
 				Description: `If set, clients can request certificates for
-subdomains directly beneath this base domain, including
-the wildcard subdomain. See the documentation for more
-information. Note the difference between this and
-"allow_base_domain".`,
+subdomains directly beneath these domains, including
+the wildcard subdomains. See the documentation for more
+information. This parameter accepts a comma-separated list
+of domains.`,
 			},
 
-			"allow_base_domain": &framework.FieldSchema{
+			"allow_bare_domains": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: false,
 				Description: `If set, clients can request certificates
-for the base domain itself, e.g. "example.com". Note
-the difference between this and "allowed_base_domain".`,
+for the base domains themselves, e.g. "example.com".
+This is a separate option as in some cases this can
+be considered a security threat.`,
 			},
 
 			"allow_subdomains": &framework.FieldSchema{
@@ -179,6 +181,33 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		result.LeaseMax = ""
 		modified = true
 	}
+	if result.AllowBaseDomain {
+		result.AllowBaseDomain = false
+		result.AllowBareDomains = true
+		modified = true
+	}
+	if result.AllowedBaseDomain != "" {
+		found := false
+		allowedDomains := strings.Split(result.AllowedDomains, ",")
+		if len(allowedDomains) != 0 {
+			for _, v := range allowedDomains {
+				if v == result.AllowedBaseDomain {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			if result.AllowedDomains == "" {
+				result.AllowedDomains = result.AllowedBaseDomain
+			} else {
+				result.AllowedDomains += "," + result.AllowedBaseDomain
+			}
+			result.AllowedBaseDomain = ""
+			modified = true
+		}
+	}
+
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -241,8 +270,8 @@ func (b *backend) pathRoleCreate(
 		MaxTTL:              data.Get("max_ttl").(string),
 		TTL:                 data.Get("ttl").(string),
 		AllowLocalhost:      data.Get("allow_localhost").(bool),
-		AllowedBaseDomain:   data.Get("allowed_base_domain").(string),
-		AllowBaseDomain:     data.Get("allow_base_domain").(bool),
+		AllowedDomains:      data.Get("allowed_domains").(string),
+		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:     data.Get("allow_subdomains").(bool),
 		AllowAnyName:        data.Get("allow_any_name").(bool),
 		EnforceHostnames:    data.Get("enforce_hostnames").(bool),
@@ -314,7 +343,9 @@ type roleEntry struct {
 	TTL                   string `json:"ttl" structs:"ttl" mapstructure:"ttl"`
 	AllowLocalhost        bool   `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain     string `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowedDomains        string `json:"allowed_domains" structs:"allowed_domains" mapstructure:"allowed_domains"`
 	AllowBaseDomain       bool   `json:"allow_base_domain" structs:"allow_base_domain" mapstructure:"allow_base_domain"`
+	AllowBareDomains      bool   `json:"allow_bare_domains" structs:"allow_bare_domains" mapstructure:"allow_bare_domains"`
 	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
 	AllowSubdomains       bool   `json:"allow_subdomains" structs:"allow_subdomains" mapstructure:"allow_subdomains"`
 	AllowAnyName          bool   `json:"allow_any_name" structs:"allow_any_name" mapstructure:"allow_any_name"`

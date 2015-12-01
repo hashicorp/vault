@@ -232,7 +232,7 @@ policy used to generated those credentials. For example, let's create an
 
 ```text
 $ vault write pki/roles/example-dot-com \
-    allowed_base_domain="example.com" \
+    allowed_domains="example.com" \
     allow_subdomains="true" max_ttl="72h"
 Success! Data written to: pki/roles/example-dot-com
 ```
@@ -936,7 +936,7 @@ subpath for interactive help output.
   <dt>Description</dt>
   <dd>
     Creates or updates the role definition. Note that the
-    `allowed_base_domain`, `allow_subdomains`, and
+    `allowed_domains`, `allow_subdomains`, and
     `allow_any_name` attributes are additive; between them nearly and across
     multiple roles nearly any issuing policy can be accommodated.
     `server_flag`, `client_flag`, and `code_signing_flag` are additive as well.
@@ -975,25 +975,28 @@ subpath for interactive help output.
         on a single host to talk securely. Defaults to true.
       </li>
       <li>
-        <span class="param">allowed_base_domain</span>
+        <span class="param">allowed_domains</span>
         <span class="param-flags">optional</span>
-        **N.B.**: In 0.4+, the meaning of this value has changed, although the
-        name is kept for backwards compatibility.<br /><br />Designates the
-        base domain of the role. This is used with the `allow_base_domain` and
-        `allow_subdomains` options. There is no default.
+        Designates the domains of the role, provided as a comma-separated list.
+        This is used with the `allow_bare_domains` and `allow_subdomains`
+        options. There is no default.
       </li>
       <li>
-        <span class="param">allow_base_domain</span>
+        <span class="param">allow_bare_domains</span>
         <span class="param-flags">optional</span>
         If set, clients can request certificates matching the value of the
-        actual base domain. Defaults to false.
+        actual domains themselves; e.g. if a configured domain set with
+        `allowed_domains` is `example.com`, this allows clients to actually
+        request a certificate containing the name `example.com` as one of the
+        DNS values on the final certificate. In some scenarios, this can be
+        considered a security risk. Defaults to false.
       </li>
       <li>
         <span class="param">allow_subdomains</span>
         <span class="param-flags">optional</span>
         If set, clients can request certificates with CNs that are subdomains
         of the CNs allowed by the other role options. _This includes wildcard
-        subdomains._ For example, an `allowed_base_domain` value of
+        subdomains._ For example, an `allowed_domains` value of
         `example.com` with this option set to true will allow `foo.example.com`
         and `bar.example.com` as well as `*.example.com`. This is redundant
         when using the `allow_any_name` option.  Defaults to `false`.
@@ -1098,7 +1101,7 @@ subpath for interactive help output.
         "allow_ip_sans": true,
         "allow_localhost": true,
         "allow_subdomains": false,
-        "allowed_base_domain": "example.com",
+        "allowed_domains": "example.com,foobar.com",
         "client_flag": true,
         "code_signing_flag": false,
         "key_bits": 2048,

@@ -237,7 +237,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 
 		// The following blocks all work the same basic way:
 		// 1) If a role allows a certain class of base (localhost, token
-		// display name, role-configured base domain), perform further tests
+		// display name, role-configured domains), perform further tests
 		//
 		// 2) If there is a perfect match on either the name itself or it's an
 		// email address with a perfect match on the hostname portion, allow it
@@ -262,13 +262,13 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 			if role.AllowSubdomains {
 				// It is possible, if unlikely, to have a subdomain of "localhost"
 				if strings.HasSuffix(sanitizedName, ".localhost") ||
-					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
+					(isWildcard && sanitizedName == "localhost") {
 					continue
 				}
 
 				// A subdomain of "localdomain" is also not entirely uncommon
 				if strings.HasSuffix(sanitizedName, ".localdomain") ||
-					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
+					(isWildcard && sanitizedName == "localdomain") {
 					continue
 				}
 			}
@@ -298,29 +298,43 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 				}
 
 				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) ||
-					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
+					(isWildcard && sanitizedName == req.DisplayName) {
 					continue
 				}
 			}
 		}
 
-		if len(role.AllowedBaseDomain) != 0 {
-			// First, allow an exact match of the base domain if that role flag
-			// is enabled
-			if role.AllowBaseDomain &&
-				(name == role.AllowedBaseDomain ||
-					(isEmail && emailDomain == role.AllowedBaseDomain)) {
+		if role.AllowedDomains != "" {
+			valid := false
+			for _, currDomain := range strings.Split(role.AllowedDomains, ",") {
+				// If there is, say, a trailing comma, ignore it
+				if currDomain == "" {
+					continue
+				}
+
+				// First, allow an exact match of the base domain if that role flag
+				// is enabled
+				if role.AllowBareDomains &&
+					(name == currDomain ||
+						(isEmail && emailDomain == currDomain)) {
+					valid = true
+					break
+				}
+
+				if role.AllowSubdomains {
+					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
+						(isWildcard && sanitizedName == currDomain) {
+						valid = true
+						break
+					}
+				}
+			}
+			if valid {
 				continue
 			}
-
-			if role.AllowSubdomains {
-				if strings.HasSuffix(sanitizedName, "."+role.AllowedBaseDomain) ||
-					(isWildcard && sanitizedName == role.AllowedBaseDomain) {
-					continue
-				}
-			}
 		}
 
+		//panic(fmt.Sprintf("\nName is %s\nRole is\n%#v\n", name, role))
 		return name, nil
 	}
 
