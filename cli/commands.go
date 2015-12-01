@@ -103,6 +103,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"userpass": &credUserpass.CLIHandler{},
 					"ldap":     &credLdap.CLIHandler{},
 					"cert":     &credCert.CLIHandler{},
+					"awskms":   &credAwsKms.CLIHandler{},
 				},
 			}, nil
 		},
