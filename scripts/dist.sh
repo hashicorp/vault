@@ -53,7 +53,7 @@ if [ -z $NOSIGN ]; then
 fi
 
 # Upload
-if [ ! -z $HC_RELEASE]; then
+if [ ! -z $HC_RELEASE ]; then
   hc-releases -upload $DIR/pkg/dist
 fi
 
