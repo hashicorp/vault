@@ -1,12 +1,12 @@
 // +build !appengine
 
-package gocql
+package murmur
 
 import (
 	"unsafe"
 )
 
-func murmur3H1(data []byte) uint64 {
+func Murmur3H1(data []byte) uint64 {
 	length := len(data)
 
 	var h1, h2, k1, k2 uint64

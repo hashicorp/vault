@@ -4,7 +4,7 @@ Consul API client
 This package provides the `api` package which attempts to
 provide programmatic access to the full Consul API.
 
-Currently, all of the Consul APIs included in version 0.3 are supported.
+Currently, all of the Consul APIs included in version 0.6.0 are supported.
 
 Documentation
 =============

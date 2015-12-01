@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gocql/gocql/lru"
+	"github.com/gocql/gocql/internal/lru"
 )
 
 const defaultMaxPreparedStmts = 1000
@@ -89,7 +89,6 @@ type ClusterConfig struct {
 	Port              int               // port (default: 9042)
 	Keyspace          string            // initial keyspace (optional)
 	NumConns          int               // number of connections per host (default: 2)
-	NumStreams        int               // number of streams per connection (default: max per protocol, either 128 or 32768)
 	Consistency       Consistency       // default consistency level (default: Quorum)
 	Compressor        Compressor        // compression algorithm (default: nil)
 	Authenticator     Authenticator     // authenticator (default: nil)

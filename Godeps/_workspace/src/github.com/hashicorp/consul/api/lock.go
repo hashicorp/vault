@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,8 +23,14 @@ const (
 
 	// DefaultLockRetryTime is how long we wait after a failed lock acquisition
 	// before attempting to do the lock again. This is so that once a lock-delay
-	// is in affect, we do not hot loop retrying the acquisition.
+	// is in effect, we do not hot loop retrying the acquisition.
 	DefaultLockRetryTime = 5 * time.Second
+
+	// DefaultMonitorRetryTime is how long we wait after a failed monitor check
+	// of a lock (500 response code). This allows the monitor to ride out brief
+	// periods of unavailability, subject to the MonitorRetries setting in the
+	// lock options which is by default set to 0, disabling this feature.
+	DefaultMonitorRetryTime = 2 * time.Second
 
 	// LockFlagValue is a magic flag we set to indicate a key
 	// is being used for a lock. It is used to detect a potential
@@ -62,11 +69,13 @@ type Lock struct {
 
 // LockOptions is used to parameterize the Lock behavior.
 type LockOptions struct {
-	Key         string // Must be set and have write permissions
-	Value       []byte // Optional, value to associate with the lock
-	Session     string // Optional, created if not specified
-	SessionName string // Optional, defaults to DefaultLockSessionName
-	SessionTTL  string // Optional, defaults to DefaultLockSessionTTL
+	Key              string        // Must be set and have write permissions
+	Value            []byte        // Optional, value to associate with the lock
+	Session          string        // Optional, created if not specified
+	SessionName      string        // Optional, defaults to DefaultLockSessionName
+	SessionTTL       string        // Optional, defaults to DefaultLockSessionTTL
+	MonitorRetries   int           // Optional, defaults to 0 which means no retries
+	MonitorRetryTime time.Duration // Optional, defaults to DefaultMonitorRetryTime
 }
 
 // LockKey returns a handle to a lock struct which can be used
@@ -95,6 +104,9 @@ func (c *Client) LockOpts(opts *LockOptions) (*Lock, error) {
 		if _, err := time.ParseDuration(opts.SessionTTL); err != nil {
 			return nil, fmt.Errorf("invalid SessionTTL: %v", err)
 		}
+	}
+	if opts.MonitorRetryTime == 0 {
+		opts.MonitorRetryTime = DefaultMonitorRetryTime
 	}
 	l := &Lock{
 		c:    c,
@@ -327,8 +339,24 @@ func (l *Lock) monitorLock(session string, stopCh chan struct{}) {
 	kv := l.c.KV()
 	opts := &QueryOptions{RequireConsistent: true}
 WAIT:
+	retries := l.opts.MonitorRetries
+RETRY:
 	pair, meta, err := kv.Get(l.opts.Key, opts)
 	if err != nil {
+		// TODO (slackpad) - Make a real error type here instead of using
+		// a string check.
+		const serverError = "Unexpected response code: 500"
+
+		// If configured we can try to ride out a brief Consul unavailability
+		// by doing retries. Note that we have to attempt the retry in a non-
+		// blocking fashion so that we have a clean place to reset the retry
+		// counter if service is restored.
+		if retries > 0 && strings.Contains(err.Error(), serverError) {
+			time.Sleep(l.opts.MonitorRetryTime)
+			retries--
+			opts.WaitIndex = 0
+			goto RETRY
+		}
 		return
 	}
 	if pair != nil && pair.Session == session {
