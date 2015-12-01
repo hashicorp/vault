@@ -19,10 +19,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func getBackend(t *testing.T) logical.Backend {
+	be, _ := Factory(logical.TestBackendConfig())
+	return be
+}
+
 func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  Backend(),
+		Backend:  getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
@@ -38,7 +43,7 @@ func TestBackend_policyCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Backend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
