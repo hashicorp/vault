@@ -16,7 +16,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/gocql/gocql/lru"
+	"github.com/gocql/gocql/internal/lru"
 )
 
 // Session is the interface used by users to interact with the database.
@@ -52,15 +52,6 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 	//Check that hosts in the ClusterConfig is not empty
 	if len(cfg.Hosts) < 1 {
 		return nil, ErrNoHosts
-	}
-
-	maxStreams := 128
-	if cfg.ProtoVersion > protoVersion2 {
-		maxStreams = 32768
-	}
-
-	if cfg.NumStreams <= 0 || cfg.NumStreams > maxStreams {
-		cfg.NumStreams = maxStreams
 	}
 
 	//Adjust the size of the prepared statements cache to match the latest configuration
@@ -891,6 +882,12 @@ func (iter *Iter) Close() error {
 	})
 
 	return iter.err
+}
+
+// WillSwitchPage detects if iterator reached end of current page
+// and the next page is available.
+func (iter *Iter) WillSwitchPage() bool {
+	return iter.pos >= len(iter.rows) && iter.next != nil
 }
 
 // checkErrAndNotFound handle error and NotFound in one method.

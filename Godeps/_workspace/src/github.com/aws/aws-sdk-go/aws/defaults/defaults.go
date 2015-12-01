@@ -1,5 +1,10 @@
 // Package defaults is a collection of helpers to retrieve the SDK's default
 // configuration and handlers.
+//
+// Generally this package shouldn't be used directly, but session.Session
+// instead. This package is useful when you need to reset the defaults
+// of a session or service client to the SDK defaults before setting
+// additional parameters.
 package defaults
 
 import (
@@ -34,7 +39,13 @@ func Get() Defaults {
 	}
 }
 
-// Config returns the default configuration.
+// Config returns the default configuration without credentials.
+// To retrieve a config with credentials also included use
+// `defaults.Get().Config` instead.
+//
+// Generally you shouldn't need to use this method directly, but
+// is available if you need to reset the configuration of an
+// existing service client or session.
 func Config() *aws.Config {
 	return aws.NewConfig().
 		WithCredentials(credentials.AnonymousCredentials).
@@ -47,6 +58,10 @@ func Config() *aws.Config {
 }
 
 // Handlers returns the default request handlers.
+//
+// Generally you shouldn't need to use this method directly, but
+// is available if you need to reset the request handlers of an
+// existing service client or session.
 func Handlers() request.Handlers {
 	var handlers request.Handlers
 
@@ -61,6 +76,10 @@ func Handlers() request.Handlers {
 }
 
 // CredChain returns the default credential chain.
+//
+// Generally you shouldn't need to use this method directly, but
+// is available if you need to reset the credentials of an
+// existing service client or session's Config.
 func CredChain(cfg *aws.Config, handlers request.Handlers) *credentials.Credentials {
 	endpoint, signingRegion := endpoints.EndpointForRegion(ec2metadata.ServiceName, *cfg.Region, true)
 

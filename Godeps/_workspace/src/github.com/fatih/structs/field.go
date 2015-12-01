@@ -84,6 +84,13 @@ func (f *Field) Set(val interface{}) error {
 	return nil
 }
 
+// Zero sets the field to its zero value. It returns an error if the field is not
+// settable (not addressable or not exported).
+func (f *Field) Zero() error {
+	zero := reflect.Zero(f.value.Type()).Interface()
+	return f.Set(zero)
+}
+
 // Fields returns a slice of Fields. This is particular handy to get the fields
 // of a nested struct . A struct tag with the content of "-" ignores the
 // checking of that particular field. Example:
