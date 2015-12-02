@@ -23,9 +23,10 @@ import (
 //     p := &ec2rolecreds.EC2RoleProvider{
 //         // Pass in a custom timeout to be used when requesting
 //         // IAM EC2 Role credentials.
-//         Client: &http.Client{
-//             Timeout: 10 * time.Second,
-//         },
+//         Client: ec2metadata.New(sess, aws.Config{
+//             HTTPClient: &http.Client{Timeout: 10 * time.Second},
+//         }),
+//
 //         // Do not use early expiry of credentials. If a non zero value is
 //         // specified the credentials will be expired early
 //         ExpiryWindow: 0,

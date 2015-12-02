@@ -63,13 +63,15 @@ type AgentCheckRegistration struct {
 // AgentServiceCheck is used to create an associated
 // check for a service
 type AgentServiceCheck struct {
-	Script   string `json:",omitempty"`
-	Interval string `json:",omitempty"`
-	Timeout  string `json:",omitempty"`
-	TTL      string `json:",omitempty"`
-	HTTP     string `json:",omitempty"`
-	TCP      string `json:",omitempty"`
-	Status   string `json:",omitempty"`
+	Script            string `json:",omitempty"`
+	DockerContainerID string `json:",omitempty"`
+	Shell             string `json:",omitempty"` // Only supported for Docker.
+	Interval          string `json:",omitempty"`
+	Timeout           string `json:",omitempty"`
+	TTL               string `json:",omitempty"`
+	HTTP              string `json:",omitempty"`
+	TCP               string `json:",omitempty"`
+	Status            string `json:",omitempty"`
 }
 type AgentServiceChecks []*AgentServiceCheck
 

@@ -35,7 +35,7 @@ const (
 	// Maximum allowed depth when recursively substituing variable names.
 	_DEPTH_VALUES = 99
 
-	_VERSION = "1.6.0"
+	_VERSION = "1.7.0"
 )
 
 func Version() string {
@@ -618,6 +618,27 @@ func (s *Section) GetKey(name string) (*Key, error) {
 	return key, nil
 }
 
+// HasKey returns true if section contains a key with given name.
+func (s *Section) Haskey(name string) bool {
+	key, _ := s.GetKey(name)
+	return key != nil
+}
+
+// HasKey returns true if section contains given raw value.
+func (s *Section) HasValue(value string) bool {
+	if s.f.BlockMode {
+		s.f.lock.RLock()
+		defer s.f.lock.RUnlock()
+	}
+
+	for _, k := range s.keys {
+		if value == k.value {
+			return true
+		}
+	}
+	return false
+}
+
 // Key assumes named Key exists in section and returns a zero-value when not.
 func (s *Section) Key(name string) *Key {
 	key, err := s.GetKey(name)
@@ -737,7 +758,10 @@ func Load(source interface{}, others ...interface{}) (_ *File, err error) {
 		}
 	}
 	f := newFile(sources)
-	return f, f.Reload()
+	if err = f.Reload(); err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 // Empty returns an empty file object.

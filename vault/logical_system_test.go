@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"crypto/sha256"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -540,6 +542,57 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_auditHash(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		view := &logical.InmemStorage{}
+		view.Put(&logical.StorageEntry{
+			Key:   "salt",
+			Value: []byte("foo"),
+		})
+		var err error
+		config.Salt, err = salt.NewSalt(view, &salt.Config{
+			HMAC:     sha256.New,
+			HMACType: "hmac-sha256",
+		})
+		if err != nil {
+			t.Fatal("error getting new salt: %v", err)
+		}
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req.Data["type"] = "noop"
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.WriteOperation, "audit-hash/foo")
+	req.Data["input"] = "bar"
+
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("response or its data was nil")
+	}
+	hash, ok := resp.Data["hash"]
+	if !ok {
+		t.Fatalf("did not get hash back in response, response was %#v", resp.Data)
+	}
+	if hash.(string) != "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317" {
+		t.Fatalf("bad hash back: %s", hash.(string))
 	}
 }
 

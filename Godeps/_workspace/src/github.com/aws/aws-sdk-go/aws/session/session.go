@@ -1,5 +1,11 @@
 // Package session provides a way to create service clients with shared configuration
 // and handlers.
+//
+// Generally this package should be used instead of the `defaults` package.
+//
+// A session should be used to share configurations and request handlers between multiple
+// service clients. When service clients need specific configuration aws.Config can be
+// used to provide additional configuration directly to the service client.
 package session
 
 import (

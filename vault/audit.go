@@ -287,6 +287,18 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 	return ok
 }
 
+// GetHash returns a hash using the salt of the given backend
+func (a *AuditBroker) GetHash(name string, input string) (string, error) {
+	a.l.RLock()
+	defer a.l.RUnlock()
+	be, ok := a.backends[name]
+	if !ok {
+		return "", fmt.Errorf("unknown audit backend %s", name)
+	}
+
+	return be.backend.GetHash(input), nil
+}
+
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
 func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) (reterr error) {

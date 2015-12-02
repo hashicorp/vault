@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/gocql/gocql/internal/murmur"
 )
 
 // a token partitioner
@@ -36,7 +38,7 @@ func (p murmur3Partitioner) Name() string {
 }
 
 func (p murmur3Partitioner) Hash(partitionKey []byte) token {
-	h1 := murmur3H1(partitionKey)
+	h1 := murmur.Murmur3H1(partitionKey)
 	return murmur3Token(int64(h1))
 }
 

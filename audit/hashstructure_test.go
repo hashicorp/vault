@@ -81,6 +81,25 @@ func TestCopy_response(t *testing.T) {
 	}
 }
 
+func TestHashString(t *testing.T) {
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(&logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
+	out := HashString(localSalt, "foo")
+	if out != "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a" {
+		t.Fatalf("err: HashString output did not match expected")
+	}
+}
+
 func TestHash(t *testing.T) {
 	now := time.Now().UTC()
 
