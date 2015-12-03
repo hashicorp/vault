@@ -61,6 +61,9 @@ IMPROVEMENTS:
  * physical/consul: Consul now uses a connection pool to limit the number of
    outstanding operations, improving behavior when a lot of operations must
    happen at once [GH-677]
+ * physical/consul: The `datacenter` parameter was removed; It could not be
+   effective unless the Vault node (or the Consul node it was connecting to)
+   was in the datacenter specified, in which case it wasn't needed [GH-816]
  * physical/etcd: Support TLS-encrypted connections and use a connection pool
    to limit the number of outstanding operations [GH-780]
  * physical/s3: The S3 endpoint can now be configured, allowing using

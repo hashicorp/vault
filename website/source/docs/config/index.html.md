@@ -120,9 +120,6 @@ For Consul, the following options are supported:
 
   * `scheme` (optional) - "http" or "https" for talking to Consul.
 
-  * `datacenter` (optional) - The datacenter within Consul to write to.
-      This defaults to the local datacenter.
-
   * `token` (optional) - An access token to use to write data to Consul.
 
   * `max_parallel` (optional) - The maximum number of connections to Consul;
