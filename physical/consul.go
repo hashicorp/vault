@@ -53,9 +53,6 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
 	}
-	if dc, ok := conf["datacenter"]; ok {
-		consulConf.Datacenter = dc
-	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
 	}
