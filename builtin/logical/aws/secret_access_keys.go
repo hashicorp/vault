@@ -102,24 +102,28 @@ func (b *backend) secretAccessKeysCreate(
 		guo, err := client.GetUser(&iam.GetUserInput{
 			UserName: aws.String(username),
 		})
-		if err != nil {
-			awsErr, ok := err.(awserr.Error)
-			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"unexpected error type returned from AWS SDK: %T, err is %v", err, err),
-				), nil
-			}
-			if awsErr.Code() != "NoSuchEntity" {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"unexpected error returned from AWS: %v", err),
-				), nil
-			}
-		} else {
+
+		if err == nil {
 			if guo.User == nil {
 				return logical.ErrorResponse(fmt.Sprintf(
 					"user returned from AWS was nil")), nil
 			}
+
+			break
 		}
+
+		awsErr, ok := err.(awserr.Error)
+		if !ok {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"unexpected error type returned from AWS SDK: %T, err is %v", err, err),
+			), nil
+		}
+		if awsErr.Code() != "NoSuchEntity" {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"unexpected error returned from AWS: %v", err),
+			), nil
+		}
+
 		time.Sleep(2 * time.Second)
 	}
 
