@@ -191,7 +191,6 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"key_id":     keyid,
 			"ciphertext": tokEncrypted,
 		},
 		Unauthenticated: true,
@@ -209,7 +208,6 @@ func testAccLoginInvalidToken(t *testing.T, display string) logicaltest.TestStep
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"key_id":     keyid,
 			"ciphertext": tokEncrypted,
 		},
 		ErrorOk:         true,
@@ -225,7 +223,6 @@ func testAccLoginInvalid(t *testing.T, display string) logicaltest.TestStep {
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"key_id":     keyid,
 			"ciphertext": tokEncrypted,
 		},
 		ErrorOk:         true,
@@ -234,14 +231,12 @@ func testAccLoginInvalid(t *testing.T, display string) logicaltest.TestStep {
 		Check: logicaltest.TestCheckError(),
 	}
 }
-
 func testAccKeyDeleted(t *testing.T, display string) logicaltest.TestStep {
 	tokEncrypted := createToken(t, false, false, false, false)
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"key_id":     keyid,
 			"ciphertext": tokEncrypted,
 		},
 		ErrorOk:         true,
@@ -256,7 +251,6 @@ func testAccLoginTokenExpired(t *testing.T, display string) logicaltest.TestStep
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"key_id":     keyid,
 			"ciphertext": tokEncrypted,
 		},
 		ErrorOk:         true,
@@ -271,7 +265,6 @@ func testAccLoginTokenInFuture(t *testing.T, display string) logicaltest.TestSte
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"key_id":     keyid,
 			"ciphertext": tokEncrypted,
 		},
 		ErrorOk:         true,

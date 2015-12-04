@@ -41,12 +41,11 @@ type token struct {
 
 func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	keyId := data.Get("key_id").(string)
 	cipherText := data.Get("ciphertext").(string)
 
-	// Ensure both keyId and cipherText are provided
-	if keyId == "" || cipherText == "" {
-		return logical.ErrorResponse("missing 'key_id' or 'ciphertext'"), nil
+	// Ensure cipherText is provided
+	if cipherText == "" {
+		return logical.ErrorResponse("missing 'ciphertext'"), nil
 	}
 
 	decodedCiphertext, err := hex.DecodeString(cipherText)
@@ -71,6 +70,8 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse("Could not decrypt the token"), err
 	}
 
+	keyId := (*resp.KeyId)[len(*resp.KeyId)-36:]
+
 	var tok token
 
 	err = json.Unmarshal(resp.Plaintext, &tok)
@@ -85,7 +86,7 @@ func (b *backend) pathLogin(
 	keyRaw, err := b.MapKey.Get(req.Storage, keyId)
 
 	if keyRaw == nil {
-		return logical.ErrorResponse("invalid key ID"), nil
+		return logical.ErrorResponse("invalid key ID: " + keyId), nil
 	}
 
 	if err != nil {

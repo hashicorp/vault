@@ -71,7 +71,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, map[string]interface{}{
-		"key_id":     keyid,
 		"ciphertext": tok,
 	})
 	if err != nil {
