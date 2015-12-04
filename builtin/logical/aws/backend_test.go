@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -94,10 +93,6 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 				return err
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
-
-			// Sleep sometime because AWS is eventually consistent
-			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
-			time.Sleep(10 * time.Second)
 
 			// Build a client and verify that the credentials work
 			creds := credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, "")
