@@ -53,6 +53,10 @@ mount of the backend. The workaround here is to mount multiple copies of the
 `cert` backend, configure each with one CA/CRL, and have clients connect to the
 appropriate mount.
 
+In addition, since the backend does not fetch the CRLs itself, the CRL's
+designated time to next update is not considered. If a CRL is no longer in use,
+it is up to the administrator to remove it from the backend.
+
 ## Authentication
 
 ### Via the CLI
