@@ -266,7 +266,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>
     Gets information associated with the named CRL (currently, the serial numbers contained within).
     As the serials can be integers up to an arbitrary size, these are returned as strings. Requires
-	`sudo` access.
+    `sudo` access.
   </dd>
 
   <dt>Method</dt>
