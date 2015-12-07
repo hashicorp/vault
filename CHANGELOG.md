@@ -58,9 +58,9 @@ IMPROVEMENTS:
  * logical: Responses now contain a "warnings" key containing a list of
    warnings returned from the server. These are conditions that did not require
    failing an operation, but of which the client should be aware. [GH-676]
- * physical/consul: Consul now uses a connection pool to limit the number of
-   outstanding operations, improving behavior when a lot of operations must
-   happen at once [GH-677]
+ * physical/(consul,etcd): Consul and etcd now use a connection pool to limit
+   the number of outstanding operations, improving behavior when a lot of
+   operations must happen at once [GH-677] [GH-780]
  * physical/consul: The `datacenter` parameter was removed; It could not be
    effective unless the Vault node (or the Consul node it was connecting to)
    was in the datacenter specified, in which case it wasn't needed [GH-816]
