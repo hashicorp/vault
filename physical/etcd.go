@@ -53,8 +53,8 @@ var (
 // errorIsMissingKey returns true if the given error is an etcd error with an
 // error code corresponding to a missing key.
 func errorIsMissingKey(err error) bool {
-	etcdErr, ok := err.(*client.Error)
-	return ok && etcdErr.Code == 100
+	etcdErr, ok := err.(client.Error)
+	return ok && etcdErr.Code == client.ErrorCodeKeyNotFound
 }
 
 // EtcdBackend is a physical backend that stores data at specific
