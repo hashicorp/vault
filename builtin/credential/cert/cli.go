@@ -12,7 +12,7 @@ type CLIHandler struct{}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	var data struct {
-		Mount    string `mapstructure:"mount"`
+		Mount string `mapstructure:"mount"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
 		return "", err

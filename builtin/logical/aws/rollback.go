@@ -9,6 +9,7 @@ import (
 
 var rollbackMap = map[string]framework.RollbackFunc{
 	"user": pathUserRollback,
+	"sts":  pathUserRollback,
 }
 
 func rollback(req *logical.Request, kind string, data interface{}) error {
