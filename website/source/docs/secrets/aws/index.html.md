@@ -145,6 +145,13 @@ Note that this policy example is unrelated to the policy you wrote to `aws/roles
 If you get stuck at any time, simply run `vault path-help aws` or with a subpath for
 interactive help output.
 
+## A Note on Consistency
+
+Unfortunately, IAM credentials are eventually consistent with respect to other
+Amazon services. If you are planning on using these credential in a pipeline,
+you may need to add a delay of 5-10 seconds (or more) after fetching
+credentials before they can be used successfully.
+
 ## API
 
 ### /aws/config/root
