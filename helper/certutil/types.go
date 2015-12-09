@@ -248,18 +248,12 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 		return nil, UserError{"Given parsed cert bundle does not have private key information"}
 	}
 
-	if p.PKCS8 {
-		if k, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes); err == nil {
-			switch k := k.(type) {
-			case *rsa.PrivateKey:
-				return k, nil
-			case *ecdsa.PrivateKey:
-				return k, nil
-			default:
-				return nil, UserError{fmt.Sprintf("Unable to determine pkcs8 key type")}
-			}
-		} else {
-			return nil, UserError{fmt.Sprintf("Error decoding pkcs8: %v", err)}
+	if k, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes); err == nil {
+		switch k := k.(type) {
+		case *rsa.PrivateKey:
+			return k, nil
+		case *ecdsa.PrivateKey:
+			return k, nil
 		}
 	}
 
