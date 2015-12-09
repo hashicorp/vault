@@ -113,6 +113,8 @@ generate them, leading to client errors.
  * secret/generic: Validate given duration at write time, not just read time;
    if stored durations are not parseable, return a warning and the default
    duration rather than an error [GH-718]
+ * secret/generic: Return 400 instead of 500 when `generic` backend is written
+   to with no data fields [GH-825]
  * secret/postgresql: Revoke permissions before dropping a user or revocation
    may fail [GH-699]
 

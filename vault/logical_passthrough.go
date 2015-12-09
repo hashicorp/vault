@@ -149,7 +149,7 @@ func (b *PassthroughBackend) handleWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check that some fields are given
 	if len(req.Data) == 0 {
-		return nil, fmt.Errorf("missing data fields")
+		return logical.ErrorResponse("missing data fields"), nil
 	}
 
 	// Check if there is a ttl key; verify parseability if so

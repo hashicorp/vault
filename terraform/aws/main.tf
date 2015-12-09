@@ -1,5 +1,5 @@
 resource "template_file" "install" {
-    filename = "${path.module}/scripts/install.sh.tpl"
+    template = "${file("${path.module}/scripts/install.sh.tpl")}"
 
     vars {
         download_url  = "${var.download-url}"
