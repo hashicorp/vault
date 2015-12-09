@@ -10,6 +10,8 @@ package certutil
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -84,6 +86,7 @@ type CertBundle struct {
 // and a DER-encoded certificate
 type ParsedCertBundle struct {
 	PrivateKeyType   int
+	PKCS8            bool
 	PrivateKeyBytes  []byte
 	PrivateKey       crypto.Signer
 	IssuingCABytes   []byte
@@ -137,6 +140,17 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			} else if _, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
 				result.PrivateKeyType = RSAPrivateKey
 				c.PrivateKeyType = "rsa"
+			} else if k, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes); err == nil {
+				result.PKCS8 = true
+
+				switch k.(type) {
+				case *ecdsa.PrivateKey:
+					result.PrivateKeyType = ECPrivateKey
+					c.PrivateKeyType = "ec"
+				case *rsa.PrivateKey:
+					result.PrivateKeyType = RSAPrivateKey
+					c.PrivateKeyType = "rsa"
+				}
 			} else {
 				return nil, UserError{fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
 			}
@@ -213,6 +227,9 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 		default:
 			return nil, InternalError{"Could not determine private key type when creating block"}
 		}
+		if p.PKCS8 {
+			block.Type = "PRIVATE KEY"
+		}
 		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
@@ -229,6 +246,21 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 
 	if p.PrivateKeyBytes == nil || len(p.PrivateKeyBytes) == 0 {
 		return nil, UserError{"Given parsed cert bundle does not have private key information"}
+	}
+
+	if p.PKCS8 {
+		if k, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes); err == nil {
+			switch k := k.(type) {
+			case *rsa.PrivateKey:
+				return k, nil
+			case *ecdsa.PrivateKey:
+				return k, nil
+			default:
+				return nil, UserError{fmt.Sprintf("Unable to determine pkcs8 key type")}
+			}
+		} else {
+			return nil, UserError{fmt.Sprintf("Error decoding pkcs8: %v", err)}
+		}
 	}
 
 	switch p.PrivateKeyType {
