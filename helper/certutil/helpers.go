@@ -135,6 +135,8 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			parsedBundle.PrivateKey = signer
 		} else if signer, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes); err == nil {
+			parsedBundle.PKCS8 = true
+
 			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
 				return nil, UserError{"More than one private key given; provide only one private key in the bundle"}
 			}
