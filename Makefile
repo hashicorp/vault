@@ -19,7 +19,7 @@ dev: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
+	TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=60s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
@@ -31,7 +31,7 @@ testacc: generate
 
 # testrace runs the race checker
 testrace: generate
-	TF_ACC= godep go test -race $(TEST) $(TESTARGS)
+	CGO_ENABLED=1 TF_ACC= godep go test -race $(TEST) $(TESTARGS)
 
 cover:
 	./scripts/coverage.sh --html

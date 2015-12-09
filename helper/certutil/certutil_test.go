@@ -31,76 +31,15 @@ func TestCertBundleConversion(t *testing.T) {
 		if err != nil {
 			t.Fatalf(err.Error())
 		}
-	}
-}
 
-func TestTLSConfig(t *testing.T) {
-	cbut := refreshRSACertBundle()
-
-	pcbut, err := cbut.ToParsedCertBundle()
-	if err != nil {
-		t.Fatalf("Error getting parsed cert bundle: %s", err)
-	}
-
-	usages := []TLSUsage{
-		TLSUnknown,
-		TLSClient,
-		TLSServer,
-		TLSClient | TLSServer,
-	}
-
-	for _, usage := range usages {
-		tlsConfig, err := pcbut.GetTLSConfig(usage)
+		cbut, err := pcbut.ToCertBundle()
 		if err != nil {
-			t.Fatalf("Error getting tls config: %s", err)
-		}
-		if tlsConfig == nil {
-			t.Fatalf("Got nil tls.Config")
+			t.Fatalf("Error converting to cert bundle: %s", err)
 		}
 
-		if len(tlsConfig.Certificates) != 1 {
-			t.Fatalf("Unexpected length in config.Certificates")
-		}
-
-		// Length should be 2, since we passed in a CA
-		if len(tlsConfig.Certificates[0].Certificate) != 2 {
-			t.Fatalf("Did not find both certificates in config.Certificates.Certificate")
-		}
-
-		if tlsConfig.Certificates[0].Leaf != pcbut.Certificate {
-			t.Fatalf("Leaf certificate does not match parsed bundle's certificate")
-		}
-
-		if tlsConfig.Certificates[0].PrivateKey != pcbut.PrivateKey {
-			t.Fatalf("Config's private key does not match parsed bundle's private key")
-		}
-
-		switch usage {
-		case TLSServer | TLSClient:
-			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
-				t.Fatalf("CA certificate not in client cert pool as expected")
-			}
-			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
-				t.Fatalf("CA certificate not in root cert pool as expected")
-			}
-		case TLSServer:
-			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
-				t.Fatalf("CA certificate not in client cert pool as expected")
-			}
-			if tlsConfig.RootCAs != nil {
-				t.Fatalf("Found root pools in config object when not expected")
-			}
-		case TLSClient:
-			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
-				t.Fatalf("CA certificate not in root cert pool as expected")
-			}
-			if tlsConfig.ClientCAs != nil {
-				t.Fatalf("Found root pools in config object when not expected")
-			}
-		default:
-			if tlsConfig.RootCAs != nil || tlsConfig.ClientCAs != nil {
-				t.Fatalf("Found root pools in config object when not expected")
-			}
+		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
+		if err != nil {
+			t.Fatalf(err.Error())
 		}
 	}
 }
@@ -225,20 +164,200 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 	return nil
 }
 
-func refreshRSACertBundle() *CertBundle {
-	return &CertBundle{
-		Certificate: certRSAPem,
-		PrivateKey:  privRSAKeyPem,
-		IssuingCA:   issuingCaPem,
+func TestCSRBundleConversion(t *testing.T) {
+	csrbuts := []*CSRBundle{
+		refreshRSACSRBundle(),
+		refreshECCSRBundle(),
+	}
+
+	for _, csrbut := range csrbuts {
+		pcsrbut, err := csrbut.ToParsedCSRBundle()
+		if err != nil {
+			t.Fatalf("Error converting to parsed CSR bundle: %v", err)
+		}
+
+		err = compareCSRBundleToParsedCSRBundle(csrbut, pcsrbut)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		csrbut, err = pcsrbut.ToCSRBundle()
+		if err != nil {
+			t.Fatalf("Error converting to CSR bundle: %v", err)
+		}
+
+		err = compareCSRBundleToParsedCSRBundle(csrbut, pcsrbut)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
 	}
 }
 
-func refreshECCertBundle() *CertBundle {
-	return &CertBundle{
-		Certificate: certECPem,
-		PrivateKey:  privECKeyPem,
+func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBundle) error {
+	if csrbut == nil {
+		return fmt.Errorf("Got nil bundle")
+	}
+	if pcsrbut == nil {
+		return fmt.Errorf("Got nil parsed bundle")
+	}
+
+	switch {
+	case pcsrbut.CSR == nil:
+		return fmt.Errorf("Parsed bundle has nil csr")
+	case pcsrbut.PrivateKey == nil:
+		return fmt.Errorf("Parsed bundle has nil private key")
+	}
+
+	switch csrbut.PrivateKey {
+	case privRSAKeyPem:
+		if pcsrbut.PrivateKeyType != RSAPrivateKey {
+			return fmt.Errorf("Parsed bundle has wrong private key type")
+		}
+	case privECKeyPem:
+		if pcsrbut.PrivateKeyType != ECPrivateKey {
+			return fmt.Errorf("Parsed bundle has wrong private key type")
+		}
+	default:
+		return fmt.Errorf("Parsed bundle has unknown private key type")
+	}
+
+	csrb, err := pcsrbut.ToCSRBundle()
+	if err != nil {
+		return fmt.Errorf("Thrown error during parsed bundle conversion: %s\n\nInput was: %#v", err, *pcsrbut)
+	}
+
+	switch {
+	case len(csrb.CSR) == 0:
+		return fmt.Errorf("Bundle has nil certificate")
+	case len(csrb.PrivateKey) == 0:
+		return fmt.Errorf("Bundle has nil private key")
+	}
+
+	switch csrb.PrivateKeyType {
+	case "rsa":
+		if pcsrbut.PrivateKeyType != RSAPrivateKey {
+			return fmt.Errorf("Bundle has wrong private key type")
+		}
+		if csrb.PrivateKey != privRSAKeyPem {
+			return fmt.Errorf("Bundle private key does not match")
+		}
+	case "ec":
+		if pcsrbut.PrivateKeyType != ECPrivateKey {
+			return fmt.Errorf("Bundle has wrong private key type")
+		}
+		if csrb.PrivateKey != privECKeyPem {
+			return fmt.Errorf("Bundle private key does not match")
+		}
+	default:
+		return fmt.Errorf("Bundle has unknown private key type")
+	}
+
+	return nil
+}
+
+func TestTLSConfig(t *testing.T) {
+	cbut := refreshRSACertBundle()
+
+	pcbut, err := cbut.ToParsedCertBundle()
+	if err != nil {
+		t.Fatalf("Error getting parsed cert bundle: %s", err)
+	}
+
+	usages := []TLSUsage{
+		TLSUnknown,
+		TLSClient,
+		TLSServer,
+		TLSClient | TLSServer,
+	}
+
+	for _, usage := range usages {
+		tlsConfig, err := pcbut.GetTLSConfig(usage)
+		if err != nil {
+			t.Fatalf("Error getting tls config: %s", err)
+		}
+		if tlsConfig == nil {
+			t.Fatalf("Got nil tls.Config")
+		}
+
+		if len(tlsConfig.Certificates) != 1 {
+			t.Fatalf("Unexpected length in config.Certificates")
+		}
+
+		// Length should be 2, since we passed in a CA
+		if len(tlsConfig.Certificates[0].Certificate) != 2 {
+			t.Fatalf("Did not find both certificates in config.Certificates.Certificate")
+		}
+
+		if tlsConfig.Certificates[0].Leaf != pcbut.Certificate {
+			t.Fatalf("Leaf certificate does not match parsed bundle's certificate")
+		}
+
+		if tlsConfig.Certificates[0].PrivateKey != pcbut.PrivateKey {
+			t.Fatalf("Config's private key does not match parsed bundle's private key")
+		}
+
+		switch usage {
+		case TLSServer | TLSClient:
+			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+				t.Fatalf("CA certificate not in client cert pool as expected")
+			}
+			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+				t.Fatalf("CA certificate not in root cert pool as expected")
+			}
+		case TLSServer:
+			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+				t.Fatalf("CA certificate not in client cert pool as expected")
+			}
+			if tlsConfig.RootCAs != nil {
+				t.Fatalf("Found root pools in config object when not expected")
+			}
+		case TLSClient:
+			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+				t.Fatalf("CA certificate not in root cert pool as expected")
+			}
+			if tlsConfig.ClientCAs != nil {
+				t.Fatalf("Found root pools in config object when not expected")
+			}
+		default:
+			if tlsConfig.RootCAs != nil || tlsConfig.ClientCAs != nil {
+				t.Fatalf("Found root pools in config object when not expected")
+			}
+		}
+	}
+}
+
+func refreshRSACertBundle() *CertBundle {
+	ret := &CertBundle{
+		Certificate: certRSAPem,
 		IssuingCA:   issuingCaPem,
 	}
+	ret.PrivateKey = privRSAKeyPem
+	return ret
+}
+
+func refreshECCertBundle() *CertBundle {
+	ret := &CertBundle{
+		Certificate: certECPem,
+		IssuingCA:   issuingCaPem,
+	}
+	ret.PrivateKey = privECKeyPem
+	return ret
+}
+
+func refreshRSACSRBundle() *CSRBundle {
+	ret := &CSRBundle{
+		CSR: csrRSAPem,
+	}
+	ret.PrivateKey = privRSAKeyPem
+	return ret
+}
+
+func refreshECCSRBundle() *CSRBundle {
+	ret := &CSRBundle{
+		CSR: csrECPem,
+	}
+	ret.PrivateKey = privECKeyPem
+	return ret
 }
 
 const (
@@ -270,6 +389,23 @@ cm+8kcfLY1E5fSf/4e7mIQq7o5qVn9Y3HWsajS1FFeznJjPj4Jaa1HvegNcycAzs
 XOQ7xy23/8wUupgNeD1mFdSFCXQ3UedsJuVBHsElPc5W74q4F4+F
 -----END RSA PRIVATE KEY-----`
 
+	csrRSAPem = `-----BEGIN CERTIFICATE REQUEST-----
+MIICijCCAXICAQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
+ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBALd2SVGs7QkYlYPOz9MvE+0DDRUIutQQkiCnqcV1
+1nO84uSSUjH0ALLVyRKgWIkobEqWJurKIk+oV9O+Le8EABxkt/ru6jaIFqZkwFE1
+JzSDPkAsR9jXP5M2MWlmo7qVc4Bry3oqlN3eLSFJP2ZH7b1ia8q9oWXPMxDdwuKR
+kv9hfkUPszr/gaQCNQXW0BoRe5vdr5+ikv4lrKpsBxvaAoYL1ngR41lCPKhmrgXP
+oreEuUcXzfCSSAV1CGbW2qhWc4I7/JFA8qqEBr5GP+AntStGxSbDO8JjD7/uULHC
+AReCloDdJE0jDz1355/0CAH4WmEJE/TI8Bq+vgd0jgzRgk0CAwEAAaAAMA0GCSqG
+SIb3DQEBCwUAA4IBAQAR8U1vZMJf7YFvGU69QvoWPTDe/o8SwYy1j+++AAO9Y7H2
+C7nb+9tnEMtXm+3pkY0aJIecAnq8H4QWimOrJa/ZsoZLzz9LKW2nzARdWo63j4nB
+jKld/EDBzQ/nQSTyoX7s9JiDiSC9yqTXBrPHSXruPbh7sE0yXROar+6atjNdCpDp
+uLw86gwewDJrMaB1aFAmDvwaRQQDONwRy0zG1UdMxLQxsxpKOHaGM/ZvV3FPir2B
+7mKupki/dvap5UW0lTMJBlKf3qhoeHKMHFo9i5vGCIkWUIv+XgTF0NjbYv9i7bfq
+WdW905v4wiuWRlddNwqFtLx9Pf1/fRJVT5mBbjIx
+-----END CERTIFICATE REQUEST-----`
+
 	certRSAPem = `-----BEGIN CERTIFICATE-----
 MIID+jCCAuSgAwIBAgIUcFCL9ESWTKLE6RqSYV7iZ78f1KcwCwYJKoZIhvcNAQEL
 MBsxGTAXBgNVBAMMEFZhdWx0IFRlc3RpbmcgQ0EwHhcNMTUwNjE5MTcyMzA0WhcN
@@ -300,6 +436,14 @@ MGgCAQEEHM3nuYLlrvawBN9hGVcu9mpaCEr7LMe44a7oQOygBwYFK4EEACGhPAM6
 AATBZ3VXwBE9oeSREpM5b25PW6WiuLb4EXWpKZyjj552QYKYe7QBuGe9wvvgOeCB
 ovN3tSuGKzTiUA==
 -----END EC PRIVATE KEY-----`
+
+	csrECPem = `-----BEGIN CERTIFICATE REQUEST-----
+MIHsMIGcAgEAMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwTjAQBgcqhkjOPQIBBgUr
+gQQAIQM6AATBZ3VXwBE9oeSREpM5b25PW6WiuLb4EXWpKZyjj552QYKYe7QBuGe9
+wvvgOeCBovN3tSuGKzTiUKAAMAoGCCqGSM49BAMCAz8AMDwCHFap/5XDuqtXCG1g
+ljbYH5OWGBqGYCfL2k2+/6cCHAuk1bmOkGx7JAq/fSPd09i0DQIqUu7WHQHms48=
+-----END CERTIFICATE REQUEST-----`
 
 	certECPem = `-----BEGIN CERTIFICATE-----
 MIIDJDCCAg6gAwIBAgIUM3J02tw0ZvpHUVHv6t8kcoft2/MwCwYJKoZIhvcNAQEL
