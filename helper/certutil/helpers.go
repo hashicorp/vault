@@ -134,7 +134,20 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 			parsedBundle.PrivateKeyType = RSAPrivateKey
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			parsedBundle.PrivateKey = signer
-
+		} else if signer, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes); err == nil {
+			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
+				return nil, UserError{"More than one private key given; provide only one private key in the bundle"}
+			}
+			switch signer := signer.(type) {
+			case *rsa.PrivateKey:
+				parsedBundle.PrivateKey = signer
+				parsedBundle.PrivateKeyType = RSAPrivateKey
+				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+			case *ecdsa.PrivateKey:
+				parsedBundle.PrivateKey = signer
+				parsedBundle.PrivateKeyType = ECPrivateKey
+				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			switch len(certificates) {
 			case 0:
