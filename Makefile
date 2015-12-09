@@ -19,7 +19,7 @@ dev: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
+	TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=60s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
