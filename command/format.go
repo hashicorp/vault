@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/hashicorp/vault/api"
@@ -68,8 +69,14 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 		}
 	}
 
-	for k, v := range s.Data {
-		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, v))
+	keys := make([]string, 0, len(s.Data))
+	for k := range s.Data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, s.Data[k]))
 	}
 
 	if len(s.Warnings) != 0 {
