@@ -133,7 +133,7 @@ The following HTTP status codes are used throughout the API.
 - `204` - Success, no data returned.
 - `400` - Invalid request, missing or invalid data. See the
    "validation" section for more details on the error response.
-- `401` - Unauthorized, your authentication details are either
+- `403` - Forbidden, your authentication details are either
    incorrect or you don't have access to this feature.
 - `404` - Invalid path. This can both mean that the path truly
    doesn't exist or that you don't have permission to view a
