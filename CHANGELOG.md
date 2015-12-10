@@ -1,4 +1,4 @@
-## 0.4.0 (Unreleased)
+## 0.4.0 (December 10, 2015)
 
 DEPRECATIONS/BREAKING CHANGES:
 
