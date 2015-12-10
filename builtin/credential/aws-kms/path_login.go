@@ -79,7 +79,9 @@ func (b *backend) pathLogin(
 	if err != nil {
 		return logical.ErrorResponse("Cannot parse token"), nil
 	}
-	if tok.NotBefore.Before(time.Now().UTC()) || tok.NotAfter.After(time.Now().UTC()) {
+	
+	var now = time.Now().UTC()
+	if now.Before(tok.NotBefore) || now.After(tok.NotAfter) {
 		return logical.ErrorResponse("Token expired/not valid yet"), nil
 	}
 
