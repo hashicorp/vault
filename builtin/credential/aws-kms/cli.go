@@ -21,11 +21,13 @@ func createClientToken(keyid *string) (string, error) {
 	}
 	svc := kms.New(session.New(awsConfig))
 
-	notAfter := time.Now().UTC().Add(10 * time.Minute)
-	notBefore := time.Now().UTC().Add(-10 * time.Minute)
+	var now = time.Now().UTC()
+	notAfter := now.Add(10 * time.Minute)
+	notBefore := now.Add(-10 * time.Minute)
+
 	tok := &token{
-		NotBefore: notAfter,
-		NotAfter:  notBefore,
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
 	}
 	tokJson, err := json.Marshal(tok)
 
