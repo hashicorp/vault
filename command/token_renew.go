@@ -82,7 +82,7 @@ General Options:
 Token Renew Options:
 
   -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json.
+                          delimited table. This can also be json or yaml.
 
 `
 	return strings.TrimSpace(helpText)

@@ -107,6 +107,10 @@
 			"Rev": "9a7733345ff091c5457cb963f498a79ecd0bdbaa"
 		},
 		{
+			"ImportPath": "github.com/ghodss/yaml",
+			"Rev": "73d445a93680fa1a78ae23a5839bad48f32ba1ee"
+		},
+		{
 			"ImportPath": "github.com/go-ini/ini",
 			"Comment": "v0-56-g03e0e7d",
 			"Rev": "03e0e7d51a13a91c765d8d0161246bc14a38001a"
@@ -271,6 +275,10 @@
 		{
 			"ImportPath": "gopkg.in/inf.v0",
 			"Rev": "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "53feefa2559fb8dfa8d81baad31be332c97d6c77"
 		}
 	]
 }

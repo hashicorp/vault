@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/ryanuber/columnize"
@@ -16,6 +18,8 @@ func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
 	switch format {
 	case "json":
 		return outputFormatJSON(ui, secret)
+	case "yaml":
+		return outputFormatYAML(ui, secret)
 	case "table":
 		fallthrough
 	default:
@@ -34,6 +38,18 @@ func outputFormatJSON(ui cli.Ui, s *api.Secret) int {
 	var out bytes.Buffer
 	json.Indent(&out, b, "", "\t")
 	ui.Output(out.String())
+	return 0
+}
+
+func outputFormatYAML(ui cli.Ui, s *api.Secret) int {
+	b, err := yaml.Marshal(s)
+	if err != nil {
+		ui.Error(fmt.Sprintf(
+			"Error formatting secret: %s", err))
+		return 1
+	}
+
+	ui.Output(strings.TrimSpace(string(b)))
 	return 0
 }
 
