@@ -4,6 +4,10 @@ IMPROVEMENTS:
 
  * cli: Output secrets sorted by key name [GH-830]
 
+MISC:
+
+ * Various minor documentation fixes and improvements [GH-839]
+
 ## 0.4.0 (December 10, 2015)
 
 DEPRECATIONS/BREAKING CHANGES:
