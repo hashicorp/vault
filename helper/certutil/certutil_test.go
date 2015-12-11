@@ -136,19 +136,19 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 	switch cbut.PrivateKey {
 	case privRSAKeyPem:
 		if pcbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("Parsed bundle has wrong private key type")
+			return fmt.Errorf("Parsed bundle has wrong private key type: %v, should be 'rsa' (%v)", pcbut.PrivateKeyType, RSAPrivateKey)
 		}
 	case privRSA8KeyPem:
 		if pcbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("Parsed bundle has wrong private key type")
+			return fmt.Errorf("Parsed bundle has wrong pkcs8 private key type: %v, should be 'rsa' (%v)", pcbut.PrivateKeyType, RSAPrivateKey)
 		}
 	case privECKeyPem:
 		if pcbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("Parsed bundle has wrong private key type")
+			return fmt.Errorf("Parsed bundle has wrong private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
 	case privEC8KeyPem:
 		if pcbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("Parsed bundle has wrong private key type")
+			return fmt.Errorf("Parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
 	default:
 		return fmt.Errorf("Parsed bundle has unknown private key type")
@@ -176,23 +176,17 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("Bundle has nil issuing CA")
 	}
 
-	switch cb.PrivateKeyType {
-	case "rsa":
-		if pcbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("Bundle has wrong private key type")
-		}
+	switch pcbut.PrivateKeyType {
+	case RSAPrivateKey:
 		if cb.PrivateKey != privRSAKeyPem && cb.PrivateKey != privRSA8KeyPem {
 			return fmt.Errorf("Bundle private key does not match")
 		}
-	case "ec":
-		if pcbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("Bundle has wrong private key type")
-		}
+	case ECPrivateKey:
 		if cb.PrivateKey != privECKeyPem && cb.PrivateKey != privEC8KeyPem {
 			return fmt.Errorf("Bundle private key does not match")
 		}
 	default:
-		return fmt.Errorf("Bundle has unknown private key type")
+		return fmt.Errorf("CertBundle has unknown private key type")
 	}
 
 	if cb.SerialNumber != GetOctalFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
@@ -287,6 +281,7 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 			return fmt.Errorf("Bundle private key does not match")
 		}
 	default:
+		fmt.Printf("csrb = %+v\n", csrb)
 		return fmt.Errorf("Bundle has unknown private key type")
 	}
 
