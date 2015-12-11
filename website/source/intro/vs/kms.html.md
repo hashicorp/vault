@@ -21,7 +21,7 @@ In contrast, Vault provides a comprehensive secret management solution.
 The [`transit` backend](/docs/secrets/transit/index.html)
 provides similar capabilities as the KMS service, allowing for encryption keys
 to be stored and cryptographic operations to be performed. However, Vault goes
-much futher than just key management.
+much further than just key management.
 
 The flexible secret backends allow Vault to handle any type of secret data,
 including database credentials, API keys, PKI keys, and encryption keys.
