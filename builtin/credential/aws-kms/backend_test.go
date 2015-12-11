@@ -154,8 +154,8 @@ func createToken(t *testing.T, invalidType bool, invalidCipherText bool, expired
 		tokJson, err = json.Marshal(tok)
 	} else {
 		tok := &token{
-			NotBefore: notAfter,
-			NotAfter:  notBefore,
+			NotBefore: notBefore,
+			NotAfter:  notAfter,
 		}
 		tokJson, err = json.Marshal(tok)
 	}
