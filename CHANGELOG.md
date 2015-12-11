@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
  * cli: Output secrets sorted by key name [GH-830]
+ * cli: Support YAML as an output format [GH-832]
 
 MISC:
 
