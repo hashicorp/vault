@@ -123,7 +123,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
 				return nil, UserError{"more than one private key given; provide only one private key in the bundle"}
 			}
-			parsedBundle.PrivateKeyFormat = EC
+			parsedBundle.PrivateKeyFormat = ECBlock
 			parsedBundle.PrivateKeyType = ECPrivateKey
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			parsedBundle.PrivateKey = signer
@@ -133,11 +133,11 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				return nil, UserError{"more than one private key given; provide only one private key in the bundle"}
 			}
 			parsedBundle.PrivateKeyType = RSAPrivateKey
-			parsedBundle.PrivateKeyFormat = PKCS1
+			parsedBundle.PrivateKeyFormat = PKCS1Block
 			parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			parsedBundle.PrivateKey = signer
 		} else if signer, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes); err == nil {
-			parsedBundle.PrivateKeyFormat = PKCS8
+			parsedBundle.PrivateKeyFormat = PKCS8Block
 
 			if parsedBundle.PrivateKeyType != UnknownPrivateKey {
 				return nil, UserError{"More than one private key given; provide only one private key in the bundle"}
@@ -203,7 +203,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 // GeneratePrivateKey generates a private key with the specified type and key bits
 func GeneratePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyContainer) error {
 	var err error
-	var privateKeyType int
+	var privateKeyType PrivateKeyType
 	var privateKeyBytes []byte
 	var privateKey crypto.Signer
 
