@@ -281,7 +281,6 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 			return fmt.Errorf("Bundle private key does not match")
 		}
 	default:
-		fmt.Printf("csrb = %+v\n", csrb)
 		return fmt.Errorf("Bundle has unknown private key type")
 	}
 
