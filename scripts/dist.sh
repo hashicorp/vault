@@ -14,6 +14,11 @@ if ([ -z $AWS_ACCESS_KEY_ID ] || [ -z $AWS_SECRET_ACCESS_KEY ]) && [ ! -z $HC_RE
     exit 1
 fi
 
+if [ -z $NOBUILD ] && [ -z $DOCKER_CROSS_IMAGE ]; then
+    echo "Please set the Docker cross-compile image in DOCKER_CROSS_IMAGE"
+    exit 1
+fi
+
 # Get the parent directory of where this script is.
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done

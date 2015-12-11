@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 
@@ -158,7 +157,6 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 			return fmt.Errorf("Bundle has wrong private key type")
 		}
 		if cb.PrivateKey != privRSAKeyPem && cb.PrivateKey != privRSA8KeyPem {
-			log.Println(cb.PrivateKey, privRSAKeyPem, privRSA8KeyPem)
 			return fmt.Errorf("Bundle private key does not match")
 		}
 	case "ec":
