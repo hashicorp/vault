@@ -49,6 +49,31 @@ func TestCertBundleConversion(t *testing.T) {
 	}
 }
 
+func BenchmarkCertBundleParsing(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		cbuts := []*CertBundle{
+			refreshRSACertBundle(),
+			refreshRSA8CertBundle(),
+			refreshECCertBundle(),
+			refreshEC8CertBundle(),
+		}
+
+		for i, cbut := range cbuts {
+			pcbut, err := cbut.ToParsedCertBundle()
+			if err != nil {
+				b.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+				b.Errorf("Error converting to parsed cert bundle: %s", err)
+				continue
+			}
+
+			cbut, err = pcbut.ToCertBundle()
+			if err != nil {
+				b.Fatalf("Error converting to cert bundle: %s", err)
+			}
+		}
+	}
+}
+
 func TestCertBundleParsing(t *testing.T) {
 	jsonBundle := refreshRSACertBundle()
 	jsonString, err := json.Marshal(jsonBundle)
