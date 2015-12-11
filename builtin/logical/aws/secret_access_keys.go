@@ -43,9 +43,9 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretAccessKeysAndTokenCreate(
-	s logical.Storage,
-	displayName, policyName string, policy string) (*logical.Response, error) {
+func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
+	displayName, policyName, policy string,
+	lifeTimeInSeconds *int64) (*logical.Response, error) {
 	IAMClient, err := clientIAM(s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -79,14 +79,14 @@ func (b *backend) secretAccessKeysAndTokenCreate(
 			"Error creating IAM user: %s", err)), nil
 	}
 
-    duration := int64(60*60)
-
 	// Create the keys and token
+	fmt.Println(username, policy)
+
 	resp, err := STSClient.GetFederationToken(
 		&sts.GetFederationTokenInput{
 			Name:            aws.String(username),
 			Policy:          aws.String(policy),
-			DurationSeconds: &duration, //TODO make this configurable
+			DurationSeconds: lifeTimeInSeconds,
 		})
 
 	if err != nil {

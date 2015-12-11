@@ -15,6 +15,11 @@ func pathSTS(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
+			"duration": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "Lifetime of the token in seconds",
+				Default: 3600,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -29,6 +34,7 @@ func pathSTS(b *backend) *framework.Path {
 func (b *backend) pathSTSRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
+	duration := d.Get("duration").(int64)
 
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)
@@ -42,7 +48,10 @@ func (b *backend) pathSTSRead(
 
 	// Use the helper to create the secret
 	return b.secretAccessKeysAndTokenCreate(
-		req.Storage, req.DisplayName, policyName, string(policy.Value))
+		req.Storage,
+		req.DisplayName, policyName, string(policy.Value),
+		&duration,
+	)
 }
 
 const pathSTSHelpSyn = `
