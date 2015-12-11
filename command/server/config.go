@@ -17,6 +17,7 @@ import (
 type Config struct {
 	Listeners []*Listener `hcl:"-"`
 	Backend   *Backend    `hcl:"-"`
+	HABackend *Backend    `hcl:"-"`
 
 	DisableCache bool `hcl:"disable_cache"`
 	DisableMlock bool `hcl:"disable_mlock"`
@@ -187,6 +188,12 @@ func LoadConfigFile(path string) (*Config, error) {
 	}
 	if objs := obj.Get("backend", false); objs != nil {
 		result.Backend, err = loadBackend(objs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if objs := obj.Get("ha_backend", false); objs != nil {
+		result.HABackend, err = loadBackend(objs)
 		if err != nil {
 			return nil, err
 		}

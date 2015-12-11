@@ -1110,10 +1110,12 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -1172,6 +1174,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
@@ -1256,10 +1259,12 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 
 func TestCore_Standby(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -1313,6 +1318,7 @@ func TestCore_Standby(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
@@ -2003,10 +2009,12 @@ func testWaitActive(t *testing.T, core *Core) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -2025,6 +2033,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
@@ -2074,10 +2083,12 @@ func TestCore_Standby_Rotate(t *testing.T) {
 
 func TestCore_Standby_Rekey(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -2096,6 +2107,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
