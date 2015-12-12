@@ -14,10 +14,6 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
 		Fields: map[string]*framework.FieldSchema{
-			"key_id": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Key ID",
-			},
 
 			"ciphertext": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -79,7 +75,7 @@ func (b *backend) pathLogin(
 	if err != nil {
 		return logical.ErrorResponse("Cannot parse token"), nil
 	}
-	
+
 	var now = time.Now().UTC()
 	if now.Before(tok.NotBefore) || now.After(tok.NotAfter) {
 		return logical.ErrorResponse("Token expired/not valid yet"), nil
