@@ -9,6 +9,7 @@ body.page-sub{
 }
 
 #footer{
+  flex-shrink:0;
   padding: 64px 0;
 
   .hashicorp-project{

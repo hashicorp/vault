@@ -11,7 +11,6 @@
 //= require lib/Chainable
 //= require lib/dbg
 
-//= require docs
 //= require app/Sidebar
 //= require app/DotLockup
 //= require app/Init
