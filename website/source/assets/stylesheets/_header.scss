@@ -5,6 +5,8 @@
 // --------------------------------------------------
 
 #header {
+  flex-shrink:0;
+
   .navbar-brand {
     .logo{
       width: $project-logo-width;
