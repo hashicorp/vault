@@ -21,9 +21,10 @@ func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
 	case "yaml":
 		return outputFormatYAML(ui, secret)
 	case "table":
-		fallthrough
-	default:
 		return outputFormatTable(ui, secret, true)
+	default:
+		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+		return 1
 	}
 }
 
