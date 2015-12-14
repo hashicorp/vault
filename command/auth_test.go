@@ -10,8 +10,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
-	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
@@ -188,12 +186,8 @@ func testAuthInit(t *testing.T) {
 
 	// Write a .vault config to use our custom token helper
 	config := fmt.Sprintf(
-		"token_helper = \"%s\"\n", token.TestProcessPath(t))
+		"token_helper = \"\"\n")
 	ioutil.WriteFile(filepath.Join(td, ".vault"), []byte(config), 0644)
-}
-
-func TestHelperProcess(t *testing.T) {
-	token.TestHelperProcessCLI(t, &tokenDisk.Command{})
 }
 
 type testAuthHandler struct{}
