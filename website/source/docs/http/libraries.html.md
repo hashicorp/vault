@@ -27,3 +27,7 @@ Some are officially maintained while others are provided by the community.
 
 * [node-vault](https://github.com/kr1sp1n/node-vault)
 * [vaulted](https://github.com/chiefy/vaulted)
+
+## Java
+
+* [vault-java](https://github.com/jhaals/vault-java)
