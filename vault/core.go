@@ -277,7 +277,7 @@ type CoreConfig struct {
 	// Defaults to the same backend as Physical. This is not a backend that
 	// necessarily supports HA; it is merely the one that will be attempted
 	// for HA operations
-	HAPhysical physical.Backend
+	HAPhysical physical.HABackend
 
 	Logger          *log.Logger
 	DisableCache    bool   // Disables the LRU cache on the physical backend
@@ -290,12 +290,7 @@ type CoreConfig struct {
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	// Check if this backend supports an HA configuraiton
-	var haBackend physical.HABackend
-	if ha, ok := conf.HAPhysical.(physical.HABackend); ok {
-		haBackend = ha
-	}
-	if haBackend != nil && conf.AdvertiseAddr == "" {
+	if conf.HAPhysical != nil && conf.AdvertiseAddr == "" {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
@@ -305,7 +300,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.MaxLeaseTTL == 0 {
 		conf.MaxLeaseTTL = maxLeaseTTL
 	}
-
 	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
 	}
@@ -361,7 +355,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:              haBackend,
+		ha:              conf.HAPhysical,
 		advertiseAddr:   conf.AdvertiseAddr,
 		physical:        conf.Physical,
 		barrier:         barrier,

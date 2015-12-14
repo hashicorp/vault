@@ -114,47 +114,9 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	var advertiseAddr string = config.Backend.AdvertiseAddr
-
-	// Note that "habackend" is a backend that *may* support HA;
-	// it defaults to the same backend as normal operations
-	var habackend physical.Backend = backend
-
-	// Initialize the separate HA physical backend, if it exists
-	if config.HABackend != nil {
-		habackend, err = physical.NewBackend(
-			config.HABackend.Type, config.HABackend.Config)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error initializing backend of type %s: %s",
-				config.HABackend.Type, err))
-			return 1
-		}
-		if _, ok := habackend.(physical.HABackend); !ok {
-			c.Ui.Error("Specified HA backend does not support HA")
-			return 1
-		}
-
-		advertiseAddr = config.HABackend.AdvertiseAddr
-	}
-
-	// Attempt to detect the advertise address possible
-	if detect, ok := habackend.(physical.AdvertiseDetect); ok && advertiseAddr == "" {
-		advertise, err := c.detectAdvertise(detect, config)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
-		} else if advertise == "" {
-			c.Ui.Error("Failed to detect advertise address.")
-		} else {
-			advertiseAddr = advertise
-		}
-	}
-
-	// Initialize the core
-	core, err := vault.NewCore(&vault.CoreConfig{
-		AdvertiseAddr:      advertiseAddr,
+	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
-		HAPhysical:         habackend,
+		HAPhysical:         nil,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
@@ -163,7 +125,41 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
-	})
+	}
+
+	// Initialize the separate HA physical backend, if it exists
+	if config.HABackend != nil {
+		habackend, err := physical.NewBackend(
+			config.HABackend.Type, config.HABackend.Config)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error initializing backend of type %s: %s",
+				config.HABackend.Type, err))
+			return 1
+		}
+
+		var ok bool
+		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
+			c.Ui.Error("Specified HA backend does not support HA")
+			return 1
+		}
+		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
+	}
+
+	// Attempt to detect the advertise address possible
+	if detect, ok := coreConfig.HAPhysical.(physical.AdvertiseDetect); ok && coreConfig.AdvertiseAddr == "" {
+		advertise, err := c.detectAdvertise(detect, config)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
+		} else if advertise == "" {
+			c.Ui.Error("Failed to detect advertise address.")
+		} else {
+			coreConfig.AdvertiseAddr = advertise
+		}
+	}
+
+	// Initialize the core
+	core, err := vault.NewCore(coreConfig)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))
 		return 1
@@ -214,13 +210,13 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if config.HABackend != nil {
 		info["HA backend"] = config.HABackend.Type
-		info["advertise address"] = advertiseAddr
+		info["advertise address"] = coreConfig.AdvertiseAddr
 		infoKeys = append(infoKeys, "HA backend", "advertise address")
 	} else {
 		// If the backend supports HA, then note it
-		if _, ok := habackend.(physical.HABackend); ok {
+		if coreConfig.HAPhysical != nil {
 			info["backend"] += " (HA available)"
-			info["advertise address"] = advertiseAddr
+			info["advertise address"] = coreConfig.AdvertiseAddr
 			infoKeys = append(infoKeys, "advertise address")
 		}
 	}

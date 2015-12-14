@@ -1258,9 +1258,16 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
-	// Create the first core and initialize it
-	inm := physical.NewInmem()
 	inmha := physical.NewInmemHA()
+	testCore_Standby_Common(t, inmha, inmha)
+}
+
+func TestCore_Standby_SeparateHA(t *testing.T) {
+	testCore_Standby_Common(t, physical.NewInmemHA(), physical.NewInmemHA())
+}
+
+func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.HABackend) {
+	// Create the first core and initialize it
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
