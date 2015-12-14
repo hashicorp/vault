@@ -20,63 +20,63 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/endpoints",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/ec2query",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/query",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/rest",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/restxml",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/signer/v4",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/waiter",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/iam",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/s3",
-			"Comment": "v1.0.2-3-gcb8f6e2",
-			"Rev": "cb8f6e2243db557350e4ff8f786590881e4149b6"
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/client",
