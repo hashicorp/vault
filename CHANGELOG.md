@@ -12,6 +12,7 @@ IMPROVEMENTS:
 
 MISC:
 
+ * Add `vault-java` to libraries [GH-851]
  * Various minor documentation fixes and improvements [GH-839]
 
 ## 0.4.0 (December 10, 2015)
