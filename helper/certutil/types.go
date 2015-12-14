@@ -23,15 +23,16 @@ type Secret struct {
 	Data map[string]interface{} `json:"data"`
 }
 
-// The type of of the Private Key referenced in CertBundle
-// and ParsedCertBundle. This uses colloquial names rather than
-// official names, to eliminate confusion
-type PrivateKeyType int
+// PrivateKeyType holds a string representation of the type of private key (ec
+// or rsa) referenced in CertBundle and ParsedCertBundle. This uses colloquial
+// names rather than official names, to eliminate confusion
+type PrivateKeyType string
 
+//Well-known PrivateKeyTypes
 const (
-	UnknownPrivateKey = PrivateKeyType(iota)
-	RSAPrivateKey
-	ECPrivateKey
+	UnknownPrivateKey PrivateKeyType = ""
+	RSAPrivateKey     PrivateKeyType = "rsa"
+	ECPrivateKey      PrivateKeyType = "ec"
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
@@ -39,6 +40,7 @@ const (
 // client use, or both, which affects which values are set
 type TLSUsage int
 
+//Well-known TLSUsage types
 const (
 	TLSUnknown TLSUsage = 0
 	TLSServer  TLSUsage = 1 << iota
@@ -83,11 +85,11 @@ type ParsedPrivateKeyContainer interface {
 // a PEM-encoded certificate, and a string-encoded serial number,
 // returned from a successful Issue request
 type CertBundle struct {
-	PrivateKeyType string `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
-	Certificate    string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	IssuingCA      string `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
-	PrivateKey     string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
-	SerialNumber   string `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
+	PrivateKeyType PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
+	Certificate    string         `json:"certificate" structs:"certificate" mapstructure:"certificate"`
+	IssuingCA      string         `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
+	PrivateKey     string         `json:"private_key" structs:"private_key" mapstructure:"private_key"`
+	SerialNumber   string         `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
 
 // ParsedCertBundle contains a key type, a DER-encoded private key,
@@ -106,9 +108,9 @@ type ParsedCertBundle struct {
 // CSRBundle contains a key type, a PEM-encoded private key,
 // and a PEM-encoded CSR
 type CSRBundle struct {
-	PrivateKeyType string `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
-	CSR            string `json:"csr" structs:"csr" mapstructure:"csr"`
-	PrivateKey     string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
+	PrivateKeyType PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
+	CSR            string         `json:"csr" structs:"csr" mapstructure:"csr"`
+	PrivateKey     string         `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 }
 
 // ParsedCSRBundle contains a key type, a DER-encoded private key,
@@ -139,11 +141,9 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 
 		switch result.PrivateKeyFormat {
 		case ECBlock:
-			c.PrivateKeyType = "ec"
-			result.PrivateKeyType = ECPrivateKey
+			result.PrivateKeyType, c.PrivateKeyType = ECPrivateKey, ECPrivateKey
 		case PKCS1Block:
-			c.PrivateKeyType = "rsa"
-			result.PrivateKeyType = RSAPrivateKey
+			c.PrivateKeyType, result.PrivateKeyType = RSAPrivateKey, RSAPrivateKey
 		case PKCS8Block:
 			t, err := getPKCS8Type(pemBlock.Bytes)
 			if err != nil {
@@ -152,9 +152,9 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			result.PrivateKeyType = t
 			switch t {
 			case ECPrivateKey:
-				c.PrivateKeyType = "ec"
+				c.PrivateKeyType = ECPrivateKey
 			case RSAPrivateKey:
-				c.PrivateKeyType = "rsa"
+				c.PrivateKeyType = RSAPrivateKey
 			}
 		default:
 			return nil, UserError{fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
@@ -222,6 +222,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
 		block.Type = string(p.PrivateKeyFormat)
 		block.Bytes = p.PrivateKeyBytes
+		result.PrivateKeyType = p.PrivateKeyType
 
 		//Handle bundle not parsed by us
 		if block.Type == "" {
