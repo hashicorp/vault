@@ -436,6 +436,10 @@ func signCert(b *backend,
 		return nil, err
 	}
 
+	if useCSRValues && !isCA {
+		return nil, certutil.UserError{Err: "cannot use CSR values with a non-CA certificate"}
+	}
+
 	creationBundle.IsCA = isCA
 	creationBundle.UseCSRValues = useCSRValues
 
@@ -661,6 +665,32 @@ func generateCreationBundle(b *backend,
 	return creationBundle, nil
 }
 
+// addKeyUsages adds approrpiate key usages to the template given the creation
+// information
+func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) {
+	certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement)
+
+	if creationInfo.Usage&serverUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+	}
+	if creationInfo.Usage&clientUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+	}
+	if creationInfo.Usage&codeSigningUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+	}
+	if creationInfo.Usage&emailProtectionUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	}
+
+	if creationInfo.IsCA {
+		// Go performs validation not according to spec but according to the Windows
+		// Crypto API, so we add all usages to CA certs
+		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		certTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
+	}
+}
+
 // Performs the heavy lifting of creating a certificate. Returns
 // a fully-filled-in ParsedCertBundle.
 func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle, error) {
@@ -692,7 +722,6 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		Subject:        subject,
 		NotBefore:      time.Now(),
 		NotAfter:       time.Now().Add(creationInfo.TTL),
-		KeyUsage:       x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement),
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
 		DNSNames:       creationInfo.DNSNames,
@@ -700,18 +729,12 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		IPAddresses:    creationInfo.IPAddresses,
 	}
 
-	if creationInfo.Usage&serverUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+	// Add this before calling addKeyUsages
+	if creationInfo.SigningBundle == nil {
+		certTemplate.IsCA = true
 	}
-	if creationInfo.Usage&clientUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
-	}
-	if creationInfo.Usage&codeSigningUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
-	}
-	if creationInfo.Usage&emailProtectionUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
-	}
+
+	addKeyUsages(creationInfo, certTemplate)
 
 	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
@@ -746,9 +769,6 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		}
 
 		certTemplate.BasicConstraintsValid = true
-		certTemplate.IsCA = true
-		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
 	}
 
@@ -876,37 +896,13 @@ func signCertificate(creationInfo *creationBundle,
 		certTemplate.IPAddresses = csr.IPAddresses
 
 		certTemplate.ExtraExtensions = csr.Extensions
-		// Do not sign a CA certificate if they didn't go through the sign-intermediate
-		// endpoint
-		if !creationInfo.IsCA && oidInExtensions(oidExtensionBasicConstraints, certTemplate.ExtraExtensions) {
-			return nil, certutil.UserError{Err: "will not sign a CSR asking for CA rights through this endpoint"}
-		}
-
 	} else {
 		certTemplate.DNSNames = creationInfo.DNSNames
 		certTemplate.EmailAddresses = creationInfo.EmailAddresses
 		certTemplate.IPAddresses = creationInfo.IPAddresses
-
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement)
-
-		if creationInfo.Usage&serverUsage != 0 {
-			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
-		}
-		if creationInfo.Usage&clientUsage != 0 {
-			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
-		}
-		if creationInfo.Usage&codeSigningUsage != 0 {
-			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
-		}
-		if creationInfo.Usage&emailProtectionUsage != 0 {
-			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
-		}
-
-		if creationInfo.IsCA {
-			certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-			certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
-		}
 	}
+
+	addKeyUsages(creationInfo, certTemplate)
 
 	var certBytes []byte
 	caCert := creationInfo.SigningBundle.Certificate
