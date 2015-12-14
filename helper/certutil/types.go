@@ -283,7 +283,7 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 // SetParsedPrivateKey sets the private key parameters on the bundle
 func (p *ParsedCertBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateKeyType PrivateKeyType, privateKeyBytes []byte) {
 	p.PrivateKey = privateKey
-	p.PrivateKeyType = PrivateKeyType(privateKeyType)
+	p.PrivateKeyType = privateKeyType
 	p.PrivateKeyBytes = privateKeyBytes
 }
 
