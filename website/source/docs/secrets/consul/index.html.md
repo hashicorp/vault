@@ -143,12 +143,21 @@ Permission denied
       <li>
         <span class="param">policy</span>
         <span class="param-flags">required</span>
-        The base64 encoded Consul ACL policy. This is documented in [more detail here](https://consul.io/docs/internals/acl.html).
+        The base64 encoded Consul ACL policy. This is documented in [more
+        detail here](https://consul.io/docs/internals/acl.html). Required
+        unless the `token_type` is `management`.
+      </li>
+      <li>
+        <span class="param">token_type</span>
+        <span class="param-flags">optional</span>
+        The type of token to create using this role: `client` or `management`.
+        If `management`, the `policy` parameter is not required.
       </li>
       <li>
         <span class="param">lease</span>
         <span class="param-flags">optional</span>
-        The lease value provided as a string duration with time suffix. Hour is the largest suffix.
+        The lease value provided as a string duration with time suffix. Hour is
+        the largest suffix.
       </li>
     </ul>
   </dd>
