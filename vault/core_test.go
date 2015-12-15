@@ -1417,6 +1417,23 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if advertise != advertiseOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
+
+	if inm.(*physical.InmemHABackend) == inmha.(*physical.InmemHABackend) {
+		lockSize := inm.(*physical.InmemHABackend).LockMapSize()
+		if lockSize == 0 {
+			t.Fatalf("locks not used with only one HA backend")
+		}
+	} else {
+		lockSize := inmha.(*physical.InmemHABackend).LockMapSize()
+		if lockSize == 0 {
+			t.Fatalf("locks not used with expected HA backend")
+		}
+
+		lockSize = inm.(*physical.InmemHABackend).LockMapSize()
+		if lockSize != 0 {
+			t.Fatalf("locks used with unexpected HA backend")
+		}
+	}
 }
 
 // Ensure that InternalData is never returned
