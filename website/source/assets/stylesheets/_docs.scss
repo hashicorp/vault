@@ -17,7 +17,9 @@ body.layout-docs,
 body.layout-inner,
 body.layout-downloads,
 body.layout-intro{
-	//background: $light-black image-url('sidebar-wire.png') left 62px no-repeat;
+  display: flex;
+  flex-direction: column;
+
 	>.container{
     flex: 1 0 auto;
 
