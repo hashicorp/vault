@@ -21,6 +21,10 @@ IMPROVEMENTS:
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
 
+BUG FIXES:
+ * physical/s3: Use an initialized client when using IAM roles to fix a
+   regression introduced against newer versions of the AWS Go SDK [GH-836]
+
 MISC:
 
  * Add `vault-java` to libraries [GH-851]
