@@ -38,6 +38,11 @@ to specify where the configuration is.
   is stored. There are multiple options available for storage backends,
   and they're documented below.
 
+* `ha_backend` (optional) - Configures the storage backend where Vault HA
+  coordination will take place. Must be an HA-supporting backend using the
+  configuration options as documented below. If not set, HA will be attempted
+  on the backend given in the `backend` parameter.
+
 * `listener` (required) - Configures how Vault is listening for API requests.
   "tcp" is currently the only option available. A full reference for the
    inner syntax is below.

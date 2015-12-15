@@ -1,5 +1,14 @@
 ## 0.5.0 (Unreleased)
 
+FEATURES:
+
+ * **Split Data/High Availability Physical Backends**: You can now configure
+   two separate physical backends: one to be used for High Availability
+   coordination and another to be used for encrypted data storage. See the
+   [configuration
+   documentation](https://vaultproject.io/docs/config/index.html) for details.
+   [GH-395]
+
 IMPROVEMENTS:
 
  * cli: Output secrets sorted by key name [GH-830]
