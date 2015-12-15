@@ -116,6 +116,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
+		AdvertiseAddr:      config.Backend.AdvertiseAddr,
 		HAPhysical:         nil,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
@@ -147,7 +148,14 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Attempt to detect the advertise address possible
-	if detect, ok := coreConfig.HAPhysical.(physical.AdvertiseDetect); ok && coreConfig.AdvertiseAddr == "" {
+	var detect physical.AdvertiseDetect
+	var ok bool
+	if coreConfig.HAPhysical != nil {
+		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
+	} else {
+		detect, ok = coreConfig.Physical.(physical.AdvertiseDetect)
+	}
+	if ok && coreConfig.AdvertiseAddr == "" {
 		advertise, err := c.detectAdvertise(detect, config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
