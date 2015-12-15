@@ -147,6 +147,10 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
 	}
 
+	if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
+		coreConfig.AdvertiseAddr = envAA
+	}
+
 	// Attempt to detect the advertise address possible
 	var detect physical.AdvertiseDetect
 	var ok bool

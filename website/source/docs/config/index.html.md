@@ -111,7 +111,8 @@ All backends support the following options:
   * `advertise_addr` (optional) - For backends that support HA, this
       is the address to advertise to other Vault servers in the cluster
       for request forwarding. Most HA backends will attempt to determine
-      the advertise address if not provided.
+      the advertise address if not provided. This can also be set via
+      the `VAULT_ADVERTISE_ADDR` environment variable.
 
 #### Backend Reference: Consul
 
