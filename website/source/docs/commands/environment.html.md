@@ -28,6 +28,9 @@ The following table describes them:
     <td>The address of the Vault server.</td>
   </tr>
   <tr>
+    <td><tt>VAULT_ADVERTISE_ADDR</tt></td>
+    <td>The advertised address of the server to use for client request forwarding when running in High Availability mode.</td>
+  <tr>
     <td><tt>VAULT_CACERT</tt></td>
     <td>Path to a PEM-encoded CA cert file to use to verify the Vault server SSL certificate.</td>
   </tr>
