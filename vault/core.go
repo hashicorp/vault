@@ -273,23 +273,24 @@ type CoreConfig struct {
 	CredentialBackends map[string]logical.Factory
 	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
-	Logger             *log.Logger
-	DisableCache       bool   // Disables the LRU cache on the physical backend
-	DisableMlock       bool   // Disables mlock syscall
-	CacheSize          int    // Custom cache size of zero for default
-	AdvertiseAddr      string // Set as the leader address for HA
-	DefaultLeaseTTL    time.Duration
-	MaxLeaseTTL        time.Duration
+
+	// Defaults to the same backend as Physical. This is not a backend that
+	// necessarily supports HA; it is merely the one that will be attempted
+	// for HA operations
+	HAPhysical physical.HABackend
+
+	Logger          *log.Logger
+	DisableCache    bool   // Disables the LRU cache on the physical backend
+	DisableMlock    bool   // Disables mlock syscall
+	CacheSize       int    // Custom cache size of zero for default
+	AdvertiseAddr   string // Set as the leader address for HA
+	DefaultLeaseTTL time.Duration
+	MaxLeaseTTL     time.Duration
 }
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	// Check if this backend supports an HA configuraiton
-	var haBackend physical.HABackend
-	if ha, ok := conf.Physical.(physical.HABackend); ok {
-		haBackend = ha
-	}
-	if haBackend != nil && conf.AdvertiseAddr == "" {
+	if conf.HAPhysical != nil && conf.AdvertiseAddr == "" {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
@@ -299,7 +300,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.MaxLeaseTTL == 0 {
 		conf.MaxLeaseTTL = maxLeaseTTL
 	}
-
 	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
 	}
@@ -355,7 +355,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:              haBackend,
+		ha:              conf.HAPhysical,
 		advertiseAddr:   conf.AdvertiseAddr,
 		physical:        conf.Physical,
 		barrier:         barrier,

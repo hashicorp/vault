@@ -1110,10 +1110,12 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -1172,6 +1174,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
@@ -1255,11 +1258,20 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
+	inmha := physical.NewInmemHA()
+	testCore_Standby_Common(t, inmha, inmha)
+}
+
+func TestCore_Standby_SeparateHA(t *testing.T) {
+	testCore_Standby_Common(t, physical.NewInmemHA(), physical.NewInmemHA())
+}
+
+func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.HABackend) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -1313,6 +1325,7 @@ func TestCore_Standby(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
@@ -1403,6 +1416,23 @@ func TestCore_Standby(t *testing.T) {
 	}
 	if advertise != advertiseOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
+	if inm.(*physical.InmemHABackend) == inmha.(*physical.InmemHABackend) {
+		lockSize := inm.(*physical.InmemHABackend).LockMapSize()
+		if lockSize == 0 {
+			t.Fatalf("locks not used with only one HA backend")
+		}
+	} else {
+		lockSize := inmha.(*physical.InmemHABackend).LockMapSize()
+		if lockSize == 0 {
+			t.Fatalf("locks not used with expected HA backend")
+		}
+
+		lockSize = inm.(*physical.InmemHABackend).LockMapSize()
+		if lockSize != 0 {
+			t.Fatalf("locks used with unexpected HA backend")
+		}
 	}
 }
 
@@ -2003,10 +2033,12 @@ func testWaitActive(t *testing.T, core *Core) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -2025,6 +2057,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})
@@ -2074,10 +2107,12 @@ func TestCore_Standby_Rotate(t *testing.T) {
 
 func TestCore_Standby_Rekey(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal,
 		DisableMlock:  true,
 	})
@@ -2096,6 +2131,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	advertiseOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
 		Physical:      inm,
+		HAPhysical:    inmha,
 		AdvertiseAddr: advertiseOriginal2,
 		DisableMlock:  true,
 	})

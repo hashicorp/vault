@@ -30,6 +30,14 @@ func TestLoadConfigFile(t *testing.T) {
 			},
 		},
 
+		HABackend: &Backend{
+			Type:          "consul",
+			AdvertiseAddr: "snafu",
+			Config: map[string]string{
+				"bar": "baz",
+			},
+		},
+
 		Telemetry: &Telemetry{
 			StatsdAddr:      "bar",
 			StatsiteAddr:    "foo",
@@ -108,6 +116,13 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
+			},
+		},
+
+		HABackend: &Backend{
+			Type: "consul",
+			Config: map[string]string{
+				"bar": "baz",
 			},
 		},
 

@@ -69,7 +69,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	defer ln2.Close()
 
 	// Create an HA Vault
-	inm := physical.NewInmemHA()
+	inm := physical.NewInmem()
 	conf := &vault.CoreConfig{
 		Physical:      inm,
 		AdvertiseAddr: addr1,
