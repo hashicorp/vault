@@ -544,9 +544,6 @@ func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *request.Request, o
 // For information about limitations on role names and the number of roles you
 // can create, go to Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
 // in the IAM User Guide.
-//
-// The policy in the following example grants permission to an EC2 instance
-// to assume the role.
 func (c *IAM) CreateRole(input *CreateRoleInput) (*CreateRoleOutput, error) {
 	req, out := c.CreateRoleRequest(input)
 	err := req.Send()
@@ -4994,7 +4991,8 @@ func (s CreatePolicyVersionOutput) GoString() string {
 type CreateRoleInput struct {
 	_ struct{} `type:"structure"`
 
-	// The policy that grants an entity permission to assume the role.
+	// The trust relationship policy document that grants an entity permission to
+	// assume the role.
 	AssumeRolePolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The path to the role. For more information about paths, see IAM Identifiers
