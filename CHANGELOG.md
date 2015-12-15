@@ -15,6 +15,8 @@ IMPROVEMENTS:
  * cli: Support YAML as an output format [GH-832]
  * cli: Show an error if the output format is incorrect, rather than falling
    back to an empty table [GH-849]
+ * cli: Allow setting the `advertise_addr` for HA via the
+   `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
