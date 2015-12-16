@@ -19,7 +19,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/pgpkeys"
