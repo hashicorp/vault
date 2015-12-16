@@ -168,6 +168,10 @@
 			"Rev": "42a2b573b664dbf281bd48c3cc12c086b17a39ba"
 		},
 		{
+			"ImportPath": "github.com/hashicorp/go-uuid",
+			"Rev": "2d537aea09f39d27f9aa33092154c51ebe277486"
+		},
+		{
 			"ImportPath": "github.com/hashicorp/golang-lru",
 			"Rev": "b361c4c189a958f7d0ad435952611c140751afe2"
 		},
@@ -183,10 +187,6 @@
 			"ImportPath": "github.com/hashicorp/serf/coordinate",
 			"Comment": "v0.6.4-145-ga72c045",
 			"Rev": "a72c0453da2ba628a013e98bf323a76be4aa1443"
-		},
-		{
-			"ImportPath": "github.com/hashicorp/uuid",
-			"Rev": "2951e8b9707a040acdb49145ed9f36a088f3532e"
 		},
 		{
 			"ImportPath": "github.com/jmespath/go-jmespath",
