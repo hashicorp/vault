@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -119,6 +120,22 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	cfg := client.Config{
 		Endpoints: machinesParsed,
 		Transport: cTransport,
+	}
+
+	// Set credentials.
+	username := os.Getenv("ETCD_USERNAME")
+	if username == "" {
+		username, _ = conf["username"]
+	}
+
+	password := os.Getenv("ETCD_PASSWORD")
+	if password == "" {
+		password, _ = conf["password"]
+	}
+
+	if username != "" && password != "" {
+		cfg.Username = username
+		cfg.Password = password
 	}
 
 	c, err := client.New(cfg)
