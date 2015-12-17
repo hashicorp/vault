@@ -1,5 +1,11 @@
 ## 0.5.0 (Unreleased)
 
+DEPRECATIONS/BREAKING CHANGES:
+ * S3 physical backend: Environment variables are now preferred over
+   configuration values. This makes it behave similar to the rest of Vault,
+   which, in increasing order of preference, uses values from the configuration
+   file, environment variables, and CLI flags. [GH-871]
+
 FEATURES:
 
  * **Split Data/High Availability Physical Backends**: You can now configure
