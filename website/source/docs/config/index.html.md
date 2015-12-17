@@ -169,6 +169,13 @@ For etcd, the following options are supported:
       Can be comma separated list (protocol://host:port) of many etcd instances.
       Defaults to "http://localhost:2379" if not specified.
 
+  * `tls_ca_file` (optional) - The path to the CA certificate used for etcd communication.
+      Defaults to system bundle if not specified.
+
+  * `tls_cert_file` (optional) - The path to the certificate for etcd communication.
+
+  * `tls_key_file` (optional) - The path to the private key for etcd communication.
+
 #### Backend Reference: S3
 
 For S3, the following options are supported:
