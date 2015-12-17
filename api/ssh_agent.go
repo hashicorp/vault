@@ -5,11 +5,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"net/http"
 	"os"
-	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/mapstructure"
 )
@@ -66,15 +64,9 @@ func (c *SSHAgentConfig) SetTLSParameters(clientConfig *Config, certPool *x509.C
 		RootCAs:            certPool,
 	}
 
-	clientConfig.HttpClient.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSClientConfig:     tlsConfig,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
+	transport := cleanhttp.DefaultTransport()
+	transport.TLSClientConfig = tlsConfig
+	clientConfig.HttpClient.Transport = transport
 }
 
 // NewClient returns a new client for the configuration. This client will be used by the

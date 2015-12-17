@@ -3,7 +3,6 @@ package physical
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 // ConsulBackend is a physical backend that stores data at specific
@@ -63,9 +63,9 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 			return nil, err
 		}
 
-		consulConf.HttpClient.Transport = &http.Transport{
-			TLSClientConfig: tlsClientConfig,
-		}
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = tlsClientConfig
+		consulConf.HttpClient.Transport = transport
 	}
 
 	client, err := api.NewClient(consulConf)
