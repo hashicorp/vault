@@ -157,7 +157,7 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/go-cleanhttp",
-			"Rev": "5df5ddc69534f1a4697289f1dca2193fbb40213f"
+			"Rev": "ce617e79981a8fff618bb643d155133a8f38db96"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/go-multierror",
