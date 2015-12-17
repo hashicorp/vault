@@ -20,6 +20,7 @@ IMPROVEMENTS:
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
+ * physical/etcd: Support basic auth [GH-859]
 
 BUG FIXES:
  * physical/s3: Use an initialized client when using IAM roles to fix a
