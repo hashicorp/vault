@@ -31,9 +31,9 @@ type S3Backend struct {
 // from the environment, AWS credential files or by IAM role.
 func newS3Backend(conf map[string]string) (Backend, error) {
 
-	bucket, ok := conf["bucket"]
-	if !ok {
-		bucket = os.Getenv("AWS_S3_BUCKET")
+	bucket := os.Getenv("AWS_S3_BUCKET")
+	if bucket == "" {
+		bucket = conf["bucket"]
 		if bucket == "" {
 			return nil, fmt.Errorf("'bucket' must be set")
 		}
@@ -51,13 +51,13 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	if !ok {
 		session_token = ""
 	}
-	endpoint, ok := conf["endpoint"]
-	if !ok {
-		endpoint = os.Getenv("AWS_S3_ENDPOINT")
+	endpoint := os.Getenv("AWS_S3_ENDPOINT")
+	if endpoint == "" {
+		endpoint = conf["endpoint"]
 	}
-	region, ok := conf["region"]
-	if !ok {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = conf["region"]
 		if region == "" {
 			region = "us-east-1"
 		}
