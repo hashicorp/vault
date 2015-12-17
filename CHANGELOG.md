@@ -31,6 +31,8 @@ IMPROVEMENTS:
 BUG FIXES:
  * core: When running in standalone mode, don't advertise that we are active
    until post-unseal setup completes [GH-872]
+ * core: Update go-cleanhttp dependency to ensure idle connections aren't
+   leaked [GH-867]
  * physical/s3: Use an initialized client when using IAM roles to fix a
    regression introduced against newer versions of the AWS Go SDK [GH-836]
 
