@@ -1066,13 +1066,13 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
-		c.standby = false
 		if err := c.postUnseal(); err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			c.barrier.Seal()
 			c.logger.Printf("[WARN] core: vault is sealed")
 			return false, err
 		}
+		c.standby = false
 	} else {
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
