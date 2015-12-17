@@ -29,6 +29,8 @@ IMPROVEMENTS:
  * physical/etcd: Support basic auth [GH-859]
 
 BUG FIXES:
+ * core: When running in standalone mode, don't advertise that we are active
+   until post-unseal setup completes [GH-872]
  * physical/s3: Use an initialized client when using IAM roles to fix a
    regression introduced against newer versions of the AWS Go SDK [GH-836]
 
