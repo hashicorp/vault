@@ -273,19 +273,14 @@ type CoreConfig struct {
 	CredentialBackends map[string]logical.Factory
 	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
-
-	// Defaults to the same backend as Physical. This is not a backend that
-	// necessarily supports HA; it is merely the one that will be attempted
-	// for HA operations
-	HAPhysical physical.HABackend
-
-	Logger          *log.Logger
-	DisableCache    bool   // Disables the LRU cache on the physical backend
-	DisableMlock    bool   // Disables mlock syscall
-	CacheSize       int    // Custom cache size of zero for default
-	AdvertiseAddr   string // Set as the leader address for HA
-	DefaultLeaseTTL time.Duration
-	MaxLeaseTTL     time.Duration
+	HAPhysical         physical.HABackend // May be nil, which disables HA operations
+	Logger             *log.Logger
+	DisableCache       bool   // Disables the LRU cache on the physical backend
+	DisableMlock       bool   // Disables mlock syscall
+	CacheSize          int    // Custom cache size of zero for default
+	AdvertiseAddr      string // Set as the leader address for HA
+	DefaultLeaseTTL    time.Duration
+	MaxLeaseTTL        time.Duration
 }
 
 // NewCore is used to construct a new core
