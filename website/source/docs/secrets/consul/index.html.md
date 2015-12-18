@@ -27,13 +27,31 @@ $ vault mount consul
 Successfully mounted 'consul' at 'consul'!
 ```
 
+Acquire management token from Consul [more details](https://consul.io/docs/agent/http/acl.html#acl_create), using your `acl_master_token` from Consul configuration file (or any other existing management token):
+
+```shell
+$ curl \
+    -H "X-Consul-Token: secret" \
+    -X PUT \
+    -d '{"Name": "sample", "Type": "management"}' \
+    http://127.0.0.1:8500/v1/acl/create
+```
+
+Example acl token to use in configuring Vault to use Consul as secret backend:
+
+```javascript
+{
+  "ID": "adf4238a-882b-9ddc-4a9d-5b6758e4159e"
+}
+```
+
 Next, we must configure Vault to know how to contact Consul.
 This is done by writing the access information:
 
 ```
 $ vault write consul/config/access \
     address=127.0.0.1:8500 \
-    token=root
+    token=adf4238a-882b-9ddc-4a9d-5b6758e4159e
 Success! Data written to: consul/config/access
 ```
 
