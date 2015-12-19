@@ -34,6 +34,16 @@
 			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
 		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/json",
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/jsonrpc",
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
+		},
+		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/query",
 			"Comment": "v1.0.4",
 			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
@@ -60,6 +70,11 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/waiter",
+			"Comment": "v1.0.4",
+			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/dynamodb",
 			"Comment": "v1.0.4",
 			"Rev": "999b1591218c36d5050d1ba7266eba956e65965f"
 		},
