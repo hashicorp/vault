@@ -24,7 +24,6 @@ $blue: darken($blue, 5%);
 }
 
 @mixin project-footer-a-style{
-
   &:hover{
 
   }
@@ -44,8 +43,10 @@ $blue: darken($blue, 5%);
 
 @mixin project-by-hashicorp-style{
   &:hover{
-    line{
-      stroke: $blue;
+    svg{
+      .svg-bg-line{
+        fill: $blue;
+      }
     }
   }
 }

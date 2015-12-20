@@ -159,9 +159,6 @@
       polygon{
         fill: white;
       }
-      line{
-        stroke: white;
-      }
     }
 
     &:focus,
@@ -205,8 +202,7 @@
         @include transition(all 300ms ease-in);
       }
     }
-    line{
-      stroke: black;
+    .svg-bg-line{
       @include transition(all 300ms ease-in);
 
       &:hover{
