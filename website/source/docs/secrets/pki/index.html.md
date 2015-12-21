@@ -857,6 +857,7 @@ subpath for interactive help output.
         value. If not provided, the role's `ttl` value will be used. Note that
         the role values default to system values if not explicitly set.
       </li>
+      <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
         Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
