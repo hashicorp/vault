@@ -354,6 +354,11 @@ func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
 		return "", err
 	}
 
+	// set [] for ipv6 addresses
+	if strings.Contains(host, ":") && !strings.Contains(host, "]") {
+		host = "[" + host + "]"
+	}
+
 	// Default the port and scheme
 	scheme := "https"
 	port := 8200
