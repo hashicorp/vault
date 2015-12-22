@@ -18,18 +18,23 @@ import (
 func TestCertBundleConversion(t *testing.T) {
 	cbuts := []*CertBundle{
 		refreshRSACertBundle(),
+		refreshRSA8CertBundle(),
 		refreshECCertBundle(),
+		refreshEC8CertBundle(),
 	}
 
-	for _, cbut := range cbuts {
+	for i, cbut := range cbuts {
 		pcbut, err := cbut.ToParsedCertBundle()
 		if err != nil {
-			t.Fatalf("Error converting to parsed cert bundle: %s", err)
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Errorf("Error converting to parsed cert bundle: %s", err)
+			continue
 		}
 
 		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Errorf(err.Error())
 		}
 
 		cbut, err := pcbut.ToCertBundle()
@@ -40,6 +45,31 @@ func TestCertBundleConversion(t *testing.T) {
 		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
 		if err != nil {
 			t.Fatalf(err.Error())
+		}
+	}
+}
+
+func BenchmarkCertBundleParsing(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		cbuts := []*CertBundle{
+			refreshRSACertBundle(),
+			refreshRSA8CertBundle(),
+			refreshECCertBundle(),
+			refreshEC8CertBundle(),
+		}
+
+		for i, cbut := range cbuts {
+			pcbut, err := cbut.ToParsedCertBundle()
+			if err != nil {
+				b.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+				b.Errorf("Error converting to parsed cert bundle: %s", err)
+				continue
+			}
+
+			cbut, err = pcbut.ToCertBundle()
+			if err != nil {
+				b.Fatalf("Error converting to cert bundle: %s", err)
+			}
 		}
 	}
 }
@@ -106,11 +136,19 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 	switch cbut.PrivateKey {
 	case privRSAKeyPem:
 		if pcbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("Parsed bundle has wrong private key type")
+			return fmt.Errorf("Parsed bundle has wrong private key type: %v, should be 'rsa' (%v)", pcbut.PrivateKeyType, RSAPrivateKey)
+		}
+	case privRSA8KeyPem:
+		if pcbut.PrivateKeyType != RSAPrivateKey {
+			return fmt.Errorf("Parsed bundle has wrong pkcs8 private key type: %v, should be 'rsa' (%v)", pcbut.PrivateKeyType, RSAPrivateKey)
 		}
 	case privECKeyPem:
 		if pcbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("Parsed bundle has wrong private key type")
+			return fmt.Errorf("Parsed bundle has wrong private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
+		}
+	case privEC8KeyPem:
+		if pcbut.PrivateKeyType != ECPrivateKey {
+			return fmt.Errorf("Parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
 	default:
 		return fmt.Errorf("Parsed bundle has unknown private key type")
@@ -138,23 +176,17 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("Bundle has nil issuing CA")
 	}
 
-	switch cb.PrivateKeyType {
-	case "rsa":
-		if pcbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("Bundle has wrong private key type")
-		}
-		if cb.PrivateKey != privRSAKeyPem {
+	switch pcbut.PrivateKeyType {
+	case RSAPrivateKey:
+		if cb.PrivateKey != privRSAKeyPem && cb.PrivateKey != privRSA8KeyPem {
 			return fmt.Errorf("Bundle private key does not match")
 		}
-	case "ec":
-		if pcbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("Bundle has wrong private key type")
-		}
-		if cb.PrivateKey != privECKeyPem {
+	case ECPrivateKey:
+		if cb.PrivateKey != privECKeyPem && cb.PrivateKey != privEC8KeyPem {
 			return fmt.Errorf("Bundle private key does not match")
 		}
 	default:
-		return fmt.Errorf("Bundle has unknown private key type")
+		return fmt.Errorf("CertBundle has unknown private key type")
 	}
 
 	if cb.SerialNumber != GetOctalFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
@@ -326,6 +358,14 @@ func TestTLSConfig(t *testing.T) {
 	}
 }
 
+func refreshRSA8CertBundle() *CertBundle {
+	return &CertBundle{
+		Certificate: certRSAPem,
+		PrivateKey:  privRSA8KeyPem,
+		IssuingCA:   issuingCaPem,
+	}
+}
+
 func refreshRSACertBundle() *CertBundle {
 	ret := &CertBundle{
 		Certificate: certRSAPem,
@@ -360,7 +400,44 @@ func refreshECCSRBundle() *CSRBundle {
 	return ret
 }
 
+func refreshEC8CertBundle() *CertBundle {
+	return &CertBundle{
+		Certificate: certECPem,
+		PrivateKey:  privEC8KeyPem,
+		IssuingCA:   issuingCaPem,
+	}
+}
+
 const (
+	privRSA8KeyPem = `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC3dklRrO0JGJWD
+zs/TLxPtAw0VCLrUEJIgp6nFddZzvOLkklIx9ACy1ckSoFiJKGxKlibqyiJPqFfT
+vi3vBAAcZLf67uo2iBamZMBRNSc0gz5ALEfY1z+TNjFpZqO6lXOAa8t6KpTd3i0h
+ST9mR+29YmvKvaFlzzMQ3cLikZL/YX5FD7M6/4GkAjUF1tAaEXub3a+fopL+Jayq
+bAcb2gKGC9Z4EeNZQjyoZq4Fz6K3hLlHF83wkkgFdQhm1tqoVnOCO/yRQPKqhAa+
+Rj/gJ7UrRsUmwzvCYw+/7lCxwgEXgpaA3SRNIw89d+ef9AgB+FphCRP0yPAavr4H
+dI4M0YJNAgMBAAECggEAe1LCGmsZs2GZL88XmKguxsWkR51kqSSydcz+rEN38rjn
+9Cn/oqCYz54x2Zl7qkdH9CNW6cESq2VIFIfkrKSNxohVvBJZ0mpMf3F+bZhDUGNg
+txaM/VBD5hspv+ZE7SmFSLAtSWPSSgoNYDCys3hqcUH1n4U1NxC/DPllBZRBsfSd
+5C1Y7WcO8uxJyC7WRyGgTMkQloU5DX4d8Z5bEPvrp9nKplCLn5wuuE6oc4ZKU74g
+VV7SGC6IQcWv0sQ9NdeRm05HjBN/uPVSzyzUpD+O/TWzH1LscRtkm6vMiNLbc7LA
+RR0l3USwgTaUlXZBTBKICw9hk5JBmWA4bM9VEpWQaQKBgQDW76lU/av7FLFjLwpx
+1xEJ0YYGHTRUvHXIlEdZnliMXnqGnRHRwb7EYtqvkoJ0GmviMmdAYivHyXDdIMK3
+gReXGAnGK1eUG2IoHIzv+ZhFF9RGv1YxGvjzwZCVYNujZdqWe5pzSqWQWpUiDQFp
+b5nXkD8TUvr1pTFpHSjOUD0mXwKBgQDag0DkXai2rOj141i5w0COKFWEBN3XUMQJ
+C9shCn/RsQl7RmefOr9AgYg5VqkLRUoYHAE/kO4svU/+dM+OMT9mGMW6Ew0zk/ML
+qhsCMGH6AKlz5z7bVB6u/tEpROLawZPNEe6WlxxEN+4XxuHMPqUCjnQWlKY8T+i9
+nNv34ixe0wKBgFWdR0z0cqHjvzjrzvRDn6TSkdkzntm17BDGh5k6Crl3FMU0IZn0
+28EsQ0G2UUJgF+MVAq3RrPC627spRoaD5FqqF5KZRxxWwAWMQdOBD1dOQ58erf2H
+aezmiGoIF9UBSE2y1HXiIQrcGhVjKtHNw3DrI0TWQ+K/N2xQUiXELmdvAoGANRSN
+PuxBf56hOJnxg66aj+3cWCWWfidwd4IZyPzz78xBsWB464Up0FGm9cbHaaV7SkAD
+TZ23Pcb/F6DoinIMJJD/9yOJoW3fLIY16WI3arOedjlGW6Ejkv7zcEL7mIhNjxM8
+EfjDNQ8hF0WItETDcMuKB7I0b5I5x1XDWYPno2ECgYEAsWHewaSG8+Ij8b+L/m0Z
+lUD91L/gNVc6gdbjf5kMdYTCqI3q9N/9VWJyb7yRx8tjUTl9J//h7uYhCrujmpWf
+1jcdaxqNLUUV7OcmM+PglprUe96A1zJwDOxc5DvHLbf/zBS6mA14PWYV1IUJdDdR
+52wm5UEewSU9zlbvirgXj4U=
+-----END PRIVATE KEY-----`
+
 	privRSAKeyPem = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAt3ZJUaztCRiVg87P0y8T7QMNFQi61BCSIKepxXXWc7zi5JJS
 MfQAstXJEqBYiShsSpYm6soiT6hX074t7wQAHGS3+u7qNogWpmTAUTUnNIM+QCxH
@@ -444,6 +521,12 @@ gQQAIQM6AATBZ3VXwBE9oeSREpM5b25PW6WiuLb4EXWpKZyjj552QYKYe7QBuGe9
 wvvgOeCBovN3tSuGKzTiUKAAMAoGCCqGSM49BAMCAz8AMDwCHFap/5XDuqtXCG1g
 ljbYH5OWGBqGYCfL2k2+/6cCHAuk1bmOkGx7JAq/fSPd09i0DQIqUu7WHQHms48=
 -----END CERTIFICATE REQUEST-----`
+
+	privEC8KeyPem = `-----BEGIN PRIVATE KEY-----
+MHgCAQAwEAYHKoZIzj0CAQYFK4EEACEEYTBfAgEBBBzN57mC5a72sATfYRlXLvZq
+WghK+yzHuOGu6EDsoTwDOgAEwWd1V8ARPaHkkRKTOW9uT1ulori2+BF1qSmco4+e
+dkGCmHu0AbhnvcL74DnggaLzd7Urhis04lA=
+-----END PRIVATE KEY-----`
 
 	certECPem = `-----BEGIN CERTIFICATE-----
 MIIDJDCCAg6gAwIBAgIUM3J02tw0ZvpHUVHv6t8kcoft2/MwCwYJKoZIhvcNAQEL
