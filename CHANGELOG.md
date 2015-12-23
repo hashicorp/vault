@@ -34,6 +34,8 @@ BUG FIXES:
    until post-unseal setup completes [GH-872]
  * core: Update go-cleanhttp dependency to ensure idle connections aren't
    leaked [GH-867]
+ * physical: Use square brackets when setting an IPv6-based advertise address
+   as the auto-detected advertise address [GH-883]
  * physical/s3: Use an initialized client when using IAM roles to fix a
    regression introduced against newer versions of the AWS Go SDK [GH-836]
 
