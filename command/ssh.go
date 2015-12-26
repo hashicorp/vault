@@ -69,6 +69,7 @@ func (c *SSHCommand) Run(args []string) int {
 		u, err := user.Current()
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error fetching username: %s", err))
+			return 1
 		}
 		username = u.Username
 		ipAddr = input[0]
