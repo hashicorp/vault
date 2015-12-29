@@ -87,8 +87,10 @@ The supported options are:
   * `address` (optional) - The address to bind to for listening. This
       defaults to "127.0.0.1:8200".
 
-  * `tls_disable` (optional) - If non-empty, then TLS will be disabled.
-      This is an opt-in; Vault assumes by default that TLS will be used.
+  * `tls_disable` (optional) - If true, then TLS will be disabled.
+      This will parse as boolean value, and can be set to "0", "no",
+      "false", "1", "yes", or "true". This is an opt-in; Vault assumes
+      by default that TLS will be used.
 
   * `tls_cert_file` (required unless disabled) - The path to the certificate
       for TLS.
@@ -238,7 +240,7 @@ For S3, the following options are supported:
 
   * `session_token` - (optional) The AWS session token. It can also be sourced from the `AWS_SESSION_TOKEN` environment variable.
 
-  * `endpoint` - (optional) An alternative (AWS compatible) S3 endpoint to use. It can also be sourced from the `AWS_S3_ENDPOINT` environment variable.  
+  * `endpoint` - (optional) An alternative (AWS compatible) S3 endpoint to use. It can also be sourced from the `AWS_S3_ENDPOINT` environment variable.
 
   * `region` (optional) - The AWS region. It can be sourced from the `AWS_DEFAULT_REGION` environment variable and will default to "us-east-1" if not specified.
 

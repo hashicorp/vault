@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"strconv"
 )
 
 // ListenerFactory is the factory function to create a listener.
@@ -41,8 +42,14 @@ func listenerWrapTLS(
 	config map[string]string) (net.Listener, map[string]string, error) {
 	props["tls"] = "disabled"
 
-	if v, ok := config["tls_disable"]; ok && v != "" {
-		return ln, props, nil
+	if v, ok := config["tls_disable"]; ok {
+		disabled, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid value for 'tls_disable': %v", err)
+		}
+		if disabled {
+			return ln, props, nil
+		}
 	}
 
 	certFile, ok := config["tls_cert_file"]
