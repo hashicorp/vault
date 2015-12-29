@@ -687,7 +687,11 @@ func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) 
 		// Go performs validation not according to spec but according to the Windows
 		// Crypto API, so we add all usages to CA certs
 		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-		certTemplate.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
+		certTemplate.ExtKeyUsage = []x509.ExtKeyUsage{
+			x509.ExtKeyUsageAny,
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		}
 	}
 }
 
