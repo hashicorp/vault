@@ -34,6 +34,40 @@ func TestAuthTokenCreate(t *testing.T) {
 	}
 }
 
+func TestAuthTokenLookup(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	config := DefaultConfig()
+	config.Address = addr
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(token)
+
+	// Create a new token ...
+	secret2, err := client.Auth().Token().Create(&TokenCreateRequest{
+		Lease: "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// lookup details of this token
+	secret, err := client.Auth().Token().Lookup(secret2.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("unable to lookup details of token, err = %v", err)
+	}
+
+	if secret.Data["id"] != secret2.Auth.ClientToken {
+		t.Errorf("Did not get back details about our provided token, id returned=%s", secret.Data["id"])
+	}
+
+}
+
 func TestAuthTokenLookupSelf(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)

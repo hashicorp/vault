@@ -254,6 +254,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"token-lookup": func() (cli.Command, error) {
+			return &command.TokenLookupCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"token-renew": func() (cli.Command, error) {
 			return &command.TokenRenewCommand{
 				Meta: meta,
