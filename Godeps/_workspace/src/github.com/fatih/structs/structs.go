@@ -94,7 +94,12 @@ func (s *Struct) Map() map[string]interface{} {
 			// map[string]interface{} too
 			n := New(val.Interface())
 			n.TagName = s.TagName
-			finalVal = n.Map()
+			m := n.Map()
+			if len(m) == 0 {
+				finalVal = val.Interface()
+			} else {
+				finalVal = m
+			}
 		} else {
 			finalVal = val.Interface()
 		}

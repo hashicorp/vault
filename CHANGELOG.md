@@ -1,4 +1,52 @@
-## 0.4.0 (Unreleased)
+## 0.5.0 (Unreleased)
+
+DEPRECATIONS/BREAKING CHANGES:
+ * S3 physical backend: Environment variables are now preferred over
+   configuration values. This makes it behave similar to the rest of Vault,
+   which, in increasing order of preference, uses values from the configuration
+   file, environment variables, and CLI flags. [GH-871]
+
+FEATURES:
+
+ * **Split Data/High Availability Physical Backends**: You can now configure
+   two separate physical backends: one to be used for High Availability
+   coordination and another to be used for encrypted data storage. See the
+   [configuration
+   documentation](https://vaultproject.io/docs/config/index.html) for details.
+   [GH-395]
+
+IMPROVEMENTS:
+
+ * cli: Output secrets sorted by key name [GH-830]
+ * cli: Support YAML as an output format [GH-832]
+ * cli: Show an error if the output format is incorrect, rather than falling
+   back to an empty table [GH-849]
+ * cli: Allow setting the `advertise_addr` for HA via the
+   `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
+ * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
+ * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
+   backend; this fixes the non-spec validation logic used in the Windows Crypto
+   API and Go's verification functions [GH-846]
+ * physical/etcd: Support basic auth [GH-859]
+
+BUG FIXES:
+ * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
+ * core: When running in standalone mode, don't advertise that we are active
+   until post-unseal setup completes [GH-872]
+ * core: Update go-cleanhttp dependency to ensure idle connections aren't
+   leaked [GH-867]
+ * physical: Use square brackets when setting an IPv6-based advertise address
+   as the auto-detected advertise address [GH-883]
+ * physical/s3: Use an initialized client when using IAM roles to fix a
+   regression introduced against newer versions of the AWS Go SDK [GH-836]
+
+MISC:
+
+ * Add `vault-java` to libraries [GH-851]
+ * Various minor documentation fixes and improvements [GH-839] [GH-854]
+   [GH-861] [GH-876]
+
+## 0.4.0 (December 10, 2015)
 
 DEPRECATIONS/BREAKING CHANGES:
 
@@ -11,9 +59,25 @@ DEPRECATIONS/BREAKING CHANGES:
  * As noted below in the FEATURES section, if your Vault installation contains
    a policy called `default`, new tokens created will inherit this policy
    automatically.
+ * In the PKI backend there have been a few minor breaking changes:
+   * The token display name is no longer a valid option for providing a base
+   domain for issuance. Since this name is prepended with the name of the
+   authentication backend that issued it, it provided a faulty use-case at best
+   and a confusing experience at worst. We hope to figure out a better
+   per-token value in a future release.
+   * The `allowed_base_domain` parameter has been changed to `allowed_domains`,
+   which accepts a comma-separated list of domains. This allows issuing
+   certificates with DNS subjects across multiple domains. If you had a
+   configured `allowed_base_domain` parameter, it will be migrated
+   automatically when the role is read (either via a normal read, or via
+   issuing a certificate).
 
 FEATURES:
 
+ * **Significantly Enhanced PKI Backend**: The `pki` backend can now generate
+   and sign root CA certificates and intermediate CA CSRs. It can also now sign
+   submitted client CSRs, as well as a significant number of other
+   enhancements. See the updated documentation for the full API. [GH-666]
  * **CRL Checking for Certificate Authentication**: The `cert` backend now
    supports pushing CRLs into the mount and using the contained serial numbers
    for revocation checking. See the documentation for the `cert` backend for
@@ -58,9 +122,12 @@ IMPROVEMENTS:
  * logical: Responses now contain a "warnings" key containing a list of
    warnings returned from the server. These are conditions that did not require
    failing an operation, but of which the client should be aware. [GH-676]
- * physical/consul: Consul now uses a connection pool to limit the number of
-   outstanding operations, improving behavior when a lot of operations must
-   happen at once [GH-677]
+ * physical/(consul,etcd): Consul and etcd now use a connection pool to limit
+   the number of outstanding operations, improving behavior when a lot of
+   operations must happen at once [GH-677] [GH-780]
+ * physical/consul: The `datacenter` parameter was removed; It could not be
+   effective unless the Vault node (or the Consul node it was connecting to)
+   was in the datacenter specified, in which case it wasn't needed [GH-816]
  * physical/etcd: Support TLS-encrypted connections and use a connection pool
    to limit the number of outstanding operations [GH-780]
  * physical/s3: The S3 endpoint can now be configured, allowing using
@@ -94,13 +161,15 @@ generate them, leading to client errors.
  * secret/generic: Validate given duration at write time, not just read time;
    if stored durations are not parseable, return a warning and the default
    duration rather than an error [GH-718]
+ * secret/generic: Return 400 instead of 500 when `generic` backend is written
+   to with no data fields [GH-825]
  * secret/postgresql: Revoke permissions before dropping a user or revocation
    may fail [GH-699]
 
 MISC:
 
  * Various documentation fixes and improvements [GH-685] [GH-688] [GH-697]
-   [GH-710] [GH-715]
+   [GH-710] [GH-715] [GH-831]
 
 ## 0.3.1 (October 6, 2015)
 

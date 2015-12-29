@@ -180,7 +180,7 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	// Verify the token
-	secret, err := client.Logical().Read("auth/token/lookup-self")
+	secret, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error validating token: %s", err))

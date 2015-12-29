@@ -354,12 +354,20 @@ func (r *roundRobinConnPolicy) SetConns(conns []*Conn) {
 }
 
 func (r *roundRobinConnPolicy) Pick(qry *Query) *Conn {
-	pos := atomic.AddUint32(&r.pos, 1)
-	var conn *Conn
+	pos := int(atomic.AddUint32(&r.pos, 1) - 1)
 	r.mu.RLock()
-	if len(r.conns) > 0 {
-		conn = r.conns[pos%uint32(len(r.conns))]
+	defer r.mu.RUnlock()
+
+	if len(r.conns) == 0 {
+		return nil
 	}
-	r.mu.RUnlock()
-	return conn
+
+	for i := 0; i < len(r.conns); i++ {
+		conn := r.conns[(pos+i)%len(r.conns)]
+		if conn.AvailableStreams() > 0 {
+			return conn
+		}
+	}
+
+	return nil
 }

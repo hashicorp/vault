@@ -39,12 +39,13 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev bool
+	var dev, verifyOnly bool
 	var configPath []string
 	var logLevel string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
+	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -103,6 +104,14 @@ func (c *ServerCommand) Run(args []string) int {
 		Writer:   logGate,
 	}, "", log.LstdFlags)
 
+	// Initialize telemetry; if this is done after the core is created,
+	// because we are using a global telemetry object, it can be a data
+	// race between writing metrics from core and the object being set
+	if err := c.setupTelementry(config); err != nil {
+		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
+		return 1
+	}
+
 	// Initialize the backend
 	backend, err := physical.NewBackend(
 		config.Backend.Type, config.Backend.Config)
@@ -113,22 +122,10 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Attempt to detect the advertise address possible
-	if detect, ok := backend.(physical.AdvertiseDetect); ok && config.Backend.AdvertiseAddr == "" {
-		advertise, err := c.detectAdvertise(detect, config)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
-		} else if advertise == "" {
-			c.Ui.Error("Failed to detect advertise address.")
-		} else {
-			config.Backend.AdvertiseAddr = advertise
-		}
-	}
-
-	// Initialize the core
-	core, err := vault.NewCore(&vault.CoreConfig{
-		AdvertiseAddr:      config.Backend.AdvertiseAddr,
+	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
+		AdvertiseAddr:      config.Backend.AdvertiseAddr,
+		HAPhysical:         nil,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
@@ -137,7 +134,52 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
-	})
+	}
+
+	// Initialize the separate HA physical backend, if it exists
+	if config.HABackend != nil {
+		habackend, err := physical.NewBackend(
+			config.HABackend.Type, config.HABackend.Config)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error initializing backend of type %s: %s",
+				config.HABackend.Type, err))
+			return 1
+		}
+
+		var ok bool
+		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
+			c.Ui.Error("Specified HA backend does not support HA")
+			return 1
+		}
+		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
+	}
+
+	if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
+		coreConfig.AdvertiseAddr = envAA
+	}
+
+	// Attempt to detect the advertise address possible
+	var detect physical.AdvertiseDetect
+	var ok bool
+	if coreConfig.HAPhysical != nil {
+		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
+	} else {
+		detect, ok = coreConfig.Physical.(physical.AdvertiseDetect)
+	}
+	if ok && coreConfig.AdvertiseAddr == "" {
+		advertise, err := c.detectAdvertise(detect, config)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
+		} else if advertise == "" {
+			c.Ui.Error("Failed to detect advertise address.")
+		} else {
+			coreConfig.AdvertiseAddr = advertise
+		}
+	}
+
+	// Initialize the core
+	core, err := vault.NewCore(coreConfig)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))
 		return 1
@@ -186,17 +228,17 @@ func (c *ServerCommand) Run(args []string) int {
 		mlock.Supported(), !config.DisableMlock)
 	infoKeys = append(infoKeys, "log level", "mlock", "backend")
 
-	// If the backend supports HA, then note it
-	if _, ok := backend.(physical.HABackend); ok {
-		info["backend"] += " (HA available)"
-		info["advertise address"] = config.Backend.AdvertiseAddr
-		infoKeys = append(infoKeys, "advertise address")
-	}
-
-	// Initialize the telemetry
-	if err := c.setupTelementry(config); err != nil {
-		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
-		return 1
+	if config.HABackend != nil {
+		info["HA backend"] = config.HABackend.Type
+		info["advertise address"] = coreConfig.AdvertiseAddr
+		infoKeys = append(infoKeys, "HA backend", "advertise address")
+	} else {
+		// If the backend supports HA, then note it
+		if coreConfig.HAPhysical != nil {
+			info["backend"] += " (HA available)"
+			info["advertise address"] = coreConfig.AdvertiseAddr
+			infoKeys = append(infoKeys, "advertise address")
+		}
 	}
 
 	// Initialize the listeners
@@ -223,6 +265,10 @@ func (c *ServerCommand) Run(args []string) int {
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 		lns = append(lns, ln)
+	}
+
+	if verifyOnly {
+		return 0
 	}
 
 	// Initialize the HTTP server
@@ -306,6 +352,11 @@ func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
 	host, err := detect.DetectHostAddr()
 	if err != nil {
 		return "", err
+	}
+
+	// set [] for ipv6 addresses
+	if strings.Contains(host, ":") && !strings.Contains(host, "]") {
+		host = "[" + host + "]"
 	}
 
 	// Default the port and scheme

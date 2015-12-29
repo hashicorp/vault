@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -53,8 +54,8 @@ var (
 // errorIsMissingKey returns true if the given error is an etcd error with an
 // error code corresponding to a missing key.
 func errorIsMissingKey(err error) bool {
-	etcdErr, ok := err.(*client.Error)
-	return ok && etcdErr.Code == 100
+	etcdErr, ok := err.(client.Error)
+	return ok && etcdErr.Code == client.ErrorCodeKeyNotFound
 }
 
 // EtcdBackend is a physical backend that stores data at specific
@@ -119,6 +120,22 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	cfg := client.Config{
 		Endpoints: machinesParsed,
 		Transport: cTransport,
+	}
+
+	// Set credentials.
+	username := os.Getenv("ETCD_USERNAME")
+	if username == "" {
+		username, _ = conf["username"]
+	}
+
+	password := os.Getenv("ETCD_PASSWORD")
+	if password == "" {
+		password, _ = conf["password"]
+	}
+
+	if username != "" && password != "" {
+		cfg.Username = username
+		cfg.Password = password
 	}
 
 	c, err := client.New(cfg)

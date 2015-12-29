@@ -8,9 +8,14 @@ if [ -z $VERSION ]; then
     exit 1
 fi
 
-# Make sure we have a bintray API key
-if [ -z $BINTRAY_API_KEY ] && [ ! -z $BINTRAY ]; then
-    echo "Please set your bintray API key in the BINTRAY_API_KEY env var."
+# Make sure we have AWS API keys
+if ([ -z $AWS_ACCESS_KEY_ID ] || [ -z $AWS_SECRET_ACCESS_KEY ]) && [ ! -z $HC_RELEASE ]; then
+    echo "Please set your AWS access key information in the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars."
+    exit 1
+fi
+
+if [ -z $NOBUILD ] && [ -z $DOCKER_CROSS_IMAGE ]; then
+    echo "Please set the Docker cross-compile image in DOCKER_CROSS_IMAGE"
     exit 1
 fi
 
@@ -22,17 +27,21 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 # Change into that dir because we expect that
 cd $DIR
 
+if [ -z $RELBRANCH ]; then
+  RELBRANCH=master
+fi
+
 # Tag, unless told not to
 if [ -z $NOTAG ]; then
   echo "==> Tagging..."
   git commit --allow-empty -a --gpg-sign=348FFC4C -m "Cut version $VERSION"
-  git tag -a -m "Version $VERSION" -s -u 348FFC4C "v${VERSION}" master
+  git tag -a -m "Version $VERSION" -s -u 348FFC4C "v${VERSION}" $RELBRANCH
 fi
 
 # Build the packages
 if [ -z $NOBUILD ]; then
-# Yes, jefferai/gox should be parameterized; it's just a local build of the Dockerfile in the cross dir
-  docker run --rm -v "$(pwd)":/gopath/src/github.com/hashicorp/vault -w /gopath/src/github.com/hashicorp/vault jefferai/gox:1.5.1
+  # This should be a local build of the Dockerfile in the cross dir
+  docker run --rm -v "$(pwd)":/gopath/src/github.com/hashicorp/vault -w /gopath/src/github.com/hashicorp/vault ${DOCKER_CROSS_IMAGE}
 fi
 
 # Zip all the files
@@ -53,16 +62,8 @@ if [ -z $NOSIGN ]; then
 fi
 
 # Upload
-if [ ! -z $BINTRAY ]; then
-  for ARCHIVE in ./pkg/dist/*; do
-    ARCHIVE_NAME=$(basename ${ARCHIVE})
-
-    echo Uploading: $ARCHIVE_NAME
-    curl \
-        -T ${ARCHIVE} \
-        -umitchellh:${BINTRAY_API_KEY} \
-        "https://api.bintray.com/content/mitchellh/vault/vault/${VERSION}/${ARCHIVE_NAME}"
-  done
+if [ ! -z $HC_RELEASE ]; then
+  hc-releases -upload $DIR/pkg/dist --publish --purge
 fi
 
 exit 0

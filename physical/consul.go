@@ -3,7 +3,6 @@ package physical
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 // ConsulBackend is a physical backend that stores data at specific
@@ -53,9 +53,6 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
 	}
-	if dc, ok := conf["datacenter"]; ok {
-		consulConf.Datacenter = dc
-	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
 	}
@@ -66,9 +63,9 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 			return nil, err
 		}
 
-		consulConf.HttpClient.Transport = &http.Transport{
-			TLSClientConfig: tlsClientConfig,
-		}
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = tlsClientConfig
+		consulConf.HttpClient.Transport = transport
 	}
 
 	client, err := api.NewClient(consulConf)
@@ -206,9 +203,10 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	// Create the lock
 	opts := &api.LockOptions{
-		Key:         c.path + key,
-		Value:       []byte(value),
-		SessionName: "Vault Lock",
+		Key:            c.path + key,
+		Value:          []byte(value),
+		SessionName:    "Vault Lock",
+		MonitorRetries: 5,
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {

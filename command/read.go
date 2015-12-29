@@ -100,7 +100,7 @@ General Options:
 Read Options:
 
   -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json.
+                          delimited table. This can also be json or yaml.
 
   -field=field            If included, the raw value of the specified field
   						  will be output raw to stdout.

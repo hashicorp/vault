@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
@@ -30,9 +31,9 @@ type S3Backend struct {
 // from the environment, AWS credential files or by IAM role.
 func newS3Backend(conf map[string]string) (Backend, error) {
 
-	bucket, ok := conf["bucket"]
-	if !ok {
-		bucket = os.Getenv("AWS_S3_BUCKET")
+	bucket := os.Getenv("AWS_S3_BUCKET")
+	if bucket == "" {
+		bucket = conf["bucket"]
 		if bucket == "" {
 			return nil, fmt.Errorf("'bucket' must be set")
 		}
@@ -50,13 +51,13 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	if !ok {
 		session_token = ""
 	}
-	endpoint, ok := conf["endpoint"]
-	if !ok {
-		endpoint = os.Getenv("AWS_S3_ENDPOINT")
+	endpoint := os.Getenv("AWS_S3_ENDPOINT")
+	if endpoint == "" {
+		endpoint = conf["endpoint"]
 	}
-	region, ok := conf["region"]
-	if !ok {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = conf["region"]
 		if region == "" {
 			region = "us-east-1"
 		}
@@ -70,7 +71,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 		}},
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-		&ec2rolecreds.EC2RoleProvider{},
+		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
 	})
 
 	s3conn := s3.New(session.New(&aws.Config{

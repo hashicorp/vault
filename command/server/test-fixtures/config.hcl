@@ -12,5 +12,10 @@ backend "consul" {
     advertise_addr = "foo"
 }
 
+ha_backend "consul" {
+    bar = "baz"
+    advertise_addr = "snafu"
+}
+
 max_lease_ttl = "10h"
 default_lease_ttl = "10h"

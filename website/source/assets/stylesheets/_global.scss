@@ -6,8 +6,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }*/
+html{
+  min-height: 100%;
+}
 
 body {
+    min-height: 100%;
     -webkit-font-smoothing: antialiased;
     color: $black;
     background-color: $white;

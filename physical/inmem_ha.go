@@ -32,6 +32,12 @@ func (i *InmemHABackend) LockWith(key, value string) (Lock, error) {
 	return l, nil
 }
 
+// LockMapSize is used in some tests to determine whether this backend has ever
+// been used for HA purposes rather than simply for storage
+func (i *InmemHABackend) LockMapSize() int {
+	return len(i.locks)
+}
+
 // InmemLock is an in-memory Lock implementation for the HABackend
 type InmemLock struct {
 	in    *InmemHABackend
