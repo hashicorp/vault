@@ -691,6 +691,10 @@ func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) 
 			x509.ExtKeyUsageAny,
 			x509.ExtKeyUsageServerAuth,
 			x509.ExtKeyUsageClientAuth,
+			x509.ExtKeyUsageCodeSigning,
+			x509.ExtKeyUsageEmailProtection,
+			x509.ExtKeyUsageTimeStamping,
+			x509.ExtKeyUsageOCSPSigning,
 		}
 	}
 }
