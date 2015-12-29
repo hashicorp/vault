@@ -194,7 +194,7 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 }
 
 // TokenHelper returns the token helper that is configured for Vault.
-func (m *Meta) TokenHelper() (*token.Helper, error) {
+func (m *Meta) TokenHelper() (token.TokenHelper, error) {
 	config, err := m.Config()
 	if err != nil {
 		return nil, err
@@ -202,11 +202,14 @@ func (m *Meta) TokenHelper() (*token.Helper, error) {
 
 	path := config.TokenHelper
 	if path == "" {
-		path = "disk"
+		return &token.InternalTokenHelper{}, nil
 	}
 
-	path = token.HelperPath(path)
-	return &token.Helper{Path: path}, nil
+	path, err = token.ExternalTokenHelperPath(path)
+	if err != nil {
+		return nil, err
+	}
+	return &token.ExternalTokenHelper{BinaryPath: path}, nil
 }
 
 func (m *Meta) loadCACert(path string) (*x509.CertPool, error) {

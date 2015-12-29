@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
 	"github.com/hashicorp/vault/audit"
-	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
 	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/cli"
@@ -274,11 +273,6 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 				VersionInfo: versionInfo,
 				Ui:          meta.Ui,
 			}, nil
-		},
-
-		// The commands below are hidden from the help output
-		"token-disk": func() (cli.Command, error) {
-			return &tokenDisk.Command{}, nil
 		},
 	}
 }

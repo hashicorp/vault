@@ -10,16 +10,13 @@ import (
 	"testing"
 )
 
-func TestHelperPath(t *testing.T) {
-	cases := map[string]string{
-		"foo": exePath + " token-foo",
-	}
+func TestExternalTokenHelperPath(t *testing.T) {
+	cases := map[string]string{}
 
 	unixCases := map[string]string{
 		"/foo": "/foo",
 	}
 	windowsCases := map[string]string{
-		"/foo":             exePath + " token-/foo",
 		"C:/foo":           "C:/foo",
 		`C:\Program Files`: `C:\Program Files`,
 	}
@@ -36,7 +33,10 @@ func TestHelperPath(t *testing.T) {
 	}
 
 	for k, v := range cases {
-		actual := HelperPath(k)
+		actual, err := ExternalTokenHelperPath(k)
+		if err != nil {
+			t.Fatalf("error getting external helper path: %v", err)
+		}
 		if actual != v {
 			t.Fatalf(
 				"input: %s, expected: %s, got: %s",
@@ -45,16 +45,16 @@ func TestHelperPath(t *testing.T) {
 	}
 }
 
-func TestHelper(t *testing.T) {
-	Test(t, testHelper(t))
+func TestExternalTokenHelper(t *testing.T) {
+	Test(t, testExternalTokenHelper(t))
 }
 
-func testHelper(t *testing.T) *Helper {
-	return &Helper{Path: helperPath("helper"), Env: helperEnv()}
+func testExternalTokenHelper(t *testing.T) *ExternalTokenHelper {
+	return &ExternalTokenHelper{BinaryPath: helperPath("helper"), Env: helperEnv()}
 }
 
 func helperPath(s ...string) string {
-	cs := []string{"-test.run=TestHelperProcess", "--"}
+	cs := []string{"-test.run=TestExternalTokenHelperProcess", "--"}
 	cs = append(cs, s...)
 	return fmt.Sprintf(
 		"%s %s",
@@ -76,7 +76,7 @@ func helperEnv() []string {
 }
 
 // This is not a real test. This is just a helper process kicked off by tests.
-func TestHelperProcess(*testing.T) {
+func TestExternalTokenHelperProcess(*testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
