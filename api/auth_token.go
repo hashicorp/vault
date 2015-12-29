@@ -26,7 +26,7 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 }
 
 func (c *TokenAuth) LookupSelf() (*Secret, error) {
-	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-self")
+	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
 
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
