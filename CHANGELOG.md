@@ -23,6 +23,8 @@ IMPROVEMENTS:
    back to an empty table [GH-849]
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
+ * conf: Use normal bool values rather than empty/non-empty for the
+   `tls_disable` option [GH-802]
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
