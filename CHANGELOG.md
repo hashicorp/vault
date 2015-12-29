@@ -23,6 +23,9 @@ IMPROVEMENTS:
    back to an empty table [GH-849]
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
+ * cli/server: Use internal functions for the token-helper rather than shelling
+   out, which fixes some problems with using a static binary in Docker or paths
+   with multiple spaces when launching in `-dev` mode [GH-850]
  * conf: Use normal bool values rather than empty/non-empty for the
    `tls_disable` option [GH-802]
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
