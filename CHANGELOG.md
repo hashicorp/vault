@@ -30,6 +30,7 @@ IMPROVEMENTS:
  * physical/etcd: Support basic auth [GH-859]
 
 BUG FIXES:
+ * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
  * core: When running in standalone mode, don't advertise that we are active
    until post-unseal setup completes [GH-872]
  * core: Update go-cleanhttp dependency to ensure idle connections aren't
