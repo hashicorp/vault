@@ -76,33 +76,83 @@ the Vault executable access to the `mlock` syscall on Linux systems:
 sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
 ```
 
+## Listener Reference
+
+For the `listener` section, the only supported listener currently
+is "tcp". Regardless of future plans, this is the recommended listener,
+since it allows for HA mode.
+
+The supported options are:
+
+  * `address` (optional) - The address to bind to for listening. This
+      defaults to "127.0.0.1:8200".
+
+  * `tls_disable` (optional) - If non-empty, then TLS will be disabled.
+      This is an opt-in; Vault assumes by default that TLS will be used.
+
+  * `tls_cert_file` (required unless disabled) - The path to the certificate
+      for TLS.
+
+  * `tls_key_file` (required unless disabled) - The path to the private key
+      for the certificate.
+
+  * `tls_min_version` (optional) - **(Vault > 0.2)** If provided, specifies
+      the minimum supported version of TLS. Accepted values are "tls10", "tls11"
+      or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
+      are generally considered less secure; avoid using these if
+      possible.
+
+## Telemetry Reference
+
+For the `telemetry` section, there is no resource name. All configuration
+is within the object itself.
+
+* `statsite_address` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
+  instances for metrics. This is highly recommended for production usage.
+
+* `statsd_address` (optional) - This is the same as `statsite_address` but
+  for StatsD.
+
+* `disable_hostname` (optional) - Whether or not to prepend runtime telemetry
+  with the machines hostname. This is a global option. Defaults to false.
+
 ## Backend Reference
 
-For the `backend` section, the supported backends are shown below.
+For the `backend` section, the supported physical backends are shown below.
 Vault requires that the backend itself will be responsible for backups,
 durability, etc.
 
+__*Please note*__: The only physical backends actively maintained by HashiCorp
+are `consul`, `inmem`, and `file`. The other backends are community-derived and
+community-supported. We include them in the hope that they will be useful to
+those users that wish to utilize them, but they receive minimal validation and
+testing from HashiCorp, and HashiCorp staff may not be knowledgeable about the
+data store being utilized. If you encounter problems with them, we will attempt
+to help you, but may refer you to the backend author. 
+
   * `consul` - Store data within [Consul](http://www.consul.io). This
-      backend supports HA. It is the most recommended backend for Vault
-      and has been shown to work at high scale under heavy load.
+    backend supports HA. It is the most recommended backend for Vault and has
+    been shown to work at high scale under heavy load.
 
   * `etcd` - Store data within [etcd](https://coreos.com/etcd/).
-      This backend supports HA.
+    This backend supports HA. This is a community-supported backend.
 
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
-      This backend supports HA.
+    This backend supports HA. This is a community-supported backend.
 
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
-      This backend does not support HA.
+    This backend does not support HA. This is a community-supported backend.
 
-  * `mysql` - Store data within MySQL. This backend does not support HA.
+  * `mysql` - Store data within MySQL. This backend does not support HA. This
+    is a community-supported backend.
 
   * `inmem` - Store data in-memory. This is only really useful for
-      development and experimentation. Data is lost whenever Vault is
-      restarted.
+    development and experimentation. Data is lost whenever Vault is
+    restarted.
 
   * `file` - Store data on the filesystem using a directory structure.
-      This backend does not support HA.
+    This backend does not support HA.
+
 
 #### Common Backend Options
 
@@ -147,7 +197,7 @@ For Consul, the following options are supported:
   * `tls_key_file` (optional) - The path to the private key for Consul communication.
       Set accordingly to the [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting in Consul.
 
-#### Backend Reference: Zookeeper
+#### Backend Reference: Zookeeper (Community-Supported)
 
 For Zookeeper, the following options are supported:
 
@@ -158,7 +208,7 @@ For Zookeeper, the following options are supported:
       Can be comma separated list (host:port) of many Zookeeper instances.
       Defaults to "localhost:2181" if not specified.
 
-#### Backend Reference: etcd
+#### Backend Reference: etcd (Community-Supported)
 
 For etcd, the following options are supported:
 
@@ -176,7 +226,7 @@ For etcd, the following options are supported:
 
   * `tls_key_file` (optional) - The path to the private key for etcd communication.
 
-#### Backend Reference: S3
+#### Backend Reference: S3 (Community-Supported)
 
 For S3, the following options are supported:
 
@@ -199,7 +249,7 @@ will cause Vault to attempt to retrieve credentials from the metadata service.
 You are responsible for ensuring your instance is launched with the appropriate
 profile enabled. Vault will handle renewing profile credentials as they rotate.
 
-#### Backend Reference: MySQL
+#### Backend Reference: MySQL (Community-Supported)
 
 The MySQL backend has the following options:
 
@@ -227,42 +277,4 @@ The file backend has the following options:
   * `path` (required) - The path on disk to a directory where the
       data will be stored.
 
-## Listener Reference
 
-For the `listener` section, the only supported listener currently
-is "tcp". Regardless of future plans, this is the recommended listener,
-since it allows for HA mode.
-
-The supported options are:
-
-  * `address` (optional) - The address to bind to for listening. This
-      defaults to "127.0.0.1:8200".
-
-  * `tls_disable` (optional) - If non-empty, then TLS will be disabled.
-      This is an opt-in; Vault assumes by default that TLS will be used.
-
-  * `tls_cert_file` (required unless disabled) - The path to the certificate
-      for TLS.
-
-  * `tls_key_file` (required unless disabled) - The path to the private key
-      for the certificate.
-
-  * `tls_min_version` (optional) - **(Vault > 0.2)** If provided, specifies
-      the minimum supported version of TLS. Accepted values are "tls10", "tls11"
-      or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
-      are generally considered less secure; avoid using these if
-      possible.
-
-## Telemetry Reference
-
-For the `telemetry` section, there is no resource name. All configuration
-is within the object itself.
-
-* `statsite_address` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
-  instances for metrics. This is highly recommended for production usage.
-
-* `statsd_address` (optional) - This is the same as `statsite_address` but
-  for StatsD.
-
-* `disable_hostname` (optional) - Whether or not to prepend runtime telemetry
-  with the machines hostname. This is a global option. Defaults to false.
