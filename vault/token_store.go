@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -602,10 +603,21 @@ func (ts *TokenStore) handleCreateCommon(
 	if !isSudo && !strListSubset(parent.Policies, data.Policies) {
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
-	te.Policies = data.Policies
-	if !strListSubset(te.Policies, []string{"root"}) && !data.NoDefaultPolicy {
-		te.Policies = append(te.Policies, "default")
+
+	// Use a map to filter out/prevent duplicates
+	policyMap := map[string]bool{}
+	for _, policy := range data.Policies {
+		policyMap[policy] = true
 	}
+	if !policyMap["root"] &&
+		!data.NoDefaultPolicy {
+		policyMap["default"] = true
+	}
+
+	for k, _ := range policyMap {
+		te.Policies = append(te.Policies, k)
+	}
+	sort.Strings(te.Policies)
 
 	// Only allow an orphan token if the client has sudo policy
 	if data.NoParent {

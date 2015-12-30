@@ -888,7 +888,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 	exp = map[string]interface{}{
 		"id":           "client",
-		"policies":     []string{"foo", "default"},
+		"policies":     []string{"default", "foo"},
 		"path":         "auth/token/create",
 		"meta":         map[string]string(nil),
 		"display_name": "token",

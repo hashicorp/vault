@@ -1020,7 +1020,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	expect := &TokenEntry{
 		ID:           clientToken,
 		Parent:       root,
-		Policies:     []string{"foo", "default"},
+		Policies:     []string{"default", "foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
 		CreationTime: te.CreationTime,
