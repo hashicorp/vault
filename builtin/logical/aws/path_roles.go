@@ -82,7 +82,7 @@ func useInlinePolicy(d *framework.FieldData) (bool, error) {
 	ba := d.Get("arn").(string) != ""
 
 	if !bp && !ba {
-		return false, errors.New("At least one of policy or arn should be provided")
+		return false, errors.New("Either policy or arn must be provided")
 	}
 	if bp && ba {
 		return false, errors.New("Only one of policy or arn should be provided")
@@ -127,17 +127,21 @@ func pathRolesWrite(
 }
 
 const pathRolesHelpSyn = `
-Read and write IAM policies that access keys can be made for.
+Read, write and reference IAM policies that access keys can be made for.
 `
 
 const pathRolesHelpDesc = `
 This path allows you to read and write roles that are used to
-create access keys. These roles have IAM policies that map directly to the route to read the
-access keys. For example, if the backend is mounted at "aws" and you
-create a role at "aws/roles/deploy" then a user could request access
-credentials at "aws/creds/deploy".
+create access keys. These roles are associated with IAM policies that
+map directly to the route to read the access keys. For example, if the
+backend is mounted at "aws" and you create a role at "aws/roles/deploy"
+then a user could request access credentials at "aws/creds/deploy".
 
-The policies written are normal IAM policies. Vault will not attempt to
-parse these except to validate that they're basic JSON. To validate the
-keys, attempt to read an access key after writing the policy.
+You can either supply a user inline policy (via the policy argument), or
+provide a reference to an existing AWS policy by supplying the full arn
+reference (via the arn argument). Inline user policies written are normal
+IAM policies. Vault will not attempt to parse these except to validate
+that they're basic JSON. No validation is performed on arn references.
+
+To validate the keys, attempt to read an access key after writing the policy.
 `
