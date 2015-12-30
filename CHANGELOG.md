@@ -24,6 +24,9 @@ IMPROVEMENTS:
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
  * cli/token-lookup: Add token-lookup command [GH-892]
+ * cli/token-renew: Use the `renew-self` endpoint instead of `renew` if the
+   token we're renewing is the same as the client token; this makes the
+   operation likely to succeed given Vault's default policies [GH-894]
  * cli/server: Use internal functions for the token-helper rather than shelling
    out, which fixes some problems with using a static binary in Docker or paths
    with multiple spaces when launching in `-dev` mode [GH-850]
