@@ -5,6 +5,11 @@ DEPRECATIONS/BREAKING CHANGES:
    configuration values. This makes it behave similar to the rest of Vault,
    which, in increasing order of preference, uses values from the configuration
    file, environment variables, and CLI flags. [GH-871]
+ * `token-renew` CLI command: If the token given for renewal is the same as the
+   client token, the `renew-self` endpoint will be used in the API. Given that
+   the `default` policy (by default) allows all clients access to the
+   `renew-self` endpoint, this makes it much more likely that the intended
+   operation will be successful. [GH-894]
 
 FEATURES:
 
@@ -24,9 +29,6 @@ IMPROVEMENTS:
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
  * cli/token-lookup: Add token-lookup command [GH-892]
- * cli/token-renew: Use the `renew-self` endpoint instead of `renew` if the
-   token we're renewing is the same as the client token; this makes the
-   operation likely to succeed given Vault's default policies [GH-894]
  * cli/server: Use internal functions for the token-helper rather than shelling
    out, which fixes some problems with using a static binary in Docker or paths
    with multiple spaces when launching in `-dev` mode [GH-850]
