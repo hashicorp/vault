@@ -23,6 +23,7 @@ IMPROVEMENTS:
    back to an empty table [GH-849]
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
+ * cli/token-lookup: Add token-lookup command [GH-892]
  * cli/server: Use internal functions for the token-helper rather than shelling
    out, which fixes some problems with using a static binary in Docker or paths
    with multiple spaces when launching in `-dev` mode [GH-850]
