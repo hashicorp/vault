@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"errors"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"strings"
 )
 
 func pathRoles() *framework.Path {
@@ -16,6 +18,11 @@ func pathRoles() *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
+			},
+
+			"arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "ARN Reference to a managed policy",
 			},
 
 			"policy": &framework.FieldSchema{
@@ -55,28 +62,65 @@ func pathRolesRead(
 		return nil, nil
 	}
 
+	val := string(entry.Value)
+	if strings.HasPrefix(val, "arn:") {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"arn": val,
+			},
+		}, nil
+	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policy": string(entry.Value),
+			"policy": val,
 		},
 	}, nil
+}
+
+func useInlinePolicy(d *framework.FieldData) (bool, error) {
+	bp := d.Get("policy").(string) != ""
+	ba := d.Get("arn").(string) != ""
+
+	if !bp && !ba {
+		return false, errors.New("At least one of policy or arn should be provided")
+	}
+	if bp && ba {
+		return false, errors.New("Only one of policy or arn should be provided")
+	}
+	return bp, nil
 }
 
 func pathRolesWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var buf bytes.Buffer
-	if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error compacting policy: %s", err)), nil
-	}
 
-	// Write the policy into storage
-	err := req.Storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + d.Get("name").(string),
-		Value: buf.Bytes(),
-	})
+	uip, err := useInlinePolicy(d)
 	if err != nil {
 		return nil, err
+	}
+
+	if uip {
+		if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error compacting policy: %s", err)), nil
+		}
+		// Write the policy into storage
+		err := req.Storage.Put(&logical.StorageEntry{
+			Key:   "policy/" + d.Get("name").(string),
+			Value: buf.Bytes(),
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Write the arn ref into storage
+		err := req.Storage.Put(&logical.StorageEntry{
+			Key:   "policy/" + d.Get("name").(string),
+			Value: []byte(d.Get("arn").(string)),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil

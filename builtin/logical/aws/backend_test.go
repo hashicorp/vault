@@ -182,3 +182,69 @@ const testPolicy = `
     ]
 }
 `
+
+const testPolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+
+func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.WriteOperation,
+		Path:      "roles/" + name,
+		Data: map[string]interface{}{
+			"arn": testPolicyArn,
+		},
+	}
+}
+
+func TestBackend_basicPolicyArnRef(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
+			testAccStepReadUser(t, "test"),
+		},
+	})
+}
+
+func TestBackend_policyArnCrud(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
+			testAccStepReadArnPolicy(t, "test", testPolicyArn),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadArnPolicy(t, "test", ""),
+		},
+	})
+}
+
+func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if value == "" {
+					return nil
+				}
+
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			var d struct {
+				Policy string `mapstructure:"arn"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			if d.Policy != value {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+
+			return nil
+		},
+	}
+}
