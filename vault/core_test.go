@@ -560,7 +560,7 @@ func TestCore_HandleRequest_NoSlash(t *testing.T) {
 // Test a root path is denied if non-root
 func TestCore_HandleRequest_RootPath(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testCoreMakeToken(t, c, root, "child", []string{"test"})
+	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -595,7 +595,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	}
 
 	// Child token (non-root) but with 'test' policy should have access
-	testCoreMakeToken(t, c, root, "child", []string{"test"})
+	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
 	req = &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "sys/policy", // root protected!
@@ -613,7 +613,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testCoreMakeToken(t, c, root, "child", []string{"test"})
+	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
 		Operation: logical.WriteOperation,
@@ -633,7 +633,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testCoreMakeToken(t, c, root, "child", []string{"test"})
+	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
 
 	// Set the 'test' policy object to permit access to secret/
 	req := &logical.Request{

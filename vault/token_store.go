@@ -266,15 +266,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	ID           string            // ID of this entry, generally a random UUID
-	Parent       string            // Parent token, used for revocation trees
-	Policies     []string          // Which named policies should be used
-	Path         string            // Used for audit trails, this is something like "auth/user/login"
-	Meta         map[string]string // Used for auditing. This could include things like "source", "user", "ip"
-	DisplayName  string            // Used for operators to be able to associate with the source
-	NumUses      int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
-	CreationTime int64             // Time of token creation
-	TTL          time.Duration     // Duration set when token was created
+	ID              string            // ID of this entry, generally a random UUID
+	Parent          string            // Parent token, used for revocation trees
+	Policies        []string          // Which named policies should be used
+	Path            string            // Used for audit trails, this is something like "auth/user/login"
+	Meta            map[string]string // Used for auditing. This could include things like "source", "user", "ip"
+	DisplayName     string            // Used for operators to be able to associate with the source
+	NumUses         int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	CreationTime    int64             // Time of token creation
+	LastRenewalTime int64             // Time that the token was last renewed; 0 means never renewed
+	TTL             time.Duration     // Duration set when token was created
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -311,6 +312,19 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 	if entry.ID == "" {
 		entry.ID = uuid.GenerateUUID()
 	}
+
+	return ts.storeCommon(entry, true)
+}
+
+// Store is used to store an updated token entry.
+func (ts *TokenStore) store(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "store"}, time.Now())
+	return ts.storeCommon(entry, false)
+}
+
+// storeCommon handles the actual storage of an entry, possibly generating
+// secondary indexes
+func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error {
 	saltedId := ts.SaltID(entry.ID)
 
 	// Marshal the entry
@@ -319,25 +333,27 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		return fmt.Errorf("failed to encode entry: %v", err)
 	}
 
-	// Write the secondary index if necessary. This is done before the
-	// primary index because we'd rather have a dangling pointer with
-	// a missing primary instead of missing the parent index and potentially
-	// escaping the revocation chain.
-	if entry.Parent != "" {
-		// Ensure the parent exists
-		parent, err := ts.Lookup(entry.Parent)
-		if err != nil {
-			return fmt.Errorf("failed to lookup parent: %v", err)
-		}
-		if parent == nil {
-			return fmt.Errorf("parent token not found")
-		}
+	if writeSecondary {
+		// Write the secondary index if necessary. This is done before the
+		// primary index because we'd rather have a dangling pointer with
+		// a missing primary instead of missing the parent index and potentially
+		// escaping the revocation chain.
+		if entry.Parent != "" {
+			// Ensure the parent exists
+			parent, err := ts.Lookup(entry.Parent)
+			if err != nil {
+				return fmt.Errorf("failed to lookup parent: %v", err)
+			}
+			if parent == nil {
+				return fmt.Errorf("parent token not found")
+			}
 
-		// Create the index entry
-		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		le := &logical.StorageEntry{Key: path}
-		if err := ts.view.Put(le); err != nil {
-			return fmt.Errorf("failed to persist entry: %v", err)
+			// Create the index entry
+			path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+			le := &logical.StorageEntry{Key: path}
+			if err := ts.view.Put(le); err != nil {
+				return fmt.Errorf("failed to persist entry: %v", err)
+			}
 		}
 	}
 
@@ -810,15 +826,16 @@ func (ts *TokenStore) handleLookup(
 	// you could escalate your privileges.
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":            out.ID,
-			"policies":      out.Policies,
-			"path":          out.Path,
-			"meta":          out.Meta,
-			"display_name":  out.DisplayName,
-			"num_uses":      out.NumUses,
-			"orphan":        false,
-			"creation_time": int(out.CreationTime),
-			"ttl":           int(out.TTL.Seconds()),
+			"id":                out.ID,
+			"policies":          out.Policies,
+			"path":              out.Path,
+			"meta":              out.Meta,
+			"display_name":      out.DisplayName,
+			"num_uses":          out.NumUses,
+			"orphan":            false,
+			"creation_time":     int(out.CreationTime),
+			"last_renewal_time": int(out.LastRenewalTime),
+			"ttl":               int(out.TTL.Seconds()),
 		},
 	}
 
@@ -849,20 +866,25 @@ func (ts *TokenStore) handleRenew(
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	te, err := ts.Lookup(id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Verify the token exists
-	if out == nil {
+	if te == nil {
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
 	// Renew the token and its children
-	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
+	auth, err := ts.expiration.RenewToken(te.Path, te.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	te.LastRenewalTime = time.Now().Unix()
+	if err := ts.store(te); err != nil {
+		return logical.ErrorResponse("error saving renewed token"), fmt.Errorf("unable to save renewed token: %v", err)
 	}
 
 	// Generate the response

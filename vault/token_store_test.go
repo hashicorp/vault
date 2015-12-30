@@ -572,7 +572,7 @@ func TestTokenStore_HandleRequest_CreateToken_RootID(t *testing.T) {
 
 func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "client", []string{"foo"})
+	testMakeToken(t, ts, root, "client", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = "client"
@@ -590,7 +590,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "client", []string{"foo", "bar"})
+	testMakeToken(t, ts, root, "client", "", []string{"foo", "bar"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = "client"
@@ -607,7 +607,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "client", []string{"foo", "bar"})
+	testMakeToken(t, ts, root, "client", "", []string{"foo", "bar"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = "client"
@@ -624,7 +624,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "client", []string{"foo"})
+	testMakeToken(t, ts, root, "client", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = "client"
@@ -757,8 +757,8 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "child", []string{"root", "foo"})
-	testMakeToken(t, ts, "child", "sub-child", []string{"foo"})
+	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "revoke/child")
 	resp, err := ts.HandleRequest(req)
@@ -789,8 +789,8 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 
 func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "child", []string{"root", "foo"})
-	testMakeToken(t, ts, "child", "sub-child", []string{"foo"})
+	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/child")
 	req.ClientToken = root
@@ -822,7 +822,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 
 func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
-	testMakeToken(t, ts, root, "child", []string{"foo"})
+	testMakeToken(t, ts, root, "child", "", []string{"foo"})
 
 	out, err := ts.Lookup("child")
 	if err != nil {
@@ -850,7 +850,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
-	_, ts, root := mockTokenStore(t)
+	c, ts, root := mockTokenStore(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup/"+root)
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
@@ -861,21 +861,27 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":           root,
-		"policies":     []string{"root"},
-		"path":         "auth/token/root",
-		"meta":         map[string]string(nil),
-		"display_name": "root",
-		"orphan":       true,
-		"num_uses":     0,
-		"ttl":          0,
+		"id":                root,
+		"policies":          []string{"root"},
+		"path":              "auth/token/root",
+		"meta":              map[string]string(nil),
+		"display_name":      "root",
+		"orphan":            true,
+		"num_uses":          0,
+		"ttl":               0,
+		"last_renewal_time": 0,
+	}
+
+	if resp.Data["creation_time"].(int) == 0 {
+		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
 	}
 
-	testMakeToken(t, ts, root, "client", []string{"foo"})
+	testCoreMakeToken(t, c, root, "client", "3600s", []string{"foo"})
 
 	req = logical.TestRequest(t, logical.ReadOperation, "lookup/client")
 	resp, err = ts.HandleRequest(req)
@@ -887,18 +893,47 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"id":           "client",
-		"policies":     []string{"default", "foo"},
-		"path":         "auth/token/create",
-		"meta":         map[string]string(nil),
-		"display_name": "token",
-		"orphan":       false,
-		"num_uses":     0,
-		"ttl":          2592000,
+		"id":                "client",
+		"policies":          []string{"default", "foo"},
+		"path":              "auth/token/create",
+		"meta":              map[string]string(nil),
+		"display_name":      "token",
+		"orphan":            false,
+		"num_uses":          0,
+		"ttl":               3600,
+		"last_renewal_time": 0,
+	}
+
+	if resp.Data["creation_time"].(int) == 0 {
+		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
+	}
+
+	// Test last_renewal_time functionality
+	req = logical.TestRequest(t, logical.WriteOperation, "renew/client")
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "lookup/client")
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	if resp.Data["last_renewal_time"].(int) == 0 {
+		t.Fatalf("last_renewal_time was zero")
 	}
 }
 
@@ -955,16 +990,22 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":           root,
-		"policies":     []string{"root"},
-		"path":         "auth/token/root",
-		"meta":         map[string]string(nil),
-		"display_name": "root",
-		"orphan":       true,
-		"num_uses":     0,
-		"ttl":          0,
+		"id":                root,
+		"policies":          []string{"root"},
+		"path":              "auth/token/root",
+		"meta":              map[string]string(nil),
+		"display_name":      "root",
+		"orphan":            true,
+		"num_uses":          0,
+		"ttl":               0,
+		"last_renewal_time": 0,
+	}
+
+	if resp.Data["creation_time"].(int) == 0 {
+		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
 	}
@@ -1059,11 +1100,12 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	}
 }
 
-func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []string) {
+func testMakeToken(t *testing.T, ts *TokenStore, root, client, ttl string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "create")
 	req.ClientToken = root
 	req.Data["id"] = client
 	req.Data["policies"] = policy
+	req.Data["ttl"] = ttl
 
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
@@ -1074,11 +1116,12 @@ func testMakeToken(t *testing.T, ts *TokenStore, root, client string, policy []s
 	}
 }
 
-func testCoreMakeToken(t *testing.T, c *Core, root, client string, policy []string) {
+func testCoreMakeToken(t *testing.T, c *Core, root, client, ttl string, policy []string) {
 	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["id"] = client
 	req.Data["policies"] = policy
+	req.Data["ttl"] = ttl
 
 	resp, err := c.HandleRequest(req)
 	if err != nil {
