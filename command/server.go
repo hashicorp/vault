@@ -104,9 +104,6 @@ func (c *ServerCommand) Run(args []string) int {
 		Writer:   logGate,
 	}, "", log.LstdFlags)
 
-	// Initialize telemetry; if this is done after the core is created,
-	// because we are using a global telemetry object, it can be a data
-	// race between writing metrics from core and the object being set
 	if err := c.setupTelementry(config); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
