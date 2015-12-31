@@ -1264,11 +1264,11 @@ subpath for interactive help output.
   <dd>
     <ul>
       <li>
-      <li>
         <span class="param">csr</span>
         <span class="param-flags">required</span>
         The PEM-encoded CSR.
       </li>
+      <li>
         <span class="param">common_name</span>
         <span class="param-flags">required</span>
         The requested CN for the certificate.
