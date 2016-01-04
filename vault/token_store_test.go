@@ -861,15 +861,14 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":                root,
-		"policies":          []string{"root"},
-		"path":              "auth/token/root",
-		"meta":              map[string]string(nil),
-		"display_name":      "root",
-		"orphan":            true,
-		"num_uses":          0,
-		"ttl":               0,
-		"last_renewal_time": 0,
+		"id":           root,
+		"policies":     []string{"root"},
+		"path":         "auth/token/root",
+		"meta":         map[string]string(nil),
+		"display_name": "root",
+		"orphan":       true,
+		"num_uses":     0,
+		"ttl":          0,
 	}
 
 	if resp.Data["creation_time"].(int) == 0 {
@@ -893,15 +892,14 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"id":                "client",
-		"policies":          []string{"default", "foo"},
-		"path":              "auth/token/create",
-		"meta":              map[string]string(nil),
-		"display_name":      "token",
-		"orphan":            false,
-		"num_uses":          0,
-		"ttl":               3600,
-		"last_renewal_time": 0,
+		"id":           "client",
+		"policies":     []string{"default", "foo"},
+		"path":         "auth/token/create",
+		"meta":         map[string]string(nil),
+		"display_name": "token",
+		"orphan":       false,
+		"num_uses":     0,
+		"ttl":          3600,
 	}
 
 	if resp.Data["creation_time"].(int) == 0 {
@@ -932,7 +930,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	if resp.Data["last_renewal_time"].(int) == 0 {
+	if resp.Data["last_renewal_time"].(int64) == 0 {
 		t.Fatalf("last_renewal_time was zero")
 	}
 }
@@ -990,15 +988,14 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":                root,
-		"policies":          []string{"root"},
-		"path":              "auth/token/root",
-		"meta":              map[string]string(nil),
-		"display_name":      "root",
-		"orphan":            true,
-		"num_uses":          0,
-		"ttl":               0,
-		"last_renewal_time": 0,
+		"id":           root,
+		"policies":     []string{"root"},
+		"path":         "auth/token/root",
+		"meta":         map[string]string(nil),
+		"display_name": "root",
+		"orphan":       true,
+		"num_uses":     0,
+		"ttl":          0,
 	}
 
 	if resp.Data["creation_time"].(int) == 0 {
@@ -1007,7 +1004,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	delete(resp.Data, "creation_time")
 
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad: %#v exp: %#v", resp.Data, exp)
+		t.Fatalf("bad:\ngot %#v\nexpected: %#v\n", resp.Data, exp)
 	}
 }
 

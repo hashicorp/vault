@@ -850,8 +850,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		IssueTime:  time.Now().UTC(),
-		ExpireTime: time.Now().UTC(),
+		IssueTime:       time.Now().UTC(),
+		ExpireTime:      time.Now().UTC(),
+		LastRenewalTime: time.Time{}.UTC(),
 	}
 	if err := exp.persistEntry(le); err != nil {
 		t.Fatalf("err: %v", err)
@@ -862,7 +863,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if !reflect.DeepEqual(out, le) {
-		t.Fatalf("out: %#v expect: %#v", out, le)
+		t.Fatalf("\nout: %#v\nexpect: %#v\n", out, le)
 	}
 
 	err = exp.deleteEntry("foo/bar/1234")

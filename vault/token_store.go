@@ -266,16 +266,15 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	ID              string            // ID of this entry, generally a random UUID
-	Parent          string            // Parent token, used for revocation trees
-	Policies        []string          // Which named policies should be used
-	Path            string            // Used for audit trails, this is something like "auth/user/login"
-	Meta            map[string]string // Used for auditing. This could include things like "source", "user", "ip"
-	DisplayName     string            // Used for operators to be able to associate with the source
-	NumUses         int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
-	CreationTime    int64             // Time of token creation
-	LastRenewalTime int64             // Time that the token was last renewed; 0 means never renewed
-	TTL             time.Duration     // Duration set when token was created
+	ID           string            // ID of this entry, generally a random UUID
+	Parent       string            // Parent token, used for revocation trees
+	Policies     []string          // Which named policies should be used
+	Path         string            // Used for audit trails, this is something like "auth/user/login"
+	Meta         map[string]string // Used for auditing. This could include things like "source", "user", "ip"
+	DisplayName  string            // Used for operators to be able to associate with the source
+	NumUses      int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	CreationTime int64             // Time of token creation
+	TTL          time.Duration     // Duration set when token was created
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -316,7 +315,8 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 	return ts.storeCommon(entry, true)
 }
 
-// Store is used to store an updated token entry.
+// Store is used to store an updated token entry without writing the
+// secondary index.
 func (ts *TokenStore) store(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "store"}, time.Now())
 	return ts.storeCommon(entry, false)
@@ -826,21 +826,29 @@ func (ts *TokenStore) handleLookup(
 	// you could escalate your privileges.
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":                out.ID,
-			"policies":          out.Policies,
-			"path":              out.Path,
-			"meta":              out.Meta,
-			"display_name":      out.DisplayName,
-			"num_uses":          out.NumUses,
-			"orphan":            false,
-			"creation_time":     int(out.CreationTime),
-			"last_renewal_time": int(out.LastRenewalTime),
-			"ttl":               int(out.TTL.Seconds()),
+			"id":            out.ID,
+			"policies":      out.Policies,
+			"path":          out.Path,
+			"meta":          out.Meta,
+			"display_name":  out.DisplayName,
+			"num_uses":      out.NumUses,
+			"orphan":        false,
+			"creation_time": int(out.CreationTime),
+			"ttl":           int(out.TTL.Seconds()),
 		},
 	}
 
 	if out.Parent == "" {
 		resp.Data["orphan"] = true
+	}
+
+	// Fetch the last renewal time
+	leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(out.Path, out.ID)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	if leaseTimes != nil && !leaseTimes.LastRenewalTime.IsZero() {
+		resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
 	}
 
 	return resp, nil
@@ -880,11 +888,6 @@ func (ts *TokenStore) handleRenew(
 	auth, err := ts.expiration.RenewToken(te.Path, te.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	te.LastRenewalTime = time.Now().Unix()
-	if err := ts.store(te); err != nil {
-		return logical.ErrorResponse("error saving renewed token"), fmt.Errorf("unable to save renewed token: %v", err)
 	}
 
 	// Generate the response
