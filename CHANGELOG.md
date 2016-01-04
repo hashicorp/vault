@@ -37,6 +37,7 @@ IMPROVEMENTS:
    with multiple spaces when launching in `-dev` mode [GH-850]
  * conf: Use normal bool values rather than empty/non-empty for the
    `tls_disable` option [GH-802]
+ * credential/token: Add `last_renewal_time` to token lookup calls [GH-896]
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
