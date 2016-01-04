@@ -868,10 +868,10 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"display_name": "root",
 		"orphan":       true,
 		"num_uses":     0,
-		"ttl":          0,
+		"ttl":          int64(0),
 	}
 
-	if resp.Data["creation_time"].(int) == 0 {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -899,10 +899,10 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"display_name": "token",
 		"orphan":       false,
 		"num_uses":     0,
-		"ttl":          3600,
+		"ttl":          int64(3600),
 	}
 
-	if resp.Data["creation_time"].(int) == 0 {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -995,10 +995,10 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"display_name": "root",
 		"orphan":       true,
 		"num_uses":     0,
-		"ttl":          0,
+		"ttl":          int64(0),
 	}
 
-	if resp.Data["creation_time"].(int) == 0 {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
