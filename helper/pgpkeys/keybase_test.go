@@ -12,20 +12,21 @@ import (
 )
 
 func TestFetchKeybasePubkeys(t *testing.T) {
-	ret, err := FetchKeybasePubkeys([]string{"jefferai", "hashicorp"})
+	testset := []string{"keybase:jefferai", "keybase:hashicorp"}
+	ret, err := FetchKeybasePubkeys(testset)
 	if err != nil {
 		t.Fatalf("bad: %v", err)
 	}
 
 	fingerprints := []string{}
-	for i, retKey := range ret {
-		data, err := base64.StdEncoding.DecodeString(retKey)
+	for _, user := range testset {
+		data, err := base64.StdEncoding.DecodeString(ret[user])
 		if err != nil {
-			t.Fatalf("error decoding key %d: %v", i, err)
+			t.Fatalf("error decoding key for user %s: %v", user, err)
 		}
 		entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
 		if err != nil {
-			t.Fatalf("error parsing key %d: %v", i, err)
+			t.Fatalf("error parsing key for user %s: %v", user, err)
 		}
 		fingerprints = append(fingerprints, hex.EncodeToString(entity.PrimaryKey.Fingerprint[:]))
 	}

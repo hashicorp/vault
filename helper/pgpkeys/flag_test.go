@@ -128,7 +128,6 @@ func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 	fingerprints := []string{}
 	for _, pubkey := range []string(*pkf) {
 		keyBytes, err := base64.StdEncoding.DecodeString(pubkey)
