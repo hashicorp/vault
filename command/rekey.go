@@ -233,12 +233,13 @@ Unseal Options:
 
   -pgp-keys               If provided, must be a comma-separated list of
                           files on disk containing binary- or base64-format
-                          public PGP keys. The number of files must match
-                          'key-shares'. The output unseal keys will encrypted
-                          and hex-encoded, in order, with the given public keys.
-                          If you want to use them with the 'vault unseal'
-                          command, you will need to hex decode and decrypt;
-                          this will be the plaintext unseal key.
+                          public PGP keys, or Keybase usernames specified as
+                          "keybase:<username>". The number of given entries
+                          must match 'key-shares'. The output unseal keys will
+                          encrypted and hex-encoded, in order, with the given
+                          public keys.  If you want to use them with the 'vault
+                          unseal' command, you will need to hex decode and
+                          decrypt; this will be the plaintext unseal key.
 `
 	return strings.TrimSpace(helpText)
 }
