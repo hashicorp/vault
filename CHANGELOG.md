@@ -19,6 +19,9 @@ FEATURES:
    [configuration
    documentation](https://vaultproject.io/docs/config/index.html) for details.
    [GH-395]
+ * **Keybase Support for PGP Encryption Keys**: You can now specify Keybase
+   users when passing in PGP keys to the `init` and `rekey` CLI commands.
+   Public keys for these users will be fetched automatically. [GH-901]
 
 IMPROVEMENTS:
 
