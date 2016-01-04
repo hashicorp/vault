@@ -311,6 +311,20 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 	if entry.ID == "" {
 		entry.ID = uuid.GenerateUUID()
 	}
+
+	return ts.storeCommon(entry, true)
+}
+
+// Store is used to store an updated token entry without writing the
+// secondary index.
+func (ts *TokenStore) store(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "store"}, time.Now())
+	return ts.storeCommon(entry, false)
+}
+
+// storeCommon handles the actual storage of an entry, possibly generating
+// secondary indexes
+func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error {
 	saltedId := ts.SaltID(entry.ID)
 
 	// Marshal the entry
@@ -319,25 +333,27 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		return fmt.Errorf("failed to encode entry: %v", err)
 	}
 
-	// Write the secondary index if necessary. This is done before the
-	// primary index because we'd rather have a dangling pointer with
-	// a missing primary instead of missing the parent index and potentially
-	// escaping the revocation chain.
-	if entry.Parent != "" {
-		// Ensure the parent exists
-		parent, err := ts.Lookup(entry.Parent)
-		if err != nil {
-			return fmt.Errorf("failed to lookup parent: %v", err)
-		}
-		if parent == nil {
-			return fmt.Errorf("parent token not found")
-		}
+	if writeSecondary {
+		// Write the secondary index if necessary. This is done before the
+		// primary index because we'd rather have a dangling pointer with
+		// a missing primary instead of missing the parent index and potentially
+		// escaping the revocation chain.
+		if entry.Parent != "" {
+			// Ensure the parent exists
+			parent, err := ts.Lookup(entry.Parent)
+			if err != nil {
+				return fmt.Errorf("failed to lookup parent: %v", err)
+			}
+			if parent == nil {
+				return fmt.Errorf("parent token not found")
+			}
 
-		// Create the index entry
-		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		le := &logical.StorageEntry{Key: path}
-		if err := ts.view.Put(le); err != nil {
-			return fmt.Errorf("failed to persist entry: %v", err)
+			// Create the index entry
+			path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+			le := &logical.StorageEntry{Key: path}
+			if err := ts.view.Put(le); err != nil {
+				return fmt.Errorf("failed to persist entry: %v", err)
+			}
 		}
 	}
 
@@ -826,6 +842,15 @@ func (ts *TokenStore) handleLookup(
 		resp.Data["orphan"] = true
 	}
 
+	// Fetch the last renewal time
+	leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(out.Path, out.ID)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	if leaseTimes != nil && !leaseTimes.LastRenewalTime.IsZero() {
+		resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+	}
+
 	return resp, nil
 }
 
@@ -849,18 +874,18 @@ func (ts *TokenStore) handleRenew(
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	te, err := ts.Lookup(id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Verify the token exists
-	if out == nil {
+	if te == nil {
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
 	// Renew the token and its children
-	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
+	auth, err := ts.expiration.RenewToken(te.Path, te.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

@@ -295,6 +295,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	le.Data = resp.Data
 	le.Secret = resp.Secret
 	le.ExpireTime = resp.Secret.ExpirationTime()
+	le.LastRenewalTime = time.Now().UTC()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -346,6 +347,7 @@ func (m *ExpirationManager) RenewToken(source string, token string,
 	// Update the lease entry
 	le.Auth = resp.Auth
 	le.ExpireTime = resp.Auth.ExpirationTime()
+	le.LastRenewalTime = time.Now().UTC()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -422,6 +424,40 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	// Setup revocation timer
 	m.updatePending(&le, auth.LeaseTotal())
 	return nil
+}
+
+// FetchLeaseTimesByToken is a helper function to use token values to compute
+// the leaseID, rather than pushing that logic back into the token store.
+func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*leaseEntry, error) {
+	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times-by-token"}, time.Now())
+
+	// Compute the Lease ID
+	leaseID := path.Join(source, m.tokenStore.SaltID(token))
+	return m.FetchLeaseTimes(leaseID)
+}
+
+// FetchLeaseTimes is used to fetch the issue time, expiration time, and last
+// renewed time of a lease entry. It returns a leaseEntry itself, but with only
+// those values copied over.
+func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error) {
+	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
+
+	// Load the entry
+	le, err := m.loadEntry(leaseID)
+	if err != nil {
+		return nil, err
+	}
+	if le == nil {
+		return nil, nil
+	}
+
+	ret := &leaseEntry{
+		IssueTime:       le.IssueTime,
+		ExpireTime:      le.ExpireTime,
+		LastRenewalTime: le.LastRenewalTime,
+	}
+
+	return ret, nil
 }
 
 // updatePending is used to update a pending invocation for a lease
@@ -633,14 +669,15 @@ func (m *ExpirationManager) emitMetrics() {
 // leaseEntry is used to structure the values the expiration
 // manager stores. This is used to handle renew and revocation.
 type leaseEntry struct {
-	LeaseID     string                 `json:"lease_id"`
-	ClientToken string                 `json:"client_token"`
-	Path        string                 `json:"path"`
-	Data        map[string]interface{} `json:"data"`
-	Secret      *logical.Secret        `json:"secret"`
-	Auth        *logical.Auth          `json:"auth"`
-	IssueTime   time.Time              `json:"issue_time"`
-	ExpireTime  time.Time              `json:"expire_time"`
+	LeaseID         string                 `json:"lease_id"`
+	ClientToken     string                 `json:"client_token"`
+	Path            string                 `json:"path"`
+	Data            map[string]interface{} `json:"data"`
+	Secret          *logical.Secret        `json:"secret"`
+	Auth            *logical.Auth          `json:"auth"`
+	IssueTime       time.Time              `json:"issue_time"`
+	ExpireTime      time.Time              `json:"expire_time"`
+	LastRenewalTime time.Time              `json:"last_renewal_time"`
 }
 
 // encode is used to JSON encode the lease entry
