@@ -21,7 +21,25 @@ func (p *PubKeyFilesFlag) Set(value string) error {
 	if len(*p) > 0 {
 		return errors.New("pgp-keys can only be specified once")
 	}
-	for _, keyfile := range strings.Split(value, ",") {
+
+	splitValues := strings.Split(value, ",")
+
+	keybaseMap, err := FetchKeybasePubkeys(splitValues)
+	if err != nil {
+		return err
+	}
+
+	// Now go through the actual flag, and substitute in resolved keybase
+	// entries where appropriate
+	for _, keyfile := range splitValues {
+		if strings.HasPrefix(keyfile, kbPrefix) {
+			key := keybaseMap[keyfile]
+			if key == "" {
+				return fmt.Errorf("key for keybase user %s was not found in the map", strings.TrimPrefix(keyfile, kbPrefix))
+			}
+			*p = append(*p, key)
+			continue
+		}
 		if keyfile[0] == '@' {
 			keyfile = keyfile[1:]
 		}
