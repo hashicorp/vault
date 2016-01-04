@@ -79,13 +79,14 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 		return nil, fmt.Errorf("got non-OK response: %s", out.Status.Name)
 	}
 
-	if len(out.Them) != len(usernames) {
-		return nil, fmt.Errorf("returned keys length does not match number of provided usernames")
-	}
-
+	missingNames := make([]string, 0, len(usernames))
 	var keyReader *bytes.Reader
 	serializedEntity := bytes.NewBuffer(nil)
 	for i, themVal := range out.Them {
+		if themVal.Primary.Bundle == "" {
+			missingNames = append(missingNames, usernames[i])
+			continue
+		}
 		keyReader = bytes.NewReader([]byte(themVal.Primary.Bundle))
 		entityList, err := openpgp.ReadArmoredKeyRing(keyReader)
 		if err != nil {
@@ -106,6 +107,10 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 
 		// The API returns values in the same ordering requested, so this should properly match
 		ret[kbPrefix+usernames[i]] = base64.StdEncoding.EncodeToString(serializedEntity.Bytes())
+	}
+
+	if len(missingNames) > 0 {
+		return nil, fmt.Errorf("unable to fetch keys for user(s) %s from keybase", strings.Join(missingNames, ","))
 	}
 
 	return ret, nil
