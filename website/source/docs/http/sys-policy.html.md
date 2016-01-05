@@ -64,6 +64,7 @@ description: |-
     {
       "rules": "path..."
     }
+    ```
 
   </dd>
 </dl>
