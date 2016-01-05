@@ -61,7 +61,7 @@ MISC:
 
  * Add `vault-java` to libraries [GH-851]
  * Various minor documentation fixes and improvements [GH-839] [GH-854]
-   [GH-861] [GH-876] [GH-899] [GH-900]
+   [GH-861] [GH-876] [GH-899] [GH-900] [GH-904]
 
 ## 0.4.0 (December 10, 2015)
 
