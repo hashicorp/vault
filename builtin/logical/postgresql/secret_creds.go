@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -130,6 +131,32 @@ func (b *backend) secretCredsRevoke(
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;",
 			schema, pq.QuoteIdentifier(username)))
+
+		revocationStmts = append(revocationStmts, fmt.Sprintf(
+			"REVOKE USAGE ON SCHEMA %s FROM %s;",
+			schema, pq.QuoteIdentifier(username)))
+	}
+
+	// for good measure, revoke all privileges and usage on schema public
+	revocationStmts = append(revocationStmts, fmt.Sprintf(
+		"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;",
+		pq.QuoteIdentifier(username)))
+
+	revocationStmts = append(revocationStmts, fmt.Sprintf(
+		"REVOKE USAGE ON SCHEMA public FROM %s;",
+		pq.QuoteIdentifier(username)))
+
+	// get the current database name so we can issue a REVOKE CONNECT for
+	// this username
+	var dbname sql.NullString
+	if err := db.QueryRow("SELECT current_database();").Scan(&dbname); err != nil {
+		return nil, err
+	}
+
+	if dbname.Valid {
+		revocationStmts = append(revocationStmts, fmt.Sprintf(
+			"REVOKE CONNECT ON DATABASE %s FROM %s;",
+			dbname.String, pq.QuoteIdentifier(username)))
 	}
 
 	// again, here, we do not stop on error, as we want to remove as
