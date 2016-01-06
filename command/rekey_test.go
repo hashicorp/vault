@@ -5,8 +5,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -77,7 +79,12 @@ func TestRekey_init(t *testing.T) {
 		},
 	}
 
-	args := []string{"-address", addr, "-init", "-key-threshold=10", "-key-shares=10"}
+	args := []string{
+		"-address", addr,
+		"-init",
+		"-key-threshold", "10",
+		"-key-shares", "10",
+	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
@@ -159,6 +166,15 @@ func TestRekey_init_pgp(t *testing.T) {
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
+	bc := &logical.BackendConfig{
+		Logger: nil,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	}
+	sysBackend := vault.NewSystemBackend(core, bc)
+
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
 		Key: hex.EncodeToString(key),
@@ -179,6 +195,7 @@ func TestRekey_init_pgp(t *testing.T) {
 		"-key-shares", "3",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
 		"-key-threshold", "2",
+		"-backup", "true",
 	}
 
 	if code := c.Run(args); code != 0 {
@@ -196,6 +213,8 @@ func TestRekey_init_pgp(t *testing.T) {
 		t.Fatal("should rekey")
 	}
 
+	c.Nonce = config.Nonce
+
 	args = []string{
 		"-address", addr,
 	}
@@ -203,5 +222,45 @@ func TestRekey_init_pgp(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), token, core)
+	type backupStruct struct {
+		Keys map[string]string
+	}
+	backupVals := &backupStruct{}
+
+	req := logical.TestRequest(t, logical.ReadOperation, "rekey/backup")
+	resp, err := sysBackend.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("error running backed-up unseal key fetch: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("got nil resp with unseal key fetch")
+	}
+	if resp.Data["keys"] == nil {
+		t.Fatalf("could not retrieve unseal keys from token")
+	}
+	if resp.Data["nonce"] != config.Nonce {
+		t.Fatalf("nonce mismatch between rekey and backed-up keys")
+	}
+
+	backupVals.Keys = resp.Data["keys"].(map[string]string)
+
+	// Now delete and try again; the values should be inaccessible
+	req = logical.TestRequest(t, logical.DeleteOperation, "rekey/backup")
+	resp, err = sysBackend.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("error running backed-up unseal key delete: %v", err)
+	}
+	req = logical.TestRequest(t, logical.ReadOperation, "rekey/backup")
+	resp, err = sysBackend.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("error running backed-up unseal key fetch: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("got nil resp with unseal key fetch")
+	}
+	if resp.Data["keys"] != nil {
+		t.Fatalf("keys found when they should have been deleted")
+	}
+
+	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), token, true, backupVals.Keys, core)
 }

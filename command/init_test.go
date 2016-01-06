@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
@@ -171,9 +172,19 @@ func TestInit_PGP(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	pgpKeys := []string{}
+	for _, pubFile := range pubFiles {
+		pub, err := pgpkeys.ReadPGPFile(pubFile)
+		if err != nil {
+			t.Fatalf("bad: %v", err)
+		}
+		pgpKeys = append(pgpKeys, pub)
+	}
+
 	expected := &vault.SealConfig{
 		SecretShares:    3,
 		SecretThreshold: 2,
+		PGPKeys:         pgpKeys,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
 		t.Fatalf("bad:\nexpected: %#v\ngot: %#v", expected, sealConf)
@@ -190,5 +201,5 @@ func TestInit_PGP(t *testing.T) {
 
 	rootToken := matches[0][1]
 
-	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), rootToken, core)
+	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), rootToken, false, nil, core)
 }

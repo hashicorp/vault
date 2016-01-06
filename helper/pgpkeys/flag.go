@@ -40,26 +40,36 @@ func (p *PubKeyFilesFlag) Set(value string) error {
 			*p = append(*p, key)
 			continue
 		}
-		if keyfile[0] == '@' {
-			keyfile = keyfile[1:]
-		}
-		f, err := os.Open(keyfile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		buf := bytes.NewBuffer(nil)
-		_, err = buf.ReadFrom(f)
+
+		pgpStr, err := ReadPGPFile(keyfile)
 		if err != nil {
 			return err
 		}
 
-		_, err = base64.StdEncoding.DecodeString(buf.String())
-		if err == nil {
-			*p = append(*p, buf.String())
-		} else {
-			*p = append(*p, base64.StdEncoding.EncodeToString(buf.Bytes()))
-		}
+		*p = append(*p, pgpStr)
 	}
 	return nil
+}
+
+func ReadPGPFile(path string) (string, error) {
+	if path[0] == '@' {
+		path = path[1:]
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	buf := bytes.NewBuffer(nil)
+	_, err = buf.ReadFrom(f)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = base64.StdEncoding.DecodeString(buf.String())
+	if err == nil {
+		return buf.String(), nil
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+
 }

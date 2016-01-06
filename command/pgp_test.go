@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"io/ioutil"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -54,7 +55,11 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 	return tempDir, pubFiles, nil
 }
 
-func parseDecryptAndTestUnsealKeys(t *testing.T, input, rootToken string, core *vault.Core) {
+func parseDecryptAndTestUnsealKeys(t *testing.T,
+	input, rootToken string,
+	fingerprints bool,
+	backupKeys map[string]string,
+	core *vault.Core) {
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(privKey1)
 	if err != nil {
@@ -75,7 +80,12 @@ func parseDecryptAndTestUnsealKeys(t *testing.T, input, rootToken string, core *
 		priv3Bytes,
 	}
 
-	re, err := regexp.Compile("\\s*Key\\s+\\d+:\\s+(.*)")
+	var re *regexp.Regexp
+	if fingerprints {
+		re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value:\\s+(.*)")
+	} else {
+		re, err = regexp.Compile("\\s*Key\\s+\\d+:\\s+(.*)")
+	}
 	if err != nil {
 		t.Fatalf("Error compiling regex: %s", err)
 	}
@@ -85,11 +95,30 @@ func parseDecryptAndTestUnsealKeys(t *testing.T, input, rootToken string, core *
 	}
 
 	encodedKeys := []string{}
-	for _, pair := range matches {
-		if len(pair) != 2 {
-			t.Fatalf("Key not found: %#v", pair)
+	matchedFingerprints := []string{}
+	for _, tuple := range matches {
+		if fingerprints {
+			if len(tuple) != 3 {
+				t.Fatalf("Key not found: %#v", tuple)
+			}
+			matchedFingerprints = append(matchedFingerprints, tuple[1])
+			encodedKeys = append(encodedKeys, tuple[2])
+		} else {
+			if len(tuple) != 2 {
+				t.Fatalf("Key not found: %#v", tuple)
+			}
+			encodedKeys = append(encodedKeys, tuple[1])
 		}
-		encodedKeys = append(encodedKeys, pair[1])
+	}
+
+	if backupKeys != nil && len(matchedFingerprints) != 0 {
+		testMap := map[string]string{}
+		for i, v := range matchedFingerprints {
+			testMap[v] = encodedKeys[i]
+		}
+		if !reflect.DeepEqual(testMap, backupKeys) {
+			t.Fatalf("test map and backup map do not match, test map is\n%#v\nbackup map is\n%#v", testMap, backupKeys)
+		}
 	}
 
 	unsealKeys := []string{}

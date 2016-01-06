@@ -1781,7 +1781,7 @@ func TestCore_Rekey_Lifecycle(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
 
 	// Verify update not allowed
-	if _, err := c.RekeyUpdate(master); err == nil {
+	if _, err := c.RekeyUpdate(master, ""); err == nil {
 		t.Fatalf("no rekey in progress")
 	}
 
@@ -1824,6 +1824,7 @@ func TestCore_Rekey_Lifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	newConf.Nonce = conf.Nonce
 	if !reflect.DeepEqual(conf, newConf) {
 		t.Fatalf("bad: %v", conf)
 	}
@@ -1887,8 +1888,17 @@ func TestCore_Rekey_Update(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Fetch new config with generated nonce
+	rkconf, err := c.RekeyConfig()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if rkconf == nil {
+		t.Fatalf("bad: no rekey config received")
+	}
+
 	// Provide the master
-	result, err := c.RekeyUpdate(master)
+	result, err := c.RekeyUpdate(master, rkconf.Nonce)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1919,8 +1929,10 @@ func TestCore_Rekey_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	newConf.Nonce = rkconf.Nonce
 	if !reflect.DeepEqual(conf, newConf) {
-		t.Fatalf("bad: %#v", conf)
+		t.Fatalf("\nexpected: %#v\nactual: %#v\n", conf, newConf)
 	}
 
 	// Attempt unseal
@@ -1948,10 +1960,19 @@ func TestCore_Rekey_Update(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Fetch new config with generated nonce
+	rkconf, err = c.RekeyConfig()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if rkconf == nil {
+		t.Fatalf("bad: no rekey config received")
+	}
+
 	// Provide the parts master
 	oldResult := result
 	for i := 0; i < 3; i++ {
-		result, err = c.RekeyUpdate(oldResult.SecretShares[i])
+		result, err = c.RekeyUpdate(oldResult.SecretShares[i], rkconf.Nonce)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1987,6 +2008,7 @@ func TestCore_Rekey_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	newConf.Nonce = rkconf.Nonce
 	if !reflect.DeepEqual(conf, newConf) {
 		t.Fatalf("bad: %#v", conf)
 	}
@@ -2005,9 +2027,38 @@ func TestCore_Rekey_InvalidMaster(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Fetch new config with generated nonce
+	rkconf, err := c.RekeyConfig()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if rkconf == nil {
+		t.Fatalf("bad: no rekey config received")
+	}
+
 	// Provide the master (invalid)
 	master[0]++
-	_, err = c.RekeyUpdate(master)
+	_, err = c.RekeyUpdate(master, rkconf.Nonce)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+func TestCore_Rekey_InvalidNonce(t *testing.T) {
+	c, master, _ := TestCoreUnsealed(t)
+
+	// Start a rekey
+	newConf := &SealConfig{
+		SecretThreshold: 3,
+		SecretShares:    5,
+	}
+	err := c.RekeyInit(newConf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Provide the nonce (invalid)
+	_, err = c.RekeyUpdate(master, "abcd")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -2151,7 +2202,15 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	result, err := core.RekeyUpdate(key)
+	// Fetch new config with generated nonce
+	rkconf, err := core.RekeyConfig()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if rkconf == nil {
+		t.Fatalf("bad: no rekey config received")
+	}
+	result, err := core.RekeyUpdate(key, rkconf.Nonce)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2173,7 +2232,15 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	result, err = core2.RekeyUpdate(result.SecretShares[0])
+	// Fetch new config with generated nonce
+	rkconf, err = core2.RekeyConfig()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if rkconf == nil {
+		t.Fatalf("bad: no rekey config received")
+	}
+	result, err = core2.RekeyUpdate(result.SecretShares[0], rkconf.Nonce)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
