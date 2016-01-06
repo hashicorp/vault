@@ -1329,7 +1329,10 @@ func (c *Core) RekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
 	}
 
 	// Return the master key if only a single key part is used
-	results := new(RekeyResult)
+	results := &RekeyResult{
+		Backup: c.rekeyConfig.Backup,
+	}
+
 	if c.rekeyConfig.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, newMasterKey)
 	} else {
@@ -1342,21 +1345,37 @@ func (c *Core) RekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
 		results.SecretShares = shares
 	}
 
-	backupInfo := map[string]string{}
 	if len(c.rekeyConfig.PGPKeys) > 0 {
-		fingerprints, encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, c.rekeyConfig.PGPKeys)
+		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(results.SecretShares, c.rekeyConfig.PGPKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		for i := 0; i < len(fingerprints); i++ {
-			encShare := bytes.NewBuffer(encryptedShares[i])
-			backupInfo[fingerprints[i]] = hex.EncodeToString(encShare.Bytes())
-		}
+		if c.rekeyConfig.Backup {
+			backupInfo := map[string]string{}
+			for i := 0; i < len(results.PGPFingerprints); i++ {
+				encShare := bytes.NewBuffer(results.SecretShares[i])
+				backupInfo[results.PGPFingerprints[i]] = hex.EncodeToString(encShare.Bytes())
+			}
 
-		results.SecretShares = encryptedShares
-		results.PGPFingerprints = fingerprints
-		results.Backup = c.rekeyConfig.Backup
+			backupVals := &RekeyBackup{
+				Nonce: c.rekeyConfig.Nonce,
+				Keys:  backupInfo,
+			}
+			buf, err := json.Marshal(backupVals)
+			if err != nil {
+				c.logger.Printf("[ERR] core: failed to marshal unseal key backup: %v", err)
+				return nil, fmt.Errorf("failed to marshal unseal key backup: %v", err)
+			}
+			pe := &physical.Entry{
+				Key:   coreUnsealKeysBackupPath,
+				Value: buf,
+			}
+			if err = c.physical.Put(pe); err != nil {
+				c.logger.Printf("[ERR] core: failed to save unseal key backup: %v", err)
+				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
+			}
+		}
 	}
 
 	// Encode the seal configuration
@@ -1381,34 +1400,6 @@ func (c *Core) RekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
 	if err := c.physical.Put(pe); err != nil {
 		c.logger.Printf("[ERR] core: failed to update seal configuration: %v", err)
 		return nil, fmt.Errorf("failed to update seal configuration: %v", err)
-	}
-
-	if c.rekeyConfig.Backup && len(backupInfo) > 0 {
-
-		backupVals := &RekeyBackup{
-			Nonce: c.rekeyConfig.Nonce,
-			Keys:  backupInfo,
-		}
-		buf, err = json.Marshal(backupVals)
-		if err != nil {
-			// Don't return, we need to clear the progress/config below, so just
-			// log the error
-			// FIXME: in /v2/ when sys endpoints return normal Responses,
-			// ensure a warning is given
-			c.logger.Printf("[ERR] core: failed to marshal unseal key backup: %v", err)
-		} else {
-			pe := &physical.Entry{
-				Key:   coreUnsealKeysBackupPath,
-				Value: buf,
-			}
-			if err := c.physical.Put(pe); err != nil {
-				// Don't return, we need to clear the progress/config below, so just
-				// log the error
-				// FIXME: in /v2/ when sys endpoints return normal Responses,
-				// ensure a warning is given
-				c.logger.Printf("[ERR] core: failed to save unseal key backup: %v", err)
-			}
-		}
 	}
 
 	// Done!
