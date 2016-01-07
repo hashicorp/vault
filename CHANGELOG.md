@@ -53,6 +53,8 @@ BUG FIXES:
  * core: Update go-cleanhttp dependency to ensure idle connections aren't
    leaked [GH-867]
  * core: Don't allow tokens to have duplicate policies [GH-897]
+ * core: Fix regression in `sys/renew` that caused information stored in the
+   Secret part of the response to be lost [GH-912]
  * physical: Use square brackets when setting an IPv6-based advertise address
    as the auto-detected advertise address [GH-883]
  * physical/s3: Use an initialized client when using IAM roles to fix a
