@@ -145,7 +145,7 @@ func TestBackend_basic_derived(t *testing.T) {
 
 func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
 			"derived": derived,
@@ -155,7 +155,7 @@ func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest
 
 func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
 		Data: map[string]interface{}{
 			"min_decryption_version": minVer,
@@ -165,7 +165,7 @@ func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.
 
 func testAccStepDisableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
 		Data: map[string]interface{}{
 			"deletion_allowed": false,
@@ -175,7 +175,7 @@ func testAccStepDisableDeletion(t *testing.T, name string) logicaltest.TestStep 
 
 func testAccStepEnableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
 		Data: map[string]interface{}{
 			"deletion_allowed": true,
@@ -263,7 +263,7 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 func testAccStepEncrypt(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
 		Data: map[string]interface{}{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
@@ -287,7 +287,7 @@ func testAccStepEncrypt(
 func testAccStepEncryptContext(
 	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
 		Data: map[string]interface{}{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
@@ -313,7 +313,7 @@ func testAccStepEncryptContext(
 func testAccStepDecrypt(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
 		Data:      decryptData,
 		Check: func(resp *logical.Response) error {
@@ -341,7 +341,7 @@ func testAccStepDecrypt(
 func testAccStepRewrap(
 	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "rewrap/" + name,
 		Data:      decryptData,
 		Check: func(resp *logical.Response) error {
@@ -373,7 +373,7 @@ func testAccStepEncryptVX(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{},
 	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
 		Data: map[string]interface{}{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
@@ -417,7 +417,7 @@ func testAccStepLoadVX(
 func testAccStepDecryptExpectFailure(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
 		Data:      decryptData,
 		ErrorOk:   true,
@@ -432,7 +432,7 @@ func testAccStepDecryptExpectFailure(
 
 func testAccStepRotate(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/rotate",
 	}
 }
@@ -449,7 +449,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 		data["bits"] = bits
 	}
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "datakey/" + subPath + "/" + name,
 		Data:      data,
 		Check: func(resp *logical.Response) error {
@@ -485,7 +485,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 func testAccStepDecryptDatakey(t *testing.T, name string,
 	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
 		Data:      dataKeyInfo,
 		Check: func(resp *logical.Response) error {

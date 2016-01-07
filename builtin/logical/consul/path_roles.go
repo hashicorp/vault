@@ -41,7 +41,7 @@ Defaults to 'client'.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   pathRolesRead,
-			logical.WriteOperation:  pathRolesWrite,
+			logical.UpdateOperation:  pathRolesWrite,
 			logical.DeleteOperation: pathRolesDelete,
 		},
 	}

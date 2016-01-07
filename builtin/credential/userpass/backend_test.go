@@ -91,7 +91,7 @@ func TestBackend_userCrud(t *testing.T) {
 
 func testUsersWrite(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "users/" + user,
 		Data:      data,
 		ErrorOk:   true,
@@ -106,7 +106,7 @@ func testUsersWrite(t *testing.T, user string, data map[string]interface{}, expe
 
 func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
 		Data:      data,
 		ErrorOk:   true,
@@ -121,7 +121,7 @@ func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expe
 
 func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
 		Data: map[string]interface{}{
 			"password": pass,
@@ -135,7 +135,7 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 func testAccStepUser(
 	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
 		Data: map[string]interface{}{
 			"password": password,

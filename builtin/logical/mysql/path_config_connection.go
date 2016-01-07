@@ -30,7 +30,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathConnectionWrite,
+			logical.UpdateOperation: b.pathConnectionWrite,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,

@@ -1115,7 +1115,7 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Validate the token is a root token
-	_, te, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	_, te, err := c.checkToken(logical.UpdateOperation, "sys/seal", token)
 	if te != nil {
 		// Attempt to use the token (decrement num_uses)
 		if err := c.tokenStore.UseToken(te); err != nil {

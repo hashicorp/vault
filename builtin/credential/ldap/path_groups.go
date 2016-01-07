@@ -25,7 +25,7 @@ func pathGroups(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathGroupDelete,
 			logical.ReadOperation:   b.pathGroupRead,
-			logical.WriteOperation:  b.pathGroupWrite,
+			logical.UpdateOperation:  b.pathGroupWrite,
 		},
 
 		HelpSynopsis:    pathGroupHelpSyn,

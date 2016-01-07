@@ -30,7 +30,7 @@ func pathRewrap() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathRewrapWrite,
+			logical.UpdateOperation: pathRewrapWrite,
 		},
 
 		HelpSynopsis:    pathRewrapHelpSyn,

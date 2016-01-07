@@ -71,7 +71,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/root",
 		Data: map[string]interface{}{
 			"access_key": os.Getenv("AWS_ACCESS_KEY_ID"),
@@ -121,7 +121,7 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 
 func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy": testPolicy,

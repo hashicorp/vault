@@ -122,7 +122,7 @@ func (p *PathMap) Paths() []*Path {
 			Fields: schema,
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.WriteOperation:  p.pathSingleWrite,
+				logical.UpdateOperation:  p.pathSingleWrite,
 				logical.ReadOperation:   p.pathSingleRead,
 				logical.DeleteOperation: p.pathSingleDelete,
 			},

@@ -17,7 +17,7 @@ func TestACL_Root(t *testing.T) {
 	if !acl.RootPrivilege("sys/mount/foo") {
 		t.Fatalf("expected root")
 	}
-	if !acl.AllowOperation(logical.WriteOperation, "sys/mount/foo") {
+	if !acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo") {
 		t.Fatalf("expected permission")
 	}
 }
@@ -47,14 +47,14 @@ func TestACL_Single(t *testing.T) {
 		{logical.HelpOperation, "root", true},
 
 		{logical.ReadOperation, "dev/foo", true},
-		{logical.WriteOperation, "dev/foo", true},
+		{logical.UpdateOperation, "dev/foo", true},
 
 		{logical.DeleteOperation, "stage/foo", true},
-		{logical.WriteOperation, "stage/aws/foo", false},
-		{logical.WriteOperation, "stage/aws/policy/foo", true},
+		{logical.UpdateOperation, "stage/aws/foo", false},
+		{logical.UpdateOperation, "stage/aws/policy/foo", true},
 
 		{logical.DeleteOperation, "prod/foo", false},
-		{logical.WriteOperation, "prod/foo", false},
+		{logical.UpdateOperation, "prod/foo", false},
 		{logical.ReadOperation, "prod/foo", true},
 		{logical.ListOperation, "prod/foo", true},
 		{logical.ReadOperation, "prod/aws/foo", false},
@@ -101,20 +101,20 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 		{logical.HelpOperation, "root", true},
 
 		{logical.ReadOperation, "dev/hide/foo", false},
-		{logical.WriteOperation, "dev/hide/foo", false},
+		{logical.UpdateOperation, "dev/hide/foo", false},
 
 		{logical.DeleteOperation, "stage/foo", true},
-		{logical.WriteOperation, "stage/aws/foo", false},
-		{logical.WriteOperation, "stage/aws/policy/foo", false},
+		{logical.UpdateOperation, "stage/aws/foo", false},
+		{logical.UpdateOperation, "stage/aws/policy/foo", false},
 
 		{logical.DeleteOperation, "prod/foo", true},
-		{logical.WriteOperation, "prod/foo", true},
+		{logical.UpdateOperation, "prod/foo", true},
 		{logical.ReadOperation, "prod/foo", true},
 		{logical.ListOperation, "prod/foo", true},
 		{logical.ReadOperation, "prod/aws/foo", false},
 
 		{logical.ReadOperation, "sys/status", false},
-		{logical.WriteOperation, "sys/seal", true},
+		{logical.UpdateOperation, "sys/seal", true},
 	}
 
 	for _, tc := range tcases {

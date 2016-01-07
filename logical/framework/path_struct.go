@@ -64,7 +64,7 @@ func (p *PathStruct) Paths() []*Path {
 		Fields:  p.Schema,
 
 		Callbacks: map[logical.Operation]OperationFunc{
-			logical.WriteOperation:  p.pathWrite,
+			logical.UpdateOperation:  p.pathWrite,
 			logical.DeleteOperation: p.pathDelete,
 		},
 

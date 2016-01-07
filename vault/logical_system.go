@@ -75,7 +75,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:  b.handleMountTuneRead,
-					logical.WriteOperation: b.handleMountTuneWrite,
+					logical.UpdateOperation: b.handleMountTuneWrite,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
@@ -105,7 +105,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation:  b.handleMount,
+					logical.UpdateOperation:  b.handleMount,
 					logical.DeleteOperation: b.handleUnmount,
 				},
 
@@ -139,7 +139,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleRemount,
+					logical.UpdateOperation: b.handleRemount,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
@@ -161,7 +161,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleRenew,
+					logical.UpdateOperation: b.handleRenew,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["renew"][0]),
@@ -179,7 +179,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleRevoke,
+					logical.UpdateOperation: b.handleRevoke,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke"][0]),
@@ -197,7 +197,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleRevokePrefix,
+					logical.UpdateOperation: b.handleRevokePrefix,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-prefix"][0]),
@@ -234,7 +234,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation:  b.handleEnableAuth,
+					logical.UpdateOperation:  b.handleEnableAuth,
 					logical.DeleteOperation: b.handleDisableAuth,
 				},
 
@@ -269,7 +269,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handlePolicyRead,
-					logical.WriteOperation:  b.handlePolicySet,
+					logical.UpdateOperation:  b.handlePolicySet,
 					logical.DeleteOperation: b.handlePolicyDelete,
 				},
 
@@ -292,7 +292,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleAuditHash,
+					logical.UpdateOperation: b.handleAuditHash,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
@@ -333,7 +333,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation:  b.handleEnableAudit,
+					logical.UpdateOperation:  b.handleEnableAudit,
 					logical.DeleteOperation: b.handleDisableAudit,
 				},
 
@@ -355,7 +355,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRawRead,
-					logical.WriteOperation:  b.handleRawWrite,
+					logical.UpdateOperation:  b.handleRawWrite,
 					logical.DeleteOperation: b.handleRawDelete,
 				},
 			},
@@ -375,7 +375,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				Pattern: "rotate$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: b.handleRotate,
+					logical.UpdateOperation: b.handleRotate,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),

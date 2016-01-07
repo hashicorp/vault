@@ -127,7 +127,7 @@ func handleSysWritePolicy(core *vault.Core, w http.ResponseWriter, r *http.Reque
 	}
 
 	_, ok := request(core, w, r, requestAuth(r, &logical.Request{
-		Operation:  logical.WriteOperation,
+		Operation:  logical.UpdateOperation,
 		Path:       "sys/policy/" + path,
 		Connection: getConnection(r),
 		Data: map[string]interface{}{

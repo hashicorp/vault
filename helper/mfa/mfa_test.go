@@ -38,7 +38,7 @@ func testPathLogin() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: testPathLoginHandler,
+			logical.UpdateOperation: testPathLoginHandler,
 		},
 	}
 }
@@ -92,7 +92,7 @@ func TestMFALoginDenied(t *testing.T) {
 
 func testAccStepEnableMFA(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path: "mfa_config",
 		Data: map[string]interface{}{
 			"type": "test",
@@ -102,7 +102,7 @@ func testAccStepEnableMFA(t *testing.T) logicaltest.TestStep {
 
 func testAccStepLogin(t *testing.T, username string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path: "login",
 		Data: map[string]interface{}{
 			"method": "accept",
@@ -115,7 +115,7 @@ func testAccStepLogin(t *testing.T, username string) logicaltest.TestStep {
 
 func testAccStepLoginDenied(t *testing.T, username string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path: "login",
 		Data: map[string]interface{}{
 			"method": "deny",

@@ -122,7 +122,7 @@ type Operation string
 const (
 	// The operations below are called per path
 	ReadOperation   Operation = "read"
-	WriteOperation            = "write"
+	UpdateOperation            = "write"
 	DeleteOperation           = "delete"
 	ListOperation             = "list"
 	HelpOperation             = "help"

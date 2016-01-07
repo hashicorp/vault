@@ -30,7 +30,7 @@ func pathDecrypt() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathDecryptWrite,
+			logical.UpdateOperation: pathDecryptWrite,
 		},
 
 		HelpSynopsis:    pathDecryptHelpSyn,

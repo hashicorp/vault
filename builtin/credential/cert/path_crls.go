@@ -33,7 +33,7 @@ using the same name as specified here.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathCRLDelete,
 			logical.ReadOperation:   b.pathCRLRead,
-			logical.WriteOperation:  b.pathCRLWrite,
+			logical.UpdateOperation:  b.pathCRLWrite,
 		},
 
 		HelpSynopsis:    pathCRLsHelpSyn,

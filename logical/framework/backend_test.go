@@ -94,14 +94,14 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 					"value": &FieldSchema{Type: TypeBool},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
-					logical.WriteOperation: callback,
+					logical.UpdateOperation: callback,
 				},
 			},
 		},
 	}
 
 	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
@@ -390,7 +390,7 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 	}
 
 	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "84"},
 	})

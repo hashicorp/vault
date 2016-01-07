@@ -51,7 +51,7 @@ Defaults to system/backend default TTL time.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathCertDelete,
 			logical.ReadOperation:   b.pathCertRead,
-			logical.WriteOperation:  b.pathCertWrite,
+			logical.UpdateOperation:  b.pathCertWrite,
 		},
 
 		HelpSynopsis:    pathCertHelpSyn,

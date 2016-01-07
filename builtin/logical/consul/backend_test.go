@@ -153,7 +153,7 @@ func testAccPreCheck(t *testing.T) {
 func testAccStepConfig(
 	t *testing.T, config map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/access",
 		Data:      config,
 	}
@@ -235,7 +235,7 @@ func testAccStepReadManagementToken(
 
 func testAccStepWritePolicy(t *testing.T, name string, policy string, lease string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
@@ -246,7 +246,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string, lease stri
 
 func testAccStepWriteManagementPolicy(t *testing.T, name string, lease string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"token_type": "management",

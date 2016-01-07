@@ -20,7 +20,7 @@ hyphen-separated octal`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathRevokeWrite,
+			logical.UpdateOperation: b.pathRevokeWrite,
 		},
 
 		HelpSynopsis:    pathRevokeHelpSyn,

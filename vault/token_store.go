@@ -94,7 +94,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "create-orphan$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleCreateOrphan,
+					logical.UpdateOperation: t.handleCreateOrphan,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
@@ -105,7 +105,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "create$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleCreate,
+					logical.UpdateOperation: t.handleCreate,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateHelp),
@@ -152,7 +152,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "revoke-self$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeSelf,
+					logical.UpdateOperation: t.handleRevokeSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeSelfHelp),
@@ -170,7 +170,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeTree,
+					logical.UpdateOperation: t.handleRevokeTree,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeHelp),
@@ -188,7 +188,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeOrphan,
+					logical.UpdateOperation: t.handleRevokeOrphan,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeOrphanHelp),
@@ -206,7 +206,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokePrefix,
+					logical.UpdateOperation: t.handleRevokePrefix,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokePrefixHelp),
@@ -228,7 +228,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRenewSelf,
+					logical.UpdateOperation: t.handleRenewSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewSelfHelp),
@@ -250,7 +250,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRenew,
+					logical.UpdateOperation: t.handleRenew,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),

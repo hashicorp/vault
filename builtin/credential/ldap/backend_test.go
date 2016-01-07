@@ -57,7 +57,7 @@ func TestBackend_groupCrud(t *testing.T) {
 
 func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
 			// Online LDAP test server
@@ -72,7 +72,7 @@ func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 
 func testAccStepGroup(t *testing.T, group string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "groups/" + group,
 		Data: map[string]interface{}{
 			"policies": policies,
@@ -131,7 +131,7 @@ func TestBackend_userCrud(t *testing.T) {
 
 func testAccStepUser(t *testing.T, user string, groups string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "users/" + user,
 		Data: map[string]interface{}{
 			"groups": groups,
@@ -176,7 +176,7 @@ func testAccStepDeleteUser(t *testing.T, user string) logicaltest.TestStep {
 
 func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
 		Data: map[string]interface{}{
 			"password": pass,

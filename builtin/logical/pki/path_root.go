@@ -15,7 +15,7 @@ func pathGenerateRoot(b *backend) *framework.Path {
 		Pattern: "root/generate/" + framework.GenericNameRegex("exported"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathCAGenerateRoot,
+			logical.UpdateOperation: b.pathCAGenerateRoot,
 		},
 
 		HelpSynopsis:    pathGenerateRootHelpSyn,
@@ -34,7 +34,7 @@ func pathSignIntermediate(b *backend) *framework.Path {
 		Pattern: "root/sign-intermediate",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathCASignIntermediate,
+			logical.UpdateOperation: b.pathCASignIntermediate,
 		},
 
 		HelpSynopsis:    pathSignIntermediateHelpSyn,

@@ -20,7 +20,7 @@ func TestCubbyholeBackend_RootPaths(t *testing.T) {
 
 func TestCubbyholeBackend_Write(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	clientToken := uuid.GenerateUUID()
 	req.ClientToken = clientToken
 	storage := req.Storage
@@ -45,7 +45,7 @@ func TestCubbyholeBackend_Write(t *testing.T) {
 
 func TestCubbyholeBackend_Read(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	req.Data["raw"] = "test"
 	storage := req.Storage
 	clientToken := uuid.GenerateUUID()
@@ -77,7 +77,7 @@ func TestCubbyholeBackend_Read(t *testing.T) {
 
 func TestCubbyholeBackend_Delete(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	req.Data["raw"] = "test"
 	storage := req.Storage
 	clientToken := uuid.GenerateUUID()
@@ -112,7 +112,7 @@ func TestCubbyholeBackend_Delete(t *testing.T) {
 
 func TestCubbyholeBackend_List(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	clientToken := uuid.GenerateUUID()
 	req.Data["raw"] = "test"
 	req.ClientToken = clientToken
@@ -122,7 +122,7 @@ func TestCubbyholeBackend_List(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req = logical.TestRequest(t, logical.WriteOperation, "bar")
+	req = logical.TestRequest(t, logical.UpdateOperation, "bar")
 	req.Data["raw"] = "baz"
 	req.ClientToken = clientToken
 	req.Storage = storage
@@ -157,7 +157,7 @@ func TestCubbyholeIsolation(t *testing.T) {
 	var storageB logical.Storage
 
 	// Populate and test A entries
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	req.ClientToken = clientTokenA
 	storageA = req.Storage
 	req.Data["raw"] = "test"
@@ -189,7 +189,7 @@ func TestCubbyholeIsolation(t *testing.T) {
 	}
 
 	// Populate and test B entries
-	req = logical.TestRequest(t, logical.WriteOperation, "bar")
+	req = logical.TestRequest(t, logical.UpdateOperation, "bar")
 	req.ClientToken = clientTokenB
 	storageB = req.Storage
 	req.Data["raw"] = "baz"

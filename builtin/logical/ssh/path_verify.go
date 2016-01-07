@@ -16,7 +16,7 @@ func pathVerify(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathVerifyWrite,
+			logical.UpdateOperation: b.pathVerifyWrite,
 		},
 		HelpSynopsis:    pathVerifyHelpSyn,
 		HelpDescription: pathVerifyHelpDesc,

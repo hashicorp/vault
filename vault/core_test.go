@@ -379,7 +379,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -420,7 +420,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -461,7 +461,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -502,7 +502,7 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -522,7 +522,7 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -579,7 +579,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 
 	// Set the 'test' policy object to permit access to sys/policy
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "sys/policy/test", // root protected!
 		Data: map[string]interface{}{
 			"rules": `path "sys/policy" { policy = "sudo" }`,
@@ -616,7 +616,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -637,7 +637,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 
 	// Set the 'test' policy object to permit access to secret/
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "sys/policy/test",
 		Data: map[string]interface{}{
 			"rules": `path "secret/*" { policy = "write" }`,
@@ -654,7 +654,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 
 	// Write should work now
 	req = &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -681,7 +681,7 @@ func TestCore_HandleRequest_NoConnection(t *testing.T) {
 	}
 
 	// Enable the logical backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.Data["description"] = "foo"
 	req.ClientToken = root
@@ -714,7 +714,7 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 	}
 
 	// Enable the logical backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.Data["description"] = "foo"
 	req.ClientToken = root
@@ -749,7 +749,7 @@ func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -790,7 +790,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -853,7 +853,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	}
 
 	// Enable the audit backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/audit/noop")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	resp, err := c.HandleRequest(req)
@@ -863,7 +863,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 
 	// Make a request
 	req = &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -935,7 +935,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -944,7 +944,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	}
 
 	// Enable the audit backend
-	req = logical.TestRequest(t, logical.WriteOperation, "sys/audit/noop")
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err = c.HandleRequest(req)
@@ -998,7 +998,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
 	// Create a new credential
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 	resp, err := c.HandleRequest(req)
@@ -1041,7 +1041,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
 	// Create a new credential
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 	req.Data["no_default_policy"] = true
@@ -1079,7 +1079,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 
 	// Create a new credential
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["num_uses"] = "1"
 	resp, err := c.HandleRequest(req)
@@ -1089,7 +1089,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 	// Put a secret
 	req = &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/foo",
 		Data: map[string]interface{}{
 			"foo": "bar",
@@ -1297,7 +1297,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 
 	// Put a secret
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/foo",
 		Data: map[string]interface{}{
 			"foo": "bar",
@@ -1456,7 +1456,7 @@ func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -1500,7 +1500,7 @@ func TestCore_HandleRequest_InternalData(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -1543,7 +1543,7 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -1567,7 +1567,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 
 	// Create a leasable secret
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -1596,7 +1596,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 	original := resp.Secret.LeaseID
 
 	// Renew the lease
-	req = logical.TestRequest(t, logical.WriteOperation, "sys/renew/"+resp.Secret.LeaseID)
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/renew/"+resp.Secret.LeaseID)
 	req.ClientToken = root
 	resp, err = c.HandleRequest(req)
 	if err != nil {
@@ -1615,7 +1615,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 
 	// Create a new token
 	req := &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "auth/token/create",
 		Data: map[string]interface{}{
 			"lease": "1h",
@@ -1629,7 +1629,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	newClient := resp.Auth.ClientToken
 
 	// Renew the token
-	req = logical.TestRequest(t, logical.WriteOperation, "auth/token/renew/"+newClient)
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/renew/"+newClient)
 	req.ClientToken = newClient
 	resp, err = c.HandleRequest(req)
 	if err != nil {
@@ -1637,7 +1637,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	}
 
 	// Revoke using the renew prefix
-	req = logical.TestRequest(t, logical.WriteOperation, "sys/revoke-prefix/auth/token/renew/")
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/revoke-prefix/auth/token/renew/")
 	req.ClientToken = root
 	resp, err = c.HandleRequest(req)
 	if err != nil {
@@ -1675,7 +1675,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 	}
 
 	// Enable the credential backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
 	_, err := c.HandleRequest(req)
@@ -1694,7 +1694,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 
 	// Create a leasable secret
 	req = &logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "secret/test",
 		Data: map[string]interface{}{
 			"foo":   "bar",
@@ -1722,7 +1722,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 	}
 
 	// Renew the lease
-	req = logical.TestRequest(t, logical.WriteOperation, "sys/renew/"+resp.Secret.LeaseID)
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/renew/"+resp.Secret.LeaseID)
 	req.ClientToken = lresp.Auth.ClientToken
 	_, err = c.HandleRequest(req)
 	if err != nil {
@@ -1748,7 +1748,7 @@ func TestCore_HandleRequest_MountPoint(t *testing.T) {
 	}
 
 	// Enable the logical backend
-	req := logical.TestRequest(t, logical.WriteOperation, "sys/mounts/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.Data["description"] = "foo"
 	req.ClientToken = root
@@ -2121,7 +2121,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 
 	// Rotate the encryption key
 	req := &logical.Request{
-		Operation:   logical.WriteOperation,
+		Operation:   logical.UpdateOperation,
 		Path:        "sys/rotate",
 		ClientToken: root,
 	}

@@ -23,7 +23,7 @@ func pathDuoConfig() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathDuoConfigWrite,
+			logical.UpdateOperation: pathDuoConfigWrite,
 			logical.ReadOperation: pathDuoConfigRead,
 		},
 

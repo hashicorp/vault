@@ -39,7 +39,7 @@ and 512 bits are supported. Defaults to 256.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathDatakeyWrite,
+			logical.UpdateOperation: pathDatakeyWrite,
 		},
 
 		HelpSynopsis:    pathDatakeyHelpSyn,

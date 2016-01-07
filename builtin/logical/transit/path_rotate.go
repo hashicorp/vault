@@ -18,7 +18,7 @@ func pathRotate() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathRotateWrite,
+			logical.UpdateOperation: pathRotateWrite,
 		},
 
 		HelpSynopsis:    pathRotateHelpSyn,

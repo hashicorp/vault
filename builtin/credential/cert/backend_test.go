@@ -105,7 +105,7 @@ func TestBackend_untrusted(t *testing.T) {
 
 func testAccStepAddCRL(t *testing.T, crl []byte, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "crls/test",
 		ConnState: &connState,
 		Data: map[string]interface{}{
@@ -146,7 +146,7 @@ func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicalte
 
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.WriteOperation,
+		Operation:       logical.UpdateOperation,
 		Path:            "login",
 		Unauthenticated: true,
 		ConnState:       &connState,
@@ -163,7 +163,7 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 
 func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.WriteOperation,
+		Operation:       logical.UpdateOperation,
 		Path:            "login",
 		Unauthenticated: true,
 		ConnState:       &connState,
@@ -180,7 +180,7 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.WriteOperation,
+		Operation:       logical.UpdateOperation,
 		Path:            "login",
 		Unauthenticated: true,
 		ConnState:       &connState,
@@ -197,7 +197,7 @@ func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logica
 func testAccStepCert(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
@@ -211,7 +211,7 @@ func testAccStepCert(
 func testAccStepCertLease(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
@@ -225,7 +225,7 @@ func testAccStepCertLease(
 func testAccStepCertTTL(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
@@ -239,7 +239,7 @@ func testAccStepCertTTL(
 func testAccStepCertNoLease(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),

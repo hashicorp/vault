@@ -311,7 +311,7 @@ func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
 
 func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/zeroaddress",
 		Data:      data,
 	}
@@ -343,7 +343,7 @@ func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) lo
 
 func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("verify"),
 		Data:      data,
 		Check: func(resp *logical.Response) error {
@@ -366,7 +366,7 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 
 func testNamedKeysWrite(t *testing.T, name, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("keys/%s", name),
 		Data: map[string]interface{}{
 			"key": key,
@@ -383,7 +383,7 @@ func testNamedKeysDelete(t *testing.T) logicaltest.TestStep {
 
 func testLookupRead(t *testing.T, data map[string]interface{}, expected []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "lookup",
 		Data:      data,
 		Check: func(resp *logical.Response) error {
@@ -400,7 +400,7 @@ func testLookupRead(t *testing.T, data map[string]interface{}, expected []string
 
 func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
 	}
@@ -444,7 +444,7 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 
 func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
 		Data:      data,
 		ErrorOk:   true,

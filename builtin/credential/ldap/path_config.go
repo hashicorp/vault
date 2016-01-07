@@ -53,7 +53,7 @@ func pathConfig(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:  b.pathConfigRead,
-			logical.WriteOperation: b.pathConfigWrite,
+			logical.UpdateOperation: b.pathConfigWrite,
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,

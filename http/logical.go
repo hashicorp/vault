@@ -33,7 +33,7 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 		case "POST":
 			fallthrough
 		case "PUT":
-			op = logical.WriteOperation
+			op = logical.UpdateOperation
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
@@ -41,7 +41,7 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 
 		// Parse the request if we can
 		var req map[string]interface{}
-		if op == logical.WriteOperation {
+		if op == logical.UpdateOperation {
 			err := parseRequest(r, &req)
 			if err == io.EOF {
 				req = nil

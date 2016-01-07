@@ -25,7 +25,7 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation:  b.pathConfigZeroAddressWrite,
+			logical.UpdateOperation:  b.pathConfigZeroAddressWrite,
 			logical.ReadOperation:   b.pathConfigZeroAddressRead,
 			logical.DeleteOperation: b.pathConfigZeroAddressDelete,
 		},

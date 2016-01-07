@@ -26,7 +26,7 @@ func pathConfigRoot() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathConfigRootWrite,
+			logical.UpdateOperation: pathConfigRootWrite,
 		},
 
 		HelpSynopsis:    pathConfigRootHelpSyn,

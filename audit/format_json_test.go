@@ -20,7 +20,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		"auth, request": {
 			&logical.Auth{ClientToken: "foo", Policies: []string{"root"}},
 			&logical.Request{
-				Operation: logical.WriteOperation,
+				Operation: logical.UpdateOperation,
 				Path:      "/foo",
 				Connection: &logical.Connection{
 					RemoteAddr: "127.0.0.1",

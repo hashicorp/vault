@@ -22,7 +22,7 @@ endpoint, just the signed certificate.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathCAWrite,
+			logical.UpdateOperation: b.pathCAWrite,
 		},
 
 		HelpSynopsis:    pathConfigCAHelpSyn,

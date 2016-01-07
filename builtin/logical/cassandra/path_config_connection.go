@@ -59,7 +59,7 @@ take precedence.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:  b.pathConnectionRead,
-			logical.WriteOperation: b.pathConnectionWrite,
+			logical.UpdateOperation: b.pathConnectionWrite,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,

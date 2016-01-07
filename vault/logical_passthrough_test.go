@@ -23,7 +23,7 @@ func TestPassthroughBackend_RootPaths(t *testing.T) {
 
 func TestPassthroughBackend_Write(t *testing.T) {
 	test := func(b logical.Backend) {
-		req := logical.TestRequest(t, logical.WriteOperation, "foo")
+		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
 
 		resp, err := b.HandleRequest(req)
@@ -50,7 +50,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 
 func TestPassthroughBackend_Read(t *testing.T) {
 	test := func(b logical.Backend, ttlType string, leased bool) {
-		req := logical.TestRequest(t, logical.WriteOperation, "foo")
+		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
 		req.Data[ttlType] = "1h"
 		storage := req.Storage
@@ -99,7 +99,7 @@ func TestPassthroughBackend_Read(t *testing.T) {
 
 func TestPassthroughBackend_Delete(t *testing.T) {
 	test := func(b logical.Backend) {
-		req := logical.TestRequest(t, logical.WriteOperation, "foo")
+		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
 		storage := req.Storage
 
@@ -135,7 +135,7 @@ func TestPassthroughBackend_Delete(t *testing.T) {
 
 func TestPassthroughBackend_List(t *testing.T) {
 	test := func(b logical.Backend) {
-		req := logical.TestRequest(t, logical.WriteOperation, "foo")
+		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
 		storage := req.Storage
 

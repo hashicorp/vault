@@ -64,7 +64,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
 			"value": os.Getenv("MYSQL_DSN"),
@@ -74,7 +74,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
 		Data: map[string]interface{}{
 			"sql": testRole,
@@ -139,7 +139,7 @@ func testAccStepReadRole(t *testing.T, name string, sql string) logicaltest.Test
 
 func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/lease",
 		Data: map[string]interface{}{
 			"lease":     "1h5m",

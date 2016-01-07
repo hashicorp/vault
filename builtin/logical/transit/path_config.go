@@ -29,7 +29,7 @@ to be decrypted.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathConfigWrite,
+			logical.UpdateOperation: pathConfigWrite,
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,

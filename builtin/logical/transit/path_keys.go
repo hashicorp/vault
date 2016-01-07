@@ -24,7 +24,7 @@ func pathKeys() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation:  pathPolicyWrite,
+			logical.UpdateOperation:  pathPolicyWrite,
 			logical.DeleteOperation: pathPolicyDelete,
 			logical.ReadOperation:   pathPolicyRead,
 		},

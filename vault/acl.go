@@ -15,7 +15,7 @@ var (
 	// into the set of policies that allow the operation.
 	permittedPolicyLevels = map[logical.Operation][]string{
 		logical.ReadOperation:     readWriteSudo,
-		logical.WriteOperation:    writeSudo,
+		logical.UpdateOperation:    writeSudo,
 		logical.DeleteOperation:   writeSudo,
 		logical.ListOperation:     readWriteSudo,
 		logical.HelpOperation:     anyPolicy,

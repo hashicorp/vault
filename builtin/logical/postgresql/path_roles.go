@@ -24,7 +24,7 @@ func pathRoles(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.WriteOperation:  b.pathRoleCreate,
+			logical.UpdateOperation:  b.pathRoleCreate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 

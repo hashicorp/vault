@@ -22,7 +22,7 @@ func pathLogin(b *backend) *framework.Path {
 		Pattern: "login",
 		Fields:  map[string]*framework.FieldSchema{},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathLogin,
+			logical.UpdateOperation: b.pathLogin,
 		},
 	}
 }

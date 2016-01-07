@@ -34,7 +34,7 @@ for the OCSP servers attribute`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathWriteURL,
+			logical.UpdateOperation: b.pathWriteURL,
 			logical.ReadOperation:  b.pathReadURL,
 		},
 

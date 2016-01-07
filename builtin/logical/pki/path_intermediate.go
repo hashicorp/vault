@@ -14,7 +14,7 @@ func pathGenerateIntermediate(b *backend) *framework.Path {
 		Pattern: "intermediate/generate/" + framework.GenericNameRegex("exported"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathGenerateIntermediate,
+			logical.UpdateOperation: b.pathGenerateIntermediate,
 		},
 
 		HelpSynopsis:    pathGenerateIntermediateHelpSyn,
@@ -42,7 +42,7 @@ endpoint.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathSetSignedIntermediate,
+			logical.UpdateOperation: b.pathSetSignedIntermediate,
 		},
 
 		HelpSynopsis:    pathSetSignedIntermediateHelpSyn,

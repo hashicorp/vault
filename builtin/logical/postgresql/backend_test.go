@@ -52,7 +52,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
 			"value": os.Getenv("PG_URL"),
@@ -62,7 +62,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
 		Data: map[string]interface{}{
 			"sql": testRole,

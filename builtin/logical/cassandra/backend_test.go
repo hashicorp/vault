@@ -49,7 +49,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
 			"hosts":    os.Getenv("CASSANDRA_HOST"),
@@ -61,7 +61,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/test",
 		Data: map[string]interface{}{
 			"creation_cql": testRole,

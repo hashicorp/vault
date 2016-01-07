@@ -30,7 +30,7 @@ func pathEncrypt() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathEncryptWrite,
+			logical.UpdateOperation: pathEncryptWrite,
 		},
 
 		HelpSynopsis:    pathEncryptHelpSyn,

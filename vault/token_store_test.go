@@ -379,7 +379,7 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke-self")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-self")
 	req.ClientToken = ent1.ID
 
 	resp, err := ts.HandleRequest(req)
@@ -402,7 +402,7 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["display_name"] = "foo_bar.baz!"
 
@@ -432,7 +432,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["num_uses"] = "1"
 
@@ -463,7 +463,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["num_uses"] = "-1"
 
@@ -476,7 +476,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["num_uses"] = "1"
 
@@ -496,7 +496,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 
 	resp, err := ts.HandleRequest(req)
@@ -525,7 +525,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
 	_, ts, _ := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "random"
 
 	resp, err := ts.HandleRequest(req)
@@ -540,7 +540,7 @@ func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 
@@ -556,7 +556,7 @@ func TestTokenStore_HandleRequest_CreateToken(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_RootID(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["id"] = "foobar"
 	req.Data["policies"] = []string{"foo"}
@@ -574,7 +574,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "client", "", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["id"] = "foobar"
 	req.Data["policies"] = []string{"foo"}
@@ -592,7 +592,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "client", "", []string{"foo", "bar"})
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["policies"] = []string{"foo"}
 
@@ -609,7 +609,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "client", "", []string{"foo", "bar"})
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["policies"] = []string{"foo", "bar", "baz"}
 
@@ -626,7 +626,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 	testMakeToken(t, ts, root, "client", "", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["no_parent"] = true
 	req.Data["policies"] = []string{"foo"}
@@ -643,7 +643,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["no_parent"] = true
 	req.Data["policies"] = []string{"foo"}
@@ -665,7 +665,7 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create-orphan")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 
@@ -686,7 +686,7 @@ func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 	meta := map[string]string{
@@ -712,7 +712,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 	req.Data["lease"] = "1h"
@@ -735,7 +735,7 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 	_, ts, root := mockTokenStore(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 	req.Data["ttl"] = "1h"
@@ -760,7 +760,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
 	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke/child")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke/child")
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -792,7 +792,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
 	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/child")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan/child")
 	req.ClientToken = root
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
@@ -832,7 +832,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke-orphan/child")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan/child")
 	req.ClientToken = "child"
 	resp, err := ts.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -912,7 +912,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	// Test last_renewal_time functionality
-	req = logical.TestRequest(t, logical.WriteOperation, "renew/client")
+	req = logical.TestRequest(t, logical.UpdateOperation, "renew/client")
 	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -957,7 +957,7 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke-prefix/auth/github/")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/auth/github/")
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1035,7 +1035,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	originalExpire := auth.ExpirationTime()
 
 	beforeRenew := time.Now().UTC()
-	req := logical.TestRequest(t, logical.WriteOperation, "renew/"+root.ID)
+	req := logical.TestRequest(t, logical.UpdateOperation, "renew/"+root.ID)
 	req.Data["increment"] = "3600s"
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
@@ -1079,7 +1079,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	originalExpire := auth.ExpirationTime()
 
 	beforeRenew := time.Now().UTC()
-	req := logical.TestRequest(t, logical.WriteOperation, "renew-self")
+	req := logical.TestRequest(t, logical.UpdateOperation, "renew-self")
 	req.ClientToken = auth.ClientToken
 	req.Data["increment"] = "3600s"
 	resp, err := ts.HandleRequest(req)
@@ -1098,7 +1098,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 }
 
 func testMakeToken(t *testing.T, ts *TokenStore, root, client, ttl string, policy []string) {
-	req := logical.TestRequest(t, logical.WriteOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	req.Data["id"] = client
 	req.Data["policies"] = policy
@@ -1114,7 +1114,7 @@ func testMakeToken(t *testing.T, ts *TokenStore, root, client, ttl string, polic
 }
 
 func testCoreMakeToken(t *testing.T, c *Core, root, client, ttl string, policy []string) {
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/token/create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["id"] = client
 	req.Data["policies"] = policy

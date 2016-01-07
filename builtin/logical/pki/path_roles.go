@@ -146,7 +146,7 @@ Names. Defaults to true.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.WriteOperation:  b.pathRoleCreate,
+			logical.UpdateOperation:  b.pathRoleCreate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 

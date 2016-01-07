@@ -27,7 +27,7 @@ func pathRoles() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: pathRolesDelete,
 			logical.ReadOperation:   pathRolesRead,
-			logical.WriteOperation:  pathRolesWrite,
+			logical.UpdateOperation:  pathRolesWrite,
 		},
 
 		HelpSynopsis:    pathRolesHelpSyn,
