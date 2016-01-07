@@ -75,6 +75,51 @@ type RollbackFunc func(*logical.Request, string, interface{}) error
 // CleanupFunc is the callback for backend unload.
 type CleanupFunc func()
 
+func (b *Backend) HandleExistenceCheck(req *logical.Request) (*bool, error) {
+	b.once.Do(b.init)
+
+	// Ensure we are only doing this when one of the correct operations is in play
+	switch req.Operation {
+	case logical.CreateOperation:
+	case logical.UpdateOperation:
+	default:
+		return nil, fmt.Errorf("incorrect operation type %v for an existence check", req.Operation)
+	}
+
+	// Find the matching route
+	path, captures := b.route(req.Path)
+	if path == nil {
+		return nil, logical.ErrUnsupportedPath
+	}
+
+	if path.ExistenceCheck == nil {
+		return nil, nil
+	}
+
+	// Build up the data for the route, with the URL taking priority
+	// for the fields over the PUT data.
+	raw := make(map[string]interface{}, len(path.Fields))
+	for k, v := range req.Data {
+		raw[k] = v
+	}
+	for k, v := range captures {
+		raw[k] = v
+	}
+
+	fd := FieldData{
+		Raw:    raw,
+		Schema: path.Fields}
+
+	err := fd.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	// Call the callback with the request and the data
+	ret, err := path.ExistenceCheck(req, &fd)
+	return &ret, err
+}
+
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	b.once.Do(b.init)

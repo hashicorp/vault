@@ -184,6 +184,17 @@ func (r *Router) MatchingSystemView(path string) logical.SystemView {
 
 // Route is used to route a given request
 func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
+	resp, _, err := r.routeCommon(req, false)
+	return resp, err
+}
+
+// Route is used to route a given existence check request
+func (r *Router) RouteExistenceCheck(req *logical.Request) (*bool, error) {
+	_, exists, err := r.routeCommon(req, true)
+	return exists, err
+}
+
+func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, *bool, error) {
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
@@ -195,7 +206,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), nil, logical.ErrUnsupportedPath
 	}
 	defer metrics.MeasureSince([]string{"route", string(req.Operation),
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
@@ -207,7 +218,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), logical.ErrUnsupportedPath
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), nil, logical.ErrUnsupportedPath
 		}
 	}
 
@@ -253,7 +264,13 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}()
 
 	// Invoke the backend
-	return re.backend.HandleRequest(req)
+	if existenceCheck {
+		exists, err := re.backend.HandleExistenceCheck(req)
+		return nil, exists, err
+	} else {
+		resp, err := re.backend.HandleRequest(req)
+		return resp, nil, err
+	}
 }
 
 // RootPath checks if the given path requires root privileges

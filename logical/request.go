@@ -121,8 +121,9 @@ type Operation string
 
 const (
 	// The operations below are called per path
-	ReadOperation   Operation = "read"
-	UpdateOperation            = "write"
+	CreateOperation Operation = "create"
+	ReadOperation             = "read"
+	UpdateOperation           = "update"
 	DeleteOperation           = "delete"
 	ListOperation             = "list"
 	HelpOperation             = "help"
@@ -132,6 +133,10 @@ const (
 	RenewOperation              = "renew"
 	RollbackOperation           = "rollback"
 )
+
+func (o Operation) String() string {
+	return string(o)
+}
 
 var (
 	// ErrUnsupportedOperation is returned if the operation is not supported

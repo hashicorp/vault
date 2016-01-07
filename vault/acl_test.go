@@ -14,10 +14,11 @@ func TestACL_Root(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if !acl.RootPrivilege("sys/mount/foo") {
+	allowed, rootPrivs := acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo")
+	if !rootPrivs {
 		t.Fatalf("expected root")
 	}
-	if !acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo") {
+	if !allowed {
 		t.Fatalf("expected permission")
 	}
 }
@@ -33,37 +34,50 @@ func TestACL_Single(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if acl.RootPrivilege("sys/mount/foo") {
+	// Type of operation is not important here as we only care about checking
+	// sudo/root
+	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
 	type tcase struct {
-		op     logical.Operation
-		path   string
-		expect bool
+		op        logical.Operation
+		path      string
+		allowed   bool
+		rootPrivs bool
 	}
 	tcases := []tcase{
-		{logical.ReadOperation, "root", false},
-		{logical.HelpOperation, "root", true},
+		{logical.ReadOperation, "root", false, false},
+		{logical.HelpOperation, "root", true, false},
 
-		{logical.ReadOperation, "dev/foo", true},
-		{logical.UpdateOperation, "dev/foo", true},
+		{logical.ReadOperation, "dev/foo", true, true},
+		{logical.UpdateOperation, "dev/foo", true, true},
 
-		{logical.DeleteOperation, "stage/foo", true},
-		{logical.UpdateOperation, "stage/aws/foo", false},
-		{logical.UpdateOperation, "stage/aws/policy/foo", true},
+		{logical.DeleteOperation, "stage/foo", true, false},
+		{logical.ListOperation, "stage/aws/foo", true, true},
+		{logical.UpdateOperation, "stage/aws/foo", true, true},
+		{logical.UpdateOperation, "stage/aws/policy/foo", true, true},
 
-		{logical.DeleteOperation, "prod/foo", false},
-		{logical.UpdateOperation, "prod/foo", false},
-		{logical.ReadOperation, "prod/foo", true},
-		{logical.ListOperation, "prod/foo", true},
-		{logical.ReadOperation, "prod/aws/foo", false},
+		{logical.DeleteOperation, "prod/foo", false, false},
+		{logical.UpdateOperation, "prod/foo", false, false},
+		{logical.ReadOperation, "prod/foo", true, false},
+		{logical.ListOperation, "prod/foo", true, false},
+		{logical.ReadOperation, "prod/aws/foo", false, false},
+
+		{logical.ReadOperation, "foo/bar", true, true},
+		{logical.ListOperation, "foo/bar", false, true},
+		{logical.UpdateOperation, "foo/bar", false, true},
+		{logical.CreateOperation, "foo/bar", true, true},
 	}
 
 	for _, tc := range tcases {
-		out := acl.AllowOperation(tc.op, tc.path)
-		if out != tc.expect {
-			t.Fatalf("bad: case %#v: %v", tc, out)
+		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		if allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+		if rootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
 	}
 }
@@ -87,40 +101,55 @@ func TestACL_Layered(t *testing.T) {
 }
 
 func testLayeredACL(t *testing.T, acl *ACL) {
-	if acl.RootPrivilege("sys/mount/foo") {
+	// Type of operation is not important here as we only care about checking
+	// sudo/root
+	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
 	type tcase struct {
-		op     logical.Operation
-		path   string
-		expect bool
+		op        logical.Operation
+		path      string
+		allowed   bool
+		rootPrivs bool
 	}
 	tcases := []tcase{
-		{logical.ReadOperation, "root", false},
-		{logical.HelpOperation, "root", true},
+		{logical.ReadOperation, "root", false, false},
+		{logical.HelpOperation, "root", true, false},
 
-		{logical.ReadOperation, "dev/hide/foo", false},
-		{logical.UpdateOperation, "dev/hide/foo", false},
+		{logical.ReadOperation, "dev/foo", true, true},
+		{logical.UpdateOperation, "dev/foo", true, true},
+		{logical.ReadOperation, "dev/hide/foo", false, false},
+		{logical.UpdateOperation, "dev/hide/foo", false, false},
 
-		{logical.DeleteOperation, "stage/foo", true},
-		{logical.UpdateOperation, "stage/aws/foo", false},
-		{logical.UpdateOperation, "stage/aws/policy/foo", false},
+		{logical.DeleteOperation, "stage/foo", true, false},
+		{logical.ListOperation, "stage/aws/foo", true, true},
+		{logical.UpdateOperation, "stage/aws/foo", true, true},
+		{logical.UpdateOperation, "stage/aws/policy/foo", false, false},
 
-		{logical.DeleteOperation, "prod/foo", true},
-		{logical.UpdateOperation, "prod/foo", true},
-		{logical.ReadOperation, "prod/foo", true},
-		{logical.ListOperation, "prod/foo", true},
-		{logical.ReadOperation, "prod/aws/foo", false},
+		{logical.DeleteOperation, "prod/foo", true, false},
+		{logical.UpdateOperation, "prod/foo", true, false},
+		{logical.ReadOperation, "prod/foo", true, false},
+		{logical.ListOperation, "prod/foo", true, false},
+		{logical.ReadOperation, "prod/aws/foo", false, false},
 
-		{logical.ReadOperation, "sys/status", false},
-		{logical.UpdateOperation, "sys/seal", true},
+		{logical.ReadOperation, "sys/status", false, false},
+		{logical.UpdateOperation, "sys/seal", true, true},
+
+		{logical.ReadOperation, "foo/bar", false, false},
+		{logical.ListOperation, "foo/bar", false, false},
+		{logical.UpdateOperation, "foo/bar", false, false},
+		{logical.CreateOperation, "foo/bar", false, false},
 	}
 
 	for _, tc := range tcases {
-		out := acl.AllowOperation(tc.op, tc.path)
-		if out != tc.expect {
-			t.Fatalf("bad: case %#v: %v", tc, out)
+		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		if allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+		if rootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
 	}
 }
@@ -135,6 +164,7 @@ path "stage/*" {
 }
 path "stage/aws/*" {
 	policy = "read"
+	capabilities = ["update", "sudo"]
 }
 path "stage/aws/policy/*" {
 	policy = "sudo"
@@ -148,6 +178,9 @@ path "prod/aws/*" {
 path "sys/*" {
 	policy = "deny"
 }
+path "foo/bar" {
+	capabilities = ["read", "create", "sudo"]
+}
 `
 
 var aclPolicy2 = `
@@ -157,11 +190,16 @@ path "dev/hide/*" {
 }
 path "stage/aws/policy/*" {
 	policy = "deny"
+	# This should have no effect
+	capabilities = ["read", "update", "sudo"]
 }
 path "prod/*" {
 	policy = "write"
 }
 path "sys/seal" {
-	policy = "write"
+	policy = "sudo"
+}
+path "foo/bar" {
+	capabilities = ["deny"]
 }
 `

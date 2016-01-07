@@ -34,7 +34,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				"revoke-prefix/*",
 				"audit",
 				"audit/*",
-				"seal", // Must be set for Core.Seal() logic
 				"raw/*",
 				"rotate",
 			},
@@ -74,7 +73,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:  b.handleMountTuneRead,
+					logical.ReadOperation:   b.handleMountTuneRead,
 					logical.UpdateOperation: b.handleMountTuneWrite,
 				},
 
@@ -105,7 +104,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation:  b.handleMount,
+					logical.UpdateOperation: b.handleMount,
 					logical.DeleteOperation: b.handleUnmount,
 				},
 
@@ -234,7 +233,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation:  b.handleEnableAuth,
+					logical.UpdateOperation: b.handleEnableAuth,
 					logical.DeleteOperation: b.handleDisableAuth,
 				},
 
@@ -269,7 +268,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handlePolicyRead,
-					logical.UpdateOperation:  b.handlePolicySet,
+					logical.UpdateOperation: b.handlePolicySet,
 					logical.DeleteOperation: b.handlePolicyDelete,
 				},
 
@@ -333,7 +332,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation:  b.handleEnableAudit,
+					logical.UpdateOperation: b.handleEnableAudit,
 					logical.DeleteOperation: b.handleDisableAudit,
 				},
 
@@ -355,7 +354,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRawRead,
-					logical.UpdateOperation:  b.handleRawWrite,
+					logical.UpdateOperation: b.handleRawWrite,
 					logical.DeleteOperation: b.handleRawDelete,
 				},
 			},
