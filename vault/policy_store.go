@@ -23,7 +23,7 @@ const (
 // manage ACLs associated with them.
 type PolicyStore struct {
 	view *BarrierView
-	lru  *lru.Cache
+	lru  *lru.TwoQueueCache
 }
 
 // PolicyEntry is used to store a policy by name
@@ -35,7 +35,7 @@ type PolicyEntry struct {
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
 func NewPolicyStore(view *BarrierView) *PolicyStore {
-	cache, _ := lru.New(policyCacheSize)
+	cache, _ := lru.New2Q(policyCacheSize)
 	p := &PolicyStore{
 		view: view,
 		lru:  cache,
