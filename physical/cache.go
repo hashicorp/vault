@@ -17,7 +17,7 @@ const (
 // by using a simple write-through cache.
 type Cache struct {
 	backend Backend
-	lru     *lru.Cache
+	lru     *lru.TwoQueueCache
 }
 
 // NewCache returns a physical cache of the given size.
@@ -26,7 +26,7 @@ func NewCache(b Backend, size int) *Cache {
 	if size <= 0 {
 		size = DefaultCacheSize
 	}
-	cache, _ := lru.New(size)
+	cache, _ := lru.New2Q(size)
 	c := &Cache{
 		backend: b,
 		lru:     cache,
