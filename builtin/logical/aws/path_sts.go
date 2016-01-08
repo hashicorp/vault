@@ -34,7 +34,7 @@ func pathSTS(b *backend) *framework.Path {
 func (b *backend) pathSTSRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
-	duration := d.Get("duration").(int64)
+	duration := int64(d.Get("duration").(int))
 
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)
