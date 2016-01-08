@@ -108,5 +108,5 @@ type RekeyUpdateResponse struct {
 
 type RekeyRetrieveResponse struct {
 	Nonce string
-	Keys  map[string]string
+	Keys  map[string][]string
 }

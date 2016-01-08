@@ -175,7 +175,7 @@ type RekeyResult struct {
 // RekeyBackup stores the backup copy of PGP-encrypted keys
 type RekeyBackup struct {
 	Nonce string
-	Keys  map[string]string
+	Keys  map[string][]string
 }
 
 // ErrInvalidKey is returned if there is an error with a
@@ -1352,10 +1352,14 @@ func (c *Core) RekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
 		}
 
 		if c.rekeyConfig.Backup {
-			backupInfo := map[string]string{}
+			backupInfo := map[string][]string{}
 			for i := 0; i < len(results.PGPFingerprints); i++ {
 				encShare := bytes.NewBuffer(results.SecretShares[i])
-				backupInfo[results.PGPFingerprints[i]] = hex.EncodeToString(encShare.Bytes())
+				if backupInfo[results.PGPFingerprints[i]] == nil {
+					backupInfo[results.PGPFingerprints[i]] = []string{hex.EncodeToString(encShare.Bytes())}
+				} else {
+					backupInfo[results.PGPFingerprints[i]] = append(backupInfo[results.PGPFingerprints[i]], hex.EncodeToString(encShare.Bytes()))
+				}
 			}
 
 			backupVals := &RekeyBackup{
