@@ -121,18 +121,19 @@ func newDynamoDBBackend(conf map[string]string) (Backend, error) {
 		writeCapacity = DefaultDynamoDBWriteCapacity
 	}
 
-	accessKey, ok := conf["access_key"]
-	if !ok {
-		accessKey = ""
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	if accessKey == "" {
+		accessKey = conf["access_key"]
 	}
-	secretKey, ok := conf["secret_key"]
-	if !ok {
-		secretKey = ""
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if secretKey == "" {
+		secretKey = conf["secret_key"]
 	}
-	sessionToken, ok := conf["session_token"]
-	if !ok {
-		sessionToken = ""
+	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+	if sessionToken == "" {
+		sessionToken = conf["session_token"]
 	}
+
 	endpoint := os.Getenv("AWS_DYNAMODB_ENDPOINT")
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
