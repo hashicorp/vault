@@ -137,6 +137,8 @@ func (c *RekeyCommand) Run(args []string) int {
 		return c.rekeyStatus(client)
 	}
 
+	// Space between the key prompt, if any, and the output
+	c.Ui.Output("\n")
 	// Provide the keys
 	for i, key := range result.Keys {
 		if len(result.PGPFingerprints) > 0 {
@@ -191,6 +193,26 @@ func (c *RekeyCommand) initRekey(client *api.Client,
 		return 1
 	}
 
+	if pgpKeys == nil || len(pgpKeys) == 0 {
+		c.Ui.Output(`
+WARNING: If you lose the keys after they are returned to you, there is no
+recovery. Consider using the '-pgp-keys' option to protect the returned unseal
+keys along with '-backup=true' to allow recovery of the encrypted keys in case
+of emergency. They can easily be deleted at a later time with
+'vault rekey -delete'.
+`)
+	}
+
+	if pgpKeys != nil && len(pgpKeys) > 0 && !backup {
+		c.Ui.Output(`
+WARNING: You are using PGP keys for encryption, but have not set the option to
+back up the new unseal keys to physical storage. If you lose the keys after
+they are returned to you, there is no recovery. Consider setting '-backup=true'
+to allow recovery of the encrypted keys in case of emergency. They can easily
+be deleted at a later time with 'vault rekey -delete'.
+`)
+	}
+
 	// Provide the current status
 	return c.rekeyStatus(client)
 }
@@ -231,8 +253,8 @@ func (c *RekeyCommand) rekeyStatus(client *api.Client) int {
 		status.Required,
 	)
 	if len(status.PGPFingerprints) != 0 {
-		statString = fmt.Sprintf("\n%s\nPGP Key Fingerprints: %s", statString, status.PGPFingerprints)
-		statString = fmt.Sprintf("\n%s\nBackup Storage: %t", statString, status.Backup)
+		statString = fmt.Sprintf("%s\nPGP Key Fingerprints: %s", statString, status.PGPFingerprints)
+		statString = fmt.Sprintf("%s\nBackup Storage: %t", statString, status.Backup)
 	}
 	c.Ui.Output(statString)
 	return 0
