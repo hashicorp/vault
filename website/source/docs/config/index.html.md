@@ -145,6 +145,9 @@ to help you, but may refer you to the backend author.
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
     This backend does not support HA. This is a community-supported backend.
 
+  * `dynamodb` - Store data in a [DynamoDB](https://aws.amazon.com/dynamodb/) table.
+    This backend supports HA. This is a community-supported backend.
+
   * `mysql` - Store data within MySQL. This backend does not support HA. This
     is a community-supported backend.
 
@@ -250,6 +253,35 @@ make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
 will cause Vault to attempt to retrieve credentials from the metadata service.
 You are responsible for ensuring your instance is launched with the appropriate
 profile enabled. Vault will handle renewing profile credentials as they rotate.
+
+#### Backend Reference: DynamoDB (Community-Supported)
+
+The DynamoDB backend has the following options:
+
+  * `table` (optional) - The name of the DynamoDB table to store data in. The default table name is `vault-dynamodb-backend`. This option can also be provided via the environment variable `AWS_DYNAMODB_TABLE`. If the specified table does not yet exist, it will be created during initialization.
+
+  * `read_capacity` (optional) - The read capacity to provision when creating the DynamoDB table. This is the maximum number of reads consumed per second on the table. The default value is 5. This option can also be provided via the environment variable `AWS_DYNAMODB_READ_CAPACITY`.
+
+  * `write_capacity` (optional) - The write capacity to provision when creating the DynamoDB table. This is the maximum number of writes performed per second on the table. The default value is 5. This option can also be provided via the environment variable `AWS_DYNAMODB_WRITE_CAPACITY`.
+
+  * `access_key` - (required) The AWS access key. It must be provided, but it can also be sourced from the `AWS_ACCESS_KEY_ID` environment variable.
+
+  * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the `AWS_SECRET_ACCESS_KEY` environment variable.
+
+  * `session_token` - (optional) The AWS session token. It can also be sourced from the `AWS_SESSION_TOKEN` environment variable.
+
+  * `endpoint` - (optional) An alternative (AWS compatible) DynamoDB endpoint to use. It can also be sourced from the `AWS_DYNAMODB_ENDPOINT` environment variable.
+
+  * `region` (optional) - The AWS region. It can be sourced from the `AWS_DEFAULT_REGION` environment variable and will default to "us-east-1" if not specified.
+
+  * `recovery_mode` (optional) - When the Vault leader crashes or is killed without being able to shut down properly, no other node can become the new leader because the DynamoDB table still holds the old leader's lock record. To recover from this situation, one can start a single Vault node with this option set to `1` and the node will remove the old lock from DynamoDB. It is important that only one node is running in recovery mode! After this node has become the leader, other nodes can be started with regular configuration.
+    This option can also be provided via the environment variable `RECOVERY_MODE`.
+
+For more information about the read/write capacity of DynamoDB tables, see the [official AWS DynamoDB docs](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#ProvisionedThroughput).
+If you are running your Vault server on an EC2 instance, you can also make use
+of the EC2 instance profile service to provide the credentials Vault will use to
+make DynamoDB API calls. Leaving the `access_key` and `secret_key` fields empty
+will cause Vault to attempt to retrieve credentials from the metadata service.
 
 #### Backend Reference: MySQL (Community-Supported)
 
