@@ -57,8 +57,8 @@ func (c *Sys) RekeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
 	return &result, err
 }
 
-func (c *Sys) RekeyRetrieveStored() (*RekeyRetrieveResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/rekey/stored")
+func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/rekey/backup")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return nil, err
@@ -70,8 +70,8 @@ func (c *Sys) RekeyRetrieveStored() (*RekeyRetrieveResponse, error) {
 	return &result, err
 }
 
-func (c *Sys) RekeyDeleteStored() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/stored")
+func (c *Sys) RekeyDeleteBackup() error {
+	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
 		defer resp.Body.Close()

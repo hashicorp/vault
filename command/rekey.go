@@ -151,9 +151,9 @@ func (c *RekeyCommand) Run(args []string) int {
 	if len(result.PGPFingerprints) > 0 && result.Backup {
 		c.Ui.Output(fmt.Sprintf(
 			"\n" +
-				"The encrypted unseal keys have been backed up to \"core/unseal-keys\n" +
-				"in your physical backend. It is your responsibility to remove these\n" +
-				"if and when desired.",
+				"The encrypted unseal keys have been backed up to \"core/unseal-keys-backup\"\n" +
+				"in your physical backend. It is your responsibility to remove these if and\n" +
+				"when desired.",
 		))
 	}
 
@@ -231,15 +231,15 @@ func (c *RekeyCommand) rekeyStatus(client *api.Client) int {
 		status.Required,
 	)
 	if len(status.PGPFingerprints) != 0 {
-		statString = fmt.Sprintf("\nPGP Key Fingerprints: %s", status.PGPFingerprints)
-		statString = fmt.Sprintf("\nBackup Storage: %t", status.Backup)
+		statString = fmt.Sprintf("\n%s\nPGP Key Fingerprints: %s", statString, status.PGPFingerprints)
+		statString = fmt.Sprintf("\n%s\nBackup Storage: %t", statString, status.Backup)
 	}
 	c.Ui.Output(statString)
 	return 0
 }
 
 func (c *RekeyCommand) rekeyRetrieveStored(client *api.Client) int {
-	storedKeys, err := client.Sys().RekeyRetrieveStored()
+	storedKeys, err := client.Sys().RekeyRetrieveBackup()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error retrieving stored keys: %s", err))
 		return 1
@@ -253,7 +253,7 @@ func (c *RekeyCommand) rekeyRetrieveStored(client *api.Client) int {
 }
 
 func (c *RekeyCommand) rekeyDeleteStored(client *api.Client) int {
-	err := client.Sys().RekeyDeleteStored()
+	err := client.Sys().RekeyDeleteBackup()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to delete stored keys: %s", err))
 		return 1
