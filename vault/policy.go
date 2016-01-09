@@ -50,7 +50,7 @@ func (p *PathPolicy) TakesPrecedence(other *PathPolicy) bool {
 		case PathPolicyDeny, PathPolicyWrite, PathPolicySudo:
 			return false
 		default:
-			panic("missing case")
+			goto MC
 		}
 
 	case PathPolicySudo:
@@ -60,12 +60,15 @@ func (p *PathPolicy) TakesPrecedence(other *PathPolicy) bool {
 		case PathPolicyDeny, PathPolicySudo:
 			return false
 		default:
-			panic("missing case")
+			goto MC
 		}
 
 	default:
-		panic("missing case")
+		goto MC
 	}
+MC:
+	panic("missing case")
+
 }
 
 // Parse is used to parse the specified ACL rules into an
