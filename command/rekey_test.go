@@ -3,6 +3,7 @@ package command
 import (
 	"encoding/hex"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -223,7 +224,7 @@ func TestRekey_init_pgp(t *testing.T) {
 	}
 
 	type backupStruct struct {
-		Keys map[string]string
+		Keys map[string][]string
 	}
 	backupVals := &backupStruct{}
 
@@ -242,7 +243,7 @@ func TestRekey_init_pgp(t *testing.T) {
 		t.Fatalf("nonce mismatch between rekey and backed-up keys")
 	}
 
-	backupVals.Keys = resp.Data["keys"].(map[string]string)
+	backupVals.Keys = resp.Data["keys"].(map[string][]string)
 
 	// Now delete and try again; the values should be inaccessible
 	req = logical.TestRequest(t, logical.DeleteOperation, "rekey/backup")
@@ -260,6 +261,11 @@ func TestRekey_init_pgp(t *testing.T) {
 	}
 	if resp.Data["keys"] != nil {
 		t.Fatalf("keys found when they should have been deleted")
+	}
+
+	// Sort, because it'll be tested with DeepEqual later
+	for k, _ := range backupVals.Keys {
+		sort.Strings(backupVals.Keys[k])
 	}
 
 	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), token, true, backupVals.Keys, core)

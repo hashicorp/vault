@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/vault/vault"
@@ -58,7 +59,7 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 func parseDecryptAndTestUnsealKeys(t *testing.T,
 	input, rootToken string,
 	fingerprints bool,
-	backupKeys map[string]string,
+	backupKeys map[string][]string,
 	core *vault.Core) {
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(privKey1)
@@ -112,9 +113,10 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	}
 
 	if backupKeys != nil && len(matchedFingerprints) != 0 {
-		testMap := map[string]string{}
+		testMap := map[string][]string{}
 		for i, v := range matchedFingerprints {
-			testMap[v] = encodedKeys[i]
+			testMap[v] = append(testMap[v], encodedKeys[i])
+			sort.Strings(testMap[v])
 		}
 		if !reflect.DeepEqual(testMap, backupKeys) {
 			t.Fatalf("test map and backup map do not match, test map is\n%#v\nbackup map is\n%#v", testMap, backupKeys)
