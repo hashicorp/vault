@@ -623,6 +623,11 @@ func (ts *TokenStore) handleCreateCommon(
 	// Use a map to filter out/prevent duplicates
 	policyMap := map[string]bool{}
 	for _, policy := range data.Policies {
+		if policy == "" {
+			// Don't allow a policy with no name, even though it is a valid
+			// slice member
+			continue
+		}
 		policyMap[policy] = true
 	}
 	if !policyMap["root"] &&
