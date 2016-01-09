@@ -19,6 +19,10 @@ FEATURES:
    [configuration
    documentation](https://vaultproject.io/docs/config/index.html) for details.
    [GH-395]
+ * **DynamoDB HA Physical Backend**: There is now a new, community-supported
+   HA-enabled physical backend using Amazon DynamoDB. See the [configuration
+   documentation](https://vaultproject.io/docs/config/index.html) for details.
+   [GH-878]
  * **Keybase Support for PGP Encryption Keys**: You can now specify Keybase
    users when passing in PGP keys to the `init` and `rekey` CLI commands.
    Public keys for these users will be fetched automatically. [GH-901]
@@ -62,6 +66,9 @@ BUG FIXES:
 
 MISC:
 
+ * Clarified our stance on support for community-derived physical backends.
+   See the [configuration
+   documentation](https://vaultproject.io/docs/config/index.html) for details.
  * Add `vault-java` to libraries [GH-851]
  * Various minor documentation fixes and improvements [GH-839] [GH-854]
    [GH-861] [GH-876] [GH-899] [GH-900] [GH-904]
