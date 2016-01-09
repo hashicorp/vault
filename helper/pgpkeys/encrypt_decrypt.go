@@ -3,21 +3,20 @@ package pgpkeys
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/packet"
 )
 
-// EncryptShares takes an ordered set of Shamir key share fragments and
-// PGP public keys and encrypts each Shamir key fragment with the corresponding
-// public key
+// EncryptShares takes an ordered set of byte slices to encrypt and the
+// corresponding base64-encoded public keys to encrypt them with, encrypts each
+// byte slice with the corresponding public key.
 //
 // Note: There is no corresponding test function; this functionality is
 // thoroughly tested in the init and rekey command unit tests
-func EncryptShares(secretShares [][]byte, pgpKeys []string) ([]string, [][]byte, error) {
-	if len(secretShares) != len(pgpKeys) {
+func EncryptShares(input [][]byte, pgpKeys []string) ([]string, [][]byte, error) {
+	if len(input) != len(pgpKeys) {
 		return nil, nil, fmt.Errorf("Mismatch between number of generated shares and number of PGP keys")
 	}
 	encryptedShares := make([][]byte, 0, len(pgpKeys))
@@ -31,7 +30,7 @@ func EncryptShares(secretShares [][]byte, pgpKeys []string) ([]string, [][]byte,
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error setting up encryption for PGP message: %s", err)
 		}
-		_, err = pt.Write([]byte(hex.EncodeToString(secretShares[i])))
+		_, err = pt.Write(input[i])
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error encrypting PGP message: %s", err)
 		}
@@ -47,6 +46,9 @@ func EncryptShares(secretShares [][]byte, pgpKeys []string) ([]string, [][]byte,
 	return fingerprints, encryptedShares, nil
 }
 
+// GetFingerprints takes in a list of openpgp Entities and returns the
+// fingerprints. If entities is nil, it will instead parse both entities and
+// fingerprints from the pgpKeys string slice.
 func GetFingerprints(pgpKeys []string, entities []*openpgp.Entity) ([]string, error) {
 	if entities == nil {
 		var err error
@@ -63,6 +65,8 @@ func GetFingerprints(pgpKeys []string, entities []*openpgp.Entity) ([]string, er
 	return ret, nil
 }
 
+// GetEntities takes in a string array of base64-encoded PGP keys and returns
+// the openpgp Entities
 func GetEntities(pgpKeys []string) ([]*openpgp.Entity, error) {
 	ret := make([]*openpgp.Entity, 0, len(pgpKeys))
 	for _, keystring := range pgpKeys {
@@ -77,4 +81,37 @@ func GetEntities(pgpKeys []string) ([]*openpgp.Entity, error) {
 		ret = append(ret, entity)
 	}
 	return ret, nil
+}
+
+// DecryptBytes takes in base64-encoded encrypted bytes and the base64-encoded
+// private key and decrypts it. A bytes.Buffer is returned to allow the caller
+// to do useful thing with it (get it as a []byte, get it as a string, use it
+// as an io.Reader, etc), and also because this function doesn't know if what
+// comes out is binary data or a string, so let the caller decide.
+func DecryptBytes(encodedCrypt, privKey string) (*bytes.Buffer, error) {
+	privKeyBytes, err := base64.StdEncoding.DecodeString(privKey)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding base64 private key: %s", err)
+	}
+
+	cryptBytes, err := base64.StdEncoding.DecodeString(encodedCrypt)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding base64 crypted bytes: %s", err)
+	}
+
+	entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing private key: %s", err)
+	}
+
+	entityList := &openpgp.EntityList{entity}
+	md, err := openpgp.ReadMessage(bytes.NewBuffer(cryptBytes), entityList, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("Error decrypting the messages: %s", err)
+	}
+
+	ptBuf := bytes.NewBuffer(nil)
+	ptBuf.ReadFrom(md.UnverifiedBody)
+
+	return ptBuf, nil
 }

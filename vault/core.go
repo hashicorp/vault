@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -212,6 +213,12 @@ type Core struct {
 	// unlockParts has the keys provided to Unseal until
 	// the threshold number of parts is available.
 	unlockParts [][]byte
+
+	// rootGenerationProgress holds the shares until we reach enough
+	// to verify the master key
+	rootGenerationConfig   *RootGenerationConfig
+	rootGenerationProgress [][]byte
+	rootGenerationLock     sync.Mutex
 
 	// rekeyProgress holds the shares we have until we reach enough
 	// to verify the master key.
@@ -869,7 +876,11 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	if len(config.PGPKeys) > 0 {
-		_, encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, config.PGPKeys)
+		hexEncodedShares := make([][]byte, len(results.SecretShares))
+		for i, _ := range results.SecretShares {
+			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
+		}
+		_, encryptedShares, err := pgpkeys.EncryptShares(hexEncodedShares, config.PGPKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -904,7 +915,7 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken()
+	rootToken, err := c.tokenStore.rootToken("")
 	if err != nil {
 		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
 		return nil, err

@@ -182,6 +182,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"generate-root": func() (cli.Command, error) {
+			return &command.GenerateRootCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"renew": func() (cli.Command, error) {
 			return &command.RenewCommand{
 				Meta: meta,
