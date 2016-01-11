@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +44,7 @@ const (
 )
 
 var (
+	EtcdSyncConfigError          = errors.New("client setup failed: unable to parse etcd sync field in config")
 	EtcdSyncClusterError         = errors.New("client setup failed: unable to sync etcd cluster")
 	EtcdAddressError             = errors.New("client setup failed: address must be valid URL (ex. 'scheme://host:port')")
 	EtcdSemaphoreKeysEmptyError  = errors.New("lock queue is empty")
@@ -143,11 +145,25 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
-	syncErr := c.Sync(ctx)
-	cancel()
-	if syncErr != nil {
-		return nil, EtcdSyncClusterError
+	// Should we sync the cluster state? There are three available options
+	// for our client library: don't sync (required for some proxies), sync
+	// once, or sync periodically with AutoSync.  We currently support the
+	// first two.
+	sync := true
+	if v, ok := conf["sync"]; ok {
+		parsed, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, EtcdSyncConfigError
+		}
+		sync = parsed
+	}
+	if sync {
+		ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
+		syncErr := c.Sync(ctx)
+		cancel()
+		if syncErr != nil {
+			return nil, EtcdSyncClusterError
+		}
 	}
 
 	kAPI := client.NewKeysAPI(c)
