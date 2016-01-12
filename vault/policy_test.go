@@ -20,9 +20,7 @@ func TestPolicy_Parse(t *testing.T) {
 		&PathCapabilities{"", "deny",
 			[]string{
 				"deny",
-			}, map[string]bool{
-				"deny": true,
-			}, true},
+			}, DenyCapabilityInt, true},
 		&PathCapabilities{"stage/", "sudo",
 			[]string{
 				"create",
@@ -31,38 +29,23 @@ func TestPolicy_Parse(t *testing.T) {
 				"delete",
 				"list",
 				"sudo",
-			}, map[string]bool{
-				"create": true,
-				"read":   true,
-				"update": true,
-				"delete": true,
-				"list":   true,
-				"sudo":   true,
-			}, true},
+			}, CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
+				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt, true},
 		&PathCapabilities{"prod/version", "read",
 			[]string{
 				"read",
 				"list",
-			}, map[string]bool{
-				"read": true,
-				"list": true,
-			}, false},
+			}, ReadCapabilityInt | ListCapabilityInt, false},
 		&PathCapabilities{"foo/bar", "read",
 			[]string{
 				"read",
 				"list",
-			}, map[string]bool{
-				"read": true,
-				"list": true,
-			}, false},
+			}, ReadCapabilityInt | ListCapabilityInt, false},
 		&PathCapabilities{"foo/bar", "",
 			[]string{
 				"create",
 				"sudo",
-			}, map[string]bool{
-				"create": true,
-				"sudo":   true,
-			}, false},
+			}, CreateCapabilityInt | SudoCapabilityInt, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
 		ret := fmt.Sprintf("bad:\nexpected:\n")

@@ -8,12 +8,12 @@ import (
 )
 
 const (
+	DenyCapability   = "deny"
 	CreateCapability = "create"
 	ReadCapability   = "read"
 	UpdateCapability = "update"
 	DeleteCapability = "delete"
 	ListCapability   = "list"
-	DenyCapability   = "deny"
 	SudoCapability   = "sudo"
 
 	// Backwards compatibility
@@ -21,6 +21,28 @@ const (
 	OldReadPathPolicy  = "read"
 	OldWritePathPolicy = "write"
 	OldSudoPathPolicy  = "sudo"
+)
+
+const (
+	DenyCapabilityInt uint32 = 1 << iota
+	CreateCapabilityInt
+	ReadCapabilityInt
+	UpdateCapabilityInt
+	DeleteCapabilityInt
+	ListCapabilityInt
+	SudoCapabilityInt
+)
+
+var (
+	cap2Int = map[string]uint32{
+		DenyCapability:   DenyCapabilityInt,
+		CreateCapability: CreateCapabilityInt,
+		ReadCapability:   ReadCapabilityInt,
+		UpdateCapability: UpdateCapabilityInt,
+		DeleteCapability: DeleteCapabilityInt,
+		ListCapability:   ListCapabilityInt,
+		SudoCapability:   SudoCapabilityInt,
+	}
 )
 
 // Policy is used to represent the policy specified by
@@ -33,11 +55,11 @@ type Policy struct {
 
 // Capability represents a policy for a path in the namespace
 type PathCapabilities struct {
-	Prefix          string `hcl:",key"`
-	Policy          string
-	Capabilities    []string
-	CapabilitiesMap map[string]bool `hcl:"-"`
-	Glob            bool
+	Prefix             string `hcl:",key"`
+	Policy             string
+	Capabilities       []string
+	CapabilitiesBitmap uint32 `hcl:"-"`
+	Glob               bool
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -61,7 +83,7 @@ func Parse(rules string) (*Policy, error) {
 		// Map old-style policies into capabilities
 		switch pc.Policy {
 		case OldDenyPathPolicy:
-			pc.Capabilities = append(pc.Capabilities, DenyCapability)
+			pc.Capabilities = []string{DenyCapability}
 		case OldReadPathPolicy:
 			pc.Capabilities = append(pc.Capabilities, []string{ReadCapability, ListCapability}...)
 		case OldWritePathPolicy:
@@ -71,18 +93,16 @@ func Parse(rules string) (*Policy, error) {
 		}
 
 		// Initialize the map
-		pc.CapabilitiesMap = make(map[string]bool, len(pc.Capabilities))
+		pc.CapabilitiesBitmap = 0
 		for _, cap := range pc.Capabilities {
 			switch cap {
 			// If it's deny, don't include any other capability
 			case DenyCapability:
 				pc.Capabilities = []string{DenyCapability}
-				pc.CapabilitiesMap = map[string]bool{
-					DenyCapability: true,
-				}
+				pc.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
 			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
-				pc.CapabilitiesMap[cap] = true
+				pc.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return nil, fmt.Errorf("Invalid capability: %#v", pc)
 			}
