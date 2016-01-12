@@ -118,12 +118,11 @@ CHECK:
 		allowed = policy.CapabilitiesBitmap&DeleteCapabilityInt > 0
 	case "create":
 		allowed = policy.CapabilitiesBitmap&CreateCapabilityInt > 0
-	case "revoke":
+
+	// These three re-use UpdateCapabilityInt since that's the most appropraite capability/operation mapping
+	case "revoke", "renew", "rollback":
 		allowed = policy.CapabilitiesBitmap&UpdateCapabilityInt > 0
-	case "renew":
-		allowed = policy.CapabilitiesBitmap&UpdateCapabilityInt > 0
-	case "rollback":
-		allowed = policy.CapabilitiesBitmap&UpdateCapabilityInt > 0
+
 	default:
 		return false, false
 	}
