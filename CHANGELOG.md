@@ -51,6 +51,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
  * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
+ * command/read: Fix panic when an empty argument was given [GH-923]
  * command/ssh: Fix panic when username lookup fails [GH-886]
  * core: When running in standalone mode, don't advertise that we are active
    until post-unseal setup completes [GH-872]
