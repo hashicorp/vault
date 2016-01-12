@@ -72,7 +72,7 @@ MISC:
    documentation](https://vaultproject.io/docs/config/index.html) for details.
  * Add `vault-java` to libraries [GH-851]
  * Various minor documentation fixes and improvements [GH-839] [GH-854]
-   [GH-861] [GH-876] [GH-899] [GH-900] [GH-904]
+   [GH-861] [GH-876] [GH-899] [GH-900] [GH-904] [GH-923] [GH-924]
 
 ## 0.4.0 (December 10, 2015)
 
