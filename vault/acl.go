@@ -47,25 +47,25 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pc.Prefix, pc)
+				tree.Insert(pc.Prefix, pc.CapabilitiesBitmap)
 				continue
 			}
-			existing := raw.(*PathCapabilities)
+			existing := raw.(uint32)
 
 			switch {
-			case existing.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			case existing&DenyCapabilityInt > 0:
 				// If we are explicitly denied in the existing capability set,
 				// don't save anything else
 
 			case pc.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
-				tree.Insert(pc.Prefix, pc)
+				tree.Insert(pc.Prefix, DenyCapabilityInt)
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value; since it's a pointer we can just modify the
 				// underlying data
-				existing.CapabilitiesBitmap |= pc.CapabilitiesBitmap
+				tree.Insert(pc.Prefix, existing|pc.CapabilitiesBitmap)
 			}
 		}
 	}
@@ -87,10 +87,10 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	}
 
 	// Find an exact matching rule, look for glob if no match
-	var policy *PathCapabilities
+	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		policy = raw.(*PathCapabilities)
+		capabilities = raw.(uint32)
 		goto CHECK
 	}
 
@@ -99,29 +99,29 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	if !ok {
 		return false, false
 	} else {
-		policy = raw.(*PathCapabilities)
+		capabilities = raw.(uint32)
 	}
 
 CHECK:
 	// Check if the minimum permissions are met
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
-	sudo = policy.CapabilitiesBitmap&SudoCapabilityInt > 0
+	sudo = capabilities&SudoCapabilityInt > 0
 	switch op.String() {
 	case "read":
-		allowed = policy.CapabilitiesBitmap&ReadCapabilityInt > 0
+		allowed = capabilities&ReadCapabilityInt > 0
 	case "list":
-		allowed = policy.CapabilitiesBitmap&ListCapabilityInt > 0
+		allowed = capabilities&ListCapabilityInt > 0
 	case "update":
-		allowed = policy.CapabilitiesBitmap&UpdateCapabilityInt > 0
+		allowed = capabilities&UpdateCapabilityInt > 0
 	case "delete":
-		allowed = policy.CapabilitiesBitmap&DeleteCapabilityInt > 0
+		allowed = capabilities&DeleteCapabilityInt > 0
 	case "create":
-		allowed = policy.CapabilitiesBitmap&CreateCapabilityInt > 0
+		allowed = capabilities&CreateCapabilityInt > 0
 
 	// These three re-use UpdateCapabilityInt since that's the most appropraite capability/operation mapping
 	case "revoke", "renew", "rollback":
-		allowed = policy.CapabilitiesBitmap&UpdateCapabilityInt > 0
+		allowed = capabilities&UpdateCapabilityInt > 0
 
 	default:
 		return false, false
