@@ -13,7 +13,7 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Lists all the available policies.
+    List the mounted audit backends.
   </dd>
 
   <dt>Method</dt>
