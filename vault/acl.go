@@ -14,10 +14,12 @@ var (
 		logical.UpdateOperation:   []string{UpdateCapability},
 		logical.DeleteOperation:   []string{DeleteCapability},
 		logical.ListOperation:     []string{ListCapability},
-		logical.HelpOperation:     []string{CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, DenyCapability},
 		logical.RevokeOperation:   []string{UpdateCapability},
 		logical.RenewOperation:    []string{UpdateCapability},
 		logical.RollbackOperation: []string{UpdateCapability},
+
+		// Help is special-cased to always be allowed, so we don't need anything in this list
+		logical.HelpOperation: []string{},
 	}
 )
 
