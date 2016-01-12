@@ -24,7 +24,7 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) != 1 {
+	if len(args) != 1 || len(args[0]) == 0 {
 		c.Ui.Error("read expects one argument")
 		flags.Usage()
 		return 1
@@ -103,7 +103,7 @@ Read Options:
                           delimited table. This can also be json or yaml.
 
   -field=field            If included, the raw value of the specified field
-  						  will be output raw to stdout.
+                          will be output raw to stdout.
 
 `
 	return strings.TrimSpace(helpText)
