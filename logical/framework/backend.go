@@ -75,7 +75,7 @@ type RollbackFunc func(*logical.Request, string, interface{}) error
 // CleanupFunc is the callback for backend unload.
 type CleanupFunc func()
 
-func (b *Backend) HandleExistenceCheck(req *logical.Request) (*bool, error) {
+func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, exists bool, err error) {
 	b.once.Do(b.init)
 
 	// Ensure we are only doing this when one of the correct operations is in play
@@ -83,18 +83,20 @@ func (b *Backend) HandleExistenceCheck(req *logical.Request) (*bool, error) {
 	case logical.CreateOperation:
 	case logical.UpdateOperation:
 	default:
-		return nil, fmt.Errorf("incorrect operation type %v for an existence check", req.Operation)
+		return false, false, fmt.Errorf("incorrect operation type %v for an existence check", req.Operation)
 	}
 
 	// Find the matching route
 	path, captures := b.route(req.Path)
 	if path == nil {
-		return nil, logical.ErrUnsupportedPath
+		return false, false, logical.ErrUnsupportedPath
 	}
 
 	if path.ExistenceCheck == nil {
-		return nil, nil
+		return false, false, nil
 	}
+
+	checkFound = true
 
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
@@ -110,14 +112,14 @@ func (b *Backend) HandleExistenceCheck(req *logical.Request) (*bool, error) {
 		Raw:    raw,
 		Schema: path.Fields}
 
-	err := fd.Validate()
+	err = fd.Validate()
 	if err != nil {
-		return nil, err
+		return false, false, err
 	}
 
 	// Call the callback with the request and the data
-	ret, err := path.ExistenceCheck(req, &fd)
-	return &ret, err
+	exists, err = path.ExistenceCheck(req, &fd)
+	return
 }
 
 // logical.Backend impl.

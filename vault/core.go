@@ -751,28 +751,25 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(req.Path)
 
-	resourceExists := new(bool)
 	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
-		resourceExists, err = c.router.RouteExistenceCheck(req)
+		checkExists, resourceExists, err := c.router.RouteExistenceCheck(req)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to run existence check: %v", err)
 			return nil, nil, ErrInternalError
 		}
 
 		switch {
-		case resourceExists == nil:
+		case checkExists == false:
 			// No existence check, so always treate it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
-		case *resourceExists == true:
+		case resourceExists == true:
 			// It exists, so force an update operation
 			req.Operation = logical.UpdateOperation
-		case *resourceExists == false:
+		case resourceExists == false:
 			// It doesn't exist, force a create operation
 			req.Operation = logical.CreateOperation
 		default:
-			// ????
-			c.logger.Printf("[ERR] core: failed to check existence check value")
-			return nil, nil, ErrInternalError
+			panic("unreachable code")
 		}
 	}
 

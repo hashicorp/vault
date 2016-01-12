@@ -184,17 +184,17 @@ func (r *Router) MatchingSystemView(path string) logical.SystemView {
 
 // Route is used to route a given request
 func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
-	resp, _, err := r.routeCommon(req, false)
+	resp, _, _, err := r.routeCommon(req, false)
 	return resp, err
 }
 
 // Route is used to route a given existence check request
-func (r *Router) RouteExistenceCheck(req *logical.Request) (*bool, error) {
-	_, exists, err := r.routeCommon(req, true)
-	return exists, err
+func (r *Router) RouteExistenceCheck(req *logical.Request) (bool, bool, error) {
+	_, ok, exists, err := r.routeCommon(req, true)
+	return ok, exists, err
 }
 
-func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, *bool, error) {
+func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
@@ -206,7 +206,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), nil, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	defer metrics.MeasureSince([]string{"route", string(req.Operation),
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
@@ -218,7 +218,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), nil, logical.ErrUnsupportedPath
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
 
@@ -265,11 +265,11 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 
 	// Invoke the backend
 	if existenceCheck {
-		exists, err := re.backend.HandleExistenceCheck(req)
-		return nil, exists, err
+		ok, exists, err := re.backend.HandleExistenceCheck(req)
+		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(req)
-		return resp, nil, err
+		return resp, false, false, err
 	}
 }
 

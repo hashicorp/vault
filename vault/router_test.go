@@ -35,8 +35,8 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 	return n.Response, nil
 }
 
-func (n *NoopBackend) HandleExistenceCheck(req *logical.Request) (*bool, error) {
-	return new(bool), nil
+func (n *NoopBackend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+	return false, false, nil
 }
 
 func (n *NoopBackend) SpecialPaths() *logical.Paths {
