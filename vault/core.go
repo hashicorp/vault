@@ -751,6 +751,11 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(req.Path)
 
+	// When we receive a write of either type, rather than require clients to
+	// PUT/POST and trust the operation, we ask the backend to give us the real
+	// skinny -- if the backend implements an existence check, it can tell us
+	// whether a particular resource exists. Then we can mark it as an update
+	// or creation as appropriate.
 	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
 		checkExists, resourceExists, err := c.router.RouteExistenceCheck(req)
 		if err != nil {
