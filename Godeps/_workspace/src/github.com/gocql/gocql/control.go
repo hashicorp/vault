@@ -3,22 +3,27 @@ package gocql
 import (
 	"errors"
 	"fmt"
+	"log"
+	"math/rand"
+	"net"
+	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// Ensure that the atomic variable is aligned to a 64bit boundary 
+// Ensure that the atomic variable is aligned to a 64bit boundary
 // so that atomic operations can be applied on 32bit architectures.
 type controlConn struct {
-	connecting uint64
+	connecting int64
 
 	session *Session
-
-	conn       atomic.Value
+	conn    atomic.Value
 
 	retry RetryPolicy
 
-	quit chan struct{}
+	closeWg sync.WaitGroup
+	quit    chan struct{}
 }
 
 func createControlConn(session *Session) *controlConn {
@@ -29,12 +34,13 @@ func createControlConn(session *Session) *controlConn {
 	}
 
 	control.conn.Store((*Conn)(nil))
-	go control.heartBeat()
 
 	return control
 }
 
 func (c *controlConn) heartBeat() {
+	defer c.closeWg.Done()
+
 	for {
 		select {
 		case <-c.quit:
@@ -60,12 +66,84 @@ func (c *controlConn) heartBeat() {
 		c.reconnect(true)
 		// time.Sleep(5 * time.Second)
 		continue
-
 	}
 }
 
+func (c *controlConn) connect(endpoints []string) error {
+	// intial connection attmept, try to connect to each endpoint to get an initial
+	// list of nodes.
+
+	// shuffle endpoints so not all drivers will connect to the same initial
+	// node.
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	perm := r.Perm(len(endpoints))
+	shuffled := make([]string, len(endpoints))
+
+	for i, endpoint := range endpoints {
+		shuffled[perm[i]] = endpoint
+	}
+
+	// store that we are not connected so that reconnect wont happen if we error
+	atomic.StoreInt64(&c.connecting, -1)
+
+	var (
+		conn *Conn
+		err  error
+	)
+
+	for _, addr := range shuffled {
+		conn, err = c.session.connect(JoinHostPort(addr, c.session.cfg.Port), c)
+		if err != nil {
+			log.Printf("gocql: unable to control conn dial %v: %v\n", addr, err)
+			continue
+		}
+
+		if err = c.registerEvents(conn); err != nil {
+			conn.Close()
+			continue
+		}
+
+		// we should fetch the initial ring here and update initial host data. So that
+		// when we return from here we have a ring topology ready to go.
+		break
+	}
+
+	if conn == nil {
+		// this is fatal, not going to connect a session
+		return err
+	}
+
+	c.conn.Store(conn)
+	atomic.StoreInt64(&c.connecting, 0)
+
+	c.closeWg.Add(1)
+	go c.heartBeat()
+
+	return nil
+}
+
+func (c *controlConn) registerEvents(conn *Conn) error {
+	framer, err := conn.exec(&writeRegisterFrame{
+		events: []string{"TOPOLOGY_CHANGE", "STATUS_CHANGE", "STATUS_CHANGE"},
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	frame, err := framer.parseFrame()
+	if err != nil {
+		return err
+	} else if _, ok := frame.(*readyFrame); !ok {
+		return fmt.Errorf("unexpected frame in response to register: got %T: %v\n", frame, frame)
+	}
+
+	return nil
+}
+
 func (c *controlConn) reconnect(refreshring bool) {
-	if !atomic.CompareAndSwapUint64(&c.connecting, 0, 1) {
+	// TODO: simplify this function, use session.ring to get hosts instead of the
+	// connection pool
+	if !atomic.CompareAndSwapInt64(&c.connecting, 0, 1) {
 		return
 	}
 
@@ -75,38 +153,65 @@ func (c *controlConn) reconnect(refreshring bool) {
 		if success {
 			go func() {
 				time.Sleep(500 * time.Millisecond)
-				atomic.StoreUint64(&c.connecting, 0)
+				atomic.StoreInt64(&c.connecting, 0)
 			}()
 		} else {
-			atomic.StoreUint64(&c.connecting, 0)
+			atomic.StoreInt64(&c.connecting, 0)
 		}
 	}()
 
+	addr := c.addr()
 	oldConn := c.conn.Load().(*Conn)
-
-	// TODO: should have our own roundrobbin for hosts so that we can try each
-	// in succession and guantee that we get a different host each time.
-	host, conn := c.session.pool.Pick(nil)
-	if conn == nil {
-		return
-	}
-
-	newConn, err := Connect(conn.addr, conn.cfg, c, c.session)
-	if err != nil {
-		host.Mark(err)
-		// TODO: add log handler for things like this
-		return
-	}
-
-	host.Mark(nil)
-	c.conn.Store(newConn)
-	success = true
-
 	if oldConn != nil {
 		oldConn.Close()
 	}
 
-	if refreshring && c.session.cfg.DiscoverHosts {
+	var newConn *Conn
+	if addr != "" {
+		// try to connect to the old host
+		conn, err := c.session.connect(addr, c)
+		if err != nil {
+			// host is dead
+			// TODO: this is replicated in a few places
+			ip, portStr, _ := net.SplitHostPort(addr)
+			port, _ := strconv.Atoi(portStr)
+			c.session.handleNodeDown(net.ParseIP(ip), port)
+		} else {
+			newConn = conn
+		}
+	}
+
+	// TODO: should have our own roundrobbin for hosts so that we can try each
+	// in succession and guantee that we get a different host each time.
+	if newConn == nil {
+		_, conn := c.session.pool.Pick(nil)
+		if conn == nil {
+			return
+		}
+
+		if conn == nil {
+			return
+		}
+
+		var err error
+		newConn, err = c.session.connect(conn.addr, c)
+		if err != nil {
+			// TODO: add log handler for things like this
+			return
+		}
+	}
+
+	if err := c.registerEvents(newConn); err != nil {
+		// TODO: handle this case better
+		newConn.Close()
+		log.Printf("gocql: control unable to register events: %v\n", err)
+		return
+	}
+
+	c.conn.Store(newConn)
+	success = true
+
+	if refreshring {
 		c.session.hostSource.refreshRing()
 	}
 }
@@ -179,6 +284,46 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 	return
 }
 
+func (c *controlConn) fetchHostInfo(addr net.IP, port int) (*HostInfo, error) {
+	// TODO(zariel): we should probably move this into host_source or atleast
+	// share code with it.
+	hostname, _, err := net.SplitHostPort(c.addr())
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch host info, invalid conn addr: %q: %v", c.addr(), err)
+	}
+
+	isLocal := hostname == addr.String()
+
+	var fn func(*HostInfo) error
+
+	if isLocal {
+		fn = func(host *HostInfo) error {
+			// TODO(zariel): should we fetch rpc_address from here?
+			iter := c.query("SELECT data_center, rack, host_id, tokens, release_version FROM system.local WHERE key='local'")
+			iter.Scan(&host.dataCenter, &host.rack, &host.hostId, &host.tokens, &host.version)
+			return iter.Close()
+		}
+	} else {
+		fn = func(host *HostInfo) error {
+			// TODO(zariel): should we fetch rpc_address from here?
+			iter := c.query("SELECT data_center, rack, host_id, tokens, release_version FROM system.peers WHERE peer=?", addr)
+			iter.Scan(&host.dataCenter, &host.rack, &host.hostId, &host.tokens, &host.version)
+			return iter.Close()
+		}
+	}
+
+	host := &HostInfo{
+		port: port,
+	}
+
+	if err := fn(host); err != nil {
+		return nil, err
+	}
+	host.peer = addr.String()
+
+	return host, nil
+}
+
 func (c *controlConn) awaitSchemaAgreement() error {
 	return c.withConn(func(conn *Conn) *Iter {
 		return &Iter{err: conn.awaitSchemaAgreement()}
@@ -196,6 +341,11 @@ func (c *controlConn) addr() string {
 func (c *controlConn) close() {
 	// TODO: handle more gracefully
 	close(c.quit)
+	c.closeWg.Wait()
+	conn := c.conn.Load().(*Conn)
+	if conn != nil {
+		conn.Close()
+	}
 }
 
 var errNoControl = errors.New("gocql: no control connection available")

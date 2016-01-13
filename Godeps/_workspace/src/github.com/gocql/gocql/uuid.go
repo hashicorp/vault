@@ -240,3 +240,12 @@ func (u *UUID) UnmarshalJSON(data []byte) error {
 
 	return err
 }
+
+func (u UUID) MarshalText() ([]byte, error) {
+	return []byte(u.String()), nil
+}
+
+func (u *UUID) UnmarshalText(text []byte) (err error) {
+	*u, err = ParseUUID(string(text))
+	return
+}

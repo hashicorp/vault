@@ -22,17 +22,23 @@ func unmarshalError(r *request.Request) {
 	defer r.HTTPResponse.Body.Close()
 
 	if r.HTTPResponse.StatusCode == http.StatusMovedPermanently {
-		r.Error = awserr.New("BucketRegionError",
-			fmt.Sprintf("incorrect region, the bucket is not in '%s' region", aws.StringValue(r.Config.Region)), nil)
+		r.Error = awserr.NewRequestFailure(
+			awserr.New("BucketRegionError",
+				fmt.Sprintf("incorrect region, the bucket is not in '%s' region",
+					aws.StringValue(r.Config.Region)),
+				nil),
+			r.HTTPResponse.StatusCode,
+			r.RequestID,
+		)
 		return
 	}
 
-	if r.HTTPResponse.ContentLength == int64(0) {
+	if r.HTTPResponse.ContentLength <= 1 {
 		// No body, use status code to generate an awserr.Error
 		r.Error = awserr.NewRequestFailure(
 			awserr.New(strings.Replace(r.HTTPResponse.Status, " ", "", -1), r.HTTPResponse.Status, nil),
 			r.HTTPResponse.StatusCode,
-			"",
+			r.RequestID,
 		)
 		return
 	}
@@ -45,7 +51,7 @@ func unmarshalError(r *request.Request) {
 		r.Error = awserr.NewRequestFailure(
 			awserr.New(resp.Code, resp.Message, nil),
 			r.HTTPResponse.StatusCode,
-			"",
+			r.RequestID,
 		)
 	}
 }

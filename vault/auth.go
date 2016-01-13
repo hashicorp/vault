@@ -62,7 +62,11 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	entry.UUID = uuid.GenerateUUID()
+	entryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	entry.UUID = entryUUID
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
 	// Create the new backend
@@ -326,11 +330,15 @@ func (c *Core) newCredentialBackend(
 // defaultAuthTable creates a default auth table
 func defaultAuthTable() *MountTable {
 	table := &MountTable{}
+	tokenUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not generate UUID for default auth table token entry: %v", err))
+	}
 	tokenAuth := &MountEntry{
 		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
-		UUID:        uuid.GenerateUUID(),
+		UUID:        tokenUUID,
 	}
 	table.Entries = append(table.Entries, tokenAuth)
 	return table

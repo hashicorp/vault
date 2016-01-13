@@ -172,11 +172,11 @@ func DefaultConfig() *Config {
 		}
 
 		if !doVerify {
-			config.HttpClient.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
+			transport := cleanhttp.DefaultTransport()
+			transport.TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true,
 			}
+			config.HttpClient.Transport = transport
 		}
 	}
 
@@ -261,9 +261,31 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	}
 }
 
-// durToMsec converts a duration to a millisecond specified string
+// durToMsec converts a duration to a millisecond specified string. If the
+// user selected a positive value that rounds to 0 ms, then we will use 1 ms
+// so they get a short delay, otherwise Consul will translate the 0 ms into
+// a huge default delay.
 func durToMsec(dur time.Duration) string {
-	return fmt.Sprintf("%dms", dur/time.Millisecond)
+	ms := dur / time.Millisecond
+	if dur > 0 && ms == 0 {
+		ms = 1
+	}
+	return fmt.Sprintf("%dms", ms)
+}
+
+// serverError is a string we look for to detect 500 errors.
+const serverError = "Unexpected response code: 500"
+
+// IsServerError returns true for 500 errors from the Consul servers, these are
+// usually retryable at a later time.
+func IsServerError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// TODO (slackpad) - Make a real error type here instead of using
+	// a string check.
+	return strings.Contains(err.Error(), serverError)
 }
 
 // setWriteOptions is used to annotate the request with

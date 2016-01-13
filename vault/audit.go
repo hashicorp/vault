@@ -62,7 +62,11 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	entry.UUID = uuid.GenerateUUID()
+	entryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	entry.UUID = entryUUID
 	view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 	// Lookup the new backend

@@ -1144,9 +1144,17 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 
 	// Put several random entries
 	for i := 0; i < 5; i++ {
+		keyUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		valueUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			t.Fatal(err)
+		}
 		core.barrier.Put(&Entry{
-			Key:   coreLeaderPrefix + uuid.GenerateUUID(),
-			Value: []byte(uuid.GenerateUUID()),
+			Key:   coreLeaderPrefix + keyUUID,
+			Value: []byte(valueUUID),
 		})
 	}
 

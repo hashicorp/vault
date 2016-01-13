@@ -74,7 +74,7 @@ The GitHub API has good support for conditional requests which will help
 prevent you from burning through your rate limit, as well as help speed up your
 application.  go-github does not handle conditional requests directly, but is
 instead designed to work with a caching http.Transport.  We recommend using
-https://github.com/gregjones/httpcache, which can be used in conjuction with
+https://github.com/gregjones/httpcache, which can be used in conjunction with
 https://github.com/sourcegraph/apiproxy to provide additional flexibility and
 control of caching rules.
 

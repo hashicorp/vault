@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 )
@@ -29,7 +28,8 @@ const (
 	// DefaultMonitorRetryTime is how long we wait after a failed monitor check
 	// of a lock (500 response code). This allows the monitor to ride out brief
 	// periods of unavailability, subject to the MonitorRetries setting in the
-	// lock options which is by default set to 0, disabling this feature.
+	// lock options which is by default set to 0, disabling this feature. This
+	// affects locks and semaphores.
 	DefaultMonitorRetryTime = 2 * time.Second
 
 	// LockFlagValue is a magic flag we set to indicate a key
@@ -76,6 +76,8 @@ type LockOptions struct {
 	SessionTTL       string        // Optional, defaults to DefaultLockSessionTTL
 	MonitorRetries   int           // Optional, defaults to 0 which means no retries
 	MonitorRetryTime time.Duration // Optional, defaults to DefaultMonitorRetryTime
+	LockWaitTime     time.Duration // Optional, defaults to DefaultLockWaitTime
+	LockTryOnce      bool          // Optional, defaults to false which means try forever
 }
 
 // LockKey returns a handle to a lock struct which can be used
@@ -107,6 +109,9 @@ func (c *Client) LockOpts(opts *LockOptions) (*Lock, error) {
 	}
 	if opts.MonitorRetryTime == 0 {
 		opts.MonitorRetryTime = DefaultMonitorRetryTime
+	}
+	if opts.LockWaitTime == 0 {
+		opts.LockWaitTime = DefaultLockWaitTime
 	}
 	l := &Lock{
 		c:    c,
@@ -158,9 +163,11 @@ func (l *Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// Setup the query options
 	kv := l.c.KV()
 	qOpts := &QueryOptions{
-		WaitTime: DefaultLockWaitTime,
+		WaitTime: l.opts.LockWaitTime,
 	}
 
+	start := time.Now()
+	attempts := 0
 WAIT:
 	// Check if we should quit
 	select {
@@ -168,6 +175,17 @@ WAIT:
 		return nil, nil
 	default:
 	}
+
+	// Handle the one-shot mode.
+	if l.opts.LockTryOnce && attempts > 0 {
+		elapsed := time.Now().Sub(start)
+		if elapsed > qOpts.WaitTime {
+			return nil, nil
+		}
+
+		qOpts.WaitTime -= elapsed
+	}
+	attempts++
 
 	// Look for an existing lock, blocking until not taken
 	pair, meta, err := kv.Get(l.opts.Key, qOpts)
@@ -343,15 +361,11 @@ WAIT:
 RETRY:
 	pair, meta, err := kv.Get(l.opts.Key, opts)
 	if err != nil {
-		// TODO (slackpad) - Make a real error type here instead of using
-		// a string check.
-		const serverError = "Unexpected response code: 500"
-
 		// If configured we can try to ride out a brief Consul unavailability
 		// by doing retries. Note that we have to attempt the retry in a non-
 		// blocking fashion so that we have a clean place to reset the retry
 		// counter if service is restored.
-		if retries > 0 && strings.Contains(err.Error(), serverError) {
+		if retries > 0 && IsServerError(err) {
 			time.Sleep(l.opts.MonitorRetryTime)
 			retries--
 			opts.WaitIndex = 0

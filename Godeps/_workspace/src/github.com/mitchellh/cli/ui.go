@@ -9,7 +9,8 @@ import (
 	"os/signal"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"github.com/bgentry/speakeasy"
+	"github.com/mattn/go-isatty"
 )
 
 // Ui is an interface for interacting with the terminal, or "interface"
@@ -75,11 +76,8 @@ func (u *BasicUi) ask(query string, secret bool) (string, error) {
 	go func() {
 		var line string
 		var err error
-		stdin := int(os.Stdin.Fd())
-		if secret && terminal.IsTerminal(stdin) {
-			var lineBytes []byte
-			lineBytes, err = terminal.ReadPassword(stdin)
-			line = string(lineBytes)
+		if secret && isatty.IsTerminal(os.Stdin.Fd()) {
+			line, err = speakeasy.Ask("")
 		} else {
 			r := bufio.NewReader(u.Reader)
 			line, err = r.ReadString('\n')

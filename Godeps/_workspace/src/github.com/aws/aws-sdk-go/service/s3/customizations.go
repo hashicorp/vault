@@ -21,7 +21,7 @@ func init() {
 
 	initRequest = func(r *request.Request) {
 		switch r.Operation.Name {
-		case opPutBucketCors, opPutBucketLifecycle, opPutBucketPolicy, opPutBucketTagging, opDeleteObjects:
+		case opPutBucketCors, opPutBucketLifecycle, opPutBucketPolicy, opPutBucketTagging, opDeleteObjects, opPutBucketLifecycleConfiguration:
 			// These S3 operations require Content-MD5 to be set
 			r.Handlers.Build.PushBack(contentMD5)
 		case opGetBucketLocation:

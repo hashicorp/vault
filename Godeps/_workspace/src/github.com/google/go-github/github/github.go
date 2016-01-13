@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-querystring/query"
@@ -31,6 +32,7 @@ const (
 	headerRateLimit     = "X-RateLimit-Limit"
 	headerRateRemaining = "X-RateLimit-Remaining"
 	headerRateReset     = "X-RateLimit-Reset"
+	headerOTP           = "X-GitHub-OTP"
 
 	mediaTypeV3      = "application/vnd.github.v3+json"
 	defaultMediaType = "application/octet-stream"
@@ -46,6 +48,9 @@ const (
 	// https://developer.github.com/changes/2015-06-24-api-enhancements-for-working-with-organization-permissions/
 	mediaTypeOrgPermissionPreview     = "application/vnd.github.ironman-preview+json"
 	mediaTypeOrgPermissionRepoPreview = "application/vnd.github.ironman-preview.repository+json"
+
+	// https://developer.github.com/changes/2015-11-11-protected-branches-api/
+	mediaTypeProtectedBranchesPreview = "application/vnd.github.loki-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -64,11 +69,8 @@ type Client struct {
 	// User agent used when communicating with the GitHub API.
 	UserAgent string
 
-	// Rate specifies the current rate limit for the client as determined by the
-	// most recent API call.  If the client is used in a multi-user application,
-	// this rate may not always be up-to-date.  Call RateLimits() to check the
-	// current rate.
-	Rate Rate
+	rateMu sync.Mutex
+	rate   Rate
 
 	// Services used for talking to different parts of the GitHub API.
 	Activity      *ActivityService
@@ -292,6 +294,17 @@ func (r *Response) populateRate() {
 	}
 }
 
+// Rate specifies the current rate limit for the client as determined by the
+// most recent API call.  If the client is used in a multi-user application,
+// this rate may not always be up-to-date.  Call RateLimits() to check the
+// current rate.
+func (c *Client) Rate() Rate {
+	c.rateMu.Lock()
+	rate := c.rate
+	c.rateMu.Unlock()
+	return rate
+}
+
 // Do sends an API request and returns the API response.  The API response is
 // JSON decoded and stored in the value pointed to by v, or returned as an
 // error if an API error has occurred.  If v implements the io.Writer
@@ -307,7 +320,9 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 
 	response := newResponse(resp)
 
-	c.Rate = response.Rate
+	c.rateMu.Lock()
+	c.rate = response.Rate
+	c.rateMu.Unlock()
 
 	err = CheckResponse(resp)
 	if err != nil {
@@ -321,6 +336,9 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 			io.Copy(w, resp.Body)
 		} else {
 			err = json.NewDecoder(resp.Body).Decode(v)
+			if err == io.EOF {
+				err = nil // ignore EOF errors caused by empty response body
+			}
 		}
 	}
 	return response, err
@@ -343,8 +361,15 @@ func (r *ErrorResponse) Error() string {
 		r.Response.StatusCode, r.Message, r.Errors)
 }
 
-// sanitizeURL redacts the client_id and client_secret tokens from the URL which
-// may be exposed to the user, specifically in the ErrorResponse error message.
+// TwoFactorAuthError occurs when using HTTP Basic Authentication for a user
+// that has two-factor authentication enabled.  The request can be reattempted
+// by providing a one-time password in the request.
+type TwoFactorAuthError ErrorResponse
+
+func (r *TwoFactorAuthError) Error() string { return (*ErrorResponse)(r).Error() }
+
+// sanitizeURL redacts the client_secret parameter from the URL which may be
+// exposed to the user, specifically in the ErrorResponse error message.
 func sanitizeURL(uri *url.URL) *url.URL {
 	if uri == nil {
 		return nil
@@ -396,6 +421,9 @@ func CheckResponse(r *http.Response) error {
 	data, err := ioutil.ReadAll(r.Body)
 	if err == nil && data != nil {
 		json.Unmarshal(data, errorResponse)
+	}
+	if r.StatusCode == http.StatusUnauthorized && strings.HasPrefix(r.Header.Get(headerOTP), "required") {
+		return (*TwoFactorAuthError)(errorResponse)
 	}
 	return errorResponse
 }
@@ -548,6 +576,43 @@ func (t *UnauthenticatedRateLimitedTransport) transport() http.RoundTripper {
 	return http.DefaultTransport
 }
 
+// BasicAuthTransport is an http.RoundTripper that authenticates all requests
+// using HTTP Basic Authentication with the provided username and password.  It
+// additionally supports users who have two-factor authentication enabled on
+// their GitHub account.
+type BasicAuthTransport struct {
+	Username string // GitHub username
+	Password string // GitHub password
+	OTP      string // one-time password for users with two-factor auth enabled
+
+	// Transport is the underlying HTTP transport to use when making requests.
+	// It will default to http.DefaultTransport if nil.
+	Transport http.RoundTripper
+}
+
+// RoundTrip implements the RoundTripper interface.
+func (t *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = cloneRequest(req) // per RoundTrip contract
+	req.SetBasicAuth(t.Username, t.Password)
+	if t.OTP != "" {
+		req.Header.Add(headerOTP, t.OTP)
+	}
+	return t.transport().RoundTrip(req)
+}
+
+// Client returns an *http.Client that makes requests that are authenticated
+// using HTTP Basic Authentication.
+func (t *BasicAuthTransport) Client() *http.Client {
+	return &http.Client{Transport: t}
+}
+
+func (t *BasicAuthTransport) transport() http.RoundTripper {
+	if t.Transport != nil {
+		return t.Transport
+	}
+	return http.DefaultTransport
+}
+
 // cloneRequest returns a clone of the provided *http.Request. The clone is a
 // shallow copy of the struct and its Header map.
 func cloneRequest(r *http.Request) *http.Request {
@@ -555,9 +620,9 @@ func cloneRequest(r *http.Request) *http.Request {
 	r2 := new(http.Request)
 	*r2 = *r
 	// deep copy of the Header
-	r2.Header = make(http.Header)
+	r2.Header = make(http.Header, len(r.Header))
 	for k, s := range r.Header {
-		r2.Header[k] = s
+		r2.Header[k] = append([]string(nil), s...)
 	}
 	return r2
 }

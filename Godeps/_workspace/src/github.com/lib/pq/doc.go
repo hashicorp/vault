@@ -86,6 +86,8 @@ variables not supported by pq are set, pq will panic during connection
 establishment.  Environment variables have a lower precedence than explicitly
 provided connection parameters.
 
+The pgpass mechanism as described in http://www.postgresql.org/docs/current/static/libpq-pgpass.html
+is supported, but on Windows PGPASSFILE must be specified explicitly.
 
 Queries
 

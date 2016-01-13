@@ -81,7 +81,10 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 
 	// Generate a new salt if necessary
 	if s.salt == "" {
-		s.salt = uuid.GenerateUUID()
+		s.salt, err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate uuid: %v", err)
+		}
 		s.generated = true
 		if view != nil {
 			raw := &logical.StorageEntry{

@@ -5,12 +5,121 @@
 package gocql
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
 
 	"github.com/hailocab/go-hostpool"
 )
+
+// cowHostList implements a copy on write host list, its equivilent type is []*HostInfo
+type cowHostList struct {
+	list atomic.Value
+	mu   sync.Mutex
+}
+
+func (c *cowHostList) String() string {
+	return fmt.Sprintf("%+v", c.get())
+}
+
+func (c *cowHostList) get() []*HostInfo {
+	// TODO(zariel): should we replace this with []*HostInfo?
+	l, ok := c.list.Load().(*[]*HostInfo)
+	if !ok {
+		return nil
+	}
+	return *l
+}
+
+func (c *cowHostList) set(list []*HostInfo) {
+	c.mu.Lock()
+	c.list.Store(&list)
+	c.mu.Unlock()
+}
+
+// add will add a host if it not already in the list
+func (c *cowHostList) add(host *HostInfo) bool {
+	c.mu.Lock()
+	l := c.get()
+
+	if n := len(l); n == 0 {
+		l = []*HostInfo{host}
+	} else {
+		newL := make([]*HostInfo, n+1)
+		for i := 0; i < n; i++ {
+			if host.Equal(l[i]) {
+				c.mu.Unlock()
+				return false
+			}
+			newL[i] = l[i]
+		}
+		newL[n] = host
+		l = newL
+	}
+
+	c.list.Store(&l)
+	c.mu.Unlock()
+	return true
+}
+
+func (c *cowHostList) update(host *HostInfo) {
+	c.mu.Lock()
+	l := c.get()
+
+	if len(l) == 0 {
+		c.mu.Unlock()
+		return
+	}
+
+	found := false
+	newL := make([]*HostInfo, len(l))
+	for i := range l {
+		if host.Equal(l[i]) {
+			newL[i] = host
+			found = true
+		} else {
+			newL[i] = l[i]
+		}
+	}
+
+	if found {
+		c.list.Store(&newL)
+	}
+
+	c.mu.Unlock()
+}
+
+func (c *cowHostList) remove(addr string) bool {
+	c.mu.Lock()
+	l := c.get()
+	size := len(l)
+	if size == 0 {
+		c.mu.Unlock()
+		return false
+	}
+
+	found := false
+	newL := make([]*HostInfo, 0, size)
+	for i := 0; i < len(l); i++ {
+		if l[i].Peer() != addr {
+			newL = append(newL, l[i])
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		c.mu.Unlock()
+		return false
+	}
+
+	newL = newL[:size-1 : size-1]
+	c.list.Store(&newL)
+	c.mu.Unlock()
+
+	return true
+}
 
 // RetryableQuery is an interface that represents a query or batch statement that
 // exposes the correct functions for the retry policy logic to evaluate correctly.
@@ -50,9 +159,16 @@ func (s *SimpleRetryPolicy) Attempt(q RetryableQuery) bool {
 	return q.Attempts() <= s.NumRetries
 }
 
+type HostStateNotifier interface {
+	AddHost(host *HostInfo)
+	RemoveHost(addr string)
+	// TODO(zariel): add host up/down
+}
+
 // HostSelectionPolicy is an interface for selecting
 // the most appropriate host to execute a given query.
 type HostSelectionPolicy interface {
+	HostStateNotifier
 	SetHosts
 	SetPartitioner
 	//Pick returns an iteration function over selected hosts
@@ -72,19 +188,17 @@ type NextHost func() SelectedHost
 // RoundRobinHostPolicy is a round-robin load balancing policy, where each host
 // is tried sequentially for each query.
 func RoundRobinHostPolicy() HostSelectionPolicy {
-	return &roundRobinHostPolicy{hosts: []HostInfo{}}
+	return &roundRobinHostPolicy{}
 }
 
 type roundRobinHostPolicy struct {
-	hosts []HostInfo
+	hosts cowHostList
 	pos   uint32
 	mu    sync.RWMutex
 }
 
-func (r *roundRobinHostPolicy) SetHosts(hosts []HostInfo) {
-	r.mu.Lock()
-	r.hosts = hosts
-	r.mu.Unlock()
+func (r *roundRobinHostPolicy) SetHosts(hosts []*HostInfo) {
+	r.hosts.set(hosts)
 }
 
 func (r *roundRobinHostPolicy) SetPartitioner(partitioner string) {
@@ -96,22 +210,29 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 	// to the number of hosts known to this policy
 	var i int
 	return func() SelectedHost {
-		r.mu.RLock()
-		defer r.mu.RUnlock()
-		if len(r.hosts) == 0 {
+		hosts := r.hosts.get()
+		if len(hosts) == 0 {
 			return nil
 		}
 
 		// always increment pos to evenly distribute traffic in case of
 		// failures
-		pos := atomic.AddUint32(&r.pos, 1)
-		if i >= len(r.hosts) {
+		pos := atomic.AddUint32(&r.pos, 1) - 1
+		if i >= len(hosts) {
 			return nil
 		}
-		host := &r.hosts[(pos)%uint32(len(r.hosts))]
+		host := hosts[(pos)%uint32(len(hosts))]
 		i++
 		return selectedRoundRobinHost{host}
 	}
+}
+
+func (r *roundRobinHostPolicy) AddHost(host *HostInfo) {
+	r.hosts.add(host)
+}
+
+func (r *roundRobinHostPolicy) RemoveHost(addr string) {
+	r.hosts.remove(addr)
 }
 
 // selectedRoundRobinHost is a host returned by the roundRobinHostPolicy and
@@ -132,24 +253,25 @@ func (host selectedRoundRobinHost) Mark(err error) {
 // selected based on the partition key, so queries are sent to the host which
 // owns the partition. Fallback is used when routing information is not available.
 func TokenAwareHostPolicy(fallback HostSelectionPolicy) HostSelectionPolicy {
-	return &tokenAwareHostPolicy{fallback: fallback, hosts: []HostInfo{}}
+	return &tokenAwareHostPolicy{fallback: fallback}
 }
 
 type tokenAwareHostPolicy struct {
+	hosts       cowHostList
 	mu          sync.RWMutex
-	hosts       []HostInfo
 	partitioner string
 	tokenRing   *tokenRing
 	fallback    HostSelectionPolicy
 }
 
-func (t *tokenAwareHostPolicy) SetHosts(hosts []HostInfo) {
+func (t *tokenAwareHostPolicy) SetHosts(hosts []*HostInfo) {
+	t.hosts.set(hosts)
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	// always update the fallback
 	t.fallback.SetHosts(hosts)
-	t.hosts = hosts
 
 	t.resetTokenRing()
 }
@@ -166,6 +288,23 @@ func (t *tokenAwareHostPolicy) SetPartitioner(partitioner string) {
 	}
 }
 
+func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
+	t.hosts.add(host)
+	t.fallback.AddHost(host)
+
+	t.mu.Lock()
+	t.resetTokenRing()
+	t.mu.Unlock()
+}
+
+func (t *tokenAwareHostPolicy) RemoveHost(addr string) {
+	t.hosts.remove(addr)
+
+	t.mu.Lock()
+	t.resetTokenRing()
+	t.mu.Unlock()
+}
+
 func (t *tokenAwareHostPolicy) resetTokenRing() {
 	if t.partitioner == "" {
 		// partitioner not yet set
@@ -173,7 +312,8 @@ func (t *tokenAwareHostPolicy) resetTokenRing() {
 	}
 
 	// create a new token ring
-	tokenRing, err := newTokenRing(t.partitioner, t.hosts)
+	hosts := t.hosts.get()
+	tokenRing, err := newTokenRing(t.partitioner, hosts)
 	if err != nil {
 		log.Printf("Unable to update the token ring due to error: %s", err)
 		return
@@ -215,6 +355,7 @@ func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 		hostReturned bool
 		fallbackIter NextHost
 	)
+
 	return func() SelectedHost {
 		if !hostReturned {
 			hostReturned = true
@@ -266,28 +407,63 @@ func (host selectedTokenAwareHost) Mark(err error) {
 //     )
 //
 func HostPoolHostPolicy(hp hostpool.HostPool) HostSelectionPolicy {
-	return &hostPoolHostPolicy{hostMap: map[string]HostInfo{}, hp: hp}
+	return &hostPoolHostPolicy{hostMap: map[string]*HostInfo{}, hp: hp}
 }
 
 type hostPoolHostPolicy struct {
 	hp      hostpool.HostPool
-	hostMap map[string]HostInfo
 	mu      sync.RWMutex
+	hostMap map[string]*HostInfo
 }
 
-func (r *hostPoolHostPolicy) SetHosts(hosts []HostInfo) {
+func (r *hostPoolHostPolicy) SetHosts(hosts []*HostInfo) {
 	peers := make([]string, len(hosts))
-	hostMap := make(map[string]HostInfo, len(hosts))
+	hostMap := make(map[string]*HostInfo, len(hosts))
 
 	for i, host := range hosts {
-		peers[i] = host.Peer
-		hostMap[host.Peer] = host
+		peers[i] = host.Peer()
+		hostMap[host.Peer()] = host
 	}
 
 	r.mu.Lock()
 	r.hp.SetHosts(peers)
 	r.hostMap = hostMap
 	r.mu.Unlock()
+}
+
+func (r *hostPoolHostPolicy) AddHost(host *HostInfo) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, ok := r.hostMap[host.Peer()]; ok {
+		return
+	}
+
+	hosts := make([]string, 0, len(r.hostMap)+1)
+	for addr := range r.hostMap {
+		hosts = append(hosts, addr)
+	}
+	hosts = append(hosts, host.Peer())
+
+	r.hp.SetHosts(hosts)
+	r.hostMap[host.Peer()] = host
+}
+
+func (r *hostPoolHostPolicy) RemoveHost(addr string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, ok := r.hostMap[addr]; !ok {
+		return
+	}
+
+	delete(r.hostMap, addr)
+	hosts := make([]string, 0, len(r.hostMap))
+	for addr := range r.hostMap {
+		hosts = append(hosts, addr)
+	}
+
+	r.hp.SetHosts(hosts)
 }
 
 func (r *hostPoolHostPolicy) SetPartitioner(partitioner string) {
@@ -309,7 +485,7 @@ func (r *hostPoolHostPolicy) Pick(qry *Query) NextHost {
 			return nil
 		}
 
-		return selectedHostPoolHost{&host, hostR}
+		return selectedHostPoolHost{host, hostR}
 	}
 }
 

@@ -50,13 +50,18 @@ func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]
 // the empty string will fetch watched repos for the authenticated user.
 //
 // GitHub API Docs: https://developer.github.com/v3/activity/watching/#list-repositories-being-watched
-func (s *ActivityService) ListWatched(user string) ([]Repository, *Response, error) {
+func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]Repository, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/subscriptions", user)
 	} else {
 		u = "user/subscriptions"
 	}
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err

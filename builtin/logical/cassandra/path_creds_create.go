@@ -43,8 +43,15 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	displayName := req.DisplayName
-	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, strings.Replace(uuid.GenerateUUID(), "-", "_", -1), time.Now().Unix())
-	password := uuid.GenerateUUID()
+	userUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, strings.Replace(userUUID, "-", "_", -1), time.Now().Unix())
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get our connection
 	session, err := b.DB(req.Storage)

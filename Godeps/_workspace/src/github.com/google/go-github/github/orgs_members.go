@@ -52,7 +52,7 @@ type ListMembersOptions struct {
 	// 2fa_disabled, all.  Default is "all".
 	Filter string `url:"filter,omitempty"`
 
-	// Role filters memebers returned by their role in the organization.
+	// Role filters members returned by their role in the organization.
 	// Possible values are:
 	//     all - all members of the organization, regardless of role
 	//     admin - organization owners

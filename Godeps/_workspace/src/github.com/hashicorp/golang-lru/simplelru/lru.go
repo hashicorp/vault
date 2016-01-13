@@ -1,4 +1,4 @@
-package internal
+package simplelru
 
 import (
 	"container/list"

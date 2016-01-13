@@ -80,19 +80,11 @@ func (s *DogStatsdSink) parseKey(key []string) ([]string, []string) {
 // Implementation of methods in the MetricSink interface
 
 func (s *DogStatsdSink) SetGauge(key []string, val float32) {
-	key, tags := s.parseKey(key)
-	flatKey := s.flattenKey(key)
-
-	rate := 1.0
-	s.client.Gauge(flatKey, float64(val), tags, rate)
+	s.SetGaugeWithTags(key, val, []string{})
 }
 
 func (s *DogStatsdSink) IncrCounter(key []string, val float32) {
-	key, tags := s.parseKey(key)
-	flatKey := s.flattenKey(key)
-
-	rate := 1.0
-	s.client.Count(flatKey, int64(val), tags, rate)
+	s.IncrCounterWithTags(key, val, []string{})
 }
 
 // EmitKey is not implemented since DogStatsd does not provide a metric type that holds an
@@ -101,9 +93,33 @@ func (s *DogStatsdSink) EmitKey(key []string, val float32) {
 }
 
 func (s *DogStatsdSink) AddSample(key []string, val float32) {
-	key, tags := s.parseKey(key)
-	flatKey := s.flattenKey(key)
+	s.AddSampleWithTags(key, val, []string{})
+}
 
+// The following ...WithTags methods correspond to Datadog's Tag extension to Statsd.
+// http://docs.datadoghq.com/guides/dogstatsd/#tags
+
+func (s *DogStatsdSink) SetGaugeWithTags(key []string, val float32, tags []string) {
+	flatKey, tags := s.getFlatkeyAndCombinedTags(key, tags)
+	rate := 1.0
+	s.client.Gauge(flatKey, float64(val), tags, rate)
+}
+
+func (s *DogStatsdSink) IncrCounterWithTags(key []string, val float32, tags []string) {
+	flatKey, tags := s.getFlatkeyAndCombinedTags(key, tags)
+	rate := 1.0
+	s.client.Count(flatKey, int64(val), tags, rate)
+}
+
+func (s *DogStatsdSink) AddSampleWithTags(key []string, val float32, tags []string) {
+	flatKey, tags := s.getFlatkeyAndCombinedTags(key, tags)
 	rate := 1.0
 	s.client.TimeInMilliseconds(flatKey, float64(val), tags, rate)
+}
+
+func (s *DogStatsdSink) getFlatkeyAndCombinedTags(key []string, tags []string) (flattenedKey string, combinedTags []string) {
+	key, hostTags := s.parseKey(key)
+	flatKey := s.flattenKey(key)
+	tags = append(tags, hostTags...)
+	return flatKey, tags
 }

@@ -56,11 +56,18 @@ func (b *backend) pathRoleCreateRead(
 	if len(displayName) > 10 {
 		displayName = displayName[:10]
 	}
-	username := fmt.Sprintf("%s-%s", displayName, uuid.GenerateUUID())
+	userUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	username := fmt.Sprintf("%s-%s", displayName, userUUID)
 	if len(username) > 16 {
 		username = username[:16]
 	}
-	password := uuid.GenerateUUID()
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get our connection
 	db, err := b.DB(req.Storage)

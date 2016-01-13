@@ -104,6 +104,10 @@ func (p *epsilonGreedyHostPool) Get() HostPoolResponse {
 	p.Lock()
 	defer p.Unlock()
 	host := p.getEpsilonGreedy()
+	if host == "" {
+		return nil
+	}
+
 	started := time.Now()
 	return &epsilonHostPoolResponse{
 		standardHostPoolResponse: standardHostPoolResponse{host: host, pool: p},
@@ -161,6 +165,7 @@ func (p *epsilonGreedyHostPool) getEpsilonGreedy() string {
 		if len(possibleHosts) != 0 {
 			log.Println("Failed to randomly choose a host, Dan loses")
 		}
+
 		return p.getRoundRobin()
 	}
 

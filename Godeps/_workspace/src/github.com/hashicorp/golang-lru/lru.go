@@ -6,12 +6,12 @@ package lru
 import (
 	"sync"
 
-	"github.com/hashicorp/golang-lru/internal"
+	"github.com/hashicorp/golang-lru/simplelru"
 )
 
 // Cache is a thread-safe fixed size LRU cache.
 type Cache struct {
-	lru  *internal.LRU
+	lru  *simplelru.LRU
 	lock sync.RWMutex
 }
 
@@ -23,7 +23,7 @@ func New(size int) (*Cache, error) {
 // NewWithEvict constructs a fixed size cache with the given eviction
 // callback.
 func NewWithEvict(size int, onEvicted func(key interface{}, value interface{})) (*Cache, error) {
-	lru, err := internal.NewLRU(size, internal.EvictCallback(onEvicted))
+	lru, err := simplelru.NewLRU(size, simplelru.EvictCallback(onEvicted))
 	if err != nil {
 		return nil, err
 	}

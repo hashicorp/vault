@@ -62,7 +62,7 @@ func Marshal(info TypeInfo, value interface{}) ([]byte, error) {
 	}
 
 	switch info.Type() {
-	case TypeVarchar, TypeAscii, TypeBlob:
+	case TypeVarchar, TypeAscii, TypeBlob, TypeText:
 		return marshalVarchar(info, value)
 	case TypeBoolean:
 		return marshalBool(info, value)
@@ -115,7 +115,7 @@ func Unmarshal(info TypeInfo, data []byte, value interface{}) error {
 	}
 
 	switch info.Type() {
-	case TypeVarchar, TypeAscii, TypeBlob:
+	case TypeVarchar, TypeAscii, TypeBlob, TypeText:
 		return unmarshalVarchar(info, data, value)
 	case TypeBoolean:
 		return unmarshalBool(info, data, value)
@@ -1216,7 +1216,11 @@ func unmarshalInet(info TypeInfo, data []byte, value interface{}) error {
 	case Unmarshaler:
 		return v.UnmarshalCQL(info, data)
 	case *net.IP:
-		ip := net.IP(data)
+		if x := len(data); !(x == 4 || x == 16) {
+			return unmarshalErrorf("cannot unmarshal %s into %T: invalid sized IP: got %d bytes not 4 or 16", info, value, x)
+		}
+		buf := copyBytes(data)
+		ip := net.IP(buf)
 		if v4 := ip.To4(); v4 != nil {
 			*v = v4
 			return nil
@@ -1616,6 +1620,10 @@ type TupleTypeInfo struct {
 	Elems []TypeInfo
 }
 
+func (t TupleTypeInfo) New() interface{} {
+	return reflect.New(goType(t)).Interface()
+}
+
 type UDTField struct {
 	Name string
 	Type TypeInfo
@@ -1626,6 +1634,10 @@ type UDTTypeInfo struct {
 	KeySpace string
 	Name     string
 	Elements []UDTField
+}
+
+func (u UDTTypeInfo) New() interface{} {
+	return reflect.New(goType(u)).Interface()
 }
 
 func (u UDTTypeInfo) String() string {
@@ -1663,6 +1675,7 @@ const (
 	TypeDouble    Type = 0x0007
 	TypeFloat     Type = 0x0008
 	TypeInt       Type = 0x0009
+	TypeText      Type = 0x000A
 	TypeTimestamp Type = 0x000B
 	TypeUUID      Type = 0x000C
 	TypeVarchar   Type = 0x000D
@@ -1699,6 +1712,8 @@ func (t Type) String() string {
 		return "float"
 	case TypeInt:
 		return "int"
+	case TypeText:
+		return "text"
 	case TypeTimestamp:
 		return "timestamp"
 	case TypeUUID:

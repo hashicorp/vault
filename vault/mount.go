@@ -181,7 +181,11 @@ func (c *Core) mount(me *MountEntry) error {
 	defer c.mountsLock.Unlock()
 
 	// Generate a new UUID and view
-	me.UUID = uuid.GenerateUUID()
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	me.UUID = meUUID
 	view := NewBarrierView(c.barrier, backendBarrierPrefix+me.UUID+"/")
 
 	backend, err := c.newLogicalBackend(me.Type, c.mountEntrySysView(me), view, nil)
@@ -571,11 +575,15 @@ func (c *Core) mountEntrySysView(me *MountEntry) logical.SystemView {
 // defaultMountTable creates a default mount table
 func defaultMountTable() *MountTable {
 	table := &MountTable{}
+	mountUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create default mount table UUID: %v", err))
+	}
 	genericMount := &MountEntry{
 		Path:        "secret/",
 		Type:        "generic",
 		Description: "generic secret storage",
-		UUID:        uuid.GenerateUUID(),
+		UUID:        mountUUID,
 	}
 	table.Entries = append(table.Entries, genericMount)
 	table.Entries = append(table.Entries, requiredMountTable().Entries...)
@@ -586,17 +594,26 @@ func defaultMountTable() *MountTable {
 // to be available
 func requiredMountTable() *MountTable {
 	table := &MountTable{}
+	cubbyholeUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create cubbyhole UUID: %v", err))
+	}
 	cubbyholeMount := &MountEntry{
 		Path:        "cubbyhole/",
 		Type:        "cubbyhole",
 		Description: "per-token private secret storage",
-		UUID:        uuid.GenerateUUID(),
+		UUID:        cubbyholeUUID,
+	}
+
+	sysUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create sys UUID: %v", err))
 	}
 	sysMount := &MountEntry{
 		Path:        "sys/",
 		Type:        "system",
 		Description: "system endpoints used for control, policy and debugging",
-		UUID:        uuid.GenerateUUID(),
+		UUID:        sysUUID,
 	}
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)

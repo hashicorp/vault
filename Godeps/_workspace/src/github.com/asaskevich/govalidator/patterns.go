@@ -33,6 +33,7 @@ const (
 	SSN            string = `^\d{3}[- ]?\d{2}[- ]?\d{4}$`
 	WinPath        string = `^[a-zA-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*$`
 	UnixPath       string = `^((?:\/[a-zA-Z0-9\.\:]+(?:_[a-zA-Z0-9\:\.]+)*(?:\-[\:a-zA-Z0-9\.]+)*)+\/?)$`
+	Semver         string = "^v?(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
 	tagName        string = "valid"
 )
 
@@ -76,4 +77,5 @@ var (
 	rxSSN            = regexp.MustCompile(SSN)
 	rxWinPath        = regexp.MustCompile(WinPath)
 	rxUnixPath       = regexp.MustCompile(UnixPath)
+	rxSemver         = regexp.MustCompile(Semver)
 )

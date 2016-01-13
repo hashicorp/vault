@@ -24,10 +24,14 @@ func UnmarshalError(r *request.Request) {
 	if err != nil && err != io.EOF {
 		r.Error = awserr.New("SerializationError", "failed to decode query XML error response", err)
 	} else {
+		reqID := resp.RequestID
+		if reqID == "" {
+			reqID = r.RequestID
+		}
 		r.Error = awserr.NewRequestFailure(
 			awserr.New(resp.Code, resp.Message, nil),
 			r.HTTPResponse.StatusCode,
-			resp.RequestID,
+			reqID,
 		)
 	}
 }

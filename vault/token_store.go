@@ -309,7 +309,11 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
-		entry.ID = uuid.GenerateUUID()
+		entryUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.ID = entryUUID
 	}
 
 	return ts.storeCommon(entry, true)

@@ -84,43 +84,23 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	// Reading Handshake Initialization Packet
 	cipher, err := mc.readInitPacket()
 	if err != nil {
-		mc.Close()
+		mc.cleanup()
 		return nil, err
 	}
 
 	// Send Client Authentication Packet
 	if err = mc.writeAuthPacket(cipher); err != nil {
-		mc.Close()
+		mc.cleanup()
 		return nil, err
 	}
 
-	// Read Result Packet
-	err = mc.readResultOK()
-	if err != nil {
-		// Retry with old authentication method, if allowed
-		if mc.cfg != nil && mc.cfg.allowOldPasswords && err == ErrOldPassword {
-			if err = mc.writeOldAuthPacket(cipher); err != nil {
-				mc.Close()
-				return nil, err
-			}
-			if err = mc.readResultOK(); err != nil {
-				mc.Close()
-				return nil, err
-			}
-		} else if mc.cfg != nil && mc.cfg.allowCleartextPasswords && err == ErrCleartextPassword {
-			if err = mc.writeClearAuthPacket(); err != nil {
-				mc.Close()
-				return nil, err
-			}
-			if err = mc.readResultOK(); err != nil {
-				mc.Close()
-				return nil, err
-			}
-		} else {
-			mc.Close()
-			return nil, err
-		}
-
+	// Handle response to auth packet, switch methods if possible
+	if err = handleAuthResult(mc, cipher); err != nil {
+		// Authentication failed and MySQL has already closed the connection
+		// (https://dev.mysql.com/doc/internals/en/authentication-fails.html).
+		// Do not send COM_QUIT, just cleanup and return the error.
+		mc.cleanup()
+		return nil, err
 	}
 
 	// Get max allowed packet size
@@ -142,6 +122,38 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	}
 
 	return mc, nil
+}
+
+func handleAuthResult(mc *mysqlConn, cipher []byte) error {
+	// Read Result Packet
+	err := mc.readResultOK()
+	if err == nil {
+		return nil // auth successful
+	}
+
+	if mc.cfg == nil {
+		return err // auth failed and retry not possible
+	}
+
+	// Retry auth if configured to do so.
+	if mc.cfg.allowOldPasswords && err == ErrOldPassword {
+		// Retry with old authentication method. Note: there are edge cases
+		// where this should work but doesn't; this is currently "wontfix":
+		// https://github.com/go-sql-driver/mysql/issues/184
+		if err = mc.writeOldAuthPacket(cipher); err != nil {
+			return err
+		}
+		err = mc.readResultOK()
+	} else if mc.cfg.allowCleartextPasswords && err == ErrCleartextPassword {
+		// Retry with clear text password for
+		// http://dev.mysql.com/doc/refman/5.7/en/cleartext-authentication-plugin.html
+		// http://dev.mysql.com/doc/refman/5.7/en/pam-authentication-plugin.html
+		if err = mc.writeClearAuthPacket(); err != nil {
+			return err
+		}
+		err = mc.readResultOK()
+	}
+	return err
 }
 
 func init() {

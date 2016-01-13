@@ -12,10 +12,21 @@ Bugfixes:
  - Enable microsecond resolution on TIME, DATETIME and TIMESTAMP (#249)
  - Fixed handling of queries without columns and rows (#255)
  - Fixed a panic when SetKeepAlive() failed (#298)
+ - Support receiving ERR packet while reading rows (#321)
+ - Fixed reading NULL length-encoded integers in MySQL 5.6+ (#349)
+ - Fixed absolute paths support in LOAD LOCAL DATA INFILE (#356)
+ - Actually zero out bytes in handshake response (#378)
+ - Fixed race condition in registering LOAD DATA INFILE handler (#383)
+ - Fixed tests with MySQL 5.7.9+ (#380)
+ - QueryUnescape TLS config names (#397)
+ - Fixed "broken pipe" error by writing to closed socket (#390)
 
 New Features:
- - Support for returning table alias on Columns() (#289)
+ - Support for returning table alias on Columns() (#289, #359, #382)
  - Placeholder interpolation, can be actived with the DSN parameter `interpolateParams=true` (#309, #318)
+ - Support for uint64 parameters with high bit set (#332, #345)
+ - Cleartext authentication plugin support (#327)
+
 
 
 ## Version 1.2 (2014-06-03)

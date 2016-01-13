@@ -41,7 +41,7 @@ func (f *Field) IsExported() bool {
 	return f.field.PkgPath == ""
 }
 
-// IsZero returns true if the given field is not initalized (has a zero value).
+// IsZero returns true if the given field is not initialized (has a zero value).
 // It panics if the field is not exported.
 func (f *Field) IsZero() bool {
 	zero := reflect.Zero(f.value.Type()).Interface()
@@ -61,7 +61,7 @@ func (f *Field) Kind() reflect.Kind {
 }
 
 // Set sets the field to given value v. It retuns an error if the field is not
-// settable (not addresable or not exported) or if the given value's type
+// settable (not addressable or not exported) or if the given value's type
 // doesn't match the fields type.
 func (f *Field) Set(val interface{}) error {
 	// we can't set unexported fields, so be sure this field is exported

@@ -373,8 +373,12 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Create a lease entry
+	leaseUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", err
+	}
 	le := leaseEntry{
-		LeaseID:     path.Join(req.Path, uuid.GenerateUUID()),
+		LeaseID:     path.Join(req.Path, leaseUUID),
 		ClientToken: req.ClientToken,
 		Path:        req.Path,
 		Data:        resp.Data,

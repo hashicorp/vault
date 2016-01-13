@@ -10,7 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,9 +38,21 @@ type Session struct {
 	schemaDescriber     *schemaDescriber
 	trace               Tracer
 	hostSource          *ringDescriber
-	mu                  sync.RWMutex
+	ring                ring
+
+	connCfg *ConnConfig
+
+	mu sync.RWMutex
+
+	hostFilter HostFilter
 
 	control *controlConn
+
+	// event handlers
+	nodeEvents *eventDeouncer
+
+	// ring metadata
+	hosts []HostInfo
 
 	cfg ClusterConfig
 
@@ -66,49 +79,75 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		pageSize: cfg.PageSize,
 	}
 
-	pool, err := cfg.PoolConfig.buildPool(s)
+	connCfg, err := connConfig(s)
 	if err != nil {
-		return nil, err
-	}
-	s.pool = pool
-
-	// See if there are any connections in the pool
-	if pool.Size() == 0 {
 		s.Close()
-		return nil, ErrNoConnectionsStarted
+		return nil, fmt.Errorf("gocql: unable to create session: %v", err)
 	}
+	s.connCfg = connCfg
+
+	s.nodeEvents = newEventDeouncer("NodeEvents", s.handleNodeEvent)
 
 	s.routingKeyInfoCache.lru = lru.New(cfg.MaxRoutingKeyInfo)
 
 	// I think it might be a good idea to simplify this and make it always discover
 	// hosts, maybe with more filters.
-	if cfg.DiscoverHosts {
-		s.hostSource = &ringDescriber{
-			session:    s,
-			dcFilter:   cfg.Discovery.DcFilter,
-			rackFilter: cfg.Discovery.RackFilter,
-			closeChan:  make(chan bool),
-		}
+	s.hostSource = &ringDescriber{
+		session:   s,
+		closeChan: make(chan bool),
 	}
+
+	s.pool = cfg.PoolConfig.buildPool(s)
+
+	var hosts []*HostInfo
 
 	if !cfg.disableControlConn {
 		s.control = createControlConn(s)
-		s.control.reconnect(false)
-
-		// need to setup host source to check for rpc_address in system.local
-		localHasRPCAddr, err := checkSystemLocal(s.control)
-		if err != nil {
-			log.Printf("gocql: unable to verify if system.local table contains rpc_address, falling back to connection address: %v", err)
+		if err := s.control.connect(cfg.Hosts); err != nil {
+			s.Close()
+			return nil, err
 		}
 
-		if cfg.DiscoverHosts {
-			s.hostSource.localHasRpcAddr = localHasRPCAddr
+		// need to setup host source to check for broadcast_address in system.local
+		localHasRPCAddr, _ := checkSystemLocal(s.control)
+		s.hostSource.localHasRpcAddr = localHasRPCAddr
+		hosts, _, err = s.hostSource.GetHosts()
+		if err != nil {
+			s.Close()
+			return nil, err
+		}
+
+	} else {
+		// we dont get host info
+		hosts = make([]*HostInfo, len(cfg.Hosts))
+		for i, hostport := range cfg.Hosts {
+			// TODO: remove duplication
+			addr, portStr, err := net.SplitHostPort(JoinHostPort(hostport, cfg.Port))
+			if err != nil {
+				s.Close()
+				return nil, fmt.Errorf("NewSession: unable to parse hostport of addr %q: %v", hostport, err)
+			}
+
+			port, err := strconv.Atoi(portStr)
+			if err != nil {
+				s.Close()
+				return nil, fmt.Errorf("NewSession: invalid port for hostport of addr %q: %v", hostport, err)
+			}
+
+			hosts[i] = &HostInfo{peer: addr, port: port, state: NodeUp}
 		}
 	}
 
-	if cfg.DiscoverHosts {
-		s.hostSource.refreshRing()
-		go s.hostSource.run(cfg.Discovery.Sleep)
+	for _, host := range hosts {
+		s.handleNodeUp(net.ParseIP(host.Peer()), host.Port(), false)
+	}
+
+	// TODO(zariel): we probably dont need this any more as we verify that we
+	// can connect to one of the endpoints supplied by using the control conn.
+	// See if there are any connections in the pool
+	if s.pool.Size() == 0 {
+		s.Close()
+		return nil, ErrNoConnectionsStarted
 	}
 
 	return s, nil
@@ -206,6 +245,10 @@ func (s *Session) Close() {
 	if s.control != nil {
 		s.control.close()
 	}
+
+	if s.nodeEvents != nil {
+		s.nodeEvents.stop()
+	}
 }
 
 func (s *Session) Closed() bool {
@@ -228,6 +271,7 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 	for {
 		host, conn := s.pool.Pick(qry)
 
+		qry.attempts++
 		//Assign the error unavailable to the iterator
 		if conn == nil {
 			if qry.rt == nil || !qry.rt.Attempt(qry) {
@@ -241,11 +285,10 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 		t := time.Now()
 		iter = conn.executeQuery(qry)
 		qry.totalLatency += time.Now().Sub(t).Nanoseconds()
-		qry.attempts++
 
 		//Exit for loop if the query was successful
 		if iter.err == nil {
-			host.Mark(iter.err)
+			host.Mark(nil)
 			break
 		}
 
@@ -495,6 +538,10 @@ func (s *Session) MapExecuteBatchCAS(batch *Batch, dest map[string]interface{}) 
 	}
 }
 
+func (s *Session) connect(addr string, errorHandler ConnErrorHandler) (*Conn, error) {
+	return Connect(addr, s.connCfg, errorHandler, s)
+}
+
 // Query represents a CQL statement that can be executed.
 type Query struct {
 	stmt             string
@@ -707,7 +754,7 @@ func (q *Query) PageState(state []byte) *Query {
 // Exec executes the query without returning any rows.
 func (q *Query) Exec() error {
 	iter := q.Iter()
-	return iter.err
+	return iter.Close()
 }
 
 func isUseStatement(stmt string) bool {
@@ -798,9 +845,15 @@ type Iter struct {
 	rows [][][]byte
 	meta resultMetadata
 	next *nextIter
+	host *HostInfo
 
 	framer *framer
 	once   sync.Once
+}
+
+// Host returns the host which the query was sent to.
+func (iter *Iter) Host() *HostInfo {
+	return iter.host
 }
 
 // Columns returns the name and type of the selected columns.
@@ -834,7 +887,7 @@ func (iter *Iter) Scan(dest ...interface{}) bool {
 	// currently only support scanning into an expand tuple, such that its the same
 	// as scanning in more values from a single column
 	if len(dest) != iter.meta.actualColCount {
-		iter.err = errors.New("count mismatch")
+		iter.err = fmt.Errorf("gocql: not enough columns to scan into: have %d want %d", len(dest), iter.meta.actualColCount)
 		return false
 	}
 

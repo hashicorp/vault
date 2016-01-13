@@ -446,20 +446,18 @@ func (c *EC2) AuthorizeSecurityGroupEgressRequest(input *AuthorizeSecurityGroupE
 	return
 }
 
-// Adds one or more egress rules to a security group for use with a VPC. Specifically,
-// this action permits instances to send traffic to one or more destination
-// CIDR IP address ranges, or to one or more destination security groups for
-// the same VPC.
+// [EC2-VPC only] Adds one or more egress rules to a security group for use
+// with a VPC. Specifically, this action permits instances to send traffic to
+// one or more destination CIDR IP address ranges, or to one or more destination
+// security groups for the same VPC. This action doesn't apply to security groups
+// for use in EC2-Classic. For more information, see Security Groups for Your
+// VPC (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html)
+// in the Amazon Virtual Private Cloud User Guide.
 //
 //  You can have up to 50 rules per security group (covering both ingress and
 // egress rules).
 //
-//  A security group is for use with instances either in the EC2-Classic platform
-// or in a specific VPC. This action doesn't apply to security groups for use
-// in EC2-Classic. For more information, see Security Groups for Your VPC (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html)
-// in the Amazon Virtual Private Cloud User Guide.
-//
-// Each rule consists of the protocol (for example, TCP), plus either a CIDR
+//  Each rule consists of the protocol (for example, TCP), plus either a CIDR
 // range or a source group. For the TCP and UDP protocols, you must also specify
 // the destination port or port range. For the ICMP protocol, you must also
 // specify the ICMP type and code. You can use -1 for the type or code to mean
@@ -825,8 +823,7 @@ func (c *EC2) CopyImageRequest(input *CopyImageInput) (req *request.Request, out
 
 // Initiates the copy of an AMI from the specified source region to the current
 // region. You specify the destination region by using its endpoint when making
-// the request. AMIs that use encrypted EBS snapshots cannot be copied with
-// this method.
+// the request.
 //
 // For more information, see Copying AMIs (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -1155,6 +1152,38 @@ func (c *EC2) CreateKeyPair(input *CreateKeyPairInput) (*CreateKeyPairOutput, er
 	return out, err
 }
 
+const opCreateNatGateway = "CreateNatGateway"
+
+// CreateNatGatewayRequest generates a request for the CreateNatGateway operation.
+func (c *EC2) CreateNatGatewayRequest(input *CreateNatGatewayInput) (req *request.Request, output *CreateNatGatewayOutput) {
+	op := &request.Operation{
+		Name:       opCreateNatGateway,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &CreateNatGatewayInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &CreateNatGatewayOutput{}
+	req.Data = output
+	return
+}
+
+// Creates a NAT gateway in the specified subnet. A NAT gateway can be used
+// to enable instances in a private subnet to connect to the Internet. This
+// action creates a network interface in the specified subnet with a private
+// IP address from the IP address range of the subnet. For more information,
+// see NAT Gateways (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html)
+// in the Amazon Virtual Private Cloud User Guide.
+func (c *EC2) CreateNatGateway(input *CreateNatGatewayInput) (*CreateNatGatewayOutput, error) {
+	req, out := c.CreateNatGatewayRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opCreateNetworkAcl = "CreateNetworkAcl"
 
 // CreateNetworkAclRequest generates a request for the CreateNetworkAcl operation.
@@ -1325,7 +1354,7 @@ func (c *EC2) CreateReservedInstancesListingRequest(input *CreateReservedInstanc
 // To sell your Reserved instances, you must first register as a seller in
 // the Reserved Instance Marketplace. After completing the registration process,
 // you can create a Reserved Instance Marketplace listing of some or all of
-// your Reserved Instances, and specify the upfront price to receive for them.
+// your Reserved instances, and specify the upfront price to receive for them.
 // Your Reserved instance listings then become available for purchase. To view
 // the details of your Reserved instance listing, you can use the DescribeReservedInstancesListings
 // operation.
@@ -1361,7 +1390,8 @@ func (c *EC2) CreateRouteRequest(input *CreateRouteInput) (req *request.Request,
 // Creates a route in a route table within a VPC.
 //
 // You must specify one of the following targets: Internet gateway or virtual
-// private gateway, NAT instance, VPC peering connection, or network interface.
+// private gateway, NAT instance, NAT gateway, VPC peering connection, or network
+// interface.
 //
 // When determining how to route traffic, we use the route with the most specific
 // match. For example, let's say the traffic is destined for 192.0.2.3, and
@@ -1445,7 +1475,7 @@ func (c *EC2) CreateSecurityGroupRequest(input *CreateSecurityGroupInput) (req *
 //
 //  EC2-Classic: You can have up to 500 security groups.
 //
-// EC2-VPC: You can create up to 100 security groups per VPC.
+// EC2-VPC: You can create up to 500 security groups per VPC.
 //
 //  When you create a security group, you specify a friendly name of your choice.
 // You can have a security group for use in EC2-Classic with the same name as
@@ -2032,6 +2062,35 @@ func (c *EC2) DeleteKeyPairRequest(input *DeleteKeyPairInput) (req *request.Requ
 // Deletes the specified key pair, by removing the public key from Amazon EC2.
 func (c *EC2) DeleteKeyPair(input *DeleteKeyPairInput) (*DeleteKeyPairOutput, error) {
 	req, out := c.DeleteKeyPairRequest(input)
+	err := req.Send()
+	return out, err
+}
+
+const opDeleteNatGateway = "DeleteNatGateway"
+
+// DeleteNatGatewayRequest generates a request for the DeleteNatGateway operation.
+func (c *EC2) DeleteNatGatewayRequest(input *DeleteNatGatewayInput) (req *request.Request, output *DeleteNatGatewayOutput) {
+	op := &request.Operation{
+		Name:       opDeleteNatGateway,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeleteNatGatewayInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &DeleteNatGatewayOutput{}
+	req.Data = output
+	return
+}
+
+// Deletes the specified NAT gateway. Deleting a NAT gateway disassociates its
+// Elastic IP address, but does not release the address from your account. Deleting
+// a NAT gateway does not delete any NAT gateway routes in your route tables.
+func (c *EC2) DeleteNatGateway(input *DeleteNatGatewayInput) (*DeleteNatGatewayOutput, error) {
+	req, out := c.DeleteNatGatewayRequest(input)
 	err := req.Send()
 	return out, err
 }
@@ -2955,7 +3014,7 @@ func (c *EC2) DescribeHostsRequest(input *DescribeHostsInput) (req *request.Requ
 //
 // The results describe only the Dedicated hosts in the region you're currently
 // using. All listed instances consume capacity on your Dedicated host. Dedicated
-// hosts that have recently been released will be listed with the status "released".
+// hosts that have recently been released will be listed with the state released.
 func (c *EC2) DescribeHosts(input *DescribeHostsInput) (*DescribeHostsOutput, error) {
 	req, out := c.DescribeHostsRequest(input)
 	err := req.Send()
@@ -2982,21 +3041,20 @@ func (c *EC2) DescribeIdFormatRequest(input *DescribeIdFormatInput) (req *reques
 	return
 }
 
-// Important: This command is reserved for future use, and is currently not
-// available for you to use.
-//
-// Describes the ID format settings for your resources, for example, to view
-// which resource types are enabled for longer IDs. This request only returns
-// information about resource types whose ID formats can be modified; it does
-// not return information about other resource types.
+// Describes the ID format settings for your resources on a per-region basis,
+// for example, to view which resource types are enabled for longer IDs. This
+// request only returns information about resource types whose ID formats can
+// be modified; it does not return information about other resource types.
 //
 // The following resource types support longer IDs: instance | reservation.
 //
 // These settings apply to the IAM user who makes the request; they do not
 // apply to the entire AWS account. By default, an IAM user defaults to the
 // same settings as the root user, unless they explicitly override the settings
-// by running the ModifyIdFormat command. These settings are applied on a per-region
-// basis.
+// by running the ModifyIdFormat command. Resources created with longer IDs
+// are visible to all IAM users, regardless of these settings and provided that
+// they have permission to use the relevant Describe command for the resource
+// type.
 func (c *EC2) DescribeIdFormat(input *DescribeIdFormatInput) (*DescribeIdFormatOutput, error) {
 	req, out := c.DescribeIdFormatRequest(input)
 	err := req.Send()
@@ -3346,6 +3404,33 @@ func (c *EC2) DescribeMovingAddresses(input *DescribeMovingAddressesInput) (*Des
 	return out, err
 }
 
+const opDescribeNatGateways = "DescribeNatGateways"
+
+// DescribeNatGatewaysRequest generates a request for the DescribeNatGateways operation.
+func (c *EC2) DescribeNatGatewaysRequest(input *DescribeNatGatewaysInput) (req *request.Request, output *DescribeNatGatewaysOutput) {
+	op := &request.Operation{
+		Name:       opDescribeNatGateways,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeNatGatewaysInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &DescribeNatGatewaysOutput{}
+	req.Data = output
+	return
+}
+
+// Describes one or more of the your NAT gateways.
+func (c *EC2) DescribeNatGateways(input *DescribeNatGatewaysInput) (*DescribeNatGatewaysOutput, error) {
+	req, out := c.DescribeNatGatewaysRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opDescribeNetworkAcls = "DescribeNetworkAcls"
 
 // DescribeNetworkAclsRequest generates a request for the DescribeNetworkAcls operation.
@@ -3626,7 +3711,7 @@ func (c *EC2) DescribeReservedInstancesModificationsRequest(input *DescribeReser
 }
 
 // Describes the modifications made to your Reserved instances. If no parameter
-// is specified, information about all your Reserved Instances modification
+// is specified, information about all your Reserved instances modification
 // requests is returned. If a modification ID is specified, only information
 // about the specific modification is returned.
 //
@@ -3677,6 +3762,10 @@ func (c *EC2) DescribeReservedInstancesOfferingsRequest(input *DescribeReservedI
 // of time. During that time period, you do not receive insufficient capacity
 // errors, and you pay a lower usage rate than the rate charged for On-Demand
 // instances for the actual time used.
+//
+// If you have listed your own Reserved instances for sale in the Reserved
+// Instance Marketplace, they will be excluded from these results. This is to
+// ensure that you do not purchase your own Reserved instances.
 //
 // For more information, see Reserved Instance Marketplace (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-market-general.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -4362,6 +4451,39 @@ func (c *EC2) DescribeVpcClassicLink(input *DescribeVpcClassicLinkInput) (*Descr
 	return out, err
 }
 
+const opDescribeVpcClassicLinkDnsSupport = "DescribeVpcClassicLinkDnsSupport"
+
+// DescribeVpcClassicLinkDnsSupportRequest generates a request for the DescribeVpcClassicLinkDnsSupport operation.
+func (c *EC2) DescribeVpcClassicLinkDnsSupportRequest(input *DescribeVpcClassicLinkDnsSupportInput) (req *request.Request, output *DescribeVpcClassicLinkDnsSupportOutput) {
+	op := &request.Operation{
+		Name:       opDescribeVpcClassicLinkDnsSupport,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeVpcClassicLinkDnsSupportInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &DescribeVpcClassicLinkDnsSupportOutput{}
+	req.Data = output
+	return
+}
+
+// Describes the ClassicLink DNS support status of one or more VPCs. If enabled,
+// the DNS hostname of a linked EC2-Classic instance resolves to its private
+// IP address when addressed from an instance in the VPC to which it's linked.
+// Similarly, the DNS hostname of an instance in a VPC resolves to its private
+// IP address when addressed from a linked EC2-Classic instance. For more information
+// about ClassicLink, see ClassicLink (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-classiclink.html)
+// in the Amazon Elastic Compute Cloud User Guide.
+func (c *EC2) DescribeVpcClassicLinkDnsSupport(input *DescribeVpcClassicLinkDnsSupportInput) (*DescribeVpcClassicLinkDnsSupportOutput, error) {
+	req, out := c.DescribeVpcClassicLinkDnsSupportRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opDescribeVpcEndpointServices = "DescribeVpcEndpointServices"
 
 // DescribeVpcEndpointServicesRequest generates a request for the DescribeVpcEndpointServices operation.
@@ -4747,6 +4869,37 @@ func (c *EC2) DisableVpcClassicLink(input *DisableVpcClassicLinkInput) (*Disable
 	return out, err
 }
 
+const opDisableVpcClassicLinkDnsSupport = "DisableVpcClassicLinkDnsSupport"
+
+// DisableVpcClassicLinkDnsSupportRequest generates a request for the DisableVpcClassicLinkDnsSupport operation.
+func (c *EC2) DisableVpcClassicLinkDnsSupportRequest(input *DisableVpcClassicLinkDnsSupportInput) (req *request.Request, output *DisableVpcClassicLinkDnsSupportOutput) {
+	op := &request.Operation{
+		Name:       opDisableVpcClassicLinkDnsSupport,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DisableVpcClassicLinkDnsSupportInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &DisableVpcClassicLinkDnsSupportOutput{}
+	req.Data = output
+	return
+}
+
+// Disables ClassicLink DNS support for a VPC. If disabled, DNS hostnames resolve
+// to public IP addresses when addressed between a linked EC2-Classic instance
+// and instances in the VPC to which it's linked. For more information about
+// ClassicLink, see ClassicLink (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-classiclink.html)
+// in the Amazon Elastic Compute Cloud User Guide.
+func (c *EC2) DisableVpcClassicLinkDnsSupport(input *DisableVpcClassicLinkDnsSupportInput) (*DisableVpcClassicLinkDnsSupportOutput, error) {
+	req, out := c.DisableVpcClassicLinkDnsSupportRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opDisassociateAddress = "DisassociateAddress"
 
 // DisassociateAddressRequest generates a request for the DisassociateAddress operation.
@@ -4899,6 +5052,39 @@ func (c *EC2) EnableVpcClassicLinkRequest(input *EnableVpcClassicLinkInput) (req
 // in the Amazon Elastic Compute Cloud User Guide.
 func (c *EC2) EnableVpcClassicLink(input *EnableVpcClassicLinkInput) (*EnableVpcClassicLinkOutput, error) {
 	req, out := c.EnableVpcClassicLinkRequest(input)
+	err := req.Send()
+	return out, err
+}
+
+const opEnableVpcClassicLinkDnsSupport = "EnableVpcClassicLinkDnsSupport"
+
+// EnableVpcClassicLinkDnsSupportRequest generates a request for the EnableVpcClassicLinkDnsSupport operation.
+func (c *EC2) EnableVpcClassicLinkDnsSupportRequest(input *EnableVpcClassicLinkDnsSupportInput) (req *request.Request, output *EnableVpcClassicLinkDnsSupportOutput) {
+	op := &request.Operation{
+		Name:       opEnableVpcClassicLinkDnsSupport,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &EnableVpcClassicLinkDnsSupportInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &EnableVpcClassicLinkDnsSupportOutput{}
+	req.Data = output
+	return
+}
+
+// Enables a VPC to support DNS hostname resolution for ClassicLink. If enabled,
+// the DNS hostname of a linked EC2-Classic instance resolves to its private
+// IP address when addressed from an instance in the VPC to which it's linked.
+// Similarly, the DNS hostname of an instance in a VPC resolves to its private
+// IP address when addressed from a linked EC2-Classic instance. For more information
+// about ClassicLink, see ClassicLink (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-classiclink.html)
+// in the Amazon Elastic Compute Cloud User Guide.
+func (c *EC2) EnableVpcClassicLinkDnsSupport(input *EnableVpcClassicLinkDnsSupportInput) (*EnableVpcClassicLinkDnsSupportOutput, error) {
+	req, out := c.EnableVpcClassicLinkDnsSupportRequest(input)
 	err := req.Send()
 	return out, err
 }
@@ -5194,17 +5380,17 @@ func (c *EC2) ModifyIdFormatRequest(input *ModifyIdFormatInput) (req *request.Re
 	return
 }
 
-// Important: This command is reserved for future use, and is currently not
-// available for you to use.
-//
-// Modifies the ID format for the specified resource. You can specify that
-// resources should receive longer IDs (17-character IDs) when they are created.
-// The following resource types support longer IDs: instance | reservation.
+// Modifies the ID format for the specified resource on a per-region basis.
+// You can specify that resources should receive longer IDs (17-character IDs)
+// when they are created. The following resource types support longer IDs: instance
+// | reservation.
 //
 // This setting applies to the IAM user who makes the request; it does not
 // apply to the entire AWS account. By default, an IAM user defaults to the
 // same settings as the root user, unless they explicitly override the settings
-// by running this request. These settings are applied on a per-region basis.
+// by running this request. Resources created with longer IDs are visible to
+// all IAM users, regardless of these settings and provided that they have permission
+// to use the relevant Describe command for the resource type.
 func (c *EC2) ModifyIdFormat(input *ModifyIdFormatInput) (*ModifyIdFormatOutput, error) {
 	req, out := c.ModifyIdFormatRequest(input)
 	err := req.Send()
@@ -5368,8 +5554,8 @@ func (c *EC2) ModifyReservedInstancesRequest(input *ModifyReservedInstancesInput
 }
 
 // Modifies the Availability Zone, instance count, instance type, or network
-// platform (EC2-Classic or EC2-VPC) of your Reserved Instances. The Reserved
-// Instances to be modified must be identical, except for Availability Zone,
+// platform (EC2-Classic or EC2-VPC) of your Reserved instances. The Reserved
+// instances to be modified must be identical, except for Availability Zone,
 // network platform, and instance type.
 //
 // For more information, see Modifying Reserved Instances (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-modifying.html)
@@ -5632,12 +5818,14 @@ func (c *EC2) MoveAddressToVpcRequest(input *MoveAddressToVpcInput) (req *reques
 }
 
 // Moves an Elastic IP address from the EC2-Classic platform to the EC2-VPC
-// platform. The Elastic IP address must be allocated to your account, and it
-// must not be associated with an instance. After the Elastic IP address is
-// moved, it is no longer available for use in the EC2-Classic platform, unless
-// you move it back using the RestoreAddressToClassic request. You cannot move
-// an Elastic IP address that's allocated for use in the EC2-VPC platform to
-// the EC2-Classic platform.
+// platform. The Elastic IP address must be allocated to your account for more
+// than 24 hours, and it must not be associated with an instance. After the
+// Elastic IP address is moved, it is no longer available for use in the EC2-Classic
+// platform, unless you move it back using the RestoreAddressToClassic request.
+// You cannot move an Elastic IP address that's allocated for use in the EC2-VPC
+// platform to the EC2-Classic platform. You cannot migrate an Elastic IP address
+// that's associated with a reverse DNS record. Contact AWS account and billing
+// support to remove the reverse DNS record.
 func (c *EC2) MoveAddressToVpc(input *MoveAddressToVpcInput) (*MoveAddressToVpcOutput, error) {
 	req, out := c.MoveAddressToVpcRequest(input)
 	err := req.Send()
@@ -5871,7 +6059,7 @@ func (c *EC2) ReleaseHostsRequest(input *ReleaseHostsInput) (req *request.Reques
 }
 
 // When you no longer want to use a Dedicated host it can be released. On-Demand
-// billing is stopped and the host goes into "released" state. The host ID of
+// billing is stopped and the host goes into released state. The host ID of
 // Dedicated hosts that have been released can no longer be specified in another
 // request, e.g., ModifyHosts. You must stop or terminate all instances on a
 // host before it can be released.
@@ -5969,7 +6157,7 @@ func (c *EC2) ReplaceRouteRequest(input *ReplaceRouteInput) (req *request.Reques
 
 // Replaces an existing route within a route table in a VPC. You must provide
 // only one of the following: Internet gateway or virtual private gateway, NAT
-// instance, VPC peering connection, or network interface.
+// instance, NAT gateway, VPC peering connection, or network interface.
 //
 // For more information about route tables, see Route Tables (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Route_Tables.html)
 // in the Amazon Virtual Private Cloud User Guide.
@@ -6268,7 +6456,9 @@ func (c *EC2) RestoreAddressToClassicRequest(input *RestoreAddressToClassicInput
 // Restores an Elastic IP address that was previously moved to the EC2-VPC platform
 // back to the EC2-Classic platform. You cannot move an Elastic IP address that
 // was originally allocated for use in EC2-VPC. The Elastic IP address must
-// not be associated with an instance or network interface.
+// not be associated with an instance or network interface. You cannot restore
+// an Elastic IP address that's associated with a reverse DNS record. Contact
+// AWS account and billing support to remove the reverse DNS record.
 func (c *EC2) RestoreAddressToClassic(input *RestoreAddressToClassicInput) (*RestoreAddressToClassicOutput, error) {
 	req, out := c.RestoreAddressToClassicRequest(input)
 	err := req.Send()
@@ -6295,9 +6485,10 @@ func (c *EC2) RevokeSecurityGroupEgressRequest(input *RevokeSecurityGroupEgressI
 	return
 }
 
-// Removes one or more egress rules from a security group for EC2-VPC. The values
-// that you specify in the revoke request (for example, ports) must match the
-// existing rule's values for the rule to be revoked.
+// [EC2-VPC only] Removes one or more egress rules from a security group for
+// EC2-VPC. This action doesn't apply to security groups for use in EC2-Classic.
+// The values that you specify in the revoke request (for example, ports) must
+// match the existing rule's values for the rule to be revoked.
 //
 // Each rule consists of the protocol and the CIDR range or source security
 // group. For the TCP and UDP protocols, you must also specify the destination
@@ -7313,8 +7504,8 @@ func (s AttributeValue) GoString() string {
 type AuthorizeSecurityGroupEgressInput struct {
 	_ struct{} `type:"structure"`
 
-	// The CIDR IP address range. You can't specify this parameter when specifying
-	// a source security group.
+	// The CIDR IP address range. We recommend that you specify the CIDR range in
+	// a set of IP permissions instead.
 	CidrIp *string `locationName:"cidrIp" type:"string"`
 
 	// Checks whether you have the required permissions for the action, without
@@ -7324,7 +7515,7 @@ type AuthorizeSecurityGroupEgressInput struct {
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
 	// The start of port range for the TCP and UDP protocols, or an ICMP type number.
-	// For the ICMP type number, use -1 to specify all ICMP types.
+	// We recommend that you specify the port range in a set of IP permissions instead.
 	FromPort *int64 `locationName:"fromPort" type:"integer"`
 
 	// The ID of the security group.
@@ -7334,8 +7525,8 @@ type AuthorizeSecurityGroupEgressInput struct {
 	// a CIDR IP address range.
 	IpPermissions []*IpPermission `locationName:"ipPermissions" locationNameList:"item" type:"list"`
 
-	// The IP protocol name (tcp, udp, icmp) or number (see Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)).
-	// Use -1 to specify all.
+	// The IP protocol name or number. We recommend that you specify the protocol
+	// in a set of IP permissions instead.
 	IpProtocol *string `locationName:"ipProtocol" type:"string"`
 
 	// The name of a destination security group. To authorize outbound access to
@@ -7348,8 +7539,8 @@ type AuthorizeSecurityGroupEgressInput struct {
 	// IP permissions instead.
 	SourceSecurityGroupOwnerId *string `locationName:"sourceSecurityGroupOwnerId" type:"string"`
 
-	// The end of port range for the TCP and UDP protocols, or an ICMP code number.
-	// For the ICMP code number, use -1 to specify all ICMP codes for the ICMP type.
+	// The end of port range for the TCP and UDP protocols, or an ICMP type number.
+	// We recommend that you specify the port range in a set of IP permissions instead.
 	ToPort *int64 `locationName:"toPort" type:"integer"`
 }
 
@@ -7498,6 +7689,7 @@ func (s AvailabilityZoneMessage) GoString() string {
 	return s.String()
 }
 
+// The capacity information for instances launched onto the Dedicated host.
 type AvailableCapacity struct {
 	_ struct{} `type:"structure"`
 
@@ -8055,6 +8247,27 @@ func (s CancelledSpotInstanceRequest) GoString() string {
 	return s.String()
 }
 
+// Describes the ClassicLink DNS support status of a VPC.
+type ClassicLinkDnsSupport struct {
+	_ struct{} `type:"structure"`
+
+	// Indicates whether ClassicLink DNS support is enabled for the VPC.
+	ClassicLinkDnsSupported *bool `locationName:"classicLinkDnsSupported" type:"boolean"`
+
+	// The ID of the VPC.
+	VpcId *string `locationName:"vpcId" type:"string"`
+}
+
+// String returns the string representation
+func (s ClassicLinkDnsSupport) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ClassicLinkDnsSupport) GoString() string {
+	return s.String()
+}
+
 // Describes a linked EC2-Classic instance.
 type ClassicLinkInstance struct {
 	_ struct{} `type:"structure"`
@@ -8212,6 +8425,23 @@ type CopyImageInput struct {
 	// the required permissions, the error response is DryRunOperation. Otherwise,
 	// it is UnauthorizedOperation.
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
+
+	// Specifies whether the destination snapshots of the copied image should be
+	// encrypted. The default CMK for EBS is used unless a non-default AWS Key Management
+	// Service (AWS KMS) CMK is specified with KmsKeyId. For more information, see
+	// Amazon EBS Encryption (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html)
+	// in the Amazon Elastic Compute Cloud User Guide.
+	Encrypted *bool `locationName:"encrypted" type:"boolean"`
+
+	// The full ARN of the AWS Key Management Service (AWS KMS) CMK to use when
+	// encrypting the snapshots of an image during a copy operation. This parameter
+	// is only required if you want to use a non-default CMK; if this parameter
+	// is not specified, the default CMK for EBS is used. The ARN contains the arn:aws:kms
+	// namespace, followed by the region of the CMK, the AWS account ID of the CMK
+	// owner, the key namespace, and then the CMK ID. For example, arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef.
+	// The specified CMK must exist in the region that the snapshot is being copied
+	// to. If a KmsKeyId is specified, the Encrypted flag must also be set.
+	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
 
 	// The name of the new AMI in the destination region.
 	Name *string `type:"string" required:"true"`
@@ -8676,6 +8906,55 @@ func (s CreateKeyPairOutput) GoString() string {
 	return s.String()
 }
 
+type CreateNatGatewayInput struct {
+	_ struct{} `type:"structure"`
+
+	// The allocation ID of an Elastic IP address to associate with the NAT gateway.
+	// If the Elastic IP address is associated with another resource, you must first
+	// disassociate it.
+	AllocationId *string `type:"string" required:"true"`
+
+	// Unique, case-sensitive identifier you provide to ensure the idempotency of
+	// the request. For more information, see How to Ensure Idempotency (http://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html).
+	//
+	// Constraint: Maximum 64 ASCII characters.
+	ClientToken *string `type:"string"`
+
+	// The subnet in which to create the NAT gateway.
+	SubnetId *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s CreateNatGatewayInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateNatGatewayInput) GoString() string {
+	return s.String()
+}
+
+type CreateNatGatewayOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Unique, case-sensitive identifier to ensure the idempotency of the request.
+	// Only returned if a client token was provided in the request.
+	ClientToken *string `locationName:"clientToken" type:"string"`
+
+	// Information about the NAT gateway.
+	NatGateway *NatGateway `locationName:"natGateway" type:"structure"`
+}
+
+// String returns the string representation
+func (s CreateNatGatewayOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s CreateNatGatewayOutput) GoString() string {
+	return s.String()
+}
+
 type CreateNetworkAclEntryInput struct {
 	_ struct{} `type:"structure"`
 
@@ -8956,6 +9235,9 @@ type CreateRouteInput struct {
 	// The ID of a NAT instance in your VPC. The operation fails if you specify
 	// an instance ID unless exactly one network interface is attached.
 	InstanceId *string `locationName:"instanceId" type:"string"`
+
+	// The ID of a NAT gateway.
+	NatGatewayId *string `locationName:"natGatewayId" type:"string"`
 
 	// The ID of a network interface.
 	NetworkInterfaceId *string `locationName:"networkInterfaceId" type:"string"`
@@ -9873,6 +10155,40 @@ func (s DeleteKeyPairOutput) String() string {
 
 // GoString returns the string representation
 func (s DeleteKeyPairOutput) GoString() string {
+	return s.String()
+}
+
+type DeleteNatGatewayInput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the NAT gateway.
+	NatGatewayId *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s DeleteNatGatewayInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteNatGatewayInput) GoString() string {
+	return s.String()
+}
+
+type DeleteNatGatewayOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the NAT gateway.
+	NatGatewayId *string `locationName:"natGatewayId" type:"string"`
+}
+
+// String returns the string representation
+func (s DeleteNatGatewayOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DeleteNatGatewayOutput) GoString() string {
 	return s.String()
 }
 
@@ -11781,6 +12097,9 @@ type DescribeInstancesInput struct {
 
 	// One or more filters.
 	//
+	//   affinity - The affinity setting for an instance running on a Dedicated
+	// host (default | host).
+	//
 	//   architecture - The instance architecture (i386 | x86_64).
 	//
 	//   availability-zone - The Availability Zone of the instance.
@@ -11809,6 +12128,9 @@ type DescribeInstancesInput struct {
 	//
 	//   group-name - The name of the security group for the instance. EC2-Classic
 	// only.
+	//
+	//   host-Id - The ID of the Dedicated host on which the instance is running,
+	// if applicable.
 	//
 	//   hypervisor - The hypervisor type of the instance (ovm | xen).
 	//
@@ -11915,7 +12237,7 @@ type DescribeInstancesInput struct {
 	//   tag-value - The value of a tag assigned to the resource. This filter is
 	// independent of the tag-key filter.
 	//
-	//   tenancy - The tenancy of an instance (dedicated | default).
+	//   tenancy - The tenancy of an instance (dedicated | default | host).
 	//
 	//   virtualization-type - The virtualization type of the instance (paravirtual
 	// | hvm).
@@ -11945,7 +12267,7 @@ type DescribeInstancesInput struct {
 	//
 	//   network-interface.mac-address - The MAC address of the network interface.
 	//
-	//   network-interface-private-dns-name - The private DNS name of the network
+	//   network-interface.private-dns-name - The private DNS name of the network
 	// interface.
 	//
 	//   network-interface.source-dest-check - Whether the network interface performs
@@ -12225,6 +12547,67 @@ func (s DescribeMovingAddressesOutput) GoString() string {
 	return s.String()
 }
 
+type DescribeNatGatewaysInput struct {
+	_ struct{} `type:"structure"`
+
+	// One or more filters.
+	//
+	//   nat-gateway-id - The ID of the NAT gateway.
+	//
+	//   state - The state of the NAT gateway (pending | failed | available | deleting
+	// | deleted).
+	//
+	//   subnet-id - The ID of the subnet in which the NAT gateway resides.
+	//
+	//   vpc-id - The ID of the VPC in which the NAT gateway resides.
+	Filter []*Filter `locationNameList:"Filter" type:"list"`
+
+	// The maximum number of items to return for this request. The request returns
+	// a token that you can specify in a subsequent call to get the next set of
+	// results.
+	//
+	// Constraint: If the value specified is greater than 1000, we return only
+	// 1000 items.
+	MaxResults *int64 `type:"integer"`
+
+	// One or more NAT gateway IDs.
+	NatGatewayIds []*string `locationName:"NatGatewayId" locationNameList:"item" type:"list"`
+
+	// The token to retrieve the next page of results.
+	NextToken *string `type:"string"`
+}
+
+// String returns the string representation
+func (s DescribeNatGatewaysInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeNatGatewaysInput) GoString() string {
+	return s.String()
+}
+
+type DescribeNatGatewaysOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Information about the NAT gateways.
+	NatGateways []*NatGateway `locationName:"natGatewaySet" locationNameList:"item" type:"list"`
+
+	// The token to use to retrieve the next page of results. This value is null
+	// when there are no more results to return.
+	NextToken *string `locationName:"nextToken" type:"string"`
+}
+
+// String returns the string representation
+func (s DescribeNatGatewaysOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeNatGatewaysOutput) GoString() string {
+	return s.String()
+}
+
 type DescribeNetworkAclsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -12410,23 +12793,26 @@ type DescribeNetworkInterfacesInput struct {
 	//
 	//   attachment.attachment-id - The ID of the interface attachment.
 	//
+	//   attachment.attach.time - The time that the network interface was attached
+	// to an instance.
+	//
+	//   attachment.delete-on-termination - Indicates whether the attachment is
+	// deleted when an instance is terminated.
+	//
+	//   attachment.device-index - The device index to which the network interface
+	// is attached.
+	//
 	//   attachment.instance-id - The ID of the instance to which the network interface
 	// is attached.
 	//
 	//   attachment.instance-owner-id - The owner ID of the instance to which the
 	// network interface is attached.
 	//
-	//   attachment.device-index - The device index to which the network interface
-	// is attached.
+	//   attachment.nat-gateway-id - The ID of the NAT gateway to which the network
+	// interface is attached.
 	//
 	//   attachment.status - The status of the attachment (attaching | attached
 	// | detaching | detached).
-	//
-	//   attachment.attach.time - The time that the network interface was attached
-	// to an instance.
-	//
-	//   attachment.delete-on-termination - Indicates whether the attachment is
-	// deleted when an instance is terminated.
 	//
 	//   availability-zone - The Availability Zone of the network interface.
 	//
@@ -12458,7 +12844,7 @@ type DescribeNetworkInterfacesInput struct {
 	//   source-desk-check - Indicates whether the network interface performs source/destination
 	// checking. A value of true means checking is enabled, and false means checking
 	// is disabled. The value must be false for the network interface to perform
-	// Network Address Translation (NAT) in your VPC.
+	// network address translation (NAT) in your VPC.
 	//
 	//   status - The status of the network interface. If the network interface
 	// is not attached to an instance, the status is available; if a network interface
@@ -12698,13 +13084,12 @@ type DescribeReservedInstancesInput struct {
 	//   fixed-price - The purchase price of the Reserved instance (for example,
 	// 9800.0).
 	//
-	//   instance-type - The instance type on which the Reserved instance can be
-	// used.
+	//   instance-type - The instance type that is covered by the reservation.
 	//
 	//   product-description - The Reserved instance product platform description.
 	// Instances that include (Amazon VPC) in the product platform description will
 	// only be displayed to EC2-Classic account holders and are for use with Amazon
-	// VPC. (Linux/UNIX | Linux/UNIX (Amazon VPC) | SUSE Linux | SUSE Linux (Amazon
+	// VPC (Linux/UNIX | Linux/UNIX (Amazon VPC) | SUSE Linux | SUSE Linux (Amazon
 	// VPC) | Red Hat Enterprise Linux | Red Hat Enterprise Linux (Amazon VPC) |
 	// Windows | Windows (Amazon VPC) | Windows with SQL Server Standard | Windows
 	// with SQL Server Standard (Amazon VPC) | Windows with SQL Server Web | Windows
@@ -12906,12 +13291,11 @@ type DescribeReservedInstancesOfferingsInput struct {
 	//   fixed-price - The purchase price of the Reserved instance (for example,
 	// 9800.0).
 	//
-	//   instance-type - The instance type on which the Reserved instance can be
-	// used.
+	//   instance-type - The instance type that is covered by the reservation.
 	//
 	//   marketplace - Set to true to show only Reserved Instance Marketplace offerings.
 	// When this filter is not used, which is the default behavior, all offerings
-	// from AWS and Reserved Instance Marketplace are listed.
+	// from both AWS and the Reserved Instance Marketplace are listed.
 	//
 	//   product-description - The Reserved instance product platform description.
 	// Instances that include (Amazon VPC) in the product platform description will
@@ -12923,7 +13307,7 @@ type DescribeReservedInstancesOfferingsInput struct {
 	// with SQL Server Web (Amazon VPC) | Windows with SQL Server Enterprise | Windows
 	// with SQL Server Enterprise (Amazon VPC))
 	//
-	//   reserved-instances-offering-id - The Reserved instances offering ID.
+	//   reserved-instances-offering-id - The Reserved instances' offering ID.
 	//
 	//   usage-price - The usage price of the Reserved instance, per hour (for
 	// example, 0.84).
@@ -12932,15 +13316,15 @@ type DescribeReservedInstancesOfferingsInput struct {
 	// Include Reserved Instance Marketplace offerings in the response.
 	IncludeMarketplace *bool `type:"boolean"`
 
-	// The tenancy of the Reserved instance offering. A Reserved instance with dedicated
-	// tenancy is applied to instances that run on single-tenant hardware and can
-	// only be launched within a VPC.
+	// The tenancy of the instances covered by the reservation. A Reserved instance
+	// with a tenancy of dedicated is applied to instances that run in a VPC on
+	// single-tenant hardware (i.e., Dedicated instances).
 	//
 	// Default: default
 	InstanceTenancy *string `locationName:"instanceTenancy" type:"string" enum:"Tenancy"`
 
-	// The instance type on which the Reserved instance can be used. For more information,
-	// see Instance Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html)
+	// The instance type that the reservation will cover (for example, m1.small).
+	// For more information, see Instance Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	InstanceType *string `type:"string" enum:"InstanceType"`
 
@@ -13064,6 +13448,8 @@ type DescribeRouteTablesInput struct {
 	//
 	//   route.instance-id - The ID of an instance specified in a route in the
 	// table.
+	//
+	//   route.nat-gateway-id - The ID of a NAT gateway.
 	//
 	//   route.origin - Describes how the route was created. CreateRouteTable indicates
 	// that the route was automatically created when the route table was created;
@@ -14238,7 +14624,7 @@ type DescribeVpcAttributeInput struct {
 	_ struct{} `type:"structure"`
 
 	// The VPC attribute.
-	Attribute *string `type:"string" enum:"VpcAttributeName"`
+	Attribute *string `type:"string" required:"true" enum:"VpcAttributeName"`
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have
@@ -14284,6 +14670,52 @@ func (s DescribeVpcAttributeOutput) String() string {
 
 // GoString returns the string representation
 func (s DescribeVpcAttributeOutput) GoString() string {
+	return s.String()
+}
+
+type DescribeVpcClassicLinkDnsSupportInput struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum number of items to return for this request. The request returns
+	// a token that you can specify in a subsequent call to get the next set of
+	// results.
+	MaxResults *int64 `locationName:"maxResults" min:"5" type:"integer"`
+
+	// The token for the next set of items to return. (You received this token from
+	// a prior call.)
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+
+	// One or more VPC IDs.
+	VpcIds []*string `locationNameList:"VpcId" type:"list"`
+}
+
+// String returns the string representation
+func (s DescribeVpcClassicLinkDnsSupportInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeVpcClassicLinkDnsSupportInput) GoString() string {
+	return s.String()
+}
+
+type DescribeVpcClassicLinkDnsSupportOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The token to use when requesting the next set of items.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+
+	// Information about the ClassicLink DNS support status of the VPCs.
+	Vpcs []*ClassicLinkDnsSupport `locationName:"vpcs" locationNameList:"item" type:"list"`
+}
+
+// String returns the string representation
+func (s DescribeVpcClassicLinkDnsSupportOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeVpcClassicLinkDnsSupportOutput) GoString() string {
 	return s.String()
 }
 
@@ -14714,7 +15146,8 @@ type DescribeVpnGatewaysInput struct {
 	//
 	//   attachment.vpc-id - The ID of an attached VPC.
 	//
-	//   availability-zone - The Availability Zone for the virtual private gateway.
+	//   availability-zone - The Availability Zone for the virtual private gateway
+	// (if applicable).
 	//
 	//   state - The state of the virtual private gateway (pending | available
 	// | deleting | deleted).
@@ -15047,6 +15480,40 @@ func (s DisableVgwRoutePropagationOutput) String() string {
 
 // GoString returns the string representation
 func (s DisableVgwRoutePropagationOutput) GoString() string {
+	return s.String()
+}
+
+type DisableVpcClassicLinkDnsSupportInput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the VPC.
+	VpcId *string `type:"string"`
+}
+
+// String returns the string representation
+func (s DisableVpcClassicLinkDnsSupportInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DisableVpcClassicLinkDnsSupportInput) GoString() string {
+	return s.String()
+}
+
+type DisableVpcClassicLinkDnsSupportOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Returns true if the request succeeds; otherwise, it returns an error.
+	Return *bool `locationName:"return" type:"boolean"`
+}
+
+// String returns the string representation
+func (s DisableVpcClassicLinkDnsSupportOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DisableVpcClassicLinkDnsSupportOutput) GoString() string {
 	return s.String()
 }
 
@@ -15446,6 +15913,40 @@ func (s EnableVolumeIOOutput) GoString() string {
 	return s.String()
 }
 
+type EnableVpcClassicLinkDnsSupportInput struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the VPC.
+	VpcId *string `type:"string"`
+}
+
+// String returns the string representation
+func (s EnableVpcClassicLinkDnsSupportInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s EnableVpcClassicLinkDnsSupportInput) GoString() string {
+	return s.String()
+}
+
+type EnableVpcClassicLinkDnsSupportOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Returns true if the request succeeds; otherwise, it returns an error.
+	Return *bool `locationName:"return" type:"boolean"`
+}
+
+// String returns the string representation
+func (s EnableVpcClassicLinkDnsSupportOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s EnableVpcClassicLinkDnsSupportOutput) GoString() string {
+	return s.String()
+}
+
 type EnableVpcClassicLinkInput struct {
 	_ struct{} `type:"structure"`
 
@@ -15685,10 +16186,11 @@ type FlowLog struct {
 	CreationTime *time.Time `locationName:"creationTime" type:"timestamp" timestampFormat:"iso8601"`
 
 	// Information about the error that occurred. Rate limited indicates that CloudWatch
-	// logs throttling has been applied for one or more network interfaces. Access
-	// error indicates that the IAM role associated with the flow log does not have
-	// sufficient permissions to publish to CloudWatch Logs. Unknown error indicates
-	// an internal error.
+	// logs throttling has been applied for one or more network interfaces, or that
+	// you've reached the limit on the number of CloudWatch Logs log groups that
+	// you can create. Access error indicates that the IAM role associated with
+	// the flow log does not have sufficient permissions to publish to CloudWatch
+	// Logs. Unknown error indicates an internal error.
 	DeliverLogsErrorMessage *string `locationName:"deliverLogsErrorMessage" type:"string"`
 
 	// The ARN of the IAM role that posts logs to CloudWatch Logs.
@@ -15752,7 +16254,8 @@ type GetConsoleOutputOutput struct {
 	// The ID of the instance.
 	InstanceId *string `locationName:"instanceId" type:"string"`
 
-	// The console output, Base64 encoded.
+	// The console output, Base64 encoded. If using a command line tool, the tools
+	// decode the output for you.
 	Output *string `locationName:"output" type:"string"`
 
 	// The time the output was last updated.
@@ -15867,6 +16370,7 @@ func (s HistoryRecord) GoString() string {
 	return s.String()
 }
 
+// Describes the properties of the Dedicated host.
 type Host struct {
 	_ struct{} `type:"structure"`
 
@@ -15890,14 +16394,14 @@ type Host struct {
 	// The hardware specifications of the Dedicated host.
 	HostProperties *HostProperties `locationName:"hostProperties" type:"structure"`
 
-	// The reservation ID of the Dedicated host. This returns a "null" response
-	// if the Dedicated host doesn't have an associated reservation.
+	// The reservation ID of the Dedicated host. This returns a null response if
+	// the Dedicated host doesn't have an associated reservation.
 	HostReservationId *string `locationName:"hostReservationId" type:"string"`
 
 	// The IDs and instance type that are currently running on the Dedicated host.
 	Instances []*HostInstance `locationName:"instances" locationNameList:"item" type:"list"`
 
-	// The Dedicated host's state. Can be "available", "under assessment, or "released".
+	// The Dedicated host's state.
 	State *string `locationName:"state" type:"string" enum:"AllocationState"`
 }
 
@@ -16895,6 +17399,7 @@ func (s InstanceBlockDeviceMappingSpecification) GoString() string {
 	return s.String()
 }
 
+// Information about the instance type that the Dedicated host supports.
 type InstanceCapacity struct {
 	_ struct{} `type:"structure"`
 
@@ -17406,14 +17911,11 @@ type IpPermission struct {
 	// A value of -1 indicates all ICMP types.
 	FromPort *int64 `locationName:"fromPort" type:"integer"`
 
-	// The protocol.
+	// The IP protocol name (for tcp, udp, and icmp) or number (see Protocol Numbers
+	// (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)).
 	//
-	// When you call DescribeSecurityGroups, the protocol value returned is the
-	// number. Exception: For TCP, UDP, and ICMP, the value returned is the name
-	// (for example, tcp, udp, or icmp). For a list of protocol numbers, see Protocol
-	// Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-	// (VPC only) When you call AuthorizeSecurityGroupIngress, you can use -1 to
-	// specify all.
+	// [EC2-VPC only] When you authorize or revoke security group rules, you can
+	// use -1 to specify all.
 	IpProtocol *string `locationName:"ipProtocol" type:"string"`
 
 	// One or more IP ranges.
@@ -18384,6 +18886,88 @@ func (s MovingAddressStatus) GoString() string {
 	return s.String()
 }
 
+// Describes a NAT gateway.
+type NatGateway struct {
+	_ struct{} `type:"structure"`
+
+	// The date and time the NAT gateway was created.
+	CreateTime *time.Time `locationName:"createTime" type:"timestamp" timestampFormat:"iso8601"`
+
+	// The date and time the NAT gateway was deleted, if applicable.
+	DeleteTime *time.Time `locationName:"deleteTime" type:"timestamp" timestampFormat:"iso8601"`
+
+	// If the NAT gateway could not be created, specifies the error code for the
+	// failure. (InsufficientFreeAddressesInSubnet | Gateway.NotAttached | InvalidAllocationID.NotFound
+	// | Resource.AlreadyAssociated | InternalError)
+	FailureCode *string `locationName:"failureCode" type:"string"`
+
+	// If the NAT gateway could not be created, specifies the error message for
+	// the failure, that corresponds to the error code.
+	//
+	//  For InsufficientFreeAddressesInSubnet: Subnet has insufficient free addresses
+	// to create this NAT gateway For Gateway.NotAttached: Network vpc-xxxxxxxx
+	// has no Internet gateway attached For InvalidAllocationID.NotFound: Elastic
+	// IP address eipalloc-xxxxxxxx could not be associated with this NAT gateway
+	// For Resource.AlreadyAssociated: Elastic IP address eipalloc-xxxxxxxx is already
+	// associated For InternalError: Network interface eni-xxxxxxxx, created and
+	// used internally by this NAT gateway is in an invalid state. Please try again.
+	FailureMessage *string `locationName:"failureMessage" type:"string"`
+
+	// Information about the IP addresses and network interface associated with
+	// the NAT gateway.
+	NatGatewayAddresses []*NatGatewayAddress `locationName:"natGatewayAddressSet" locationNameList:"item" type:"list"`
+
+	// The ID of the NAT gateway.
+	NatGatewayId *string `locationName:"natGatewayId" type:"string"`
+
+	// The state of the NAT gateway.
+	State *string `locationName:"state" type:"string" enum:"NatGatewayState"`
+
+	// The ID of the subnet in which the NAT gateway is located.
+	SubnetId *string `locationName:"subnetId" type:"string"`
+
+	// The ID of the VPC in which the NAT gateway is located.
+	VpcId *string `locationName:"vpcId" type:"string"`
+}
+
+// String returns the string representation
+func (s NatGateway) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NatGateway) GoString() string {
+	return s.String()
+}
+
+// Describes the IP addresses and network interface associated with a NAT gateway.
+type NatGatewayAddress struct {
+	_ struct{} `type:"structure"`
+
+	// The allocation ID of the Elastic IP address that's associated with the NAT
+	// gateway.
+	AllocationId *string `locationName:"allocationId" type:"string"`
+
+	// The ID of the network interface associated with the NAT gateway.
+	NetworkInterfaceId *string `locationName:"networkInterfaceId" type:"string"`
+
+	// The private IP address associated with the Elastic IP address.
+	PrivateIp *string `locationName:"privateIp" type:"string"`
+
+	// The Elastic IP address associated with the NAT gateway.
+	PublicIp *string `locationName:"publicIp" type:"string"`
+}
+
+// String returns the string representation
+func (s NatGatewayAddress) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NatGatewayAddress) GoString() string {
+	return s.String()
+}
+
 // Describes a network ACL.
 type NetworkAcl struct {
 	_ struct{} `type:"structure"`
@@ -18498,6 +19082,9 @@ type NetworkInterface struct {
 
 	// Any security groups for the network interface.
 	Groups []*GroupIdentifier `locationName:"groupSet" locationNameList:"item" type:"list"`
+
+	// The type of interface.
+	InterfaceType *string `locationName:"interfaceType" type:"string" enum:"NetworkInterfaceType"`
 
 	// The MAC address.
 	MacAddress *string `locationName:"macAddress" type:"string"`
@@ -18810,10 +19397,10 @@ type PriceSchedule struct {
 	_ struct{} `type:"structure"`
 
 	// The current price schedule, as determined by the term remaining for the Reserved
-	// Instance in the listing.
+	// instance in the listing.
 	//
 	// A specific price schedule is always in effect, but only one price schedule
-	// can be active at any time. Take, for example, a Reserved Instance listing
+	// can be active at any time. Take, for example, a Reserved instance listing
 	// that has five months remaining in its term. When you specify price schedules
 	// for five months and two months, this means that schedule 1, covering the
 	// first three months of the remaining term, will be active during months 5,
@@ -18873,7 +19460,7 @@ func (s PriceScheduleSpecification) GoString() string {
 type PricingDetail struct {
 	_ struct{} `type:"structure"`
 
-	// The number of instances available for the price.
+	// The number of reservations available for the price.
 	Count *int64 `locationName:"count" type:"integer"`
 
 	// The price per instance.
@@ -19403,6 +19990,9 @@ type ReplaceRouteInput struct {
 	// The ID of a NAT instance in your VPC.
 	InstanceId *string `locationName:"instanceId" type:"string"`
 
+	// The ID of a NAT gateway.
+	NatGatewayId *string `locationName:"natGatewayId" type:"string"`
+
 	// The ID of a network interface.
 	NetworkInterfaceId *string `locationName:"networkInterfaceId" type:"string"`
 
@@ -19853,7 +20443,7 @@ type ReservedInstances struct {
 	// The purchase price of the Reserved instance.
 	FixedPrice *float64 `locationName:"fixedPrice" type:"float"`
 
-	// The number of Reserved instances purchased.
+	// The number of reservations purchased.
 	InstanceCount *int64 `locationName:"instanceCount" type:"integer"`
 
 	// The tenancy of the reserved instance.
@@ -20322,8 +20912,8 @@ func (s RestoreAddressToClassicOutput) GoString() string {
 type RevokeSecurityGroupEgressInput struct {
 	_ struct{} `type:"structure"`
 
-	// The CIDR IP address range. You can't specify this parameter when specifying
-	// a source security group.
+	// The CIDR IP address range. We recommend that you specify the CIDR range in
+	// a set of IP permissions instead.
 	CidrIp *string `locationName:"cidrIp" type:"string"`
 
 	// Checks whether you have the required permissions for the action, without
@@ -20333,7 +20923,7 @@ type RevokeSecurityGroupEgressInput struct {
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
 	// The start of port range for the TCP and UDP protocols, or an ICMP type number.
-	// For the ICMP type number, use -1 to specify all ICMP types.
+	// We recommend that you specify the port range in a set of IP permissions instead.
 	FromPort *int64 `locationName:"fromPort" type:"integer"`
 
 	// The ID of the security group.
@@ -20343,8 +20933,8 @@ type RevokeSecurityGroupEgressInput struct {
 	// a CIDR IP address range.
 	IpPermissions []*IpPermission `locationName:"ipPermissions" locationNameList:"item" type:"list"`
 
-	// The IP protocol name (tcp, udp, icmp) or number (see Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)).
-	// Use -1 to specify all.
+	// The IP protocol name or number. We recommend that you specify the protocol
+	// in a set of IP permissions instead.
 	IpProtocol *string `locationName:"ipProtocol" type:"string"`
 
 	// The name of a destination security group. To revoke outbound access to a
@@ -20357,8 +20947,8 @@ type RevokeSecurityGroupEgressInput struct {
 	// IP permissions instead.
 	SourceSecurityGroupOwnerId *string `locationName:"sourceSecurityGroupOwnerId" type:"string"`
 
-	// The end of port range for the TCP and UDP protocols, or an ICMP code number.
-	// For the ICMP code number, use -1 to specify all ICMP codes for the ICMP type.
+	// The end of port range for the TCP and UDP protocols, or an ICMP type number.
+	// We recommend that you specify the port range in a set of IP permissions instead.
 	ToPort *int64 `locationName:"toPort" type:"integer"`
 }
 
@@ -20480,6 +21070,9 @@ type Route struct {
 
 	// The AWS account ID of the owner of the instance.
 	InstanceOwnerId *string `locationName:"instanceOwnerId" type:"string"`
+
+	// The ID of a NAT gateway.
+	NatGatewayId *string `locationName:"natGatewayId" type:"string"`
 
 	// The ID of the network interface.
 	NetworkInterfaceId *string `locationName:"networkInterfaceId" type:"string"`
@@ -20704,7 +21297,12 @@ type RunInstancesInput struct {
 	// [EC2-VPC] The ID of the subnet to launch the instance into.
 	SubnetId *string `type:"string"`
 
-	// The Base64-encoded MIME user data for the instances.
+	// Data to configure the instance, or a script to run during instance launch.
+	// For more information, see Running Commands on Your Linux Instance at Launch
+	// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) (Linux)
+	// and Adding User Data (http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-instance-metadata.html#instancedata-add-user-data)
+	// (Windows). For API calls, the text must be base64-encoded. Command line tools
+	// perform encoding for you.
 	UserData *string `type:"string"`
 }
 
@@ -21085,7 +21683,8 @@ type SpotFleetLaunchSpecification struct {
 	// value of WeightedCapacity.
 	SpotPrice *string `locationName:"spotPrice" type:"string"`
 
-	// The ID of the subnet in which to launch the instances.
+	// The ID of the subnet in which to launch the instances. To specify multiple
+	// subnets, separate them using commas; for example, "subnet-a61dafcf, subnet-65ea5f08".
 	SubnetId *string `locationName:"subnetId" type:"string"`
 
 	// The Base64-encoded MIME user data to make available to the instances.
@@ -21350,7 +21949,8 @@ func (s SpotInstanceStatus) GoString() string {
 type SpotPlacement struct {
 	_ struct{} `type:"structure"`
 
-	// The Availability Zone.
+	// The Availability Zones. To specify multiple Availability Zones, separate
+	// them using commas; for example, "us-west-2a, us-west-2b".
 	AvailabilityZone *string `locationName:"availabilityZone" type:"string"`
 
 	// The name of the placement group (for cluster instances).
@@ -21468,7 +22068,8 @@ type StateReason struct {
 	// Client.UserInitiatedShutdown: The instance was shut down using the Amazon
 	// EC2 API.
 	//
-	// Client.VolumeLimitExceeded: The volume limit was exceeded.
+	// Client.VolumeLimitExceeded: The limit on the number of EBS volumes or total
+	// storage was exceeded. Decrease usage or request an increase in your limits.
 	//
 	// Client.InvalidSnapshot.NotFound: The specified snapshot was not found.
 	Message *string `locationName:"message" type:"string"`
@@ -22453,7 +23054,8 @@ func (s VpnConnectionOptionsSpecification) GoString() string {
 type VpnGateway struct {
 	_ struct{} `type:"structure"`
 
-	// The Availability Zone where the virtual private gateway was created.
+	// The Availability Zone where the virtual private gateway was created, if applicable.
+	// This field may be empty or not returned.
 	AvailabilityZone *string `locationName:"availabilityZone" type:"string"`
 
 	// The current state of the virtual private gateway.
@@ -22884,6 +23486,8 @@ const (
 	// @enum InstanceType
 	InstanceTypeM410xlarge = "m4.10xlarge"
 	// @enum InstanceType
+	InstanceTypeT2Nano = "t2.nano"
+	// @enum InstanceType
 	InstanceTypeT2Micro = "t2.micro"
 	// @enum InstanceType
 	InstanceTypeT2Small = "t2.small"
@@ -23004,6 +23608,19 @@ const (
 )
 
 const (
+	// @enum NatGatewayState
+	NatGatewayStatePending = "pending"
+	// @enum NatGatewayState
+	NatGatewayStateFailed = "failed"
+	// @enum NatGatewayState
+	NatGatewayStateAvailable = "available"
+	// @enum NatGatewayState
+	NatGatewayStateDeleting = "deleting"
+	// @enum NatGatewayState
+	NatGatewayStateDeleted = "deleted"
+)
+
+const (
 	// @enum NetworkInterfaceAttribute
 	NetworkInterfaceAttributeDescription = "description"
 	// @enum NetworkInterfaceAttribute
@@ -23023,6 +23640,13 @@ const (
 	NetworkInterfaceStatusInUse = "in-use"
 	// @enum NetworkInterfaceStatus
 	NetworkInterfaceStatusDetaching = "detaching"
+)
+
+const (
+	// @enum NetworkInterfaceType
+	NetworkInterfaceTypeInterface = "interface"
+	// @enum NetworkInterfaceType
+	NetworkInterfaceTypeNatGateway = "natGateway"
 )
 
 const (

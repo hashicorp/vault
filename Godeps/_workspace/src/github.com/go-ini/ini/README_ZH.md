@@ -15,7 +15,19 @@
 
 ## 下载安装
 
+使用一个特定版本：
+
     go get gopkg.in/ini.v1
+
+使用最新版：
+
+	go get github.com/go-ini/ini
+
+### 测试安装
+
+如果您想要在自己的机器上运行测试，请使用 `-t` 标记：
+
+	go get -t gopkg.in/ini.v1
 
 ## 开始使用
 
@@ -148,8 +160,8 @@ yes := cfg.Section("").HasValue("test value")
 
 ```go
 // 布尔值的规则：
-// true 当值为：1, t, T, TRUE, true, True, YES, yes, Yes, ON, on, On
-// false 当值为：0, f, F, FALSE, false, False, NO, no, No, OFF, off, Off
+// true 当值为：1, t, T, TRUE, true, True, YES, yes, Yes, y, ON, on, On
+// false 当值为：0, f, F, FALSE, false, False, NO, no, No, n, OFF, off, Off
 v, err = cfg.Section("").Key("BOOL").Bool()
 v, err = cfg.Section("").Key("FLOAT64").Float64()
 v, err = cfg.Section("").Key("INT").Int()

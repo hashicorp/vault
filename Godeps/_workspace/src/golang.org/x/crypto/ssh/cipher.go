@@ -115,9 +115,12 @@ var cipherModes = map[string]*streamCipherMode{
 	// should invest a cleaner way to do this.
 	gcmCipherID: {16, 12, 0, nil},
 
-	// insecure cipher, see http://www.isg.rhul.ac.uk/~kp/SandPfinal.pdf
-	// uncomment below to enable it.
-	// aes128cbcID: {16, aes.BlockSize, 0, nil},
+	// CBC mode is insecure and so is not included in the default config.
+	// (See http://www.isg.rhul.ac.uk/~kp/SandPfinal.pdf). If absolutely
+	// needed, it's possible to specify a custom Config to enable it.
+	// You should expect that an active attacker can recover plaintext if
+	// you do.
+	aes128cbcID: {16, aes.BlockSize, 0, nil},
 }
 
 // prefixLen is the length of the packet prefix that contains the packet length

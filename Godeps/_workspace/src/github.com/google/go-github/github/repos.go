@@ -448,8 +448,27 @@ func (s *RepositoriesService) ListTags(owner string, repo string, opt *ListOptio
 
 // Branch represents a repository branch
 type Branch struct {
-	Name   *string `json:"name,omitempty"`
-	Commit *Commit `json:"commit,omitempty"`
+	Name       *string     `json:"name,omitempty"`
+	Commit     *Commit     `json:"commit,omitempty"`
+	Protection *Protection `json:"protection,omitempty"`
+}
+
+// Protection represents a repository branch's protection
+type Protection struct {
+	Enabled              *bool                 `json:"enabled,omitempty"`
+	RequiredStatusChecks *RequiredStatusChecks `json:"required_status_checks,omitempty"`
+}
+
+// RequiredStatusChecks represents the protection status of a individual branch
+type RequiredStatusChecks struct {
+	// Who required status checks apply to.
+	// Possible values are:
+	//     off
+	//     non_admins
+	//     everyone
+	EnforcementLevel *string   `json:"enforcement_level,omitempty"`
+	// The list of status checks which are required
+	Contexts         *[]string `json:"contexts,omitempty"`
 }
 
 // ListBranches lists branches for the specified repository.
@@ -485,6 +504,8 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 	if err != nil {
 		return nil, nil, err
 	}
+
+	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	b := new(Branch)
 	resp, err := s.client.Do(req, b)

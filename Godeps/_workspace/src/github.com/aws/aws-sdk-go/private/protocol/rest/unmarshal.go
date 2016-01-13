@@ -26,6 +26,10 @@ func Unmarshal(r *request.Request) {
 // UnmarshalMeta unmarshals the REST metadata of a response in a REST service
 func UnmarshalMeta(r *request.Request) {
 	r.RequestID = r.HTTPResponse.Header.Get("X-Amzn-Requestid")
+	if r.RequestID == "" {
+		// Alternative version of request id in the header
+		r.RequestID = r.HTTPResponse.Header.Get("X-Amz-Request-Id")
+	}
 	if r.DataFilled() {
 		v := reflect.Indirect(reflect.ValueOf(r.Data))
 		unmarshalLocationElements(r, v)

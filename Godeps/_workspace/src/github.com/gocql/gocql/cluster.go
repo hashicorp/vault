@@ -40,16 +40,6 @@ func initStmtsLRU(max int) {
 	}
 }
 
-// To enable periodic node discovery enable DiscoverHosts in ClusterConfig
-type DiscoveryConfig struct {
-	// If not empty will filter all discoverred hosts to a single Data Centre (default: "")
-	DcFilter string
-	// If not empty will filter all discoverred hosts to a single Rack (default: "")
-	RackFilter string
-	// The interval to check for new hosts (default: 30s)
-	Sleep time.Duration
-}
-
 // PoolConfig configures the connection pool used by the driver, it defaults to
 // using a round robbin host selection policy and a round robbin connection selection
 // policy for each host.
@@ -63,7 +53,7 @@ type PoolConfig struct {
 	ConnSelectionPolicy func() ConnSelectionPolicy
 }
 
-func (p PoolConfig) buildPool(session *Session) (*policyConnPool, error) {
+func (p PoolConfig) buildPool(session *Session) *policyConnPool {
 	hostSelection := p.HostSelectionPolicy
 	if hostSelection == nil {
 		hostSelection = RoundRobinHostPolicy()
@@ -75,6 +65,27 @@ func (p PoolConfig) buildPool(session *Session) (*policyConnPool, error) {
 	}
 
 	return newPolicyConnPool(session, hostSelection, connSelection)
+}
+
+type DiscoveryConfig struct {
+	// If not empty will filter all discoverred hosts to a single Data Centre (default: "")
+	DcFilter string
+	// If not empty will filter all discoverred hosts to a single Rack (default: "")
+	RackFilter string
+	// ignored
+	Sleep time.Duration
+}
+
+func (d DiscoveryConfig) matchFilter(host *HostInfo) bool {
+	if d.DcFilter != "" && d.DcFilter != host.DataCenter() {
+		return false
+	}
+
+	if d.RackFilter != "" && d.RackFilter != host.Rack() {
+		return false
+	}
+
+	return true
 }
 
 // ClusterConfig is a struct to configure the default cluster implementation
@@ -94,17 +105,17 @@ type ClusterConfig struct {
 	Authenticator     Authenticator     // authenticator (default: nil)
 	RetryPolicy       RetryPolicy       // Default retry policy to use for queries (default: 0)
 	SocketKeepalive   time.Duration     // The keepalive period to use, enabled if > 0 (default: 0)
-	DiscoverHosts     bool              // If set, gocql will attempt to automatically discover other members of the Cassandra cluster (default: false)
 	MaxPreparedStmts  int               // Sets the maximum cache size for prepared statements globally for gocql (default: 1000)
 	MaxRoutingKeyInfo int               // Sets the maximum cache size for query info about statements for each session (default: 1000)
 	PageSize          int               // Default page size to use for created sessions (default: 5000)
 	SerialConsistency SerialConsistency // Sets the consistency for the serial part of queries, values can be either SERIAL or LOCAL_SERIAL (default: unset)
-	Discovery         DiscoveryConfig
 	SslOpts           *SslOptions
 	DefaultTimestamp  bool // Sends a client side timestamp for all requests which overrides the timestamp at which it arrives at the server. (default: true, only enabled for protocol 3 and above)
 	// PoolConfig configures the underlying connection pool, allowing the
 	// configuration of host selection and connection selection policies.
 	PoolConfig PoolConfig
+
+	Discovery DiscoveryConfig
 
 	// The maximum amount of time to wait for schema agreement in a cluster after
 	// receiving a schema change frame. (deault: 60s)
@@ -124,7 +135,6 @@ func NewCluster(hosts ...string) *ClusterConfig {
 		Port:                   9042,
 		NumConns:               2,
 		Consistency:            Quorum,
-		DiscoverHosts:          false,
 		MaxPreparedStmts:       defaultMaxPreparedStmts,
 		MaxRoutingKeyInfo:      1000,
 		PageSize:               5000,

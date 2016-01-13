@@ -62,7 +62,7 @@ func (r *keyring) Remove(key ssh.PublicKey) error {
 		if bytes.Equal(r.keys[i].signer.PublicKey().Marshal(), want) {
 			found = true
 			r.keys[i] = r.keys[len(r.keys)-1]
-			r.keys = r.keys[len(r.keys)-1:]
+			r.keys = r.keys[:len(r.keys)-1]
 			continue
 		} else {
 			i++

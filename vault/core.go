@@ -1290,7 +1290,13 @@ func (c *Core) RekeyInit(config *SealConfig) error {
 	*c.rekeyConfig = *config
 
 	// Initialize the nonce
-	c.rekeyConfig.Nonce = uuid.GenerateUUID()
+	nonce, err := uuid.GenerateUUID()
+	if err != nil {
+		c.rekeyConfig = nil
+		return err
+	}
+	c.rekeyConfig.Nonce = nonce
+
 	c.logger.Printf("[INFO] core: rekey initialized (nonce: %s, shares: %d, threshold: %d)",
 		c.rekeyConfig.Nonce, c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
 	return nil
@@ -1656,7 +1662,11 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		}
 
 		// Create a lock
-		uuid := uuid.GenerateUUID()
+		uuid, err := uuid.GenerateUUID()
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to generate uuid: %v", err)
+			return
+		}
 		lock, err := c.ha.LockWith(coreLockPath, uuid)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to create lock: %v", err)

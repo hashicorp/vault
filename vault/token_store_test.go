@@ -30,7 +30,11 @@ func mockTokenStore(t *testing.T) (*Core, *TokenStore, string) {
 		Description: "token based credentials",
 	}
 
-	me.UUID = uuid.GenerateUUID()
+	uuid, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	me.UUID = uuid
 
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
 

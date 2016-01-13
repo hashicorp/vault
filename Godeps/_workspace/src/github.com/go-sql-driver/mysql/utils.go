@@ -267,6 +267,8 @@ func parseDSNParams(cfg *config, params string) (err error) {
 				if boolValue {
 					cfg.tls = &tls.Config{}
 				}
+			} else if value, err := url.QueryUnescape(value); err != nil {
+				return fmt.Errorf("Invalid value for tls config name: %v", err)
 			} else {
 				if strings.ToLower(value) == "skip-verify" {
 					cfg.tls = &tls.Config{InsecureSkipVerify: true}

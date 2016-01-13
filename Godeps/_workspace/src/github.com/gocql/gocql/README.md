@@ -12,6 +12,12 @@ Project Website: http://gocql.github.io/<br>
 API documentation: http://godoc.org/github.com/gocql/gocql<br>
 Discussions: https://groups.google.com/forum/#!forum/gocql
 
+Production Stability
+--------------------
+The method in which the driver maintains and discovers hosts in the Cassandra cluster changed when adding support for event driven discovery using serverside events. This has meant many things in the driver internally have been touched and changed, as such if you would like to go back to the historical node discovery the tag `pre-node-events` is a tree which uses the old polling based discovery.
+
+If you run into bugs related to node discovery using events please open a ticket.
+
 Supported Versions
 ------------------
 
@@ -167,7 +173,7 @@ There are various ways to bind application level data structures to CQL statemen
 * Building on top of the gocql driver, [cqlr](https://github.com/relops/cqlr) adds the ability to auto-bind a CQL iterator to a struct or to bind a struct to an INSERT statement.
 * Another external project that layers on top of gocql is [cqlc](http://relops.com/cqlc) which generates gocql compliant code from your Cassandra schema so that you can write type safe CQL statements in Go with a natural query syntax.
 * [gocassa](https://github.com/hailocab/gocassa) is an external project that layers on top of gocql to provide convenient query building and data binding.
-* [gocqltable](https://github.com/elvtechnology/gocqltable) provides an ORM-style convenience layer to make CRUD operations with gocql easier.
+* [gocqltable](https://github.com/kristoiv/gocqltable) provides an ORM-style convenience layer to make CRUD operations with gocql easier.
 
 Ecosphere
 ---------
@@ -179,7 +185,7 @@ The following community maintained tools are known to integrate with gocql:
 * [cqlr](https://github.com/relops/cqlr) adds the ability to auto-bind a CQL iterator to a struct or to bind a struct to an INSERT statement.
 * [cqlc](http://relops.com/cqlc) which generates gocql compliant code from your Cassandra schema so that you can write type safe CQL statements in Go with a natural query syntax.
 * [gocassa](https://github.com/hailocab/gocassa) provides query building, adds data binding, and provides easy-to-use "recipe" tables for common query use-cases.
-* [gocqltable](https://github.com/elvtechnology/gocqltable) is a wrapper around gocql that aims to simplify common operations whilst working the library.
+* [gocqltable](https://github.com/kristoiv/gocqltable) is a wrapper around gocql that aims to simplify common operations whilst working the library.
 
 Other Projects
 --------------
