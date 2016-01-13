@@ -119,10 +119,10 @@ used for operators, while applications may use public/private keys or tokens to 
 An authentication request flows through core and into a credential backend, which determines
 if the request is valid and returns a list of associated policies.
 
-Policies are just a named ACL rule. For example, the "root" policy is builtin and
+Policies are just a named ACL rule. For example, the "root" policy is built-in and
 permits access to all resources. You can create any number of named policies with
-fine-grained control over paths. Vault operates exclusively in a blacklist mode, meaning
-unless access is explicitly granted via a policy the action is not allowed.
+fine-grained control over paths. Vault operates exclusively in a whitelist mode, meaning
+that unless access is explicitly granted via a policy, the action is not allowed.
 Since a user may have multiple policies associated, an action is allowed if any policy
 permits it. Policies are stored and managed by an internal policy store. This internal store
 is manipulated through the system backend, which is always mounted at `sys/`.

@@ -29,10 +29,14 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 		case "DELETE":
 			op = logical.DeleteOperation
 		case "GET":
-			op = logical.ReadOperation
-		case "POST":
-			fallthrough
-		case "PUT":
+			if r.Form.Get("list") == "true" {
+				op = logical.ListOperation
+			} else {
+				op = logical.ReadOperation
+			}
+		case "LIST":
+			op = logical.ListOperation
+		case "POST", "PUT":
 			op = logical.UpdateOperation
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)

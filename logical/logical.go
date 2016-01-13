@@ -27,6 +27,14 @@ type Backend interface {
 	// information, such as globally configured default and max lease TTLs.
 	System() SystemView
 
+	// HandleExistenceCheck is used to handle a request and generate a response
+	// indicating whether the given path exists or not; this is used to
+	// understand whether the request must have a Create or Update capability
+	// ACL applied. The first bool indicates whether an existence check
+	// function was found for the backend; the second indicates whether, if an
+	// existence check function was found, the item exists or not.
+	HandleExistenceCheck(*Request) (bool, bool, error)
+
 	Cleanup()
 }
 

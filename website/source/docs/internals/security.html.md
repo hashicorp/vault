@@ -108,7 +108,7 @@ policies. Vault uses a strict default deny or whitelist enforcement. This means 
 an associated policy allows for a given action, it will be denied. Each policy specifies
 a level of access granted to a path in Vault. When the policies are merged (if multiple
 policies are associated with a client), the highest access level permitted is used.
-For example, if the "engineering" policy permits read/write access to the "eng/" path,
+For example, if the "engineering" policy permits read/update access to the "eng/" path,
 and the "ops" policy permits read access to the "ops/" path, then the user gets the
 union of those. Policy is matched using the most specific defined policy, which may be
 an exact match or the longest-prefix match glob pattern.

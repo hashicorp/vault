@@ -286,6 +286,10 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}, nil
 }
 
+func (n *rawHTTP) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+	return false, false, nil
+}
+
 func (n *rawHTTP) SpecialPaths() *logical.Paths {
 	return &logical.Paths{Unauthenticated: []string{"*"}}
 }

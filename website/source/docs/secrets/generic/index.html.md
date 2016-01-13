@@ -19,6 +19,9 @@ of these backends at different mount points as you like.
 Writing to a key in the `secret/` backend will replace the old value;
 sub-fields are not merged together.
 
+This backend honors the distinction between the `create` and `update`
+capabilities inside ACL policies.
+
 **Note**: Path and key names are _not_ obfuscated or encrypted; only the values
 set on keys are. You should not store sensitive information as part of a
 secret's path.
@@ -109,7 +112,10 @@ seconds (one hour) as specified.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Stores a secret at the specified location.
+    Stores a secret at the specified location. If the value does not yet exist,
+    the calling token must have an ACL policy granting the `create` capability.
+    If the value already exists, the calling token must have an ACL policy
+    granting the `update` capability.
   </dd>
 
   <dt>Method</dt>

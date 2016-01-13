@@ -475,7 +475,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	auth, te, err := c.checkToken(req)
 	if te != nil {
 		defer func() {
 			// Attempt to use the token (decrement num_uses)
@@ -705,12 +705,11 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	return resp, auth, err
 }
 
-func (c *Core) checkToken(
-	op logical.Operation, path string, token string) (*logical.Auth, *TokenEntry, error) {
-	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
+func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
-	if token == "" {
+	if req.ClientToken == "" {
 		return nil, nil, fmt.Errorf("missing client token")
 	}
 
@@ -720,7 +719,7 @@ func (c *Core) checkToken(
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(token)
+	te, err := c.tokenStore.Lookup(req.ClientToken)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
 		return nil, nil, ErrInternalError
@@ -738,19 +737,59 @@ func (c *Core) checkToken(
 		return nil, nil, ErrInternalError
 	}
 
+	return acl, te, nil
+}
+
+func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
+
+	acl, te, err := c.fetchACLandTokenEntry(req)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Check if this is a root protected path
-	if c.router.RootPath(path) && !acl.RootPrivilege(path) {
-		return nil, nil, logical.ErrPermissionDenied
+	rootPath := c.router.RootPath(req.Path)
+
+	// When we receive a write of either type, rather than require clients to
+	// PUT/POST and trust the operation, we ask the backend to give us the real
+	// skinny -- if the backend implements an existence check, it can tell us
+	// whether a particular resource exists. Then we can mark it as an update
+	// or creation as appropriate.
+	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
+		checkExists, resourceExists, err := c.router.RouteExistenceCheck(req)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to run existence check: %v", err)
+			return nil, nil, ErrInternalError
+		}
+
+		switch {
+		case checkExists == false:
+			// No existence check, so always treate it as an update operation, which is how it is pre 0.5
+			req.Operation = logical.UpdateOperation
+		case resourceExists == true:
+			// It exists, so force an update operation
+			req.Operation = logical.UpdateOperation
+		case resourceExists == false:
+			// It doesn't exist, force a create operation
+			req.Operation = logical.CreateOperation
+		default:
+			panic("unreachable code")
+		}
 	}
 
 	// Check the standard non-root ACLs
-	if !acl.AllowOperation(op, path) {
+	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	if !allowed {
+		return nil, nil, logical.ErrPermissionDenied
+	}
+	if rootPath && !rootPrivs {
 		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Create the auth response
 	auth := &logical.Auth{
-		ClientToken: token,
+		ClientToken: req.ClientToken,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
@@ -1115,9 +1154,15 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Validate the token is a root token
-	_, te, err := c.checkToken(logical.UpdateOperation, "sys/seal", token)
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/seal",
+		ClientToken: token,
+	}
+	acl, te, err := c.fetchACLandTokenEntry(req)
+
+	// Attempt to use the token (decrement num_uses)
 	if te != nil {
-		// Attempt to use the token (decrement num_uses)
 		if err := c.tokenStore.UseToken(te); err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
 			retErr = ErrInternalError
@@ -1125,6 +1170,17 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 	if err != nil {
 		return err
+	}
+
+	// Verify that this operation is allowed
+	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	if !allowed {
+		return logical.ErrPermissionDenied
+	}
+
+	// We always require root privileges for this operation
+	if !rootPrivs {
+		return logical.ErrPermissionDenied
 	}
 
 	// Seal the Vault

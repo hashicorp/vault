@@ -19,7 +19,6 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"revoke-prefix/*",
 		"audit",
 		"audit/*",
-		"seal",
 		"raw/*",
 		"rotate",
 	}
@@ -739,7 +738,7 @@ func TestSystemBackend_rawWrite(t *testing.T) {
 	if p == nil || len(p.Paths) == 0 {
 		t.Fatalf("missing policy %#v", p)
 	}
-	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != PathPolicyRead {
+	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != ReadCapability {
 		t.Fatalf("Bad: %#v", p)
 	}
 }

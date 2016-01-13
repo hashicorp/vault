@@ -47,10 +47,13 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead,
-					logical.UpdateOperation:  b.handleWrite,
+					logical.CreateOperation: b.handleWrite,
+					logical.UpdateOperation: b.handleWrite,
 					logical.DeleteOperation: b.handleDelete,
 					logical.ListOperation:   b.handleList,
 				},
+
+				ExistenceCheck: b.handleExistenceCheck,
 
 				HelpSynopsis:    strings.TrimSpace(passthroughHelpSynopsis),
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
@@ -88,6 +91,16 @@ func (b *PassthroughBackend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This is a no-op
 	return nil, nil
+}
+
+func (b *PassthroughBackend) handleExistenceCheck(
+	req *logical.Request, data *framework.FieldData) (bool, error) {
+	out, err := req.Storage.Get(req.Path)
+	if err != nil {
+		return false, fmt.Errorf("existence check failed: %v", err)
+	}
+
+	return out != nil, nil
 }
 
 func (b *PassthroughBackend) handleRead(
