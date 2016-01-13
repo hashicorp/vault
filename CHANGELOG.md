@@ -19,6 +19,13 @@ FEATURES:
    [configuration
    documentation](https://vaultproject.io/docs/config/index.html) for details.
    [GH-395]
+ * **Fine-Grained Access Control**: Policies can now use the `capabilities` set
+   to specify fine-grained control over operations allowed on a path, including
+   separation of `sudo` privileges from other privileges. These can be mixed
+   and matched in any way desired. The `policy` value is kept for backwards
+   compatibility. See the [updated policy
+   documentation](https://vaultproject.io/docs/concepts/policies.html) for
+   details. [GH-914]
  * **DynamoDB HA Physical Backend**: There is now a new, community-supported
    HA-enabled physical backend using Amazon DynamoDB. See the [configuration
    documentation](https://vaultproject.io/docs/config/index.html) for details.
