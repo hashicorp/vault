@@ -134,10 +134,6 @@ const (
 	RollbackOperation           = "rollback"
 )
 
-func (o Operation) String() string {
-	return string(o)
-}
-
 var (
 	// ErrUnsupportedOperation is returned if the operation is not supported
 	// by the logical backend.

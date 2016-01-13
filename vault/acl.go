@@ -107,20 +107,20 @@ CHECK:
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
 	sudo = capabilities&SudoCapabilityInt > 0
-	switch op.String() {
-	case "read":
+	switch op {
+	case logical.ReadOperation:
 		allowed = capabilities&ReadCapabilityInt > 0
-	case "list":
+	case logical.ListOperation:
 		allowed = capabilities&ListCapabilityInt > 0
-	case "update":
+	case logical.UpdateOperation:
 		allowed = capabilities&UpdateCapabilityInt > 0
-	case "delete":
+	case logical.DeleteOperation:
 		allowed = capabilities&DeleteCapabilityInt > 0
-	case "create":
+	case logical.CreateOperation:
 		allowed = capabilities&CreateCapabilityInt > 0
 
 	// These three re-use UpdateCapabilityInt since that's the most appropraite capability/operation mapping
-	case "revoke", "renew", "rollback":
+	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
 		allowed = capabilities&UpdateCapabilityInt > 0
 
 	default:
