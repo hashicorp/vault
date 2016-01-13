@@ -1,3 +1,14 @@
+## 0.4.1 (January 13, 2016)
+
+SECURITY:
+
+  * Build against Go 1.5.3 to mitigate a security vulnerability introduced in
+    Go 1.5. For more information, please see
+    https://groups.google.com/forum/#!topic/golang-dev/MEATuOi_ei4
+
+This is a security-only release; other than the version number and building
+against Go 1.5.3, there are no changes from 0.4.0.
+
 ## 0.4.0 (December 10, 2015)
 
 DEPRECATIONS/BREAKING CHANGES:
