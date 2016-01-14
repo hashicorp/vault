@@ -14,7 +14,7 @@ compromise. It is useful to first understand the
 [high-level architecture](/docs/internals/architecture.html) before learning about key rotation.
 
 As a review, Vault starts in a _sealed_ state. Vault is unsealed by providing the unseal keys.
-By default, Vault uses a technique known as [Shamir's secret sharing algorithm](http://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
+By default, Vault uses a technique known as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
 to split the master key into 5 shares, any 3 of which are required to reconstruct the master
 key. The master key is used to protect the encryption key, which is ultimately used to protect
 data written to the storage backend.

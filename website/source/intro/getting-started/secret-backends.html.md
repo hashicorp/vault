@@ -19,7 +19,7 @@ in particular is what makes Vault unique. For example, the "aws" backend
 generates AWS access keys dynamically, on demand. Another example --
 this type of backend does not yet exist -- is a backend that
 reads and writes data directly to an
-[HSM](http://en.wikipedia.org/wiki/Hardware_security_module).
+[HSM](https://en.wikipedia.org/wiki/Hardware_security_module).
 As Vault matures, more and more backends will be added.
 
 To represent backends, Vault behaves much like a filesystem: backends
@@ -92,7 +92,7 @@ closely tied to their mount paths.
 Now that you've mounted and unmounted a backend, you might wonder:
 "what is a secret backend? what is the point of this mounting system?"
 
-Vault behaves a lot like a [virtual filesystem](http://en.wikipedia.org/wiki/Virtual_file_system).
+Vault behaves a lot like a [virtual filesystem](https://en.wikipedia.org/wiki/Virtual_file_system).
 The read/write/delete operations are forwarded to the backend, and the
 backend can choose to react to these operations however it wishes.
 For example, the "generic" backend simply passes this through to the

@@ -63,7 +63,7 @@ default, the `{{username}}` and `{{password}}` fields will be populated by
 Vault with dynamically generated values. This CQL statement is creating
 the named user, and then granting it `SELECT` or read-only privileges
 to keyspaces. More complex `GRANT` queries can be used to
-customize the privileges of the role. See the [CQL Reference Manual](http://docs.datastax.com/en/cql/3.1/cql/cql_reference/grant_r.html)
+customize the privileges of the role. See the [CQL Reference Manual](https://docs.datastax.com/en/cql/3.1/cql/cql_reference/grant_r.html)
 for more information.
 
 To generate a new set of credentials, we simply read from that role:
@@ -167,7 +167,7 @@ subpath for interactive help output.
         JSON containing a certificate and private key;
         a certificate, private key, and issuing CA certificate; or just a CA
         certificate. For convenience format is the same as the output of the
-        `issue` command from the `pki` backend; see [the pki documentation](https://vaultproject.io/docs/secrets/pki/index.html).
+        `issue` command from the `pki` backend; see [the pki documentation](https://www.vaultproject.io/docs/secrets/pki/index.html).
       </li>
     </ul>
   </dd>

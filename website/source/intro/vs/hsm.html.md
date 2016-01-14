@@ -8,7 +8,7 @@ description: |-
 
 # Vault vs. HSMs
 
-A [hardware security module (HSM)](http://en.wikipedia.org/wiki/Hardware_security_module)
+A [hardware security module (HSM)](https://en.wikipedia.org/wiki/Hardware_security_module)
 is a hardware device that is meant to secure various secrets. They generally
 have very strong security models and adhere to many compliance regulations.
 

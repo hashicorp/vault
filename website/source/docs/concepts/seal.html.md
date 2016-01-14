@@ -33,7 +33,7 @@ this master key.
 
 Instead of distributing this master key as a single key to an operator,
 Vault uses an algorithm known as
-[Shamir's Secret Sharing](http://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
+[Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
 to split the key into shards. A certain threshold of shards is required to
 reconstruct the master key.
 

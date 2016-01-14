@@ -11,7 +11,7 @@ description: |-
 Name: `consul`
 
 The Consul secret backend for Vault generates
-[Consul](http://consul.io)
+[Consul](https://www.consul.io)
 API tokens dynamically based on Consul ACL policies.
 
 This page will show a quick start for this backend. For detailed documentation
@@ -28,7 +28,7 @@ Successfully mounted 'consul' at 'consul'!
 ```
 
 [Acquire a management token from
-Consul](https://consul.io/docs/agent/http/acl.html#acl_create), using the
+Consul](https://www.consul.io/docs/agent/http/acl.html#acl_create), using the
 `acl_master_token` from your Consul configuration file or any other management
 token:
 
@@ -72,7 +72,7 @@ Success! Data written to: consul/roles/readonly
 
 The backend expects the policy to be base64 encoded, so we need to encode it
 properly before writing. The policy language is [documented by
-Consul](https://consul.io/docs/internals/acl.html), but we've defined a
+Consul](https://www.consul.io/docs/internals/acl.html), but we've defined a
 read-only policy.
 
 To generate a new set Consul ACL token, we simply read from that role:
@@ -163,7 +163,7 @@ Permission denied
         <span class="param">policy</span>
         <span class="param-flags">required</span>
         The base64 encoded Consul ACL policy. This is documented in [more
-        detail here](https://consul.io/docs/internals/acl.html). Required
+        detail here](https://www.consul.io/docs/internals/acl.html). Required
         unless the `token_type` is `management`.
       </li>
       <li>

@@ -19,7 +19,7 @@ it will dump the current telemetry information to the agent's `stderr`.
 This telemetry information can be used for debugging or otherwise
 getting a better view of what Vault is doing.
 
-Telemetry information can be streamed to both [statsite](http://github.com/armon/statsite)
+Telemetry information can be streamed to both [statsite](https://github.com/armon/statsite)
 as well as statsd based on providing the appropriate configuration options.
 
 Below is sample output of a telemetry dump:
