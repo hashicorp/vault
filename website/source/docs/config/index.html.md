@@ -142,11 +142,11 @@ to help you, but may refer you to the backend author.
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
     This backend supports HA. This is a community-supported backend.
 
-  * `s3` - Store data within an S3 bucket [S3](https://aws.amazon.com/s3/).
-    This backend does not support HA. This is a community-supported backend.
-
   * `dynamodb` - Store data in a [DynamoDB](https://aws.amazon.com/dynamodb/) table.
     This backend supports HA. This is a community-supported backend.
+
+  * `s3` - Store data within an S3 bucket [S3](https://aws.amazon.com/s3/).
+    This backend does not support HA. This is a community-supported backend.
 
   * `mysql` - Store data within MySQL. This backend does not support HA. This
     is a community-supported backend.
@@ -202,17 +202,6 @@ For Consul, the following options are supported:
   * `tls_key_file` (optional) - The path to the private key for Consul communication.
       Set accordingly to the [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting in Consul.
 
-#### Backend Reference: Zookeeper (Community-Supported)
-
-For Zookeeper, the following options are supported:
-
-  * `path` (optional) - The path within Zookeeper where data will be stored.
-      Defaults to "vault/".
-
-  * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
-      Can be comma separated list (host:port) of many Zookeeper instances.
-      Defaults to "localhost:2181" if not specified.
-
 #### Backend Reference: etcd (Community-Supported)
 
 For etcd, the following options are supported:
@@ -231,28 +220,16 @@ For etcd, the following options are supported:
 
   * `tls_key_file` (optional) - The path to the private key for etcd communication.
 
-#### Backend Reference: S3 (Community-Supported)
+#### Backend Reference: Zookeeper (Community-Supported)
 
-For S3, the following options are supported:
+For Zookeeper, the following options are supported:
 
-  * `bucket` (required) - The name of the S3 bucket to use. It must be provided, but it can also be sourced from the `AWS_S3_BUCKET` environment variable.
+  * `path` (optional) - The path within Zookeeper where data will be stored.
+      Defaults to "vault/".
 
-  * `access_key` - (required) The AWS access key. It must be provided, but it can also be sourced from the `AWS_ACCESS_KEY_ID` environment variable.
-
-  * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the `AWS_SECRET_ACCESS_KEY` environment variable.
-
-  * `session_token` - (optional) The AWS session token. It can also be sourced from the `AWS_SESSION_TOKEN` environment variable.
-
-  * `endpoint` - (optional) An alternative (AWS compatible) S3 endpoint to use. It can also be sourced from the `AWS_S3_ENDPOINT` environment variable.
-
-  * `region` (optional) - The AWS region. It can be sourced from the `AWS_DEFAULT_REGION` environment variable and will default to "us-east-1" if not specified.
-
-If you are running your Vault server on an EC2 instance, you can also make use
-of the EC2 instance profile service to provide the credentials Vault will use to
-make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
-will cause Vault to attempt to retrieve credentials from the metadata service.
-You are responsible for ensuring your instance is launched with the appropriate
-profile enabled. Vault will handle renewing profile credentials as they rotate.
+  * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
+      Can be comma separated list (host:port) of many Zookeeper instances.
+      Defaults to "localhost:2181" if not specified.
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
@@ -282,6 +259,29 @@ If you are running your Vault server on an EC2 instance, you can also make use
 of the EC2 instance profile service to provide the credentials Vault will use to
 make DynamoDB API calls. Leaving the `access_key` and `secret_key` fields empty
 will cause Vault to attempt to retrieve credentials from the metadata service.
+
+#### Backend Reference: S3 (Community-Supported)
+
+For S3, the following options are supported:
+
+  * `bucket` (required) - The name of the S3 bucket to use. It must be provided, but it can also be sourced from the `AWS_S3_BUCKET` environment variable.
+
+  * `access_key` - (required) The AWS access key. It must be provided, but it can also be sourced from the `AWS_ACCESS_KEY_ID` environment variable.
+
+  * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the `AWS_SECRET_ACCESS_KEY` environment variable.
+
+  * `session_token` - (optional) The AWS session token. It can also be sourced from the `AWS_SESSION_TOKEN` environment variable.
+
+  * `endpoint` - (optional) An alternative (AWS compatible) S3 endpoint to use. It can also be sourced from the `AWS_S3_ENDPOINT` environment variable.
+
+  * `region` (optional) - The AWS region. It can be sourced from the `AWS_DEFAULT_REGION` environment variable and will default to "us-east-1" if not specified.
+
+If you are running your Vault server on an EC2 instance, you can also make use
+of the EC2 instance profile service to provide the credentials Vault will use to
+make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
+will cause Vault to attempt to retrieve credentials from the metadata service.
+You are responsible for ensuring your instance is launched with the appropriate
+profile enabled. Vault will handle renewing profile credentials as they rotate.
 
 #### Backend Reference: MySQL (Community-Supported)
 
