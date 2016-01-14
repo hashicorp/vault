@@ -73,7 +73,7 @@ is an example IAM policy to get started:
 ```
 
 For more information on IAM policies, please see the
-[AWS IAM policy documentation](http://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
+[AWS IAM policy documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
 
 To generate a new set of IAM credentials, we simply read from that role:
 

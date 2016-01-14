@@ -38,7 +38,7 @@ Within the configuration file, there are two primary configurations:
 
   * `backend` - This is the physical backend that Vault uses for
     storage. Up to this point the dev server has used "inmem" (in memory),
-    but in the example above we're using [Consul](http://www.consul.io),
+    but in the example above we're using [Consul](https://www.consul.io),
     a much more production-ready backend.
 
   * `listener` - One or more listeners determine how Vault listens for
@@ -156,7 +156,7 @@ the Vault, you need 3 of the 5 keys that were generated.
 
 -> **Note:** Vault does not store any of the unseal key shards. Vault
 uses an algorithm known as
-[Shamir's Secret Sharing](http://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
+[Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
 to split the master key into shards. Only with the threshold number of keys
 can it be reconstructed and your data finally accessed.
 

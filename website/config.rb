@@ -5,6 +5,4 @@ activate :hashicorp do |h|
   h.version      = "0.4.1"
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
-
-  h.minify_javascript = false
 end

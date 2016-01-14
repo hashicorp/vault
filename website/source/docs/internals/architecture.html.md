@@ -91,7 +91,7 @@ Once started, the Vault is in a _sealed_ state. Before any operation can be perf
 on the Vault it must be unsealed. This is done by providing the unseal keys. When
 the Vault is initialized it generates an encryption key which is used to protect all the
 data. That key is protected by a master key. By default, Vault uses a technique known
-as [Shamir's secret sharing algorithm](http://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
+as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
 to split the master key into 5 shares, any 3 of which are required to reconstruct the master
 key.
 

@@ -130,9 +130,9 @@ community-supported. We include them in the hope that they will be useful to
 those users that wish to utilize them, but they receive minimal validation and
 testing from HashiCorp, and HashiCorp staff may not be knowledgeable about the
 data store being utilized. If you encounter problems with them, we will attempt
-to help you, but may refer you to the backend author. 
+to help you, but may refer you to the backend author.
 
-  * `consul` - Store data within [Consul](http://www.consul.io). This
+  * `consul` - Store data within [Consul](https://www.consul.io). This
     backend supports HA. It is the most recommended backend for Vault and has
     been shown to work at high scale under heavy load.
 
@@ -142,7 +142,7 @@ to help you, but may refer you to the backend author.
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
     This backend supports HA. This is a community-supported backend.
 
-  * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
+  * `s3` - Store data within an S3 bucket [S3](https://aws.amazon.com/s3/).
     This backend does not support HA. This is a community-supported backend.
 
   * `dynamodb` - Store data in a [DynamoDB](https://aws.amazon.com/dynamodb/) table.
@@ -277,7 +277,7 @@ The DynamoDB backend has the following options:
   * `recovery_mode` (optional) - When the Vault leader crashes or is killed without being able to shut down properly, no other node can become the new leader because the DynamoDB table still holds the old leader's lock record. To recover from this situation, one can start a single Vault node with this option set to `1` and the node will remove the old lock from DynamoDB. It is important that only one node is running in recovery mode! After this node has become the leader, other nodes can be started with regular configuration.
     This option can also be provided via the environment variable `RECOVERY_MODE`.
 
-For more information about the read/write capacity of DynamoDB tables, see the [official AWS DynamoDB docs](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#ProvisionedThroughput).
+For more information about the read/write capacity of DynamoDB tables, see the [official AWS DynamoDB docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#ProvisionedThroughput).
 If you are running your Vault server on an EC2 instance, you can also make use
 of the EC2 instance profile service to provide the credentials Vault will use to
 make DynamoDB API calls. Leaving the `access_key` and `secret_key` fields empty
@@ -310,5 +310,3 @@ The file backend has the following options:
 
   * `path` (required) - The path on disk to a directory where the
       data will be stored.
-
-
