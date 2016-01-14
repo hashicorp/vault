@@ -96,8 +96,8 @@ body.layout-intro{
 					}
 
 					&:before{
-						background: url(../images/triangle-sprite.png) 0 0 no-repeat;
-						@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 7px, 25px);
+						background: image-url("triangle-sprite.png") 0 0 no-repeat;
+						@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 7px, 25px);
 					}
 				}
 
@@ -123,8 +123,8 @@ body.layout-intro{
 					top: 15px;
 					left: $parent-default-state;
 					overflow: hidden;
-					background: url(../images/triangle-sprite.png) 0 -9px no-repeat;
-					@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 7px, 25px);
+					background: image-url("triangle-sprite.png") 0 -9px no-repeat;
+					@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 7px, 25px);
 				}
 			}
 		}
@@ -148,8 +148,8 @@ body.layout-intro{
 						}
 
 						&:before{
-							background: url(../images/triangle-sprite.png) 0 0 no-repeat;
-							@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 5px, 19px);
+							background: image-url("triangle-sprite.png") 0 0 no-repeat;
+							@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 5px, 19px);
 						}
 					}
 				}
@@ -173,8 +173,8 @@ body.layout-intro{
 						top: 12px;
 						left: $child-default-state;
 						overflow: hidden;
-						background: url(../images/triangle-sprite.png) 0 -13px no-repeat;
-						@include img-retina("../images/triangle-sprite.png", "../images/triangle-sprite@2x.png", 5px, 19px);
+						background: image-url("triangle-sprite.png") 0 -13px no-repeat;
+						@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 5px, 19px);
 					}
 				}
 			}
