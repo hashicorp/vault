@@ -13,7 +13,6 @@ import (
 // ReadCommand is a Command that reads data from the Vault.
 type ReadCommand struct {
 	Meta
-	List bool
 }
 
 func (c *ReadCommand) Run(args []string) int {
@@ -22,11 +21,7 @@ func (c *ReadCommand) Run(args []string) int {
 	var err error
 	var secret *api.Secret
 	var flags *flag.FlagSet
-	if c.List {
-		flags = c.Meta.FlagSet("list", FlagSetDefault)
-	} else {
-		flags = c.Meta.FlagSet("read", FlagSetDefault)
-	}
+	flags = c.Meta.FlagSet("read", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&field, "field", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -53,11 +48,7 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	if c.List {
-		secret, err = client.Logical().List(path)
-	} else {
-		secret, err = client.Logical().Read(path)
-	}
+	secret, err = client.Logical().Read(path)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error reading %s: %s", path, err))
@@ -94,9 +85,6 @@ func (c *ReadCommand) Run(args []string) int {
 }
 
 func (c *ReadCommand) Synopsis() string {
-	if c.List {
-		return "List data in Vault"
-	}
 	return "Read data or secrets from Vault"
 }
 
@@ -110,21 +98,7 @@ Usage: vault read [options] path
   secrets and configuration as well as generate dynamic values from
   materialized backends. Please reference the documentation for the
   backends in use to determine key structure.
-`
 
-	if c.List {
-		helpText =
-			`
-Usage: vault list [options] path
-
-  List data from Vault.
-
-  Retrieve a listing of available data. The data returned is
-  backend-specific, and not all backends implement listing capability.
-`
-	}
-
-	helpText += `
 General Options:
 
   ` + generalOptionsUsage() + `

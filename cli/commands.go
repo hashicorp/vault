@@ -161,7 +161,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 		"read": func() (cli.Command, error) {
 			return &command.ReadCommand{
 				Meta: meta,
-				List: false,
+			}, nil
+		},
+
+		"list": func() (cli.Command, error) {
+			return &command.ListCommand{
+				Meta: meta,
 			}, nil
 		},
 
@@ -174,13 +179,6 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 		"delete": func() (cli.Command, error) {
 			return &command.DeleteCommand{
 				Meta: meta,
-			}, nil
-		},
-
-		"list": func() (cli.Command, error) {
-			return &command.ReadCommand{
-				Meta: meta,
-				List: true,
 			}, nil
 		},
 

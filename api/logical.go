@@ -27,7 +27,8 @@ func (c *Logical) Read(path string) (*Secret, error) {
 }
 
 func (c *Logical) List(path string) (*Secret, error) {
-	r := c.c.NewRequest("LIST", "/v1/"+path)
+	r := c.c.NewRequest("GET", "/v1/"+path)
+	r.Params.Set("list", "true")
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()

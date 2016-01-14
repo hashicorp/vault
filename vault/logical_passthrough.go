@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -218,8 +219,19 @@ func (b *PassthroughBackend) handleList(
 		return nil, err
 	}
 
+	// A list of an actual key returns "" in the list, which can cause nasty
+	// things downstream with JSON conversion, including in Go. So, prepend the
+	// path and let users do what they wish.
+	retKeys := make([]string, len(keys))
+	for i, k := range keys {
+		retKeys[i] = req.MountPoint + req.Path + k
+	}
+
+	// Sort
+	sort.Strings(retKeys)
+
 	// Generate the response
-	return logical.ListResponse(keys), nil
+	return logical.ListResponse(retKeys), nil
 }
 
 func (b *PassthroughBackend) GeneratesLeases() bool {

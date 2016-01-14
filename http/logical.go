@@ -29,13 +29,16 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 		case "DELETE":
 			op = logical.DeleteOperation
 		case "GET":
+			// Need to call ParseForm to get query params loaded
+			err := r.ParseForm()
+			if err != nil {
+				respondError(w, http.StatusBadRequest, err)
+			}
 			if r.Form.Get("list") == "true" {
 				op = logical.ListOperation
 			} else {
 				op = logical.ReadOperation
 			}
-		case "LIST":
-			op = logical.ListOperation
 		case "POST", "PUT":
 			op = logical.UpdateOperation
 		case "LIST":
@@ -71,7 +74,7 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 		if !ok {
 			return
 		}
-		if op == logical.ReadOperation && resp == nil {
+		if (op == logical.ReadOperation || op == logical.ListOperation) && resp == nil {
 			respondError(w, http.StatusNotFound, nil)
 			return
 		}

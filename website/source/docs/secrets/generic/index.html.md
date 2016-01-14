@@ -16,7 +16,7 @@ the getting started guide, you interacted with a generic secret backend
 via the `secret/` prefix that Vault mounts by default. You can mount as many
 of these backends at different mount points as you like.
 
-Writing to a key in the `secret/` backend will replace the old value;
+Writing to a key in the `generic` backend will replace the old value;
 sub-fields are not merged together.
 
 This backend honors the distinction between the `create` and `update`
@@ -39,9 +39,6 @@ to the Vault server if it results in clients accessing the value very frequently
 Also note that setting `ttl` does not actually expire the data; it is
 informational only.
 
-N.B.: Prior to version 0.3, the `ttl` parameter was called `lease`. Both will
-work for 0.3, but in 0.4 `lease` will be removed.
-
 As an example, we can write a new key "foo" to the generic backend
 mounted at "secret/" by default:
 
@@ -58,8 +55,7 @@ We can test this by doing a read:
 ```
 $ vault read secret/foo
 Key             Value
-ttl_seconds     3600
-ttl             1h
+lease_duration  3600
 zip             zap
 ```
 
@@ -69,7 +65,6 @@ seconds (one hour) as specified.
 
 ## API
 
-### /secret
 #### GET
 
 <dl class="api">
@@ -97,6 +92,47 @@ seconds (one hour) as specified.
     "auth": null,
     "data": {
       "foo": "bar"
+    },
+    "lease_duration": 2592000,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
+
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of secret entries at the specified location. Folders are
+    suffixed with `/`.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/secret/<path>?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  The example below shows output for a query path of `secret/` when there are
+  secrets at `secret/foo` and `secret/foo/bar`; note the difference in the two
+  entries.
+
+  ```javascript
+  {
+    "auth": null,
+    "data": {
+      "keys": ["secret/foo", "secret/foo/"]
     },
     "lease_duration": 2592000,
     "lease_id": "",

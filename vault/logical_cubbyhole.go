@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -153,16 +154,21 @@ func (b *CubbyholeBackend) handleList(
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("[ERR] cubbyhole list: Client token empty")
 	}
+
 	// List the keys at the prefix given by the request
 	keys, err := req.Storage.List(req.ClientToken + "/" + req.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	strippedKeys := []string{}
-	for _, key := range keys {
-		strippedKeys = append(strippedKeys, strings.TrimPrefix(key, req.ClientToken+"/"))
+	// Strip the token; also, add the path for the same reason as in
+	// passthrough
+	strippedKeys := make([]string, len(keys))
+	for i, key := range keys {
+		strippedKeys[i] = req.MountPoint + req.Path + strings.TrimPrefix(key, req.ClientToken+"/")
 	}
+
+	sort.Strings(strippedKeys)
 
 	// Generate the response
 	return logical.ListResponse(strippedKeys), nil
