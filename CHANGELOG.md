@@ -81,6 +81,17 @@ MISC:
  * Various minor documentation fixes and improvements [GH-839] [GH-854]
    [GH-861] [GH-876] [GH-899] [GH-900] [GH-904] [GH-923] [GH-924]
 
+## 0.4.1 (January 13, 2016)
+
+SECURITY:
+
+  * Build against Go 1.5.3 to mitigate a security vulnerability introduced in
+    Go 1.5. For more information, please see
+    https://groups.google.com/forum/#!topic/golang-dev/MEATuOi_ei4
+
+This is a security-only release; other than the version number and building
+against Go 1.5.3, there are no changes from 0.4.0.
+
 ## 0.4.0 (December 10, 2015)
 
 DEPRECATIONS/BREAKING CHANGES:
