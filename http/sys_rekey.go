@@ -114,11 +114,6 @@ func handleSysRekeyInitDelete(core *vault.Core, w http.ResponseWriter, r *http.R
 
 func handleSysRekeyUpdate(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			respondError(w, http.StatusMethodNotAllowed, nil)
-			return
-		}
-
 		// Parse the request
 		var req RekeyUpdateRequest
 		if err := parseRequest(r, &req); err != nil {
