@@ -84,6 +84,7 @@ lease_id        aws/creds/deploy/7cb8df71-782f-3de1-79dd-251778e49f58
 lease_duration  3600
 access_key      AKIAIOMYUTSLGJOGLHTQ
 secret_key      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
+security_token  <nil>
 ```
 
 If you run the command again, you will get a new set of credentials:
@@ -95,7 +96,22 @@ lease_id        aws/creds/deploy/82d89562-ff19-382e-6be9-cb45c8f6a42d
 lease_duration  3600
 access_key      AKIAJZ5YRPHFH3QHRRRQ
 secret_key      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
+security_token  <nil>
 ```
+
+If you want keys with an STS token use the 'sts' endpoint instead of 'creds.'
+
+```text
+$vault read aws/sts/deploy
+Key            	Value
+lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
+lease_duration 	3600
+lease_renewable	true
+access_key     	ASIAJYYYY2AA5K4WIXXX
+secret_key     	HSs0DYYYYYY9W81DXtI0K7X84H+OVZXK5BXXXX
+security_token 	AQoDYXdzEEwasAKwQyZUtZaCjVNDiXXXXXXXXgUgBBVUUbSyujLjsw6jYzboOQ89vUVIehUw/9MreAifXFmfdbjTr3g6zc0me9M+dB95DyhetFItX5QThw0lEsVQWSiIeIotGmg7mjT1//e7CJc4LpxbW707loFX1TYD1ilNnblEsIBKGlRNXZ+QJdguY4VkzXxv2urxIH0Sl14xtqsRPboV7eYruSEZlAuP3FLmqFbmA0AFPCT37cLf/vUHinSbvw49C4c9WQLH7CeFPhDub7/rub/QU/lCjjJ43IqIRo9jYgcEvvdRkQSt70zO8moGCc7pFvmL7XGhISegQpEzudErTE/PdhjlGpAKGR3d5qKrHpPYK/k480wk1Ai/t1dTa/8/3jUYTUeIkaJpNBnupQt7qoaXXXXXXXXXX
+```
+
 
 If you get an error message similar to either of the following, the root credentials that you wrote to `aws/config/root` have insufficient privilege:
 
@@ -151,6 +167,10 @@ Unfortunately, IAM credentials are eventually consistent with respect to other
 Amazon services. If you are planning on using these credential in a pipeline,
 you may need to add a delay of 5-10 seconds (or more) after fetching
 credentials before they can be used successfully.
+
+If you want to be able to use credentials without the wait, consider using the STS
+method of fetching keys. IAM credentials supported by an STS token are available for use
+as soon as they are generated.
 
 ## API
 
@@ -355,10 +375,47 @@ credentials before they can be used successfully.
     {
       "data": {
         "access_key": "...",
-        "secret_key": "..."
+        "secret_key": "...",
+        "secret_token": null
       }
     }
     ```
 
   </dd>
+</dl>
+
+
+### /aws/sts/
+#### GET
+
+<dl class="api">
+    <dt>Description</dt>
+    <dd>
+        Generates a dynamic IAM credential with an STS token based on the named role.
+    </dd>
+
+    <dt>Method</dt>
+    <dd>GET</dd>
+
+    <dt>URL</dt>
+    <dd>`/aws/sts/<name>`</dd>
+
+    <dt>Parameters</dt>
+    <dd>
+        None
+    </dd>
+
+    <dt>Returns</dt>
+    <dd>
+
+    ```javascript
+    {
+        "data": {
+            "access_key": "...",
+            "secret_key": "...",
+            "secret_token": "..."
+        }
+    }
+    ```
+    </dd>
 </dl>
