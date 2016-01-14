@@ -79,9 +79,6 @@ func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
 			"Error creating IAM user: %s", err)), nil
 	}
 
-	// Create the keys and token
-	fmt.Println(username, policy)
-
 	resp, err := STSClient.GetFederationToken(
 		&sts.GetFederationTokenInput{
 			Name:            aws.String(username),
