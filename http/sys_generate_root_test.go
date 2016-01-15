@@ -13,13 +13,13 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestSysRootGenerationInit_Status(t *testing.T) {
+func TestSysGenerateRootAttempt_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp, err := http.Get(addr + "/v1/sys/root-generation/attempt")
+	resp, err := http.Get(addr + "/v1/sys/generate-root/attempt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -41,24 +41,24 @@ func TestSysRootGenerationInit_Status(t *testing.T) {
 	}
 }
 
-func TestSysRootGenerationInit_Setup_OTP(t *testing.T) {
+func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpGet(t, token, addr+"/v1/sys/root-generation/attempt")
+	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -77,18 +77,18 @@ func TestSysRootGenerationInit_Setup_OTP(t *testing.T) {
 	}
 }
 
-func TestSysRootGenerationInit_Setup_PGP(t *testing.T) {
+func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpGet(t, token, addr+"/v1/sys/root-generation/attempt")
+	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -107,26 +107,26 @@ func TestSysRootGenerationInit_Setup_PGP(t *testing.T) {
 	}
 }
 
-func TestSysRootGenerationInit_Cancel(t *testing.T) {
+func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
 
-	resp = testHttpDelete(t, token, addr+"/v1/sys/root-generation/attempt")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
 	testResponseStatus(t, resp, 204)
 
-	resp, err = http.Get(addr + "/v1/sys/root-generation/attempt")
+	resp, err = http.Get(addr + "/v1/sys/generate-root/attempt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -148,70 +148,70 @@ func TestSysRootGenerationInit_Cancel(t *testing.T) {
 	}
 }
 
-func TestSysRootGeneration_badKey(t *testing.T) {
+func TestSysGenerateRoot_badKey(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/update", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
 		"key": "0123",
 		"otp": otp,
 	})
 	testResponseStatus(t, resp, 400)
 }
 
-func TestSysRootGeneration_ReInitUpdate(t *testing.T) {
+func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpDelete(t, token, addr+"/v1/sys/root-generation/attempt")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
 	testResponseStatus(t, resp, 204)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
 
 	testResponseStatus(t, resp, 204)
 }
 
-func TestSysRootGeneration_Update_OTP(t *testing.T) {
+func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 	core, master, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
 	testResponseStatus(t, resp, 204)
 
 	// We need to get the nonce first before we update
-	resp, err = http.Get(addr + "/v1/sys/root-generation/attempt")
+	resp, err = http.Get(addr + "/v1/sys/generate-root/attempt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -219,7 +219,7 @@ func TestSysRootGeneration_Update_OTP(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rootGenerationStatus)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/root-generation/update", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
 		"nonce": rootGenerationStatus["nonce"].(string),
 		"key":   hex.EncodeToString(master),
 	})
@@ -277,19 +277,19 @@ func TestSysRootGeneration_Update_OTP(t *testing.T) {
 	}
 }
 
-func TestSysRootGeneration_Update_PGP(t *testing.T) {
+func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 	core, master, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/root-generation/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
 	testResponseStatus(t, resp, 204)
 
 	// We need to get the nonce first before we update
-	resp, err := http.Get(addr + "/v1/sys/root-generation/attempt")
+	resp, err := http.Get(addr + "/v1/sys/generate-root/attempt")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -297,7 +297,7 @@ func TestSysRootGeneration_Update_PGP(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rootGenerationStatus)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/root-generation/update", map[string]interface{}{
+	resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
 		"nonce": rootGenerationStatus["nonce"].(string),
 		"key":   hex.EncodeToString(master),
 	})

@@ -12,26 +12,26 @@ import (
 	"github.com/hashicorp/vault/shamir"
 )
 
-// RootGenerationConfig holds the configuration for a root generation
+// GenerateRootConfig holds the configuration for a root generation
 // command.
-type RootGenerationConfig struct {
+type GenerateRootConfig struct {
 	Nonce          string
 	PGPKey         string
 	PGPFingerprint string
 	OTP            string
 }
 
-// RootGenerationResult holds the result of a root generation update
+// GenerateRootResult holds the result of a root generation update
 // command
-type RootGenerationResult struct {
+type GenerateRootResult struct {
 	Progress         int
 	Required         int
 	EncodedRootToken string
 	PGPFingerprint   string
 }
 
-// RootGeneration is used to return the root generation progress (num shares)
-func (c *Core) RootGenerationProgress() (int, error) {
+// GenerateRoot is used to return the root generation progress (num shares)
+func (c *Core) GenerateRootProgress() (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -41,15 +41,15 @@ func (c *Core) RootGenerationProgress() (int, error) {
 		return 0, ErrStandby
 	}
 
-	c.rootGenerationLock.Lock()
-	defer c.rootGenerationLock.Unlock()
+	c.generateRootLock.Lock()
+	defer c.generateRootLock.Unlock()
 
-	return len(c.rootGenerationProgress), nil
+	return len(c.generateRootProgress), nil
 }
 
-// RootGenerationConfig is used to read the root generation configuration
+// GenerateRootConfig is used to read the root generation configuration
 // It stubbornly refuses to return the OTP if one is there.
-func (c *Core) RootGenerationConfiguration() (*RootGenerationConfig, error) {
+func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -59,21 +59,21 @@ func (c *Core) RootGenerationConfiguration() (*RootGenerationConfig, error) {
 		return nil, ErrStandby
 	}
 
-	c.rootGenerationLock.Lock()
-	defer c.rootGenerationLock.Unlock()
+	c.generateRootLock.Lock()
+	defer c.generateRootLock.Unlock()
 
 	// Copy the config if any
-	var conf *RootGenerationConfig
-	if c.rootGenerationConfig != nil {
-		conf = new(RootGenerationConfig)
-		*conf = *c.rootGenerationConfig
+	var conf *GenerateRootConfig
+	if c.generateRootConfig != nil {
+		conf = new(GenerateRootConfig)
+		*conf = *c.generateRootConfig
 		conf.OTP = ""
 	}
 	return conf, nil
 }
 
-// RootGenerationInit is used to initialize the root generation settings
-func (c *Core) RootGenerationInit(otp, pgpKey string) error {
+// GenerateRootInit is used to initialize the root generation settings
+func (c *Core) GenerateRootInit(otp, pgpKey string) error {
 	var fingerprint string
 	switch {
 	case len(otp) > 0:
@@ -108,11 +108,11 @@ func (c *Core) RootGenerationInit(otp, pgpKey string) error {
 		return ErrStandby
 	}
 
-	c.rootGenerationLock.Lock()
-	defer c.rootGenerationLock.Unlock()
+	c.generateRootLock.Lock()
+	defer c.generateRootLock.Unlock()
 
 	// Prevent multiple concurrent root generations
-	if c.rootGenerationConfig != nil {
+	if c.generateRootConfig != nil {
 		return fmt.Errorf("root generation already in progress")
 	}
 
@@ -122,7 +122,7 @@ func (c *Core) RootGenerationInit(otp, pgpKey string) error {
 		return err
 	}
 
-	c.rootGenerationConfig = &RootGenerationConfig{
+	c.generateRootConfig = &GenerateRootConfig{
 		Nonce:          generationNonce,
 		OTP:            otp,
 		PGPKey:         pgpKey,
@@ -130,12 +130,12 @@ func (c *Core) RootGenerationInit(otp, pgpKey string) error {
 	}
 
 	c.logger.Printf("[INFO] core: root generation initialized (nonce: %s)",
-		c.rootGenerationConfig.Nonce)
+		c.generateRootConfig.Nonce)
 	return nil
 }
 
-// RootGenerationUpdate is used to provide a new key part
-func (c *Core) RootGenerationUpdate(key []byte, nonce string) (*RootGenerationResult, error) {
+// GenerateRootUpdate is used to provide a new key part
+func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult, error) {
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
@@ -167,48 +167,48 @@ func (c *Core) RootGenerationUpdate(key []byte, nonce string) (*RootGenerationRe
 		return nil, ErrStandby
 	}
 
-	c.rootGenerationLock.Lock()
-	defer c.rootGenerationLock.Unlock()
+	c.generateRootLock.Lock()
+	defer c.generateRootLock.Unlock()
 
-	// Ensure a rootGeneration is in progress
-	if c.rootGenerationConfig == nil {
+	// Ensure a generateRoot is in progress
+	if c.generateRootConfig == nil {
 		return nil, fmt.Errorf("no root generation in progress")
 	}
 
-	if nonce != c.rootGenerationConfig.Nonce {
-		return nil, fmt.Errorf("incorrect nonce supplied; nonce for this root generation operation is %s", c.rootGenerationConfig.Nonce)
+	if nonce != c.generateRootConfig.Nonce {
+		return nil, fmt.Errorf("incorrect nonce supplied; nonce for this root generation operation is %s", c.generateRootConfig.Nonce)
 	}
 
 	// Check if we already have this piece
-	for _, existing := range c.rootGenerationProgress {
+	for _, existing := range c.generateRootProgress {
 		if bytes.Equal(existing, key) {
 			return nil, nil
 		}
 	}
 
 	// Store this key
-	c.rootGenerationProgress = append(c.rootGenerationProgress, key)
-	progress := len(c.rootGenerationProgress)
+	c.generateRootProgress = append(c.generateRootProgress, key)
+	progress := len(c.generateRootProgress)
 
 	// Check if we don't have enough keys to unlock
-	if len(c.rootGenerationProgress) < config.SecretThreshold {
+	if len(c.generateRootProgress) < config.SecretThreshold {
 		c.logger.Printf("[DEBUG] core: cannot generate root, have %d of %d keys",
 			progress, config.SecretThreshold)
-		return &RootGenerationResult{
+		return &GenerateRootResult{
 			Progress:       progress,
 			Required:       config.SecretThreshold,
-			PGPFingerprint: c.rootGenerationConfig.PGPFingerprint,
+			PGPFingerprint: c.generateRootConfig.PGPFingerprint,
 		}, nil
 	}
 
 	// Recover the master key
 	var masterKey []byte
 	if config.SecretThreshold == 1 {
-		masterKey = c.rootGenerationProgress[0]
-		c.rootGenerationProgress = nil
+		masterKey = c.generateRootProgress[0]
+		c.generateRootProgress = nil
 	} else {
-		masterKey, err = shamir.Combine(c.rootGenerationProgress)
-		c.rootGenerationProgress = nil
+		masterKey, err = shamir.Combine(c.generateRootProgress)
+		c.generateRootProgress = nil
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute master key: %v", err)
 		}
@@ -237,17 +237,17 @@ func (c *Core) RootGenerationUpdate(key []byte, nonce string) (*RootGenerationRe
 	// Get the encoded value first so that if there is an error we don't create
 	// the root token.
 	switch {
-	case len(c.rootGenerationConfig.OTP) > 0:
+	case len(c.generateRootConfig.OTP) > 0:
 		// This function performs decoding checks so rather than decode the OTP,
 		// just encode the value we're passing in.
-		tokenBytes, err = xor.XORBase64(c.rootGenerationConfig.OTP, base64.StdEncoding.EncodeToString(buf))
+		tokenBytes, err = xor.XORBase64(c.generateRootConfig.OTP, base64.StdEncoding.EncodeToString(buf))
 		if err != nil {
 			c.logger.Printf("[ERR] core: xor of root token failed: %v", err)
 			return nil, err
 		}
 
-	case len(c.rootGenerationConfig.PGPKey) > 0:
-		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(uuidStr)}, []string{c.rootGenerationConfig.PGPKey})
+	case len(c.generateRootConfig.PGPKey) > 0:
+		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(uuidStr)}, []string{c.generateRootConfig.PGPKey})
 		if err != nil {
 			c.logger.Printf("[ERR] core: error encrypting new root token: %v", err)
 			return nil, err
@@ -264,23 +264,23 @@ func (c *Core) RootGenerationUpdate(key []byte, nonce string) (*RootGenerationRe
 		return nil, err
 	}
 
-	results := &RootGenerationResult{
+	results := &GenerateRootResult{
 		Progress:         progress,
 		Required:         config.SecretThreshold,
 		EncodedRootToken: base64.StdEncoding.EncodeToString(tokenBytes),
-		PGPFingerprint:   c.rootGenerationConfig.PGPFingerprint,
+		PGPFingerprint:   c.generateRootConfig.PGPFingerprint,
 	}
 
 	c.logger.Printf("[INFO] core: root generation finished (nonce: %s)",
-		c.rootGenerationConfig.Nonce)
+		c.generateRootConfig.Nonce)
 
-	c.rootGenerationProgress = nil
-	c.rootGenerationConfig = nil
+	c.generateRootProgress = nil
+	c.generateRootConfig = nil
 	return results, nil
 }
 
-// RootGenerationCancel is used to cancel an in-progress root generation
-func (c *Core) RootGenerationCancel() error {
+// GenerateRootCancel is used to cancel an in-progress root generation
+func (c *Core) GenerateRootCancel() error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -290,11 +290,11 @@ func (c *Core) RootGenerationCancel() error {
 		return ErrStandby
 	}
 
-	c.rootGenerationLock.Lock()
-	defer c.rootGenerationLock.Unlock()
+	c.generateRootLock.Lock()
+	defer c.generateRootLock.Unlock()
 
 	// Clear any progress or config
-	c.rootGenerationConfig = nil
-	c.rootGenerationProgress = nil
+	c.generateRootConfig = nil
+	c.generateRootProgress = nil
 	return nil
 }

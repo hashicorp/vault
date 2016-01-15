@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"log"
@@ -340,4 +341,25 @@ func (n *rawHTTP) System() logical.SystemView {
 
 func (n *rawHTTP) Cleanup() {
 	// noop
+}
+
+func GenerateRandBytes(length int) ([]byte, error) {
+	if length < 0 {
+		return nil, fmt.Errorf("length must be >= 0")
+	}
+
+	buf := make([]byte, length)
+	if length == 0 {
+		return buf, nil
+	}
+
+	n, err := rand.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	if n != length {
+		return nil, fmt.Errorf("unable to read %d bytes; only read %d", length, n)
+	}
+
+	return buf, nil
 }

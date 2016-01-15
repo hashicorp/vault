@@ -29,7 +29,7 @@ func TestGenerateRoot_Cancel(t *testing.T) {
 		},
 	}
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestGenerateRoot_Cancel(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.RootGenerationConfiguration()
+	config, err := core.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -67,7 +67,7 @@ func TestGenerateRoot_status(t *testing.T) {
 		},
 	}
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestGenerateRoot_OTP(t *testing.T) {
 	}
 
 	// Generate an OTP
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := vault.GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestGenerateRoot_OTP(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.RootGenerationConfiguration()
+	config, err := core.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestGenerateRoot_PGP(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.RootGenerationConfiguration()
+	config, err := core.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

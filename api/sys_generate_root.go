@@ -1,25 +1,25 @@
 package api
 
-func (c *Sys) RootGenerationStatus() (*RootGenerationStatusResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/root-generation/attempt")
+func (c *Sys) GenerateRootStatus() (*GenerateRootStatusResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/generate-root/attempt")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	var result RootGenerationStatusResponse
+	var result GenerateRootStatusResponse
 	err = resp.DecodeJSON(&result)
 	return &result, err
 }
 
-func (c *Sys) RootGenerationInit(otp, pgpKey string) error {
+func (c *Sys) GenerateRootInit(otp, pgpKey string) error {
 	body := map[string]interface{}{
 		"otp":     otp,
 		"pgp_key": pgpKey,
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/root-generation/attempt")
+	r := c.c.NewRequest("PUT", "/v1/sys/generate-root/attempt")
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
@@ -31,8 +31,8 @@ func (c *Sys) RootGenerationInit(otp, pgpKey string) error {
 	return err
 }
 
-func (c *Sys) RootGenerationCancel() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/root-generation/attempt")
+func (c *Sys) GenerateRootCancel() error {
+	r := c.c.NewRequest("DELETE", "/v1/sys/generate-root/attempt")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
 		defer resp.Body.Close()
@@ -40,13 +40,13 @@ func (c *Sys) RootGenerationCancel() error {
 	return err
 }
 
-func (c *Sys) RootGenerationUpdate(shard, nonce string) (*RootGenerationStatusResponse, error) {
+func (c *Sys) GenerateRootUpdate(shard, nonce string) (*GenerateRootStatusResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/root-generation/update")
+	r := c.c.NewRequest("PUT", "/v1/sys/generate-root/update")
 	if err := r.SetJSONBody(body); err != nil {
 		return nil, err
 	}
@@ -57,12 +57,12 @@ func (c *Sys) RootGenerationUpdate(shard, nonce string) (*RootGenerationStatusRe
 	}
 	defer resp.Body.Close()
 
-	var result RootGenerationStatusResponse
+	var result GenerateRootStatusResponse
 	err = resp.DecodeJSON(&result)
 	return &result, err
 }
 
-type RootGenerationStatusResponse struct {
+type GenerateRootStatusResponse struct {
 	Nonce            string
 	Started          bool
 	Progress         int

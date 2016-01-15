@@ -1,12 +1,12 @@
 ---
 layout: "http"
-page_title: "HTTP API: /sys/root-generation/"
-sidebar_current: "docs-http-sys-root-generation"
+page_title: "HTTP API: /sys/generate-root/"
+sidebar_current: "docs-http-sys-generate-root"
 description: |-
-  The `/sys/root-generation/` endpoints are used to create a new root key for Vault.
+  The `/sys/generate-root/` endpoints are used to create a new root key for Vault.
 ---
 
-# /sys/root-generation/attempt
+# /sys/generate-root/attempt
 
 ## GET
 
@@ -21,7 +21,7 @@ description: |-
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/root-generation/attempt`</dd>
+  <dd>`/sys/generate-root/attempt`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -65,7 +65,7 @@ description: |-
   <dd>PUT</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/root-generation/attempt`</dd>
+  <dd>`/sys/generate-root/attempt`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -118,7 +118,7 @@ description: |-
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/root-generation/attempt`</dd>
+  <dd>`/sys/generate-root/attempt`</dd>
 
   <dt>Parameters</dt>
   <dd>None
@@ -129,7 +129,7 @@ description: |-
   </dd>
 </dl>
 
-# /sys/root-generation/update
+# /sys/generate-root/update
 
 ## PUT
 
@@ -147,7 +147,7 @@ description: |-
   <dd>PUT</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/root-generation/update`</dd>
+  <dd>`/sys/generate-root/update`</dd>
 
   <dt>Parameters</dt>
   <dd>

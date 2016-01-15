@@ -214,11 +214,11 @@ type Core struct {
 	// the threshold number of parts is available.
 	unlockParts [][]byte
 
-	// rootGenerationProgress holds the shares until we reach enough
+	// generateRootProgress holds the shares until we reach enough
 	// to verify the master key
-	rootGenerationConfig   *RootGenerationConfig
-	rootGenerationProgress [][]byte
-	rootGenerationLock     sync.Mutex
+	generateRootConfig   *GenerateRootConfig
+	generateRootProgress [][]byte
+	generateRootLock     sync.Mutex
 
 	// rekeyProgress holds the shares we have until we reach enough
 	// to verify the master key.

@@ -9,22 +9,22 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysRootGenerationInit(core *vault.Core) http.Handler {
+func handleSysGenerateRootAttempt(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			handleSysRootGenerationInitGet(core, w, r)
+			handleSysGenerateRootAttemptGet(core, w, r)
 		case "POST", "PUT":
-			handleSysRootGenerationInitPut(core, w, r)
+			handleSysGenerateRootAttemptPut(core, w, r)
 		case "DELETE":
-			handleSysRootGenerationInitDelete(core, w, r)
+			handleSysGenerateRootAttemptDelete(core, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
 
-func handleSysRootGenerationInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Get the current seal configuration
 	sealConfig, err := core.SealConfig()
 	if err != nil {
@@ -38,21 +38,21 @@ func handleSysRootGenerationInitGet(core *vault.Core, w http.ResponseWriter, r *
 	}
 
 	// Get the generation configuration
-	generationConfig, err := core.RootGenerationConfiguration()
+	generationConfig, err := core.GenerateRootConfiguration()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Get the progress
-	progress, err := core.RootGenerationProgress()
+	progress, err := core.GenerateRootProgress()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Format the status
-	status := &RootGenerationStatusResponse{
+	status := &GenerateRootStatusResponse{
 		Started:  false,
 		Progress: progress,
 		Required: sealConfig.SecretThreshold,
@@ -67,9 +67,9 @@ func handleSysRootGenerationInitGet(core *vault.Core, w http.ResponseWriter, r *
 	respondOk(w, status)
 }
 
-func handleSysRootGenerationInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
-	var req RootGenerationInitRequest
+	var req GenerateRootInitRequest
 	if err := parseRequest(r, &req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
@@ -80,8 +80,8 @@ func handleSysRootGenerationInitPut(core *vault.Core, w http.ResponseWriter, r *
 		return
 	}
 
-	// Initialize the generation
-	err := core.RootGenerationInit(req.OTP, req.PGPKey)
+	// Attemptialize the generation
+	err := core.GenerateRootInit(req.OTP, req.PGPKey)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
@@ -89,8 +89,8 @@ func handleSysRootGenerationInitPut(core *vault.Core, w http.ResponseWriter, r *
 	respondOk(w, nil)
 }
 
-func handleSysRootGenerationInitDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	err := core.RootGenerationCancel()
+func handleSysGenerateRootAttemptDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	err := core.GenerateRootCancel()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -98,10 +98,10 @@ func handleSysRootGenerationInitDelete(core *vault.Core, w http.ResponseWriter, 
 	respondOk(w, nil)
 }
 
-func handleSysRootGenerationUpdate(core *vault.Core) http.Handler {
+func handleSysGenerateRootUpdate(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request
-		var req RootGenerationUpdateRequest
+		var req GenerateRootUpdateRequest
 		if err := parseRequest(r, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
@@ -123,13 +123,13 @@ func handleSysRootGenerationUpdate(core *vault.Core) http.Handler {
 		}
 
 		// Use the key to make progress on root generation
-		result, err := core.RootGenerationUpdate(key, req.Nonce)
+		result, err := core.GenerateRootUpdate(key, req.Nonce)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		resp := &RootGenerationStatusResponse{
+		resp := &GenerateRootStatusResponse{
 			Complete:         result.Progress == result.Required,
 			Nonce:            req.Nonce,
 			Progress:         result.Progress,
@@ -143,12 +143,12 @@ func handleSysRootGenerationUpdate(core *vault.Core) http.Handler {
 	})
 }
 
-type RootGenerationInitRequest struct {
+type GenerateRootInitRequest struct {
 	OTP    string `json:"otp"`
 	PGPKey string `json:"pgp_key"`
 }
 
-type RootGenerationStatusResponse struct {
+type GenerateRootStatusResponse struct {
 	Nonce            string `json:"nonce"`
 	Started          bool   `json:"started"`
 	Progress         int    `json:"progress"`
@@ -158,7 +158,7 @@ type RootGenerationStatusResponse struct {
 	PGPFingerprint   string `json:"pgp_fingerprint"`
 }
 
-type RootGenerationUpdateRequest struct {
+type GenerateRootUpdateRequest struct {
 	Nonce string
 	Key   string
 }

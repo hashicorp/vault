@@ -9,16 +9,16 @@ import (
 	"github.com/hashicorp/vault/helper/xor"
 )
 
-func TestCore_RootGeneration_Lifecycle(t *testing.T) {
+func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
 
 	// Verify update not allowed
-	if _, err := c.RootGenerationUpdate(master, ""); err == nil {
+	if _, err := c.GenerateRootUpdate(master, ""); err == nil {
 		t.Fatalf("no root generation in progress")
 	}
 
 	// Should be no progress
-	num, err := c.RootGenerationProgress()
+	num, err := c.GenerateRootProgress()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestCore_RootGeneration_Lifecycle(t *testing.T) {
 	}
 
 	// Should be no config
-	conf, err := c.RootGenerationConfiguration()
+	conf, err := c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -36,36 +36,36 @@ func TestCore_RootGeneration_Lifecycle(t *testing.T) {
 	}
 
 	// Cancel should be idempotent
-	err = c.RootGenerationCancel()
+	err = c.GenerateRootCancel()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Start a root generation
-	err = c.RootGenerationInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should get config
-	conf, err = c.RootGenerationConfiguration()
+	conf, err = c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Cancel should be clear
-	err = c.RootGenerationCancel()
+	err = c.GenerateRootCancel()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be no config
-	conf, err = c.RootGenerationConfiguration()
+	conf, err = c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -74,41 +74,41 @@ func TestCore_RootGeneration_Lifecycle(t *testing.T) {
 	}
 }
 
-func TestCore_RootGeneration_Init(t *testing.T) {
+func TestCore_GenerateRoot_Init(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = c.RootGenerationInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Second should fail
-	err = c.RootGenerationInit("", pgpkeys.TestPubKey1)
+	err = c.GenerateRootInit("", pgpkeys.TestPubKey1)
 	if err == nil {
 		t.Fatalf("should fail")
 	}
 }
 
-func TestCore_RootGeneration_InvalidMaster(t *testing.T) {
+func TestCore_GenerateRoot_InvalidMaster(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = c.RootGenerationInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Fetch new config with generated nonce
-	rgconf, err := c.RootGenerationConfiguration()
+	rgconf, err := c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -118,49 +118,49 @@ func TestCore_RootGeneration_InvalidMaster(t *testing.T) {
 
 	// Provide the master (invalid)
 	master[0]++
-	_, err = c.RootGenerationUpdate(master, rgconf.Nonce)
+	_, err = c.GenerateRootUpdate(master, rgconf.Nonce)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
-func TestCore_RootGeneration_InvalidNonce(t *testing.T) {
+func TestCore_GenerateRoot_InvalidNonce(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = c.RootGenerationInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Provide the nonce (invalid)
-	_, err = c.RootGenerationUpdate(master, "abcd")
+	_, err = c.GenerateRootUpdate(master, "abcd")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 }
 
-func TestCore_RootGeneration_Update_OTP(t *testing.T) {
+func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
 
-	otpBytes, err := xor.GenerateRandBytes(16)
+	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
 	// Start a root generation
-	err = c.RootGenerationInit(otp, "")
+	err = c.GenerateRootInit(otp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Fetch new config with generated nonce
-	rkconf, err := c.RootGenerationConfiguration()
+	rkconf, err := c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestCore_RootGeneration_Update_OTP(t *testing.T) {
 	}
 
 	// Provide the master
-	result, err := c.RootGenerationUpdate(master, rkconf.Nonce)
+	result, err := c.GenerateRootUpdate(master, rkconf.Nonce)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestCore_RootGeneration_Update_OTP(t *testing.T) {
 	encodedRootToken := result.EncodedRootToken
 
 	// Should be no progress
-	num, err := c.RootGenerationProgress()
+	num, err := c.GenerateRootProgress()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestCore_RootGeneration_Update_OTP(t *testing.T) {
 	}
 
 	// Should be no config
-	conf, err := c.RootGenerationConfiguration()
+	conf, err := c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -220,17 +220,17 @@ func TestCore_RootGeneration_Update_OTP(t *testing.T) {
 	}
 }
 
-func TestCore_RootGeneration_Update_PGP(t *testing.T) {
+func TestCore_GenerateRoot_Update_PGP(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
 
 	// Start a root generation
-	err := c.RootGenerationInit("", pgpkeys.TestPubKey1)
+	err := c.GenerateRootInit("", pgpkeys.TestPubKey1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Fetch new config with generated nonce
-	rkconf, err := c.RootGenerationConfiguration()
+	rkconf, err := c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestCore_RootGeneration_Update_PGP(t *testing.T) {
 	}
 
 	// Provide the master
-	result, err := c.RootGenerationUpdate(master, rkconf.Nonce)
+	result, err := c.GenerateRootUpdate(master, rkconf.Nonce)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestCore_RootGeneration_Update_PGP(t *testing.T) {
 	encodedRootToken := result.EncodedRootToken
 
 	// Should be no progress
-	num, err := c.RootGenerationProgress()
+	num, err := c.GenerateRootProgress()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestCore_RootGeneration_Update_PGP(t *testing.T) {
 	}
 
 	// Should be no config
-	conf, err := c.RootGenerationConfiguration()
+	conf, err := c.GenerateRootConfiguration()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
