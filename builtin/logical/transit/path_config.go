@@ -57,6 +57,10 @@ func pathConfigWrite(
 	minDecryptionVersion := d.Get("min_decryption_version").(int)
 	if minDecryptionVersion != 0 &&
 		minDecryptionVersion != policy.MinDecryptionVersion {
+		if minDecryptionVersion > policy.LatestVersion {
+			return logical.ErrorResponse(
+				fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, policy.LatestVersion)), nil
+		}
 		policy.MinDecryptionVersion = minDecryptionVersion
 		persistNeeded = true
 	}
