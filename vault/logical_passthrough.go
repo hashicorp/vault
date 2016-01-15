@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -226,9 +225,6 @@ func (b *PassthroughBackend) handleList(
 	for i, k := range keys {
 		retKeys[i] = req.MountPoint + req.Path + k
 	}
-
-	// Sort
-	sort.Strings(retKeys)
 
 	// Generate the response
 	return logical.ListResponse(retKeys), nil

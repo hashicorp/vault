@@ -30,11 +30,8 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 			op = logical.DeleteOperation
 		case "GET":
 			// Need to call ParseForm to get query params loaded
-			err := r.ParseForm()
-			if err != nil {
-				respondError(w, http.StatusBadRequest, err)
-			}
-			if r.Form.Get("list") == "true" {
+			queryVals := r.URL.Query()
+			if queryVals.Get("list") == "true" {
 				op = logical.ListOperation
 			} else {
 				op = logical.ReadOperation

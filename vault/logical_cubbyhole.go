@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -167,8 +166,6 @@ func (b *CubbyholeBackend) handleList(
 	for i, key := range keys {
 		strippedKeys[i] = req.MountPoint + req.Path + strings.TrimPrefix(key, req.ClientToken+"/")
 	}
-
-	sort.Strings(strippedKeys)
 
 	// Generate the response
 	return logical.ListResponse(strippedKeys), nil

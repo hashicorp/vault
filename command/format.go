@@ -166,6 +166,7 @@ func outputFormatTableList(ui cli.Ui, s *api.Secret, bare bool) int {
 	for _, k := range s.Data["keys"].([]string) {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 
 	for _, k := range keys {
 		input = append(input, fmt.Sprintf("%s", k))
