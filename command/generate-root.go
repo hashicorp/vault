@@ -83,14 +83,25 @@ func (c *GenerateRootCommand) Run(args []string) int {
 
 	// If we are initing, or if we are not started but are not running a
 	// special function, check otp and pgpkey
-	if init ||
-		(!init && !cancel && !status && !genotp && len(decode) == 0 && !rootGenerationStatus.Started) {
+	checkOtpPgp := false
+	switch {
+	case init:
+		checkOtpPgp = true
+	case cancel:
+	case status:
+	case genotp:
+	case len(decode) != 0:
+	case rootGenerationStatus.Started:
+	default:
+		checkOtpPgp = true
+	}
+	if checkOtpPgp {
 		switch {
 		case len(otp) == 0 && (pgpKeyArr == nil || len(pgpKeyArr) == 0):
-			c.Ui.Error("-otp or -pgp-key must be specified")
+			c.Ui.Error(c.Help())
 			return 1
 		case len(otp) != 0 && pgpKeyArr != nil && len(pgpKeyArr) != 0:
-			c.Ui.Error("Only one of -otp or -pgp-key must be specified")
+			c.Ui.Error(c.Help())
 			return 1
 		case len(otp) != 0:
 			err := c.verifyOTP(otp)
