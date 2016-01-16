@@ -117,6 +117,11 @@ func (b *CubbyholeBackend) handleWrite(
 		return nil, fmt.Errorf("missing data fields")
 	}
 
+	path := req.Path
+	if strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
+	}
+
 	// JSON encode the data
 	buf, err := json.Marshal(req.Data)
 	if err != nil {
@@ -125,7 +130,7 @@ func (b *CubbyholeBackend) handleWrite(
 
 	// Write out a new key
 	entry := &logical.StorageEntry{
-		Key:   req.ClientToken + "/" + req.Path,
+		Key:   req.ClientToken + "/" + path,
 		Value: buf,
 	}
 	if err := req.Storage.Put(entry); err != nil {
@@ -164,7 +169,12 @@ func (b *CubbyholeBackend) handleList(
 	// passthrough
 	strippedKeys := make([]string, len(keys))
 	for i, key := range keys {
-		strippedKeys[i] = req.MountPoint + req.Path + strings.TrimPrefix(key, req.ClientToken+"/")
+		ret := strings.TrimPrefix(key, req.ClientToken+"/")
+		if ret == "" {
+			strippedKeys[i] = "."
+		} else {
+			strippedKeys[i] = ret
+		}
 	}
 
 	// Generate the response

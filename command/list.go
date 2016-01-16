@@ -15,13 +15,11 @@ type ListCommand struct {
 
 func (c *ListCommand) Run(args []string) int {
 	var format string
-	var bare bool
 	var err error
 	var secret *api.Secret
 	var flags *flag.FlagSet
 	flags = c.Meta.FlagSet("list", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
-	flags.BoolVar(&bare, "bare", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -58,14 +56,8 @@ func (c *ListCommand) Run(args []string) int {
 		return 1
 	}
 	if secret.Data["keys"] == nil {
-		if !bare {
-			c.Ui.Error("No entries found")
-		}
+		c.Ui.Error("No entries found")
 		return 0
-	}
-
-	if bare {
-		return OutputList(c.Ui, "bare", secret)
 	}
 
 	return OutputList(c.Ui, format, secret)
@@ -93,9 +85,6 @@ Read Options:
 
   -format=table           The format for output. By default it is a whitespace-
                           delimited table. This can also be json or yaml.
-
-  -bare                   Causes the key values to be output raw to stdout,
-                          without formatting (except for newlines).
 `
 	return strings.TrimSpace(helpText)
 }

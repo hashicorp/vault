@@ -35,9 +35,7 @@ func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
 	case "yaml":
 		return outputFormatYAMLList(ui, secret)
 	case "table":
-		return outputFormatTableList(ui, secret, false)
-	case "bare":
-		return outputFormatTableList(ui, secret, true)
+		return outputFormatTableList(ui, secret)
 	default:
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
 		return 1
@@ -150,7 +148,7 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 	return 0
 }
 
-func outputFormatTableList(ui cli.Ui, s *api.Secret, bare bool) int {
+func outputFormatTableList(ui cli.Ui, s *api.Secret) int {
 	config := columnize.DefaultConfig()
 	config.Delim = "♨"
 	config.Glue = "\t"
@@ -158,13 +156,11 @@ func outputFormatTableList(ui cli.Ui, s *api.Secret, bare bool) int {
 
 	input := make([]string, 0, 5)
 
-	if !bare {
-		input = append(input, "Keys")
-	}
+	input = append(input, "Keys")
 
-	keys := make([]string, 0, len(s.Data["keys"].([]string)))
-	for _, k := range s.Data["keys"].([]string) {
-		keys = append(keys, k)
+	keys := make([]string, 0, len(s.Data["keys"].([]interface{})))
+	for _, k := range s.Data["keys"].([]interface{}) {
+		keys = append(keys, k.(string))
 	}
 	sort.Strings(keys)
 
@@ -172,19 +168,13 @@ func outputFormatTableList(ui cli.Ui, s *api.Secret, bare bool) int {
 		input = append(input, fmt.Sprintf("%s", k))
 	}
 
-	if !bare && len(s.Warnings) != 0 {
+	if len(s.Warnings) != 0 {
 		input = append(input, "")
 		for _, warning := range s.Warnings {
 			input = append(input, fmt.Sprintf("* %s", warning))
 		}
 	}
 
-	if bare {
-		for _, line := range input {
-			ui.Output(line)
-		}
-	} else {
-		ui.Output(columnize.Format(input, config))
-	}
+	ui.Output(columnize.Format(input, config))
 	return 0
 }

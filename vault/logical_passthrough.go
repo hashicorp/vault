@@ -165,6 +165,11 @@ func (b *PassthroughBackend) handleWrite(
 		return logical.ErrorResponse("missing data fields"), nil
 	}
 
+	path := req.Path
+	if strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
+	}
+
 	// Check if there is a ttl key; verify parseability if so
 	var ttl string
 	ttl = data.Get("ttl").(string)
@@ -190,7 +195,7 @@ func (b *PassthroughBackend) handleWrite(
 
 	// Write out a new key
 	entry := &logical.StorageEntry{
-		Key:   req.Path,
+		Key:   path,
 		Value: buf,
 	}
 	if err := req.Storage.Put(entry); err != nil {
@@ -223,7 +228,11 @@ func (b *PassthroughBackend) handleList(
 	// path and let users do what they wish.
 	retKeys := make([]string, len(keys))
 	for i, k := range keys {
-		retKeys[i] = req.MountPoint + req.Path + k
+		if k == "" {
+			retKeys[i] = "."
+		} else {
+			retKeys[i] = k
+		}
 	}
 
 	// Generate the response
