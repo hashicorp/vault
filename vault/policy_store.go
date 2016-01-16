@@ -207,15 +207,19 @@ func (ps *PolicyStore) ACL(names ...string) (*ACL, error) {
 func (ps *PolicyStore) createDefaultPolicy() error {
 	policy, err := Parse(`
 path "auth/token/lookup-self" {
-	policy = "read"
+    capabilities = ["read"]
 }
 
 path "auth/token/renew-self" {
-	policy = "write"
+    capabilities = ["update"]
 }
 
 path "auth/token/revoke-self" {
-	policy = "write"
+    capabilities = ["update"]
+}
+
+path "cubbyhole/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
 }
 `)
 	if err != nil {
