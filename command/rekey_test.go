@@ -193,8 +193,8 @@ func TestRekey_init_pgp(t *testing.T) {
 	args := []string{
 		"-address", addr,
 		"-init",
-		"-key-shares", "3",
-		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
+		"-key-shares", "4",
+		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2] + "," + pubFiles[3],
 		"-key-threshold", "2",
 		"-backup", "true",
 	}
@@ -207,7 +207,7 @@ func TestRekey_init_pgp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if config.SecretShares != 3 {
+	if config.SecretShares != 4 {
 		t.Fatal("should rekey")
 	}
 	if config.SecretThreshold != 2 {

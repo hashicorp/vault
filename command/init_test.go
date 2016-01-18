@@ -148,8 +148,8 @@ func TestInit_PGP(t *testing.T) {
 
 	args = []string{
 		"-address", addr,
-		"-key-shares", "3",
-		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
+		"-key-shares", "4",
+		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2] + "," + pubFiles[3],
 		"-key-threshold", "2",
 	}
 
@@ -182,7 +182,7 @@ func TestInit_PGP(t *testing.T) {
 	}
 
 	expected := &vault.SealConfig{
-		SecretShares:    3,
+		SecretShares:    4,
 		SecretThreshold: 2,
 		PGPKeys:         pgpKeys,
 	}
