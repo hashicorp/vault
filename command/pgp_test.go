@@ -26,6 +26,7 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 		tempDir + "/pubkey1",
 		tempDir + "/pubkey2",
 		tempDir + "/pubkey3",
+		tempDir + "/aapubkey1",
 	}
 	decoder := base64.StdEncoding
 	pub1Bytes, err := decoder.DecodeString(pubKey1)
@@ -51,6 +52,10 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 	err = ioutil.WriteFile(pubFiles[2], pub3Bytes, 0755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
+	}
+	err = ioutil.WriteFile(pubFiles[3], []byte(aaPubKey1), 0755)
+	if err != nil {
+		t.Fatalf("Error writing aa pub key 1 to temp file: %s", err)
 	}
 
 	return tempDir, pubFiles, nil
@@ -91,7 +96,7 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 		t.Fatalf("Error compiling regex: %s", err)
 	}
 	matches := re.FindAllStringSubmatch(input, -1)
-	if len(matches) != 3 {
+	if len(matches) != 4 {
 		t.Fatalf("Unexpected number of keys returned, got %d, matches was \n\n%#v\n\n, input was \n\n%s\n\n", len(matches), matches, input)
 	}
 
@@ -393,3 +398,39 @@ GSP00i+sxql1NhTjJcjJtfOPUzgfW+Af/+HR648z4c7c6MCjDFKnk8ZkoGLRU7ISjenkNFzvu2bj
 lxJkil0uJDlLPbbX80ojzV1GS9g+ZxVPR+68N1QLl2FU6zsfg34upmLLHG8VG4vExzgyNkOwfTYv
 dgyRNTjnuPue6H12fZZ9uCNeG52v7lR3eoQcCxBOniwgipB8UJ52RWXblwxzCtGtDi/EWB3zLTUn
 puKcgucA0LotbihSMxhDylaARfVO1QV6csabM/g=`
+const aaPubKey1 = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1
+
+mQENBFXbjPUBCADjNjCUQwfxKL+RR2GA6pv/1K+zJZ8UWIF9S0lk7cVIEfJiprzz
+wiMwBS5cD0darGin1FHvIWOZxujA7oW0O2TUuatqI3aAYDTfRYurh6iKLC+VS+F7
+H+/mhfFvKmgr0Y5kDCF1j0T/063QZ84IRGucR/X43IY7kAtmxGXH0dYOCzOe5UBX
+1fTn3mXGe2ImCDWBH7gOViynXmb6XNvXkP0fsF5St9jhO7mbZU9EFkv9O3t3EaUR
+fHopsCVDOlCkFCw5ArY+DUORHRzoMX0PnkyQb5OzibkChzpg8hQssKeVGpuskTdz
+5Q7PtdW71jXd4fFVzoNH8fYwRpziD2xNvi6HABEBAAG0EFZhdWx0IFRlc3QgS2V5
+IDGJATgEEwECACIFAlXbjPUCGy8GCwkIBwMCBhUIAgkKCwQWAgMBAh4BAheAAAoJ
+EOfLr44BHbeTo+sH/i7bapIgPnZsJ81hmxPj4W12uvunksGJiC7d4hIHsG7kmJRT
+JfjECi+AuTGeDwBy84TDcRaOB6e79fj65Fg6HgSahDUtKJbGxj/lWzmaBuTzlN3C
+Ee8cMwIPqPT2kajJVdOyrvkyuFOdPFOEA7bdCH0MqgIdM2SdF8t40k/ATfuD2K1Z
+mumJ508I3gF39jgTnPzD4C8quswrMQ3bzfvKC3klXRlBC0yoArn+0QA3cf2B9T4z
+J2qnvgotVbeK/b1OJRNj6Poeo+SsWNc/A5mw7lGScnDgL3yfwCm1gQXaQKfOt5x+
+7GqhWDw10q+bJpJlI10FfzAnhMF9etSqSeURBRW5AQ0EVduM9QEIAL53hJ5bZJ7o
+EDCnaY+SCzt9QsAfnFTAnZJQrvkvusJzrTQ088eUQmAjvxkfRqnv981fFwGnh2+I
+1Ktm698UAZS9Jt8yjak9wWUICKQO5QUt5k8cHwldQXNXVXFa+TpQWQR5yW1a9okj
+h5o/3d4cBt1yZPUJJyLKY43Wvptb6EuEsScO2DnRkh5wSMDQ7dTooddJCmaq3LTj
+OleRFQbu9ij386Do6jzK69mJU56TfdcydkxkWF5NZLGnED3lq+hQNbe+8UI5tD2o
+P/3r5tXKgMy1R/XPvR/zbfwvx4FAKFOP01awLq4P3d/2xOkMu4Lu9p315E87DOle
+Ywxk+FoTqXEAEQEAAYkCPgQYAQIACQUCVduM9QIbLgEpCRDny6+OAR23k8BdIAQZ
+AQIABgUCVduM9QAKCRAID0JGyHtSGmqYB/4m4rJbbWa7dBJ8VqRU7ZKnNRDR9CVh
+EGipBmpDGRYulEimOPzLUX/ZXZmTZzgemeXLBaJJlWnopVUWuAsyjQuZAfdd8nHk
+GRHG0/DGum0l4sKTta3OPGHNC1z1dAcQ1RCr9bTD3PxjLBczdGqhzw71trkQRBRd
+tPiUchltPMIyjUHqVJ0xmg0hPqFic0fICsr0YwKoz3h9+QEcZHvsjSZjgydKvfLY
+cm+4DDMCCqcHuJrbXJKUWmJcXR0y/+HQONGrGJ5xWdO+6eJioPn2jVMnXCm4EKc7
+fcLFrz/LKmJ8seXhxjM3EdFtylBGCrx3xdK0f+JDNQaC/rhUb5V2XuX6VwoH/AtY
++XsKVYRfNIupLOUcf/srsm3IXT4SXWVomOc9hjGQiJ3rraIbADsc+6bCAr4XNZS7
+moViAAcIPXFv3m3WfUlnG/om78UjQqyVACRZqqAGmuPq+TSkRUCpt9h+A39LQWko
+jHqyob3cyLgy6z9Q557O9uK3lQozbw2gH9zC0RqnePl+rsWIUU/ga16fH6pWc1uJ
+iEBt8UZGypQ/E56/343epmYAe0a87sHx8iDV+dNtDVKfPRENiLOOc19MmS+phmUy
+rbHqI91c0pmysYcJZCD3a502X1gpjFbPZcRtiTmGnUKdOIu60YPNE4+h7u2CfYyF
+Pu3AlUaGNMBlvy6PEpU=
+=NUTS
+-----END PGP PUBLIC KEY BLOCK-----`

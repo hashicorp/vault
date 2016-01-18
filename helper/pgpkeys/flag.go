@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"golang.org/x/crypto/openpgp"
 )
 
 // PGPPubKeyFiles implements the flag.Value interface and allows
@@ -64,6 +66,26 @@ func ReadPGPFile(path string) (string, error) {
 	_, err = buf.ReadFrom(f)
 	if err != nil {
 		return "", err
+	}
+
+	// First parse as an armored keyring file, if that doesn't work, treat it as a straight binary/b64 string
+	keyReader := bytes.NewReader(buf.Bytes())
+	entityList, err := openpgp.ReadArmoredKeyRing(keyReader)
+	if err == nil {
+		if len(entityList) != 1 {
+			return "", fmt.Errorf("more than one key found in file %s", path)
+		}
+		if entityList[0] == nil {
+			return "", fmt.Errorf("primary key was nil for file %s", path)
+		}
+
+		serializedEntity := bytes.NewBuffer(nil)
+		err = entityList[0].Serialize(serializedEntity)
+		if err != nil {
+			return "", fmt.Errorf("error serializing entity for file %s: %s", path, err)
+		}
+
+		return base64.StdEncoding.EncodeToString(serializedEntity.Bytes()), nil
 	}
 
 	_, err = base64.StdEncoding.DecodeString(buf.String())
