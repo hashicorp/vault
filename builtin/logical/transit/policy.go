@@ -178,7 +178,7 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 		// version to 5, we will archive from 4 down to (10-10) non-inclusive.
 		// If the latest version now becomes 8, we will archive from 7 down to
 		// (10-6) non-inclusive, e.g. keys 5, 6, and 7.
-		for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i-- {
+		for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i++ {
 			archive.Keys[i] = p.Keys[i]
 		}
 
@@ -189,7 +189,7 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 
 		// Perform deletion afterwards so that if there is an error saving we
 		// haven't messed with the current policy
-		for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i-- {
+		for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i++ {
 			delete(p.Keys, i)
 		}
 
