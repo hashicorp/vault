@@ -46,6 +46,8 @@ IMPROVEMENTS:
  * cli/server: Use internal functions for the token-helper rather than shelling
    out, which fixes some problems with using a static binary in Docker or paths
    with multiple spaces when launching in `-dev` mode [GH-850]
+ * command/{init,rekey}: Allow ASCII-armored keychain files to be arguments for
+   `-pgp-keys` [GH-940]
  * conf: Use normal bool values rather than empty/non-empty for the
    `tls_disable` option [GH-802]
  * credential/token: Add `last_renewal_time` to token lookup calls [GH-896]
