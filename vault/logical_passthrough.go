@@ -165,11 +165,6 @@ func (b *PassthroughBackend) handleWrite(
 		return logical.ErrorResponse("missing data fields"), nil
 	}
 
-	path := req.Path
-	if strings.HasSuffix(path, "/") {
-		return logical.ErrorResponse("cannot write to a directory path"), nil
-	}
-
 	// Check if there is a ttl key; verify parseability if so
 	var ttl string
 	ttl = data.Get("ttl").(string)
@@ -195,7 +190,7 @@ func (b *PassthroughBackend) handleWrite(
 
 	// Write out a new key
 	entry := &logical.StorageEntry{
-		Key:   path,
+		Key:   req.Path,
 		Value: buf,
 	}
 	if err := req.Storage.Put(entry); err != nil {

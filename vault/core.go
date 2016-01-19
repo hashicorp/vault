@@ -436,6 +436,12 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return nil, ErrStandby
 	}
 
+	if strings.HasSuffix(req.Path, "/") &&
+		(req.Operation == logical.UpdateOperation ||
+			req.Operation == logical.CreateOperation) {
+		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
+	}
+
 	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {
 		resp, auth, err = c.handleLoginRequest(req)

@@ -117,11 +117,6 @@ func (b *CubbyholeBackend) handleWrite(
 		return nil, fmt.Errorf("missing data fields")
 	}
 
-	path := req.Path
-	if strings.HasSuffix(path, "/") {
-		return logical.ErrorResponse("cannot write to a directory path"), nil
-	}
-
 	// JSON encode the data
 	buf, err := json.Marshal(req.Data)
 	if err != nil {
@@ -130,7 +125,7 @@ func (b *CubbyholeBackend) handleWrite(
 
 	// Write out a new key
 	entry := &logical.StorageEntry{
-		Key:   req.ClientToken + "/" + path,
+		Key:   req.ClientToken + "/" + req.Path,
 		Value: buf,
 	}
 	if err := req.Storage.Put(entry); err != nil {
