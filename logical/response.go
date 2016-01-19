@@ -144,7 +144,7 @@ func ListResponse(keys []string) *Response {
 	resp := &Response{
 		Data: map[string]interface{}{},
 	}
-	if keys != nil {
+	if len(keys) != 0 {
 		resp.Data["keys"] = keys
 	}
 	return resp
