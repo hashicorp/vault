@@ -63,7 +63,7 @@ as Consul to make sure you only query Vault servers that are unsealed.
 
 ## Sealing
 
-There is also an API to seal the Vault. This will throw away the encryption
+There is also an API to seal the Vault. This will throw away the master
 key and require another unseal process to restore it. Sealing only requires
 a single operator with root privileges.
 
