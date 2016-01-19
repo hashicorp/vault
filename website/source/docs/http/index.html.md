@@ -21,7 +21,7 @@ This documentation is only for the v1 API.
 ~> **Backwards compatibility:** At the current version, Vault does
 not yet promise backwards compatibility even with the v1 prefix. We'll
 remove this warning when this policy changes. We expect we'll reach API
-stability by Vault 0.7.
+stability by Vault 1.0.
 
 ## Transport
 
