@@ -96,7 +96,9 @@ As expected, the value previously set is returned to us.
   <dd>
     Returns a list of secret entries at the specified location. Folders are
     suffixed with `/`. The input must be a folder; list on a file will not
-    return a value.
+    return a value. Note that no policy-based filtering is performed on
+    returned keys; it is not recommended to put sensitive or secret values as
+    key names. The values themselves are not accessible via this command.
   </dd>
 
   <dt>Method</dt>
