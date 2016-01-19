@@ -108,7 +108,8 @@ seconds (one hour) as specified.
   <dt>Description</dt>
   <dd>
     Returns a list of secret entries at the specified location. Folders are
-    suffixed with `/`.
+    suffixed with `/`. The input must be a folder; list on a file will not
+    return a value.
   </dd>
 
   <dt>Method</dt>
@@ -132,7 +133,7 @@ seconds (one hour) as specified.
   {
     "auth": null,
     "data": {
-      "keys": ["secret/foo", "secret/foo/"]
+      "keys": ["foo", "foo/"]
     },
     "lease_duration": 2592000,
     "lease_id": "",

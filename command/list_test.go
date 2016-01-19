@@ -61,7 +61,7 @@ func TestList(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"keys": []interface{}{"secret/foo", "secret/foo/"},
+		"keys": []interface{}{"foo", "foo/"},
 	}
 
 	if !reflect.DeepEqual(secret.Data, exp) {

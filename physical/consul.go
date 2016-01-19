@@ -3,7 +3,6 @@ package physical
 import (
 	"fmt"
 	"io/ioutil"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -188,6 +187,13 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"consul", "list"}, time.Now())
 	scan := c.path + prefix
 
+	// The TrimPrefix call below will not work correctly if we have "//" at the
+	// end. This can happen in cases where you are e.g. listing the root of a
+	// prefix in a logical backend via "/" instead of ""
+	if strings.HasSuffix(scan, "//") {
+		scan = scan[:len(scan)-1]
+	}
+
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
@@ -195,7 +201,7 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 	for idx, val := range out {
 		out[idx] = strings.TrimPrefix(val, scan)
 	}
-	sort.Strings(out)
+
 	return out, err
 }
 

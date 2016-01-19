@@ -95,7 +95,8 @@ As expected, the value previously set is returned to us.
   <dt>Description</dt>
   <dd>
     Returns a list of secret entries at the specified location. Folders are
-    suffixed with `/`.
+    suffixed with `/`. The input must be a folder; list on a file will not
+    return a value.
   </dd>
 
   <dt>Method</dt>
@@ -119,7 +120,7 @@ As expected, the value previously set is returned to us.
   {
     "auth": null,
     "data": {
-      "keys": ["cubbyhole/foo", "cubbyhole/foo/"]
+      "keys": ["foo", "foo/"]
     },
     "lease_duration": 2592000,
     "lease_id": "",

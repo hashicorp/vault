@@ -217,26 +217,22 @@ func (b *PassthroughBackend) handleDelete(
 
 func (b *PassthroughBackend) handleList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Right now we only handle directories, so ensure it ends with /; however,
+	// some physical backends may not handle the "/" case properly, so only add
+	// it if we're not listing the root
+	path := req.Path
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(req.Path)
+	keys, err := req.Storage.List(path)
 	if err != nil {
 		return nil, err
 	}
 
-	// A list of an actual key returns "" in the list, which can cause nasty
-	// things downstream with JSON conversion, including in Go. So, prepend the
-	// path and let users do what they wish.
-	retKeys := make([]string, len(keys))
-	for i, k := range keys {
-		if k == "" {
-			retKeys[i] = "."
-		} else {
-			retKeys[i] = k
-		}
-	}
-
 	// Generate the response
-	return logical.ListResponse(retKeys), nil
+	return logical.ListResponse(keys), nil
 }
 
 func (b *PassthroughBackend) GeneratesLeases() bool {
