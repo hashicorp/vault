@@ -119,7 +119,7 @@ func (b *CubbyholeBackend) handleWrite(
 
 	path := req.Path
 	if strings.HasSuffix(path, "/") {
-		path = path[:len(path)-1]
+		return logical.ErrorResponse("cannot write to a directory path"), nil
 	}
 
 	// JSON encode the data

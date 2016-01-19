@@ -167,7 +167,7 @@ func (b *PassthroughBackend) handleWrite(
 
 	path := req.Path
 	if strings.HasSuffix(path, "/") {
-		path = path[:len(path)-1]
+		return logical.ErrorResponse("cannot write to a directory path"), nil
 	}
 
 	// Check if there is a ttl key; verify parseability if so
