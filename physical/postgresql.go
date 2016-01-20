@@ -41,7 +41,7 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 
 	// Create the required table if it doesn't exists.
 	create_query := "CREATE TABLE IF NOT EXISTS " + table +
-		" (vault_key VARCHAR(512), vault_value BYTEA, PRIMARY KEY (vault_key))"
+		" (vault_key TEXT, vault_value BYTEA, PRIMARY KEY (vault_key))"
 	if _, err := db.Exec(create_query); err != nil {
 		return nil, fmt.Errorf("failed to create postgres table: %v", err)
 	}
@@ -58,7 +58,7 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		// Create the upsert function
 		// http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html
 		create_upsert := `
-CREATE OR REPLACE FUNCTION upsert_vault(key VARCHAR(512), value BYTEA) RETURNS VOID AS
+CREATE OR REPLACE FUNCTION upsert_vault(key TEXT, value BYTEA) RETURNS VOID AS
 $$
 BEGIN
     LOOP
