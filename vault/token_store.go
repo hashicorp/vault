@@ -290,9 +290,8 @@ func (ts *TokenStore) SaltID(id string) string {
 }
 
 // RootToken is used to generate a new token with root privileges and no parent
-func (ts *TokenStore) rootToken(id string) (*TokenEntry, error) {
+func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	te := &TokenEntry{
-		ID:           id,
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",

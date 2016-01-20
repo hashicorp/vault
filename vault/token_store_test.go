@@ -21,7 +21,7 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 func TestTokenStore_RootToken(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
-	te, err := ts.rootToken("")
+	te, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -909,7 +909,7 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken("")
+	root, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -982,7 +982,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken("")
+	root, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1026,7 +1026,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken("")
+	root, err := ts.rootToken()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

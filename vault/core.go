@@ -915,7 +915,7 @@ func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken("")
+	rootToken, err := c.tokenStore.rootToken()
 	if err != nil {
 		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
 		return nil, err

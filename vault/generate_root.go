@@ -2,7 +2,6 @@ package vault
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 
@@ -220,17 +219,26 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 		return nil, err
 	}
 
-	// Generate the raw token bytes
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		c.logger.Printf("failed to read random bytes: %v", err)
+	te, err := c.tokenStore.rootToken()
+	if err != nil {
+		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
 		return nil, err
 	}
+	if te == nil {
+		c.logger.Printf("[ERR] core: got nil token entry back from root generation")
+		return nil, fmt.Errorf("got nil token entry back from root generation")
+	}
 
-	uuidStr, err := uuid.FormatUUID(buf)
+	uuidBytes, err := uuid.ParseUUID(te.ID)
 	if err != nil {
-		c.logger.Printf("error formatting token: %v", err)
+		c.tokenStore.Revoke(te.ID)
+		c.logger.Printf("[ERR] core: error getting generated token bytes: %v", err)
 		return nil, err
+	}
+	if uuidBytes == nil {
+		c.tokenStore.Revoke(te.ID)
+		c.logger.Printf("[ERR] core: got nil parsed UUID bytes")
+		return nil, fmt.Errorf("got nil parsed UUID bytes")
 	}
 
 	var tokenBytes []byte
@@ -240,28 +248,25 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 	case len(c.generateRootConfig.OTP) > 0:
 		// This function performs decoding checks so rather than decode the OTP,
 		// just encode the value we're passing in.
-		tokenBytes, err = xor.XORBase64(c.generateRootConfig.OTP, base64.StdEncoding.EncodeToString(buf))
+		tokenBytes, err = xor.XORBase64(c.generateRootConfig.OTP, base64.StdEncoding.EncodeToString(uuidBytes))
 		if err != nil {
+			c.tokenStore.Revoke(te.ID)
 			c.logger.Printf("[ERR] core: xor of root token failed: %v", err)
 			return nil, err
 		}
 
 	case len(c.generateRootConfig.PGPKey) > 0:
-		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(uuidStr)}, []string{c.generateRootConfig.PGPKey})
+		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(te.ID)}, []string{c.generateRootConfig.PGPKey})
 		if err != nil {
+			c.tokenStore.Revoke(te.ID)
 			c.logger.Printf("[ERR] core: error encrypting new root token: %v", err)
 			return nil, err
 		}
 		tokenBytes = tokenBytesArr[0]
 
 	default:
+		c.tokenStore.Revoke(te.ID)
 		return nil, fmt.Errorf("unreachable condition")
-	}
-
-	_, err = c.tokenStore.rootToken(uuidStr)
-	if err != nil {
-		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
-		return nil, err
 	}
 
 	results := &GenerateRootResult{
