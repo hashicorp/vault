@@ -300,6 +300,23 @@ The MySQL backend has the following options:
 
   * `tls_ca_file` (optional) - The path to the CA certificate to connect using TLS
 
+#### Backend Reference: PostgreSQL (Community-Supported)
+
+The PostgreSQL backend has the following options:
+
+  * `connection_url` (required) - The connection string used to connect to PostgreSQL.
+
+    Examples:
+
+    * postgres://username:password@localhost:5432/database
+
+    * postgres://username:password@localhost:5432/database?sslmode=verify-full
+
+    A list of all supported parameters can be found in [the pq library documentation](https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters).
+
+  * `table` (optional) - The name of the table to use. Defaults to "vault". This
+    table will be created if it doesn't exist.
+
 #### Backend Reference: Inmem
 
 The in-memory backend has no configuration options.
