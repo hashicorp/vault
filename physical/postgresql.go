@@ -46,9 +46,19 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("failed to create postgres table: %v", err)
 	}
 
-	// Create the upstart function.
-	// http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html
-	create_upsert := `CREATE OR REPLACE FUNCTION upsert_vault(key VARCHAR(512), value BYTEA) RETURNS VOID AS
+	// Determine if we need to create an upsert function (versions < 9.5)
+	var upsert_missing bool
+	upsert_missing_query := "SELECT string_to_array(setting, '.')::int[] < '{9,5}' FROM pg_settings WHERE name = 'server_version'"
+	if err := db.QueryRow(upsert_missing_query).Scan(&upsert_missing); err != nil {
+		return nil, fmt.Errorf("failed to check postgres server version: %v", err)
+	}
+
+	put_statement := "INSERT INTO " + table + " VALUES($1, $2) ON CONFLICT (vault_key) DO UPDATE SET vault_value = $2"
+	if upsert_missing {
+		// Create the upsert function
+		// http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html
+		create_upsert := `
+CREATE OR REPLACE FUNCTION upsert_vault(key VARCHAR(512), value BYTEA) RETURNS VOID AS
 $$
 BEGIN
     LOOP
@@ -70,8 +80,12 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;`
-	if _, err := db.Exec(create_upsert); err != nil {
-		return nil, fmt.Errorf("failed to create upsert function: %v", err)
+
+		if _, err := db.Exec(create_upsert); err != nil {
+			return nil, fmt.Errorf("failed to create upsert function: %v", err)
+		}
+
+		put_statement = "SELECT upsert_vault($1, $2)"
 	}
 
 	// Setup the backend.
@@ -83,7 +97,7 @@ LANGUAGE plpgsql;`
 
 	// Prepare all the statements required
 	statements := map[string]string{
-		"put":    "SELECT upsert_vault($1, $2)",
+		"put":    put_statement,
 		"get":    "SELECT vault_value FROM " + table + " WHERE vault_key = $1",
 		"delete": "DELETE FROM " + table + " WHERE vault_key = $1",
 		"list":   "SELECT vault_key FROM " + table + " WHERE vault_key LIKE $1",
