@@ -210,7 +210,11 @@ func (c *Core) RekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
 	}
 
 	if len(c.rekeyConfig.PGPKeys) > 0 {
-		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(results.SecretShares, c.rekeyConfig.PGPKeys)
+		hexEncodedShares := make([][]byte, len(results.SecretShares))
+		for i, _ := range results.SecretShares {
+			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
+		}
+		results.PGPFingerprints, results.SecretShares, err = pgpkeys.EncryptShares(hexEncodedShares, c.rekeyConfig.PGPKeys)
 		if err != nil {
 			return nil, err
 		}

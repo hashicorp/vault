@@ -17,7 +17,7 @@ import (
 // thoroughly tested in the init and rekey command unit tests
 func EncryptShares(input [][]byte, pgpKeys []string) ([]string, [][]byte, error) {
 	if len(input) != len(pgpKeys) {
-		return nil, nil, fmt.Errorf("Mismatch between number of generated shares and number of PGP keys")
+		return nil, nil, fmt.Errorf("Mismatch between number items to encrypt and number of PGP keys")
 	}
 	encryptedShares := make([][]byte, 0, len(pgpKeys))
 	entities, err := GetEntities(pgpKeys)
