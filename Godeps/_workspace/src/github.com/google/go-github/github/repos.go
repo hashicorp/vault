@@ -515,3 +515,24 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 
 	return b, resp, err
 }
+
+// EditBranch edits the branch (currently only Branch Protection)
+//
+// GitHub API docs: https://developer.github.com/v3/repos/#enabling-and-disabling-branch-protection
+func (s *RepositoriesService) EditBranch(owner, repo, branchName string, branch *Branch) (*Branch, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v", owner, repo, branchName)
+	req, err := s.client.NewRequest("PATCH", u, branch)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
+
+	b := new(Branch)
+	resp, err := s.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, err
+}

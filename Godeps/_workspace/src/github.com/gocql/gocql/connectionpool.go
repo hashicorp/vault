@@ -190,6 +190,13 @@ func (p *policyConnPool) Size() int {
 	return count
 }
 
+func (p *policyConnPool) getPool(addr string) (pool *hostConnPool, ok bool) {
+	p.mu.RLock()
+	pool, ok = p.hostConnPools[addr]
+	p.mu.RUnlock()
+	return
+}
+
 func (p *policyConnPool) Pick(qry *Query) (SelectedHost, *Conn) {
 	nextHost := p.hostPolicy.Pick(qry)
 

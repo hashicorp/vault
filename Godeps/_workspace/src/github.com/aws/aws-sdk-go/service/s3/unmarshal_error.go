@@ -33,7 +33,7 @@ func unmarshalError(r *request.Request) {
 		return
 	}
 
-	if r.HTTPResponse.ContentLength <= 1 {
+	if r.HTTPResponse.ContentLength == 0 {
 		// No body, use status code to generate an awserr.Error
 		r.Error = awserr.NewRequestFailure(
 			awserr.New(strings.Replace(r.HTTPResponse.Status, " ", "", -1), r.HTTPResponse.Status, nil),

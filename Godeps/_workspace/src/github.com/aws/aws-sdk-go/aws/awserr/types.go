@@ -31,7 +31,7 @@ type baseError struct {
 
 	// Optional original error this error is based off of. Allows building
 	// chained errors.
-	origErr error
+	errs []error
 }
 
 // newBaseError returns an error object for the code, message, and err.
@@ -43,11 +43,34 @@ type baseError struct {
 //
 // origErr is the error object which will be nested under the new error to be returned.
 func newBaseError(code, message string, origErr error) *baseError {
-	return &baseError{
+	b := &baseError{
 		code:    code,
 		message: message,
-		origErr: origErr,
 	}
+
+	if origErr != nil {
+		b.errs = append(b.errs, origErr)
+	}
+
+	return b
+}
+
+// newBaseErrors returns an error object for the code, message, and errors.
+//
+// code is a short no whitespace phrase depicting the classification of
+// the error that is being created.
+//
+// message is the free flow string containing detailed information about the error.
+//
+// origErrs is the error objects which will be nested under the new errors to be returned.
+func newBaseErrors(code, message string, origErrs []error) *baseError {
+	b := &baseError{
+		code:    code,
+		message: message,
+		errs:    origErrs,
+	}
+
+	return b
 }
 
 // Error returns the string representation of the error.
@@ -56,7 +79,12 @@ func newBaseError(code, message string, origErr error) *baseError {
 //
 // Satisfies the error interface.
 func (b baseError) Error() string {
-	return SprintError(b.code, b.message, "", b.origErr)
+	size := len(b.errs)
+	if size > 0 {
+		return SprintError(b.code, b.message, "", errorList(b.errs))
+	}
+
+	return SprintError(b.code, b.message, "", nil)
 }
 
 // String returns the string representation of the error.
@@ -76,9 +104,20 @@ func (b baseError) Message() string {
 }
 
 // OrigErr returns the original error if one was set. Nil is returned if no error
-// was set.
+// was set. This only returns the first element in the list. If the full list is
+// needed, use BatchError
 func (b baseError) OrigErr() error {
-	return b.origErr
+	if size := len(b.errs); size > 0 {
+		return b.errs[0]
+	}
+
+	return nil
+}
+
+// OrigErrs returns the original errors if one was set. An empty slice is returned if
+// no error was set:w
+func (b baseError) OrigErrs() []error {
+	return b.errs
 }
 
 // So that the Error interface type can be included as an anonymous field
@@ -132,4 +171,27 @@ func (r requestError) StatusCode() int {
 // RequestID returns the wrapped requestID
 func (r requestError) RequestID() string {
 	return r.requestID
+}
+
+// An error list that satisfies the golang interface
+type errorList []error
+
+// Error returns the string representation of the error.
+//
+// Satisfies the error interface.
+func (e errorList) Error() string {
+	msg := ""
+	// How do we want to handle the array size being zero
+	if size := len(e); size > 0 {
+		for i := 0; i < size; i++ {
+			msg += fmt.Sprintf("%s", e[i].Error())
+			// We check the next index to see if it is within the slice.
+			// If it is, then we append a newline. We do this, because unit tests
+			// could be broken with the additional '\n'
+			if i+1 < size {
+				msg += "\n"
+			}
+		}
+	}
+	return msg
 }

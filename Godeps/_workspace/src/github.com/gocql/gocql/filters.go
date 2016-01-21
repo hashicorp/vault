@@ -15,9 +15,15 @@ func (fn HostFilterFunc) Accept(host *HostInfo) bool {
 }
 
 // AcceptAllFilter will accept all hosts
-func AcceptAllFilterfunc() HostFilter {
+func AcceptAllFilter() HostFilter {
 	return HostFilterFunc(func(host *HostInfo) bool {
 		return true
+	})
+}
+
+func DenyAllFilter() HostFilter {
+	return HostFilterFunc(func(host *HostInfo) bool {
+		return false
 	})
 }
 

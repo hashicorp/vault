@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strings"
 )
 
 // These constants represent the algorithm names for key types supported by this
@@ -75,6 +76,79 @@ func parseAuthorizedKey(in []byte) (out PublicKey, comment string, err error) {
 	}
 	comment = string(bytes.TrimSpace(in[i:]))
 	return out, comment, nil
+}
+
+// ParseKnownHosts parses an entry in the format of the known_hosts file.
+//
+// The known_hosts format is documented in the sshd(8) manual page. This
+// function will parse a single entry from in. On successful return, marker
+// will contain the optional marker value (i.e. "cert-authority" or "revoked")
+// or else be empty, hosts will contain the hosts that this entry matches,
+// pubKey will contain the public key and comment will contain any trailing
+// comment at the end of the line. See the sshd(8) manual page for the various
+// forms that a host string can take.
+//
+// The unparsed remainder of the input will be returned in rest. This function
+// can be called repeatedly to parse multiple entries.
+//
+// If no entries were found in the input then err will be io.EOF. Otherwise a
+// non-nil err value indicates a parse error.
+func ParseKnownHosts(in []byte) (marker string, hosts []string, pubKey PublicKey, comment string, rest []byte, err error) {
+	for len(in) > 0 {
+		end := bytes.IndexByte(in, '\n')
+		if end != -1 {
+			rest = in[end+1:]
+			in = in[:end]
+		} else {
+			rest = nil
+		}
+
+		end = bytes.IndexByte(in, '\r')
+		if end != -1 {
+			in = in[:end]
+		}
+
+		in = bytes.TrimSpace(in)
+		if len(in) == 0 || in[0] == '#' {
+			in = rest
+			continue
+		}
+
+		i := bytes.IndexAny(in, " \t")
+		if i == -1 {
+			in = rest
+			continue
+		}
+
+		// Strip out the begining of the known_host key.
+		// This is either an optional marker or a (set of) hostname(s).
+		keyFields := bytes.Fields(in)
+		if len(keyFields) < 3 || len(keyFields) > 5 {
+			return "", nil, nil, "", nil, errors.New("ssh: invalid entry in known_hosts data")
+		}
+
+		// keyFields[0] is either "@cert-authority", "@revoked" or a comma separated
+		// list of hosts
+		marker := ""
+		if keyFields[0][0] == '@' {
+			marker = string(keyFields[0][1:])
+			keyFields = keyFields[1:]
+		}
+
+		hosts := string(keyFields[0])
+		// keyFields[1] contains the key type (e.g. “ssh-rsa”).
+		// However, that information is duplicated inside the
+		// base64-encoded key and so is ignored here.
+
+		key := bytes.Join(keyFields[2:], []byte(" "))
+		if pubKey, comment, err = parseAuthorizedKey(key); err != nil {
+			return "", nil, nil, "", nil, err
+		}
+
+		return marker, strings.Split(hosts, ","), pubKey, comment, rest, nil
+	}
+
+	return "", nil, nil, "", nil, io.EOF
 }
 
 // ParseAuthorizedKeys parses a public key from an authorized_keys

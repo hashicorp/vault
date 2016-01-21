@@ -124,7 +124,7 @@ func (mc *mysqlConn) handleInFileRequest(name string) (err error) {
 		fileRegisterLock.RLock()
 		fr := fileRegister[name]
 		fileRegisterLock.RUnlock()
-		if mc.cfg.allowAllFiles || fr {
+		if mc.cfg.AllowAllFiles || fr {
 			var file *os.File
 			var fi os.FileInfo
 
@@ -139,12 +139,12 @@ func (mc *mysqlConn) handleInFileRequest(name string) (err error) {
 					} else if fileSize <= mc.maxPacketAllowed {
 						data = make([]byte, 4+mc.maxWriteSize)
 					} else {
-						err = fmt.Errorf("Local File '%s' too large: Size: %d, Max: %d", name, fileSize, mc.maxPacketAllowed)
+						err = fmt.Errorf("local file '%s' too large: size: %d, max: %d", name, fileSize, mc.maxPacketAllowed)
 					}
 				}
 			}
 		} else {
-			err = fmt.Errorf("Local File '%s' is not registered. Use the DSN parameter 'allowAllFiles=true' to allow all files", name)
+			err = fmt.Errorf("local file '%s' is not registered", name)
 		}
 	}
 
@@ -175,8 +175,8 @@ func (mc *mysqlConn) handleInFileRequest(name string) (err error) {
 	// read OK packet
 	if err == nil {
 		return mc.readResultOK()
-	} else {
-		mc.readPacket()
 	}
+
+	mc.readPacket()
 	return err
 }

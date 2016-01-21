@@ -1341,6 +1341,12 @@ type frameWriter interface {
 	writeFrame(framer *framer, streamID int) error
 }
 
+type frameWriterFunc func(framer *framer, streamID int) error
+
+func (f frameWriterFunc) writeFrame(framer *framer, streamID int) error {
+	return f(framer, streamID)
+}
+
 type writeExecuteFrame struct {
 	preparedID []byte
 	params     queryParams
