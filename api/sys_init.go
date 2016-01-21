@@ -34,6 +34,7 @@ type InitRequest struct {
 	SecretShares    int      `json:"secret_shares"`
 	SecretThreshold int      `json:"secret_threshold"`
 	PGPKeys         []string `json:"pgp_keys"`
+	Idempotent      bool     `json:"idempotent"`
 }
 
 type InitStatusResponse struct {
