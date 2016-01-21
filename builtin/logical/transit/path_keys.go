@@ -24,7 +24,7 @@ func pathKeys() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:  pathPolicyWrite,
+			logical.UpdateOperation: pathPolicyWrite,
 			logical.DeleteOperation: pathPolicyDelete,
 			logical.ReadOperation:   pathPolicyRead,
 		},
@@ -73,6 +73,8 @@ func pathPolicyRead(
 			"derived":                p.Derived,
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
+			"latest_version":         p.LatestVersion,
+			"archive_version":        p.ArchiveVersion,
 		},
 	}
 	if p.Derived {

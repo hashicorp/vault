@@ -221,7 +221,8 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 			return fmt.Errorf("latest archived key version not high enough to satisfy request")
 		}
 
-		for i := p.MinDecryptionVersion; i <= p.LatestVersion-len(p.Keys); i++ {
+		currLen := len(p.Keys)
+		for i := p.MinDecryptionVersion; i <= p.LatestVersion-currLen; i++ {
 			_, ok := p.Keys[i]
 			if ok {
 				// We hit the beginning of the values currently in the keyset,
