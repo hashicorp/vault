@@ -40,6 +40,8 @@ FEATURES:
    value is protected via any PGP key of the initiator's choosing or a one-time
    pad known only to the initiator (a suitable pad can be generated via the
    `-genotp` flag to the command. [GH-915]
+ * **STS Support in AWS Secret Backend**: You can now use the AWS secret
+   backend to fetch STS tokens rather than IAM users. [GH-927] 
 
 IMPROVEMENTS:
 
@@ -49,10 +51,11 @@ IMPROVEMENTS:
    back to an empty table [GH-849]
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
- * cli/token-lookup: Add token-lookup command [GH-892]
+ * cli/generate-root: Add generate-root and associated functionality [GH-915]
  * cli/server: Use internal functions for the token-helper rather than shelling
    out, which fixes some problems with using a static binary in Docker or paths
    with multiple spaces when launching in `-dev` mode [GH-850]
+ * cli/token-lookup: Add token-lookup command [GH-892]
  * command/{init,rekey}: Allow ASCII-armored keychain files to be arguments for
    `-pgp-keys` [GH-940]
  * conf: Use normal bool values rather than empty/non-empty for the
@@ -63,6 +66,7 @@ IMPROVEMENTS:
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
+ * logical/aws: You can now get STS tokens instead of IAM users [GH-927]
  * physical/cache: Use 2Q cache instead of straight LRU [GH-908]
  * physical/etcd: Support basic auth [GH-859]
 
