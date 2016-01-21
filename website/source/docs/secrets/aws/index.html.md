@@ -100,6 +100,7 @@ security_token  <nil>
 ```
 
 If you want keys with an STS token use the 'sts' endpoint instead of 'creds.'
+The aws/sts endpoint will always fetch STS credentials with a 1hr ttl.
 
 ```text
 $vault read aws/sts/deploy
@@ -160,6 +161,20 @@ Note that this policy example is unrelated to the policy you wrote to `aws/roles
 
 If you get stuck at any time, simply run `vault path-help aws` or with a subpath for
 interactive help output.
+
+## A Note on STS Permissions
+
+Vault generates STS tokens using the IAM credentials passed to aws/config.
+
+Those credentials must have two properties:
+
+- They must have permissions to call sts:GetFederatedToken.
+- The capabilities of those credentials have to be at least as permissive as those requested
+by policies attached to the STS creds.
+
+If either of those conditions are not met, a "403 not-authorized" error will be returned.
+
+See http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html for more details.
 
 ## A Note on Consistency
 

@@ -15,8 +15,8 @@ func pathSTS(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
-			"duration": &framework.FieldSchema{
-				Type:        framework.TypeInt,
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the token in seconds",
 				Default: 3600,
 			},
@@ -34,7 +34,7 @@ func pathSTS(b *backend) *framework.Path {
 func (b *backend) pathSTSRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
-	duration := int64(d.Get("duration").(int))
+	ttl := int64(d.Get("ttl").(int))
 
 	// Read the policy
 	policy, err := req.Storage.Get("policy/" + policyName)
@@ -50,7 +50,7 @@ func (b *backend) pathSTSRead(
 	return b.secretAccessKeysAndTokenCreate(
 		req.Storage,
 		req.DisplayName, policyName, string(policy.Value),
-		&duration,
+		&ttl,
 	)
 }
 
