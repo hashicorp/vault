@@ -170,6 +170,10 @@ func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
 	// Add the % wildcard to the prefix to do the prefix search
 	likePrefix := prefix + "%"
 	rows, err := m.statements["list"].Query(likePrefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
 	var keys []string
 	for rows.Next() {
