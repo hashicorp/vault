@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"strings"
 )
 
 const SecretAccessKeyType = "access_keys"
@@ -45,9 +46,17 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Generate a random username. We don't put the policy names in the
-	// username because the AWS console makes it pretty easy to see that.
-	username := fmt.Sprintf("vault-%s-%d-%d", normalizeDisplayName(displayName), time.Now().Unix(), rand.Int31n(10000))
+	// Generate a random username. Originally when only dealing with user supplied
+	// inline polices, the policy name was not added into the generated username
+	// as the AWS console made it pretty easy to see this, however with the introduction
+	// of policy (arn) references having it form part of the name makes it easier to
+	// track down
+	username := fmt.Sprintf(
+		"vault-%s-%s-%d-%d",
+		normalizeDisplayName(displayName),
+		normalizeDisplayName(policyName),
+		time.Now().Unix(),
+		rand.Int31n(10000))
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -69,15 +78,28 @@ func (b *backend) secretAccessKeysCreate(
 			"Error creating IAM user: %s", err)), nil
 	}
 
-	// Add the user to all the groups
-	_, err = client.PutUserPolicy(&iam.PutUserPolicyInput{
-		UserName:       aws.String(username),
-		PolicyName:     aws.String(policyName),
-		PolicyDocument: aws.String(policy),
-	})
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error adding user to group: %s", err)), nil
+	if strings.HasPrefix(policy, "arn:") {
+		// Attach existing policy against user
+		_, err = client.AttachUserPolicy(&iam.AttachUserPolicyInput{
+			UserName:  aws.String(username),
+			PolicyArn: aws.String(policy),
+		})
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error attaching user policy: %s", err)), nil
+		}
+
+	} else {
+		// Add new inline user policy against user
+		_, err = client.PutUserPolicy(&iam.PutUserPolicyInput{
+			UserName:       aws.String(username),
+			PolicyName:     aws.String(policyName),
+			PolicyDocument: aws.String(policy),
+		})
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error putting user policy: %s", err)), nil
+		}
 	}
 
 	// Create the keys
@@ -144,6 +166,6 @@ func secretAccessKeysRevoke(
 }
 
 func normalizeDisplayName(displayName string) string {
-	re := regexp.MustCompile("[^a-zA-Z+=,.@_-]")
+	re := regexp.MustCompile("[^a-zA-Z0-9+=,.@_-]")
 	return re.ReplaceAllString(displayName, "_")
 }
