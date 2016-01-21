@@ -43,43 +43,28 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
+func genUsername(displayName, policyName string) string {
+	// Generate a random username. We don't put the policy names in the
+	// username because the AWS console makes it pretty easy to see that.
+	return fmt.Sprintf(
+		"vault-%s-%s-%d-%d",
+		normalizeDisplayName(displayName),
+		normalizeDisplayName(policyName),
+		time.Now().Unix(),
+		rand.Int31n(10000))
+}
+
 func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds *int64) (*logical.Response, error) {
-	IAMClient, err := clientIAM(s)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
 	STSClient, err := clientSTS(s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Generate a random username. We don't put the policy names in the
-	// username because the AWS console makes it pretty easy to see that.
-	username := fmt.Sprintf("vault-%s-%d-%d", normalizeDisplayName(displayName), time.Now().Unix(), rand.Int31n(10000))
+	username := genUsername(displayName, policyName)
 
-	// Write to the WAL that this user will be created. We do this before
-	// the user is created because if switch the order then the WAL put
-	// can fail, which would put us in an awkward position: we have a user
-	// we need to rollback but can't put the WAL entry to do the rollback.
-	walId, err := framework.PutWAL(s, "user", &walUser{
-		UserName: username,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("Error writing WAL entry: %s", err)
-	}
-
-	// Create the user
-	_, err = IAMClient.CreateUser(&iam.CreateUserInput{
-		UserName: aws.String(username),
-	})
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error creating IAM user: %s", err)), nil
-	}
-
-	resp, err := STSClient.GetFederationToken(
+	tokenResp, err := STSClient.GetFederationToken(
 		&sts.GetFederationTokenInput{
 			Name:            aws.String(username),
 			Policy:          aws.String(policy),
@@ -88,24 +73,18 @@ func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Error creating access keys: %s", err)), nil
-	}
-
-	// Remove the WAL entry, we succeeded! If we fail, we don't return
-	// the secret because it'll get rolled back anyways, so we have to return
-	// an error here.
-	if err := framework.DeleteWAL(s, walId); err != nil {
-		return nil, fmt.Errorf("Failed to commit WAL entry: %s", err)
+			"Error generating STS keys: %s", err)), nil
 	}
 
 	// Return the info!
 	return b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *resp.Credentials.AccessKeyId,
-		"secret_key":     *resp.Credentials.SecretAccessKey,
-		"security_token": *resp.Credentials.SessionToken,
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
+		"is_sts": 	true,
 	}), nil
 }
 
@@ -117,17 +96,7 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Generate a random username. Originally when only dealing with user supplied
-	// inline polices, the policy name was not added into the generated username
-	// as the AWS console made it pretty easy to see this, however with the introduction
-	// of policy (arn) references having it form part of the name makes it easier to
-	// track down
-	username := fmt.Sprintf(
-		"vault-%s-%s-%d-%d",
-		normalizeDisplayName(displayName),
-		normalizeDisplayName(policyName),
-		time.Now().Unix(),
-		rand.Int31n(10000))
+	username := genUsername(displayName, policyName)
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -197,6 +166,7 @@ func (b *backend) secretAccessKeysCreate(
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
+		"is_sts": 	false,
 	}), nil
 }
 
@@ -216,6 +186,22 @@ func (b *backend) secretAccessKeysRenew(
 
 func secretAccessKeysRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// STS cleans up after itself so we can skip this if is_sts internal data
+	// element set to true. If is_sts is not set, assumes old version
+	// and defaults to the IAM approach.
+	isSTSRaw, ok := req.Secret.InternalData["is_sts"]
+	if ok {
+		isSTS, ok := isSTSRaw.(bool)
+		if ok {
+			if isSTS {
+				return nil, nil
+			}
+		} else {
+			return nil, fmt.Errorf("secret has is_sts but value could not be understood")
+		}
+	}
+
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {

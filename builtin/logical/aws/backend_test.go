@@ -235,7 +235,7 @@ const testPolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 
 func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"arn": testPolicyArn,
