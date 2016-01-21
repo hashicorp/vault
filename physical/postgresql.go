@@ -187,7 +187,7 @@ func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
 		if i := strings.Index(key, "/"); i == -1 {
 			// Add objects only from the current 'folder'
 			keys = append(keys, key)
-		} else if i != -1 {
+		} else {
 			// Add truncated 'folder' paths
 			keys = appendIfMissing(keys, string(key[:i+1]))
 		}
