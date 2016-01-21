@@ -171,6 +171,26 @@ func TestGenerateRoot_OTP(t *testing.T) {
 		resp.Data["policies"].([]string)[0] != "root" {
 		t.Fatalf("bad: %#v", resp.Data)
 	}
+
+	// Clear the output and run a decode to verify we get the same result
+	ui.OutputWriter.Reset()
+	args = []string{
+		"-address", addr,
+		"-decode", encodedToken,
+		"-otp", otp,
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+	beforeNAfter = strings.Split(ui.OutputWriter.String(), "Root token: ")
+	if len(beforeNAfter) != 2 {
+		t.Fatalf("did not find decoded root token in %s", ui.OutputWriter.String())
+	}
+
+	outToken := strings.TrimSpace(beforeNAfter[1])
+	if outToken != token {
+		t.Fatalf("tokens do not match:\n%s\n%s", token, outToken)
+	}
 }
 
 func TestGenerateRoot_PGP(t *testing.T) {
