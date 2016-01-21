@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"strings"
@@ -28,6 +29,10 @@ func secretAccessKeys(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "Secret Key",
 			},
+			"security_token": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Security Token",
+			},
 		},
 
 		DefaultDuration:    1 * time.Hour,
@@ -38,6 +43,51 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
+func genUsername(displayName, policyName string) string {
+	// Generate a random username. We don't put the policy names in the
+	// username because the AWS console makes it pretty easy to see that.
+	return fmt.Sprintf(
+		"vault-%s-%s-%d-%d",
+		normalizeDisplayName(displayName),
+		normalizeDisplayName(policyName),
+		time.Now().Unix(),
+		rand.Int31n(10000))
+}
+
+func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
+	displayName, policyName, policy string,
+	lifeTimeInSeconds *int64) (*logical.Response, error) {
+	STSClient, err := clientSTS(s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	username := genUsername(displayName, policyName)
+
+	tokenResp, err := STSClient.GetFederationToken(
+		&sts.GetFederationTokenInput{
+			Name:            aws.String(username),
+			Policy:          aws.String(policy),
+			DurationSeconds: lifeTimeInSeconds,
+		})
+
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Error generating STS keys: %s", err)), nil
+	}
+
+	// Return the info!
+	return b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+	}, map[string]interface{}{
+		"username": username,
+		"policy":   policy,
+		"is_sts": 	true,
+	}), nil
+}
+
 func (b *backend) secretAccessKeysCreate(
 	s logical.Storage,
 	displayName, policyName string, policy string) (*logical.Response, error) {
@@ -46,17 +96,7 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Generate a random username. Originally when only dealing with user supplied
-	// inline polices, the policy name was not added into the generated username
-	// as the AWS console made it pretty easy to see this, however with the introduction
-	// of policy (arn) references having it form part of the name makes it easier to
-	// track down
-	username := fmt.Sprintf(
-		"vault-%s-%s-%d-%d",
-		normalizeDisplayName(displayName),
-		normalizeDisplayName(policyName),
-		time.Now().Unix(),
-		rand.Int31n(10000))
+	username := genUsername(displayName, policyName)
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -120,11 +160,13 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Return the info!
 	return b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
-		"access_key": *keyResp.AccessKey.AccessKeyId,
-		"secret_key": *keyResp.AccessKey.SecretAccessKey,
+		"access_key":     *keyResp.AccessKey.AccessKeyId,
+		"secret_key":     *keyResp.AccessKey.SecretAccessKey,
+		"security_token": nil,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
+		"is_sts": 	false,
 	}), nil
 }
 
@@ -144,6 +186,22 @@ func (b *backend) secretAccessKeysRenew(
 
 func secretAccessKeysRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// STS cleans up after itself so we can skip this if is_sts internal data
+	// element set to true. If is_sts is not set, assumes old version
+	// and defaults to the IAM approach.
+	isSTSRaw, ok := req.Secret.InternalData["is_sts"]
+	if ok {
+		isSTS, ok := isSTSRaw.(bool)
+		if ok {
+			if isSTS {
+				return nil, nil
+			}
+		} else {
+			return nil, fmt.Errorf("secret has is_sts but value could not be understood")
+		}
+	}
+
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
