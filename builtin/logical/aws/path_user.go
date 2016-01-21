@@ -71,6 +71,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 	}
 	groups := groupsResp.Groups
 
+	// Inline (user) policies
 	policiesResp, err := client.ListUserPolicies(&iam.ListUserPoliciesInput{
 		UserName: aws.String(username),
 		MaxItems: aws.Int64(1000),
@@ -79,6 +80,16 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 		return err
 	}
 	policies := policiesResp.PolicyNames
+
+	// Attached managed policies
+	manPoliciesResp, err := client.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+		UserName: aws.String(username),
+		MaxItems: aws.Int64(1000),
+	})
+	if err != nil {
+		return err
+	}
+	manPolicies := manPoliciesResp.AttachedPolicies
 
 	keysResp, err := client.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(username),
@@ -100,7 +111,18 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 		}
 	}
 
-	// Delete any policies
+	// Detach managed policies
+	for _, p := range manPolicies {
+		_, err = client.DetachUserPolicy(&iam.DetachUserPolicyInput{
+			UserName:  aws.String(username),
+			PolicyArn: p.PolicyArn,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete any inline (user) policies
 	for _, p := range policies {
 		_, err = client.DeleteUserPolicy(&iam.DeleteUserPolicyInput{
 			UserName:   aws.String(username),

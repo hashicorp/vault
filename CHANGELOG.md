@@ -33,6 +33,13 @@ FEATURES:
  * **Keybase Support for PGP Encryption Keys**: You can now specify Keybase
    users when passing in PGP keys to the `init` and `rekey` CLI commands.
    Public keys for these users will be fetched automatically. [GH-901]
+ * **Root Token Generation via Unseal Keys**: You can now use the
+   `generate-root` CLI command to generate new orphaned, non-expiring root
+   tokens in case the original is lost or revoked (accidentally or
+   purposefully). This requires a quorum of unseal key holders. The output
+   value is protected via any PGP key of the initiator's choosing or a one-time
+   pad known only to the initiator (a suitable pad can be generated via the
+   `-genotp` flag to the command. [GH-915]
 
 IMPROVEMENTS:
 

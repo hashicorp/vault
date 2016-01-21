@@ -13,7 +13,7 @@ import (
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t *testing.T) *ExpirationManager {
-	_, ts, _ := mockTokenStore(t)
+	_, ts, _, _ := TestCoreWithTokenStore(t)
 	return ts.expiration
 }
 

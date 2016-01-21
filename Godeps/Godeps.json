@@ -188,7 +188,7 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/go-uuid",
-			"Rev": "132dbc4ad1e0f75b30c3785f667fedbc55b3b198"
+			"Rev": "36289988d83ca270bc07c234c36f364b0dd9c9a7"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/golang-lru",
