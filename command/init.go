@@ -16,11 +16,13 @@ type InitCommand struct {
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares int
 	var pgpKeys pgpkeys.PubKeyFilesFlag
+	var idempotent bool
 	flags := c.Meta.FlagSet("init", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
+	flags.BoolVar(&idempotent, "idempotent", false, "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
@@ -36,11 +38,29 @@ func (c *InitCommand) Run(args []string) int {
 		SecretShares:    shares,
 		SecretThreshold: threshold,
 		PGPKeys:         pgpKeys,
+		Idempotent:      idempotent,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing Vault: %s", err))
 		return 1
+	}
+
+	if idempotent {
+		switch {
+		case (resp.Keys == nil || len(resp.Keys) == 0) && resp.RootToken == "":
+			c.Ui.Output("Vault is already initialized")
+			return 0
+		case (resp.Keys == nil || len(resp.Keys) == 0) && resp.RootToken != "":
+			c.Ui.Output("Response from Vault could not be understood")
+			return 1
+		case resp.Keys != nil && len(resp.Keys) > 0 && resp.RootToken == "":
+			c.Ui.Output("Response from Vault could not be understood")
+			return 1
+		default:
+			// Do nothing; we have both keys and a root token back so this is a
+			// fresh init
+		}
 	}
 
 	for i, key := range resp.Keys {
@@ -103,6 +123,11 @@ Init Options:
                           public keys.  If you want to use them with the 'vault
                           unseal' command, you will need to hex decode and
                           decrypt; this will be the plaintext unseal key.
+
+  -idempotent             If set, the command will be idempotent; issuing an
+                          init on an already-initialized Vault will return
+                          success rather than failure so long as the key shares,
+                          threshold, and any PGP keys are the same.
 `
 	return strings.TrimSpace(helpText)
 }
