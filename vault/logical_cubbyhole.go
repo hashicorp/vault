@@ -153,15 +153,25 @@ func (b *CubbyholeBackend) handleList(
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("[ERR] cubbyhole list: Client token empty")
 	}
+
+	// Right now we only handle directories, so ensure it ends with /; however,
+	// some physical backends may not handle the "/" case properly, so only add
+	// it if we're not listing the root
+	path := req.Path
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(req.ClientToken + "/" + req.Path)
+	keys, err := req.Storage.List(req.ClientToken + "/" + path)
 	if err != nil {
 		return nil, err
 	}
 
-	strippedKeys := []string{}
-	for _, key := range keys {
-		strippedKeys = append(strippedKeys, strings.TrimPrefix(key, req.ClientToken+"/"))
+	// Strip the token
+	strippedKeys := make([]string, len(keys))
+	for i, key := range keys {
+		strippedKeys[i] = strings.TrimPrefix(key, req.ClientToken+"/")
 	}
 
 	// Generate the response

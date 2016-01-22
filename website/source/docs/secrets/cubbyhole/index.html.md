@@ -23,7 +23,7 @@ Also unlike the `generic` backend, because the cubbyhole's lifetime is linked
 to an authentication token, there is no concept of a lease or lease TTL for
 values contained in the token's cubbyhole.
 
-Writing to a key in the `cubbyhole/` backend will replace the old value,
+Writing to a key in the `cubbyhole` backend will replace the old value;
 the sub-fields are not merged together.
 
 ## Quick Start
@@ -52,7 +52,6 @@ As expected, the value previously set is returned to us.
 
 ## API
 
-### /cubbyhole
 #### GET
 
 <dl class="api">
@@ -86,6 +85,50 @@ As expected, the value previously set is returned to us.
       "renewable": false
     }
     ```
+
+  </dd>
+</dl>
+
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of secret entries at the specified location. Folders are
+    suffixed with `/`. The input must be a folder; list on a file will not
+    return a value. Note that no policy-based filtering is performed on
+    returned keys; it is not recommended to put sensitive or secret values as
+    key names. The values themselves are not accessible via this command.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/cubbyhole/<path>?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  The example below shows output for a query path of `cubbyhole/` when there
+  are secrets at `cubbyhole/foo` and `cubbyhole/foo/bar`; note the difference
+  in the two entries.
+
+  ```javascript
+  {
+    "auth": null,
+    "data": {
+      "keys": ["foo", "foo/"]
+    },
+    "lease_duration": 2592000,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
 
   </dd>
 </dl>
