@@ -436,6 +436,12 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return nil, ErrStandby
 	}
 
+	// Allowing writing to a path ending in / makes it extremely difficult to
+	// understand user intent for the filesystem-like backends (generic,
+	// cubbyhole) -- did they want a key named foo/ or did they want to write
+	// to a directory foo/ with no (or forgotten) key, or...? It also affects
+	// lookup, because paths ending in / are considered prefixes by some
+	// backends. Basically, it's all just terrible, so don't allow it.
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
 			req.Operation == logical.CreateOperation) {
