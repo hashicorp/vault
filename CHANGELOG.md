@@ -26,13 +26,11 @@ FEATURES:
    compatibility. See the [updated policy
    documentation](https://vaultproject.io/docs/concepts/policies.html) for
    details. [GH-914]
- * **DynamoDB HA Physical Backend**: There is now a new, community-supported
-   HA-enabled physical backend using Amazon DynamoDB. See the [configuration
-   documentation](https://vaultproject.io/docs/config/index.html) for details.
-   [GH-878]
- * **Keybase Support for PGP Encryption Keys**: You can now specify Keybase
-   users when passing in PGP keys to the `init` and `rekey` CLI commands.
-   Public keys for these users will be fetched automatically. [GH-901]
+ * **List Support**: Listing is now supported via the API and the new `vault
+   list` command. This currently supports listing keys in the `generic` and
+   `cubbyhole` backends. Different parts of the API and backends will need to
+   implement list capabilities in ways that make sense to particular endpoints,
+   so further support will appear over time. [GH-617]
  * **Root Token Generation via Unseal Keys**: You can now use the
    `generate-root` CLI command to generate new orphaned, non-expiring root
    tokens in case the original is lost or revoked (accidentally or
@@ -40,6 +38,14 @@ FEATURES:
    value is protected via any PGP key of the initiator's choosing or a one-time
    pad known only to the initiator (a suitable pad can be generated via the
    `-genotp` flag to the command. [GH-915]
+ * **DynamoDB HA Physical Backend**: There is now a new, community-supported
+   HA-enabled physical backend using Amazon DynamoDB. See the [configuration
+   documentation](https://vaultproject.io/docs/config/index.html) for details.
+   [GH-878]
+ * **Keybase Support for PGP Encryption Keys**: You can now specify Keybase
+   users when passing in PGP keys to the `init`, `rekey`, and `generate-root`
+   CLI commands.  Public keys for these users will be fetched automatically.
+   [GH-901]
  * **STS Support in AWS Secret Backend**: You can now use the AWS secret
    backend to fetch STS tokens rather than IAM users. [GH-927] 
 
