@@ -33,16 +33,6 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		table = "vault"
 	}
 
-	key_column, ok := conf["key_column"]
-	if !ok {
-		key_column = "vault_key"
-	}
-
-	value_column, ok := conf["value_column"]
-	if !ok {
-		value_column = "vault_value"
-	}
-
 	upsert_function, ok := conf["upsert_function"]
 	if !ok {
 		upsert_function = "vault_upsert"
@@ -66,8 +56,8 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		put_statement = "SELECT " + upsert_function + "($1, $2)"
 	} else {
 		put_statement = "INSERT INTO " + table + " VALUES($1, $2)" +
-			" ON CONFLICT (" + key_column + ") DO " +
-			" UPDATE SET " + value_column + " = $2"
+			" ON CONFLICT (vault_key) DO " +
+			" UPDATE SET vault_value = $2"
 	}
 
 	// Setup the backend.
@@ -80,9 +70,9 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	// Prepare all the statements required
 	statements := map[string]string{
 		"put":    put_statement,
-		"get":    "SELECT " + value_column + " FROM " + table + " WHERE " + key_column + " = $1",
-		"delete": "DELETE FROM " + table + " WHERE " + key_column + " = $1",
-		"list":   "SELECT " + key_column + " FROM " + table + " WHERE " + key_column + " LIKE $1",
+		"get":    "SELECT vault_value FROM " + table + " WHERE vault_key = $1",
+		"delete": "DELETE FROM " + table + " WHERE vault_key = $1",
+		"list":   "SELECT vault_key FROM " + table + " WHERE vault_key LIKE $1",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {

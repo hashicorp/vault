@@ -317,12 +317,6 @@ The PostgreSQL backend has the following options:
   * `table` (optional) - The name of the table to write vault data to. Defaults
     to "vault".
 
-  * `key_column` (optional) - The name of the column that will hold key names.
-    Defaults to "vault_key".
-
-  * `value_column` (optional) - The name of the column that will hold the
-    value. Defaults to "vault_value".
-
   * `upsert_function` (optional) - The name of the upsert function. Defaults to
     "vault_upsert". *This will only be used if you're running a version of PostgreSQL prior to 9.5*
 
