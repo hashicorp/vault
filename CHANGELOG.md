@@ -58,6 +58,8 @@ IMPROVEMENTS:
  * cli: Allow setting the `advertise_addr` for HA via the
    `VAULT_ADVERTISE_ADDR` environment variable [GH-581]
  * cli/generate-root: Add generate-root and associated functionality [GH-915]
+ * cli/init: Add `-check` flag that returns whether Vault is initialized
+   [GH-949]
  * cli/server: Use internal functions for the token-helper rather than shelling
    out, which fixes some problems with using a static binary in Docker or paths
    with multiple spaces when launching in `-dev` mode [GH-850]
