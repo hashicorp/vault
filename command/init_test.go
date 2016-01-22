@@ -58,6 +58,45 @@ func TestInit(t *testing.T) {
 	}
 }
 
+func TestInit_Check(t *testing.T) {
+	ui := new(cli.MockUi)
+	c := &InitCommand{
+		Meta: Meta{
+			Ui: ui,
+		},
+	}
+
+	core := vault.TestCore(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	// Should return 2, not initialized
+	args := []string{"-address", addr, "-check"}
+	if code := c.Run(args); code != 2 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	// Now initialize it
+	args = []string{"-address", addr}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	// Should return 0, initialized
+	args = []string{"-address", addr, "-check"}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	init, err := core.Initialized()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !init {
+		t.Fatal("should be initialized")
+	}
+}
+
 func TestInit_custom(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
