@@ -317,9 +317,6 @@ The PostgreSQL backend has the following options:
   * `table` (optional) - The name of the table to write vault data to. Defaults
     to "vault".
 
-  * `upsert_function` (optional) - The name of the upsert function. Defaults to
-    "vault_upsert". *This will only be used if you're running a version of PostgreSQL prior to 9.5*
-
 Make sure the PostgreSQL database you choose (or create) for vault storage has
 a table suitable for storing vault's data:
 
@@ -328,35 +325,6 @@ CREATE TABLE vault (
   vault_key TEXT PRIMARY KEY,
   vault_value BYTEA
 );
-```
-
-If you're using a version of PostgreSQL prior to 9.5, create an upsert function
-in the database you will be using for vault storage (taken from
-[PostgreSQL documentation](http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-UPSERT-EXAMPLE):
-
-```sql
-CREATE FUNCTION vault_upsert(_key TEXT, _value BYTEA) RETURNS VOID AS
-$$
-BEGIN
-    LOOP
-        -- first try to update the key
-        UPDATE vault SET vault_value = _value WHERE vault_key = _key;
-        IF found THEN
-            RETURN;
-        END IF;
-        -- not there, so try to insert the key
-        -- if someone else inserts the same key concurrently,
-        -- we could get a unique-key failure
-        BEGIN
-            INSERT INTO vault (vault_key, vault_value) VALUES (_key, _value);
-            RETURN;
-        EXCEPTION WHEN unique_violation THEN
-            -- Do nothing, and loop to try the UPDATE again.
-        END;
-    END LOOP;
-END;
-$$
-LANGUAGE plpgsql;
 ```
 
 #### Backend Reference: Inmem

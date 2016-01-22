@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 // PostgreSQL Backend is a physical backend that stores data
@@ -28,15 +28,11 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
-	table, ok := conf["table"]
+	unquoted_table, ok := conf["table"]
 	if !ok {
-		table = "vault"
+		unquoted_table = "vault"
 	}
-
-	upsert_function, ok := conf["upsert_function"]
-	if !ok {
-		upsert_function = "vault_upsert"
-	}
+	quoted_table := pq.QuoteIdentifier(unquoted_table)
 
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
@@ -51,18 +47,45 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("failed to check for native upsert: %v", err)
 	}
 
+	// Setup our put strategy based on the presence or absence of a native
+	// upsert. The upsert function used is taken [from the PostgreSQL
+	// docs](http://www.postgresql.org/docs/current/static/plpgsql-control-structures.html#PLPGSQL-UPSERT-EXAMPLE)
+	// and chosen primarily for reasons [listed
+	// here](http://www.depesz.com/2012/06/10/why-is-upsert-so-complicated/)
 	var put_statement string
+	create_upsert_sql := `
+CREATE OR REPLACE FUNCTION vault_upsert(_key TEXT, _value BYTEA) RETURNS VOID AS
+$$
+BEGIN
+    LOOP
+        UPDATE ` + quoted_table + ` SET vault_value = _value WHERE vault_key = _key;
+        IF found THEN
+            RETURN;
+        END IF;
+        BEGIN
+            INSERT INTO ` + quoted_table + ` (vault_key, vault_value) VALUES (_key, _value);
+            RETURN;
+        EXCEPTION WHEN unique_violation THEN
+            -- Do nothing, and loop to try the UPDATE again.
+        END;
+    END LOOP;
+END;
+$$
+LANGUAGE plpgsql;`
 	if upsert_required {
-		put_statement = "SELECT " + upsert_function + "($1, $2)"
+		put_statement = "SELECT vault_upsert($1, $2)"
+		if _, err := db.Exec(create_upsert_sql); err != nil {
+			return nil, fmt.Errorf("failed to create upsert function: %v", err)
+		}
 	} else {
-		put_statement = "INSERT INTO " + table + " VALUES($1, $2)" +
+		put_statement = "INSERT INTO " + quoted_table + " VALUES($1, $2)" +
 			" ON CONFLICT (vault_key) DO " +
 			" UPDATE SET vault_value = $2"
 	}
 
 	// Setup the backend.
 	m := &PostgreSQLBackend{
-		table:      table,
+		table:      unquoted_table,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 	}
@@ -70,9 +93,9 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	// Prepare all the statements required
 	statements := map[string]string{
 		"put":    put_statement,
-		"get":    "SELECT vault_value FROM " + table + " WHERE vault_key = $1",
-		"delete": "DELETE FROM " + table + " WHERE vault_key = $1",
-		"list":   "SELECT vault_key FROM " + table + " WHERE vault_key LIKE $1",
+		"get":    "SELECT vault_value FROM " + quoted_table + " WHERE vault_key = $1",
+		"delete": "DELETE FROM " + quoted_table + " WHERE vault_key = $1",
+		"list":   "SELECT vault_key FROM " + quoted_table + " WHERE vault_key LIKE $1",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {
