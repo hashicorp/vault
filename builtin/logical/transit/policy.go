@@ -137,11 +137,6 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 	// For safety, because there isn't really a good reason to, we never delete
 	// keys from the archive even when we move them back.
 
-	// 0/1 are aliases, so don't deal with this code path unless we're past that
-	if p.MinDecryptionVersion < 2 {
-		return nil
-	}
-
 	// Check if we have the latest minimum version in the current set of keys
 	_, keysContainsMinimum := p.Keys[p.MinDecryptionVersion]
 
@@ -375,7 +370,8 @@ func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 	}
 
 	if ver == 0 {
-		// Compatibility mode with initial implementation, where keys start at zero
+		// Compatibility mode with initial implementation, where keys start at
+		// zero
 		ver = 1
 	}
 
@@ -446,6 +442,13 @@ func (p *Policy) rotate(storage logical.Storage) error {
 		CreationTime: time.Now().Unix(),
 	}
 
+	// This ensures that with new key creations min decryption version is set
+	// to 1 rather than the int default of 0, since keys start at 1 (either
+	// fresh or after migration to the key map)
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
+	}
+
 	return p.Persist(storage, p.Name)
 }
 
@@ -502,6 +505,13 @@ func getPolicy(req *logical.Request, name string) (*Policy, error) {
 	// With archiving, past assumptions about the length of the keys map are no longer valid
 	if p.LatestVersion == 0 && len(p.Keys) != 0 {
 		p.LatestVersion = len(p.Keys)
+		persistNeeded = true
+	}
+
+	// We disallow setting the version to 0, since they start at 1 since moving
+	// to rotate-able keys, so update if it's set to 0
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
 		persistNeeded = true
 	}
 
