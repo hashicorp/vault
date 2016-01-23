@@ -27,7 +27,7 @@ description: |-
 
     ```javascript
     {
-      "initialize": true
+      "initialized": true
     }
     ```
 
