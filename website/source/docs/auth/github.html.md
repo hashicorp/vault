@@ -26,7 +26,40 @@ $ vault auth -method=github token=<api token>
 
 #### Via the API
 
-The endpoint for the GitHub login is `/login`.
+The endpoint for the GitHub login is `auth/github/login`. 
+
+The `github` mountpoint value in the url is the default mountpoint value. If you have mounted the `github` backend with a different mountpoint, use that value.
+
+The `token` should be sent in the POST body encoded as JSON.
+
+```shell
+$ curl $VAULT_ADDR/v1/auth/github/login \
+    -d '{ "token": "your_github_personal_access_token" }'
+```
+
+The response will be in JSON. For example:
+
+```javascript
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "warnings": null,
+  "auth": {
+    "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
+    "policies": [
+      "root"
+    ],
+    "metadata": {
+      "org": "test_org",
+      "username": "rajanadar",
+    },
+    "lease_duration": 0,
+    "renewable": false
+  }
+}
+```
 
 ## Configuration
 
