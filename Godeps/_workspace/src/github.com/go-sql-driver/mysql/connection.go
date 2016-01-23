@@ -9,9 +9,7 @@
 package mysql
 
 import (
-	"crypto/tls"
 	"database/sql/driver"
-	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -23,9 +21,10 @@ type mysqlConn struct {
 	netConn          net.Conn
 	affectedRows     uint64
 	insertId         uint64
-	cfg              *config
+	cfg              *Config
 	maxPacketAllowed int
 	maxWriteSize     int
+	writeTimeout     time.Duration
 	flags            clientFlag
 	status           statusFlag
 	sequence         uint8
@@ -33,28 +32,9 @@ type mysqlConn struct {
 	strict           bool
 }
 
-type config struct {
-	user                    string
-	passwd                  string
-	net                     string
-	addr                    string
-	dbname                  string
-	params                  map[string]string
-	loc                     *time.Location
-	tls                     *tls.Config
-	timeout                 time.Duration
-	collation               uint8
-	allowAllFiles           bool
-	allowOldPasswords       bool
-	allowCleartextPasswords bool
-	clientFoundRows         bool
-	columnsWithAlias        bool
-	interpolateParams       bool
-}
-
 // Handles parameters set in DSN after the connection is established
 func (mc *mysqlConn) handleParams() (err error) {
-	for param, val := range mc.cfg.params {
+	for param, val := range mc.cfg.Params {
 		switch param {
 		// Charset
 		case "charset":
@@ -69,27 +49,6 @@ func (mc *mysqlConn) handleParams() (err error) {
 			if err != nil {
 				return
 			}
-
-		// time.Time parsing
-		case "parseTime":
-			var isBool bool
-			mc.parseTime, isBool = readBool(val)
-			if !isBool {
-				return errors.New("Invalid Bool value: " + val)
-			}
-
-		// Strict mode
-		case "strict":
-			var isBool bool
-			mc.strict, isBool = readBool(val)
-			if !isBool {
-				return errors.New("Invalid Bool value: " + val)
-			}
-
-		// Compression
-		case "compress":
-			err = errors.New("Compression not implemented yet")
-			return
 
 		// System Vars
 		default:
@@ -140,7 +99,7 @@ func (mc *mysqlConn) cleanup() {
 		mc.netConn = nil
 	}
 	mc.cfg = nil
-	mc.buf.rd = nil
+	mc.buf.nc = nil
 }
 
 func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
@@ -217,7 +176,7 @@ func (mc *mysqlConn) interpolateParams(query string, args []driver.Value) (strin
 			if v.IsZero() {
 				buf = append(buf, "'0000-00-00'"...)
 			} else {
-				v := v.In(mc.cfg.loc)
+				v := v.In(mc.cfg.Loc)
 				v = v.Add(time.Nanosecond * 500) // To round under microsecond
 				year := v.Year()
 				year100 := year / 100
@@ -298,7 +257,7 @@ func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, err
 		return nil, driver.ErrBadConn
 	}
 	if len(args) != 0 {
-		if !mc.cfg.interpolateParams {
+		if !mc.cfg.InterpolateParams {
 			return nil, driver.ErrSkip
 		}
 		// try to interpolate the parameters to save extra roundtrips for preparing and closing a statement
@@ -349,7 +308,7 @@ func (mc *mysqlConn) Query(query string, args []driver.Value) (driver.Rows, erro
 		return nil, driver.ErrBadConn
 	}
 	if len(args) != 0 {
-		if !mc.cfg.interpolateParams {
+		if !mc.cfg.InterpolateParams {
 			return nil, driver.ErrSkip
 		}
 		// try client-side prepare to reduce roundtrip
@@ -395,6 +354,7 @@ func (mc *mysqlConn) getSystemVar(name string) ([]byte, error) {
 	if err == nil {
 		rows := new(textRows)
 		rows.mc = mc
+		rows.columns = []mysqlField{{fieldType: fieldTypeVarChar}}
 
 		if resLen > 0 {
 			// Columns

@@ -155,14 +155,14 @@ func (t *Tree) Insert(s string, v interface{}) (interface{}, bool) {
 				old := n.leaf.val
 				n.leaf.val = v
 				return old, true
-			} else {
-				n.leaf = &leafNode{
-					key: s,
-					val: v,
-				}
-				t.size++
-				return nil, false
 			}
+
+			n.leaf = &leafNode{
+				key: s,
+				val: v,
+			}
+			t.size++
+			return nil, false
 		}
 
 		// Look for the edge
@@ -233,7 +233,6 @@ func (t *Tree) Insert(s string, v interface{}) (interface{}, bool) {
 		})
 		return nil, false
 	}
-	return nil, false
 }
 
 // Delete is used to delete a key, returning the previous
@@ -393,9 +392,8 @@ func (t *Tree) Maximum() (string, interface{}, bool) {
 		}
 		if n.isLeaf() {
 			return n.leaf.key, n.leaf.val, true
-		} else {
-			break
 		}
+		break
 	}
 	return "", nil, false
 }

@@ -36,6 +36,18 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_basicSTS(t *testing.T) {
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWritePolicy(t, "test", testPolicy),
+			testAccStepReadSTS(t, "test"),
+		},
+	})
+}
+
 func TestBackend_policyCrud(t *testing.T) {
 	var compacted bytes.Buffer
 	if err := json.Compact(&compacted, []byte(testPolicy)); err != nil {
@@ -119,6 +131,42 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
+func testAccStepReadSTS(t *testing.T, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "sts/" + name,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				AccessKey string `mapstructure:"access_key"`
+				SecretKey string `mapstructure:"secret_key"`
+				STSToken  string `mapstructure:"security_token"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			log.Printf("[WARN] Generated credentials: %v", d)
+
+			// Build a client and verify that the credentials work
+			creds := credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, d.STSToken)
+			awsConfig := &aws.Config{
+				Credentials: creds,
+				Region:      aws.String("us-east-1"),
+				HTTPClient:  cleanhttp.DefaultClient(),
+			}
+			client := ec2.New(session.New(awsConfig))
+
+			log.Printf("[WARN] Verifying that the generated credentials work...")
+			_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+}
+
+
 func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -187,7 +235,7 @@ const testPolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 
 func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"arn": testPolicyArn,

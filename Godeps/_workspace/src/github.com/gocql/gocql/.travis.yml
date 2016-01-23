@@ -5,6 +5,7 @@ sudo: false
 cache:
   directories:
     - $HOME/.ccm/repository
+    - $HOME/.local/lib/python2.7
 
 matrix:
   fast_finish: true
@@ -24,7 +25,7 @@ env:
 
 go:
   - 1.4
-  - 1.5
+  - 1.5.3
 
 install:
   - pip install --user cql PyYAML six

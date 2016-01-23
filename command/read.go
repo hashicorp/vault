@@ -1,10 +1,13 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
 )
 
 // ReadCommand is a Command that reads data from the Vault.
@@ -15,7 +18,10 @@ type ReadCommand struct {
 func (c *ReadCommand) Run(args []string) int {
 	var format string
 	var field string
-	flags := c.Meta.FlagSet("read", FlagSetDefault)
+	var err error
+	var secret *api.Secret
+	var flags *flag.FlagSet
+	flags = c.Meta.FlagSet("read", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&field, "field", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -42,7 +48,7 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Read(path)
+	secret, err = client.Logical().Read(path)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error reading %s: %s", path, err))
@@ -88,8 +94,8 @@ Usage: vault read [options] path
 
   Read data from Vault.
 
-  Read reads data at the given path from Vault. This can be used to
-  read secrets and configuration as well as generate dynamic values from
+  Reads data at the given path from Vault. This can be used to read
+  secrets and configuration as well as generate dynamic values from
   materialized backends. Please reference the documentation for the
   backends in use to determine key structure.
 

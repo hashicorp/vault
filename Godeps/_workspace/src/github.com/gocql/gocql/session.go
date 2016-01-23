@@ -44,8 +44,6 @@ type Session struct {
 
 	mu sync.RWMutex
 
-	hostFilter HostFilter
-
 	control *controlConn
 
 	// event handlers
@@ -58,6 +56,26 @@ type Session struct {
 
 	closeMu  sync.RWMutex
 	isClosed bool
+}
+
+func addrsToHosts(addrs []string, defaultPort int) ([]*HostInfo, error) {
+	hosts := make([]*HostInfo, len(addrs))
+	for i, hostport := range addrs {
+		// TODO: remove duplication
+		addr, portStr, err := net.SplitHostPort(JoinHostPort(hostport, defaultPort))
+		if err != nil {
+			return nil, fmt.Errorf("NewSession: unable to parse hostport of addr %q: %v", hostport, err)
+		}
+
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			return nil, fmt.Errorf("NewSession: invalid port for hostport of addr %q: %v", hostport, err)
+		}
+
+		hosts[i] = &HostInfo{peer: addr, port: port, state: NodeUp}
+	}
+
+	return hosts, nil
 }
 
 // NewSession wraps an existing Node.
@@ -111,34 +129,27 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		// need to setup host source to check for broadcast_address in system.local
 		localHasRPCAddr, _ := checkSystemLocal(s.control)
 		s.hostSource.localHasRpcAddr = localHasRPCAddr
-		hosts, _, err = s.hostSource.GetHosts()
+
+		var err error
+		if cfg.DisableInitialHostLookup {
+			// TODO: we could look at system.local to get token and other metadata
+			// in this case.
+			hosts, err = addrsToHosts(cfg.Hosts, cfg.Port)
+		} else {
+			hosts, _, err = s.hostSource.GetHosts()
+		}
+
 		if err != nil {
 			s.Close()
 			return nil, err
 		}
-
 	} else {
 		// we dont get host info
-		hosts = make([]*HostInfo, len(cfg.Hosts))
-		for i, hostport := range cfg.Hosts {
-			// TODO: remove duplication
-			addr, portStr, err := net.SplitHostPort(JoinHostPort(hostport, cfg.Port))
-			if err != nil {
-				s.Close()
-				return nil, fmt.Errorf("NewSession: unable to parse hostport of addr %q: %v", hostport, err)
-			}
-
-			port, err := strconv.Atoi(portStr)
-			if err != nil {
-				s.Close()
-				return nil, fmt.Errorf("NewSession: invalid port for hostport of addr %q: %v", hostport, err)
-			}
-
-			hosts[i] = &HostInfo{peer: addr, port: port, state: NodeUp}
-		}
+		hosts, err = addrsToHosts(cfg.Hosts, cfg.Port)
 	}
 
 	for _, host := range hosts {
+		s.ring.addHost(host)
 		s.handleNodeUp(net.ParseIP(host.Peer()), host.Port(), false)
 	}
 
@@ -286,14 +297,13 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 		iter = conn.executeQuery(qry)
 		qry.totalLatency += time.Now().Sub(t).Nanoseconds()
 
-		//Exit for loop if the query was successful
+		// Update host
+		host.Mark(iter.err)
+
+		// Exit for loop if the query was successful
 		if iter.err == nil {
-			host.Mark(nil)
 			break
 		}
-
-		// Mark host as ok
-		host.Mark(nil)
 
 		if qry.rt == nil || !qry.rt.Attempt(qry) {
 			break
@@ -442,100 +452,109 @@ func (s *Session) routingKeyInfo(stmt string) (*routingKeyInfo, error) {
 	return routingKeyInfo, nil
 }
 
-func (s *Session) executeBatch(batch *Batch) (*Iter, error) {
+func (s *Session) executeBatch(batch *Batch) *Iter {
 	// fail fast
 	if s.Closed() {
-		return nil, ErrSessionClosed
+		return &Iter{err: ErrSessionClosed}
 	}
 
 	// Prevent the execution of the batch if greater than the limit
 	// Currently batches have a limit of 65536 queries.
 	// https://datastax-oss.atlassian.net/browse/JAVA-229
 	if batch.Size() > BatchSizeMaximum {
-		return nil, ErrTooManyStmts
+		return &Iter{err: ErrTooManyStmts}
 	}
 
-	var err error
 	var iter *Iter
 	batch.attempts = 0
 	batch.totalLatency = 0
 	for {
 		host, conn := s.pool.Pick(nil)
 
-		//Assign the error unavailable and break loop
-		if conn == nil {
-			err = ErrNoConnections
-			break
-		}
-		t := time.Now()
-		iter, err = conn.executeBatch(batch)
-		batch.totalLatency += time.Now().Sub(t).Nanoseconds()
 		batch.attempts++
-		//Exit loop if operation executed correctly
-		if err == nil {
-			host.Mark(err)
-			return iter, err
+		if conn == nil {
+			if batch.rt == nil || !batch.rt.Attempt(batch) {
+				// Assign the error unavailable and break loop
+				iter = &Iter{err: ErrNoConnections}
+				break
+			}
+
+			continue
 		}
 
-		// Mark host as OK
-		host.Mark(nil)
+		if conn == nil {
+			iter = &Iter{err: ErrNoConnections}
+			break
+		}
+
+		t := time.Now()
+
+		iter = conn.executeBatch(batch)
+
+		batch.totalLatency += time.Since(t).Nanoseconds()
+		// Exit loop if operation executed correctly
+		if iter.err == nil {
+			host.Mark(nil)
+			break
+		}
+
+		// Mark host with error if returned from Close
+		host.Mark(iter.Close())
 
 		if batch.rt == nil || !batch.rt.Attempt(batch) {
 			break
 		}
 	}
 
-	return nil, err
+	return iter
 }
 
 // ExecuteBatch executes a batch operation and returns nil if successful
 // otherwise an error is returned describing the failure.
 func (s *Session) ExecuteBatch(batch *Batch) error {
-	_, err := s.executeBatch(batch)
-	return err
+	iter := s.executeBatch(batch)
+	return iter.Close()
 }
 
-// ExecuteBatchCAS executes a batch operation and returns nil if successful and
+// ExecuteBatchCAS executes a batch operation and returns true if successful and
 // an iterator (to scan aditional rows if more than one conditional statement)
-// was sent, otherwise an error is returned describing the failure.
+// was sent.
 // Further scans on the interator must also remember to include
 // the applied boolean as the first argument to *Iter.Scan
 func (s *Session) ExecuteBatchCAS(batch *Batch, dest ...interface{}) (applied bool, iter *Iter, err error) {
-	if iter, err := s.executeBatch(batch); err == nil {
-		if err := iter.checkErrAndNotFound(); err != nil {
-			return false, nil, err
-		}
-		if len(iter.Columns()) > 1 {
-			dest = append([]interface{}{&applied}, dest...)
-			iter.Scan(dest...)
-		} else {
-			iter.Scan(&applied)
-		}
-		return applied, iter, nil
-	} else {
+	iter = s.executeBatch(batch)
+	if err := iter.checkErrAndNotFound(); err != nil {
+		iter.Close()
 		return false, nil, err
 	}
+
+	if len(iter.Columns()) > 1 {
+		dest = append([]interface{}{&applied}, dest...)
+		iter.Scan(dest...)
+	} else {
+		iter.Scan(&applied)
+	}
+
+	return applied, iter, nil
 }
 
 // MapExecuteBatchCAS executes a batch operation much like ExecuteBatchCAS,
 // however it accepts a map rather than a list of arguments for the initial
 // scan.
 func (s *Session) MapExecuteBatchCAS(batch *Batch, dest map[string]interface{}) (applied bool, iter *Iter, err error) {
-	if iter, err := s.executeBatch(batch); err == nil {
-		if err := iter.checkErrAndNotFound(); err != nil {
-			return false, nil, err
-		}
-		iter.MapScan(dest)
-		applied = dest["[applied]"].(bool)
-		delete(dest, "[applied]")
-
-		// we usually close here, but instead of closing, just returin an error
-		// if MapScan failed. Although Close just returns err, using Close
-		// here might be confusing as we are not actually closing the iter
-		return applied, iter, iter.err
-	} else {
+	iter = s.executeBatch(batch)
+	if err := iter.checkErrAndNotFound(); err != nil {
+		iter.Close()
 		return false, nil, err
 	}
+	iter.MapScan(dest)
+	applied = dest["[applied]"].(bool)
+	delete(dest, "[applied]")
+
+	// we usually close here, but instead of closing, just returin an error
+	// if MapScan failed. Although Close just returns err, using Close
+	// here might be confusing as we are not actually closing the iter
+	return applied, iter, iter.err
 }
 
 func (s *Session) connect(addr string, errorHandler ConnErrorHandler) (*Conn, error) {

@@ -31,10 +31,8 @@ type cassVersion struct {
 
 func (c *cassVersion) UnmarshalCQL(info TypeInfo, data []byte) error {
 	version := strings.TrimSuffix(string(data), "-SNAPSHOT")
+	version = strings.TrimPrefix(version, "v")
 	v := strings.Split(version, ".")
-	if len(v) < 3 {
-		return fmt.Errorf("invalid schema_version: %v", string(data))
-	}
 
 	var err error
 	c.Major, err = strconv.Atoi(v[0])
@@ -47,9 +45,11 @@ func (c *cassVersion) UnmarshalCQL(info TypeInfo, data []byte) error {
 		return fmt.Errorf("invalid minor version %v: %v", v[1], err)
 	}
 
-	c.Patch, err = strconv.Atoi(v[2])
-	if err != nil {
-		return fmt.Errorf("invalid patch version %v: %v", v[2], err)
+	if len(v) > 2 {
+		c.Patch, err = strconv.Atoi(v[2])
+		if err != nil {
+			return fmt.Errorf("invalid patch version %v: %v", v[2], err)
+		}
 	}
 
 	return nil

@@ -164,6 +164,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"list": func() (cli.Command, error) {
+			return &command.ListCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"write": func() (cli.Command, error) {
 			return &command.WriteCommand{
 				Meta: meta,

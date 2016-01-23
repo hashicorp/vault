@@ -103,6 +103,12 @@ type ConnErrorHandler interface {
 	HandleError(conn *Conn, err error, closed bool)
 }
 
+type connErrorHandlerFn func(conn *Conn, err error, closed bool)
+
+func (fn connErrorHandlerFn) HandleError(conn *Conn, err error, closed bool) {
+	fn(conn, err, closed)
+}
+
 // How many timeouts we will allow to occur before the connection is closed
 // and restarted. This is to prevent a single query timeout from killing a connection
 // which may be serving more queries just fine.
@@ -533,6 +539,11 @@ func (c *Conn) exec(req frameWriter, tracer Tracer) (*framer, error) {
 		return nil, err
 	}
 
+	var timeoutCh <-chan time.Time
+	if c.timeout > 0 {
+		timeoutCh = time.After(c.timeout)
+	}
+
 	select {
 	case err := <-call.resp:
 		if err != nil {
@@ -545,7 +556,7 @@ func (c *Conn) exec(req frameWriter, tracer Tracer) (*framer, error) {
 			}
 			return nil, err
 		}
-	case <-time.After(c.timeout):
+	case <-timeoutCh:
 		close(call.timeout)
 		c.handleTimeout()
 		return nil, ErrTimeoutNoResponse
@@ -817,9 +828,9 @@ func (c *Conn) UseKeyspace(keyspace string) error {
 	return nil
 }
 
-func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
+func (c *Conn) executeBatch(batch *Batch) *Iter {
 	if c.version == protoVersion1 {
-		return nil, ErrUnsupported
+		return &Iter{err: ErrUnsupported}
 	}
 
 	n := len(batch.Entries)
@@ -831,7 +842,7 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 		defaultTimestamp:  batch.defaultTimestamp,
 	}
 
-	stmts := make(map[string]string)
+	stmts := make(map[string]string, len(batch.Entries))
 
 	for i := 0; i < n; i++ {
 		entry := &batch.Entries[i]
@@ -839,7 +850,7 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 		if len(entry.Args) > 0 || entry.binding != nil {
 			info, err := c.prepareStatement(entry.Stmt, nil)
 			if err != nil {
-				return nil, err
+				return &Iter{err: err}
 			}
 
 			var args []interface{}
@@ -848,12 +859,12 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 			} else {
 				args, err = entry.binding(info)
 				if err != nil {
-					return nil, err
+					return &Iter{err: err}
 				}
 			}
 
 			if len(args) != len(info.Args) {
-				return nil, ErrQueryArgLength
+				return &Iter{err: ErrQueryArgLength}
 			}
 
 			b.preparedID = info.Id
@@ -864,7 +875,7 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 			for j := 0; j < len(info.Args); j++ {
 				val, err := Marshal(info.Args[j].TypeInfo, args[j])
 				if err != nil {
-					return nil, err
+					return &Iter{err: err}
 				}
 
 				b.values[j].value = val
@@ -878,18 +889,18 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 	// TODO: should batch support tracing?
 	framer, err := c.exec(req, nil)
 	if err != nil {
-		return nil, err
+		return &Iter{err: err}
 	}
 
 	resp, err := framer.parseFrame()
 	if err != nil {
-		return nil, err
+		return &Iter{err: err, framer: framer}
 	}
 
 	switch x := resp.(type) {
 	case *resultVoidFrame:
 		framerPool.Put(framer)
-		return nil, nil
+		return &Iter{}
 	case *RequestErrUnprepared:
 		stmt, found := stmts[string(x.StatementId)]
 		if found {
@@ -903,7 +914,7 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 		if found {
 			return c.executeBatch(batch)
 		} else {
-			return nil, x
+			return &Iter{err: err, framer: framer}
 		}
 	case *resultRowsFrame:
 		iter := &Iter{
@@ -912,13 +923,12 @@ func (c *Conn) executeBatch(batch *Batch) (*Iter, error) {
 			framer: framer,
 		}
 
-		return iter, nil
+		return iter
 	case error:
-		framerPool.Put(framer)
-		return nil, x
+
+		return &Iter{err: err, framer: framer}
 	default:
-		framerPool.Put(framer)
-		return nil, NewErrProtocol("Unknown type in response to batch statement: %s", x)
+		return &Iter{err: NewErrProtocol("Unknown type in response to batch statement: %s", x), framer: framer}
 	}
 }
 

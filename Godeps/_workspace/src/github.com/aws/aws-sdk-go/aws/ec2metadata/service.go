@@ -4,7 +4,6 @@ package ec2metadata
 
 import (
 	"io/ioutil"
-	"net"
 	"net/http"
 	"time"
 
@@ -26,6 +25,7 @@ type EC2Metadata struct {
 // New creates a new instance of the EC2Metadata client with a session.
 // This client is safe to use across multiple goroutines.
 //
+//
 // Example:
 //     // Create a EC2Metadata client from just a session.
 //     svc := ec2metadata.New(mySession)
@@ -40,22 +40,19 @@ func New(p client.ConfigProvider, cfgs ...*aws.Config) *EC2Metadata {
 // NewClient returns a new EC2Metadata client. Should be used to create
 // a client when not using a session. Generally using just New with a session
 // is preferred.
+//
+// If an unmodified HTTP client is provided from the stdlib default, or no client
+// the EC2RoleProvider's EC2Metadata HTTP client's timeout will be shortened.
+// To disable this set Config.EC2MetadataDisableTimeoutOverride to false. Enabled by default.
 func NewClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion string, opts ...func(*client.Client)) *EC2Metadata {
-	// If the default http client is provided, replace it with a custom
-	// client using default timeouts.
-	if cfg.HTTPClient == http.DefaultClient {
+	if !aws.BoolValue(cfg.EC2MetadataDisableTimeoutOverride) && httpClientZero(cfg.HTTPClient) {
+		// If the http client is unmodified and this feature is not disabled
+		// set custom timeouts for EC2Metadata requests.
 		cfg.HTTPClient = &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				Dial: (&net.Dialer{
-					// use a shorter timeout than default because the metadata
-					// service is local if it is running, and to fail faster
-					// if not running on an ec2 instance.
-					Timeout:   5 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}).Dial,
-				TLSHandshakeTimeout: 10 * time.Second,
-			},
+			// use a shorter timeout than default because the metadata
+			// service is local if it is running, and to fail faster
+			// if not running on an ec2 instance.
+			Timeout: 5 * time.Second,
 		}
 	}
 
@@ -82,6 +79,10 @@ func NewClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 	}
 
 	return svc
+}
+
+func httpClientZero(c *http.Client) bool {
+	return c == nil || (c.Transport == nil && c.CheckRedirect == nil && c.Jar == nil && c.Timeout == 0)
 }
 
 type metadataOutput struct {

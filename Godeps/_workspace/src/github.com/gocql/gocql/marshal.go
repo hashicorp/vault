@@ -1521,6 +1521,11 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 
 	udt := info.(UDTTypeInfo)
 	for _, e := range udt.Elements {
+		if len(data) < 4 {
+			// UDT def does not match the column value
+			return nil
+		}
+
 		size := readInt(data[:4])
 		data = data[4:]
 
@@ -1532,7 +1537,7 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 			}
 
 			if !f.IsValid() || !f.CanAddr() {
-				return unmarshalErrorf("cannot unmarshal %s into %T", info, value)
+				return unmarshalErrorf("cannot unmarshal %s into %T: field %v is not valid", info, value, e.Name)
 			}
 
 			fk := f.Addr().Interface()

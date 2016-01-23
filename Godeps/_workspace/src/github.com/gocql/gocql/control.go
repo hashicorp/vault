@@ -123,8 +123,21 @@ func (c *controlConn) connect(endpoints []string) error {
 }
 
 func (c *controlConn) registerEvents(conn *Conn) error {
+	var events []string
+
+	if !c.session.cfg.Events.DisableTopologyEvents {
+		events = append(events, "TOPOLOGY_CHANGE")
+	}
+	if !c.session.cfg.Events.DisableNodeStatusEvents {
+		events = append(events, "STATUS_CHANGE")
+	}
+
+	if len(events) == 0 {
+		return nil
+	}
+
 	framer, err := conn.exec(&writeRegisterFrame{
-		events: []string{"TOPOLOGY_CHANGE", "STATUS_CHANGE", "STATUS_CHANGE"},
+		events: events,
 	}, nil)
 	if err != nil {
 		return err

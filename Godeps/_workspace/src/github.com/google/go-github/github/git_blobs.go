@@ -33,7 +33,7 @@ func (s *GitService) GetBlob(owner string, repo string, sha string) (*Blob, *Res
 
 // CreateBlob creates a blob object.
 //
-// GitHub API docs: http://developer.github.com/v3/git/blobs/#create-a-blob
+// GitHub API docs: https://developer.github.com/v3/git/blobs/#create-a-blob
 func (s *GitService) CreateBlob(owner string, repo string, blob *Blob) (*Blob, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/git/blobs", owner, repo)
 	req, err := s.client.NewRequest("POST", u, blob)

@@ -141,9 +141,11 @@ func ErrorResponse(text string) *Response {
 
 // ListResponse is used to format a response to a list operation.
 func ListResponse(keys []string) *Response {
-	return &Response{
-		Data: map[string]interface{}{
-			"keys": keys,
-		},
+	resp := &Response{
+		Data: map[string]interface{}{},
 	}
+	if len(keys) != 0 {
+		resp.Data["keys"] = keys
+	}
+	return resp
 }

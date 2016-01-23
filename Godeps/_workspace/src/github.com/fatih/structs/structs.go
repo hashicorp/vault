@@ -1,7 +1,11 @@
 // Package structs contains various utilities functions to work with structs.
 package structs
 
-import "reflect"
+import (
+	"fmt"
+
+	"reflect"
+)
 
 var (
 	// DefaultTagName is the default tag name for struct fields which provides
@@ -41,6 +45,12 @@ func New(s interface{}) *Struct {
 //
 //   // Field is ignored by this package.
 //   Field bool `structs:"-"`
+//
+// A tag value with the content of "string" uses the stringer to get the value. Example:
+//
+//   // The value will be output of Animal's String() func.
+//   // Map will panic if Animal does not implement String().
+//   Field *Animal `structs:"field,string"`
 //
 // A tag value with the option of "omitnested" stops iterating further if the type
 // is a struct. Example:
@@ -104,6 +114,14 @@ func (s *Struct) Map() map[string]interface{} {
 			finalVal = val.Interface()
 		}
 
+		if tagOpts.Has("string") {
+			s, ok := val.Interface().(fmt.Stringer)
+			if ok {
+				out[name] = s.String()
+			}
+			continue
+		}
+
 		out[name] = finalVal
 	}
 
@@ -151,6 +169,14 @@ func (s *Struct) Values() []interface{} {
 			if reflect.DeepEqual(current, zero) {
 				continue
 			}
+		}
+
+		if tagOpts.Has("string") {
+			s, ok := val.Interface().(fmt.Stringer)
+			if ok {
+				t = append(t, s.String())
+			}
+			continue
 		}
 
 		if IsStruct(val.Interface()) && !tagOpts.Has("omitnested") {

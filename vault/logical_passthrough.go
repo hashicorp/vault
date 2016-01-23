@@ -212,8 +212,16 @@ func (b *PassthroughBackend) handleDelete(
 
 func (b *PassthroughBackend) handleList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Right now we only handle directories, so ensure it ends with /; however,
+	// some physical backends may not handle the "/" case properly, so only add
+	// it if we're not listing the root
+	path := req.Path
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(req.Path)
+	keys, err := req.Storage.List(path)
 	if err != nil {
 		return nil, err
 	}

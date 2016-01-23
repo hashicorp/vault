@@ -38,7 +38,7 @@ type emptyRows struct{}
 
 func (rows *mysqlRows) Columns() []string {
 	columns := make([]string, len(rows.columns))
-	if rows.mc.cfg.columnsWithAlias {
+	if rows.mc.cfg.ColumnsWithAlias {
 		for i := range columns {
 			if tableName := rows.columns[i].tableName; len(tableName) > 0 {
 				columns[i] = tableName + "." + rows.columns[i].name

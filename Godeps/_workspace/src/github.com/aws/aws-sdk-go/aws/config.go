@@ -18,6 +18,11 @@ type RequestRetryer interface{}
 // A Config provides service configuration for service clients. By default,
 // all clients will use the {defaults.DefaultConfig} structure.
 type Config struct {
+	// Enables verbose error printing of all credential chain errors.
+	// Should be used when wanting to see all errors while attempting to retreive
+	// credentials.
+	CredentialsChainVerboseErrors *bool
+
 	// The credentials object to use when signing requests. Defaults to
 	// a chain of credential providers to search for credentials in environment
 	// variables, shared credential file, and EC2 Instance Roles.
@@ -95,6 +100,20 @@ type Config struct {
 	//   Amazon S3: Virtual Hosting of Buckets
 	S3ForcePathStyle *bool
 
+	// Set this to `true` to disable the EC2Metadata client from overriding the
+	// default http.Client's Timeout. This is helpful if you do not want the EC2Metadata
+	// client to create a new http.Client. This options is only meaningful if you're not
+	// already using a custom HTTP client with the SDK. Enabled by default.
+	//
+	// Must be set and provided to the session.New() in order to disable the EC2Metadata
+	// overriding the timeout for default credentials chain.
+	//
+	// Example:
+	//    sess := session.New(aws.NewConfig().WithEC2MetadataDiableTimeoutOverride(true))
+	//    svc := s3.New(sess)
+	//
+	EC2MetadataDisableTimeoutOverride *bool
+
 	SleepDelay func(time.Duration)
 }
 
@@ -105,6 +124,13 @@ type Config struct {
 //
 func NewConfig() *Config {
 	return &Config{}
+}
+
+// WithCredentialsChainVerboseErrors sets a config verbose errors boolean and returning
+// a Config pointer.
+func (c *Config) WithCredentialsChainVerboseErrors(verboseErrs bool) *Config {
+	c.CredentialsChainVerboseErrors = &verboseErrs
+	return c
 }
 
 // WithCredentials sets a config Credentials value returning a Config pointer
@@ -184,6 +210,13 @@ func (c *Config) WithS3ForcePathStyle(force bool) *Config {
 	return c
 }
 
+// WithEC2MetadataDisableTimeoutOverride sets a config EC2MetadataDisableTimeoutOverride value
+// returning a Config pointer for chaining.
+func (c *Config) WithEC2MetadataDisableTimeoutOverride(enable bool) *Config {
+	c.EC2MetadataDisableTimeoutOverride = &enable
+	return c
+}
+
 // WithSleepDelay overrides the function used to sleep while waiting for the
 // next retry. Defaults to time.Sleep.
 func (c *Config) WithSleepDelay(fn func(time.Duration)) *Config {
@@ -201,6 +234,10 @@ func (c *Config) MergeIn(cfgs ...*Config) {
 func mergeInConfig(dst *Config, other *Config) {
 	if other == nil {
 		return
+	}
+
+	if other.CredentialsChainVerboseErrors != nil {
+		dst.CredentialsChainVerboseErrors = other.CredentialsChainVerboseErrors
 	}
 
 	if other.Credentials != nil {
@@ -249,6 +286,10 @@ func mergeInConfig(dst *Config, other *Config) {
 
 	if other.S3ForcePathStyle != nil {
 		dst.S3ForcePathStyle = other.S3ForcePathStyle
+	}
+
+	if other.EC2MetadataDisableTimeoutOverride != nil {
+		dst.EC2MetadataDisableTimeoutOverride = other.EC2MetadataDisableTimeoutOverride
 	}
 
 	if other.SleepDelay != nil {
