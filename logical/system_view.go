@@ -16,12 +16,23 @@ type SystemView interface {
 	// SudoPrivilege returns true if given path has sudo privileges
 	// for the given client token
 	SudoPrivilege(path string, token string) bool
+
+	// Returns true if the mount is tainted. A mount is tainted if it is in the
+	// process of being unmounted. This should only be used in special
+	// circumstances; a primary use-case is as a guard in revocation functions.
+	// If revocation of a backend's leases fails it can keep the unmounting
+	// process from being successful. If the reason for this failure is not
+	// relevant when the mount is tainted (for instance, saving a CRL to disk
+	// when the stored CRL will be removed during the unmounting process
+	// anyways), we can ignore the errors to allow unmounting to complete.
+	Tainted() bool
 }
 
 type StaticSystemView struct {
 	DefaultLeaseTTLVal time.Duration
 	MaxLeaseTTLVal     time.Duration
 	SudoPrivilegeVal   bool
+	TaintedVal         bool
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -34,4 +45,8 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 
 func (d StaticSystemView) SudoPrivilege(path string, token string) bool {
 	return d.SudoPrivilegeVal
+}
+
+func (d StaticSystemView) Tainted() bool {
+	return d.TaintedVal
 }

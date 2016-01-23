@@ -64,3 +64,8 @@ func (d dynamicSystemView) fetchTTLs() (def, max time.Duration) {
 
 	return
 }
+
+// Tainted indicates that the mount is in the process of being removed
+func (d dynamicSystemView) Tainted() bool {
+	return d.mountEntry.Tainted
+}
