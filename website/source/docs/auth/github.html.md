@@ -28,6 +28,8 @@ $ vault auth -method=github token=<api token>
 
 The endpoint for the GitHub login is `auth/github/login`. 
 
+The `github` mountpoint value in the url is the default mountpoint value. If you have mounted the `github` backend with a different mountpoint, use that value.
+
 The `token` should be sent in the POST body encoded as JSON.
 
 ```shell
