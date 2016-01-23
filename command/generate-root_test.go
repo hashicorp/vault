@@ -166,7 +166,7 @@ func TestGenerateRoot_OTP(t *testing.T) {
 	if resp.Data["orphan"].(bool) != true ||
 		resp.Data["ttl"].(int64) != 0 ||
 		resp.Data["num_uses"].(int) != 0 ||
-		resp.Data["meta"].(map[string]string) != map[string]string(nil) ||
+		resp.Data["meta"].(map[string]string) != nil ||
 		len(resp.Data["policies"].([]string)) != 1 ||
 		resp.Data["policies"].([]string)[0] != "root" {
 		t.Fatalf("bad: %#v", resp.Data)
@@ -270,7 +270,7 @@ func TestGenerateRoot_PGP(t *testing.T) {
 	if resp.Data["orphan"].(bool) != true ||
 		resp.Data["ttl"].(int64) != 0 ||
 		resp.Data["num_uses"].(int) != 0 ||
-		resp.Data["meta"].(map[string]string) != map[string]string(nil) ||
+		resp.Data["meta"].(map[string]string) != nil ||
 		len(resp.Data["policies"].([]string)) != 1 ||
 		resp.Data["policies"].([]string)[0] != "root" {
 		t.Fatalf("bad: %#v", resp.Data)
