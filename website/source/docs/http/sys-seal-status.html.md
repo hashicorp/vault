@@ -11,7 +11,7 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Returns the seal status of the Vault.
+    Returns the seal status of the Vault.<br/><br/>This is an unauthenticated endpoint.
   </dd>
 
   <dt>Method</dt>
