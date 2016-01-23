@@ -762,7 +762,13 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 	// or creation as appropriate.
 	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
 		checkExists, resourceExists, err := c.router.RouteExistenceCheck(req)
-		if err != nil {
+		switch err {
+		case logical.ErrUnsupportedPath:
+			// fail later via bad path to avoid confusing items in the log
+			checkExists = false
+		case nil:
+			// Continue on
+		default:
 			c.logger.Printf("[ERR] core: failed to run existence check: %v", err)
 			return nil, nil, ErrInternalError
 		}
