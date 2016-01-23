@@ -327,6 +327,37 @@ CREATE TABLE vault (
 );
 ```
 
+If you're using a version of PostgreSQL prior to 9.5, vault will expect an
+upsert function to exist named "vault_upsert". The recommanded function to use
+for this operation is:
+
+```sql
+CREATE FUNCTION vault_upsert(_key TEXT, _value BYTEA) RETURNS VOID AS
+$$
+BEGIN
+    LOOP
+        -- first try to update the key
+        UPDATE vault SET vault_value = _value WHERE vault_key = _key;
+        IF found THEN
+            RETURN;
+        END IF;
+        -- not there, so try to insert the key
+        -- if someone else inserts the same key concurrently,
+        -- we could get a unique-key failure
+        BEGIN
+            INSERT INTO vault (vault_key, vault_value) VALUES (_key, _value);
+            RETURN;
+        EXCEPTION WHEN unique_violation THEN
+            -- Do nothing, and loop to try the UPDATE again.
+        END;
+    END LOOP;
+END;
+$$
+LANGUAGE plpgsql;
+```
+
+More info can be found in the [PostgreSQL documentation](http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-UPSERT-EXAMPLE):
+
 #### Backend Reference: Inmem
 
 The in-memory backend has no configuration options.

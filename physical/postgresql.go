@@ -48,35 +48,10 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	}
 
 	// Setup our put strategy based on the presence or absence of a native
-	// upsert. The upsert function used is taken [from the PostgreSQL
-	// docs](http://www.postgresql.org/docs/current/static/plpgsql-control-structures.html#PLPGSQL-UPSERT-EXAMPLE)
-	// and chosen primarily for reasons [listed
-	// here](http://www.depesz.com/2012/06/10/why-is-upsert-so-complicated/)
+	// upsert.
 	var put_statement string
-	create_upsert_sql := `
-CREATE OR REPLACE FUNCTION vault_upsert(_key TEXT, _value BYTEA) RETURNS VOID AS
-$$
-BEGIN
-    LOOP
-        UPDATE ` + quoted_table + ` SET vault_value = _value WHERE vault_key = _key;
-        IF found THEN
-            RETURN;
-        END IF;
-        BEGIN
-            INSERT INTO ` + quoted_table + ` (vault_key, vault_value) VALUES (_key, _value);
-            RETURN;
-        EXCEPTION WHEN unique_violation THEN
-            -- Do nothing, and loop to try the UPDATE again.
-        END;
-    END LOOP;
-END;
-$$
-LANGUAGE plpgsql;`
 	if upsert_required {
 		put_statement = "SELECT vault_upsert($1, $2)"
-		if _, err := db.Exec(create_upsert_sql); err != nil {
-			return nil, fmt.Errorf("failed to create upsert function: %v", err)
-		}
 	} else {
 		put_statement = "INSERT INTO " + quoted_table + " VALUES($1, $2)" +
 			" ON CONFLICT (vault_key) DO " +

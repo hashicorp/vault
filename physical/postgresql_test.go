@@ -19,7 +19,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 
 	// Run vault tests
-	b, err := NewBackend("postgres", map[string]string{
+	b, err := NewBackend("postgresql", map[string]string{
 		"connection_url": connURL,
 		"table":          table,
 	})
