@@ -93,6 +93,8 @@ BUG FIXES:
    as the auto-detected advertise address [GH-883]
  * physical/s3: Use an initialized client when using IAM roles to fix a
    regression introduced against newer versions of the AWS Go SDK [GH-836]
+ * secret/pki: Fix a condition where unmounting could fail if the CA
+   certificate was not properly loaded [GH-946]
 
 MISC:
 
