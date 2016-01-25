@@ -1,0 +1,38 @@
+# Adapted from tcnksm/dockerfile-gox -- thanks!
+
+FROM debian:jessie
+
+RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
+                         curl \
+                         zip \
+                         build-essential \
+                         ca-certificates \
+                         git mercurial bzr \
+               && rm -rf /var/lib/apt/lists/*
+
+ENV GOVERSION 1.5.3
+RUN mkdir /goroot-upstream && mkdir /gopath-upstream && mkdir /gopath
+RUN curl https://storage.googleapis.com/golang/go${GOVERSION}.linux-amd64.tar.gz \
+           | tar xvzf - -C /goroot-upstream --strip-components=1
+
+ENV GOROOT_BOOTSTRAP /goroot-upstream
+RUN git clone https://github.com/golang/go /goroot
+WORKDIR /goroot/src
+RUN git config user.email "jeff@hashicorp.com"
+RUN git config user.name "Jeff Mitchell"
+RUN git checkout -b go1.5.3-fixed-x509 go1.5.3
+RUN git cherry-pick e78e654c1de0a7bfe0314d6954d42b046f14f1bb
+RUN git cherry-pick a0ea93dea5f5741addc8c96b7ed037d0e359e33f
+RUN ./all.bash
+
+ENV GOPATH /gopath
+ENV GOROOT /goroot
+ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
+
+RUN go get github.com/mitchellh/gox
+RUN go get github.com/tools/godep
+
+RUN mkdir -p /gopath/src/github.com/hashicorp/vault
+WORKDIR /gopath/src/github.com/hashicorp/vault
+ENV CGO_ENABLED=0
+CMD make bin
