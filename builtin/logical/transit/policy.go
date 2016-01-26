@@ -138,26 +138,23 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// For safety, because there isn't really a good reason to, we never delete
 	// keys from the archive even when we move them back.
 
+	// Check if we have the latest minimum version in the current set of keys
+	_, keysContainsMinimum := p.Keys[p.MinDecryptionVersion]
+
 	// Sanity checks
 	switch {
 	case p.MinDecryptionVersion < 1:
 		return fmt.Errorf("minimum decryption version of %d is less than 1", p.MinDecryptionVersion)
 	case p.LatestVersion < 1:
 		return fmt.Errorf("latest version of %d is less than 1", p.LatestVersion)
+	case !keysContainsMinimum && p.ArchiveVersion != p.LatestVersion:
+		return fmt.Errorf("need to move keys from archive but archive version not up-to-date")
+	case p.ArchiveVersion > p.LatestVersion:
+		return fmt.Errorf("archive version of %d is greater than the latest version %d",
+			p.ArchiveVersion, p.LatestVersion)
 	case p.MinDecryptionVersion > p.LatestVersion:
 		return fmt.Errorf("minimum decryption version of %d is greater than the latest version %d",
 			p.MinDecryptionVersion, p.LatestVersion)
-	}
-
-	// Check if we have the latest minimum version in the current set of keys
-	_, keysContainsMinimum := p.Keys[p.MinDecryptionVersion]
-
-	// If keys contains the minimum value, we are moving keys *to* the archive,
-	// but we only need to do this if the archive doesn't contain those key
-	// versions, since we don't remove key versions from the archive.
-	if keysContainsMinimum &&
-		p.ArchiveVersion >= p.MinDecryptionVersion-1 {
-		return nil
 	}
 
 	archive, err := p.loadArchive(storage)
@@ -168,25 +165,21 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	if keysContainsMinimum {
 		// Need to move keys *to* archive
 
-		// We need a size that is equivalent to the minimum decryption version
-		// minus 1, but adding one since slice numbering starts at 0 and we're
+		// We need a size that is equivalent to the latest version (number of
+		// keys) but adding one since slice numbering starts at 0 and we're
 		// indexing by key version
-		if len(archive.Keys) < p.MinDecryptionVersion {
+		if len(archive.Keys) < p.LatestVersion+1 {
 			// Increase the size of the archive slice
-			newKeys := make([]KeyEntry, p.MinDecryptionVersion)
+			newKeys := make([]KeyEntry, p.LatestVersion+1)
 			copy(newKeys, archive.Keys)
 			archive.Keys = newKeys
 		}
 
-		// As we are archiving progressively, we should only have to archive
-		// from the min version down to the latest version minus however many
-		// keys are in the policy's map. For example, if we have never
-		// archived, the latest version is 10, and we move the min decryption
-		// version to 5, we will archive from 4 down to (10-10) non-inclusive.
-		// If the latest version now becomes 8, we will archive from 7 down to
-		// (10-6) non-inclusive, e.g. keys 5, 6, and 7.
-		for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i++ {
+		// We are storing all keys in the archive, so we ensure that it is up
+		// to date up to p.LatestVersion
+		for i := p.ArchiveVersion + 1; i <= p.LatestVersion; i++ {
 			archive.Keys[i] = p.Keys[i]
+			p.ArchiveVersion = i
 		}
 
 		err = p.storeArchive(archive, storage)
@@ -200,42 +193,10 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 			delete(p.Keys, i)
 		}
 
-		// Update the archive max key version. This also corresponds to the
-		// maximum safe index into the slice. Continuing our example from
-		// before, p.ArchiveVersion will now be 7.
-		p.ArchiveVersion = p.MinDecryptionVersion - 1
-
 	} else {
 		// Need to move keys *from* archive
 
-		// If we've been archiving, keys should have been archived
-		// sequentially. So we can perform a sanity check. First test the
-		// actual latest version in the policy, so continuing the previous
-		// example, if the key version is 10 and the minimum was 8, p.Keys
-		// should hold 8, 9, and 10. Now if we move the minimum back, e.g. to
-		// 5, we need to load keys 5, 6, and 7, so should load everything up to
-		// (10-3), inclusive. If p.ArchiveVersion is less than this (which it
-		// shouldn't be, as set earlier in the example), we have a problem.
-		// Also, we should never have a situation where the Archive version is
-		// less than the minimum decryption version but we also do not have the
-		// minimum version in p.Keys (which is the only way we'd be in this
-		// code path to begin with). That's also a problem.
-		//
-		// Note that we *should never have these problems*. If we do it's
-		// serious.
-		if p.ArchiveVersion < p.LatestVersion-len(p.Keys) ||
-			p.ArchiveVersion < p.MinDecryptionVersion {
-			return fmt.Errorf("latest archived key version not high enough to satisfy request")
-		}
-
-		currLen := len(p.Keys)
-		for i := p.MinDecryptionVersion; i <= p.LatestVersion-currLen; i++ {
-			_, ok := p.Keys[i]
-			if ok {
-				// We hit the beginning of the values currently in the keyset,
-				// so break
-				break
-			}
+		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
 			p.Keys[i] = archive.Keys[i]
 		}
 	}

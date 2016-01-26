@@ -30,7 +30,7 @@ func Test_Archiving(t *testing.T) {
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, policy.Keys[1])
-	checkKeys(t, policy, storage, 0, 1, 1)
+	checkKeys(t, policy, storage, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
 		err = policy.rotate(storage)
@@ -38,7 +38,7 @@ func Test_Archiving(t *testing.T) {
 			t.Fatal(err)
 		}
 		keysArchive = append(keysArchive, policy.Keys[i])
-		checkKeys(t, policy, storage, 0, i, i)
+		checkKeys(t, policy, storage, "rotate", i, i, i)
 	}
 
 	// Move the min decryption version up
@@ -50,14 +50,14 @@ func Test_Archiving(t *testing.T) {
 			t.Fatal(err)
 		}
 		// We expect to find:
-		// * The keys in archive are the min decryption version - 1
+		// * The keys in archive are the same as the latest version
 		// * The latest version is constant
 		// * The number of keys in the policy itself is from the min
 		// decryption version up to the latest version, so for e.g. 7 and
 		// 10, you'd need 7, 8, 9, and 10 -- IOW, latest version - min
 		// decryption version plus 1 (the min decryption version key
 		// itself)
-		checkKeys(t, policy, storage, i-1, 10, policy.LatestVersion-policy.MinDecryptionVersion+1)
+		checkKeys(t, policy, storage, "minadd", 10, 10, policy.LatestVersion-policy.MinDecryptionVersion+1)
 	}
 
 	// Move the min decryption version down
@@ -69,21 +69,21 @@ func Test_Archiving(t *testing.T) {
 			t.Fatal(err)
 		}
 		// We expect to find:
-		// * The keys in archive are never removed so should be the previous
-		// min decryption version (10) minus 1, always
+		// * The keys in archive are never removed so same as the latest version
 		// * The latest version is constant
 		// * The number of keys in the policy itself is from the min
 		// decryption version up to the latest version, so for e.g. 7 and
 		// 10, you'd need 7, 8, 9, and 10 -- IOW, latest version - min
 		// decryption version plus 1 (the min decryption version key
 		// itself)
-		checkKeys(t, policy, storage, 9, 10, policy.LatestVersion-policy.MinDecryptionVersion+1)
+		checkKeys(t, policy, storage, "minsub", 10, 10, policy.LatestVersion-policy.MinDecryptionVersion+1)
 	}
 }
 
 func checkKeys(t *testing.T,
 	policy *Policy,
 	storage logical.Storage,
+	action string,
 	archiveVer, latestVer, keysSize int) {
 
 	// Sanity check
@@ -126,8 +126,8 @@ func checkKeys(t *testing.T,
 
 	if keysSize != len(policy.Keys) {
 		t.Fatalf(
-			"expected keys size %d, found %d",
-			keysSize, len(policy.Keys),
+			"expected keys size %d, found %d, action is %s, policy is \n%#v\n",
+			keysSize, len(policy.Keys), action, policy,
 		)
 	}
 
