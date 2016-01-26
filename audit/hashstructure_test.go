@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -114,12 +115,14 @@ func TestHash(t *testing.T) {
 		{
 			&logical.Request{
 				Data: map[string]interface{}{
-					"foo": "bar",
+					"foo":              "bar",
+					"private_key_type": certutil.PrivateKeyType("rsa"),
 				},
 			},
 			&logical.Request{
 				Data: map[string]interface{}{
-					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 				},
 			},
 		},
@@ -177,7 +180,7 @@ func TestHash(t *testing.T) {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
 		if !reflect.DeepEqual(tc.Input, tc.Output) {
-			t.Fatalf("bad:\n\n%s\n\n%#v\n\n%#v", input, tc.Input, tc.Output)
+			t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output\n%#v", input, tc.Input, tc.Output)
 		}
 	}
 }
