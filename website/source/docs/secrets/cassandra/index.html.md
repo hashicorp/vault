@@ -262,7 +262,7 @@ subpath for interactive help output.
     {
       "data": {
         "creation_cql": "CREATE USER...",
-        "revocation_cql": "DROP USER...",
+        "rollback_cql": "DROP USER...",
         "lease": "12h",
         "lease_grace_period": "1h"
       }
