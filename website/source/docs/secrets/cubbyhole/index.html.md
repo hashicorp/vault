@@ -165,3 +165,28 @@ As expected, the value previously set is returned to us.
   A `204` response code.
   </dd>
 </dl>
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the secret at the specified location.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/cubbyhole/<path>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  A `204` response code.
+  </dd>
+</dl>
