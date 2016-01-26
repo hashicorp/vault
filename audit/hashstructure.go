@@ -186,7 +186,7 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		return nil
 	}
 
-	replaceVal := w.Callback(v.Interface().(string))
+	replaceVal := w.Callback(v.String())
 
 	resultVal := reflect.ValueOf(replaceVal)
 	switch w.loc {
