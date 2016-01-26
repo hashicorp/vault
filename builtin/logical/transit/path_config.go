@@ -89,11 +89,19 @@ func pathConfigWrite(
 		}
 	}
 
+	// Add this as a guard here before persisting since we now require the min
+	// decryption version to start at 1; even if it's not explicitly set here,
+	// force the upgrade
+	if policy.MinDecryptionVersion == 0 {
+		policy.MinDecryptionVersion = 1
+		persistNeeded = true
+	}
+
 	if !persistNeeded {
 		return nil, nil
 	}
 
-	return resp, policy.Persist(req.Storage, name)
+	return resp, policy.Persist(req.Storage)
 }
 
 const pathConfigHelpSyn = `Configure a named encryption key`

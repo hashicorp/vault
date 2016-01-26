@@ -76,23 +76,24 @@ type Policy struct {
 	// The latest key version in this policy
 	LatestVersion int `json:"latest_version"`
 
-	// The latest key version in the archive. We never delete these, so this is a max.
+	// The latest key version in the archive. We never delete these, so this is
+	// a max.
 	ArchiveVersion int `json:"archive_version"`
 
 	// Whether the key is allowed to be deleted
 	DeletionAllowed bool `json:"deletion_allowed"`
 }
 
-// ArchivedKeys stores old keys. This is used to keep the key loading time sane when
-// there are huge numbers of rotations.
+// ArchivedKeys stores old keys. This is used to keep the key loading time sane
+// when there are huge numbers of rotations.
 type ArchivedKeys struct {
 	Keys []KeyEntry `json:"keys"`
 }
 
-func (p *Policy) loadArchive(storage logical.Storage, name string) (*ArchivedKeys, error) {
+func (p *Policy) loadArchive(storage logical.Storage) (*ArchivedKeys, error) {
 	archive := &ArchivedKeys{}
 
-	raw, err := storage.Get("policy/" + name + "/archive")
+	raw, err := storage.Get("policy/" + p.Name + "/archive")
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +109,7 @@ func (p *Policy) loadArchive(storage logical.Storage, name string) (*ArchivedKey
 	return archive, nil
 }
 
-func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage, name string) error {
+func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage) error {
 	// Encode the policy
 	buf, err := json.Marshal(archive)
 	if err != nil {
@@ -117,7 +118,7 @@ func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage, na
 
 	// Write the policy into storage
 	err = storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name + "/archive",
+		Key:   "policy/" + p.Name + "/archive",
 		Value: buf,
 	})
 	if err != nil {
@@ -130,12 +131,23 @@ func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage, na
 // handleArchiving manages the movement of keys to and from the policy archive.
 // This should *ONLY* be called from Persist() since it assumes that the policy
 // will be persisted afterwards.
-func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
+func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// We need to move keys that are no longer accessible to ArchivedKeys, and keys
 	// that now need to be accessible back here.
 	//
 	// For safety, because there isn't really a good reason to, we never delete
 	// keys from the archive even when we move them back.
+
+	// Sanity checks
+	switch {
+	case p.MinDecryptionVersion < 1:
+		return fmt.Errorf("minimum decryption version of %d is less than 1", p.MinDecryptionVersion)
+	case p.LatestVersion < 1:
+		return fmt.Errorf("latest version of %d is less than 1", p.LatestVersion)
+	case p.MinDecryptionVersion > p.LatestVersion:
+		return fmt.Errorf("minimum decryption version of %d is greater than the latest version %d",
+			p.MinDecryptionVersion, p.LatestVersion)
+	}
 
 	// Check if we have the latest minimum version in the current set of keys
 	_, keysContainsMinimum := p.Keys[p.MinDecryptionVersion]
@@ -148,7 +160,7 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 		return nil
 	}
 
-	archive, err := p.loadArchive(storage, name)
+	archive, err := p.loadArchive(storage)
 	if err != nil {
 		return err
 	}
@@ -156,11 +168,11 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 	if keysContainsMinimum {
 		// Need to move keys *to* archive
 
-		if len(archive.Keys) < p.MinDecryptionVersion-1 {
-			// Increase the size of the archive slice. We need a size that is
-			// equivalent to the minimum decryption version minus 1, but adding
-			// one since slice numbering starts at 0 and we're indexing by key
-			// version
+		// We need a size that is equivalent to the minimum decryption version
+		// minus 1, but adding one since slice numbering starts at 0 and we're
+		// indexing by key version
+		if len(archive.Keys) < p.MinDecryptionVersion {
+			// Increase the size of the archive slice
 			newKeys := make([]KeyEntry, p.MinDecryptionVersion)
 			copy(newKeys, archive.Keys)
 			archive.Keys = newKeys
@@ -177,7 +189,7 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 			archive.Keys[i] = p.Keys[i]
 		}
 
-		err = p.storeArchive(archive, storage, name)
+		err = p.storeArchive(archive, storage)
 		if err != nil {
 			return err
 		}
@@ -231,8 +243,8 @@ func (p *Policy) handleArchiving(storage logical.Storage, name string) error {
 	return nil
 }
 
-func (p *Policy) Persist(storage logical.Storage, name string) error {
-	err := p.handleArchiving(storage, name)
+func (p *Policy) Persist(storage logical.Storage) error {
+	err := p.handleArchiving(storage)
 	if err != nil {
 		return err
 	}
@@ -245,7 +257,7 @@ func (p *Policy) Persist(storage logical.Storage, name string) error {
 
 	// Write the policy into storage
 	err = storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name,
+		Key:   "policy/" + p.Name,
 		Value: buf,
 	})
 	if err != nil {
@@ -449,7 +461,7 @@ func (p *Policy) rotate(storage logical.Storage) error {
 		p.MinDecryptionVersion = 1
 	}
 
-	return p.Persist(storage, p.Name)
+	return p.Persist(storage)
 }
 
 func (p *Policy) migrateKeyToKeysMap() {
@@ -516,7 +528,7 @@ func getPolicy(req *logical.Request, name string) (*Policy, error) {
 	}
 
 	if persistNeeded {
-		err = p.Persist(req.Storage, name)
+		err = p.Persist(req.Storage)
 		if err != nil {
 			return nil, err
 		}
