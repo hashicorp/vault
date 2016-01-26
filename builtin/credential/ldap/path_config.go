@@ -25,6 +25,14 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
 			},
+			"binddn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP DN for searching for the user DN",
+			},
+			"bindpass": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP password for searching for the user DN",
+			},
 			"groupdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "LDAP domain to use for groups (eg: ou=Groups,dc=example,dc=org)",
@@ -52,7 +60,7 @@ func pathConfig(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:  b.pathConfigRead,
+			logical.ReadOperation:   b.pathConfigRead,
 			logical.UpdateOperation: b.pathConfigWrite,
 		},
 
@@ -98,6 +106,8 @@ func (b *backend) pathConfigRead(
 			"certificate":  cfg.Certificate,
 			"insecure_tls": cfg.InsecureTLS,
 			"starttls":     cfg.StartTLS,
+			"binddn":       cfg.BindDN,
+			"bindpass":     cfg.BindPassword,
 		},
 	}, nil
 }
@@ -138,6 +148,14 @@ func (b *backend) pathConfigWrite(
 	if startTLS {
 		cfg.StartTLS = startTLS
 	}
+	bindDN := d.Get("binddn").(string)
+	if bindDN != "" {
+		cfg.BindDN = bindDN
+	}
+	bindPass := d.Get("bindpass").(string)
+	if bindPass != "" {
+		cfg.BindPassword = bindPass
+	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
 	// We can also check the URL at this stage, as anything else would probably
@@ -160,14 +178,16 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url         string
-	UserDN      string
-	GroupDN     string
-	UPNDomain   string
-	UserAttr    string
-	Certificate string
-	InsecureTLS bool
-	StartTLS    bool
+	Url          string
+	UserDN       string
+	GroupDN      string
+	UPNDomain    string
+	UserAttr     string
+	Certificate  string
+	InsecureTLS  bool
+	StartTLS     bool
+	BindDN       string
+	BindPassword string
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {

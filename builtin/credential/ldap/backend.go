@@ -98,13 +98,29 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
-
-	// Try to authenticate to the server using the provided credentials
 	binddn := ""
-	if cfg.UPNDomain != "" {
-		binddn = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+	if cfg.BindDN != "" && cfg.BindPassword != "" {
+		if err = c.Bind(binddn, password); err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind (service) failed: %v", err)), nil
+		}
+		sresult, err := c.Search(&ldap.SearchRequest{
+			BaseDN: cfg.UserDN,
+			Scope:  2, // subtree
+			Filter: fmt.Sprintf("(%s=%s)", cfg.UserAttr, EscapeLDAPValue(username)),
+		})
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search for binddn failed: %v", err)), nil
+		}
+		if len(sresult.Entries) != 1 {
+			return nil, logical.ErrorResponse("LDAP search for binddn 0 or not uniq"), nil
+		}
+		binddn = sresult.Entries[0].DN
 	} else {
-		binddn = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
+		if cfg.UPNDomain != "" {
+			binddn = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+		} else {
+			binddn = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
+		}
 	}
 	if err = c.Bind(binddn, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
