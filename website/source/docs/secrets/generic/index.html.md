@@ -191,3 +191,28 @@ seconds (one hour) as specified.
   A `204` response code.
   </dd>
 </dl>
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the secret at the specified location.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/secret/<path>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  A `204` response code.
+  </dd>
+</dl>
