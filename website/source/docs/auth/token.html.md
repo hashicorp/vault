@@ -180,7 +180,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns information about the current client token.
+    Returns information about the client token provided in the request path.
   </dd>
 
   <dt>Method</dt>
