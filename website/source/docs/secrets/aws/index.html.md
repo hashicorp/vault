@@ -46,8 +46,13 @@ The following parameters are required:
 - `region` the AWS region for API calls.
 
 The next step is to configure a role. A role is a logical name that maps
-to a policy used to generated those credentials. For example, lets create
-a "deploy" role:
+to a policy used to generated those credentials. 
+You can either supply a user inline policy (via the policy argument), or
+provide a reference to an existing AWS policy by supplying the full ARN
+reference (via the arn argument).
+
+For example, lets first create  
+a "deploy" role using an user inline policy as an example:
 
 ```text
 $ vault write aws/roles/deploy \
@@ -72,8 +77,20 @@ is an example IAM policy to get started:
 }
 ```
 
+As a second example, lets create  
+a "readonly" role as using an existing AWS policy as an example:
+
+```text
+$ vault write aws/roles/readonly arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+```
+
+This path will create a named role pointing to an existing IAM policy used
+to restrict permissions for it. This is used to dynamically create
+a new pair of IAM credentials when needed.
+
 For more information on IAM policies, please see the
 [AWS IAM policy documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
+
 
 To generate a new set of IAM credentials, we simply read from that role:
 
@@ -292,8 +309,13 @@ as soon as they are generated.
     <ul>
       <li>
         <span class="param">policy</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">required (unless arn specified)</span>
         The IAM policy in JSON format.
+      </li>
+      <li>
+        <span class="param">arn</span>
+        <span class="param-flags">required (unless policy specified)</span>
+        The full ARN reference to the desired existing policy
       </li>
     </ul>
   </dd>
@@ -329,11 +351,17 @@ as soon as they are generated.
     ```javascript
     {
       "data": {
-        "policy": "..."
+        "policy": "..."       
       }
     }
     ```
-
+    ```javascript
+    {
+      "data": {
+        "arn": "..."       
+      }
+    }
+    ```
   </dd>
 </dl>
 
