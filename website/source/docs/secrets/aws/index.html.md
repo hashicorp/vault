@@ -51,8 +51,7 @@ You can either supply a user inline policy (via the policy argument), or
 provide a reference to an existing AWS policy by supplying the full ARN
 reference (via the arn argument).
 
-For example, lets first create  
-a "deploy" role using an user inline policy as an example:
+For example, lets first create a "deploy" role using an user inline policy as an example:
 
 ```text
 $ vault write aws/roles/deploy \
@@ -77,8 +76,7 @@ is an example IAM policy to get started:
 }
 ```
 
-As a second example, lets create  
-a "readonly" role as using an existing AWS policy as an example:
+As a second example, lets create a "readonly" role using an existing AWS policy as an example:
 
 ```text
 $ vault write aws/roles/readonly arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
