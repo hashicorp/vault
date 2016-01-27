@@ -76,6 +76,9 @@ IMPROVEMENTS:
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
  * logical/postgres: Add `max_idle_connections` paramter [GH-950]
+ * logical/transit: Keys are archived and only keys between the latest version
+   and `min_decryption_version` are loaded into the working set. This can
+   provide a very large speed increase when rotating keys very often. [GH-977]
  * physical/cache: Use 2Q cache instead of straight LRU [GH-908]
  * physical/etcd: Support basic auth [GH-859]
 
