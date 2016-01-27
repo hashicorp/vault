@@ -109,6 +109,12 @@ func pathPolicyDelete(
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}
+
+	err = req.Storage.Delete("archive/" + name)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error deleting archive %s: %s", name, err)), err
+	}
+
 	return nil, nil
 }
 

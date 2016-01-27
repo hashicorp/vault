@@ -8,8 +8,12 @@ import (
 )
 
 var (
-	keysArchive = []KeyEntry{KeyEntry{}}
+	keysArchive []KeyEntry
 )
+
+func resetKeysArchive() {
+	keysArchive = []KeyEntry{KeyEntry{}}
+}
 
 func Test_KeyUpgrade(t *testing.T) {
 	storage := &logical.InmemStorage{}
@@ -38,7 +42,77 @@ func Test_KeyUpgrade(t *testing.T) {
 	}
 }
 
+func Test_ArchivingUpgrade(t *testing.T) {
+	resetKeysArchive()
+
+	// First, we generate a policy and rotate it a number of times. Each time
+	// we'll ensure that we have the expected number of keys in the archive and
+	// the main keys object, which without changing the min version should be
+	// zero and latest, respectively
+
+	storage := &logical.InmemStorage{}
+
+	policy, err := generatePolicy(storage, "test", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy == nil {
+		t.Fatal("policy is nil")
+	}
+
+	// Store the initial key in the archive
+	keysArchive = append(keysArchive, policy.Keys[1])
+	checkKeys(t, policy, storage, "initial", 1, 1, 1)
+
+	for i := 2; i <= 10; i++ {
+		err = policy.rotate(storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keysArchive = append(keysArchive, policy.Keys[i])
+		checkKeys(t, policy, storage, "rotate", i, i, i)
+	}
+
+	// Now, wipe the archive and set the archive version to zero
+	err = storage.Delete("archive/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy.ArchiveVersion = 0
+
+	// Store it, but without calling persist, so we don't trigger
+	// handleArchiving()
+	buf, err := policy.Serialize()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write the policy into storage
+	err = storage.Put(&logical.StorageEntry{
+		Key:   "policy/" + policy.Name,
+		Value: buf,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now get the policy again; the upgrade should happen automatically
+	policy, err = getPolicy(&logical.Request{
+		Storage: storage,
+	}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy == nil {
+		t.Fatal("policy is nil")
+	}
+
+	checkKeys(t, policy, storage, "upgrade", 10, 10, 10)
+}
+
 func Test_Archiving(t *testing.T) {
+	resetKeysArchive()
+
 	// First, we generate a policy and rotate it a number of times. Each time
 	// we'll ensure that we have the expected number of keys in the archive and
 	// the main keys object, which without changing the min version should be

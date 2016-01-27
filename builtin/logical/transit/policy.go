@@ -93,7 +93,7 @@ type ArchivedKeys struct {
 func (p *Policy) loadArchive(storage logical.Storage) (*ArchivedKeys, error) {
 	archive := &ArchivedKeys{}
 
-	raw, err := storage.Get("policy/" + p.Name + "/archive")
+	raw, err := storage.Get("archive/" + p.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage) er
 
 	// Write the policy into storage
 	err = storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + p.Name + "/archive",
+		Key:   "archive/" + p.Name,
 		Value: buf,
 	})
 	if err != nil {
@@ -480,6 +480,11 @@ func getPolicy(req *logical.Request, name string) (*Policy, error) {
 	// to rotate-able keys, so update if it's set to 0
 	if p.MinDecryptionVersion == 0 {
 		p.MinDecryptionVersion = 1
+		persistNeeded = true
+	}
+
+	// On first load after an upgrade, copy keys to the archive
+	if p.ArchiveVersion == 0 {
 		persistNeeded = true
 	}
 
