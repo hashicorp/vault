@@ -215,7 +215,7 @@ BUG FIXES:
 
  * api: API client now checks for a 301 response for redirects. Vault doesn't
    generate these, but in certain conditions Go's internal HTTP handler can
-generate them, leading to client errors.
+   generate them, leading to client errors.
  * cli: `token-create` now supports the `ttl` parameter in addition to the
    deprecated `lease` parameter. [GH-688]
  * core: Return data from `generic` backends on the last use of a limited-use
