@@ -100,6 +100,15 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
 The above configures the target LDAP server, along with the parameters
 specifying how users and groups should be queried from the LDAP server.
 
+If your users are not located directly below the "userdn", e.g. in several
+OUs like
+```
+    ou=users,dc=example,dc=com
+ou=people    ou=external     ou=robots
+```
+you can also specify a `binddn` and `bindpass` for vault to search for the DN
+of a user.
+
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
 ```
