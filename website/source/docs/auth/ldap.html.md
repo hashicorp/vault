@@ -100,6 +100,31 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
 The above configures the target LDAP server, along with the parameters
 specifying how users and groups should be queried from the LDAP server.
 
+If your users are not located directly below the "userdn", e.g. in several
+OUs like
+```
+    ou=users,dc=example,dc=com
+ou=people    ou=external     ou=robots
+```
+you can also specify a `binddn` and `bindpass` for vault to search for the DN
+of a user. This also works for the AD where a typical setup is to have user
+DNs in the form `cn=Firstname Lastname,ou=Users,dc=example,dc=com` but you
+want to login users using the `sAMAccountName` attribute. For that specify
+```
+$ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
+    userattr=sAMAccountName \
+    userdn="ou=users,dc=example,dc=com" \
+    groupdn="dc=example,dc=com" \
+    binddn="cn=vault,ou=users,dc=example,dc=com" \
+    bindpass='My$ecrt3tP4ss' \
+    certificate=@ldap_ca_cert.pem \
+    insecure_tls=false \
+    starttls=true
+...
+```
+To discover the bind dn for a user with an anonymous bind, use the `discoverdn=true`
+parameter and leave the `binddn` / `bindpass` empty.
+
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
 ```
