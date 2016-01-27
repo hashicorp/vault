@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathEncrypt() *framework.Path {
+func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -30,7 +30,7 @@ func pathEncrypt() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: pathEncryptWrite,
+			logical.UpdateOperation: b.pathEncryptWrite,
 		},
 
 		HelpSynopsis:    pathEncryptHelpSyn,
@@ -38,18 +38,12 @@ func pathEncrypt() *framework.Path {
 	}
 }
 
-func pathEncryptWrite(
+func (b *backend) pathEncryptWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	value := d.Get("plaintext").(string)
 	if len(value) == 0 {
 		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
-	}
-
-	// Get the policy
-	p, err := getPolicy(req, name)
-	if err != nil {
-		return nil, err
 	}
 
 	// Decode the context if any
@@ -63,16 +57,26 @@ func pathEncryptWrite(
 		}
 	}
 
-	// Error if invalid policy
-	if p == nil {
-		isDerived := len(context) != 0
-		p, err = generatePolicy(req.Storage, name, isDerived)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to upsert policy: %v", err)), logical.ErrInvalidRequest
-		}
+	// Get the policy
+	lp, err := b.policies.getPolicy(req, name)
+	if err != nil {
+		return nil, err
 	}
 
-	ciphertext, err := p.Encrypt(context, value)
+	// Error if invalid policy
+	if lp == nil {
+		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
+	lp.lock.RLock()
+	defer lp.lock.RUnlock()
+
+	// Verify if wasn't deleted before we grabbed the lock
+	if lp.policy == nil {
+		return nil, fmt.Errorf("policy %s found in cache but no longer valid after lock", name)
+	}
+
+	ciphertext, err := lp.policy.Encrypt(context, value)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

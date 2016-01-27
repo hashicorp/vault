@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfig() *framework.Path {
+func (b *backend) pathConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/config",
 		Fields: map[string]*framework.FieldSchema{
@@ -29,7 +29,7 @@ to be decrypted.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: pathConfigWrite,
+			logical.UpdateOperation: b.pathConfigWrite,
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,
@@ -37,19 +37,27 @@ to be decrypted.`,
 	}
 }
 
-func pathConfigWrite(
+func (b *backend) pathConfigWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists
-	policy, err := getPolicy(req, name)
+	lp, err := b.policies.getPolicy(req, name)
 	if err != nil {
 		return nil, err
 	}
-	if policy == nil {
+	if lp == nil {
 		return logical.ErrorResponse(
 				fmt.Sprintf("no existing role named %s could be found", name)),
 			logical.ErrInvalidRequest
+	}
+
+	lp.lock.Lock()
+	defer lp.lock.Unlock()
+
+	// Verify if wasn't deleted before we grabbed the lock
+	if lp.policy == nil {
+		return nil, fmt.Errorf("policy %s found in cache but no longer valid after lock", name)
 	}
 
 	resp := &logical.Response{}
@@ -70,12 +78,12 @@ func pathConfigWrite(
 		}
 
 		if minDecryptionVersion > 0 &&
-			minDecryptionVersion != policy.MinDecryptionVersion {
-			if minDecryptionVersion > policy.LatestVersion {
+			minDecryptionVersion != lp.policy.MinDecryptionVersion {
+			if minDecryptionVersion > lp.policy.LatestVersion {
 				return logical.ErrorResponse(
-					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, policy.LatestVersion)), nil
+					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, lp.policy.LatestVersion)), nil
 			}
-			policy.MinDecryptionVersion = minDecryptionVersion
+			lp.policy.MinDecryptionVersion = minDecryptionVersion
 			persistNeeded = true
 		}
 	}
@@ -83,8 +91,8 @@ func pathConfigWrite(
 	allowDeletionInt, ok := d.GetOk("deletion_allowed")
 	if ok {
 		allowDeletion := allowDeletionInt.(bool)
-		if allowDeletion != policy.DeletionAllowed {
-			policy.DeletionAllowed = allowDeletion
+		if allowDeletion != lp.policy.DeletionAllowed {
+			lp.policy.DeletionAllowed = allowDeletion
 			persistNeeded = true
 		}
 	}
@@ -92,8 +100,8 @@ func pathConfigWrite(
 	// Add this as a guard here before persisting since we now require the min
 	// decryption version to start at 1; even if it's not explicitly set here,
 	// force the upgrade
-	if policy.MinDecryptionVersion == 0 {
-		policy.MinDecryptionVersion = 1
+	if lp.policy.MinDecryptionVersion == 0 {
+		lp.policy.MinDecryptionVersion = 1
 		persistNeeded = true
 	}
 
@@ -101,7 +109,7 @@ func pathConfigWrite(
 		return nil, nil
 	}
 
-	return resp, policy.Persist(req.Storage)
+	return resp, lp.policy.Persist(req.Storage)
 }
 
 const pathConfigHelpSyn = `Configure a named encryption key`
