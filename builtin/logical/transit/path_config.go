@@ -52,13 +52,32 @@ func pathConfigWrite(
 			logical.ErrInvalidRequest
 	}
 
+	resp := &logical.Response{}
+
 	persistNeeded := false
 
-	minDecryptionVersion := d.Get("min_decryption_version").(int)
-	if minDecryptionVersion != 0 &&
-		minDecryptionVersion != policy.MinDecryptionVersion {
-		policy.MinDecryptionVersion = minDecryptionVersion
-		persistNeeded = true
+	minDecryptionVersionRaw, ok := d.GetOk("min_decryption_version")
+	if ok {
+		minDecryptionVersion := minDecryptionVersionRaw.(int)
+
+		if minDecryptionVersion < 0 {
+			return logical.ErrorResponse("min decryption version cannot be negative"), nil
+		}
+
+		if minDecryptionVersion == 0 {
+			minDecryptionVersion = 1
+			resp.AddWarning("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
+		}
+
+		if minDecryptionVersion > 0 &&
+			minDecryptionVersion != policy.MinDecryptionVersion {
+			if minDecryptionVersion > policy.LatestVersion {
+				return logical.ErrorResponse(
+					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, policy.LatestVersion)), nil
+			}
+			policy.MinDecryptionVersion = minDecryptionVersion
+			persistNeeded = true
+		}
 	}
 
 	allowDeletionInt, ok := d.GetOk("deletion_allowed")
@@ -70,11 +89,19 @@ func pathConfigWrite(
 		}
 	}
 
+	// Add this as a guard here before persisting since we now require the min
+	// decryption version to start at 1; even if it's not explicitly set here,
+	// force the upgrade
+	if policy.MinDecryptionVersion == 0 {
+		policy.MinDecryptionVersion = 1
+		persistNeeded = true
+	}
+
 	if !persistNeeded {
 		return nil, nil
 	}
 
-	return nil, policy.Persist(req.Storage, name)
+	return resp, policy.Persist(req.Storage)
 }
 
 const pathConfigHelpSyn = `Configure a named encryption key`

@@ -24,7 +24,7 @@ func pathKeys() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:  pathPolicyWrite,
+			logical.UpdateOperation: pathPolicyWrite,
 			logical.DeleteOperation: pathPolicyDelete,
 			logical.ReadOperation:   pathPolicyRead,
 		},
@@ -73,6 +73,7 @@ func pathPolicyRead(
 			"derived":                p.Derived,
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
+			"latest_version":         p.LatestVersion,
 		},
 	}
 	if p.Derived {
@@ -108,6 +109,12 @@ func pathPolicyDelete(
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}
+
+	err = req.Storage.Delete("archive/" + name)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error deleting archive %s: %s", name, err)), err
+	}
+
 	return nil, nil
 }
 
