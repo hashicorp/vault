@@ -257,7 +257,7 @@ FEATURES:
 
  * **Settable Maximum Open Connections**: The `mysql` and `postgresql` backends
    now allow setting the number of maximum open connections to the database,
-which was previously capped to 2. [GH-661]
+   which was previously capped to 2. [GH-661]
  * **Renewable Tokens for GitHub**: The `github` backend now supports
    specifying a TTL, enabling renewable tokens. [GH-664]
 
@@ -280,54 +280,54 @@ ahead of time on the "vault-tool" mailing list.
 
  * **Cookie Authentication Removed**: As of 0.3 the only way to authenticate is
    via the X-Vault-Token header. Cookie authentication was hard to properly
-test, could result in browsers/tools/applications saving tokens in plaintext on
-disk, and other issues. [GH-564]
+   test, could result in browsers/tools/applications saving tokens in plaintext
+   on disk, and other issues. [GH-564]
  * **Terminology/Field Names**: Vault is transitioning from overloading the
    term "lease" to mean both "a set of metadata" and "the amount of time the
-metadata is valid". The latter is now being referred to as TTL (or
-"lease_duration" for backwards-compatibility); some parts of Vault have already
-switched to using "ttl" and others will follow in upcoming releases. In
-particular, the "token", "generic", and "pki" backends accept both "ttl" and
-"lease" but in 0.4 only "ttl" will be accepted. [GH-528]
+   metadata is valid". The latter is now being referred to as TTL (or
+   "lease_duration" for backwards-compatibility); some parts of Vault have
+   already switched to using "ttl" and others will follow in upcoming releases.
+   In particular, the "token", "generic", and "pki" backends accept both "ttl"
+   and "lease" but in 0.4 only "ttl" will be accepted. [GH-528]
  * **Downgrade Not Supported**: Due to enhancements in the storage subsytem,
    values written by Vault 0.3+ will not be able to be read by prior versions
-of Vault. There are no expected upgrade issues, however, as with all critical
-infrastructure it is recommended to back up Vault's physical storage before
-upgrading.
+   of Vault. There are no expected upgrade issues, however, as with all
+   critical infrastructure it is recommended to back up Vault's physical
+   storage before upgrading.
 
 FEATURES:
 
  * **SSH Backend**: Vault can now be used to delegate SSH access to machines,
    via a (recommended) One-Time Password approach or by issuing dynamic keys.
-[GH-385]
+   [GH-385]
  * **Cubbyhole Backend**: This backend works similarly to the "generic" backend
    but provides a per-token workspace. This enables some additional
-authentication workflows (especially for containers) and can be useful to
-applications to e.g. store local credentials while being restarted or upgraded,
-rather than persisting to disk. [GH-612]
+   authentication workflows (especially for containers) and can be useful to
+   applications to e.g. store local credentials while being restarted or
+   upgraded, rather than persisting to disk. [GH-612]
  * **Transit Backend Improvements**: The transit backend now allows key
    rotation and datakey generation. For rotation, data encrypted with previous
-versions of the keys can still be decrypted, down to a (configurable) minimum
-previous version; there is a rewrap function for manual upgrades of ciphertext
-to newer versions. Additionally, the backend now allows generating and
-returning high-entropy keys of a configurable bitsize suitable for AES and
-other functions; this is returned wrapped by a named key, or optionally both
-wrapped and plaintext for immediate use. [GH-626]
+   versions of the keys can still be decrypted, down to a (configurable)
+   minimum previous version; there is a rewrap function for manual upgrades of
+   ciphertext to newer versions. Additionally, the backend now allows
+   generating and returning high-entropy keys of a configurable bitsize
+   suitable for AES and other functions; this is returned wrapped by a named
+   key, or optionally both wrapped and plaintext for immediate use. [GH-626]
  * **Global and Per-Mount Default/Max TTL Support**: You can now set the
    default and maximum Time To Live for leases both globally and per-mount.
-Per-mount settings override global settings. Not all backends honor these
-settings yet, but the maximum is a hard limit enforced outside the backend. See
-the documentation for "/sys/mounts/" for details on configuring per-mount TTLs.
-[GH-469]
+   Per-mount settings override global settings. Not all backends honor these
+   settings yet, but the maximum is a hard limit enforced outside the backend.
+   See the documentation for "/sys/mounts/" for details on configuring
+   per-mount TTLs.  [GH-469]
  * **PGP Encryption for Unseal Keys**: When initializing or rotating Vault's
    master key, PGP/GPG public keys can now be provided. The output keys will be
-encrypted with the given keys, in order. [GH-570]
+   encrypted with the given keys, in order. [GH-570]
  * **Duo Multifactor Authentication Support**: Backends that support MFA can
    now use Duo as the mechanism. [GH-464]
  * **Performance Improvements**: Users of the "generic" backend will see a
    significant performance improvement as the backend no longer creates leases,
-although it does return TTLs (global/mount default, or set per-item) as before.
-[GH-631]
+   although it does return TTLs (global/mount default, or set per-item) as
+   before.  [GH-631]
  * **Codebase Audit**: Vault's codebase was audited by iSEC. (The terms of the
    audit contract do not allow us to make the results public.) [GH-220]
 
@@ -391,7 +391,7 @@ BUG FIXES:
    root-only options [GH-629]
  * secret/cassandra: Work around backwards-incompatible change made in
    Cassandra 2.2 preventing Vault from properly setting/revoking leases
-[GH-549]
+   [GH-549]
  * secret/mysql: Use varbinary instead of varchar to avoid InnoDB/UTF-8 issues
    [GH-522]
  * secret/postgres: Explicitly set timezone in connections [GH-597]
@@ -404,7 +404,7 @@ MISC:
 
  * Various documentation fixes and improvements [GH-412] [GH-474] [GH-476]
    [GH-482] [GH-483] [GH-486] [GH-508] [GH-568] [GH-574] [GH-586] [GH-590]
-[GH-591] [GH-592] [GH-595] [GH-613] [GH-637]
+   [GH-591] [GH-592] [GH-595] [GH-613] [GH-637]
  * Less "armon" in stack traces [GH-453]
  * Sourcegraph integration [GH-456]
 
@@ -414,10 +414,10 @@ FEATURES:
 
  * **Key Rotation Support**: The `rotate` command can be used to rotate the
    master encryption key used to write data to the storage (physical) backend.
-[GH-277]
+   [GH-277]
  * **Rekey Support**: Rekey can be used to rotate the master key and change the
    configuration of the unseal keys (number of shares, threshold required).
-[GH-277]
+   [GH-277]
  * **New secret backend: `pki`**: Enable Vault to be a certificate authority
    and generate signed TLS certificates. [GH-310]
  * **New secret backend: `cassandra`**: Generate dynamic credentials for
@@ -442,8 +442,8 @@ IMPROVEMENTS:
  * core: graceful shutdown for faster HA failover
  * core: **change policy format** to use explicit globbing [GH-400] Any
    existing policy in Vault is automatically upgraded to avoid issues.  All
-policy files must be updated for future writes. Adding the explicit glob
-character `*` to the path specification is all that is required.
+   policy files must be updated for future writes. Adding the explicit glob
+   character `*` to the path specification is all that is required.
  * core: policy merging to give deny highest precedence [GH-400]
  * credential/app-id: Protect against timing attack on app-id
  * credential/cert: Record the common name in the metadata [GH-342]
