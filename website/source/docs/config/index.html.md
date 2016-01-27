@@ -213,6 +213,18 @@ For etcd, the following options are supported:
       Can be comma separated list (protocol://host:port) of many etcd instances.
       Defaults to "http://localhost:2379" if not specified.
 
+  * `sync` (optional) - Should we synchronize the list of available etcd
+      servers on startup?  This will parse as a boolean value, and can be set
+      to "0", "no", "false", "1", "yes", or "true".  Defaults to true.  Set
+      to false if your etcd cluster is behind a proxy server and syncing
+      causes Vault to fail.
+
+  * `username` (optional) - Username to use when authenticating with the etcd
+      server.  May also be specified via the ETCD_USERNAME environment variable.
+
+  * `password` (optional) - Password to use when authenticating with the etcd
+      server.  May also be specified via the ETCD_PASSWORD environment variable.
+
   * `tls_ca_file` (optional) - The path to the CA certificate used for etcd communication.
       Defaults to system bundle if not specified.
 
