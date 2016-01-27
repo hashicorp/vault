@@ -3,10 +3,10 @@ package physical
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -110,7 +110,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 			CertFile: cert,
 			KeyFile:  key,
 		}
-		cTransport, transportErr = transport.NewTransport(tls, 30 * time.Second)
+		cTransport, transportErr = transport.NewTransport(tls, 30*time.Second)
 
 		if transportErr != nil {
 			return nil, transportErr
@@ -149,29 +149,29 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 	// for our client library: don't sync (required for some proxies), sync
 	// once, or sync periodically with AutoSync.  We currently support the
 	// first two.
-	sync := true
-	if v, ok := conf["sync"]; ok {
-		parsed, err := strconv.ParseBool(v)
-		if err != nil {
-			return nil, EtcdSyncConfigError
-		}
-		sync = parsed
+	sync, ok := conf["sync"]
+	if !ok {
+		sync = "yes"
 	}
-	if sync {
+	switch sync {
+	case "yes", "true", "y", "1":
 		ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
 		syncErr := c.Sync(ctx)
 		cancel()
 		if syncErr != nil {
 			return nil, EtcdSyncClusterError
 		}
+	case "no", "false", "n", "0":
+	default:
+		return nil, fmt.Errorf("value of 'sync' could not be understood")
 	}
 
 	kAPI := client.NewKeysAPI(c)
 
 	// Setup the backend.
 	return &EtcdBackend{
-		path:   path,
-		kAPI: kAPI,
+		path:       path,
+		kAPI:       kAPI,
 		permitPool: NewPermitPool(DefaultParallelOperations),
 	}, nil
 }
@@ -197,7 +197,7 @@ func (c *EtcdBackend) Get(key string) (*Entry, error) {
 
 	getOpts := &client.GetOptions{
 		Recursive: false,
-		Sort: false,
+		Sort:      false,
 	}
 	response, err := c.kAPI.Get(context.Background(), c.nodePath(key), getOpts)
 	if err != nil {
@@ -253,7 +253,7 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 	// missing, we just return an empty list of contents.
 	getOpts := &client.GetOptions{
 		Recursive: false,
-		Sort: true,
+		Sort:      true,
 	}
 	response, err := c.kAPI.Get(context.Background(), path, getOpts)
 	if err != nil {
@@ -332,7 +332,7 @@ func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
 // renewSemaphoreKey renews an existing semaphore key.
 func (c *EtcdLock) renewSemaphoreKey() (string, uint64, error) {
 	setOpts := &client.SetOptions{
-		TTL: EtcdLockTTL,
+		TTL:       EtcdLockTTL,
 		PrevExist: client.PrevExist,
 	}
 	response, err := c.kAPI.Set(context.Background(), c.semaphoreKey, c.value, setOpts)
@@ -348,7 +348,7 @@ func (c *EtcdLock) getSemaphoreKey() (string, string, uint64, error) {
 	// Get the list of waiters in order to see if we are next.
 	getOpts := &client.GetOptions{
 		Recursive: false,
-		Sort: true,
+		Sort:      true,
 	}
 	response, err := c.kAPI.Get(context.Background(), c.semaphoreDirKey, getOpts)
 	if err != nil {
