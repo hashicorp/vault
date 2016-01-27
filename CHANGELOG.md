@@ -1,10 +1,14 @@
 ## 0.5.0 (Unreleased)
 
 DEPRECATIONS/BREAKING CHANGES:
- * S3 physical backend: Environment variables are now preferred over
+ * `s3` physical backend: Environment variables are now preferred over
    configuration values. This makes it behave similar to the rest of Vault,
    which, in increasing order of preference, uses values from the configuration
    file, environment variables, and CLI flags. [GH-871]
+ * `etcd` physical backend: `sync` functionality is now supported and turned on
+   by default. This can be disabled. [GH-921]
+ * `transit`: Attempting to encrypt a value with a key that does not yet exist
+   now results in an error, not creation of the key [GH-979]
  * `token-renew` CLI command: If the token given for renewal is the same as the
    client token, the `renew-self` endpoint will be used in the API. Given that
    the `default` policy (by default) allows all clients access to the
@@ -83,6 +87,7 @@ IMPROVEMENTS:
    provide a very large speed increase when rotating keys very often. [GH-977]
  * physical/cache: Use 2Q cache instead of straight LRU [GH-908]
  * physical/etcd: Support basic auth [GH-859]
+ * physical/etcd: Support sync functionality and enable by default [GH-921]
 
 BUG FIXES:
  * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
