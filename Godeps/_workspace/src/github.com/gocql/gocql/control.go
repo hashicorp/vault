@@ -131,6 +131,9 @@ func (c *controlConn) registerEvents(conn *Conn) error {
 	if !c.session.cfg.Events.DisableNodeStatusEvents {
 		events = append(events, "STATUS_CHANGE")
 	}
+	if !c.session.cfg.Events.DisableSchemaEvents {
+		events = append(events, "SCHEMA_CHANGE")
+	}
 
 	if len(events) == 0 {
 		return nil

@@ -14,6 +14,14 @@ import (
 	"golang.org/x/net/context"
 )
 
+func nop() {}
+
+var (
+	testHookContextDoneBeforeHeaders = nop
+	testHookDoReturned               = nop
+	testHookDidBodyClose             = nop
+)
+
 // Do sends an HTTP request with the provided http.Client and returns an HTTP response.
 // If the client is nil, http.DefaultClient is used.
 // If the context is canceled or times out, ctx.Err() will be returned.
@@ -33,6 +41,7 @@ func Do(ctx context.Context, client *http.Client, req *http.Request) (*http.Resp
 
 	go func() {
 		resp, err := client.Do(req)
+		testHookDoReturned()
 		result <- responseAndError{resp, err}
 	}()
 
@@ -40,7 +49,15 @@ func Do(ctx context.Context, client *http.Client, req *http.Request) (*http.Resp
 
 	select {
 	case <-ctx.Done():
+		testHookContextDoneBeforeHeaders()
 		cancel()
+		// Clean up after the goroutine calling client.Do:
+		go func() {
+			if r := <-result; r.resp != nil {
+				testHookDidBodyClose()
+				r.resp.Body.Close()
+			}
+		}()
 		return nil, ctx.Err()
 	case r := <-result:
 		var err error

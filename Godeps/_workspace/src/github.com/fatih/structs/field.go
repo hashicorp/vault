@@ -60,7 +60,7 @@ func (f *Field) Kind() reflect.Kind {
 	return f.value.Kind()
 }
 
-// Set sets the field to given value v. It retuns an error if the field is not
+// Set sets the field to given value v. It returns an error if the field is not
 // settable (not addressable or not exported) or if the given value's type
 // doesn't match the fields type.
 func (f *Field) Set(val interface{}) error {

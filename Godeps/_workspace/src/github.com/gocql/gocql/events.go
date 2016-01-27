@@ -80,6 +80,37 @@ func (e *eventDeouncer) debounce(frame frame) {
 	e.mu.Unlock()
 }
 
+func (s *Session) handleEvent(framer *framer) {
+	// TODO(zariel): need to debounce events frames, and possible also events
+	defer framerPool.Put(framer)
+
+	frame, err := framer.parseFrame()
+	if err != nil {
+		// TODO: logger
+		log.Printf("gocql: unable to parse event frame: %v\n", err)
+		return
+	}
+
+	if debug {
+		log.Printf("gocql: handling frame: %v\n", frame)
+	}
+
+	// TODO: handle medatadata events
+	switch f := frame.(type) {
+	case *schemaChangeKeyspace, *schemaChangeFunction, *schemaChangeTable:
+		s.schemaEvents.debounce(frame)
+	case *topologyChangeEventFrame, *statusChangeEventFrame:
+		s.nodeEvents.debounce(frame)
+	default:
+		log.Printf("gocql: invalid event frame (%T): %v\n", f, f)
+	}
+}
+
+func (s *Session) handleSchemaEvent(frames []frame) {
+	// for now we dont care about them, just reset the prepared statements
+	s.stmtsLRU.clear()
+}
+
 func (s *Session) handleNodeEvent(frames []frame) {
 	type nodeEvent struct {
 		change string
@@ -129,34 +160,6 @@ func (s *Session) handleNodeEvent(frames []frame) {
 			s.handleNodeDown(f.host, f.port)
 		}
 	}
-}
-
-func (s *Session) handleEvent(framer *framer) {
-	// TODO(zariel): need to debounce events frames, and possible also events
-	defer framerPool.Put(framer)
-
-	frame, err := framer.parseFrame()
-	if err != nil {
-		// TODO: logger
-		log.Printf("gocql: unable to parse event frame: %v\n", err)
-		return
-	}
-
-	if debug {
-		log.Printf("gocql: handling frame: %v\n", frame)
-	}
-
-	// TODO: handle medatadata events
-	switch f := frame.(type) {
-	case *schemaChangeKeyspace:
-	case *schemaChangeFunction:
-	case *schemaChangeTable:
-	case *topologyChangeEventFrame, *statusChangeEventFrame:
-		s.nodeEvents.debounce(frame)
-	default:
-		log.Printf("gocql: invalid event frame (%T): %v\n", f, f)
-	}
-
 }
 
 func (s *Session) handleNewNode(host net.IP, port int, waitForBinary bool) {

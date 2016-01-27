@@ -14,9 +14,6 @@ import (
 
 const defaultMaxPreparedStmts = 1000
 
-//Package global reference to Prepared Statements LRU
-var stmtsLRU preparedLRU
-
 //preparedLRU is the prepared statement cache
 type preparedLRU struct {
 	sync.Mutex
@@ -25,18 +22,22 @@ type preparedLRU struct {
 
 //Max adjusts the maximum size of the cache and cleans up the oldest records if
 //the new max is lower than the previous value. Not concurrency safe.
-func (p *preparedLRU) Max(max int) {
+func (p *preparedLRU) max(max int) {
+	p.Lock()
+	defer p.Unlock()
+
 	for p.lru.Len() > max {
 		p.lru.RemoveOldest()
 	}
 	p.lru.MaxEntries = max
 }
 
-func initStmtsLRU(max int) {
-	if stmtsLRU.lru != nil {
-		stmtsLRU.Max(max)
-	} else {
-		stmtsLRU.lru = lru.New(max)
+func (p *preparedLRU) clear() {
+	p.Lock()
+	defer p.Unlock()
+
+	for p.lru.Len() > 0 {
+		p.lru.RemoveOldest()
 	}
 }
 
@@ -148,6 +149,8 @@ type ClusterConfig struct {
 		DisableNodeStatusEvents bool
 		// disable registering for topology events (node added/removed/moved)
 		DisableTopologyEvents bool
+		// disable registering for schema events (keyspace/table/function removed/created/updated)
+		DisableSchemaEvents bool
 	}
 
 	// internal config for testing
