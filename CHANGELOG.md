@@ -68,6 +68,8 @@ IMPROVEMENTS:
    `-pgp-keys` [GH-940]
  * conf: Use normal bool values rather than empty/non-empty for the
    `tls_disable` option [GH-802]
+ * credential/ldap: Add support for binding, both anonymously (to discover a
+   user DN) and via a username and password [GH-975]
  * credential/token: Add `last_renewal_time` to token lookup calls [GH-896]
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
  * logical/aws: You can now get STS tokens instead of IAM users [GH-927]
