@@ -106,6 +106,8 @@ BUG FIXES:
    regression introduced against newer versions of the AWS Go SDK [GH-836]
  * secret/pki: Fix a condition where unmounting could fail if the CA
    certificate was not properly loaded [GH-946]
+ * secret/ssh: Fix a problem where SSH connections were not always closed
+   properly [GH-942]
 
 MISC:
 
