@@ -74,7 +74,6 @@ func pathPolicyRead(
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
 			"latest_version":         p.LatestVersion,
-			"archive_version":        p.ArchiveVersion,
 		},
 	}
 	if p.Derived {

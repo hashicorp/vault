@@ -11,6 +11,33 @@ var (
 	keysArchive = []KeyEntry{KeyEntry{}}
 )
 
+func Test_KeyUpgrade(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	policy, err := generatePolicy(storage, "test", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy == nil {
+		t.Fatal("nil policy")
+	}
+
+	testBytes := make([]byte, len(policy.Keys[1].Key))
+	copy(testBytes, policy.Keys[1].Key)
+
+	policy.Key = policy.Keys[1].Key
+	policy.Keys = nil
+	policy.migrateKeyToKeysMap()
+	if policy.Key != nil {
+		t.Fatal("policy.Key is not nil")
+	}
+	if len(policy.Keys) != 1 {
+		t.Fatal("policy.Keys is the wrong size")
+	}
+	if !reflect.DeepEqual(testBytes, policy.Keys[1].Key) {
+		t.Fatal("key mismatch")
+	}
+}
+
 func Test_Archiving(t *testing.T) {
 	// First, we generate a policy and rotate it a number of times. Each time
 	// we'll ensure that we have the expected number of keys in the archive and
@@ -18,9 +45,8 @@ func Test_Archiving(t *testing.T) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	testName := "test"
 
-	policy, err := generatePolicy(storage, testName, false)
+	policy, err := generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
