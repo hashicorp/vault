@@ -21,6 +21,14 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "ldap URL to connect to (default: ldap://127.0.0.1)",
 			},
+			"binddn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP binding resource used to search (optional, mostly used for Active Directory)",
+			},
+			"binddnpassword": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP binding resource password (optional)",
+			},
 			"userdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
@@ -90,14 +98,16 @@ func (b *backend) pathConfigRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"url":          cfg.Url,
-			"userdn":       cfg.UserDN,
-			"groupdn":      cfg.GroupDN,
-			"upndomain":    cfg.UPNDomain,
-			"userattr":     cfg.UserAttr,
-			"certificate":  cfg.Certificate,
-			"insecure_tls": cfg.InsecureTLS,
-			"starttls":     cfg.StartTLS,
+			"url":            cfg.Url,
+			"binddn":         cfg.BindDN,
+			"binddnpassword": cfg.BindDNPassword,
+			"userdn":         cfg.UserDN,
+			"groupdn":        cfg.GroupDN,
+			"upndomain":      cfg.UPNDomain,
+			"userattr":       cfg.UserAttr,
+			"certificate":    cfg.Certificate,
+			"insecure_tls":   cfg.InsecureTLS,
+			"starttls":       cfg.StartTLS,
 		},
 	}, nil
 }
@@ -110,9 +120,17 @@ func (b *backend) pathConfigWrite(
 	if url != "" {
 		cfg.Url = strings.ToLower(url)
 	}
+	binddn := d.Get("binddn").(string)
+	if binddn != "" {
+		cfg.BindDN = binddn
+	}
+	binddnpassword := d.Get("binddnpassword").(string)
+	if binddnpassword != "" {
+		cfg.BindDNPassword = binddnpassword
+	}
 	userattr := d.Get("userattr").(string)
 	if userattr != "" {
-		cfg.UserAttr = strings.ToLower(userattr)
+		cfg.UserAttr = userattr
 	}
 	userdn := d.Get("userdn").(string)
 	if userdn != "" {
@@ -160,14 +178,16 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url         string
-	UserDN      string
-	GroupDN     string
-	UPNDomain   string
-	UserAttr    string
-	Certificate string
-	InsecureTLS bool
-	StartTLS    bool
+	Url            string
+	BindDN         string
+	BindDNPassword string
+	UserDN         string
+	GroupDN        string
+	UPNDomain      string
+	UserAttr       string
+	Certificate    string
+	InsecureTLS    bool
+	StartTLS       bool
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
