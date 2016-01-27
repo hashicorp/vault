@@ -99,7 +99,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 	binddn := ""
-	if cfg.BindDN != "" && cfg.BindPassword != "" {
+	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		if err = c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind (service) failed: %v", err)), nil
 		}

@@ -27,11 +27,11 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"binddn": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "LDAP DN for searching for the user DN",
+				Description: "LDAP DN for searching for the user DN (optional)",
 			},
 			"bindpass": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "LDAP password for searching for the user DN",
+				Description: "LDAP password for searching for the user DN (optional)",
 			},
 			"groupdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -48,6 +48,10 @@ func pathConfig(b *backend) *framework.Path {
 			"certificate": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
+			},
+			"discoverdn": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Use anonymous bind to discover the bind DN of a user (optional)",
 			},
 			"insecure_tls": &framework.FieldSchema{
 				Type:        framework.TypeBool,
@@ -108,6 +112,7 @@ func (b *backend) pathConfigRead(
 			"starttls":     cfg.StartTLS,
 			"binddn":       cfg.BindDN,
 			"bindpass":     cfg.BindPassword,
+			"discoverdn":   cfg.DiscoverDN,
 		},
 	}, nil
 }
@@ -156,6 +161,10 @@ func (b *backend) pathConfigWrite(
 	if bindPass != "" {
 		cfg.BindPassword = bindPass
 	}
+	discoverDN := d.Get("discoverdn").(bool)
+	if discoverDN {
+		cfg.DiscoverDN = discoverDN
+	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
 	// We can also check the URL at this stage, as anything else would probably
@@ -188,6 +197,7 @@ type ConfigEntry struct {
 	StartTLS     bool
 	BindDN       string
 	BindPassword string
+	DiscoverDN   bool
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {

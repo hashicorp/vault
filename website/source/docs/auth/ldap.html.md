@@ -122,6 +122,8 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
     starttls=true
 ...
 ```
+To discover the bind dn for a user with an anonymous bind, use the `discoverdn=true`
+parameter and leave the `binddn` / `bindpass` empty.
 
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
