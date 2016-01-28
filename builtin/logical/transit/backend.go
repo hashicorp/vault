@@ -38,7 +38,7 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{},
 	}
 
-	b.policies = &policyCache{
+	b.policies = policyCache{
 		cache: map[string]*lockingPolicy{},
 	}
 
@@ -47,5 +47,5 @@ func Backend() *backend {
 
 type backend struct {
 	*framework.Backend
-	policies *policyCache
+	policies policyCache
 }
