@@ -28,33 +28,6 @@ type policyCache struct {
 	lock  sync.RWMutex
 }
 
-// loadStoredPolicies loads stored policies into the cache. This should only be
-// run at backend initialization time.
-func (p *policyCache) loadStoredPolicies(storage logical.Storage) error {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	policyNames, err := storage.List("policy/")
-	if err != nil {
-		return err
-	}
-
-	// getPolicy will populate the cache
-	for _, name := range policyNames {
-		lp, err := p.getPolicy(&logical.Request{
-			Storage: storage,
-		}, name)
-		if err != nil {
-			return err
-		}
-		if lp == nil {
-			return fmt.Errorf("policy %s key was found but value was nil")
-		}
-	}
-
-	return nil
-}
-
 // getPolicy loads a policy into the cache or returns one already in the cache
 func (p *policyCache) getPolicy(req *logical.Request, name string) (*lockingPolicy, error) {
 	// We don't defer this since we may need to give it up and get a write lock

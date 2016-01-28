@@ -12,11 +12,6 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 		return nil, err
 	}
 
-	err = b.policies.loadStoredPolicies(conf.StorageView)
-	if err != nil {
-		return nil, err
-	}
-
 	return be, nil
 }
 
