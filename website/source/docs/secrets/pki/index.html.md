@@ -602,17 +602,17 @@ subpath for interactive help output.
       <li>
         <span class="param">issuing_certificates</span>
         <span class="param-flags">optional</span>
-        The URL values for the Issuing Certificate field.
+        The URL values for the Issuing Certificate field. This needs to be a delimited string value. (not a JSON array)
       </li>
       <li>
         <span class="param">crl_distribution_points</span>
         <span class="param-flags">optional</span>
-        The URL values for the CRL Distribution Points field.
+        The URL values for the CRL Distribution Points field. This needs to be a delimited string value. (not a JSON array)
       </li>
       <li>
         <span class="param">ocsp_servers</span>
         <span class="param-flags">optional</span>
-        The URL values for the OCSP Servers field.
+        The URL values for the OCSP Servers field. This needs to be a delimited string value. (not a JSON array)
       </li>
     </ul>
   </dd>
