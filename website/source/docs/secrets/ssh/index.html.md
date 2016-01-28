@@ -622,6 +622,22 @@ username@ip:~$
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-    A `204` response code.
+    <dd>A `200` response code for a valid OTP.
+
+```json
+{
+  "lease_id":"",
+  "renewable":false,
+  "lease_duration":0,
+  "data":{
+         "ip":"127.0.0.1",
+         "username":"rajanadar"
+         },
+  "warnings":null,
+  "auth":null
+}
+```
+
   </dd>
+
+  <dd>A `204` response code for an invalid OTP role, with an empty response.</dd>
