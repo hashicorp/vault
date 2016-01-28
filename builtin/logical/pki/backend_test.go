@@ -1209,6 +1209,37 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleTestStep.ErrorOk = false
 	}
 
+	// Listing test
+	ret = append(ret, logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "roles/",
+		Check: func(resp *logical.Response) error {
+			if resp.Data == nil {
+				return fmt.Errorf("nil data")
+			}
+
+			keysRaw, ok := resp.Data["keys"]
+			if !ok {
+				return fmt.Errorf("no keys found")
+			}
+
+			keys, ok := keysRaw.([]string)
+			if !ok {
+				return fmt.Errorf("could not convert keys to a string list")
+			}
+
+			if len(keys) != 1 {
+				return fmt.Errorf("unexpected keys length of %d", len(keys))
+			}
+
+			if keys[0] != "test" {
+				return fmt.Errorf("unexpected key value of %d", keys[0])
+			}
+
+			return nil
+		},
+	})
+
 	return ret
 }
 
