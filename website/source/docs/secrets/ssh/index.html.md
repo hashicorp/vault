@@ -633,8 +633,20 @@ username@ip:~$
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-    A `204` response code.
+  <dd>An array of roles as a secret structure.
+
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+            "roles": ["fe6f61b7-7e4a-46a6-b2c8-0d530b8513df", "6d6411fd-f622-ea0a-7e2c-989a745cbbb2"]
+          },
+  "warnings": null,
+  "auth": null
+}
+```
   </dd>
 
 ### /ssh/verify
