@@ -83,6 +83,7 @@ IMPROVEMENTS:
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
+ * logical/pki: Add list support for roles path [GH-985]
  * logical/postgres: Add `max_idle_connections` paramter [GH-950]
  * logical/postgres: Add list support for roles path
  * logical/ssh: Add list support for roles path [GH-983]
