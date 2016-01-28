@@ -507,7 +507,7 @@ func (c *Core) setupMounts() error {
 			c.logger.Printf("[ERR] core: failed to mount entry %s: %v", entry.Path, err)
 			return errLoadMountsFailed
 		} else {
-			c.logger.Printf("[INFO] core: mounted backend of type %s at %s", entry.Type, view.prefix)
+			c.logger.Printf("[INFO] core: mounted backend of type %s at %s", entry.Type, entry.Path)
 		}
 
 		// Ensure the path is tainted if set in the mount table
