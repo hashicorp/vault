@@ -10,6 +10,19 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathListRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "roles/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+
+		HelpSynopsis:    pathRoleHelpSyn,
+		HelpDescription: pathRoleHelpDesc,
+	}
+}
+
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
@@ -146,7 +159,7 @@ Names. Defaults to true.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation:  b.pathRoleCreate,
+			logical.UpdateOperation: b.pathRoleCreate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -259,6 +272,16 @@ func (b *backend) pathRoleRead(
 	}
 
 	return resp, nil
+}
+
+func (b *backend) pathRoleList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("role/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
 }
 
 func (b *backend) pathRoleCreate(

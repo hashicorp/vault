@@ -31,6 +31,7 @@ func Backend() *framework.Backend {
 		},
 
 		Paths: []*framework.Path{
+			pathListRoles(&b),
 			pathRoles(&b),
 			pathGenerateRoot(&b),
 			pathGenerateIntermediate(&b),
