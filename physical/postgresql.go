@@ -30,7 +30,7 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 
 	unquoted_table, ok := conf["table"]
 	if !ok {
-		unquoted_table = "vault"
+		unquoted_table = "vault_kv_store"
 	}
 	quoted_table := pq.QuoteIdentifier(unquoted_table)
 
@@ -51,16 +51,16 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	// upsert.
 	var put_statement string
 	if upsert_required {
-		put_statement = "SELECT vault_upsert($1, $2)"
+		put_statement = "SELECT vault_kv_put($1, $2)"
 	} else {
 		put_statement = "INSERT INTO " + quoted_table + " VALUES($1, $2)" +
-			" ON CONFLICT (vault_key) DO " +
-			" UPDATE SET vault_value = $2"
+			" ON CONFLICT (key) DO " +
+			" UPDATE SET value = $2"
 	}
 
 	// Setup the backend.
 	m := &PostgreSQLBackend{
-		table:      unquoted_table,
+		table:      quoted_table,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 	}
@@ -68,9 +68,9 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	// Prepare all the statements required
 	statements := map[string]string{
 		"put":    put_statement,
-		"get":    "SELECT vault_value FROM " + quoted_table + " WHERE vault_key = $1",
-		"delete": "DELETE FROM " + quoted_table + " WHERE vault_key = $1",
-		"list":   "SELECT vault_key FROM " + quoted_table + " WHERE vault_key LIKE $1",
+		"get":    "SELECT value FROM " + quoted_table + " WHERE key = $1",
+		"delete": "DELETE FROM " + quoted_table + " WHERE key = $1",
+		"list":   "SELECT key FROM " + quoted_table + " WHERE key LIKE $1",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {

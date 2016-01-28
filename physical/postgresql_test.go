@@ -15,7 +15,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 
 	table := os.Getenv("PGTABLE")
 	if table == "" {
-		table = "vault"
+		table = "vault_kv_store"
 	}
 
 	// Run vault tests
