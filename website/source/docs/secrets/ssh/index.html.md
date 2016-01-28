@@ -640,4 +640,4 @@ username@ip:~$
 
   </dd>
 
-  <dd>A `204` response code for an invalid OTP role, with an empty response.</dd>
+  <dd>A `204` response code with an empty response body, for an invalid OTP.</dd>
