@@ -79,10 +79,12 @@ IMPROVEMENTS:
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
  * logical/aws: You can now get STS tokens instead of IAM users [GH-927]
  * logical/cubbyhole: Add cubbyhole access to default policy [GH-936]
+ * logical/mysql: Add list support for roles path [GH-984]
  * logical/pki: Assign ExtKeyUsageAny to CA certs generated/signed with the
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
  * logical/postgres: Add `max_idle_connections` paramter [GH-950]
+ * logical/postgres: Add list support for roles path
  * logical/ssh: Add list support for roles path [GH-983]
  * logical/transit: Keys are archived and only keys between the latest version
    and `min_decryption_version` are loaded into the working set. This can
