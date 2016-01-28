@@ -32,7 +32,8 @@ FEATURES:
    details. [GH-914]
  * **List Support**: Listing is now supported via the API and the new `vault
    list` command. This currently supports listing keys in the `generic` and
-   `cubbyhole` backends. Different parts of the API and backends will need to
+   `cubbyhole` backends and a few other places (noted in the IMPROVEMENTS
+   section below). Different parts of the API and backends will need to
    implement list capabilities in ways that make sense to particular endpoints,
    so further support will appear over time. [GH-617]
  * **Root Token Generation via Unseal Keys**: You can now use the
@@ -82,6 +83,7 @@ IMPROVEMENTS:
    backend; this fixes the non-spec validation logic used in the Windows Crypto
    API and Go's verification functions [GH-846]
  * logical/postgres: Add `max_idle_connections` paramter [GH-950]
+ * logical/ssh: Add list support for roles path [GH-983]
  * logical/transit: Keys are archived and only keys between the latest version
    and `min_decryption_version` are loaded into the working set. This can
    provide a very large speed increase when rotating keys very often. [GH-977]
