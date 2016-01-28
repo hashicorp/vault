@@ -12,7 +12,7 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
+	b, _ := Factory(logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
