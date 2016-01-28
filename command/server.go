@@ -412,7 +412,7 @@ func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
 	return url.String(), nil
 }
 
-// setupTelementry is used ot setup the telemetry sub-systems
+// setupTelementry is used to setup the telemetry sub-systems
 func (c *ServerCommand) setupTelementry(config *server.Config) error {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
