@@ -266,6 +266,43 @@ subpath for interactive help output.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of available roles. Only the role names are returned, not
+    any values.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/roles/?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+  ```javascript
+  {
+    "auth": null,
+    "data": {
+      "keys": ["dev", "prod"]
+    },
+    "lease_duration": 2592000,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
 
 #### DELETE
 
