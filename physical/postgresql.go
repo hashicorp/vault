@@ -3,7 +3,6 @@ package physical
 import (
 	"database/sql"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -51,11 +50,11 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	// upsert.
 	var put_statement string
 	if upsert_required {
-		put_statement = "SELECT vault_kv_put($1, $2)"
+		put_statement = "SELECT vault_kv_put($1, $2, $3, $4)"
 	} else {
-		put_statement = "INSERT INTO " + quoted_table + " VALUES($1, $2)" +
-			" ON CONFLICT (key) DO " +
-			" UPDATE SET value = $2"
+		put_statement = "INSERT INTO " + quoted_table + " VALUES($1, $2, $3, $4)" +
+			" ON CONFLICT (path, key) DO " +
+			" UPDATE SET (parent_path, path, key, value) = ($1, $2, $3, $4)"
 	}
 
 	// Setup the backend.
@@ -68,9 +67,10 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 	// Prepare all the statements required
 	statements := map[string]string{
 		"put":    put_statement,
-		"get":    "SELECT value FROM " + quoted_table + " WHERE key = $1",
-		"delete": "DELETE FROM " + quoted_table + " WHERE key = $1",
-		"list":   "SELECT key FROM " + quoted_table + " WHERE key LIKE $1",
+		"get":    "SELECT value FROM " + quoted_table + " WHERE path = $1 AND key = $2",
+		"delete": "DELETE FROM " + quoted_table + " WHERE path = $1 AND key = $2",
+		"list":   "SELECT key FROM " + quoted_table + " WHERE path = $1" +
+				"UNION SELECT substr(path, length($1)+1) FROM " + quoted_table + "WHERE parent_path = $1",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {
@@ -90,11 +90,37 @@ func (m *PostgreSQLBackend) prepare(name, query string) error {
 	return nil
 }
 
+// splitKey is a helper to split a full path key into individual
+// parts: parentPath, path, key
+func (m *PostgreSQLBackend) splitKey(fullPath string) (string, string, string) {
+	var parentPath string
+	var path string
+
+	pieces := strings.Split(fullPath, "/")
+	depth  := len(pieces)
+	key    := pieces[depth-1]
+	
+	if depth == 1 {
+		parentPath = ""
+		path       = "/"
+	} else if depth == 2 {
+		parentPath = "/"
+		path       = "/" + pieces[0] + "/"
+	} else {
+		parentPath = "/" + strings.Join(pieces[:depth-2], "/") + "/"
+		path       = "/" + strings.Join(pieces[:depth-1], "/") + "/"
+	}
+
+	return parentPath, path, key
+}
+
 // Put is used to insert or update an entry.
 func (m *PostgreSQLBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"postgres", "put"}, time.Now())
 
-	_, err := m.statements["put"].Exec(entry.Key, entry.Value)
+	parentPath, path, key := m.splitKey(entry.Key)
+
+	_, err := m.statements["put"].Exec(parentPath, path, key, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -102,11 +128,13 @@ func (m *PostgreSQLBackend) Put(entry *Entry) error {
 }
 
 // Get is used to fetch and entry.
-func (m *PostgreSQLBackend) Get(key string) (*Entry, error) {
+func (m *PostgreSQLBackend) Get(fullPath string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"postgres", "get"}, time.Now())
 
+	_, path, key := m.splitKey(fullPath)
+
 	var result []byte
-	err := m.statements["get"].QueryRow(key).Scan(&result)
+	err := m.statements["get"].QueryRow(path, key).Scan(&result)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -122,10 +150,12 @@ func (m *PostgreSQLBackend) Get(key string) (*Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (m *PostgreSQLBackend) Delete(key string) error {
+func (m *PostgreSQLBackend) Delete(fullPath string) error {
 	defer metrics.MeasureSince([]string{"postgres", "delete"}, time.Now())
 
-	_, err := m.statements["delete"].Exec(key)
+	_, path, key := m.splitKey(fullPath)
+
+	_, err := m.statements["delete"].Exec(path, key)
 	if err != nil {
 		return err
 	}
@@ -137,9 +167,7 @@ func (m *PostgreSQLBackend) Delete(key string) error {
 func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"postgres", "list"}, time.Now())
 
-	// Add the % wildcard to the prefix to do the prefix search
-	likePrefix := prefix + "%"
-	rows, err := m.statements["list"].Query(likePrefix)
+	rows, err := m.statements["list"].Query("/" + prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -153,16 +181,8 @@ func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
 			return nil, fmt.Errorf("failed to scan rows: %v", err)
 		}
 
-		key = strings.TrimPrefix(key, prefix)
-		if i := strings.Index(key, "/"); i == -1 {
-			// Add objects only from the current 'folder'
-			keys = append(keys, key)
-		} else {
-			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, string(key[:i+1]))
-		}
+		keys = append(keys, key)
 	}
 
-	sort.Strings(keys)
 	return keys, nil
 }
