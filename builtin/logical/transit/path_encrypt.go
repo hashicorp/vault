@@ -68,12 +68,12 @@ func (b *backend) pathEncryptWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	lp.lock.RLock()
-	defer lp.lock.RUnlock()
+	lp.RLock()
+	defer lp.RUnlock()
 
 	// Verify if wasn't deleted before we grabbed the lock
 	if lp.policy == nil {
-		return nil, fmt.Errorf("policy %s found in cache but no longer valid after lock", name)
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
 	ciphertext, err := lp.policy.Encrypt(context, value)

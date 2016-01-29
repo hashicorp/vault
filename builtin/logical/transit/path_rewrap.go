@@ -69,8 +69,8 @@ func (b *backend) pathRewrapWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	lp.lock.RLock()
-	defer lp.lock.RUnlock()
+	lp.RLock()
+	defer lp.RUnlock()
 
 	// Verify if wasn't deleted before we grabbed the lock
 	if lp.policy == nil {

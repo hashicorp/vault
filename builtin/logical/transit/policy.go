@@ -24,26 +24,26 @@ const (
 
 // policyCache implements a simple locking cache of policies
 type policyCache struct {
+	sync.RWMutex
 	cache map[string]*lockingPolicy
-	lock  sync.RWMutex
 }
 
 // getPolicy loads a policy into the cache or returns one already in the cache
 func (p *policyCache) getPolicy(req *logical.Request, name string) (*lockingPolicy, error) {
 	// We don't defer this since we may need to give it up and get a write lock
-	p.lock.RLock()
+	p.RLock()
 
 	// First, see if we're in the cache -- if so, return that
 	if p.cache[name] != nil {
-		defer p.lock.RUnlock()
+		defer p.RUnlock()
 		return p.cache[name], nil
 	}
 
 	// If we find anything, we'll need to write into the cache, plus possibly
 	// persist the entry, so lock the cache
-	p.lock.RUnlock()
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
 
 	// Check one more time to ensure that another process did not write during
 	// our lock switcheroo.
@@ -127,8 +127,8 @@ func (p *policyCache) generatePolicy(storage logical.Storage, name string, deriv
 		return nil, fmt.Errorf("policy %s already exists", name)
 	}
 
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.Lock()
+	defer p.Unlock()
 
 	// Now we need to check again in the cache to ensure the policy wasn't
 	// created since we checked getPolicy. A policy being created holds a write
@@ -163,24 +163,35 @@ func (p *policyCache) generatePolicy(storage logical.Storage, name string, deriv
 
 // deletePolicy deletes a policy
 func (p *policyCache) deletePolicy(storage logical.Storage, name string) error {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	// Ensure one with this name exists
+	lp, err := p.getPolicy(&logical.Request{
+		Storage: storage,
+	}, name)
+	if err != nil {
+		return fmt.Errorf("error checking if policy already exists: %s", err)
+	}
+	if lp == nil {
+		return fmt.Errorf("policy %s does not exist", name)
+	}
 
-	lp := p.cache[name]
+	p.Lock()
+	defer p.Unlock()
+
+	lp = p.cache[name]
 	if lp == nil {
 		return fmt.Errorf("policy %s not found", name)
 	}
 
 	// We need to ensure all other access has stopped
-	lp.lock.Lock()
-	defer lp.lock.Unlock()
+	lp.Lock()
+	defer lp.Unlock()
 
 	// Verify this hasn't changed
 	if !lp.policy.DeletionAllowed {
 		return fmt.Errorf("deletion not allowed for policy %s", name)
 	}
 
-	err := storage.Delete("policy/" + name)
+	err = storage.Delete("policy/" + name)
 	if err != nil {
 		return fmt.Errorf("error deleting policy %s: %s", name, err)
 	}
@@ -198,8 +209,8 @@ func (p *policyCache) deletePolicy(storage logical.Storage, name string) error {
 
 // lockingPolicy holds a Policy guarded by a lock
 type lockingPolicy struct {
+	sync.RWMutex
 	policy *Policy
-	lock   sync.RWMutex
 }
 
 // KeyEntry stores the key and metadata

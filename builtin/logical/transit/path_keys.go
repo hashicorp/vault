@@ -65,8 +65,8 @@ func (b *backend) pathPolicyRead(
 		return nil, nil
 	}
 
-	lp.lock.RLock()
-	defer lp.lock.RUnlock()
+	lp.RLock()
+	defer lp.RUnlock()
 
 	// Verify if wasn't deleted before we grabbed the lock
 	if lp.policy == nil {
@@ -108,23 +108,6 @@ func (b *backend) pathPolicyDelete(
 	if lp == nil {
 		return logical.ErrorResponse(fmt.Sprintf("no such key %s", name)), logical.ErrInvalidRequest
 	}
-
-	// We don't defer here because deletePolicy also needs to grab the lock
-	lp.lock.RLock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
-		lp.lock.RUnlock()
-		return nil, fmt.Errorf("policy %s found in cache but no longer valid after lock", name)
-	}
-
-	if !lp.policy.DeletionAllowed {
-		lp.lock.RUnlock()
-		return logical.ErrorResponse(fmt.Sprintf("'allow_deletion' config value is not set")), logical.ErrInvalidRequest
-	}
-
-	// Let deletePolicy grab the lock
-	lp.lock.RUnlock()
 
 	err = b.policies.deletePolicy(req.Storage, name)
 	if err != nil {

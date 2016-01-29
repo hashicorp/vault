@@ -83,12 +83,12 @@ func (b *backend) pathDatakeyWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	lp.lock.RLock()
-	defer lp.lock.RUnlock()
+	lp.RLock()
+	defer lp.RUnlock()
 
 	// Verify if wasn't deleted before we grabbed the lock
 	if lp.policy == nil {
-		return nil, fmt.Errorf("policy %s found in cache but no longer valid after lock", name)
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
 	newKey := make([]byte, 32)
