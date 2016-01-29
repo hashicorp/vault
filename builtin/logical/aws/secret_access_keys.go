@@ -6,12 +6,13 @@ import (
 	"regexp"
 	"time"
 
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
 )
 
 const SecretAccessKeyType = "access_keys"
@@ -34,9 +35,6 @@ func secretAccessKeys(b *backend) *framework.Secret {
 				Description: "Security Token",
 			},
 		},
-
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
 
 		Renew:  b.secretAccessKeysRenew,
 		Revoke: secretAccessKeysRevoke,
@@ -76,16 +74,20 @@ func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
 			"Error generating STS keys: %s", err)), nil
 	}
 
-	// Return the info!
-	return b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
+	resp := b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
 		"access_key":     *tokenResp.Credentials.AccessKeyId,
 		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 		"security_token": *tokenResp.Credentials.SessionToken,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
-		"is_sts": 	true,
-	}), nil
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
+
+	return resp, nil
 }
 
 func (b *backend) secretAccessKeysCreate(
@@ -159,28 +161,49 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Return the info!
-	return b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
+	resp := b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
 		"access_key":     *keyResp.AccessKey.AccessKeyId,
 		"secret_key":     *keyResp.AccessKey.SecretAccessKey,
 		"security_token": nil,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
-		"is_sts": 	false,
-	}), nil
+		"is_sts":   false,
+	})
+
+	lease, err := b.Lease(s)
+	if err != nil || lease == nil {
+		lease = &configLease{}
+	}
+
+	resp.Secret.TTL = lease.Lease
+
+	return resp, nil
 }
 
 func (b *backend) secretAccessKeysRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// STS already has a lifetime, and we don't support renewing it
+	isSTSRaw, ok := req.Secret.InternalData["is_sts"]
+	if ok {
+		isSTS, ok := isSTSRaw.(bool)
+		if ok {
+			if isSTS {
+				return nil, nil
+			}
+		}
+	}
+
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
 	return f(req, d)
 }
 

@@ -77,6 +77,8 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
 		),
+
+		AuthRenew: b.pathLoginRenew,
 	}
 
 	// Since the salt is new in 0.2, we need to handle this by migrating

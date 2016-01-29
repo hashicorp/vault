@@ -3,7 +3,6 @@ package ldap
 import (
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -56,6 +55,9 @@ func (b *backend) pathLogin(
 				"password": password,
 			},
 			DisplayName: username,
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+			},
 		},
 	}, nil
 }
@@ -77,7 +79,7 @@ func (b *backend) pathLoginRenew(
 		return logical.ErrorResponse("policies have changed, revoking login"), nil
 	}
 
-	return framework.LeaseExtend(1*time.Hour, 0, false)(req, d)
+	return framework.LeaseExtend(0, 0, b.System())(req, d)
 }
 
 const pathLoginSyn = `

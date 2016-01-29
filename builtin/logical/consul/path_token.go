@@ -65,9 +65,10 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Use the helper to create the secret
-	s := b.Secret(SecretTokenType)
-	s.DefaultDuration = result.Lease
-	return s.Response(map[string]interface{}{
+	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
 		"token": token,
-	}, nil), nil
+	}, nil)
+	s.Secret.TTL = result.Lease
+
+	return s, nil
 }
