@@ -88,6 +88,7 @@ var BuiltinBackends = map[string]Factory{
 	"dynamodb":  newDynamoDBBackend,
 	"etcd":      newEtcdBackend,
 	"mysql":     newMySQLBackend,
+	"mongodb":	 newMongoBackend,
 }
 
 // PermitPool is a wrapper around a semaphore library to keep things
