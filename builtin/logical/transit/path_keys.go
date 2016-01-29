@@ -70,7 +70,7 @@ func (b *backend) pathPolicyRead(
 
 	// Verify if wasn't deleted before we grabbed the lock
 	if lp.policy == nil {
-		return nil, fmt.Errorf("policy %s found in cache but no longer valid after lock", name)
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
 	// Return the response
