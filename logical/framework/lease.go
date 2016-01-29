@@ -68,7 +68,8 @@ func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.
 			increment = systemView.DefaultLeaseTTL()
 		}
 
-		proposedExpiration := leaseOpts.IssueTime.UTC().Add(increment)
+		// We are proposing a time of the current time plus the increment
+		proposedExpiration := now.Add(increment)
 
 		// If the proposed expiration is after the maximum TTL of the lease,
 		// cap the increment to whatever is left
