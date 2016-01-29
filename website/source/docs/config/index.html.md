@@ -312,6 +312,64 @@ The MySQL backend has the following options:
 
   * `tls_ca_file` (optional) - The path to the CA certificate to connect using TLS
 
+#### Backend Reference: PostgreSQL (Community-Supported)
+
+The PostgreSQL backend has the following options:
+
+  * `connection_url` (required) - The connection string used to connect to PostgreSQL.
+
+    Examples:
+
+    * postgres://username:password@localhost:5432/database?sslmode=disabled
+
+    * postgres://username:password@localhost:5432/database?sslmode=verify-full
+
+    A list of all supported parameters can be found in [the pq library documentation](https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters).
+
+  * `table` (optional) - The name of the table to write vault data to. Defaults
+    to "vault_kv_store".
+
+Make sure the PostgreSQL database you choose (or create) for vault storage has
+a table suitable for storing vault's data:
+
+```sql
+CREATE TABLE vault_kv_store (
+  key TEXT PRIMARY KEY,
+  value BYTEA
+);
+```
+
+If you're using a version of PostgreSQL prior to 9.5, vault will expect an
+upsert function to exist named "vault_kv_put". The recommanded function to use
+for this operation is:
+
+```sql
+CREATE FUNCTION vault_kv_put(_key TEXT, _value BYTEA) RETURNS VOID AS
+$$
+BEGIN
+    LOOP
+        -- first try to update the key
+        UPDATE vault_kv_store SET value = _value WHERE key = _key;
+        IF found THEN
+            RETURN;
+        END IF;
+        -- not there, so try to insert the key
+        -- if someone else inserts the same key concurrently,
+        -- we could get a unique-key failure
+        BEGIN
+            INSERT INTO vault_kv_store (key, value) VALUES (_key, _value);
+            RETURN;
+        EXCEPTION WHEN unique_violation THEN
+            -- Do nothing, and loop to try the UPDATE again.
+        END;
+    END LOOP;
+END;
+$$
+LANGUAGE plpgsql;
+```
+
+More info can be found in the [PostgreSQL documentation](http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-UPSERT-EXAMPLE):
+
 #### Backend Reference: Inmem
 
 The in-memory backend has no configuration options.
