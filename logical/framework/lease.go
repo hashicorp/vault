@@ -7,17 +7,18 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// LeaseExtend returns an OperationFunc that can be used to simply extend
-// the lease of the auth/secret for the duration that was requested. Max
-// is the max time past the _current_ time that a lease can be extended. i.e.
-// setting it to 2 hours forces a renewal within the next 2 hours again.
+// LeaseExtend returns an OperationFunc that can be used to simply extend the
+// lease of the auth/secret for the duration that was requested.
 //
-// maxSession is the maximum session length allowed since the original
-// issue time. If this is zero, it is ignored.
+// backendIncrement is the backend's requested increment -- perhaps from a user
+// request, perhaps from a role/config value. If not set, uses the mount/system
+// value.
 //
-// maxFromLease controls if the maximum renewal period comes from the existing
-// lease. This means the value of `max` will be replaced with the existing
-// lease duration.
+// backendMax is the backend's requested increment -- this can be more
+// restrictive than the mount/system value but not less.
+//
+// systemView is the system view from the calling backend, used to determine
+// and/or correct default/max times.
 func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.SystemView) OperationFunc {
 	return func(req *logical.Request, data *FieldData) (*logical.Response, error) {
 		var leaseOpts *logical.LeaseOptions
