@@ -668,7 +668,10 @@ func generateCreationBundle(b *backend,
 // addKeyUsages adds approrpiate key usages to the template given the creation
 // information
 func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) {
-	certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement)
+	if creationInfo.IsCA {
+		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		return
+	}
 
 	if creationInfo.Usage&serverUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
@@ -681,21 +684,6 @@ func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) 
 	}
 	if creationInfo.Usage&emailProtectionUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
-	}
-
-	if creationInfo.IsCA {
-		// Go performs validation not according to spec but according to the Windows
-		// Crypto API, so we add all usages to CA certs
-		certTemplate.KeyUsage = x509.KeyUsage(certTemplate.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-		certTemplate.ExtKeyUsage = []x509.ExtKeyUsage{
-			x509.ExtKeyUsageAny,
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-			x509.ExtKeyUsageCodeSigning,
-			x509.ExtKeyUsageEmailProtection,
-			x509.ExtKeyUsageTimeStamping,
-			x509.ExtKeyUsageOCSPSigning,
-		}
 	}
 }
 
