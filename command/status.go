@@ -17,7 +17,7 @@ func (c *StatusCommand) Run(args []string) int {
 	flags := c.Meta.FlagSet("status", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
-		return 1
+		return 2
 	}
 
 	client, err := c.Client()
