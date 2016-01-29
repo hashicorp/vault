@@ -17,21 +17,21 @@ func (c *StatusCommand) Run(args []string) int {
 	flags := c.Meta.FlagSet("status", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
-		return 2
+		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing client: %s", err))
-		return 2
+		return 1
 	}
 
 	sealStatus, err := client.Sys().SealStatus()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error checking seal status: %s", err))
-		return 2
+		return 1
 	}
 	c.Ui.Output(fmt.Sprintf(
 		"Sealed: %v\n"+
@@ -53,7 +53,7 @@ func (c *StatusCommand) Run(args []string) int {
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error checking leader status: %s", err))
-		return 2
+		return 1
 	}
 
 	// Output if HA is enabled
@@ -77,7 +77,7 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	if sealStatus.Sealed {
-		return 1
+		return 2
 	} else {
 		return 0
 	}
