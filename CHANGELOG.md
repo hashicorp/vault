@@ -92,6 +92,8 @@ IMPROVEMENTS:
  * logical/transit: Keys are archived and only keys between the latest version
    and `min_decryption_version` are loaded into the working set. This can
    provide a very large speed increase when rotating keys very often. [GH-977]
+ * logical/transit: Keys are now cached, which should provide a large speedup
+   in most cases [GH-979]
  * physical/cache: Use 2Q cache instead of straight LRU [GH-908]
  * physical/etcd: Support basic auth [GH-859]
  * physical/etcd: Support sync functionality and enable by default [GH-921]
