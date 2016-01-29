@@ -25,7 +25,7 @@ func Backend() *framework.Backend {
 		},
 
 		Secrets: []*framework.Secret{
-			secretToken(),
+			secretToken(&b),
 		},
 	}
 

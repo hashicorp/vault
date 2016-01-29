@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
@@ -48,7 +47,7 @@ func (b *backend) pathRoleCreateRead(
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
 	// Generate our username and password. MySQL limits user to 16 characters

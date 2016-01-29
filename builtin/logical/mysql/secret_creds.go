@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -25,9 +24,6 @@ func secretCreds(b *backend) *framework.Secret {
 			},
 		},
 
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
-
 		Renew:  b.secretCredsRenew,
 		Revoke: b.secretCredsRevoke,
 	}
@@ -41,10 +37,10 @@ func (b *backend) secretCredsRenew(
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
 	return f(req, d)
 }
 

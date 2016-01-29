@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -19,9 +18,8 @@ func secretOTP(b *backend) *framework.Secret {
 				Description: "One time password",
 			},
 		},
-		DefaultDuration:    0, // this will use sysview's value
-		DefaultGracePeriod: 2 * time.Minute,
-		Revoke:             b.secretOTPRevoke,
+
+		Revoke: b.secretOTPRevoke,
 	}
 }
 

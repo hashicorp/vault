@@ -56,16 +56,15 @@ template values are '{{username}}' and
 			},
 
 			"lease_grace_period": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "1h",
-				Description: `Grace period for secret renewal; defaults to
-one hour`,
+				Type:        framework.TypeString,
+				Default:     "1h",
+				Description: `DEPRECATED: this has no effect`,
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation:  b.pathRoleCreate,
+			logical.UpdateOperation: b.pathRoleCreate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -194,6 +193,5 @@ instance of Cassandra:
 
 ` + defaultRollbackCQL + `
 
-"lease" and "lease_grace_period" control the lease time and the allowed grace
-period past lease expiration, respectively.
+"lease" the lease time; if not set the mount/system defaults are used.
 `
