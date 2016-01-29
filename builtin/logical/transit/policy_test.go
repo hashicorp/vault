@@ -17,13 +17,18 @@ func resetKeysArchive() {
 
 func Test_KeyUpgrade(t *testing.T) {
 	storage := &logical.InmemStorage{}
-	policy, err := generatePolicy(storage, "test", false)
+	policies := &policyCache{
+		cache: map[string]*lockingPolicy{},
+	}
+	lp, err := policies.generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if policy == nil {
+	if lp == nil {
 		t.Fatal("nil policy")
 	}
+
+	policy := lp.policy
 
 	testBytes := make([]byte, len(policy.Keys[1].Key))
 	copy(testBytes, policy.Keys[1].Key)
@@ -51,14 +56,19 @@ func Test_ArchivingUpgrade(t *testing.T) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
+	policies := &policyCache{
+		cache: map[string]*lockingPolicy{},
+	}
 
-	policy, err := generatePolicy(storage, "test", false)
+	lp, err := policies.generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if policy == nil {
+	if lp == nil {
 		t.Fatal("policy is nil")
 	}
+
+	policy := lp.policy
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, policy.Keys[1])
@@ -96,16 +106,21 @@ func Test_ArchivingUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Expire from the cache since we modified it under-the-hood
+	delete(policies.cache, "test")
+
 	// Now get the policy again; the upgrade should happen automatically
-	policy, err = getPolicy(&logical.Request{
+	lp, err = policies.getPolicy(&logical.Request{
 		Storage: storage,
 	}, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if policy == nil {
+	if lp == nil {
 		t.Fatal("policy is nil")
 	}
+
+	policy = lp.policy
 
 	checkKeys(t, policy, storage, "upgrade", 10, 10, 10)
 }
@@ -120,13 +135,19 @@ func Test_Archiving(t *testing.T) {
 
 	storage := &logical.InmemStorage{}
 
-	policy, err := generatePolicy(storage, "test", false)
+	policies := &policyCache{
+		cache: map[string]*lockingPolicy{},
+	}
+
+	lp, err := policies.generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if policy == nil {
+	if lp == nil {
 		t.Fatal("policy is nil")
 	}
+
+	policy := lp.policy
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, policy.Keys[1])

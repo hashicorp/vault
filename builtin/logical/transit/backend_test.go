@@ -19,7 +19,7 @@ const (
 func TestBackend_basic(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", false),
 			testAccStepReadPolicy(t, "test", false, false),
@@ -42,7 +42,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_datakey(t *testing.T) {
 	dataKeyInfo := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", false),
 			testAccStepReadPolicy(t, "test", false, false),
@@ -57,7 +57,7 @@ func TestBackend_rotation(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	encryptHistory := make(map[int]map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", false),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 0, encryptHistory),
@@ -111,26 +111,10 @@ func TestBackend_rotation(t *testing.T) {
 	})
 }
 
-func TestBackend_upsert(t *testing.T) {
-	decryptData := make(map[string]interface{})
-	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
-		Steps: []logicaltest.TestStep{
-			testAccStepReadPolicy(t, "test", true, false),
-			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
-			testAccStepReadPolicy(t, "test", false, false),
-			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
-		},
-	})
-}
-
 func TestBackend_basic_derived(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: Backend(),
+		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", true),
 			testAccStepReadPolicy(t, "test", false, true),
