@@ -57,15 +57,15 @@ func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.
 		}
 
 		// Basic max safety checks have passed, now let's figure out our
-		// increment. We'll use the backend-provided value if possible, or the
-		// mount/system default if not. We won't change the LeaseOpts value,
-		// just adjust accordingly.
+		// increment. We'll use the user-supplied value first, then backend-provided default if possible, or the
+		// mount/system default if not.
 		increment := leaseOpts.Increment
-		if backendIncrement > 0 {
-			increment = backendIncrement
-		}
 		if increment <= 0 {
-			increment = systemView.DefaultLeaseTTL()
+			if backendIncrement > 0 {
+				increment = backendIncrement
+			} else {
+				increment = systemView.DefaultLeaseTTL()
+			}
 		}
 
 		// We are proposing a time of the current time plus the increment

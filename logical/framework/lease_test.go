@@ -23,25 +23,25 @@ func TestLeaseExtend(t *testing.T) {
 		Result         time.Duration
 		Error          bool
 	}{
-		"valid request, good bounds": {
+		"valid request, good bounds, increment is preferred": {
 			BackendDefault: 30 * time.Hour,
 			Increment:      1 * time.Hour,
-			Result:         30 * time.Hour,
+			Result:         1 * time.Hour,
 		},
 
-		"valid request, zero backend default": {
+		"valid request, zero backend default, uses increment": {
 			BackendDefault: 0,
 			Increment:      1 * time.Hour,
 			Result:         1 * time.Hour,
 		},
 
-		"lease increment is zero": {
+		"lease increment is zero, uses backend default": {
 			BackendDefault: 30 * time.Hour,
 			Increment:      0,
 			Result:         30 * time.Hour,
 		},
 
-		"lease increment and default are zero, use sysview": {
+		"lease increment and default are zero, uses systemview": {
 			BackendDefault: 0,
 			Increment:      0,
 			Result:         5 * time.Hour,
@@ -53,7 +53,7 @@ func TestLeaseExtend(t *testing.T) {
 			Result:         30 * time.Hour,
 		},
 
-		"request would go past max backend values and increment": {
+		"all request values are larger than the system view, so the system view limits": {
 			BackendDefault: 40 * time.Hour,
 			BackendMax:     50 * time.Hour,
 			Increment:      40 * time.Hour,
@@ -64,7 +64,7 @@ func TestLeaseExtend(t *testing.T) {
 			BackendDefault: 9 * time.Hour,
 			BackendMax:     5 * time.Hour,
 			Increment:      4 * time.Hour,
-			Result:         5 * time.Hour,
+			Result:         4 * time.Hour,
 		},
 
 		"request outside backend max": {
