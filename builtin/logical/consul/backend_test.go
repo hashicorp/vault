@@ -60,7 +60,7 @@ func TestBackend_crud(t *testing.T) {
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
-			testAccStepReadPolicy(t, "test", testPolicy, b.System().DefaultLeaseTTL()),
+			testAccStepReadPolicy(t, "test", testPolicy, 0),
 			testAccStepDeletePolicy(t, "test"),
 		},
 	})
