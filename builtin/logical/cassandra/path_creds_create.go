@@ -85,7 +85,6 @@ func (b *backend) pathCredsCreateRead(
 		"role":     name,
 	})
 	resp.Secret.TTL = role.Lease
-	resp.Secret.GracePeriod = role.LeaseGracePeriod
 
 	return resp, nil
 }

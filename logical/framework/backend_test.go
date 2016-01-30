@@ -248,9 +248,14 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 }
 
 func TestBackendHandleRequest_renewExtend(t *testing.T) {
+	sysView := logical.StaticSystemView{
+		DefaultLeaseTTLVal: 5 * time.Minute,
+		MaxLeaseTTLVal:     30 * time.Hour,
+	}
+
 	secret := &Secret{
 		Type:            "foo",
-		Renew:           LeaseExtend(0, 0, false),
+		Renew:           LeaseExtend(0, 0, sysView),
 		DefaultDuration: 5 * time.Minute,
 	}
 	b := &Backend{
@@ -268,7 +273,7 @@ func TestBackendHandleRequest_renewExtend(t *testing.T) {
 		t.Fatal("should have secret")
 	}
 
-	if resp.Secret.TTL < 60*time.Minute || resp.Secret.TTL > 70*time.Minute {
+	if resp.Secret.TTL < 59*time.Minute || resp.Secret.TTL > 61*time.Minute {
 		t.Fatalf("bad: %s", resp.Secret.TTL)
 	}
 }

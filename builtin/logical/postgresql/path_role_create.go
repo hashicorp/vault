@@ -47,8 +47,13 @@ func (b *backend) pathRoleCreateRead(
 	if err != nil {
 		return nil, err
 	}
+	// Unlike some other backends we need a lease here (can't leave as 0 and
+	// let core fill it in) because Postgres also expires users as a safety
+	// measure, so cannot be zero
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{
+			Lease: b.System().DefaultLeaseTTL(),
+		}
 	}
 
 	// Generate the username, password and expiration. PG limits user to 63 characters
@@ -69,7 +74,7 @@ func (b *backend) pathRoleCreateRead(
 		return nil, err
 	}
 	expiration := time.Now().UTC().
-		Add(lease.Lease + time.Duration((float64(lease.Lease) * 0.1))).
+		Add(lease.Lease).
 		Format("2006-01-02 15:04:05-0700")
 
 	// Get our connection
