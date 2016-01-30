@@ -10,9 +10,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+const (
+	testSysTTL    = time.Hour * 10
+	testSysMaxTTL = time.Hour * 20
+)
+
 func TestBackend_TTLDurations(t *testing.T) {
-	sysTTL := time.Hour * 10
-	sysMaxTTL := time.Hour * 20
 	data1 := map[string]interface{}{
 		"password": "password",
 		"policies": "root",
@@ -43,8 +46,8 @@ func TestBackend_TTLDurations(t *testing.T) {
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: sysTTL,
-			MaxLeaseTTLVal:     sysMaxTTL,
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
 		},
 	})
 	if err != nil {
@@ -64,8 +67,16 @@ func TestBackend_TTLDurations(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
-
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
@@ -76,7 +87,16 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_userCrud(t *testing.T) {
-	b := Backend()
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
