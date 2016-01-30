@@ -88,9 +88,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
         parent token of the caller. This creates a token with no parent.
       </li>
       <li>
-        <span class="param">no_default_profile</span>
+        <span class="param">no_default_policy</span>
         <span class="param-flags">optional</span>
-        If true the `default` profile will not be a part of this token's
+        If true the `default` policy will not be a part of this token's
         policy set.
       </li>
       <li>
