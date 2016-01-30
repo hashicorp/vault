@@ -22,7 +22,7 @@ func TestStatus(t *testing.T) {
 	defer ln.Close()
 
 	args := []string{"-address", addr}
-	if code := c.Run(args); code != 1 {
+	if code := c.Run(args); code != 2 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
