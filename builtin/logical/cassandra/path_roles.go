@@ -54,12 +54,6 @@ template values are '{{username}}' and
 				Default:     "4h",
 				Description: "The lease length; defaults to 4 hours",
 			},
-
-			"lease_grace_period": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "1h",
-				Description: `DEPRECATED: this has no effect`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -130,18 +124,10 @@ func (b *backend) pathRoleCreate(
 			"Error parsing lease value of %s: %s", leaseRaw, err)), nil
 	}
 
-	leaseGracePeriodRaw := data.Get("lease_grace_period").(string)
-	leaseGracePeriod, err := time.ParseDuration(leaseGracePeriodRaw)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error parsing lease_grace value of %s: %s", leaseGracePeriodRaw, err)), nil
-	}
-
 	entry := &roleEntry{
-		Lease:            lease,
-		LeaseGracePeriod: leaseGracePeriod,
-		CreationCQL:      creationCQL,
-		RollbackCQL:      rollbackCQL,
+		Lease:       lease,
+		CreationCQL: creationCQL,
+		RollbackCQL: rollbackCQL,
 	}
 
 	// Store it
@@ -157,10 +143,9 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	CreationCQL      string        `json:"creation_cql" structs:"creation_cql"`
-	Lease            time.Duration `json:"lease" structs:"lease"`
-	LeaseGracePeriod time.Duration `json:"lease_grace_period" structs:"lease_grace_period"`
-	RollbackCQL      string        `json:"rollback_cql" structs:"rollback_cql"`
+	CreationCQL string        `json:"creation_cql" structs:"creation_cql"`
+	Lease       time.Duration `json:"lease" structs:"lease"`
+	RollbackCQL string        `json:"rollback_cql" structs:"rollback_cql"`
 }
 
 const pathRoleHelpSyn = `

@@ -21,9 +21,6 @@ func (s *Secret) Validate() error {
 	if s.TTL < 0 {
 		return fmt.Errorf("ttl duration must not be less than zero")
 	}
-	if s.GracePeriod < 0 {
-		return fmt.Errorf("grace period must not be less than zero")
-	}
 
 	return nil
 }
