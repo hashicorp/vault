@@ -837,6 +837,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"display_name": "root",
 		"orphan":       true,
 		"num_uses":     0,
+		"creation_ttl": int64(0),
 		"ttl":          int64(0),
 	}
 
@@ -868,6 +869,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"display_name": "token",
 		"orphan":       false,
 		"num_uses":     0,
+		"creation_ttl": int64(3600),
 		"ttl":          int64(3600),
 	}
 
@@ -875,6 +877,11 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+
+	// Depending on timing of the test this may have ticked down, so accept 3599
+	if resp.Data["ttl"].(int64) == 3599 {
+		resp.Data["ttl"] = int64(3600)
+	}
 
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
@@ -964,6 +971,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"display_name": "root",
 		"orphan":       true,
 		"num_uses":     0,
+		"creation_ttl": int64(0),
 		"ttl":          int64(0),
 	}
 

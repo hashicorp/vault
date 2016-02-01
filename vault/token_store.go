@@ -77,9 +77,6 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
-		// Allow a token lease to be extended indefinitely, but each time for only
-		// as much as the original lease allowed for. If the lease has a 1 hour expiration,
-		// it can only be extended up to another hour each time this means.
 		AuthRenew: t.authRenew,
 
 		PathsSpecial: &logical.Paths{
@@ -841,7 +838,8 @@ func (ts *TokenStore) handleLookup(
 			"num_uses":      out.NumUses,
 			"orphan":        false,
 			"creation_time": int64(out.CreationTime),
-			"ttl":           int64(out.TTL.Seconds()),
+			"creation_ttl":  int64(out.TTL.Seconds()),
+			"ttl":           int64(0),
 		},
 	}
 
@@ -854,8 +852,13 @@ func (ts *TokenStore) handleLookup(
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if leaseTimes != nil && !leaseTimes.LastRenewalTime.IsZero() {
-		resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+	if leaseTimes != nil {
+		if !leaseTimes.LastRenewalTime.IsZero() {
+			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+		}
+		if !leaseTimes.ExpireTime.IsZero() {
+			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+		}
 	}
 
 	return resp, nil
