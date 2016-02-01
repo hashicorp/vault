@@ -82,6 +82,8 @@ IMPROVEMENTS:
  * credential/token: Add `last_renewal_time` to token lookup calls [GH-896]
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
  * logical/aws: You can now get STS tokens instead of IAM users [GH-927]
+ * logical/cassandra: Add `protocol_version` parameter to set the CQL proto
+   version [GH-1005]
  * logical/cubbyhole: Add cubbyhole access to default policy [GH-936]
  * logical/mysql: Add list support for roles path [GH-984]
  * logical/pki: Fix up key usages being specified for CAs [GH-989]
