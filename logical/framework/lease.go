@@ -7,77 +7,79 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// LeaseExtend returns an OperationFunc that can be used to simply extend
-// the lease of the auth/secret for the duration that was requested. Max
-// is the max time past the _current_ time that a lease can be extended. i.e.
-// setting it to 2 hours forces a renewal within the next 2 hours again.
+// LeaseExtend returns an OperationFunc that can be used to simply extend the
+// lease of the auth/secret for the duration that was requested.
 //
-// maxSession is the maximum session length allowed since the original
-// issue time. If this is zero, it is ignored.
+// backendIncrement is the backend's requested increment -- perhaps from a user
+// request, perhaps from a role/config value. If not set, uses the mount/system
+// value.
 //
-// maxFromLease controls if the maximum renewal period comes from the existing
-// lease. This means the value of `max` will be replaced with the existing
-// lease duration.
-func LeaseExtend(max, maxSession time.Duration, maxFromLease bool) OperationFunc {
+// backendMax is the backend's requested increment -- this can be more
+// restrictive than the mount/system value but not less.
+//
+// systemView is the system view from the calling backend, used to determine
+// and/or correct default/max times.
+func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.SystemView) OperationFunc {
 	return func(req *logical.Request, data *FieldData) (*logical.Response, error) {
-		leaseOpts := detectLease(req)
-		if leaseOpts == nil {
+		var leaseOpts *logical.LeaseOptions
+		switch {
+		case req.Auth != nil:
+			leaseOpts = &req.Auth.LeaseOptions
+		case req.Secret != nil:
+			leaseOpts = &req.Secret.LeaseOptions
+		default:
 			return nil, fmt.Errorf("no lease options for request")
 		}
 
-		// Check if we should limit max
-		if maxFromLease {
-			max = leaseOpts.TTL
+		// Use the mount's configured max unless the backend specifies
+		// something more restrictive (perhaps from a role configuration
+		// parameter)
+		max := systemView.MaxLeaseTTL()
+		if backendMax > 0 && backendMax < max {
+			max = backendMax
 		}
 
-		// Sanity check the desired increment
-		switch {
-		// Protect against negative leases
-		case leaseOpts.Increment < 0:
-			return logical.ErrorResponse(
-				"increment must be greater than 0"), logical.ErrInvalidRequest
-
-			// If no lease increment, or too large of an increment, use the max
-		case max > 0 && leaseOpts.Increment == 0, max > 0 && leaseOpts.Increment > max:
-			leaseOpts.Increment = max
+		// Should never happen, but guard anyways
+		if max < 0 {
+			return nil, fmt.Errorf("max TTL is negative")
 		}
+
+		// We cannot go past this time
+		maxValidTime := leaseOpts.IssueTime.UTC().Add(max)
 
 		// Get the current time
 		now := time.Now().UTC()
 
-		// Check if we're passed the issue limit
-		var maxSessionTime time.Time
-		if maxSession > 0 {
-			maxSessionTime = leaseOpts.IssueTime.Add(maxSession)
-			if maxSessionTime.Before(now) {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"lease can only be renewed up to %s past original issue",
-					maxSession)), logical.ErrInvalidRequest
+		// If we are past the max TTL, we shouldn't be in this function...but
+		// fast path out if we are
+		if maxValidTime.Before(now) {
+			return nil, fmt.Errorf("past the max TTL, cannot renew")
+		}
+
+		// Basic max safety checks have passed, now let's figure out our
+		// increment. We'll use the user-supplied value first, then backend-provided default if possible, or the
+		// mount/system default if not.
+		increment := leaseOpts.Increment
+		if increment <= 0 {
+			if backendIncrement > 0 {
+				increment = backendIncrement
+			} else {
+				increment = systemView.DefaultLeaseTTL()
 			}
 		}
 
-		// The new lease is the minimum of the requested Increment
-		// or the maxSessionTime
-		requestedLease := now.Add(leaseOpts.Increment)
-		if !maxSessionTime.IsZero() && requestedLease.After(maxSessionTime) {
-			requestedLease = maxSessionTime
+		// We are proposing a time of the current time plus the increment
+		proposedExpiration := now.Add(increment)
+
+		// If the proposed expiration is after the maximum TTL of the lease,
+		// cap the increment to whatever is left
+		if maxValidTime.Before(proposedExpiration) {
+			increment = maxValidTime.Sub(now)
 		}
 
-		// Determine the requested lease
-		newLeaseDuration := requestedLease.Sub(now)
-
 		// Set the lease
-		leaseOpts.TTL = newLeaseDuration
+		leaseOpts.TTL = increment
 
 		return &logical.Response{Auth: req.Auth, Secret: req.Secret}, nil
 	}
-}
-
-func detectLease(req *logical.Request) *logical.LeaseOptions {
-	if req.Auth != nil {
-		return &req.Auth.LeaseOptions
-	} else if req.Secret != nil {
-		return &req.Secret.LeaseOptions
-	}
-	return nil
 }

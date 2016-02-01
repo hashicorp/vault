@@ -130,13 +130,13 @@ func TestAuthTokenRenew(t *testing.T) {
 	client.SetToken(secret.Auth.ClientToken)
 
 	// Now attempt a renew with the new token
-	secret, err = client.Auth().Token().Renew(secret.Auth.ClientToken, 0)
+	secret, err = client.Auth().Token().Renew(secret.Auth.ClientToken, 3600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if secret.Auth.LeaseDuration != 3600 {
-		t.Errorf("expected 1h, got %q", secret.Auth.LeaseDuration)
+		t.Errorf("expected 1h, got %v", secret.Auth.LeaseDuration)
 	}
 
 	if secret.Auth.Renewable != true {
@@ -144,13 +144,13 @@ func TestAuthTokenRenew(t *testing.T) {
 	}
 
 	// Do the same thing with the self variant
-	secret, err = client.Auth().Token().RenewSelf(0)
+	secret, err = client.Auth().Token().RenewSelf(3600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if secret.Auth.LeaseDuration != 3600 {
-		t.Errorf("expected 1h, got %q", secret.Auth.LeaseDuration)
+		t.Errorf("expected 1h, got %v", secret.Auth.LeaseDuration)
 	}
 
 	if secret.Auth.Renewable != true {
