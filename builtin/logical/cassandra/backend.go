@@ -21,12 +21,6 @@ func Backend() *framework.Backend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-			},
-		},
-
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
 			pathRoles(&b),
@@ -52,14 +46,15 @@ type backend struct {
 }
 
 type sessionConfig struct {
-	Hosts       string `json:"hosts" structs:"hosts"`
-	Username    string `json:"username" structs:"username"`
-	Password    string `json:"password" structs:"password"`
-	TLS         bool   `json:"tls" structs:"tls"`
-	InsecureTLS bool   `json:"insecure_tls" structs:"insecure_tls"`
-	Certificate string `json:"certificate" structs:"certificate"`
-	PrivateKey  string `json:"private_key" structs:"private_key"`
-	IssuingCA   string `json:"issuing_ca" structs:"issuing_ca"`
+	Hosts           string `json:"hosts" structs:"hosts"`
+	Username        string `json:"username" structs:"username"`
+	Password        string `json:"password" structs:"password"`
+	TLS             bool   `json:"tls" structs:"tls"`
+	InsecureTLS     bool   `json:"insecure_tls" structs:"insecure_tls"`
+	Certificate     string `json:"certificate" structs:"certificate"`
+	PrivateKey      string `json:"private_key" structs:"private_key"`
+	IssuingCA       string `json:"issuing_ca" structs:"issuing_ca"`
+	ProtocolVersion int    `json:"protocol_version" structs:"protocol_version"`
 }
 
 // DB returns the database connection.

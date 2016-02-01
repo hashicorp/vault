@@ -39,6 +39,11 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 		Password: cfg.Password,
 	}
 
+	clusterConfig.ProtoVersion = cfg.ProtocolVersion
+	if clusterConfig.ProtoVersion == 0 {
+		clusterConfig.ProtoVersion = 2
+	}
+
 	if cfg.TLS {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: cfg.InsecureTLS,
