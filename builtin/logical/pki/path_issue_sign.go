@@ -133,7 +133,7 @@ func (b *backend) pathIssueSignCert(
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`), nil
+			`The "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
 	}
 
 	var caErr error
@@ -170,20 +170,33 @@ func (b *backend) pathIssueSignCert(
 
 	resp := b.Secret(SecretCertsType).Response(
 		map[string]interface{}{
-			"certificate":   cb.Certificate,
-			"issuing_ca":    cb.IssuingCA,
-			"serial_number": cb.SerialNumber,
+			"certificate": cb.Certificate,
+			"issuing_ca":  cb.IssuingCA,
 		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
 		})
 
-	if !useCSR {
-		resp.Data["private_key"] = cb.PrivateKey
-		resp.Data["private_key_type"] = cb.PrivateKeyType
-	}
+	switch format {
+	case "pem":
+		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["certificate"] = cb.Certificate
 
-	if format == "der" {
+		if !useCSR {
+			resp.Data["private_key"] = cb.PrivateKey
+			resp.Data["private_key_type"] = cb.PrivateKeyType
+		}
+
+	case "pem_bundle":
+		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA)
+		if !useCSR {
+			resp.Data["private_key"] = cb.PrivateKey
+			resp.Data["private_key_type"] = cb.PrivateKeyType
+			resp.Data["certificate"] = fmt.Sprintf("%s\n%s\n%s", cb.PrivateKey, cb.Certificate, cb.IssuingCA)
+		}
+
+	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
 		if !useCSR {

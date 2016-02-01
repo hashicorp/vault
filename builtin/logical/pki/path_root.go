@@ -101,8 +101,6 @@ func (b *backend) pathCAGenerateRoot(
 		map[string]interface{}{
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
-			"certificate":   cb.Certificate,
-			"issuing_ca":    cb.IssuingCA,
 		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
@@ -110,10 +108,24 @@ func (b *backend) pathCAGenerateRoot(
 
 	switch format {
 	case "pem":
+		resp.Data["certificate"] = cb.Certificate
+		resp.Data["issuing_ca"] = cb.IssuingCA
 		if exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
+
+	case "pem_bundle":
+		resp.Data["issuing_ca"] = cb.IssuingCA
+
+		if exported {
+			resp.Data["private_key"] = cb.PrivateKey
+			resp.Data["private_key_type"] = cb.PrivateKeyType
+			resp.Data["certificate"] = fmt.Sprintf("%s\n%s\n%s", cb.PrivateKey, cb.Certificate, cb.IssuingCA)
+		} else {
+			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA)
+		}
+
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
@@ -228,14 +240,21 @@ func (b *backend) pathCASignIntermediate(
 		map[string]interface{}{
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
-			"certificate":   cb.Certificate,
-			"issuing_ca":    cb.IssuingCA,
 		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
 		})
 
-	if format == "der" {
+	switch format {
+	case "pem":
+		resp.Data["certificate"] = cb.Certificate
+		resp.Data["issuing_ca"] = cb.IssuingCA
+
+	case "pem_bundle":
+		resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA)
+		resp.Data["issuing_ca"] = cb.IssuingCA
+
+	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
 	}

@@ -22,7 +22,7 @@ func (b *backend) getGenerationParams(
 	format = getFormat(data)
 	if format == "" {
 		errorResp = logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`)
+			`The "format" path parameter must be "pem", "der", or "pem_bundle"`)
 		return
 	}
 

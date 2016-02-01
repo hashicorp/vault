@@ -88,6 +88,15 @@ func (b *backend) pathGenerateIntermediate(
 			resp.Data["private_key"] = csrb.PrivateKey
 			resp.Data["private_key_type"] = csrb.PrivateKeyType
 		}
+
+	case "pem_bundle":
+		resp.Data["csr"] = csrb.CSR
+		if exported {
+			resp.Data["csr"] = fmt.Sprintf("%s\n%s", csrb.PrivateKey, csrb.CSR)
+			resp.Data["private_key"] = csrb.PrivateKey
+			resp.Data["private_key_type"] = csrb.PrivateKeyType
+		}
+
 	case "der":
 		resp.Data["csr"] = base64.StdEncoding.EncodeToString(parsedBundle.CSRBytes)
 		if exported {
