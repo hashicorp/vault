@@ -68,9 +68,8 @@ func (b *backend) pathLogin(
 			},
 			DisplayName: username,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         user.TTL,
-				GracePeriod: user.TTL / 10,
-				Renewable:   user.TTL > 0,
+				TTL:       user.TTL,
+				Renewable: true,
 			},
 		},
 	}, nil
@@ -78,7 +77,7 @@ func (b *backend) pathLogin(
 
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Get the user and validate auth
+	// Get the user
 	user, err := b.User(req.Storage, req.Auth.Metadata["username"])
 	if err != nil {
 		return nil, err
@@ -88,7 +87,7 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	return framework.LeaseExtend(user.MaxTTL, 0, false)(req, d)
+	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(req, d)
 }
 
 const pathLoginSyn = `

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
@@ -156,9 +155,6 @@ func (b *backend) pathCredsCreateWrite(
 	} else {
 		return nil, fmt.Errorf("key type unknown")
 	}
-
-	result.Secret.TTL = b.System().DefaultLeaseTTL()
-	result.Secret.GracePeriod = 2 * time.Minute
 
 	return result, nil
 }

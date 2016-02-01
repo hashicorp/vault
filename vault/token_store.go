@@ -80,7 +80,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		// Allow a token lease to be extended indefinitely, but each time for only
 		// as much as the original lease allowed for. If the lease has a 1 hour expiration,
 		// it can only be extended up to another hour each time this means.
-		AuthRenew: framework.LeaseExtend(0, 0, true),
+		AuthRenew: t.authRenew,
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
@@ -704,10 +704,8 @@ func (ts *TokenStore) handleCreateCommon(
 			Policies:    te.Policies,
 			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         te.TTL,
-				GracePeriod: te.TTL / 10,
-				// Tokens are renewable only if user provides lease duration
-				Renewable: te.TTL > 0,
+				TTL:       te.TTL,
+				Renewable: true,
 			},
 			ClientToken: te.ID,
 		},
@@ -912,6 +910,13 @@ func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
 		return nil
 	}
 	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+}
+
+func (ts *TokenStore) authRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	f := framework.LeaseExtend(0, 0, ts.System())
+	return f(req, d)
 }
 
 const (

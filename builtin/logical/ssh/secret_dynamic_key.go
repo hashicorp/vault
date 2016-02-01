@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -23,15 +22,14 @@ func secretDynamicKey(b *backend) *framework.Secret {
 				Description: "IP address of host",
 			},
 		},
-		DefaultDuration:    0, // this will use sysview's value
-		DefaultGracePeriod: 2 * time.Minute,
-		Renew:              b.secretDynamicKeyRenew,
-		Revoke:             b.secretDynamicKeyRevoke,
+
+		Renew:  b.secretDynamicKeyRenew,
+		Revoke: b.secretDynamicKeyRevoke,
 	}
 }
 
 func (b *backend) secretDynamicKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	f := framework.LeaseExtend(b.System().DefaultLeaseTTL(), b.System().MaxLeaseTTL(), false)
+	f := framework.LeaseExtend(0, 0, b.System())
 	return f(req, d)
 }
 
