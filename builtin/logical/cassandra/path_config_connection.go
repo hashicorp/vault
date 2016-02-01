@@ -55,10 +55,15 @@ backend can be directly passed into this parameter.
 If both this and "pem_bundle" are specified, this will
 take precedence.`,
 			},
+
+			"protocol_version": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: `The protocol version to use. Defaults to 2.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:  b.pathConnectionRead,
+			logical.ReadOperation:   b.pathConnectionRead,
 			logical.UpdateOperation: b.pathConnectionWrite,
 		},
 
@@ -108,11 +113,12 @@ func (b *backend) pathConnectionWrite(
 	}
 
 	config := &sessionConfig{
-		Hosts:       hosts,
-		Username:    username,
-		Password:    password,
-		TLS:         data.Get("tls").(bool),
-		InsecureTLS: data.Get("insecure_tls").(bool),
+		Hosts:           hosts,
+		Username:        username,
+		Password:        password,
+		TLS:             data.Get("tls").(bool),
+		InsecureTLS:     data.Get("insecure_tls").(bool),
+		ProtocolVersion: data.Get("protocol_version").(int),
 	}
 
 	if config.InsecureTLS {
