@@ -262,6 +262,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"num_uses":     float64(0),
 		"policies":     []interface{}{"root"},
 		"orphan":       true,
+		"creation_ttl": float64(0),
 		"ttl":          float64(0),
 		"path":         "auth/token/root",
 	}
@@ -341,6 +342,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"num_uses":     float64(0),
 		"policies":     []interface{}{"root"},
 		"orphan":       true,
+		"creation_ttl": float64(0),
 		"ttl":          float64(0),
 		"path":         "auth/token/root",
 	}
