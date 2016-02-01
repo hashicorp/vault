@@ -78,7 +78,8 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			b.MapUserId.Paths(),
 		),
 
-		AuthRenew: b.pathLoginRenew,
+		// Not enabled until we add verification logic to the renewal function
+		//		AuthRenew: b.pathLoginRenew,
 	}
 
 	// Since the salt is new in 0.2, we need to handle this by migrating
