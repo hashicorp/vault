@@ -1,5 +1,19 @@
 ## 0.5.0 (Unreleased)
 
+SECURITY:
+ * Previous versions of Vault could allow a malicious user to hijack the rekey
+   operation by canceling an operation in progress and starting a new one. The
+   practical application of this is very small. If the user was an unseal key
+   owner, they could attempt to do this in order to either receive unencrypted
+   reseal keys or to replace the PGP keys used for encryption with ones under
+   their control. However, since this would invalidate any rekey progress, they
+   would need other unseal key holders to resubmit, which would be rather
+   suspicious during this manual operation if they were not also the original
+   initiator of the rekey attempt. If the user was not an unseal key holder,
+   there is no benefit to be gained; the only outcome that could be attempted
+   would be a denial of service against a legitimate rekey operation by sending
+   cancel requests over and over.
+
 DEPRECATIONS/BREAKING CHANGES:
  * `s3` physical backend: Environment variables are now preferred over
    configuration values. This makes it behave similar to the rest of Vault,
