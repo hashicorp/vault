@@ -17,6 +17,12 @@ DEPRECATIONS/BREAKING CHANGES:
  * Token `lookup`: the `ttl` value in the response now reflects the actual
    remaining TTL rather than the original TTL specified when the token was
    created; this value is now located in `creation_ttl` [GH-986]
+ * Vault no longer uses grace periods on leases or token TTLs. Uncertainty
+   about the length grace period for any given backend could cause confusion
+   and uncertainty. [GH-1002]
+ * `rekey`: Rekey now requires a nonce to be supplied with key shares. This
+   nonce is generated at the start of a rekey attempt and is unique for that
+   attempt.
 
 FEATURES:
 
