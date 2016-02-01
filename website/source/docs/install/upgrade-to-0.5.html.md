@@ -8,7 +8,8 @@ description: |-
 
 # Overview
 
-This page contains the breaking changes for Vault 0.5. Please read it carefully.
+This page contains the list of breaking changes for Vault 0.5. Please read it
+carefully.
 
 ## Rekey Requires Nonce
 
