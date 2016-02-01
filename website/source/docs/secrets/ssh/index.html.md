@@ -594,9 +594,53 @@ username@ip:~$
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-    A `204` response code.
+  <dd>For a dynamic key role:
+
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+            "admin_user": "rajanadar",
+            "allowed_users": "",
+            "cidr_list": "x.x.x.x/y",
+            "default_user": "rajanadar",
+            "exclude_cidr_list": "x.x.x.x/y",
+            "install_script": "pretty_large_script",
+            "key": "5d9ee6a1-c787-47a9-9738-da243f4f69bf",
+            "key_bits": 1024,
+            "key_option_specs": "",
+            "key_type": "dynamic",
+            "port": 22
+           },
+  "warnings": null,
+  "auth": null
+}
+```
+
   </dd>
+
+  <dd>For an OTP role:
+
+```json
+{
+  "lease_id": "sshs/creds/c3c2e60c-5a48-415a-9d5a-a41e0e6cdec5/3ee6ad28-383f-d482-2427-70498eba4d96",
+  "renewable": false,
+  "lease_duration": 2592000,
+  "data": {
+            "ip": "127.0.0.1",
+            "key": "6d6411fd-f622-ea0a-7e2c-989a745cbbb2",
+            "key_type": "otp",
+            "port": 22,
+            "username": "rajanadar"
+           },
+  "warnings": null,
+  "auth": null
+}
+```
+  </dd>
+
 
 ### /ssh/lookup
 #### POST
@@ -626,8 +670,20 @@ username@ip:~$
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-    A `204` response code.
+  <dd>An array of roles as a secret structure.
+
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+            "roles": ["fe6f61b7-7e4a-46a6-b2c8-0d530b8513df", "6d6411fd-f622-ea0a-7e2c-989a745cbbb2"]
+          },
+  "warnings": null,
+  "auth": null
+}
+```
   </dd>
 
 ### /ssh/verify
@@ -659,6 +715,22 @@ username@ip:~$
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-    A `204` response code.
+    <dd>A `200` response code for a valid OTP.
+
+```json
+{
+  "lease_id":"",
+  "renewable":false,
+  "lease_duration":0,
+  "data":{
+         "ip":"127.0.0.1",
+         "username":"rajanadar"
+         },
+  "warnings":null,
+  "auth":null
+}
+```
+
   </dd>
+
+  <dd>A `204` response code with an empty response body, for an invalid OTP.</dd>
