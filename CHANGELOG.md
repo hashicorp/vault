@@ -14,6 +14,9 @@ DEPRECATIONS/BREAKING CHANGES:
    the `default` policy (by default) allows all clients access to the
    `renew-self` endpoint, this makes it much more likely that the intended
    operation will be successful. [GH-894]
+ * Token `lookup`: the `ttl` value in the response now reflects the actual
+   remaining TTL rather than the original TTL specified when the token was
+   created; this value is now located in `creation_ttl` [GH-986]
 
 FEATURES:
 
@@ -80,6 +83,8 @@ IMPROVEMENTS:
  * credential/ldap: Add support for binding, both anonymously (to discover a
    user DN) and via a username and password [GH-975]
  * credential/token: Add `last_renewal_time` to token lookup calls [GH-896]
+ * credential/token: Change `ttl` to reflect the current remaining TTL; the
+   original value is in `creation_ttl` [GH-1007]
  * helper/certutil: Add ability to parse PKCS#8 bundles [GH-829]
  * logical/aws: You can now get STS tokens instead of IAM users [GH-927]
  * logical/cassandra: Add `protocol_version` parameter to set the CQL proto
