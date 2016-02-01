@@ -74,6 +74,7 @@ func getFormat(data *framework.FieldData) string {
 	switch format {
 	case "pem":
 	case "der":
+	case "pem_bundle":
 	default:
 		format = ""
 	}

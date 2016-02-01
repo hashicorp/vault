@@ -8,8 +8,10 @@ func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[s
 	fields["format"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
 		Default: "pem",
-		Description: `Format for returned data. Can be "pem" or "der";
-defaults to "pem".`,
+		Description: `Format for returned data. Can be "pem", "der",
+or "pem_bundle". If "pem_bundle" any private
+private key and issuing cert will be appended
+to the certificate pem. Defaults to "pem".`,
 	}
 
 	fields["ip_sans"] = &framework.FieldSchema{

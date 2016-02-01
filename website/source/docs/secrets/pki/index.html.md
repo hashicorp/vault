@@ -741,8 +741,10 @@ subpath for interactive help output.
       <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
+        Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
+        defaults to `pem`. If `der`, the output is base64 encoded. If
+        `pem_bundle`, the `csr` field will contain the private key (if
+        exported) and CSR, concatenated.
       </li>
       <li>
         <span class="param">key_type</span>
@@ -860,8 +862,10 @@ subpath for interactive help output.
       <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
+        Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
+        defaults to `pem`. If `der`, the output is base64 encoded. If
+        `pem_bundle`, the `certificate` field will contain the private key,
+        certificate, and issuing CA, concatenated.
       </li>
     </ul>
   </dd>
@@ -1233,8 +1237,10 @@ subpath for interactive help output.
       <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
+        Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
+        defaults to `pem`. If `der`, the output is base64 encoded. If
+        `pem_bundle`, the `certificate` field will contain the private key (if exported),
+        certificate, and issuing CA, concatenated.
       </li>
       <li>
         <span class="param">key_type</span>
@@ -1333,8 +1339,10 @@ subpath for interactive help output.
       <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
+        Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
+        defaults to `pem`. If `der`, the output is base64 encoded. If
+        `pem_bundle`, the `certificate` field will contain the certificate and
+        issuing CA, concatenated.
       </li>
       <li>
         <span class="param">max_path_length</span>
@@ -1435,8 +1443,10 @@ subpath for interactive help output.
       <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
+        Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
+        defaults to `pem`. If `der`, the output is base64 encoded. If
+        `pem_bundle`, the `certificate` field will contain the certificate and
+        issuing CA, concatenated.
       </li>
     </ul>
   </dd>
@@ -1499,8 +1509,10 @@ subpath for interactive help output.
       <li>
       <span class="param">format</span>
       <span class="param-flags">optional</span>
-        Format for returned data. Can be `pem` or `der`; defaults to `pem`. If
-        `der`, the output is base64 encoded.
+        Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
+        defaults to `pem`. If `der`, the output is base64 encoded. If
+        `pem_bundle`, the `certificate` field will contain the certificate and
+        issuing CA, concatenated.
       </li>
     </ul>
   </dd>
