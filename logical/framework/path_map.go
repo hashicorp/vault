@@ -22,6 +22,10 @@ type PathMap struct {
 	CaseSensitive bool
 	Salt          *salt.Salt
 
+	// Allows the ability to intercept the request and modify it or cancel before
+	// the default task is performed here
+	Callbacks     map[logical.Operation]OperationFunc
+
 	once sync.Once
 }
 
@@ -135,8 +139,14 @@ func (p *PathMap) Paths() []*Path {
 	}
 }
 
-func (p *PathMap) pathList(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
+func (p *PathMap) pathList(req *logical.Request, d *FieldData) (*logical.Response, error) {
+	if p.Callbacks[logical.ListOperation] != nil {
+		res, err := p.Callbacks[logical.ListOperation](req, d)
+		if res != nil || err != nil {
+			return res, err
+		}
+	}
+
 	keys, err := req.Storage.List(req.Path)
 	if err != nil {
 		return nil, err
@@ -145,8 +155,14 @@ func (p *PathMap) pathList(
 	return logical.ListResponse(keys), nil
 }
 
-func (p *PathMap) pathSingleRead(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
+func (p *PathMap) pathSingleRead(req *logical.Request, d *FieldData) (*logical.Response, error) {
+	if p.Callbacks[logical.ReadOperation] != nil {
+		res, err := p.Callbacks[logical.ReadOperation](req, d)
+		if res != nil || err != nil {
+			return res, err
+		}
+	}
+
 	v, err := p.Get(req.Storage, d.Get("key").(string))
 	if err != nil {
 		return nil, err
@@ -157,14 +173,26 @@ func (p *PathMap) pathSingleRead(
 	}, nil
 }
 
-func (p *PathMap) pathSingleWrite(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
+func (p *PathMap) pathSingleWrite(req *logical.Request, d *FieldData) (*logical.Response, error) {
+	if p.Callbacks[logical.WriteOperation] != nil {
+		res, err := p.Callbacks[logical.WriteOperation](req, d)
+		if res != nil || err != nil {
+			return res, err
+		}
+	}
+
 	err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
 	return nil, err
 }
 
-func (p *PathMap) pathSingleDelete(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
+func (p *PathMap) pathSingleDelete(req *logical.Request, d *FieldData) (*logical.Response, error) {
+	if p.Callbacks[logical.DeleteOperation] != nil {
+		res, err := p.Callbacks[logical.DeleteOperation](req, d)
+		if res != nil || err != nil {
+			return res, err
+		}
+	}
+
 	err := p.Delete(req.Storage, d.Get("key").(string))
 	return nil, err
 }
