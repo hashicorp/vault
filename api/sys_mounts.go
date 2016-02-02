@@ -96,18 +96,21 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 	return err
 }
 
-func (c *Sys) MountConfig(path string) error {
+func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
 	if err := c.checkMountPath(path); err != nil {
-		return err
+		return nil, err
 	}
 
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 
 	resp, err := c.c.RawRequest(r)
-	if err == nil {
-		defer resp.Body.Close()
+	if err != nil {
+		return nil, err
 	}
-	return err
+	defer resp.Body.Close()
+	var result MountConfigOutput
+	err = resp.DecodeJSON(&result)
+	return &result, err
 }
 
 func (c *Sys) checkMountPath(path string) error {
