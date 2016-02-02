@@ -39,6 +39,19 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_upsert(t *testing.T) {
+	decryptData := make(map[string]interface{})
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepEncryptUpsert(t, "test", testPlaintext, decryptData),
+			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
+		},
+	})
+}
+
 func TestBackend_datakey(t *testing.T) {
 	dataKeyInfo := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -248,6 +261,30 @@ func testAccStepEncrypt(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
+		Path:      "encrypt/" + name,
+		Data: map[string]interface{}{
+			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
+		},
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Ciphertext string `mapstructure:"ciphertext"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if d.Ciphertext == "" {
+				return fmt.Errorf("missing ciphertext")
+			}
+			decryptData["ciphertext"] = d.Ciphertext
+			return nil
+		},
+	}
+}
+
+func testAccStepEncryptUpsert(
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.CreateOperation,
 		Path:      "encrypt/" + name,
 		Data: map[string]interface{}{
 			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
