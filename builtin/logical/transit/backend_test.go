@@ -111,6 +111,29 @@ func TestBackend_rotation(t *testing.T) {
 	})
 }
 
+func TestBackend_upsert(t *testing.T) {
+	decryptData := make(map[string]interface{})
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: Factory,
+		Steps: []logicaltest.TestStep{
+			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepEncryptExpectFailure(t, "test", testPlaintext, decryptData),
+			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepConfigUpsert(t, true),
+			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
+			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
+			testAccStepConfigUpsert(t, false),
+			testAccStepReadPolicy(t, "test2", true, false),
+			testAccStepEncryptExpectFailure(t, "test2", testPlaintext, decryptData),
+			testAccStepReadPolicy(t, "test2", true, false),
+			testAccStepEnableDeletion(t, "test"),
+			testAccStepDeletePolicy(t, "test"),
+			testAccStepReadPolicy(t, "test", true, false),
+		},
+	})
+}
+
 func TestBackend_basic_derived(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -263,6 +286,24 @@ func testAccStepEncrypt(
 				return fmt.Errorf("missing ciphertext")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
+			return nil
+		},
+	}
+}
+
+func testAccStepEncryptExpectFailure(
+	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "encrypt/" + name,
+		Data: map[string]interface{}{
+			"plaintext": base64.StdEncoding.EncodeToString([]byte(plaintext)),
+		},
+		ErrorOk: true,
+		Check: func(resp *logical.Response) error {
+			if !resp.IsError() {
+				return fmt.Errorf("expected error")
+			}
 			return nil
 		},
 	}
@@ -484,6 +525,16 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string))
 			}
 			return nil
+		},
+	}
+}
+
+func testAccStepConfigUpsert(t *testing.T, upsert bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			"allow_upsert": upsert,
 		},
 	}
 }

@@ -123,13 +123,81 @@ only encrypt or decrypt using the named keys they need access to.
 
 ## API
 
+### /transit/config
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows setting backend configuration options.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/config`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">allow_upsert</span>
+        <span class="param-flags">optional</span>
+        Boolean flag indicating if upserting of keys is allowed. If true, if a
+        key with the given name does not exist when a call to
+        `/transit/encrypt/<name>` is made, the key will be created on-the-fly.
+        Defaults to false.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the current backend configuration.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/config`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+        "allow_upsert": true
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
 ### /transit/keys/
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates a new named encryption key. This is a root protected endpoint.
+    Creates a new named encryption key.
   </dd>
 
   <dt>Method</dt>
@@ -165,7 +233,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>
     Returns information about a named encryption key. The `keys` object shows
     the creation time of each key version; the values are not the keys
-    themselves. This is a root protected endpoint.
+    themselves.
   </dd>
 
   <dt>Method</dt>
@@ -205,10 +273,10 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes a named encryption key. This is a root protected endpoint.
-    It will no longer be possible to decrypt any data encrypted with the
-    named key. Because this is a potentially catastrophic operation, the
-    `deletion_allowed` tunable must be set in the key's `/config` endpoint.
+    Deletes a named encryption key.  It will no longer be possible to decrypt
+    any data encrypted with the named key. Because this is a potentially
+    catastrophic operation, the `deletion_allowed` tunable must be set in the
+    key's `/config` endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -235,8 +303,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dt>Description</dt>
   <dd>
     Allows tuning configuration values for a given key. (These values are
-    returned during a read operation on the named key.) This is a
-    root-protected endpoint.
+    returned during a read operation on the named key.) 
   </dd>
 
   <dt>Method</dt>
@@ -279,7 +346,7 @@ only encrypt or decrypt using the named keys they need access to.
     Rotates the version of the named key. After rotation, new plaintext
     requests will be encrypted with the new version of the key. To upgrade
     ciphertext to be encrypted with the latest version of the key, use the
-    `rewrap` endpoint. This is a root-protected endpoint.
+    `rewrap` endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -305,7 +372,9 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Encrypts the provided plaintext using the named key.
+    Encrypts the provided plaintext using the named key. If `allow_upsert` is
+    enabled in the backend config, if the named key does not exist, it will be
+    created on-the-fly.
   </dd>
 
   <dt>Method</dt>
