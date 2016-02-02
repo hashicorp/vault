@@ -23,8 +23,8 @@ key holders via side channels; the unseal key holders can then verify the nonce
 (by providing it) when they submit their unseal key.
 
 As a convenience, if using the CLI interactively to provide the unseal key, the
-nonce will be displayed for verification but will be pre-filled-in for the
-user.
+nonce will be displayed for verification but the user will not be required to
+manually re-type it.
 
 ## `TTL` Field in Token Lookup
 
@@ -37,8 +37,7 @@ The original behavior has been moved to a field named `creation_ttl`.
 
 Vault no longer uses grace periods internally for leases or token TTLs.
 Previously these were set by backends and could differ greatly from one backend
-to the other; this variation, plus the lack of user visibility into grace
-periods themselves, was a point of confusion. TTLs (e.g. the `lease_duration`
+to another, causing confusion. TTLs (the `lease_duration` field for a lease,
 or, for a token lookup, the `ttl`) are now exact.
 
 ## `token-renew` CLI Command
@@ -49,12 +48,14 @@ endpoint. Since the `default` policy contains `auth/token/renew-self` this
 makes it much more likely that the request will succeed rather than somewhat
 confusingly failing due to a lack of permissions on `auth/token/renew`.
 
-## Transit No Longer Upserts Keys
+## Transit No Longer Upserts Keys By Default
 
 Previously, attempting to encrypt with a key that did not exist would create a
 key with default values. This was convenient but ultimately allowed a client to
 potentially escape an ACL policy restriction, albeit without any dangerous
-access. However, this is now not allowed.
+access. However, this is now disabled by default. If you want to enable this
+behavior, you can use the `allow_upsert` parameter to the new `transit/config`
+endpoint to turn it back on.
 
 ## etcd Physical Backend Uses `sync`
 
