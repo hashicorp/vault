@@ -267,17 +267,6 @@ func (c *ServerCommand) Run(args []string) int {
 		lns = append(lns, ln)
 	}
 
-	if verifyOnly {
-		return 0
-	}
-
-	// Initialize the HTTP server
-	server := &http.Server{}
-	server.Handler = vaulthttp.Handler(core)
-	for _, ln := range lns {
-		go server.Serve(ln)
-	}
-
 	infoKeys = append(infoKeys, "version")
 	info["version"] = version.GetVersion().String()
 
@@ -292,6 +281,20 @@ func (c *ServerCommand) Run(args []string) int {
 			info[k]))
 	}
 	c.Ui.Output("")
+
+	if verifyOnly {
+		for _, listener := range lns {
+			listener.Close()
+		}
+		return 0
+	}
+
+	// Initialize the HTTP server
+	server := &http.Server{}
+	server.Handler = vaulthttp.Handler(core)
+	for _, ln := range lns {
+		go server.Serve(ln)
+	}
 
 	// Output the header that the server has started
 	c.Ui.Output("==> Vault server started! Log data will stream in below:\n")
