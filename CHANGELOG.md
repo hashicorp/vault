@@ -22,7 +22,9 @@ DEPRECATIONS/BREAKING CHANGES:
  * `etcd` physical backend: `sync` functionality is now supported and turned on
    by default. This can be disabled. [GH-921]
  * `transit`: Attempting to encrypt a value with a key that does not yet exist
-   now results in an error, not creation of the key [GH-979]
+   now results in an error, not creation of the key. The previous behavior can
+   be toggled on via the `allow_upsert` parameter to the new `transit/config`
+   endpoint. [GH-1011]
  * `token-renew` CLI command: If the token given for renewal is the same as the
    client token, the `renew-self` endpoint will be used in the API. Given that
    the `default` policy (by default) allows all clients access to the
