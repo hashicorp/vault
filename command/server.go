@@ -152,7 +152,6 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
 	} else {
 		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
-			coreConfig.HAPhysical = backend.(physical.HABackend)
 			coreConfig.AdvertiseAddr = config.Backend.AdvertiseAddr
 		}
 	}
