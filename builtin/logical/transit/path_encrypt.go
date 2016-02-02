@@ -65,24 +65,7 @@ func (b *backend) pathEncryptWrite(
 
 	// Error if invalid policy
 	if lp == nil {
-		config, err := b.getConfig(req.Storage)
-		if err != nil {
-			return nil, err
-		}
-
-		if config == nil || !config.AllowUpsert {
-			return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
-		}
-
-		isDerived := len(context) != 0
-
-		lp, err = b.policies.generatePolicy(req.Storage, name, isDerived)
-		// If the error is that the policy has been created in the interim we
-		// will get the policy back, so only consider it an error if err is not
-		// nil and we do not get a policy back
-		if err != nil && lp != nil {
-			return nil, err
-		}
+		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
 	lp.RLock()

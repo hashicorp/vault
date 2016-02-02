@@ -19,10 +19,9 @@ func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Paths: []*framework.Path{
-			b.pathConfig(),
 			// Rotate/Config needs to come before Keys
 			// as the handler is greedy
-			b.pathKeysConfig(),
+			b.pathConfig(),
 			b.pathRotate(),
 			b.pathRewrap(),
 			b.pathKeys(),

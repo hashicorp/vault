@@ -134,7 +134,7 @@ func (p *policyCache) generatePolicy(storage logical.Storage, name string, deriv
 	// created since we checked getPolicy. A policy being created holds a write
 	// lock until it's done, so it'll be in the cache at this point.
 	if lp := p.cache[name]; lp != nil {
-		return lp, fmt.Errorf("policy %s already exists", name)
+		return nil, fmt.Errorf("policy %s already exists", name)
 	}
 
 	// Create the policy object
