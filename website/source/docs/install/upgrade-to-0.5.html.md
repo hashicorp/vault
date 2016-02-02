@@ -48,14 +48,15 @@ endpoint. Since the `default` policy contains `auth/token/renew-self` this
 makes it much more likely that the request will succeed rather than somewhat
 confusingly failing due to a lack of permissions on `auth/token/renew`.
 
-## Transit No Longer Upserts Keys By Default
+## Transit Upsertion Behavior Uses Capabilities
 
 Previously, attempting to encrypt with a key that did not exist would create a
 key with default values. This was convenient but ultimately allowed a client to
 potentially escape an ACL policy restriction, albeit without any dangerous
-access. However, this is now disabled by default. If you want to enable this
-behavior, you can use the `allow_upsert` parameter to the new `transit/config`
-endpoint to turn it back on.
+access. Now that Vault supports more granular capabilities in policies,
+upsertion behavior is controlled by whether the client has the `create`
+capability for the request (upsertion is allowed) or only the `update`
+capability (upsertion is denied).
 
 ## etcd Physical Backend Uses `sync`
 
