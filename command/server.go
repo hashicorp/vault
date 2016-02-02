@@ -134,6 +134,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the separate HA physical backend, if it exists
+	var ok bool
 	if config.HABackend != nil {
 		habackend, err := physical.NewBackend(
 			config.HABackend.Type, config.HABackend.Config)
@@ -144,12 +145,16 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 
-		var ok bool
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
 			c.Ui.Error("Specified HA backend does not support HA")
 			return 1
 		}
 		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
+	} else {
+		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
+			coreConfig.HAPhysical = backend.(physical.HABackend)
+			coreConfig.AdvertiseAddr = config.Backend.AdvertiseAddr
+		}
 	}
 
 	if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
@@ -158,7 +163,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Attempt to detect the advertise address possible
 	var detect physical.AdvertiseDetect
-	var ok bool
 	if coreConfig.HAPhysical != nil {
 		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
 	} else {
