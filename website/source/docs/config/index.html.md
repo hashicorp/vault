@@ -151,6 +151,9 @@ to help you, but may refer you to the backend author.
   * `mysql` - Store data within MySQL. This backend does not support HA. This
     is a community-supported backend.
 
+  * `postgresql` - Store data within PostgreSQL. This backend does not support HA. This
+    is a community-supported backend.
+
   * `inmem` - Store data in-memory. This is only really useful for
     development and experimentation. Data is lost whenever Vault is
     restarted.
