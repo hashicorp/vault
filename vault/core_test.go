@@ -2,7 +2,6 @@ package vault
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -1202,8 +1201,8 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 	// Seal the standby core with the correct token. Shouldn't go down
 	err = core2.Seal(root)
-	if err != nil && !strings.Contains(err.Error(), "vault cannot be sealed when in standby mode; please restart instead") {
-		t.Fatalf("should not be sealed in standby mode")
+	if err == nil {
+		t.Fatal("should not be sealed")
 	}
 
 	keyUUID, err := uuid.GenerateUUID()
@@ -1212,8 +1211,8 @@ func TestCore_Standby_Seal(t *testing.T) {
 	}
 	// Seal the standby core with an invalid token. Shouldn't go down
 	err = core2.Seal(keyUUID)
-	if err != nil && !strings.Contains(err.Error(), "vault cannot be sealed when in standby mode; please restart instead") {
-		t.Fatalf("should not be sealed in standby mode")
+	if err == nil {
+		t.Fatal("should not be sealed")
 	}
 }
 

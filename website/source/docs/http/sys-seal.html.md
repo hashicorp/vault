@@ -11,7 +11,7 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Seals the Vault.
+    Seals the Vault. In HA mode, only an active node can be sealed. Standby nodes should be restarted to get the same effect.
   </dd>
 
   <dt>Method</dt>
