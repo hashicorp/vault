@@ -1183,6 +1183,10 @@ func (c *Core) Seal(token string) (retErr error) {
 		}
 	}
 	if err != nil {
+		if c.standby {
+			c.logger.Printf("[ERR] core: cannot seal the vault in standby mode")
+			return errors.New("Vault cannot be sealed in standby mode")
+		}
 		return err
 	}
 
