@@ -1108,6 +1108,114 @@ func TestCore_LimitedUseToken(t *testing.T) {
 	}
 }
 
+func TestCore_Standby_Seal(t *testing.T) {
+	// Create the first core and initialize it
+	inm := physical.NewInmem()
+	inmha := physical.NewInmemHA()
+	advertiseOriginal := "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		HAPhysical:    inmha,
+		AdvertiseAddr: advertiseOriginal,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	key, root := TestCoreInit(t, core)
+	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err := core.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	// Wait for core to become active
+	testWaitActive(t, core)
+
+	// Ensure that the original clean function has stopped running
+	time.Sleep(2 * time.Second)
+
+	// Check the leader is local
+	isLeader, advertise, err := core.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !isLeader {
+		t.Fatalf("should be leader")
+	}
+	if advertise != advertiseOriginal {
+		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
+	// Create the second core and initialize it
+	advertiseOriginal2 := "http://127.0.0.1:8500"
+	core2, err := NewCore(&CoreConfig{
+		Physical:      inm,
+		HAPhysical:    inmha,
+		AdvertiseAddr: advertiseOriginal2,
+		DisableMlock:  true,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err = core2.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	// Core2 should be in standby
+	standby, err := core2.Standby()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !standby {
+		t.Fatalf("should be standby")
+	}
+
+	// Check the leader is not local
+	isLeader, advertise, err = core2.Leader()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if isLeader {
+		t.Fatalf("should not be leader")
+	}
+	if advertise != advertiseOriginal {
+		t.Fatalf("Bad advertise: %v", advertise)
+	}
+
+	// Seal the standby core with the correct token. Shouldn't go down
+	err = core2.Seal(root)
+	if err == nil {
+		t.Fatal("should not be sealed")
+	}
+
+	keyUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Seal the standby core with an invalid token. Shouldn't go down
+	err = core2.Seal(keyUUID)
+	if err == nil {
+		t.Fatal("should not be sealed")
+	}
+}
+
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
 	inm := physical.NewInmem()

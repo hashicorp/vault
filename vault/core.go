@@ -1183,6 +1183,15 @@ func (c *Core) Seal(token string) (retErr error) {
 		}
 	}
 	if err != nil {
+		// Since there is no token store in standby nodes, sealing cannot
+		// be done. Ideally, the request has to be forwarded to leader node
+		// for validation and the operation should be performed. But for now,
+		// just returning with an error and recommending a vault restart, which
+		// essentially does the same thing.
+		if c.standby {
+			c.logger.Printf("[ERR] core: vault cannot be sealed when in standby mode; please restart instead")
+			return errors.New("vault cannot be sealed when in standby mode; please restart instead")
+		}
 		return err
 	}
 
