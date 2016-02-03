@@ -116,6 +116,8 @@ IMPROVEMENTS:
  * logical/mysql: Add list support for roles path [GH-984]
  * logical/pki: Fix up key usages being specified for CAs [GH-989]
  * logical/pki: Add list support for roles path [GH-985]
+ * logical/pki: Allow `pem_bundle` to be specified as the format, which
+   provides a concatenated PEM bundle of returned values [GH-1008]
  * logical/postgres: Add `max_idle_connections` paramter [GH-950]
  * logical/postgres: Add list support for roles path
  * logical/ssh: Add list support for roles path [GH-983]
