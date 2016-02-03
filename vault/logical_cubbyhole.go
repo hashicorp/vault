@@ -154,11 +154,11 @@ func (b *CubbyholeBackend) handleList(
 		return nil, fmt.Errorf("[ERR] cubbyhole list: Client token empty")
 	}
 
-	// Right now we only handle directories, so ensure it ends with /; however,
-	// some physical backends may not handle the "/" case properly, so only add
-	// it if we're not listing the root
+	// Right now we only handle directories, so ensure it ends with /
+	// Unlike passthrough, we'll never have a case of listing "/" so we don't
+	// need to check if the path is empty
 	path := req.Path
-	if path != "" && !strings.HasSuffix(path, "/") {
+	if !strings.HasSuffix(path, "/") {
 		path = path + "/"
 	}
 
