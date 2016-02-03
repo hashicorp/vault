@@ -221,6 +221,10 @@ path "auth/token/revoke-self" {
 path "cubbyhole/*" {
     capabilities = ["create", "read", "update", "delete", "list"]
 }
+
+path "cubbyhole" {
+    capabilities = ["list"]
+}
 `)
 	if err != nil {
 		return errwrap.Wrapf("error parsing default policy: {{err}}", err)
