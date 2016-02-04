@@ -88,6 +88,11 @@ FEATURES:
    [GH-945]
  * **STS Support in AWS Secret Backend**: You can now use the AWS secret
    backend to fetch STS tokens rather than IAM users. [GH-927] 
+ * **Speedups in the transit backend**: The `transit` backend has gained a
+   cache, and now loads only the working set of keys (e.g. from the
+   `min_decryption_version` to the current key version) into its working set.
+   This provides large speedups and potential memory savings when the `rotate`
+   feature of the backend is used heavily.
 
 IMPROVEMENTS:
 
