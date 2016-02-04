@@ -13,7 +13,7 @@ SECURITY:
    initiator of the rekey attempt. If the user was not an unseal key holder,
    there is no benefit to be gained; the only outcome that could be attempted
    would be a denial of service against a legitimate rekey operation by sending
-   cancel requests over and over.
+   cancel requests over and over. Thanks to Josh Snyder for the report!
 
 DEPRECATIONS/BREAKING CHANGES:
 
