@@ -168,6 +168,15 @@ MISC:
    [GH-861] [GH-876] [GH-899] [GH-900] [GH-904] [GH-923] [GH-924] [GH-958]
    [GH-959] [GH-981] [GH-990] [GH-1024] [GH-1025]
 
+BUILD NOTE:
+
+ * The HashiCorp-provided binary release of Vault 0.5.0 is built against a
+   patched version of Go 1.5.3 containing two specific bug fixes affecting TLS
+   certificate handling. These fixes are in the Go 1.6 tree and were
+   cherry-picked on top of stock Go 1.5.3. If you want to examine the way in
+   which the releases were built, please look at our [cross-compilation
+   Dockerfile](https://github.com/hashicorp/vault/blob/v0.5.0/scripts/cross/Dockerfile-patched-1.5.3).
+
 ## 0.4.1 (January 13, 2016)
 
 SECURITY:
