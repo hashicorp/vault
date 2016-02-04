@@ -19,7 +19,7 @@ dev: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	VAULT_TOKEN= TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=60s -parallel=4
+	VAULT_TOKEN= TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
