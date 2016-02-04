@@ -1,6 +1,7 @@
 ## 0.5.0 (Unreleased)
 
 SECURITY:
+
  * Previous versions of Vault could allow a malicious user to hijack the rekey
    operation by canceling an operation in progress and starting a new one. The
    practical application of this is very small. If the user was an unseal key
@@ -15,6 +16,7 @@ SECURITY:
    cancel requests over and over.
 
 DEPRECATIONS/BREAKING CHANGES:
+
  * `s3` physical backend: Environment variables are now preferred over
    configuration values. This makes it behave similar to the rest of Vault,
    which, in increasing order of preference, uses values from the configuration
@@ -131,6 +133,7 @@ IMPROVEMENTS:
  * physical/etcd: Support sync functionality and enable by default [GH-921]
 
 BUG FIXES:
+
  * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
  * api: Fix the output of `Sys().MountConfig(...)` to return proper values
    [GH-1017]
