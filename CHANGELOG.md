@@ -71,6 +71,9 @@ FEATURES:
    value is protected via any PGP key of the initiator's choosing or a one-time
    pad known only to the initiator (a suitable pad can be generated via the
    `-genotp` flag to the command. [GH-915]
+ * **Unseal Key Archiving**: You can now optionally have Vault store your
+   unseal keys in your chosen physical store for disaster recovery purposes.
+   This option is only available when the keys are encrypted with PGP. [GH-907]
  * **Keybase Support for PGP Encryption Keys**: You can now specify Keybase
    users when passing in PGP keys to the `init`, `rekey`, and `generate-root`
    CLI commands.  Public keys for these users will be fetched automatically.
