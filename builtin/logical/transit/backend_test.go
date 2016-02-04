@@ -549,7 +549,7 @@ func TestKeyUpgrade(t *testing.T) {
 func TestPolicyFuzzing(t *testing.T) {
 	be := Backend()
 
-	storage := &logical.InmemStorage{}
+	storage := &logical.LockingInmemStorage{}
 	wg := sync.WaitGroup{}
 
 	funcs := []string{"encrypt", "decrypt", "rotate", "change_min_version"}
