@@ -37,6 +37,10 @@ func (c *ListCommand) Run(args []string) int {
 		path = path[1:]
 	}
 
+	if !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
