@@ -128,6 +128,8 @@ IMPROVEMENTS:
  * logical/pki: Add list support for roles path [GH-985]
  * logical/pki: Allow `pem_bundle` to be specified as the format, which
    provides a concatenated PEM bundle of returned values [GH-1008]
+ * logical/pki: Add 30 seconds of slack to the validity start period to
+   accommodate some clock skew in machines [GH-1036]
  * logical/postgres: Add `max_idle_connections` paramter [GH-950]
  * logical/postgres: Add list support for roles path
  * logical/ssh: Add list support for roles path [GH-983]
