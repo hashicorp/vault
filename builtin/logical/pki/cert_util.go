@@ -717,7 +717,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
 		Subject:        subject,
-		NotBefore:      time.Now(),
+		NotBefore:      time.Now().Add(-30 * time.Second),
 		NotAfter:       time.Now().Add(creationInfo.TTL),
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
@@ -873,7 +873,7 @@ func signCertificate(creationInfo *creationBundle,
 	certTemplate := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject:      subject,
-		NotBefore:    time.Now(),
+		NotBefore:    time.Now().Add(-30 * time.Second),
 		NotAfter:     time.Now().Add(creationInfo.TTL),
 		SubjectKeyId: subjKeyID[:],
 	}

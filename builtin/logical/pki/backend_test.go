@@ -299,8 +299,12 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage certUsage,
 		}
 	}
 
-	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 10 {
+	// 40 seconds since we add 30 second slack for clock skew
+	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 40 {
 		return nil, fmt.Errorf("Validity period starts out of range")
+	}
+	if !cert.NotBefore.Before(time.Now().Add(-10 * time.Second)) {
+		return nil, fmt.Errorf("Validity period not far enough in the past")
 	}
 
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
