@@ -42,6 +42,9 @@ DEPRECATIONS/BREAKING CHANGES:
  * `rekey`: Rekey now requires a nonce to be supplied with key shares. This
    nonce is generated at the start of a rekey attempt and is unique for that
    attempt.
+ * `status`: The exit code for the `status` CLI command is now `2` for an
+   uninitialized Vault instead of `1`. `1` is returned for errors. This better
+   matches the rest of the CLI.
 
 FEATURES:
 
