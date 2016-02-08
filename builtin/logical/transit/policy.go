@@ -41,7 +41,7 @@ func (p *policyCache) getPolicy(req *logical.Request, name string) (*lockingPoli
 		return p.cache[name], nil
 	}
 
-	// If we find anything, we'll need to write into the cache, plus possibly
+	// If we didn't find anything, we'll need to write into the cache, plus possibly
 	// persist the entry, so lock the cache
 	p.RUnlock()
 	p.Lock()
