@@ -94,7 +94,7 @@ Usage: vault status [options]
   Outputs the state of the Vault, sealed or unsealed and if HA is enabled.
 
   This command outputs whether or not the Vault is sealed. The exit
-  code also reflects the seal status (0 unsealed, 1 sealed, 2+ error).
+  code also reflects the seal status (0 unsealed, 2 sealed, 1 error).
 
 General Options:
 
