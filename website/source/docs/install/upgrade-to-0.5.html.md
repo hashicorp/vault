@@ -48,6 +48,11 @@ endpoint. Since the `default` policy contains `auth/token/renew-self` this
 makes it much more likely that the request will succeed rather than somewhat
 confusingly failing due to a lack of permissions on `auth/token/renew`.
 
+## `status` CLI Command
+The `status` CLI command now returns an exit code of `0` for an unsealed Vault
+(as before), `2` for a sealed Vault, and `1` for an error. This keeps error
+return codes consistent across commands.
+
 ## Transit Upsertion Behavior Uses Capabilities
 
 Previously, attempting to encrypt with a key that did not exist would create a
