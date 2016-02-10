@@ -1,4 +1,4 @@
-## 0.5.0 (Unreleased)
+## 0.5.0 (February 10, 2016)
 
 SECURITY:
 
