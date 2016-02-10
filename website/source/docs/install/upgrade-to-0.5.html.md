@@ -11,6 +11,11 @@ description: |-
 This page contains the list of breaking changes for Vault 0.5. Please read it
 carefully.
 
+Please note that these are changes to Vault itself. Client libraries maintained
+by HashiCorp have been updated with support for these changes, but if you are
+using community-supported libraries, you should ensure that they are ready for
+Vault 0.5 before upgrading.
+
 ## Rekey Requires Nonce
 
 Vault now generates a nonce when a rekey operation is started in order to
