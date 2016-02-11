@@ -216,9 +216,9 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 			} else {
 				result.AllowedDomains += "," + result.AllowedBaseDomain
 			}
-			result.AllowedBaseDomain = ""
-			modified = true
 		}
+		result.AllowedBaseDomain = ""
+		modified = true
 	}
 
 	if modified {
