@@ -1,3 +1,10 @@
+## 0.5.1 (Unreleased)
+
+BUG FIXES:
+
+ * logical/postgresql: Add extra revocation statements to better handle more
+   permission scenarios [GH-1053]
+
 ## 0.5.0 (February 10, 2016)
 
 SECURITY:
