@@ -86,7 +86,8 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
-	respondOk(w, nil)
+
+	handleSysGenerateRootAttemptGet(core, w, r)
 }
 
 func handleSysGenerateRootAttemptDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {

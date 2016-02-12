@@ -78,18 +78,13 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	// Start the rekey process if not started
 	if !rekeyStatus.Started {
-		err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    shares,
 			SecretThreshold: threshold,
 			PGPKeys:         pgpKeys,
 		})
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
-			return 1
-		}
-		rekeyStatus, err = client.Sys().RekeyStatus()
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error reading rekey status: %s", err))
 			return 1
 		}
 		c.Nonce = rekeyStatus.Nonce
@@ -182,7 +177,7 @@ func (c *RekeyCommand) initRekey(client *api.Client,
 	pgpKeys pgpkeys.PubKeyFilesFlag,
 	backup bool) int {
 	// Start the rekey
-	err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+	status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
 		PGPKeys:         pgpKeys,
@@ -214,7 +209,7 @@ be deleted at a later time with 'vault rekey -delete'.
 	}
 
 	// Provide the current status
-	return c.rekeyStatus(client)
+	return c.dumpRekeyStatus(status)
 }
 
 // cancelRekey is used to abort the rekey process
@@ -237,6 +232,10 @@ func (c *RekeyCommand) rekeyStatus(client *api.Client) int {
 		return 1
 	}
 
+	return c.dumpRekeyStatus(status)
+}
+
+func (c *RekeyCommand) dumpRekeyStatus(status *api.RekeyStatusResponse) int {
 	// Dump the status
 	statString := fmt.Sprintf(
 		"Nonce: %s\n"+

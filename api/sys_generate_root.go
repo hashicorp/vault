@@ -13,7 +13,7 @@ func (c *Sys) GenerateRootStatus() (*GenerateRootStatusResponse, error) {
 	return &result, err
 }
 
-func (c *Sys) GenerateRootInit(otp, pgpKey string) error {
+func (c *Sys) GenerateRootInit(otp, pgpKey string) (*GenerateRootStatusResponse, error) {
 	body := map[string]interface{}{
 		"otp":     otp,
 		"pgp_key": pgpKey,
@@ -21,14 +21,18 @@ func (c *Sys) GenerateRootInit(otp, pgpKey string) error {
 
 	r := c.c.NewRequest("PUT", "/v1/sys/generate-root/attempt")
 	if err := r.SetJSONBody(body); err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.c.RawRequest(r)
-	if err == nil {
-		defer resp.Body.Close()
+	if err != nil {
+		return nil, err
 	}
-	return err
+	defer resp.Body.Close()
+
+	var result GenerateRootStatusResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
 }
 
 func (c *Sys) GenerateRootCancel() error {

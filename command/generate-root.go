@@ -140,14 +140,9 @@ func (c *GenerateRootCommand) Run(args []string) int {
 
 	// Start the root generation process if not started
 	if !rootGenerationStatus.Started {
-		err = client.Sys().GenerateRootInit(otp, pgpKey)
+		rootGenerationStatus, err = client.Sys().GenerateRootInit(otp, pgpKey)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing root generation: %s", err))
-			return 1
-		}
-		rootGenerationStatus, err = client.Sys().GenerateRootStatus()
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error reading root generation status: %s", err))
 			return 1
 		}
 		c.Nonce = rootGenerationStatus.Nonce
@@ -229,14 +224,15 @@ func (c *GenerateRootCommand) decode(encodedVal, otp string) int {
 // initGenerateRoot is used to start the generation process
 func (c *GenerateRootCommand) initGenerateRoot(client *api.Client, otp string, pgpKey string) int {
 	// Start the rekey
-	err := client.Sys().GenerateRootInit(otp, pgpKey)
+	status, err := client.Sys().GenerateRootInit(otp, pgpKey)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing root generation: %s", err))
 		return 1
 	}
 
-	// Provide the current status
-	return c.rootGenerationStatus(client)
+	c.dumpStatus(status)
+
+	return 0
 }
 
 // cancelGenerateRoot is used to abort the generation process
