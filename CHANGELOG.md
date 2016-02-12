@@ -1,5 +1,11 @@
 ## 0.5.1 (Unreleased)
 
+IMPROVEMENTS:
+
+ * command/rekey and command/generate-root: These now return the status at
+   attempt initialization time, rather than requiring a separate fetch for the
+   nonce [GH-1054] 
+
 BUG FIXES:
 
  * logical/postgresql: Add extra revocation statements to better handle more
