@@ -100,7 +100,8 @@ func handleSysRekeyInitPut(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
-	respondOk(w, nil)
+
+	handleSysRekeyInitGet(core, w, r)
 }
 
 func handleSysRekeyInitDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {

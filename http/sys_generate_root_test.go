@@ -32,10 +32,10 @@ func TestSysGenerateRootAttempt_Status(t *testing.T) {
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
+		"nonce":              "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
@@ -56,9 +56,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
-	testResponseStatus(t, resp, 204)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
+	testResponseStatus(t, resp, 200)
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -71,6 +69,30 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
+	expected["nonce"] = actual["nonce"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+	}
+
+	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"started":            true,
+		"progress":           float64(0),
+		"required":           float64(1),
+		"complete":           false,
+		"encoded_root_token": "",
+		"pgp_fingerprint":    "",
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -86,7 +108,7 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
 
@@ -101,6 +123,9 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -123,17 +148,9 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 		"otp": otp,
 	})
 
-	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
-	testResponseStatus(t, resp, 204)
-
-	resp, err = http.Get(addr + "/v1/sys/generate-root/attempt")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":            false,
+		"started":            true,
 		"progress":           float64(0),
 		"required":           float64(1),
 		"complete":           false,
@@ -142,7 +159,34 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+	}
+
+	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
+	testResponseStatus(t, resp, 204)
+
+	resp, err = http.Get(addr + "/v1/sys/generate-root/attempt")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"started":            false,
+		"progress":           float64(0),
+		"required":           float64(1),
+		"complete":           false,
+		"encoded_root_token": "",
+		"pgp_fingerprint":    "",
+		"nonce":              "",
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
@@ -181,7 +225,7 @@ func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
 	testResponseStatus(t, resp, 204)
@@ -190,7 +234,7 @@ func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
 
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 }
 
 func TestSysGenerateRoot_Update_OTP(t *testing.T) {
@@ -208,13 +252,6 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"otp": otp,
 	})
-	testResponseStatus(t, resp, 204)
-
-	// We need to get the nonce first before we update
-	resp, err = http.Get(addr + "/v1/sys/generate-root/attempt")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 	var rootGenerationStatus map[string]interface{}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rootGenerationStatus)
@@ -287,7 +324,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	// We need to get the nonce first before we update
 	resp, err := http.Get(addr + "/v1/sys/generate-root/attempt")

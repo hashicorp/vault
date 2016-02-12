@@ -13,17 +13,21 @@ func (c *Sys) RekeyStatus() (*RekeyStatusResponse, error) {
 	return &result, err
 }
 
-func (c *Sys) RekeyInit(config *RekeyInitRequest) error {
+func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/rekey/init")
 	if err := r.SetJSONBody(config); err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.c.RawRequest(r)
-	if err == nil {
-		defer resp.Body.Close()
+	if err != nil {
+		return nil, err
 	}
-	return err
+	defer resp.Body.Close()
+
+	var result RekeyStatusResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
 }
 
 func (c *Sys) RekeyCancel() error {

@@ -29,10 +29,10 @@ func TestSysRekeyInit_Status(t *testing.T) {
 		"required":         float64(1),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
+		"nonce":            "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
@@ -48,9 +48,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
-	testResponseStatus(t, resp, 204)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
+	testResponseStatus(t, resp, 200)
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
@@ -64,6 +62,34 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
+	expected["nonce"] = actual["nonce"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+	}
+
+	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"started":          true,
+		"t":                float64(3),
+		"n":                float64(5),
+		"progress":         float64(0),
+		"required":         float64(1),
+		"pgp_fingerprints": interface{}(nil),
+		"backup":           false,
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -80,7 +106,7 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	resp = testHttpDelete(t, token, addr+"/v1/sys/rekey/init")
 	testResponseStatus(t, resp, 204)
@@ -99,10 +125,10 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 		"required":         float64(1),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
+		"nonce":            "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
@@ -130,13 +156,6 @@ func TestSysRekey_Update(t *testing.T) {
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
-	testResponseStatus(t, resp, 204)
-
-	// We need to get the nonce first before we update
-	resp, err := http.Get(addr + "/v1/sys/rekey/init")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 	var rekeyStatus map[string]interface{}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rekeyStatus)
@@ -177,7 +196,7 @@ func TestSysRekey_ReInitUpdate(t *testing.T) {
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	resp = testHttpDelete(t, token, addr+"/v1/sys/rekey/init")
 	testResponseStatus(t, resp, 204)
@@ -186,7 +205,7 @@ func TestSysRekey_ReInitUpdate(t *testing.T) {
 		"secret_shares":    5,
 		"secret_threshold": 3,
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
 		"key": hex.EncodeToString(master),
