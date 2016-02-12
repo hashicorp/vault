@@ -32,10 +32,10 @@ func TestSysGenerateRootAttempt_Status(t *testing.T) {
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
+		"nonce":              "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
@@ -69,6 +69,9 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -87,6 +90,9 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -117,6 +123,9 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -150,11 +159,13 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
-	initialNonce := expected["nonce"].(string)
 
 	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
 	testResponseStatus(t, resp, 204)
@@ -172,16 +183,12 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
+		"nonce":              "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
-	}
-
-	if expected["nonce"].(string) == initialNonce {
-		t.Fatalf("Same nonce detected across two invocations")
 	}
 }
 

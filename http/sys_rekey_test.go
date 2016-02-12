@@ -29,10 +29,10 @@ func TestSysRekeyInit_Status(t *testing.T) {
 		"required":         float64(1),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
+		"nonce":            "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
@@ -62,6 +62,9 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -81,6 +84,12 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
+	if actual["nonce"].(string) == "" {
+		t.Fatalf("nonce was empty")
+	}
 	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
@@ -116,10 +125,10 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 		"required":         float64(1),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
+		"nonce":            "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	expected["nonce"] = actual["nonce"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
