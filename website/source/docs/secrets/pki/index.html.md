@@ -227,7 +227,7 @@ Success! Data written to: pki/ca/urls
 #### Configure a role
 
 The next step is to configure a role. A role is a logical name that maps to a
-policy used to generated those credentials. For example, let's create an
+policy used to generate those credentials. For example, let's create an
 "example-dot-com" role:
 
 ```text
