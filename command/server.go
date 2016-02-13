@@ -79,6 +79,12 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Ensure at least one config was found.
+	if config == nil {
+		c.Ui.Error("No configuration files found.")
+		return 1
+	}
+
 	// Ensure that a backend is provided
 	if config.Backend == nil {
 		c.Ui.Error("A physical backend must be specified")
