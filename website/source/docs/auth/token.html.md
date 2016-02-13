@@ -326,7 +326,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-	Renews a lease associated with the callign token. This is used to prevent
+	Renews a lease associated with the calling token. This is used to prevent
 	the expiration of a token, and the automatic revocation of it. Token
 	renewal is possible only if there is a lease associated with it.
   </dd>
