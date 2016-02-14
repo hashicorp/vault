@@ -212,7 +212,9 @@ Permission denied
     ```javascript
     {
       "data": {
-        "policy": "abcdef="
+        "policy": "abcdef=",
+        "lease": "1h0m0s",
+        "token_type": "client"
       }
     }
     ```
