@@ -1275,9 +1275,13 @@ subpath for interactive help output.
       "renewable": false,
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+        "expiration": 1455566190,
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
-        "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+        "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAyPaCRrbyfxX2UvRmDID\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END RSA PRIVATE KEY-----\n",
+        "private_key_type": "rsa",
+        "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
         },
+      "warnings": null,
       "auth": null
     }
     ```
