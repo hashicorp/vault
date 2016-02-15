@@ -277,7 +277,7 @@ backend "zookeeper" {
   znode_owner = "ip:127.0.0.1"
  }
 ````
-The above allows access from localhost only - as this is the IP schema no auth_info is required since Zookeeper uses the address of the clients to do the ACL check. Zookeeper version 3.5.0 and above should support CIDR (which make much more sense).
+The above allows access from localhost only - as this is the IP schema no auth_info is required since Zookeeper uses the address of the clients to do the ACL check. Zookeeper version 3.5.0 and above should support CIDR (which makes much more sense).
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
