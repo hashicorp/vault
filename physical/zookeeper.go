@@ -26,6 +26,7 @@ const (
 type ZookeeperBackend struct {
 	path   string
 	client *zk.Conn
+    acl     []zk.ACL
 }
 
 // newZookeeperBackend constructs a Zookeeper backend using the given API client
@@ -52,16 +53,63 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		machines = "localhost:2181"
 	}
 
+    // zNode owner and schema.
+    var owner string
+    var schema string
+    var schemaAndOwner string
+    schemaAndOwner, ok = conf["znode_owner"]
+    if !ok {
+        owner = "anyone"
+        schema = "world"
+    } else {
+        parsedSchemaAndOwner := strings.SplitN(schemaAndOwner, ":", 2)
+        if !(len(parsedSchemaAndOwner)==2) {
+            return nil, fmt.Errorf("znode_owner expected format is 'schema:owner'")
+        } else {
+            schema = parsedSchemaAndOwner[0]
+            owner = parsedSchemaAndOwner[1]
+        }
+    }
+
+    acl := []zk.ACL{{zk.PermAll, schema, owner}} 
+
+
+    // Authnetication info
+    var schemaAndUser string
+    schemaAndUser, ok = conf["auth_info"]
+    if !ok {
+        owner = ""
+        schema = ""
+    } else {
+        parsedSchemaAndUser := strings.SplitN(schemaAndUser, ":", 2)
+        if !(len(parsedSchemaAndUser)==2) {
+            return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+        } else {
+            schema = parsedSchemaAndUser[0]
+            owner = parsedSchemaAndUser[1]
+        }
+    }   
+
+
 	// Attempt to create the ZK client
 	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("client setup failed: %v", err)
 	}
 
+    // If auth_info provided - attempt to authenticate 
+    if owner != "" {
+        err = client.AddAuth(schema, []byte(owner))
+        if err != nil {
+            return nil, fmt.Errorf("Zookeeper rejected authentication information provided at auth_info")
+        }
+    }
+
 	// Setup the backend
 	c := &ZookeeperBackend{
 		path:   path,
 		client: client,
+        acl:    acl,
 	}
 	return c, nil
 }
@@ -71,7 +119,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 // an error during an operation
 func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 	nodes := strings.Split(path, "/")
-	acl := zk.WorldACL(zk.PermAll)
+	//acl := zk.WorldACL(zk.PermAll)
 	fullPath := ""
 	for index, node := range nodes {
 		if strings.TrimSpace(node) != "" {
@@ -81,11 +129,11 @@ func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 			// set parent nodes to nil, leaf to value
 			// this block reduces round trips by being smart on the leaf create/set
 			if exists, _, _ := c.client.Exists(fullPath); !isLastNode && !exists {
-				if _, err := c.client.Create(fullPath, nil, int32(0), acl); err != nil {
+				if _, err := c.client.Create(fullPath, nil, int32(0), c.acl); err != nil {
 					return err
 				}
 			} else if isLastNode && !exists {
-				if _, err := c.client.Create(fullPath, value, int32(0), acl); err != nil {
+				if _, err := c.client.Create(fullPath, value, int32(0), c.acl); err != nil {
 					return err
 				}
 			} else if isLastNode && exists {
