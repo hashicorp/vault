@@ -119,7 +119,6 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 // an error during an operation
 func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 	nodes := strings.Split(path, "/")
-	//acl := zk.WorldACL(zk.PermAll)
 	fullPath := ""
 	for index, node := range nodes {
 		if strings.TrimSpace(node) != "" {
@@ -304,8 +303,7 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 
 func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	// Wait to acquire the lock in ZK
-	acl := zk.WorldACL(zk.PermAll)
-	lock := zk.NewLock(i.in.client, lockpath, acl)
+	lock := zk.NewLock(i.in.client, lockpath, i.in.acl)
 	err := lock.Lock()
 	if err != nil {
 		failLock <- err
