@@ -256,16 +256,28 @@ The following optional settings can be used to configure zNode ACLs
       of the user information)
     * 'ip:127.0.01' - Access from localhost only
     * 'ip:70.95.0.0/16' - Any host on the 70.95.0.0 network (CIDR is supported starting from Zookeeper 3.5.0)
-In neither of those is set the backend will not authenticate with Zookeeper and will set the OPEN_ACL_UNSAFE ACL
+
+If neither of these is set the backend will not authenticate with Zookeeper and will set the OPEN_ACL_UNSAFE ACL
 on all nodes. The affect would be that anyone connected to Zookeeper could change Vault’s znodes and, potentially, 
-take Vault out of service. Sample configurations:
+take Vault out of service. 
+
+Some sample configurations:
 ````
 backend "zookeeper" {
   znode_owner = "digest:vaultUser:raxgVAfnDRljZDAcJFxznkZsExs="
   auth_info = "digest:vaultUser:abc"
 }
 ````
+With the above configuration Vault will set an ACL on all of its zNodes permitting access to vaultUser only. If digest schema 
+is used please protect this file as it contains the clear text password. As per Zookeeper ACL model the digest value 
+(in znode_owner) must match the user (in znode_owner). 
 
+````
+backend "zookeeper" {
+  znode_owner = "ip:127.0.0.1"
+ }
+````
+The above allows access from localhost only - as this is the IP schema no auth_info is required since Zookeeper uses the address of the clients to do the ACL check. Zookeeper version 3.5.0 and above should support CIDR (which make much more sense).
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
