@@ -62,7 +62,8 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 			return nil, err
 		}
 
-		transport := cleanhttp.DefaultTransport()
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.MaxIdleConnsPerHost = 4
 		transport.TLSClientConfig = tlsClientConfig
 		consulConf.HttpClient.Transport = transport
 	}
