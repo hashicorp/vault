@@ -20,7 +20,6 @@ ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 
 RUN go get github.com/mitchellh/gox
-RUN go get github.com/tools/godep
 
 RUN mkdir -p /gopath/src/github.com/hashicorp/vault
 WORKDIR /gopath/src/github.com/hashicorp/vault

@@ -44,13 +44,6 @@ md bin 2>nul
 REM If its dev mode, only build for ourself
 if not %_DEV_BUILD% equ 1 goto build
 
-set _ORIGINAL_GOPATH=%GOPATH%
-set _GODEP_PATH_FILE=%TEMP%\vault-godep-path.txt
-godep path >"%_GODEP_PATH_FILE%"
-set /p GOPATH=<"%_GODEP_PATH_FILE%"
-del /f "%_GODEP_PATH_FILE%" 2>nul
-set GOPATH=%GOPATH%;%_ORIGINAL_GOPATH%
-
 :devbuild
 echo ==^> Preparing for development build...
 set _GO_ENV_TMP_FILE=%TEMP%\vault-go-env.txt
@@ -72,7 +65,6 @@ gox^
  .
 
 if %ERRORLEVEL% equ 1 set %_EXITCODE%=1
-set GOPATH=%_ORIGINAL_GOPATH%
 
 if %_EXITCODE% equ 1 exit /b %_EXITCODE%
 
