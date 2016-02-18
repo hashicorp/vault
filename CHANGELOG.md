@@ -2,14 +2,19 @@
 
 IMPROVEMENTS:
 
+ * deps: Use the standardized Go 1.6 vendoring system
  * command/rekey and command/generate-root: These now return the status at
    attempt initialization time, rather than requiring a separate fetch for the
    nonce [GH-1054] 
+ * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
+   204 [GH-1086]
 
 BUG FIXES:
 
- * logical/postgresql: Add extra revocation statements to better handle more
+ * secret/postgresql: Add extra revocation statements to better handle more
    permission scenarios [GH-1053]
+ * secret/pki: If a cert is not found during lookup of a serial number,
+   respond with a 400 rather than a 500 [GH-1085]
 
 ## 0.5.0 (February 10, 2016)
 
