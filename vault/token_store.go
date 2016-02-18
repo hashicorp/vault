@@ -895,7 +895,7 @@ func (ts *TokenStore) handleRenew(
 	}
 
 	// Renew the token and its children
-	auth, err := ts.expiration.RenewToken(te.Path, te.ID, increment)
+	auth, err := ts.expiration.RenewToken(req, te.Path, te.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

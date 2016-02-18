@@ -222,9 +222,6 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		}
 	}
 
-	// Determine if this path is an unauthenticated path before we modify it
-	loginPath := r.LoginPath(req.Path)
-
 	// Adjust the path to exclude the routing prefix
 	original := req.Path
 	req.Path = strings.TrimPrefix(req.Path, mount)
@@ -248,11 +245,8 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.ClientToken = re.SaltID(req.ClientToken)
 	}
 
-	// If the request is not a login path, then clear the connection
+	// Cache the pointer to the original connection object
 	originalConn := req.Connection
-	if !loginPath {
-		req.Connection = nil
-	}
 
 	// Reset the request before returning
 	defer func() {
