@@ -8,6 +8,8 @@ IMPROVEMENTS:
    nonce [GH-1054] 
  * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
    204 [GH-1086]
+ * secret/github: Github backend will check the validity of original token
+   during renewal time [GH-1047]
 
 BUG FIXES:
 
