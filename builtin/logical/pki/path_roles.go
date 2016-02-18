@@ -308,6 +308,10 @@ func (b *backend) pathRoleCreate(
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
 	}
 
+	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
+		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
+	}
+
 	var maxTTL time.Duration
 	maxSystemTTL := b.System().MaxLeaseTTL()
 	if len(entry.MaxTTL) == 0 {

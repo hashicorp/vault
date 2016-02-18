@@ -119,6 +119,14 @@ If you are using issued certificates for client authentication to Vault, note
 that as of 0.4, the `cert` authentication endpoint supports being pushed CRLs,
 but it cannot read CRLs directly from this backend.
 
+### Safe Minimums
+
+Since its inception, this backend has enforced SHA256 for signature hashes
+rather than SHA1. As of 0.5.1, a minimum of 2048 bits for RSA keys is also
+enforced. Software that can handle SHA256 signatures should also be able to
+handle 2048-bit keys, and 1024-bit keys are considered unsafe and are
+disallowed in the Internet PKI.
+
 ## Quick Start
 
 #### Mount the backend

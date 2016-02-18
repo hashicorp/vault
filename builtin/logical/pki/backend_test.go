@@ -335,11 +335,18 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 	}
 
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
-	csr, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv)
-	csrPem := pem.EncodeToMemory(&pem.Block{
+	priv1024, _ := rsa.GenerateKey(rand.Reader, 1024)
+	csr1024, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv1024)
+	csrPem1024 := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
-		Bytes: csr,
+		Bytes: csr1024,
+	})
+
+	priv2048, _ := rsa.GenerateKey(rand.Reader, 2048)
+	csr2048, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv2048)
+	csrPem2048 := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csr2048,
 	})
 
 	ret := []logicaltest.TestStep{
@@ -388,7 +395,28 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"common_name": "Intermediate Cert",
-				"csr":         string(csrPem),
+				"csr":         string(csrPem1024),
+				"format":      "der",
+			},
+			ErrorOk: true,
+			Check: func(resp *logical.Response) error {
+				if !resp.IsError() {
+					return fmt.Errorf("expected an error response but did not get one")
+				}
+				if !strings.Contains(resp.Data["error"].(string), "2048") {
+					return fmt.Errorf("recieved an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
+				}
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "root/sign-intermediate",
+			Data: map[string]interface{}{
+				"common_name": "Intermediate Cert",
+				"csr":         string(csrPem2048),
 				"format":      "der",
 			},
 			Check: func(resp *logical.Response) error {
@@ -414,6 +442,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
 				}
+
 				return nil
 			},
 		},
