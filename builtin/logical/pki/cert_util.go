@@ -172,7 +172,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 
 	certEntry, err := req.Storage.Get(path)
 	if err != nil || certEntry == nil {
-		return nil, certutil.InternalError{Err: fmt.Sprintf("certificate with serial number %s not found", serial)}
+		return nil, certutil.UserError{Err: fmt.Sprintf("certificate with serial number %s not found", serial)}
 	}
 
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {
