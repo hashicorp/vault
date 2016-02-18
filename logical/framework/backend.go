@@ -221,13 +221,14 @@ func (b *Backend) System() logical.SystemView {
 	return b.system
 }
 
-// This method takes in the TTL and MaxTTL values provided by the user, compares
-// those with the SystemView values. If they are empty default values are set.
-// If they are set, their boundaries are validated.
+// This method takes in the TTL and MaxTTL values provided by the user,
+// compares those with the SystemView values. If they are empty a value of 0 is
+// set, which will cause initial secret or LeaseExtend operations to use the
+// mount/system defaults.  If they are set, their boundaries are validated.
 func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
 	sysMaxTTL := b.System().MaxLeaseTTL()
-	if len(ttlStr) == 0 {
-		ttl = b.System().DefaultLeaseTTL()
+	if len(ttlStr) == 0 || ttlStr == "0" {
+		ttl = 0
 	} else {
 		ttl, err = time.ParseDuration(ttlStr)
 		if err != nil {
@@ -237,8 +238,8 @@ func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Durati
 			return 0, 0, fmt.Errorf("\"ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
 		}
 	}
-	if len(maxTTLStr) == 0 {
-		maxTTL = sysMaxTTL
+	if len(maxTTLStr) == 0 || maxTTLStr == "0" {
+		maxTTL = 0
 	} else {
 		maxTTL, err = time.ParseDuration(maxTTLStr)
 		if err != nil {
