@@ -129,7 +129,7 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates a new named encryption key. This is a root protected endpoint.
+    Creates a new named encryption key.
   </dd>
 
   <dt>Method</dt>
@@ -165,7 +165,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>
     Returns information about a named encryption key. The `keys` object shows
     the creation time of each key version; the values are not the keys
-    themselves. This is a root protected endpoint.
+    themselves.
   </dd>
 
   <dt>Method</dt>
@@ -205,7 +205,7 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes a named encryption key. This is a root protected endpoint.
+    Deletes a named encryption key.
     It will no longer be possible to decrypt any data encrypted with the
     named key. Because this is a potentially catastrophic operation, the
     `deletion_allowed` tunable must be set in the key's `/config` endpoint.
@@ -235,8 +235,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dt>Description</dt>
   <dd>
     Allows tuning configuration values for a given key. (These values are
-    returned during a read operation on the named key.) This is a
-    root-protected endpoint.
+    returned during a read operation on the named key.)
   </dd>
 
   <dt>Method</dt>
@@ -279,7 +278,7 @@ only encrypt or decrypt using the named keys they need access to.
     Rotates the version of the named key. After rotation, new plaintext
     requests will be encrypted with the new version of the key. To upgrade
     ciphertext to be encrypted with the latest version of the key, use the
-    `rewrap` endpoint. This is a root-protected endpoint.
+    `rewrap` endpoint.
   </dd>
 
   <dt>Method</dt>
