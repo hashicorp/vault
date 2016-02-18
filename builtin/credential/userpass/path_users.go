@@ -43,7 +43,7 @@ func pathUsers(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathUserDelete,
 			logical.ReadOperation:   b.pathUserRead,
-			logical.UpdateOperation:  b.pathUserWrite,
+			logical.UpdateOperation: b.pathUserWrite,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
@@ -112,6 +112,14 @@ func (b *backend) pathUserWrite(
 
 	ttlStr := d.Get("ttl").(string)
 	maxTTLStr := d.Get("max_ttl").(string)
+	// Setting ttlStr and maxTTLStr to "0" results in SanitizeTTL returning zero values respectively.
+	// During the secret issue time, the ttl values will be set to current value on the mount.
+	if ttlStr == "" {
+		ttlStr = "0"
+	}
+	if maxTTLStr == "" {
+		maxTTLStr = "0"
+	}
 	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
