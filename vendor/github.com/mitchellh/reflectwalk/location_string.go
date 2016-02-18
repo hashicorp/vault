@@ -9,7 +9,7 @@ const _Location_name = "NoneMapMapKeyMapValueSliceSliceElemStructStructFieldWalk
 var _Location_index = [...]uint8{0, 4, 7, 13, 21, 26, 35, 41, 52, 59}
 
 func (i Location) String() string {
-	if i >= Location(len(_Location_index)-1) {
+	if i+1 >= Location(len(_Location_index)) {
 		return fmt.Sprintf("Location(%d)", i)
 	}
 	return _Location_name[_Location_index[i]:_Location_index[i+1]]

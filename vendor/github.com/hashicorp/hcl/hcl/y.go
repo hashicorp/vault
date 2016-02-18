@@ -62,7 +62,7 @@ var hclStatenames = [...]string{}
 
 const hclEofCode = 1
 const hclErrCode = 2
-const hclInitialStackSize = 16
+const hclMaxDepth = 200
 
 //line parse.y:259
 
@@ -179,17 +179,18 @@ type hclParser interface {
 }
 
 type hclParserImpl struct {
-	lval  hclSymType
-	stack [hclInitialStackSize]hclSymType
-	char  int
+	lookahead func() int
 }
 
 func (p *hclParserImpl) Lookahead() int {
-	return p.char
+	return p.lookahead()
 }
 
 func hclNewParser() hclParser {
-	return &hclParserImpl{}
+	p := &hclParserImpl{
+		lookahead: func() int { return -1 },
+	}
+	return p
 }
 
 const hclFlag = -1000
@@ -317,20 +318,22 @@ func hclParse(hcllex hclLexer) int {
 
 func (hclrcvr *hclParserImpl) Parse(hcllex hclLexer) int {
 	var hcln int
+	var hcllval hclSymType
 	var hclVAL hclSymType
 	var hclDollar []hclSymType
 	_ = hclDollar // silence set and not used
-	hclS := hclrcvr.stack[:]
+	hclS := make([]hclSymType, hclMaxDepth)
 
 	Nerrs := 0   /* number of errors */
 	Errflag := 0 /* error recovery flag */
 	hclstate := 0
-	hclrcvr.char = -1
-	hcltoken := -1 // hclrcvr.char translated into internal numbering
+	hclchar := -1
+	hcltoken := -1 // hclchar translated into internal numbering
+	hclrcvr.lookahead = func() int { return hclchar }
 	defer func() {
 		// Make sure we report no lookahead when not parsing.
 		hclstate = -1
-		hclrcvr.char = -1
+		hclchar = -1
 		hcltoken = -1
 	}()
 	hclp := -1
@@ -362,8 +365,8 @@ hclnewstate:
 	if hcln <= hclFlag {
 		goto hcldefault /* simple state */
 	}
-	if hclrcvr.char < 0 {
-		hclrcvr.char, hcltoken = hcllex1(hcllex, &hclrcvr.lval)
+	if hclchar < 0 {
+		hclchar, hcltoken = hcllex1(hcllex, &hcllval)
 	}
 	hcln += hcltoken
 	if hcln < 0 || hcln >= hclLast {
@@ -371,9 +374,9 @@ hclnewstate:
 	}
 	hcln = hclAct[hcln]
 	if hclChk[hcln] == hcltoken { /* valid shift */
-		hclrcvr.char = -1
+		hclchar = -1
 		hcltoken = -1
-		hclVAL = hclrcvr.lval
+		hclVAL = hcllval
 		hclstate = hcln
 		if Errflag > 0 {
 			Errflag--
@@ -385,8 +388,8 @@ hcldefault:
 	/* default state action */
 	hcln = hclDef[hclstate]
 	if hcln == -2 {
-		if hclrcvr.char < 0 {
-			hclrcvr.char, hcltoken = hcllex1(hcllex, &hclrcvr.lval)
+		if hclchar < 0 {
+			hclchar, hcltoken = hcllex1(hcllex, &hcllval)
 		}
 
 		/* look through exception table */
@@ -449,7 +452,7 @@ hcldefault:
 			if hcltoken == hclEofCode {
 				goto ret1
 			}
-			hclrcvr.char = -1
+			hclchar = -1
 			hcltoken = -1
 			goto hclnewstate /* try again in the same state */
 		}

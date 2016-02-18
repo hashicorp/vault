@@ -74,33 +74,33 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/Godeps/_workspace/src/github.com/ugorji/go/codec",
-			"Comment": "v2.3.0-alpha.1-12-ge6d6b64",
-			"Rev": "e6d6b648c4b17a5dbe0787786d8ac62063d1b630"
+			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
+			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context",
-			"Comment": "v2.3.0-alpha.1-12-ge6d6b64",
-			"Rev": "e6d6b648c4b17a5dbe0787786d8ac62063d1b630"
+			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
+			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/client",
-			"Comment": "v2.3.0-alpha.1-12-ge6d6b64",
-			"Rev": "e6d6b648c4b17a5dbe0787786d8ac62063d1b630"
+			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
+			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/pathutil",
-			"Comment": "v2.3.0-alpha.1-12-ge6d6b64",
-			"Rev": "e6d6b648c4b17a5dbe0787786d8ac62063d1b630"
+			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
+			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/transport",
-			"Comment": "v2.3.0-alpha.1-12-ge6d6b64",
-			"Rev": "e6d6b648c4b17a5dbe0787786d8ac62063d1b630"
+			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
+			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/types",
-			"Comment": "v2.3.0-alpha.1-12-ge6d6b64",
-			"Rev": "e6d6b648c4b17a5dbe0787786d8ac62063d1b630"
+			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
+			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
 		},
 		{
 			"ImportPath": "github.com/duosecurity/duo_api_golang",

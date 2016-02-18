@@ -69,7 +69,7 @@ var jsonStatenames = [...]string{}
 
 const jsonEofCode = 1
 const jsonErrCode = 2
-const jsonInitialStackSize = 16
+const jsonMaxDepth = 200
 
 //line parse.y:210
 
@@ -175,17 +175,18 @@ type jsonParser interface {
 }
 
 type jsonParserImpl struct {
-	lval  jsonSymType
-	stack [jsonInitialStackSize]jsonSymType
-	char  int
+	lookahead func() int
 }
 
 func (p *jsonParserImpl) Lookahead() int {
-	return p.char
+	return p.lookahead()
 }
 
 func jsonNewParser() jsonParser {
-	return &jsonParserImpl{}
+	p := &jsonParserImpl{
+		lookahead: func() int { return -1 },
+	}
+	return p
 }
 
 const jsonFlag = -1000
@@ -313,20 +314,22 @@ func jsonParse(jsonlex jsonLexer) int {
 
 func (jsonrcvr *jsonParserImpl) Parse(jsonlex jsonLexer) int {
 	var jsonn int
+	var jsonlval jsonSymType
 	var jsonVAL jsonSymType
 	var jsonDollar []jsonSymType
 	_ = jsonDollar // silence set and not used
-	jsonS := jsonrcvr.stack[:]
+	jsonS := make([]jsonSymType, jsonMaxDepth)
 
 	Nerrs := 0   /* number of errors */
 	Errflag := 0 /* error recovery flag */
 	jsonstate := 0
-	jsonrcvr.char = -1
-	jsontoken := -1 // jsonrcvr.char translated into internal numbering
+	jsonchar := -1
+	jsontoken := -1 // jsonchar translated into internal numbering
+	jsonrcvr.lookahead = func() int { return jsonchar }
 	defer func() {
 		// Make sure we report no lookahead when not parsing.
 		jsonstate = -1
-		jsonrcvr.char = -1
+		jsonchar = -1
 		jsontoken = -1
 	}()
 	jsonp := -1
@@ -358,8 +361,8 @@ jsonnewstate:
 	if jsonn <= jsonFlag {
 		goto jsondefault /* simple state */
 	}
-	if jsonrcvr.char < 0 {
-		jsonrcvr.char, jsontoken = jsonlex1(jsonlex, &jsonrcvr.lval)
+	if jsonchar < 0 {
+		jsonchar, jsontoken = jsonlex1(jsonlex, &jsonlval)
 	}
 	jsonn += jsontoken
 	if jsonn < 0 || jsonn >= jsonLast {
@@ -367,9 +370,9 @@ jsonnewstate:
 	}
 	jsonn = jsonAct[jsonn]
 	if jsonChk[jsonn] == jsontoken { /* valid shift */
-		jsonrcvr.char = -1
+		jsonchar = -1
 		jsontoken = -1
-		jsonVAL = jsonrcvr.lval
+		jsonVAL = jsonlval
 		jsonstate = jsonn
 		if Errflag > 0 {
 			Errflag--
@@ -381,8 +384,8 @@ jsondefault:
 	/* default state action */
 	jsonn = jsonDef[jsonstate]
 	if jsonn == -2 {
-		if jsonrcvr.char < 0 {
-			jsonrcvr.char, jsontoken = jsonlex1(jsonlex, &jsonrcvr.lval)
+		if jsonchar < 0 {
+			jsonchar, jsontoken = jsonlex1(jsonlex, &jsonlval)
 		}
 
 		/* look through exception table */
@@ -445,7 +448,7 @@ jsondefault:
 			if jsontoken == jsonEofCode {
 				goto ret1
 			}
-			jsonrcvr.char = -1
+			jsonchar = -1
 			jsontoken = -1
 			goto jsonnewstate /* try again in the same state */
 		}
