@@ -41,7 +41,7 @@ instance. This is done by providing a DSN (Data Source Name):
 
 ```
 $ vault write mysql/config/connection \
-    value="root:root@tcp(192.168.33.10:3306)/"
+    connection_url="root:root@tcp(192.168.33.10:3306)/"
 Success! Data written to: mysql/config/connection
 ```
 
@@ -127,9 +127,18 @@ allowed to read.
   <dd>
     <ul>
       <li>
-        <span class="param">value</span>
+        <span class="param">connection_url</span>
         <span class="param-flags">required</span>
         The MySQL DSN
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">value</span>
+        <span class="param-flags">optionsl</span>
+        DEPRECATED; use "connection_url" instead
       </li>
     </ul>
   </dd>
@@ -140,6 +149,16 @@ allowed to read.
         <span class="param-flags">optional</span>
         Maximum number of open connections to the database.
 	Defaults to 2.
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">allow_verification</span>
+        <span class="param-flags">optional</span>
+	If set, connection_url is verified by actually connecting to the database
+	Defaults to true.
       </li>
     </ul>
   </dd>
