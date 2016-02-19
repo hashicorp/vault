@@ -48,8 +48,8 @@ fi
 rm -rf ./pkg/dist
 mkdir -p ./pkg/dist
 for FILENAME in $(find ./pkg -mindepth 1 -maxdepth 1 -type f); do
-    FILENAME=$(basename $FILENAME)
-    cp ./pkg/${FILENAME} ./pkg/dist/vault_${VERSION}_${FILENAME}
+  FILENAME=$(basename $FILENAME)
+  cp ./pkg/${FILENAME} ./pkg/dist/vault_${VERSION}_${FILENAME}
 done
 
 if [ -z $NOSIGN ]; then
@@ -64,6 +64,11 @@ fi
 # Upload
 if [ ! -z $HC_RELEASE ]; then
   hc-releases -upload $DIR/pkg/dist --publish --purge
+
+  for FILENAME in $(find $DIR/pkg/dist -type f); do
+    FILENAME=$(basename $FILENAME)
+    curl -X PURGE https://releases.hashicorp.com/vault/${VERSION}/${FILENAME}
+  done
 fi
 
 exit 0
