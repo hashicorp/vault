@@ -36,6 +36,11 @@ func (b *backend) getGenerationParams(
 		EnforceHostnames: false,
 	}
 
+	if role.KeyType == "rsa" && role.KeyBits < 2048 {
+		errorResp = logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported")
+		return
+	}
+
 	errorResp = validateKeyTypeLength(role.KeyType, role.KeyBits)
 
 	return

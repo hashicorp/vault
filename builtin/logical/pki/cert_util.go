@@ -2,6 +2,7 @@ package pki
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -349,6 +350,10 @@ func generateCert(b *backend,
 	req *logical.Request,
 	data *framework.FieldData) (*certutil.ParsedCertBundle, error) {
 
+	if role.KeyType == "rsa" && role.KeyBits < 2048 {
+		return nil, certutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
+	}
+
 	creationBundle, err := generateCreationBundle(b, role, signingBundle, nil, req, data)
 	if err != nil {
 		return nil, err
@@ -430,6 +435,16 @@ func signCert(b *backend,
 	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 	if err != nil {
 		return nil, certutil.UserError{Err: "certificate request could not be parsed"}
+	}
+
+	if csr.PublicKeyAlgorithm == x509.RSA {
+		pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
+		if !ok {
+			return nil, certutil.UserError{Err: "could not parse CSR's public key"}
+		}
+		if pubKey.N.BitLen() < 2048 {
+			return nil, certutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
+		}
 	}
 
 	creationBundle, err := generateCreationBundle(b, role, signingBundle, csr, req, data)
