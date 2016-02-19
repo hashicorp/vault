@@ -41,18 +41,35 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
-func genUsername(displayName, policyName string) string {
-	// Generate a random username. We don't put the policy names in the
-	// username because the AWS console makes it pretty easy to see that.
-	return fmt.Sprintf(
-		"vault-%s-%s-%d-%d",
-		normalizeDisplayName(displayName),
-		normalizeDisplayName(policyName),
+func genUsername(displayName, policyName, userType string) (ret string, warning string) {
+	var midString string
+
+	switch userType {
+	case "iam_user":
+		// IAM users are capped at 64 chars; this leaves, after the beginning and
+		// end added below, 35 chars to play with.
+		midString = fmt.Sprintf("%s-%s-",
+			normalizeDisplayName(displayName),
+			normalizeDisplayName(policyName))
+		if len(midString) > 35 {
+			midString = midString[0:35]
+			warning = "the calling token display name/IAM policy name were truncated to find into IAM username length limits"
+		}
+	case "sts":
+		// Capped at 32 chars, which leaves only a couple of characters to play
+		// with, so don't insert display name or policy name at all
+	}
+
+	ret = fmt.Sprintf(
+		"vault-%s%d-%d",
+		midString,
 		time.Now().Unix(),
 		rand.Int31n(10000))
+
+	return
 }
 
-func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
+func (b *backend) secretTokenCreate(s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds *int64) (*logical.Response, error) {
 	STSClient, err := clientSTS(s)
@@ -60,7 +77,7 @@ func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username := genUsername(displayName, policyName)
+	username, usernameWarning := genUsername(displayName, policyName, "sts")
 
 	tokenResp, err := STSClient.GetFederationToken(
 		&sts.GetFederationTokenInput{
@@ -87,6 +104,10 @@ func (b *backend) secretAccessKeysAndTokenCreate(s logical.Storage,
 	// Set the secret TTL to appropriately match the expiration of the token
 	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
 
+	if usernameWarning != "" {
+		resp.AddWarning(usernameWarning)
+	}
+
 	return resp, nil
 }
 
@@ -98,7 +119,7 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username := genUsername(displayName, policyName)
+	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -177,6 +198,10 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	resp.Secret.TTL = lease.Lease
+
+	if usernameWarning != "" {
+		resp.AddWarning(usernameWarning)
+	}
 
 	return resp, nil
 }
