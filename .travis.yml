@@ -4,7 +4,9 @@ language: go
 
 go:
   - 1.6
-  - tip
+# tip is currently using go1.4.1, which we're not compatible with, so always
+# fails
+#  - tip
 
 matrix:
   allow_failures:
@@ -15,8 +17,10 @@ branches:
     - master
     - travis-testing
 
+# Having an install function stops Travis from trying to do automagic things
+# with godep
 install:
-  - make dev
+  - true
 
 script:
   - make test testrace
