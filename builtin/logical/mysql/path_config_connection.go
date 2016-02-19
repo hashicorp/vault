@@ -79,7 +79,6 @@ func (b *backend) pathConnectionWrite(
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
-		ConnectionString:   connURL,
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
 	})
@@ -96,9 +95,7 @@ func (b *backend) pathConnectionWrite(
 }
 
 type connectionConfig struct {
-	ConnectionURL string `json:"connection_url"`
-	// Deprecate "value" in coming releases
-	ConnectionString   string `json:"value"`
+	ConnectionURL      string `json:"connection_url"`
 	MaxOpenConnections int    `json:"max_open_connections"`
 }
 
