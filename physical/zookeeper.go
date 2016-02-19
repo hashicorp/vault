@@ -26,7 +26,7 @@ const (
 type ZookeeperBackend struct {
 	path   string
 	client *zk.Conn
-    acl     []zk.ACL
+	acl    []zk.ACL
 }
 
 // newZookeeperBackend constructs a Zookeeper backend using the given API client
@@ -53,43 +53,41 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		machines = "localhost:2181"
 	}
 
-    // zNode owner and schema.
-    var owner string
-    var schema string
-    var schemaAndOwner string
-    schemaAndOwner, ok = conf["znode_owner"]
-    if !ok {
-        owner = "anyone"
-        schema = "world"
-    } else {
-        parsedSchemaAndOwner := strings.SplitN(schemaAndOwner, ":", 2)
-        if !(len(parsedSchemaAndOwner)==2) {
-            return nil, fmt.Errorf("znode_owner expected format is 'schema:owner'")
-        } else {
-            schema = parsedSchemaAndOwner[0]
-            owner = parsedSchemaAndOwner[1]
-        }
-    }
+	// zNode owner and schema.
+	var owner string
+	var schema string
+	var schemaAndOwner string
+	schemaAndOwner, ok = conf["znode_owner"]
+	if !ok {
+		owner = "anyone"
+		schema = "world"
+	} else {
+		parsedSchemaAndOwner := strings.SplitN(schemaAndOwner, ":", 2)
+		if len(parsedSchemaAndOwner) != 2 {
+			return nil, fmt.Errorf("znode_owner expected format is 'schema:owner'")
+		} else {
+			schema = parsedSchemaAndOwner[0]
+			owner = parsedSchemaAndOwner[1]
+		}
+	}
 
-    acl := []zk.ACL{{zk.PermAll, schema, owner}} 
+	acl := []zk.ACL{{zk.PermAll, schema, owner}}
 
-
-    // Authnetication info
-    var schemaAndUser string
-    schemaAndUser, ok = conf["auth_info"]
-    if !ok {
-        owner = ""
-        schema = ""
-    } else {
-        parsedSchemaAndUser := strings.SplitN(schemaAndUser, ":", 2)
-        if !(len(parsedSchemaAndUser)==2) {
-            return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
-        } else {
-            schema = parsedSchemaAndUser[0]
-            owner = parsedSchemaAndUser[1]
-        }
-    }   
-
+	// Authnetication info
+	var schemaAndUser string
+	schemaAndUser, ok = conf["auth_info"]
+	if !ok {
+		owner = ""
+		schema = ""
+	} else {
+		parsedSchemaAndUser := strings.SplitN(schemaAndUser, ":", 2)
+		if len(parsedSchemaAndUser) != 2 {
+			return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+		} else {
+			schema = parsedSchemaAndUser[0]
+			owner = parsedSchemaAndUser[1]
+		}
+	}
 
 	// Attempt to create the ZK client
 	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
@@ -97,19 +95,19 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		return nil, fmt.Errorf("client setup failed: %v", err)
 	}
 
-    // If auth_info provided - attempt to authenticate 
-    if owner != "" {
-        err = client.AddAuth(schema, []byte(owner))
-        if err != nil {
-            return nil, fmt.Errorf("Zookeeper rejected authentication information provided at auth_info")
-        }
-    }
+	// If auth_info provided - attempt to authenticate
+	if owner != "" {
+		err = client.AddAuth(schema, []byte(owner))
+		if err != nil {
+			return nil, fmt.Errorf("Zookeeper rejected authentication information provided at auth_info: %v", err)
+		}
+	}
 
 	// Setup the backend
 	c := &ZookeeperBackend{
 		path:   path,
 		client: client,
-        acl:    acl,
+		acl:    acl,
 	}
 	return c, nil
 }
