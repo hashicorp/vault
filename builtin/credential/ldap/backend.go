@@ -106,7 +106,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		sresult, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
-			Filter: fmt.Sprintf("(%s=%s)", cfg.UserAttr, EscapeLDAPValue(username)),
+			Filter: fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username)),
 		})
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search for binddn failed: %v", err)), nil
@@ -132,7 +132,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		sresult, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
-			Filter: fmt.Sprintf("(userPrincipalName=%s)", binddn),
+			Filter: fmt.Sprintf("(userPrincipalName=%s)", ldap.EscapeFilter(binddn)),
 		})
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
@@ -149,7 +149,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	sresult, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
-		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", username, userdn, userdn),
+		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
 	})
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
