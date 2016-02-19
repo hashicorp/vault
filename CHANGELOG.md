@@ -18,6 +18,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * credential/ldap: Properly escape values being provided to search filters
+   [GH-1100]
  * secret/postgresql: Add extra revocation statements to better handle more
    permission scenarios [GH-1053]
  * secret/pki: If a cert is not found during lookup of a serial number,
