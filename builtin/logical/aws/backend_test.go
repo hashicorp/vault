@@ -166,7 +166,6 @@ func testAccStepReadSTS(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-
 func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,

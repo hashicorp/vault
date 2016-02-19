@@ -18,7 +18,7 @@ func pathSTS(b *backend) *framework.Path {
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the token in seconds",
-				Default: 3600,
+				Default:     3600,
 			},
 		},
 
@@ -47,7 +47,7 @@ func (b *backend) pathSTSRead(
 	}
 
 	// Use the helper to create the secret
-	return b.secretAccessKeysAndTokenCreate(
+	return b.secretTokenCreate(
 		req.Storage,
 		req.DisplayName, policyName, string(policy.Value),
 		&ttl,
