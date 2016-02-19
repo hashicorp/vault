@@ -246,6 +246,39 @@ For Zookeeper, the following options are supported:
       Can be comma separated list (host:port) of many Zookeeper instances.
       Defaults to "localhost:2181" if not specified.
 
+The following optional settings can be used to configure zNode ACLs
+  * `auth_info` (optional) - Authentication string to match Zookeeper AddAuth format
+      'schema:auth'. A simple example would be 'digest:UserName:Password' - to 
+      authenticate as UserName using Password
+  * `znode_owner` (optional) - Schema and User parts of Zookeeper ACL format. Expected format 
+      is 'schema:user-ACL-match. Vault will always set all permissions (CRWDA) to that ACL, some examples:
+    * 'digest:UserName:HIDfRvTv623G==' - The user 'UserName' with the 'HIDfRvTv623G==' (second colon is part
+      of the user information)
+    * 'ip:127.0.01' - Access from localhost only
+    * 'ip:70.95.0.0/16' - Any host on the 70.95.0.0 network (CIDR is supported starting from Zookeeper 3.5.0)
+
+If neither of these is set the backend will not authenticate with Zookeeper and will set the OPEN_ACL_UNSAFE ACL
+on all nodes. The affect would be that anyone connected to Zookeeper could change Vault’s znodes and, potentially, 
+take Vault out of service. 
+
+Some sample configurations:
+````
+backend "zookeeper" {
+  znode_owner = "digest:vaultUser:raxgVAfnDRljZDAcJFxznkZsExs="
+  auth_info = "digest:vaultUser:abc"
+}
+````
+With the above configuration Vault will set an ACL on all of its zNodes permitting access to vaultUser only. If digest schema 
+is used please protect this file as it contains the clear text password. As per Zookeeper ACL model the digest value 
+(in znode_owner) must match the user (in znode_owner). 
+
+````
+backend "zookeeper" {
+  znode_owner = "ip:127.0.0.1"
+ }
+````
+The above allows access from localhost only - as this is the IP schema no auth_info is required since Zookeeper uses the address of the clients to do the ACL check. Zookeeper version 3.5.0 and above should support CIDR (which makes much more sense).
+
 #### Backend Reference: DynamoDB (Community-Supported)
 
 The DynamoDB backend has the following options:
