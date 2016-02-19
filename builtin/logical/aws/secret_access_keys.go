@@ -47,12 +47,12 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 	switch userType {
 	case "iam_user":
 		// IAM users are capped at 64 chars; this leaves, after the beginning and
-		// end added below, 35 chars to play with.
+		// end added below, 42 chars to play with.
 		midString = fmt.Sprintf("%s-%s-",
 			normalizeDisplayName(displayName),
 			normalizeDisplayName(policyName))
-		if len(midString) > 35 {
-			midString = midString[0:35]
+		if len(midString) > 42 {
+			midString = midString[0:42]
 			warning = "the calling token display name/IAM policy name were truncated to find into IAM username length limits"
 		}
 	case "sts":
