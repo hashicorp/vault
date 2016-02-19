@@ -292,11 +292,12 @@ latter case, a SSL connection will be established with a default port of 636.
 
 ## A NOTE ON ESCAPING
 
+It is up to the administrator to provide properly escaped DNs. This includes
+the user DN, bind DN for search, and so on.
+
 The only DN escaping performed by this backend is on usernames given at login
 time when they are inserted into the final bind DN, and uses escaping rules
-defined in RFC 4514. It is up to the administrator to provide properly escaped
-DNs for configuration parameters (e.g. the user DN, bind DN for search, and so
-on).
+defined in RFC 4514.
 
 Additionally, Active Directory has escaping rules that differ slightly from the
 RFC; in particular it requires escaping of '#' regardless of position in the DN
