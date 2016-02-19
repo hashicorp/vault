@@ -18,6 +18,26 @@ in multiple places.
 The mapping of groups in LDAP to Vault policies is managed by using the
 `users/` and `groups/` paths.
 
+## A Note on Escaping
+
+The only DN escaping performed by this backend is on usernames given at login
+time when they are inserted into the final bind DN, and uses escaping rules
+defined in RFC 4514. It is up to the administrator to provide properly escaped
+DNs for configuration parameters (e.g. the user DN, bind DN for search, and so
+on).
+
+Additionally, Active Directory has escaping rules that differ slightly from the
+RFC; in particular it requires escaping of '#' regardless of position in the DN
+(the RFC only requires it to be escaped when it is the first character), and
+'=', which the RFC indicates can be escaped with a backslash, but does not
+contain in its set of required escapes. If you are using Active Directory and
+these appear in your usernames, please ensure that they are escaped, in
+addition to being properly escaped in your configured DNs.
+
+For reference, see [RFC 4514](https://www.ietf.org/rfc/rfc4514.txt) and this
+[TechNet post on characters to escape in Active
+Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx).
+
 ## Authentication
 
 #### Via the CLI

@@ -87,5 +87,6 @@ Log in with a username and password.
 `
 
 const pathLoginDesc = `
-This endpoint authenticates using a username and password.
+This endpoint authenticates using a username and password. Please be sure to
+read the note on escaping from the path-help for the 'config' endpoint.
 `
