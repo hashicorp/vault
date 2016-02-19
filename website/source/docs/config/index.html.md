@@ -167,117 +167,138 @@ to help you, but may refer you to the backend author.
 All backends support the following options:
 
   * `advertise_addr` (optional) - For backends that support HA, this
-      is the address to advertise to other Vault servers in the cluster
-      for request forwarding. Most HA backends will attempt to determine
-      the advertise address if not provided. This can also be set via
-      the `VAULT_ADVERTISE_ADDR` environment variable.
+    is the address to advertise to other Vault servers in the cluster for
+    request forwarding. Most HA backends will attempt to determine the
+    advertise address if not provided. This can also be set via the
+    `VAULT_ADVERTISE_ADDR` environment variable.
 
 #### Backend Reference: Consul
 
 For Consul, the following options are supported:
 
   * `path` (optional) - The path within Consul where data will be stored.
-      Defaults to "vault/".
+    Defaults to "vault/".
 
   * `address` (optional) - The address of the Consul agent to talk to.
-      Defaults to the local agent address, if available.
+    Defaults to the local agent address, if available.
 
   * `scheme` (optional) - "http" or "https" for talking to Consul.
 
   * `token` (optional) - An access token to use to write data to Consul.
 
   * `max_parallel` (optional) - The maximum number of connections to Consul;
-      defaults to "128".
+    defaults to "128".
 
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
-      will be disabled for Consul communication.
-      Defaults to false.
+    will be disabled for Consul communication.  Defaults to false.
 
-  The following settings should be set according to your [Consul encryption settings](https://www.consul.io/docs/agent/encryption.html):
+The following settings should be set according to your [Consul encryption
+settings](https://www.consul.io/docs/agent/encryption.html):
 
-  * `tls_ca_file` (optional) - The path to the CA certificate used for Consul communication.
-      Defaults to system bundle if not specified.
-      Set accordingly to the [ca_file](https://www.consul.io/docs/agent/options.html#ca_file) setting in Consul.
+  * `tls_ca_file` (optional) - The path to the CA certificate used for Consul
+    communication.  Defaults to system bundle if not specified.  Set
+    accordingly to the
+    [ca_file](https://www.consul.io/docs/agent/options.html#ca_file) setting in
+    Consul.
 
-  * `tls_cert_file` (optional) - The path to the certificate for Consul communication.
-      Set accordingly to the [cert_file](https://www.consul.io/docs/agent/options.html#cert_file) setting in Consul.
+  * `tls_cert_file` (optional) - The path to the certificate for Consul
+    communication.  Set accordingly to the
+    [cert_file](https://www.consul.io/docs/agent/options.html#cert_file)
+    setting in Consul.
 
-  * `tls_key_file` (optional) - The path to the private key for Consul communication.
-      Set accordingly to the [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting in Consul.
+  * `tls_key_file` (optional) - The path to the private key for Consul
+    communication.  Set accordingly to the
+    [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting
+    in Consul.
 
 #### Backend Reference: etcd (Community-Supported)
 
 For etcd, the following options are supported:
 
   * `path` (optional) - The path within etcd where data will be stored.
-      Defaults to "vault/".
+    Defaults to "vault/".
 
   * `address` (optional) - The address(es) of the etcd instance(s) to talk to.
-      Can be comma separated list (protocol://host:port) of many etcd instances.
-      Defaults to "http://localhost:2379" if not specified.
+    Can be comma separated list (protocol://host:port) of many etcd instances.
+    Defaults to "http://localhost:2379" if not specified.
 
   * `sync` (optional) - Should we synchronize the list of available etcd
-      servers on startup?  This is a **string** value to allow for auto-sync to
-      be implemented later. It can be set to "0", "no", "n", "false", "1",
-      "yes", "y", or "true".  Defaults to on.  Set to false if your etcd
-      cluster is behind a proxy server and syncing causes Vault to fail.
+    servers on startup?  This is a **string** value to allow for auto-sync to
+    be implemented later. It can be set to "0", "no", "n", "false", "1", "yes",
+    "y", or "true".  Defaults to on.  Set to false if your etcd cluster is
+    behind a proxy server and syncing causes Vault to fail.
 
   * `username` (optional) - Username to use when authenticating with the etcd
-      server.  May also be specified via the ETCD_USERNAME environment variable.
+    server.  May also be specified via the ETCD_USERNAME environment variable.
 
   * `password` (optional) - Password to use when authenticating with the etcd
-      server.  May also be specified via the ETCD_PASSWORD environment variable.
+    server.  May also be specified via the ETCD_PASSWORD environment variable.
 
-  * `tls_ca_file` (optional) - The path to the CA certificate used for etcd communication.
-      Defaults to system bundle if not specified.
+  * `tls_ca_file` (optional) - The path to the CA certificate used for etcd
+    communication.  Defaults to system bundle if not specified.
 
-  * `tls_cert_file` (optional) - The path to the certificate for etcd communication.
+  * `tls_cert_file` (optional) - The path to the certificate for etcd
+    communication.
 
-  * `tls_key_file` (optional) - The path to the private key for etcd communication.
+  * `tls_key_file` (optional) - The path to the private key for etcd
+    communication.
 
 #### Backend Reference: Zookeeper (Community-Supported)
 
 For Zookeeper, the following options are supported:
 
   * `path` (optional) - The path within Zookeeper where data will be stored.
-      Defaults to "vault/".
+    Defaults to "vault/".
 
-  * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk to.
-      Can be comma separated list (host:port) of many Zookeeper instances.
-      Defaults to "localhost:2181" if not specified.
+  * `address` (optional) - The address(es) of the Zookeeper instance(s) to talk
+    to. Can be comma separated list (host:port) of many Zookeeper instances.
+    Defaults to "localhost:2181" if not specified.
 
-The following optional settings can be used to configure zNode ACLs
-  * `auth_info` (optional) - Authentication string to match Zookeeper AddAuth format
-      'schema:auth'. A simple example would be 'digest:UserName:Password' - to 
-      authenticate as UserName using Password
-  * `znode_owner` (optional) - Schema and User parts of Zookeeper ACL format. Expected format 
-      is 'schema:user-ACL-match. Vault will always set all permissions (CRWDA) to that ACL, some examples:
-    * 'digest:UserName:HIDfRvTv623G==' - The user 'UserName' with the 'HIDfRvTv623G==' (second colon is part
-      of the user information)
-    * 'ip:127.0.01' - Access from localhost only
-    * 'ip:70.95.0.0/16' - Any host on the 70.95.0.0 network (CIDR is supported starting from Zookeeper 3.5.0)
+The following optional settings can be used to configure zNode ACLs:
 
-If neither of these is set the backend will not authenticate with Zookeeper and will set the OPEN_ACL_UNSAFE ACL
-on all nodes. The affect would be that anyone connected to Zookeeper could change Vault’s znodes and, potentially, 
-take Vault out of service. 
+  * `auth_info` (optional) - Authentication string in Zookeeper AddAuth format
+    (`schema:auth`). As an example, `digest:UserName:Password` could be used to
+    authenticate as user `UserName` using password `Password` with the `digest`
+    mechanism.
+
+  * `znode_owner` (optional) - If specified, Vault will always set all
+    permissions (CRWDA) to the ACL identified here via the Schema and User
+    parts of the Zookeeper ACL format. The expected format is
+    `schema:user-ACL-match`. Some examples:
+    * `digest:UserName:HIDfRvTv623G==` - Access for the user `UserName` with
+      the corresponding digest `HIDfRvTv623G==`
+    * `ip:127.0.0.1` - Access from localhost only
+    * `ip:70.95.0.0/16` - Any host on the 70.95.0.0 network (CIDRs are
+      supported starting from Zookeeper 3.5.0)
+
+If neither of these is set, the backend will not authenticate with Zookeeper
+and will set the OPEN_ACL_UNSAFE ACL on all nodes. In this scenario, anyone
+connected to Zookeeper could change Vault’s znodes and, potentially, take Vault
+out of service. 
 
 Some sample configurations:
-````
+
+```
 backend "zookeeper" {
   znode_owner = "digest:vaultUser:raxgVAfnDRljZDAcJFxznkZsExs="
   auth_info = "digest:vaultUser:abc"
 }
-````
-With the above configuration Vault will set an ACL on all of its zNodes permitting access to vaultUser only. If digest schema 
-is used please protect this file as it contains the clear text password. As per Zookeeper ACL model the digest value 
-(in znode_owner) must match the user (in znode_owner). 
+```
 
-````
+The above configuration causes Vault to set an ACL on all of its zNodes
+permitting access to vaultUser only. If the `digest` schema is used, please
+protect this file as it contains the cleartext password. As per Zookeeper's ACL
+model, the digest value (in znode_owner) must match the user (in znode_owner).
+
+```
 backend "zookeeper" {
   znode_owner = "ip:127.0.0.1"
- }
-````
-The above allows access from localhost only - as this is the IP schema no auth_info is required since Zookeeper uses the address of the clients to do the ACL check. Zookeeper version 3.5.0 and above should support CIDR (which makes much more sense).
+}
+```
+
+The above example allows access from localhost only - as this is the `ip` no
+auth_info is required since Zookeeper uses the address of the client for the
+ACL check.
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
