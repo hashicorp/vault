@@ -262,24 +262,24 @@ General Options:
 
 SSH Options:
 
-  -role                 Role to be used to create the key.
-  			Each IP is associated with a role. To see the associated
-			roles with IP, use "lookup" endpoint. If you are certain that
-			there is only one role associated with the IP, you can
-			skip mentioning the role. It will be chosen by default.
-			If there are no roles associated with the IP, register
-			the CIDR block of that IP using the "roles/" endpoint.
+  -role             Role to be used to create the key.
+                    Each IP is associated with a role. To see the associated
+                    roles with IP, use "lookup" endpoint. If you are certain
+                    that there is only one role associated with the IP, you can
+                    skip mentioning the role. It will be chosen by default.  If
+                    there are no roles associated with the IP, register the
+                    CIDR block of that IP using the "roles/" endpoint.
 
-  -no-exec		Shows the credentials but does not establish connection.
+  -no-exec          Shows the credentials but does not establish connection.
 
-  -mount-point		Mount point of SSH backend. If the backend is mounted at
-  			'ssh', which is the default as well, this parameter can
-			be skipped.
+  -mount-point      Mount point of SSH backend. If the backend is mounted at
+                    'ssh', which is the default as well, this parameter can be
+                    skipped.
 
-  -format		If no-exec option is enabled, then the credentials will be
-  			printed out and SSH connection will not be established. The
-			format of the output can be 'json' or 'table'. JSON output
-			is useful when writing scripts. Default is 'table'.
+  -format           If no-exec option is enabled, then the credentials will be
+                    printed out and SSH connection will not be established. The
+                    format of the output can be 'json' or 'table'. JSON output
+                    is useful when writing scripts. Default is 'table'.
 `
 	return strings.TrimSpace(helpText)
 }
