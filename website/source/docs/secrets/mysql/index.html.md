@@ -154,7 +154,7 @@ allowed to read.
   <dd>
     <ul>
       <li>
-        <span class="param">allow_verification</span>
+        <span class="param">verify-connection</span>
         <span class="param-flags">optional</span>
 	If set, connection_url is verified by actually connecting to the database
 	Defaults to true.

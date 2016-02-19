@@ -15,6 +15,8 @@ IMPROVEMENTS:
    backend has enforced SHA256 hashes in signatures from the beginning, and
    software that can handle these hashes should be able to handle larger key
    lengths. [GH-1095]
+ * secret/mysql: While configuring mysql backend, avoid verification of 
+   connection_url by disabling it using verify_connection option. [GH-1096]
 
 BUG FIXES:
 
