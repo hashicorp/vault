@@ -138,7 +138,6 @@ allowed to read.
       <li>
         <span class="param">value</span>
         <span class="param-flags">optionsl</span>
-        DEPRECATED; use "connection_url" instead
       </li>
     </ul>
   </dd>

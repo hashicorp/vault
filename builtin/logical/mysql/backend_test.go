@@ -14,14 +14,20 @@ import (
 func TestBackend_basic(t *testing.T) {
 	b, _ := Factory(logical.TestBackendConfig())
 
-	d := map[string]interface{}{
+	d1 := map[string]interface{}{
 		"connection_url": os.Getenv("MYSQL_DSN"),
+	}
+	d2 := map[string]interface{}{
+		"value": os.Getenv("MYSQL_DSN"),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, d, false),
+			testAccStepConfig(t, d1, false),
+			testAccStepRole(t),
+			testAccStepReadCreds(t, "web"),
+			testAccStepConfig(t, d2, false),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, "web"),
 		},

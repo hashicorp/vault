@@ -74,7 +74,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 		return nil, err
 	}
 
-	conn := connConfig.ConnectionURL
+	conn := connConfig.ConnectionString
 	if len(conn) == 0 {
 		conn = connConfig.ConnectionURL
 	}
