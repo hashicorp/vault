@@ -41,6 +41,21 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_basic_authbind(t *testing.T) {
+	b := factory(t)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t),
+			testAccStepGroup(t, "scientists", "foo"),
+			testAccStepGroup(t, "engineers", "bar"),
+			testAccStepUser(t, "tesla", "engineers"),
+			testAccStepLogin(t, "tesla", "password"),
+		},
+	})
+}
+
 func TestBackend_groupCrud(t *testing.T) {
 	b := factory(t)
 
@@ -66,6 +81,23 @@ func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 			"userattr": "uid",
 			"userdn":   "dc=example,dc=com",
 			"groupdn":  "dc=example,dc=com",
+		},
+	}
+}
+
+func testAccStepConfigUrlWithAuthBind(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			// Online LDAP test server
+			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
+			"url":      "ldap://ldap.forumsys.com",
+			"userattr": "uid",
+			"userdn":   "dc=example,dc=com",
+			"groupdn":  "dc=example,dc=com",
+			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+			"bindpass": "password",
 		},
 	}
 }
