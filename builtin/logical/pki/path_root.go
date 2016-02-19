@@ -196,6 +196,7 @@ func (b *backend) pathCASignIntermediate(
 		AllowAnyName:     true,
 		AllowIPSANs:      true,
 		EnforceHostnames: false,
+		KeyType:          "any",
 	}
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {

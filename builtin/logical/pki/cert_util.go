@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -437,7 +438,60 @@ func signCert(b *backend,
 		return nil, certutil.UserError{Err: "certificate request could not be parsed"}
 	}
 
-	if csr.PublicKeyAlgorithm == x509.RSA {
+	switch role.KeyType {
+	case "rsa":
+		// Verify that the key matches the role type
+		if csr.PublicKeyAlgorithm != x509.RSA {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"role requires keys of type %s",
+				role.KeyType)}
+		}
+		pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
+		if !ok {
+			return nil, certutil.UserError{Err: "could not parse CSR's public key"}
+		}
+
+		// Verify that the key is at least 2048 bits
+		if pubKey.N.BitLen() < 2048 {
+			return nil, certutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
+		}
+
+		// Verify that the bit size is at least the size specified in the role
+		if pubKey.N.BitLen() < role.KeyBits {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
+				role.KeyBits,
+				pubKey.N.BitLen())}
+		}
+
+	case "ec":
+		// Verify that the key matches the role type
+		if csr.PublicKeyAlgorithm != x509.ECDSA {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"role requires keys of type %s",
+				role.KeyType)}
+		}
+		pubKey, ok := csr.PublicKey.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, certutil.UserError{Err: "could not parse CSR's public key"}
+		}
+
+		// Verify that the bit size is at least the size specified in the role
+		if pubKey.Params().BitSize < role.KeyBits {
+			return nil, certutil.UserError{Err: fmt.Sprintf(
+				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
+				role.KeyBits,
+				pubKey.Params().BitSize)}
+		}
+
+	case "any":
+		// We only care about running RSA < 2048 bit checks, so if not RSA
+		// break out
+		if csr.PublicKeyAlgorithm != x509.RSA {
+			break
+		}
+
+		// Run RSA < 2048 bit checks
 		pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
 		if !ok {
 			return nil, certutil.UserError{Err: "could not parse CSR's public key"}
@@ -445,6 +499,7 @@ func signCert(b *backend,
 		if pubKey.N.BitLen() < 2048 {
 			return nil, certutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
 		}
+
 	}
 
 	creationBundle, err := generateCreationBundle(b, role, signingBundle, csr, req, data)
