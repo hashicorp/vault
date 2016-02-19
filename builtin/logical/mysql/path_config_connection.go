@@ -49,7 +49,7 @@ func (b *backend) pathConnectionWrite(
 	connURL := data.Get("connection_url").(string)
 	if connURL == "" {
 		if connValue == "" {
-			return logical.ErrorResponse("provide the connection_url"), nil
+			return logical.ErrorResponse("the connection_url parameter must be supplied"), nil
 		} else {
 			connURL = connValue
 		}
