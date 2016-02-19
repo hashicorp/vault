@@ -13,6 +13,10 @@ matrix:
 branches:
   only:
     - master
+    - travis-testing
+
+install:
+  - make dev
 
 script:
   - make test testrace
