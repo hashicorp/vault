@@ -137,7 +137,7 @@ allowed to read.
     <ul>
       <li>
         <span class="param">value</span>
-        <span class="param-flags">optionsl</span>
+        <span class="param-flags">optional</span>
       </li>
     </ul>
   </dd>
@@ -156,7 +156,7 @@ allowed to read.
       <li>
         <span class="param">verify-connection</span>
         <span class="param-flags">optional</span>
-	If set, connection_url is verified by actually connecting to the database
+	If set, connection_url is verified by actually connecting to the database.
 	Defaults to true.
       </li>
     </ul>
