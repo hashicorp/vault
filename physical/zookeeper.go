@@ -71,7 +71,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 
 			// znode_owner is in config and structured correctly - but does it make any sense?
 			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
-			// (e.g. ':MyUser' which omit the schema, or ':' omiting both)
+			// (e.g. ':MyUser' which omit the schema, or ':' omitting both)
 			if owner == "" || schema == "" {
 				return nil, fmt.Errorf("znode_owner expected format is 'schema:auth'")
 			}
@@ -94,7 +94,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 
 			// auth_info is in config and structured correctly - but does it make any sense?
 			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
-			// (e.g. ':MyUser' which omit the schema, or ':' omiting both)
+			// (e.g. ':MyUser' which omit the schema, or ':' omitting both)
 			if owner == "" || schema == "" {
 				return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
 			}
