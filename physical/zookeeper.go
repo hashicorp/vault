@@ -68,6 +68,13 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		} else {
 			schema = parsedSchemaAndOwner[0]
 			owner = parsedSchemaAndOwner[1]
+
+			// znode_owner is in config and structured correctly - but does it make any sense?
+			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
+			// (e.g. ':MyUser' which omit the schema, or ':' omiting both)
+			if owner == "" || schema == "" {
+				return nil, fmt.Errorf("znode_owner expected format is 'schema:auth'")
+			}
 		}
 	}
 
@@ -75,28 +82,33 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 
 	// Authnetication info
 	var schemaAndUser string
-	schemaAndUser, ok = conf["auth_info"]
-	if !ok {
-		owner = ""
-		schema = ""
-	} else {
+	var useAddAuth bool
+	schemaAndUser, useAddAuth = conf["auth_info"]
+	if useAddAuth {
 		parsedSchemaAndUser := strings.SplitN(schemaAndUser, ":", 2)
 		if len(parsedSchemaAndUser) != 2 {
 			return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
 		} else {
 			schema = parsedSchemaAndUser[0]
 			owner = parsedSchemaAndUser[1]
+
+			// auth_info is in config and structured correctly - but does it make any sense?
+			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
+			// (e.g. ':MyUser' which omit the schema, or ':' omiting both)
+			if owner == "" || schema == "" {
+				return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+			}
 		}
 	}
 
-	// Attempt to create the ZK client
+	// We have all of the configuration in hand - let's try and connect to ZK
 	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("client setup failed: %v", err)
 	}
 
-	// If auth_info provided - attempt to authenticate
-	if owner != "" {
+	// ZK AddAuth API if the user asked for it
+	if useAddAuth {
 		err = client.AddAuth(schema, []byte(owner))
 		if err != nil {
 			return nil, fmt.Errorf("Zookeeper rejected authentication information provided at auth_info: %v", err)
