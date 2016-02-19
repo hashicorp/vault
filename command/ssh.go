@@ -147,8 +147,7 @@ func (c *SSHCommand) Run(args []string) int {
 		// Feel free to try and remove this dependency.
 		sshpassPath, err := exec.LookPath("sshpass")
 		if err == nil {
-			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-p", port}...)
-			sshCmdArgs = append(sshCmdArgs, args...)
+			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-p", port, username + "@" + ip.String()}...)
 			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
 			sshCmd.Stdin = os.Stdin
 			sshCmd.Stdout = os.Stdout
@@ -161,8 +160,7 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Output("OTP for the session is " + resp.Key)
 		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
 	}
-	sshCmdArgs = append(sshCmdArgs, []string{"-p", port}...)
-	sshCmdArgs = append(sshCmdArgs, args...)
+	sshCmdArgs = append(sshCmdArgs, []string{"-p", port, username + "@" + ip.String()}...)
 
 	sshCmd := exec.Command("ssh", sshCmdArgs...)
 	sshCmd.Stdin = os.Stdin
