@@ -26,6 +26,7 @@ BUG FIXES:
    permission scenarios [GH-1053]
  * secret/pki: If a cert is not found during lookup of a serial number,
    respond with a 400 rather than a 500 [GH-1085]
+ * secret/aws: Capping on length of usernames for both IAM and STS types. [GH-1102]
 
 ## 0.5.0 (February 10, 2016)
 
