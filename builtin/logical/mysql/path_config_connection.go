@@ -21,13 +21,13 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				DB connection string. Use 'connection_url' instead.
-			        This will be deprecated.`,
+This name is deprecated.`,
 			},
 			"max_open_connections": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
 			},
-			"allow_verification": &framework.FieldSchema{
+			"verify_connection": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: "If set, connection_url is verified by actually connecting to the database",
@@ -61,19 +61,19 @@ func (b *backend) pathConnectionWrite(
 	}
 
 	// Don't check the connection_url if verification is disabled
-	allowVerification := data.Get("allow_verification").(bool)
-	if allowVerification {
+	verifyConnection := data.Get("verify_connection").(bool)
+	if verifyConnection {
 		// Verify the string
 		db, err := sql.Open("mysql", connURL)
 
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Error validating connection info: %s", err)), nil
+				"error validating connection info: %s", err)), nil
 		}
 		defer db.Close()
 		if err := db.Ping(); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Error validating connection info: %s", err)), nil
+				"error validating connection info: %s", err)), nil
 		}
 	}
 
@@ -106,13 +106,14 @@ Configure the connection string to talk to MySQL.
 `
 
 const pathConfigConnectionHelpDesc = `
-This path configures the connection string used to connect to MySQL.
-The value of the string is a Data Source Name (DSN). An example is
-using "username:password@protocol(address)/dbname?param=value"
+This path configures the connection string used to connect to MySQL.  The value
+of the string is a Data Source Name (DSN). An example is using
+"username:password@protocol(address)/dbname?param=value"
 
-For example, RDS may look like: "id:password@tcp(your-amazonaws-uri.com:3306)/dbname"
+For example, RDS may look like:
+"id:password@tcp(your-amazonaws-uri.com:3306)/dbname"
 
 When configuring the connection string, the backend will verify its validity.
-In case the database needs to be provisioned beforehand, disable the verification
-of connection URL using "allow_verification" option, which defaults to "true".
+If the database is not available when setting the connection URL, set the
+"verify_connection" option to false.
 `
