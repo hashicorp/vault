@@ -1,5 +1,13 @@
 ## 0.5.1 (Unreleased)
 
+DEPRECATIONS/BREAKING CHANGES:
+
+* secret/pki: RSA keys less than 2048 bits are no longer supported. 1024-bit
+   keys are considered unsafe and are disallowed in the Internet PKI. The `pki`
+   backend has enforced SHA256 hashes in signatures from the beginning, and
+   software that can handle these hashes should be able to handle larger key
+   lengths. [GH-1095]
+
 IMPROVEMENTS:
 
  * deps: Use the standardized Go 1.6 vendoring system
@@ -10,11 +18,6 @@ IMPROVEMENTS:
    204 [GH-1086]
  * secret/github: Github backend will check the validity of original token
    during renewal time [GH-1047]
- * secret/pki: RSA keys less than 2048 bits are no longer supported. 1024-bit
-   keys are considered unsafe and are disallowed in the Internet PKI. The `pki`
-   backend has enforced SHA256 hashes in signatures from the beginning, and
-   software that can handle these hashes should be able to handle larger key
-   lengths. [GH-1095]
  * secret/pki: Submitted CSRs are now verified to have the correct key type and
    minimum number of bits according to the role. The exception is intermediate
    CA signing and the `sign-verbatim` path [GH-1104]
