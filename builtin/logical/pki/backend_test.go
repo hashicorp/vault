@@ -1123,21 +1123,47 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					issueVals.CommonName = "user@" + issueVals.CommonName
 				}
 			}
-			if allowed {
-				issueTestStep.ErrorOk = false
-			} else {
-				issueTestStep.ErrorOk = true
-			}
+
+			issueTestStep.ErrorOk = !allowed
 
 			validity, _ := time.ParseDuration(roleVals.MaxTTL)
 			if useCSRs {
+				rsaKeyBits := []int{2048, 4096}
+				ecKeyBits := []int{224, 256, 384, 521}
+
 				var privKey crypto.Signer
 				switch roleVals.KeyType {
 				case "rsa":
-					privKey, _ = rsa.GenerateKey(rand.Reader, roleVals.KeyBits)
+					roleVals.KeyBits = rsaKeyBits[mathRand.Int()%2]
+
+					// If we don't expect an error already, randomly choose a
+					// key size and expect an error if it's less than the role
+					// setting
+					testBitSize := roleVals.KeyBits
+					if !issueTestStep.ErrorOk {
+						testBitSize = rsaKeyBits[mathRand.Int()%2]
+					}
+
+					if testBitSize < roleVals.KeyBits {
+						issueTestStep.ErrorOk = true
+					}
+
+					privKey, _ = rsa.GenerateKey(rand.Reader, testBitSize)
+
 				case "ec":
+					roleVals.KeyBits = ecKeyBits[mathRand.Int()%4]
+
 					var curve elliptic.Curve
-					switch roleVals.KeyBits {
+
+					// If we don't expect an error already, randomly choose a
+					// key size and expect an error if it's less than the role
+					// setting
+					testBitSize := roleVals.KeyBits
+					if !issueTestStep.ErrorOk {
+						testBitSize = ecKeyBits[mathRand.Int()%4]
+					}
+
+					switch testBitSize {
 					case 224:
 						curve = elliptic.P224()
 					case 256:
@@ -1147,6 +1173,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					case 521:
 						curve = elliptic.P521()
 					}
+
+					if curve.Params().BitSize < roleVals.KeyBits {
+						issueTestStep.ErrorOk = true
+					}
+
 					privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
 				}
 				templ := &x509.CertificateRequest{

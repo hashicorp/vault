@@ -123,6 +123,7 @@ func (b *backend) pathSignVerbatim(
 		AllowAnyName:     true,
 		AllowIPSANs:      true,
 		EnforceHostnames: false,
+		KeyType:          "any",
 	}
 
 	return b.pathIssueSignCert(req, data, role, true, true)
