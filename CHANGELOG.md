@@ -15,6 +15,9 @@ IMPROVEMENTS:
    backend has enforced SHA256 hashes in signatures from the beginning, and
    software that can handle these hashes should be able to handle larger key
    lengths. [GH-1095]
+ * secret/pki: Submitted CSRs are now verified to have the correct key type and
+   minimum number of bits according to the role. The exception is intermediate
+   CA signing and the `sign-verbatim` path [GH-1104]
  * secret/mysql: While configuring mysql backend, avoid verification of 
    connection_url by disabling it using verify_connection option. [GH-1096]
 
