@@ -25,7 +25,7 @@ func pathUsers(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathUserDelete,
 			logical.ReadOperation:   b.pathUserRead,
-			logical.WriteOperation:  b.pathUserWrite,
+			logical.UpdateOperation:  b.pathUserWrite,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,

@@ -21,10 +21,13 @@ func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, erro
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead,
-					logical.WriteOperation:  b.handleWrite,
+					logical.CreateOperation: b.handleWrite,
+					logical.UpdateOperation: b.handleWrite,
 					logical.DeleteOperation: b.handleDelete,
 					logical.ListOperation:   b.handleList,
 				},
+
+				ExistenceCheck: b.handleExistenceCheck,
 
 				HelpSynopsis:    strings.TrimSpace(cubbyholeHelpSynopsis),
 				HelpDescription: strings.TrimSpace(cubbyholeHelpDescription),
@@ -61,6 +64,16 @@ func (b *CubbyholeBackend) revoke(saltedToken string) error {
 	}
 
 	return nil
+}
+
+func (b *CubbyholeBackend) handleExistenceCheck(
+	req *logical.Request, data *framework.FieldData) (bool, error) {
+	out, err := req.Storage.Get(req.ClientToken + "/" + req.Path)
+	if err != nil {
+		return false, fmt.Errorf("existence check failed: %v", err)
+	}
+
+	return out != nil, nil
 }
 
 func (b *CubbyholeBackend) handleRead(
@@ -140,15 +153,25 @@ func (b *CubbyholeBackend) handleList(
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("[ERR] cubbyhole list: Client token empty")
 	}
+
+	// Right now we only handle directories, so ensure it ends with / We also
+	// check if it's empty so we don't end up doing a listing on '<client
+	// token>//'
+	path := req.Path
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(req.ClientToken + "/" + req.Path)
+	keys, err := req.Storage.List(req.ClientToken + "/" + path)
 	if err != nil {
 		return nil, err
 	}
 
-	strippedKeys := []string{}
-	for _, key := range keys {
-		strippedKeys = append(strippedKeys, strings.TrimPrefix(key, req.ClientToken+"/"))
+	// Strip the token
+	strippedKeys := make([]string, len(keys))
+	for i, key := range keys {
+		strippedKeys[i] = strings.TrimPrefix(key, req.ClientToken+"/")
 	}
 
 	// Generate the response

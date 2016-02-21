@@ -28,7 +28,7 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathLogin,
+			logical.UpdateOperation: b.pathLogin,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -129,8 +129,17 @@ func (b *backend) pathLogin(
 			DisplayName: displayName,
 			Policies:    policies,
 			Metadata:    metadata,
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+			},
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	return framework.LeaseExtend(0, 0, b.System())(req, d)
 }
 
 const pathLoginSyn = `

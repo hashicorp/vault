@@ -140,9 +140,15 @@ subpath for interactive help output.
       <li>
         <span class="param">max_open_connections</span>
         <span class="param-flags">optional</span>
-        Maximum number of open connections to the database.
-	Defaults to 2.
+        Maximum number of open connections to the database. A zero uses the
+        default value of 2 and a negative value means unlimited.
       </li>
+        <span class="param">max_idle_connections</span>
+        <span class="param-flags">optional</span>
+        Maximum number of idle connections to the database. A zero uses the
+        value of `max_open_connections` and a negative value disables idle
+        connections. If larger than `max_open_connections` it will be reduced
+        to be equal.
     </ul>
   </dd>
 
@@ -260,6 +266,43 @@ subpath for interactive help output.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of available roles. Only the role names are returned, not
+    any values.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/roles/?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+  ```javascript
+  {
+    "auth": null,
+    "data": {
+      "keys": ["dev", "prod"]
+    },
+    "lease_duration": 2592000,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
 
 #### DELETE
 

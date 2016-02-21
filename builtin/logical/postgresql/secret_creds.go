@@ -1,8 +1,8 @@
 package postgresql
 
 import (
+	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -25,9 +25,6 @@ func secretCreds(b *backend) *framework.Secret {
 				Description: "Password",
 			},
 		},
-
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
 
 		Renew:  b.secretCredsRenew,
 		Revoke: b.secretCredsRevoke,
@@ -55,10 +52,10 @@ func (b *backend) secretCredsRenew(
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
 	resp, err := f(req, d)
 	if err != nil {
 		return nil, err
@@ -66,8 +63,7 @@ func (b *backend) secretCredsRenew(
 
 	// Make sure we increase the VALID UNTIL endpoint for this user.
 	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
-		expiration := expireTime.Add(10 * time.Minute).
-			Format("2006-01-02 15:04:05-0700")
+		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 
 		query := fmt.Sprintf(
 			"ALTER ROLE %s VALID UNTIL '%s';",
@@ -130,6 +126,32 @@ func (b *backend) secretCredsRevoke(
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;",
 			schema, pq.QuoteIdentifier(username)))
+
+		revocationStmts = append(revocationStmts, fmt.Sprintf(
+			"REVOKE USAGE ON SCHEMA %s FROM %s;",
+			schema, pq.QuoteIdentifier(username)))
+	}
+
+	// for good measure, revoke all privileges and usage on schema public
+	revocationStmts = append(revocationStmts, fmt.Sprintf(
+		"REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;",
+		pq.QuoteIdentifier(username)))
+
+	revocationStmts = append(revocationStmts, fmt.Sprintf(
+		"REVOKE USAGE ON SCHEMA public FROM %s;",
+		pq.QuoteIdentifier(username)))
+
+	// get the current database name so we can issue a REVOKE CONNECT for
+	// this username
+	var dbname sql.NullString
+	if err := db.QueryRow("SELECT current_database();").Scan(&dbname); err != nil {
+		return nil, err
+	}
+
+	if dbname.Valid {
+		revocationStmts = append(revocationStmts, fmt.Sprintf(
+			"REVOKE CONNECT ON DATABASE %s FROM %s;",
+			dbname.String, pq.QuoteIdentifier(username)))
 	}
 
 	// again, here, we do not stop on error, as we want to remove as

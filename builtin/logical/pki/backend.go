@@ -21,11 +21,6 @@ func Backend() *framework.Backend {
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-				"revoke/*",
-				"crl/rotate",
-			},
 			Unauthenticated: []string{
 				"cert/*",
 				"ca/pem",
@@ -36,9 +31,17 @@ func Backend() *framework.Backend {
 		},
 
 		Paths: []*framework.Path{
+			pathListRoles(&b),
 			pathRoles(&b),
+			pathGenerateRoot(&b),
+			pathGenerateIntermediate(&b),
+			pathSetSignedIntermediate(&b),
+			pathSignIntermediate(&b),
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
+			pathConfigURLs(&b),
+			pathSignVerbatim(&b),
+			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
 			pathFetchCA(&b),

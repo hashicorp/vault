@@ -2,12 +2,13 @@ package audit
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
-	"encoding/json"
+
+	"errors"
 
 	"github.com/hashicorp/vault/logical"
-	"errors"
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
@@ -20,7 +21,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		"auth, request": {
 			&logical.Auth{ClientToken: "foo", Policies: []string{"root"}},
 			&logical.Request{
-				Operation: logical.WriteOperation,
+				Operation: logical.UpdateOperation,
 				Path:      "/foo",
 				Connection: &logical.Connection{
 					RemoteAddr: "127.0.0.1",
@@ -63,5 +64,5 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}
 }
 
-const testFormatJSONReqBasicStr = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"write","path":"/foo","data":null,"remote_address":"127.0.0.1"},"error":"this is an error"}
+const testFormatJSONReqBasicStr = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"update","path":"/foo","data":null,"remote_address":"127.0.0.1"},"error":"this is an error"}
 `

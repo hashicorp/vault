@@ -206,7 +206,7 @@ func Test(t TestT, c TestCase) {
 		if resp != nil && resp.Secret != nil {
 			// Revoke this secret later
 			revoke = append(revoke, &logical.Request{
-				Operation: logical.WriteOperation,
+				Operation: logical.UpdateOperation,
 				Path:      "sys/revoke/" + resp.Secret.LeaseID,
 			})
 		}

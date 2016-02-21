@@ -36,6 +36,40 @@ description: |-
   </dd>
 </dl>
 
+# /sys/policy/
+
+## GET
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Retrieve the rules for the named policy.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/sys/policy/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "rules": "path..."
+    }
+    ```
+
+  </dd>
+</dl>
+
+
 ## PUT
 
 <dl>

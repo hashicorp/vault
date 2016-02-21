@@ -22,7 +22,7 @@ func pathLogin(b *backend) *framework.Path {
 		Pattern: "login",
 		Fields:  map[string]*framework.FieldSchema{},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathLogin,
+			logical.UpdateOperation: b.pathLogin,
 		},
 	}
 }
@@ -207,7 +207,7 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Get the cert and validate auth
+	// Get the cert and use its TTL
 	cert, err := b.Cert(req.Storage, req.Auth.Metadata["cert_name"])
 	if err != nil {
 		return nil, err
@@ -217,5 +217,5 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	return framework.LeaseExtend(cert.TTL, 0, false)(req, d)
+	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
 }

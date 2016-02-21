@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathDecrypt() *framework.Path {
+func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -30,7 +30,7 @@ func pathDecrypt() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathDecryptWrite,
+			logical.UpdateOperation: b.pathDecryptWrite,
 		},
 
 		HelpSynopsis:    pathDecryptHelpSyn,
@@ -38,7 +38,7 @@ func pathDecrypt() *framework.Path {
 	}
 }
 
-func pathDecryptWrite(
+func (b *backend) pathDecryptWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	ciphertext := d.Get("ciphertext").(string)
@@ -58,17 +58,25 @@ func pathDecryptWrite(
 	}
 
 	// Get the policy
-	p, err := getPolicy(req, name)
+	lp, err := b.policies.getPolicy(req, name)
 	if err != nil {
 		return nil, err
 	}
 
 	// Error if invalid policy
-	if p == nil {
+	if lp == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	plaintext, err := p.Decrypt(context, ciphertext)
+	lp.RLock()
+	defer lp.RUnlock()
+
+	// Verify if wasn't deleted before we grabbed the lock
+	if lp.policy == nil {
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
+	}
+
+	plaintext, err := lp.policy.Decrypt(context, ciphertext)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

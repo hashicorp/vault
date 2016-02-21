@@ -18,6 +18,15 @@ type revocationInfo struct {
 
 // Revokes a cert, and tries to be smart about error recovery
 func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Response, error) {
+	// As this backend is self-contained and this function does not hook into
+	// third parties to manage users or resources, if the mount is tainted,
+	// revocation doesn't matter anyways -- the CRL that would be written will
+	// be immediately blown away by the view being cleared. So we can simply
+	// fast path a successful exit.
+	if b.System().Tainted() {
+		return nil, nil
+	}
+
 	alreadyRevoked := false
 	var revInfo revocationInfo
 

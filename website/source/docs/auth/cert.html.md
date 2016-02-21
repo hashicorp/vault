@@ -53,6 +53,10 @@ mount of the backend. The workaround here is to mount multiple copies of the
 `cert` backend, configure each with one CA/CRL, and have clients connect to the
 appropriate mount.
 
+In addition, since the backend does not fetch the CRLs itself, the CRL's
+designated time to next update is not considered. If a CRL is no longer in use,
+it is up to the administrator to remove it from the backend.
+
 ## Authentication
 
 ### Via the CLI
@@ -97,7 +101,7 @@ $ vault write auth/cert/certs/web \
     display_name=web \
     policies=web,prod \
     certificate=@web-cert.pem \
-    ttl=1h
+    ttl=3600
 ...
 ```
 
@@ -219,9 +223,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">ttl</span>
         <span class="param-flags">optional</span>
-        The TTL period of the token, provided as "1h", where hour is
-        the largest suffix. If not provided, the token is valid for the
-        the mount or system default TTL time, in that order.
+        The TTL period of the token, provided as a number of seconds. If not
+        provided, the token is valid for the the mount or system default TTL
+        time, in that order.
       </li>
     </ul>
   </dd>
@@ -266,7 +270,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>
     Gets information associated with the named CRL (currently, the serial numbers contained within).
     As the serials can be integers up to an arbitrary size, these are returned as strings. Requires
-	`sudo` access.
+    `sudo` access.
   </dd>
 
   <dt>Method</dt>

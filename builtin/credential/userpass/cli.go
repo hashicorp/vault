@@ -2,12 +2,12 @@ package userpass
 
 import (
 	"fmt"
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/mapstructure"
 	pwd "github.com/hashicorp/vault/helper/password"
+	"github.com/mitchellh/mapstructure"
 )
 
 type CLIHandler struct{}

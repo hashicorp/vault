@@ -1,7 +1,6 @@
-TEST?=./...
+TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
-	github.com/tools/godep \
 	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/vet
@@ -19,7 +18,7 @@ dev: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	TF_ACC= godep go test $(TEST) $(TESTARGS) -timeout=30s -parallel=4
+	VAULT_TOKEN= TF_ACC= go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
@@ -27,11 +26,11 @@ testacc: generate
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	TF_ACC=1 godep go test $(TEST) -v $(TESTARGS) -timeout 45m
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
 testrace: generate
-	TF_ACC= godep go test -race $(TEST) $(TESTARGS)
+	CGO_ENABLED=1 VAULT_TOKEN= TF_ACC= go test -race $(TEST) $(TESTARGS)
 
 cover:
 	./scripts/coverage.sh --html
@@ -39,7 +38,7 @@ cover:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@go list -f '{{.Dir}}' ./... \
+	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
 		| xargs go tool vet ; if [ $$? -eq 1 ]; then \
 			echo ""; \
@@ -50,13 +49,13 @@ vet:
 # generate runs `go generate` to build the dynamically generated
 # source files.
 generate:
-	go generate ./...
+	go generate $(go list ./... | grep -v /vendor/)
 
 # bootstrap the build by downloading additional tools
 bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS) ; do \
 		echo "Installing $$tool" ; \
-    go get $$tool; \
+		go get $$tool; \
 	done
 
 .PHONY: bin default generate test vet bootstrap

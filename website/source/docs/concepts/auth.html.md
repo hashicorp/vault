@@ -76,7 +76,7 @@ must be used.
 #### Via the API
 
 API authentication is generally used for machine authentication. Each
-auth backend implements is own login endpoint. Use the `vault path-help`
+auth backend implements its own login endpoint. Use the `vault path-help`
 mechanism to find the proper endpoint.
 
 For example, the GitHub login endpoint is located at `auth/github/login`.

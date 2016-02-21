@@ -62,7 +62,7 @@ func TestBackend_Config(t *testing.T) {
 
 func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login",
 		ErrorOk:   true,
 		Data:      d,
@@ -82,7 +82,7 @@ func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64, e
 
 func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data:      d,
 	}
@@ -134,7 +134,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
 			"organization": os.Getenv("GITHUB_ORG"),
@@ -144,7 +144,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 
 func testAccStepConfigWithBaseURL(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
 			"organization": os.Getenv("GITHUB_ORG"),
@@ -155,7 +155,7 @@ func testAccStepConfigWithBaseURL(t *testing.T) logicaltest.TestStep {
 
 func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/teams/" + k,
 		Data: map[string]interface{}{
 			"value": v,
@@ -165,7 +165,7 @@ func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 
 func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
 			"token": os.Getenv("GITHUB_TOKEN"),

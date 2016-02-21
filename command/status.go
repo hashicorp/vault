@@ -24,14 +24,14 @@ func (c *StatusCommand) Run(args []string) int {
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing client: %s", err))
-		return 2
+		return 1
 	}
 
 	sealStatus, err := client.Sys().SealStatus()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error checking seal status: %s", err))
-		return 2
+		return 1
 	}
 	c.Ui.Output(fmt.Sprintf(
 		"Sealed: %v\n"+
@@ -53,7 +53,7 @@ func (c *StatusCommand) Run(args []string) int {
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error checking leader status: %s", err))
-		return 2
+		return 1
 	}
 
 	// Output if HA is enabled
@@ -77,7 +77,7 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	if sealStatus.Sealed {
-		return 1
+		return 2
 	} else {
 		return 0
 	}
@@ -94,7 +94,7 @@ Usage: vault status [options]
   Outputs the state of the Vault, sealed or unsealed and if HA is enabled.
 
   This command outputs whether or not the Vault is sealed. The exit
-  code also reflects the seal status (0 unsealed, 1 sealed, 2+ error).
+  code also reflects the seal status (0 unsealed, 2 sealed, 1 error).
 
 General Options:
 

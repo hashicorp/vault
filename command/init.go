@@ -16,10 +16,12 @@ type InitCommand struct {
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares int
 	var pgpKeys pgpkeys.PubKeyFilesFlag
+	var check bool
 	flags := c.Meta.FlagSet("init", FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
+	flags.BoolVar(&check, "check", false, "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -30,6 +32,10 @@ func (c *InitCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing client: %s", err))
 		return 1
+	}
+
+	if check {
+		return c.checkStatus(client)
 	}
 
 	resp, err := client.Sys().Init(&api.InitRequest{
@@ -66,6 +72,22 @@ func (c *InitCommand) Run(args []string) int {
 	return 0
 }
 
+func (c *InitCommand) checkStatus(client *api.Client) int {
+	inited, err := client.Sys().InitStatus()
+	switch {
+	case err != nil:
+		c.Ui.Error(fmt.Sprintf(
+			"Error checking initialization status: %s", err))
+		return 1
+	case inited:
+		c.Ui.Output("Vault has been initialized")
+		return 0
+	default:
+		c.Ui.Output("Vault is not initialized")
+		return 2
+	}
+}
+
 func (c *InitCommand) Synopsis() string {
 	return "Initialize a new Vault server"
 }
@@ -88,6 +110,12 @@ General Options:
 
 Init Options:
 
+  -check                  Don't actually initialize, just check if Vault is
+                          already initialized. A return code of 0 means Vault
+                          is initialized; a return code of 2 means Vault is not
+                          initialized; a return code of 1 means an error was
+                          encountered.
+
   -key-shares=5           The number of key shares to split the master key
                           into.
 
@@ -96,12 +124,13 @@ Init Options:
 
   -pgp-keys               If provided, must be a comma-separated list of
                           files on disk containing binary- or base64-format
-                          public PGP keys. The number of files must match
-                          'key-shares'. The output unseal keys will encrypted
-                          and hex-encoded, in order, with the given public keys.
-                          If you want to use them with the 'vault unseal'
-                          command, you will need to hex decode and decrypt;
-                          this will be the plaintext unseal key.
+                          public PGP keys, or Keybase usernames specified as
+                          "keybase:<username>". The number of given entries
+                          must match 'key-shares'. The output unseal keys will
+                          encrypted and hex-encoded, in order, with the given
+                          public keys.  If you want to use them with the 'vault
+                          unseal' command, you will need to hex decode and
+                          decrypt; this will be the plaintext unseal key.
 `
 	return strings.TrimSpace(helpText)
 }

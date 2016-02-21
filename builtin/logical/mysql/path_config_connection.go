@@ -21,16 +21,21 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				DB connection string. Use 'connection_url' instead.
-			        This will be deprecated.`,
+This name is deprecated.`,
 			},
 			"max_open_connections": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
 			},
+			"verify_connection": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: "If set, connection_url is verified by actually connecting to the database",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathConnectionWrite,
+			logical.UpdateOperation: b.pathConnectionWrite,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -40,30 +45,40 @@ func pathConfigConnection(b *backend) *framework.Path {
 
 func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	connString := data.Get("value").(string)
+	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
+	if connURL == "" {
+		if connValue == "" {
+			return logical.ErrorResponse("the connection_url parameter must be supplied"), nil
+		} else {
+			connURL = connValue
+		}
+	}
 
 	maxOpenConns := data.Get("max_open_connections").(int)
 	if maxOpenConns == 0 {
 		maxOpenConns = 2
 	}
 
-	// Verify the string
-	db, err := sql.Open("mysql", connString)
+	// Don't check the connection_url if verification is disabled
+	verifyConnection := data.Get("verify_connection").(bool)
+	if verifyConnection {
+		// Verify the string
+		db, err := sql.Open("mysql", connURL)
 
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error validating connection info: %s", err)), nil
-	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error validating connection info: %s", err)), nil
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"error validating connection info: %s", err)), nil
+		}
+		defer db.Close()
+		if err := db.Ping(); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"error validating connection info: %s", err)), nil
+		}
 	}
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
-		ConnectionString:   connString,
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
 	})
@@ -91,11 +106,14 @@ Configure the connection string to talk to MySQL.
 `
 
 const pathConfigConnectionHelpDesc = `
-This path configures the connection string used to connect to MySQL.
-The value of the string is a Data Source Name (DSN). An example is
-using "username:password@protocol(address)/dbname?param=value"
+This path configures the connection string used to connect to MySQL.  The value
+of the string is a Data Source Name (DSN). An example is using
+"username:password@protocol(address)/dbname?param=value"
 
-For example, RDS may look like: "id:password@tcp(your-amazonaws-uri.com:3306)/dbname"
+For example, RDS may look like:
+"id:password@tcp(your-amazonaws-uri.com:3306)/dbname"
 
 When configuring the connection string, the backend will verify its validity.
+If the database is not available when setting the connection URL, set the
+"verify_connection" option to false.
 `

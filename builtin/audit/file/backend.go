@@ -63,6 +63,10 @@ type Backend struct {
 	f    *os.File
 }
 
+func (b *Backend) GetHash(data string) string {
+	return audit.HashString(b.salt, data)
+}
+
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if err := b.open(); err != nil {
 		return err

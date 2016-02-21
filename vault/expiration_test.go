@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t *testing.T) *ExpirationManager {
-	_, ts, _ := mockTokenStore(t)
+	_, ts, _, _ := TestCoreWithTokenStore(t)
 	return ts.expiration
 }
 
@@ -22,7 +22,11 @@ func TestExpiration_Restore(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -52,7 +56,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Stop everything
-	err := exp.Stop()
+	err = exp.Stop()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -175,7 +179,11 @@ func TestExpiration_Revoke(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -213,7 +221,11 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -231,7 +243,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	_, err := exp.Register(req, resp)
+	_, err = exp.Register(req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -262,7 +274,11 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -322,7 +338,11 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -441,7 +461,11 @@ func TestExpiration_Renew(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -503,7 +527,11 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -545,7 +573,11 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -613,7 +645,11 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "", &MountEntry{UUID: meUUID}, view)
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -630,7 +666,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 		ExpireTime: time.Now(),
 	}
 
-	err := exp.revokeEntry(le)
+	err = exp.revokeEntry(le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -727,7 +763,11 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "", &MountEntry{UUID: meUUID}, view)
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -789,7 +829,11 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "auth/foo/")
-	exp.router.Mount(noop, "auth/foo/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "auth/foo/", &MountEntry{UUID: meUUID}, view)
 
 	le := &leaseEntry{
 		LeaseID: "auth/foo/1234",
@@ -850,8 +894,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		IssueTime:  time.Now().UTC(),
-		ExpireTime: time.Now().UTC(),
+		IssueTime:       time.Now().UTC(),
+		ExpireTime:      time.Now().UTC(),
+		LastRenewalTime: time.Time{}.UTC(),
 	}
 	if err := exp.persistEntry(le); err != nil {
 		t.Fatalf("err: %v", err)
@@ -862,7 +907,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if !reflect.DeepEqual(out, le) {
-		t.Fatalf("out: %#v expect: %#v", out, le)
+		t.Fatalf("\nout: %#v\nexpect: %#v\n", out, le)
 	}
 
 	err = exp.deleteEntry("foo/bar/1234")

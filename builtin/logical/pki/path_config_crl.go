@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -28,7 +27,7 @@ valid; defaults to 72 hours`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:  b.pathCRLRead,
-			logical.WriteOperation: b.pathCRLWrite,
+			logical.UpdateOperation: b.pathCRLWrite,
 		},
 
 		HelpSynopsis:    pathConfigCRLHelpSyn,
@@ -64,7 +63,9 @@ func (b *backend) pathCRLRead(
 	}
 
 	return &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"expiry": config.Expiry,
+		},
 	}, nil
 }
 

@@ -14,7 +14,7 @@ func TestPathMap(t *testing.T) {
 
 	// Write via HTTP
 	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
 		Data: map[string]interface{}{
 			"value": "bar",
@@ -136,7 +136,7 @@ func TestPathMap_Salted(t *testing.T) {
 
 	// Write via HTTP
 	_, err = b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
 		Data: map[string]interface{}{
 			"value": "bar",

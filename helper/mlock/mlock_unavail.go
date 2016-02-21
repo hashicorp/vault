@@ -1,4 +1,4 @@
-// +build windows plan9 darwin freebsd openbsd solaris
+// +build windows plan9 darwin freebsd openbsd
 
 package mlock
 

@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"crypto/sha256"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -17,7 +19,6 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"revoke-prefix/*",
 		"audit",
 		"audit/*",
-		"seal",
 		"raw/*",
 		"rotate",
 	}
@@ -73,7 +74,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 func TestSystemBackend_mount(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "mounts/prod/secret/")
+	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
 	req.Data["type"] = "generic"
 
 	resp, err := b.HandleRequest(req)
@@ -88,7 +89,7 @@ func TestSystemBackend_mount(t *testing.T) {
 func TestSystemBackend_mount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "mounts/prod/secret/")
+	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
 	req.Data["type"] = "nope"
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -128,7 +129,7 @@ func TestSystemBackend_unmount_invalid(t *testing.T) {
 func TestSystemBackend_remount(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "remount")
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "secret"
 	req.Data["to"] = "foo"
 	req.Data["config"] = structs.Map(MountConfig{})
@@ -144,7 +145,7 @@ func TestSystemBackend_remount(t *testing.T) {
 func TestSystemBackend_remount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "remount")
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "unknown"
 	req.Data["to"] = "foo"
 	req.Data["config"] = structs.Map(MountConfig{})
@@ -160,7 +161,7 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 func TestSystemBackend_remount_system(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "remount")
+	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "sys"
 	req.Data["to"] = "foo"
 	resp, err := b.HandleRequest(req)
@@ -176,7 +177,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
-	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
 	resp, err := core.HandleRequest(req)
@@ -199,7 +200,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	}
 
 	// Attempt renew
-	req2 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.LeaseID)
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "renew/"+resp.Secret.LeaseID)
 	req2.Data["increment"] = "100s"
 	resp2, err := b.HandleRequest(req2)
 	if err != logical.ErrInvalidRequest {
@@ -216,7 +217,7 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	b := testSystemBackend(t)
 
 	// Attempt renew
-	req := logical.TestRequest(t, logical.WriteOperation, "renew/foobarbaz")
+	req := logical.TestRequest(t, logical.UpdateOperation, "renew/foobarbaz")
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -230,7 +231,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
-	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
@@ -254,7 +255,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	}
 
 	// Attempt revoke
-	req2 := logical.TestRequest(t, logical.WriteOperation, "revoke/"+resp.Secret.LeaseID)
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "revoke/"+resp.Secret.LeaseID)
 	resp2, err := b.HandleRequest(req2)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp2)
@@ -264,7 +265,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	}
 
 	// Attempt renew
-	req3 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.LeaseID)
+	req3 := logical.TestRequest(t, logical.UpdateOperation, "renew/"+resp.Secret.LeaseID)
 	resp3, err := b.HandleRequest(req3)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -278,7 +279,7 @@ func TestSystemBackend_revoke_invalidID(t *testing.T) {
 	b := testSystemBackend(t)
 
 	// Attempt renew
-	req := logical.TestRequest(t, logical.WriteOperation, "revoke/foobarbaz")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke/foobarbaz")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -292,7 +293,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
-	req := logical.TestRequest(t, logical.WriteOperation, "secret/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
@@ -316,7 +317,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 
 	// Attempt revoke
-	req2 := logical.TestRequest(t, logical.WriteOperation, "revoke-prefix/secret/")
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/secret/")
 	resp2, err := b.HandleRequest(req2)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp2)
@@ -326,7 +327,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 
 	// Attempt renew
-	req3 := logical.TestRequest(t, logical.WriteOperation, "renew/"+resp.Secret.LeaseID)
+	req3 := logical.TestRequest(t, logical.UpdateOperation, "renew/"+resp.Secret.LeaseID)
 	resp3, err := b.HandleRequest(req3)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -361,7 +362,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 		return &NoopBackend{}, nil
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "noop"
 
 	resp, err := b.HandleRequest(req)
@@ -375,7 +376,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 
 func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 	b := testSystemBackend(t)
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "nope"
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -393,7 +394,7 @@ func TestSystemBackend_disableAuth(t *testing.T) {
 	}
 
 	// Register the backend
-	req := logical.TestRequest(t, logical.WriteOperation, "auth/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "noop"
 	b.HandleRequest(req)
 
@@ -442,7 +443,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 	// Create the policy
 	rules := `path "foo/" { policy = "read" }`
-	req := logical.TestRequest(t, logical.WriteOperation, "policy/Foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/Foo")
 	req.Data["rules"] = rules
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -531,7 +532,7 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 		}, nil
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
 
 	resp, err := b.HandleRequest(req)
@@ -543,9 +544,60 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_auditHash(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		view := &logical.InmemStorage{}
+		view.Put(&logical.StorageEntry{
+			Key:   "salt",
+			Value: []byte("foo"),
+		})
+		var err error
+		config.Salt, err = salt.NewSalt(view, &salt.Config{
+			HMAC:     sha256.New,
+			HMACType: "hmac-sha256",
+		})
+		if err != nil {
+			t.Fatal("error getting new salt: %v", err)
+		}
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
+	req.Data["type"] = "noop"
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "audit-hash/foo")
+	req.Data["input"] = "bar"
+
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("response or its data was nil")
+	}
+	hash, ok := resp.Data["hash"]
+	if !ok {
+		t.Fatalf("did not get hash back in response, response was %#v", resp.Data)
+	}
+	if hash.(string) != "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317" {
+		t.Fatalf("bad hash back: %s", hash.(string))
+	}
+}
+
 func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 	b := testSystemBackend(t)
-	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "nope"
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -564,7 +616,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 		}, nil
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
 	req.Data["description"] = "testing"
 	req.Data["options"] = map[string]interface{}{
@@ -600,7 +652,7 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 		}, nil
 	}
 
-	req := logical.TestRequest(t, logical.WriteOperation, "audit/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
 	req.Data["description"] = "testing"
 	req.Data["options"] = map[string]interface{}{
@@ -658,7 +710,7 @@ func TestSystemBackend_rawRead(t *testing.T) {
 func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "raw/"+keyringPath)
+	req := logical.TestRequest(t, logical.UpdateOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -668,7 +720,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 func TestSystemBackend_rawWrite(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "raw/sys/policy/test")
+	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -686,7 +738,7 @@ func TestSystemBackend_rawWrite(t *testing.T) {
 	if p == nil || len(p.Paths) == 0 {
 		t.Fatalf("missing policy %#v", p)
 	}
-	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != PathPolicyRead {
+	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != ReadCapability {
 		t.Fatalf("Bad: %#v", p)
 	}
 }
@@ -752,7 +804,7 @@ func TestSystemBackend_keyStatus(t *testing.T) {
 func TestSystemBackend_rotate(t *testing.T) {
 	b := testSystemBackend(t)
 
-	req := logical.TestRequest(t, logical.WriteOperation, "rotate")
+	req := logical.TestRequest(t, logical.UpdateOperation, "rotate")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

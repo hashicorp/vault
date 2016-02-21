@@ -53,6 +53,14 @@ type Path struct {
 	// callback will be called.
 	Callbacks map[logical.Operation]OperationFunc
 
+	// ExistenceCheck, if implemented, is used to query whether a given
+	// resource exists or not. This is used for ACL purposes: if an Update
+	// action is specified, and the existence check returns false, the action
+	// is not allowed since the resource must first be created. The reverse is
+	// also true. If not specified, the Update action is forced and the user
+	// must have UpdateCapability on the path.
+	ExistenceCheck func(*logical.Request, *FieldData) (bool, error)
+
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically
 	// generate a parameter listing and URL structure based on the

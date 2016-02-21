@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -30,10 +31,22 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 			op = logical.DeleteOperation
 		case "GET":
 			op = logical.ReadOperation
-		case "POST":
-			fallthrough
-		case "PUT":
-			op = logical.WriteOperation
+			// Need to call ParseForm to get query params loaded
+			queryVals := r.URL.Query()
+			listStr := queryVals.Get("list")
+			if listStr != "" {
+				list, err := strconv.ParseBool(listStr)
+				if err != nil {
+					respondError(w, http.StatusBadRequest, nil)
+				}
+				if list {
+					op = logical.ListOperation
+				}
+			}
+		case "POST", "PUT":
+			op = logical.UpdateOperation
+		case "LIST":
+			op = logical.ListOperation
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
@@ -41,7 +54,7 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 
 		// Parse the request if we can
 		var req map[string]interface{}
-		if op == logical.WriteOperation {
+		if op == logical.UpdateOperation {
 			err := parseRequest(r, &req)
 			if err == io.EOF {
 				req = nil
@@ -65,7 +78,7 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 		if !ok {
 			return
 		}
-		if op == logical.ReadOperation && resp == nil {
+		if (op == logical.ReadOperation || op == logical.ListOperation) && resp == nil {
 			respondError(w, http.StatusNotFound, nil)
 			return
 		}

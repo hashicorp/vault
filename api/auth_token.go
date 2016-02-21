@@ -25,8 +25,20 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *TokenAuth) Lookup(token string) (*Secret, error) {
+	r := c.c.NewRequest("GET", "/v1/auth/token/lookup/"+token)
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *TokenAuth) LookupSelf() (*Secret, error) {
-	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-self")
+	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
 
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
@@ -71,6 +83,8 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// RevokeOrphan revokes a token without revoking the tree underneath it (so
+// child tokens are orphaned rather than revoked)
 func (c *TokenAuth) RevokeOrphan(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-orphan/"+token)
 	resp, err := c.c.RawRequest(r)
@@ -82,6 +96,8 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 	return nil
 }
 
+// RevokePrefix revokes a token based on a prefix, which can be used to revoke
+// e.g. all tokens issued by a certain credential mount
 func (c *TokenAuth) RevokePrefix(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-prefix/"+token)
 	resp, err := c.c.RawRequest(r)
@@ -93,6 +109,7 @@ func (c *TokenAuth) RevokePrefix(token string) error {
 	return nil
 }
 
+// RevokeSelf revokes the token making the call
 func (c *TokenAuth) RevokeSelf() error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 	resp, err := c.c.RawRequest(r)
@@ -104,6 +121,9 @@ func (c *TokenAuth) RevokeSelf() error {
 	return nil
 }
 
+// RevokeTree is the "normal" revoke operation that revokes the given token and
+// the entire tree underneath -- all of its child tokens, their child tokens,
+// etc.
 func (c *TokenAuth) RevokeTree(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke/"+token)
 	resp, err := c.c.RawRequest(r)

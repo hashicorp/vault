@@ -47,6 +47,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		Paths: []*framework.Path{
 			pathConfigZeroAddress(&b),
 			pathKeys(&b),
+			pathListRoles(&b),
 			pathRoles(&b),
 			pathCredsCreate(&b),
 			pathLookup(&b),

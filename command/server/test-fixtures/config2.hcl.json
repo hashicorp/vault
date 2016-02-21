@@ -11,6 +11,12 @@
         }
     },
 
+	"ha_backend": {
+		"consul": {
+			"bar": "baz"
+		}
+	},
+
     "telemetry": {
         "statsd_address": "bar",
         "statsite_address": "foo",

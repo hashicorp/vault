@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
 	"github.com/hashicorp/vault/audit"
-	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
 	"github.com/hashicorp/vault/command"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/cli"
@@ -167,6 +166,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"list": func() (cli.Command, error) {
+			return &command.ListCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"write": func() (cli.Command, error) {
 			return &command.WriteCommand{
 				Meta: meta,
@@ -181,6 +186,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 
 		"rekey": func() (cli.Command, error) {
 			return &command.RekeyCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"generate-root": func() (cli.Command, error) {
+			return &command.GenerateRootCommand{
 				Meta: meta,
 			}, nil
 		},
@@ -257,6 +268,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"token-lookup": func() (cli.Command, error) {
+			return &command.TokenLookupCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"token-renew": func() (cli.Command, error) {
 			return &command.TokenRenewCommand{
 				Meta: meta,
@@ -276,11 +293,6 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 				VersionInfo: versionInfo,
 				Ui:          meta.Ui,
 			}, nil
-		},
-
-		// The commands below are hidden from the help output
-		"token-disk": func() (cli.Command, error) {
-			return &tokenDisk.Command{}, nil
 		},
 	}
 }

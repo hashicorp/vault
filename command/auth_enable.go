@@ -76,7 +76,7 @@ General Options:
 Auth Enable Options:
 
   -description=<desc>     Human-friendly description of the purpose for the
-                          auth provider. This shows up in the auth-list command.
+                          auth provider. This shows up in the auth -methods command.
 
   -path=<path>            Mount point for the auth provider. This defaults
                           to the type of the mount. This will make the auth

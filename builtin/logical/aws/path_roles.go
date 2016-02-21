@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"errors"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"strings"
 )
 
 func pathRoles() *framework.Path {
@@ -18,6 +20,11 @@ func pathRoles() *framework.Path {
 				Description: "Name of the policy",
 			},
 
+			"arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "ARN Reference to a managed policy",
+			},
+
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "IAM policy document",
@@ -27,7 +34,7 @@ func pathRoles() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: pathRolesDelete,
 			logical.ReadOperation:   pathRolesRead,
-			logical.WriteOperation:  pathRolesWrite,
+			logical.UpdateOperation:  pathRolesWrite,
 		},
 
 		HelpSynopsis:    pathRolesHelpSyn,
@@ -55,45 +62,86 @@ func pathRolesRead(
 		return nil, nil
 	}
 
+	val := string(entry.Value)
+	if strings.HasPrefix(val, "arn:") {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"arn": val,
+			},
+		}, nil
+	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policy": string(entry.Value),
+			"policy": val,
 		},
 	}, nil
+}
+
+func useInlinePolicy(d *framework.FieldData) (bool, error) {
+	bp := d.Get("policy").(string) != ""
+	ba := d.Get("arn").(string) != ""
+
+	if !bp && !ba {
+		return false, errors.New("Either policy or arn must be provided")
+	}
+	if bp && ba {
+		return false, errors.New("Only one of policy or arn should be provided")
+	}
+	return bp, nil
 }
 
 func pathRolesWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var buf bytes.Buffer
-	if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error compacting policy: %s", err)), nil
-	}
 
-	// Write the policy into storage
-	err := req.Storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + d.Get("name").(string),
-		Value: buf.Bytes(),
-	})
+	uip, err := useInlinePolicy(d)
 	if err != nil {
 		return nil, err
+	}
+
+	if uip {
+		if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error compacting policy: %s", err)), nil
+		}
+		// Write the policy into storage
+		err := req.Storage.Put(&logical.StorageEntry{
+			Key:   "policy/" + d.Get("name").(string),
+			Value: buf.Bytes(),
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Write the arn ref into storage
+		err := req.Storage.Put(&logical.StorageEntry{
+			Key:   "policy/" + d.Get("name").(string),
+			Value: []byte(d.Get("arn").(string)),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
 }
 
 const pathRolesHelpSyn = `
-Read and write IAM policies that access keys can be made for.
+Read, write and reference IAM policies that access keys can be made for.
 `
 
 const pathRolesHelpDesc = `
 This path allows you to read and write roles that are used to
-create access keys. These roles have IAM policies that map directly to the route to read the
-access keys. For example, if the backend is mounted at "aws" and you
-create a role at "aws/roles/deploy" then a user could request access
-credentials at "aws/creds/deploy".
+create access keys. These roles are associated with IAM policies that
+map directly to the route to read the access keys. For example, if the
+backend is mounted at "aws" and you create a role at "aws/roles/deploy"
+then a user could request access credentials at "aws/creds/deploy".
 
-The policies written are normal IAM policies. Vault will not attempt to
-parse these except to validate that they're basic JSON. To validate the
-keys, attempt to read an access key after writing the policy.
+You can either supply a user inline policy (via the policy argument), or
+provide a reference to an existing AWS policy by supplying the full arn
+reference (via the arn argument). Inline user policies written are normal
+IAM policies. Vault will not attempt to parse these except to validate
+that they're basic JSON. No validation is performed on arn references.
+
+To validate the keys, attempt to read an access key after writing the policy.
 `

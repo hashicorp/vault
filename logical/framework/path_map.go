@@ -122,12 +122,15 @@ func (p *PathMap) Paths() []*Path {
 			Fields: schema,
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.WriteOperation:  p.pathSingleWrite,
+				logical.CreateOperation: p.pathSingleWrite,
 				logical.ReadOperation:   p.pathSingleRead,
+				logical.UpdateOperation: p.pathSingleWrite,
 				logical.DeleteOperation: p.pathSingleDelete,
 			},
 
 			HelpSynopsis: fmt.Sprintf("Read/write/delete a single %s mapping", p.Name),
+
+			ExistenceCheck: p.pathSingleExistenceCheck,
 		},
 	}
 }
@@ -164,4 +167,13 @@ func (p *PathMap) pathSingleDelete(
 	req *logical.Request, d *FieldData) (*logical.Response, error) {
 	err := p.Delete(req.Storage, d.Get("key").(string))
 	return nil, err
+}
+
+func (p *PathMap) pathSingleExistenceCheck(
+	req *logical.Request, d *FieldData) (bool, error) {
+	v, err := p.Get(req.Storage, d.Get("key").(string))
+	if err != nil {
+		return false, err
+	}
+	return v != nil, nil
 }

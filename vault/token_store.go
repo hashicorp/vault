@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -76,10 +77,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
-		// Allow a token lease to be extended indefinitely, but each time for only
-		// as much as the original lease allowed for. If the lease has a 1 hour expiration,
-		// it can only be extended up to another hour each time this means.
-		AuthRenew: framework.LeaseExtend(0, 0, true),
+		AuthRenew: t.authRenew,
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
@@ -93,7 +91,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "create-orphan$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleCreateOrphan,
+					logical.UpdateOperation: t.handleCreateOrphan,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
@@ -104,7 +102,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "create$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleCreate,
+					logical.UpdateOperation: t.handleCreate,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateHelp),
@@ -151,7 +149,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "revoke-self$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeSelf,
+					logical.UpdateOperation: t.handleRevokeSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeSelfHelp),
@@ -169,7 +167,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeTree,
+					logical.UpdateOperation: t.handleRevokeTree,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeHelp),
@@ -187,7 +185,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeOrphan,
+					logical.UpdateOperation: t.handleRevokeOrphan,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeOrphanHelp),
@@ -205,7 +203,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokePrefix,
+					logical.UpdateOperation: t.handleRevokePrefix,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokePrefixHelp),
@@ -227,7 +225,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRenewSelf,
+					logical.UpdateOperation: t.handleRenewSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewSelfHelp),
@@ -249,7 +247,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRenew,
+					logical.UpdateOperation: t.handleRenew,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
@@ -308,8 +306,26 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
-		entry.ID = uuid.GenerateUUID()
+		entryUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.ID = entryUUID
 	}
+
+	return ts.storeCommon(entry, true)
+}
+
+// Store is used to store an updated token entry without writing the
+// secondary index.
+func (ts *TokenStore) store(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "store"}, time.Now())
+	return ts.storeCommon(entry, false)
+}
+
+// storeCommon handles the actual storage of an entry, possibly generating
+// secondary indexes
+func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error {
 	saltedId := ts.SaltID(entry.ID)
 
 	// Marshal the entry
@@ -318,25 +334,27 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		return fmt.Errorf("failed to encode entry: %v", err)
 	}
 
-	// Write the secondary index if necessary. This is done before the
-	// primary index because we'd rather have a dangling pointer with
-	// a missing primary instead of missing the parent index and potentially
-	// escaping the revocation chain.
-	if entry.Parent != "" {
-		// Ensure the parent exists
-		parent, err := ts.Lookup(entry.Parent)
-		if err != nil {
-			return fmt.Errorf("failed to lookup parent: %v", err)
-		}
-		if parent == nil {
-			return fmt.Errorf("parent token not found")
-		}
+	if writeSecondary {
+		// Write the secondary index if necessary. This is done before the
+		// primary index because we'd rather have a dangling pointer with
+		// a missing primary instead of missing the parent index and potentially
+		// escaping the revocation chain.
+		if entry.Parent != "" {
+			// Ensure the parent exists
+			parent, err := ts.Lookup(entry.Parent)
+			if err != nil {
+				return fmt.Errorf("failed to lookup parent: %v", err)
+			}
+			if parent == nil {
+				return fmt.Errorf("parent token not found")
+			}
 
-		// Create the index entry
-		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		le := &logical.StorageEntry{Key: path}
-		if err := ts.view.Put(le); err != nil {
-			return fmt.Errorf("failed to persist entry: %v", err)
+			// Create the index entry
+			path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+			le := &logical.StorageEntry{Key: path}
+			if err := ts.view.Put(le); err != nil {
+				return fmt.Errorf("failed to persist entry: %v", err)
+			}
 		}
 	}
 
@@ -602,10 +620,26 @@ func (ts *TokenStore) handleCreateCommon(
 	if !isSudo && !strListSubset(parent.Policies, data.Policies) {
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
-	te.Policies = data.Policies
-	if !strListSubset(te.Policies, []string{"root"}) && !data.NoDefaultPolicy {
-		te.Policies = append(te.Policies, "default")
+
+	// Use a map to filter out/prevent duplicates
+	policyMap := map[string]bool{}
+	for _, policy := range data.Policies {
+		if policy == "" {
+			// Don't allow a policy with no name, even though it is a valid
+			// slice member
+			continue
+		}
+		policyMap[policy] = true
 	}
+	if !policyMap["root"] &&
+		!data.NoDefaultPolicy {
+		policyMap["default"] = true
+	}
+
+	for k, _ := range policyMap {
+		te.Policies = append(te.Policies, k)
+	}
+	sort.Strings(te.Policies)
 
 	// Only allow an orphan token if the client has sudo policy
 	if data.NoParent {
@@ -667,10 +701,8 @@ func (ts *TokenStore) handleCreateCommon(
 			Policies:    te.Policies,
 			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         te.TTL,
-				GracePeriod: te.TTL / 10,
-				// Tokens are renewable only if user provides lease duration
-				Renewable: te.TTL > 0,
+				TTL:       te.TTL,
+				Renewable: true,
 			},
 			ClientToken: te.ID,
 		},
@@ -805,13 +837,28 @@ func (ts *TokenStore) handleLookup(
 			"display_name":  out.DisplayName,
 			"num_uses":      out.NumUses,
 			"orphan":        false,
-			"creation_time": int(out.CreationTime),
-			"ttl":           int(out.TTL.Seconds()),
+			"creation_time": int64(out.CreationTime),
+			"creation_ttl":  int64(out.TTL.Seconds()),
+			"ttl":           int64(0),
 		},
 	}
 
 	if out.Parent == "" {
 		resp.Data["orphan"] = true
+	}
+
+	// Fetch the last renewal time
+	leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(out.Path, out.ID)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	if leaseTimes != nil {
+		if !leaseTimes.LastRenewalTime.IsZero() {
+			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+		}
+		if !leaseTimes.ExpireTime.IsZero() {
+			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+		}
 	}
 
 	return resp, nil
@@ -837,18 +884,18 @@ func (ts *TokenStore) handleRenew(
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	te, err := ts.Lookup(id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Verify the token exists
-	if out == nil {
+	if te == nil {
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
 	// Renew the token and its children
-	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
+	auth, err := ts.expiration.RenewToken(te.Path, te.ID, increment)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -866,6 +913,13 @@ func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
 		return nil
 	}
 	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+}
+
+func (ts *TokenStore) authRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	f := framework.LeaseExtend(0, 0, ts.System())
+	return f(req, d)
 }
 
 const (

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -62,7 +62,11 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	entry.UUID = uuid.GenerateUUID()
+	entryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	entry.UUID = entryUUID
 	view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 	// Lookup the new backend
@@ -285,6 +289,18 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 	defer a.l.RUnlock()
 	_, ok := a.backends[name]
 	return ok
+}
+
+// GetHash returns a hash using the salt of the given backend
+func (a *AuditBroker) GetHash(name string, input string) (string, error) {
+	a.l.RLock()
+	defer a.l.RUnlock()
+	be, ok := a.backends[name]
+	if !ok {
+		return "", fmt.Errorf("unknown audit backend %s", name)
+	}
+
+	return be.backend.GetHash(input), nil
 }
 
 // LogRequest is used to ensure all the audit backends have an opportunity to

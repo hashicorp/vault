@@ -21,6 +21,11 @@ type Backend interface {
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
 	LogResponse(*logical.Auth, *logical.Request, *logical.Response, error) error
+
+	// GetHash is used to return the given data with the backend's hash,
+	// so that a caller can determine if a value in the audit log matches
+	// an expected plaintext value
+	GetHash(string) string
 }
 
 type BackendConfig struct {

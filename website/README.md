@@ -1,6 +1,6 @@
 # Vault Website
 
-This subdirectory contains the entire source for the [Vault Website](https://vaultproject.io/).
+This subdirectory contains the entire source for the [Vault Website](https://www.vaultproject.io/).
 This is a [Middleman](http://middlemanapp.com) project, which builds a static
 site from these source files.
 

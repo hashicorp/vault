@@ -41,7 +41,7 @@ Defaults to 'client'.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   pathRolesRead,
-			logical.WriteOperation:  pathRolesWrite,
+			logical.UpdateOperation: pathRolesWrite,
 			logical.DeleteOperation: pathRolesDelete,
 		},
 	}
@@ -108,9 +108,15 @@ func pathRolesWrite(
 				"Error decoding policy base64: %s", err)), nil
 		}
 	}
-	lease, err := time.ParseDuration(d.Get("lease").(string))
-	if err != nil || lease == time.Duration(0) {
-		lease = DefaultLeaseDuration
+
+	var lease time.Duration
+	leaseParam := d.Get("lease").(string)
+	if leaseParam != "" {
+		lease, err = time.ParseDuration(leaseParam)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"error parsing given lease of %s: %s", leaseParam, err)), nil
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{

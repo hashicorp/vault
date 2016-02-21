@@ -19,18 +19,29 @@ func pathConfigConnection(b *backend) *framework.Path {
 			},
 			"value": &framework.FieldSchema{
 				Type: framework.TypeString,
-				Description: `
-				DB connection string. Use 'connection_url' instead.
-				This will be deprecated.`,
+				Description: `DB connection string. Use 'connection_url' instead.
+This will be deprecated.`,
 			},
 			"max_open_connections": &framework.FieldSchema{
-				Type:        framework.TypeInt,
-				Description: "Maximum number of open connections to the database",
+				Type: framework.TypeInt,
+				Description: `Maximum number of open connections to the database;
+a zero uses the default value of two and a
+negative value means unlimited`,
+			},
+
+			// Implementation note:
+			"max_idle_connections": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `Maximum number of idle connections to the database;
+a zero uses the value of max_open_connections
+and a negative value disables idle connections.
+If larger than max_open_connections it will be
+reduced to the same size.`,
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathConnectionWrite,
+			logical.UpdateOperation: b.pathConnectionWrite,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -46,6 +57,14 @@ func (b *backend) pathConnectionWrite(
 	maxOpenConns := data.Get("max_open_connections").(int)
 	if maxOpenConns == 0 {
 		maxOpenConns = 2
+	}
+
+	maxIdleConns := data.Get("max_idle_connections").(int)
+	if maxIdleConns == 0 {
+		maxIdleConns = maxOpenConns
+	}
+	if maxIdleConns > maxOpenConns {
+		maxIdleConns = maxOpenConns
 	}
 
 	// Verify the string
@@ -65,6 +84,7 @@ func (b *backend) pathConnectionWrite(
 		ConnectionString:   connString,
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
+		MaxIdleConnections: maxIdleConns,
 	})
 	if err != nil {
 		return nil, err
@@ -84,6 +104,7 @@ type connectionConfig struct {
 	// Deprecate "value" in coming releases
 	ConnectionString   string `json:"value"`
 	MaxOpenConnections int    `json:"max_open_connections"`
+	MaxIdleConnections int    `json:"max_idle_connections"`
 }
 
 const pathConfigConnectionHelpSyn = `

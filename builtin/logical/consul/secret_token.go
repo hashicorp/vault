@@ -1,19 +1,15 @@
 package consul
 
 import (
-	"time"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 const (
-	SecretTokenType      = "token"
-	DefaultLeaseDuration = 1 * time.Hour
-	DefaultGracePeriod   = 10 * time.Minute
+	SecretTokenType = "token"
 )
 
-func secretToken() *framework.Secret {
+func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretTokenType,
 		Fields: map[string]*framework.FieldSchema{
@@ -23,12 +19,15 @@ func secretToken() *framework.Secret {
 			},
 		},
 
-		DefaultDuration:    DefaultLeaseDuration,
-		DefaultGracePeriod: DefaultGracePeriod,
-
-		Renew:  framework.LeaseExtend(0, 0, true),
+		Renew:  b.secretTokenRenew,
 		Revoke: secretTokenRevoke,
 	}
+}
+
+func (b *backend) secretTokenRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	return framework.LeaseExtend(0, 0, b.System())(req, d)
 }
 
 func secretTokenRevoke(

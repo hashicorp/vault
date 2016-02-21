@@ -3,7 +3,6 @@ package pki
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -31,9 +30,6 @@ issuing certificate authority`,
 reference`,
 			},
 		},
-
-		DefaultDuration:    168 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
 
 		Revoke: b.secretCredsRevoke,
 	}

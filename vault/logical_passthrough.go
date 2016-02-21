@@ -47,10 +47,13 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead,
-					logical.WriteOperation:  b.handleWrite,
+					logical.CreateOperation: b.handleWrite,
+					logical.UpdateOperation: b.handleWrite,
 					logical.DeleteOperation: b.handleDelete,
 					logical.ListOperation:   b.handleList,
 				},
+
+				ExistenceCheck: b.handleExistenceCheck,
 
 				HelpSynopsis:    strings.TrimSpace(passthroughHelpSynopsis),
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
@@ -88,6 +91,16 @@ func (b *PassthroughBackend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This is a no-op
 	return nil, nil
+}
+
+func (b *PassthroughBackend) handleExistenceCheck(
+	req *logical.Request, data *framework.FieldData) (bool, error) {
+	out, err := req.Storage.Get(req.Path)
+	if err != nil {
+		return false, fmt.Errorf("existence check failed: %v", err)
+	}
+
+	return out != nil, nil
 }
 
 func (b *PassthroughBackend) handleRead(
@@ -149,7 +162,7 @@ func (b *PassthroughBackend) handleWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check that some fields are given
 	if len(req.Data) == 0 {
-		return nil, fmt.Errorf("missing data fields")
+		return logical.ErrorResponse("missing data fields"), nil
 	}
 
 	// Check if there is a ttl key; verify parseability if so
@@ -199,8 +212,16 @@ func (b *PassthroughBackend) handleDelete(
 
 func (b *PassthroughBackend) handleList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Right now we only handle directories, so ensure it ends with /; however,
+	// some physical backends may not handle the "/" case properly, so only add
+	// it if we're not listing the root
+	path := req.Path
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(req.Path)
+	keys, err := req.Storage.List(path)
 	if err != nil {
 		return nil, err
 	}

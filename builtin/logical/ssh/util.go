@@ -17,46 +17,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Creates a SSH session object which can be used to run commands
-// in the target machine. The session will use public key authentication
-// method with port 22.
-func createSSHPublicKeysSession(username, ipAddr string, port int, hostKey string) (*ssh.Session, error) {
-	if username == "" {
-		return nil, fmt.Errorf("missing username")
-	}
-	if ipAddr == "" {
-		return nil, fmt.Errorf("missing ip address")
-	}
-	if hostKey == "" {
-		return nil, fmt.Errorf("missing host key")
-	}
-	signer, err := ssh.ParsePrivateKey([]byte(hostKey))
-	if err != nil {
-		return nil, fmt.Errorf("parsing Private Key failed: %s", err)
-	}
-
-	config := &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-	}
-
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", ipAddr, port), config)
-	if err != nil {
-		return nil, err
-	}
-	if client == nil {
-		return nil, fmt.Errorf("invalid client object: %s", err)
-	}
-
-	session, err := client.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	return session, nil
-}
-
 // Creates a new RSA key pair with the given key length. The private key will be
 // of pem format and the public key will be of OpenSSH format.
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
@@ -87,8 +47,18 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port int, hostkey, dynamicPublicKey, installScript string, install bool) error {
 	// Transfer the newly generated public key to remote host under a random
 	// file name. This is to avoid name collisions from other requests.
-	_, publicKeyFileName := b.GenerateSaltedOTP()
-	err := scpUpload(adminUser, ip, port, hostkey, publicKeyFileName, dynamicPublicKey)
+	_, publicKeyFileName, err := b.GenerateSaltedOTP()
+	if err != nil {
+		return err
+	}
+
+	comm, err := createSSHComm(adminUser, ip, port, hostkey)
+	if err != nil {
+		return err
+	}
+	defer comm.Close()
+
+	err = comm.Upload(publicKeyFileName, bytes.NewBufferString(dynamicPublicKey), nil)
 	if err != nil {
 		return fmt.Errorf("error uploading public key: %s", err)
 	}
@@ -97,14 +67,14 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 	// host under a random file name as well. This is to avoid name collisions
 	// from other requests.
 	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
-	err = scpUpload(adminUser, ip, port, hostkey, scriptFileName, installScript)
+	err = comm.Upload(scriptFileName, bytes.NewBufferString(installScript), nil)
 	if err != nil {
 		return fmt.Errorf("error uploading install script: %s", err)
 	}
 
 	// Create a session to run remote command that triggers the script to install
 	// or uninstall the key.
-	session, err := createSSHPublicKeysSession(adminUser, ip, port, hostkey)
+	session, err := comm.NewSession()
 	if err != nil {
 		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
 	}
@@ -233,9 +203,12 @@ func cidrListContainsIP(ip, cidrList string) (bool, error) {
 	return false, nil
 }
 
-// Uploads the file to the remote machine
-func scpUpload(username, ip string, port int, hostkey, fileName, fileContent string) error {
+func createSSHComm(username, ip string, port int, hostkey string) (*comm, error) {
 	signer, err := ssh.ParsePrivateKey([]byte(hostkey))
+	if err != nil {
+		return nil, err
+	}
+
 	clientConfig := &ssh.ClientConfig{
 		User: username,
 		Auth: []ssh.AuthMethod{
@@ -262,10 +235,6 @@ func scpUpload(username, ip string, port int, hostkey, fileName, fileContent str
 		Pty:          false,
 		DisableAgent: true,
 	}
-	comm, err := SSHCommNew(fmt.Sprintf("%s:%d", ip, port), config)
-	if err != nil {
-		return fmt.Errorf("error connecting to target: %s", err)
-	}
-	comm.Upload(fileName, bytes.NewBufferString(fileContent), nil)
-	return nil
+
+	return SSHCommNew(fmt.Sprintf("%s:%d", ip, port), config)
 }

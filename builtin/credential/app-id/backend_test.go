@@ -110,7 +110,7 @@ func TestBackend_upgradeToSalted(t *testing.T) {
 
 func testAccStepMapAppId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/app-id/foo",
 		Data: map[string]interface{}{
 			"value": "foo,bar",
@@ -120,7 +120,7 @@ func testAccStepMapAppId(t *testing.T) logicaltest.TestStep {
 
 func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/app-id/foo",
 		Data: map[string]interface{}{
 			"display_name": "tubbin",
@@ -131,7 +131,7 @@ func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
 
 func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/user-id/42",
 		Data: map[string]interface{}{
 			"value": "foo",
@@ -148,7 +148,7 @@ func testAccStepDeleteUserId(t *testing.T) logicaltest.TestStep {
 
 func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "map/user-id/42",
 		Data: map[string]interface{}{
 			"value":      "foo",
@@ -159,7 +159,7 @@ func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 
 func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
@@ -181,7 +181,7 @@ func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
 	}
 
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
@@ -197,7 +197,7 @@ func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
 
 func testAccLoginInvalid(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
@@ -212,7 +212,7 @@ func testAccLoginInvalid(t *testing.T) logicaltest.TestStep {
 
 func testAccLoginDeleted(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",

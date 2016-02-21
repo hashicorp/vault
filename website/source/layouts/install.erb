@@ -1,0 +1,37 @@
+<% wrap_layout :inner do %>
+	<% content_for :sidebar do %>
+		<div class="docs-sidebar hidden-print affix-top" role="complementary">
+			<ul class="nav docs-sidenav">
+				<li<%= sidebar_current("docs-home") %>>
+					<a href="/docs/index.html">Documentation Home</a>
+				</li>
+
+				<hr>
+
+				<li<%= sidebar_current("docs-install-overview") %>>
+					<a href="/docs/install/index.html">Overview</a>
+				</li>
+
+				<li<%= sidebar_current("docs-install-installation") %>>
+					<a href="/docs/install/install.html">Installation</a>
+				</li>
+
+				<li<%= sidebar_current("docs-install-upgrades") %>>
+					<a href="/docs/install/upgrade.html">General Upgrade Instructions</a>
+					<ul class="nav nav-visible">
+						<li<%= sidebar_current("docs-install-upgrade-to-0.5") %>>
+							<a href="/docs/install/upgrade-to-0.5.html">Upgrade to 0.5</a>
+						</li>
+						<li<%= sidebar_current("docs-install-upgrade-to-0.5.1") %>>
+							<a href="/docs/install/upgrade-to-0.5.1.html">Upgrade to 0.5.1</a>
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+	<% end %>
+
+	<div class="bs-api-section">
+	<%= yield %>
+	</div>
+<% end %>

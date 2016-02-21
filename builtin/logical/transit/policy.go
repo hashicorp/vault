@@ -6,8 +6,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -18,7 +20,200 @@ import (
 const (
 	// kdfMode is the only KDF mode currently supported
 	kdfMode = "hmac-sha256-counter"
+
+	ErrTooOld = "ciphertext version is disallowed by policy (too old)"
 )
+
+// policyCache implements a simple locking cache of policies
+type policyCache struct {
+	sync.RWMutex
+	cache map[string]*lockingPolicy
+}
+
+// getPolicy loads a policy into the cache or returns one already in the cache
+func (p *policyCache) getPolicy(req *logical.Request, name string) (*lockingPolicy, error) {
+	// We don't defer this since we may need to give it up and get a write lock
+	p.RLock()
+
+	// First, see if we're in the cache -- if so, return that
+	if p.cache[name] != nil {
+		defer p.RUnlock()
+		return p.cache[name], nil
+	}
+
+	// If we didn't find anything, we'll need to write into the cache, plus possibly
+	// persist the entry, so lock the cache
+	p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
+
+	// Check one more time to ensure that another process did not write during
+	// our lock switcheroo.
+	if p.cache[name] != nil {
+		return p.cache[name], nil
+	}
+
+	// Note that we don't need to create the locking entry until the end,
+	// because the policy wasn't in the cache so we don't know about it, and we
+	// hold the cache lock so nothing else can be writing it in right now
+
+	// Check if the policy already exists
+	raw, err := req.Storage.Get("policy/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		return nil, nil
+	}
+
+	// Decode the policy
+	policy := &Policy{
+		Keys: KeyEntryMap{},
+	}
+	err = json.Unmarshal(raw.Value, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	persistNeeded := false
+	// Ensure we've moved from Key -> Keys
+	if policy.Key != nil && len(policy.Key) > 0 {
+		policy.migrateKeyToKeysMap()
+		persistNeeded = true
+	}
+
+	// With archiving, past assumptions about the length of the keys map are no longer valid
+	if policy.LatestVersion == 0 && len(policy.Keys) != 0 {
+		policy.LatestVersion = len(policy.Keys)
+		persistNeeded = true
+	}
+
+	// We disallow setting the version to 0, since they start at 1 since moving
+	// to rotate-able keys, so update if it's set to 0
+	if policy.MinDecryptionVersion == 0 {
+		policy.MinDecryptionVersion = 1
+		persistNeeded = true
+	}
+
+	// On first load after an upgrade, copy keys to the archive
+	if policy.ArchiveVersion == 0 {
+		persistNeeded = true
+	}
+
+	if persistNeeded {
+		err = policy.Persist(req.Storage)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lp := &lockingPolicy{
+		policy: policy,
+	}
+	p.cache[name] = lp
+
+	return lp, nil
+}
+
+// generatePolicy is used to create a new named policy with a randomly
+// generated key
+func (p *policyCache) generatePolicy(storage logical.Storage, name string, derived bool) (*lockingPolicy, error) {
+	// Ensure one with this name doesn't already exist
+	lp, err := p.getPolicy(&logical.Request{
+		Storage: storage,
+	}, name)
+	if err != nil {
+		return nil, fmt.Errorf("error checking if policy already exists: %s", err)
+	}
+	if lp != nil {
+		return nil, fmt.Errorf("policy %s already exists", name)
+	}
+
+	p.Lock()
+	defer p.Unlock()
+
+	// Now we need to check again in the cache to ensure the policy wasn't
+	// created since we checked getPolicy. A policy being created holds a write
+	// lock until it's done, so it'll be in the cache at this point.
+	if lp := p.cache[name]; lp != nil {
+		return nil, fmt.Errorf("policy %s already exists", name)
+	}
+
+	// Create the policy object
+	policy := &Policy{
+		Name:       name,
+		CipherMode: "aes-gcm",
+		Derived:    derived,
+	}
+	if derived {
+		policy.KDFMode = kdfMode
+	}
+
+	err = policy.rotate(storage)
+	if err != nil {
+		return nil, err
+	}
+
+	lp = &lockingPolicy{
+		policy: policy,
+	}
+	p.cache[name] = lp
+
+	// Return the policy
+	return lp, nil
+}
+
+// deletePolicy deletes a policy
+func (p *policyCache) deletePolicy(storage logical.Storage, name string) error {
+	// Ensure one with this name exists
+	lp, err := p.getPolicy(&logical.Request{
+		Storage: storage,
+	}, name)
+	if err != nil {
+		return fmt.Errorf("error checking if policy already exists: %s", err)
+	}
+	if lp == nil {
+		return fmt.Errorf("policy %s does not exist", name)
+	}
+
+	p.Lock()
+	defer p.Unlock()
+
+	lp = p.cache[name]
+	if lp == nil {
+		return fmt.Errorf("policy %s not found", name)
+	}
+
+	// We need to ensure all other access has stopped
+	lp.Lock()
+	defer lp.Unlock()
+
+	// Verify this hasn't changed
+	if !lp.policy.DeletionAllowed {
+		return fmt.Errorf("deletion not allowed for policy %s", name)
+	}
+
+	err = storage.Delete("policy/" + name)
+	if err != nil {
+		return fmt.Errorf("error deleting policy %s: %s", name, err)
+	}
+
+	err = storage.Delete("archive/" + name)
+	if err != nil {
+		return fmt.Errorf("error deleting archive %s: %s", name, err)
+	}
+
+	lp.policy = nil
+	delete(p.cache, name)
+
+	return nil
+}
+
+// lockingPolicy holds a Policy guarded by a lock
+type lockingPolicy struct {
+	sync.RWMutex
+	policy *Policy
+}
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
@@ -72,11 +267,144 @@ type Policy struct {
 	// for decryption
 	MinDecryptionVersion int `json:"min_decryption_version"`
 
+	// The latest key version in this policy
+	LatestVersion int `json:"latest_version"`
+
+	// The latest key version in the archive. We never delete these, so this is
+	// a max.
+	ArchiveVersion int `json:"archive_version"`
+
 	// Whether the key is allowed to be deleted
 	DeletionAllowed bool `json:"deletion_allowed"`
 }
 
-func (p *Policy) Persist(storage logical.Storage, name string) error {
+// ArchivedKeys stores old keys. This is used to keep the key loading time sane
+// when there are huge numbers of rotations.
+type ArchivedKeys struct {
+	Keys []KeyEntry `json:"keys"`
+}
+
+func (p *Policy) loadArchive(storage logical.Storage) (*ArchivedKeys, error) {
+	archive := &ArchivedKeys{}
+
+	raw, err := storage.Get("archive/" + p.Name)
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		archive.Keys = make([]KeyEntry, 0)
+		return archive, nil
+	}
+
+	if err := json.Unmarshal(raw.Value, archive); err != nil {
+		return nil, err
+	}
+
+	return archive, nil
+}
+
+func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage) error {
+	// Encode the policy
+	buf, err := json.Marshal(archive)
+	if err != nil {
+		return err
+	}
+
+	// Write the policy into storage
+	err = storage.Put(&logical.StorageEntry{
+		Key:   "archive/" + p.Name,
+		Value: buf,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handleArchiving manages the movement of keys to and from the policy archive.
+// This should *ONLY* be called from Persist() since it assumes that the policy
+// will be persisted afterwards.
+func (p *Policy) handleArchiving(storage logical.Storage) error {
+	// We need to move keys that are no longer accessible to ArchivedKeys, and keys
+	// that now need to be accessible back here.
+	//
+	// For safety, because there isn't really a good reason to, we never delete
+	// keys from the archive even when we move them back.
+
+	// Check if we have the latest minimum version in the current set of keys
+	_, keysContainsMinimum := p.Keys[p.MinDecryptionVersion]
+
+	// Sanity checks
+	switch {
+	case p.MinDecryptionVersion < 1:
+		return fmt.Errorf("minimum decryption version of %d is less than 1", p.MinDecryptionVersion)
+	case p.LatestVersion < 1:
+		return fmt.Errorf("latest version of %d is less than 1", p.LatestVersion)
+	case !keysContainsMinimum && p.ArchiveVersion != p.LatestVersion:
+		return fmt.Errorf("need to move keys from archive but archive version not up-to-date")
+	case p.ArchiveVersion > p.LatestVersion:
+		return fmt.Errorf("archive version of %d is greater than the latest version %d",
+			p.ArchiveVersion, p.LatestVersion)
+	case p.MinDecryptionVersion > p.LatestVersion:
+		return fmt.Errorf("minimum decryption version of %d is greater than the latest version %d",
+			p.MinDecryptionVersion, p.LatestVersion)
+	}
+
+	archive, err := p.loadArchive(storage)
+	if err != nil {
+		return err
+	}
+
+	if !keysContainsMinimum {
+		// Need to move keys *from* archive
+
+		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
+			p.Keys[i] = archive.Keys[i]
+		}
+
+		return nil
+	}
+
+	// Need to move keys *to* archive
+
+	// We need a size that is equivalent to the latest version (number of keys)
+	// but adding one since slice numbering starts at 0 and we're indexing by
+	// key version
+	if len(archive.Keys) < p.LatestVersion+1 {
+		// Increase the size of the archive slice
+		newKeys := make([]KeyEntry, p.LatestVersion+1)
+		copy(newKeys, archive.Keys)
+		archive.Keys = newKeys
+	}
+
+	// We are storing all keys in the archive, so we ensure that it is up to
+	// date up to p.LatestVersion
+	for i := p.ArchiveVersion + 1; i <= p.LatestVersion; i++ {
+		archive.Keys[i] = p.Keys[i]
+		p.ArchiveVersion = i
+	}
+
+	err = p.storeArchive(archive, storage)
+	if err != nil {
+		return err
+	}
+
+	// Perform deletion afterwards so that if there is an error saving we
+	// haven't messed with the current policy
+	for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i++ {
+		delete(p.Keys, i)
+	}
+
+	return nil
+}
+
+func (p *Policy) Persist(storage logical.Storage) error {
+	err := p.handleArchiving(storage)
+	if err != nil {
+		return err
+	}
+
 	// Encode the policy
 	buf, err := p.Serialize()
 	if err != nil {
@@ -85,7 +413,7 @@ func (p *Policy) Persist(storage logical.Storage, name string) error {
 
 	// Write the policy into storage
 	err = storage.Put(&logical.StorageEntry{
-		Key:   "policy/" + name,
+		Key:   "policy/" + p.Name,
 		Value: buf,
 	})
 	if err != nil {
@@ -104,18 +432,15 @@ func (p *Policy) Serialize() ([]byte, error) {
 // raw key is used and no context is required, otherwise the KDF
 // mode is used with the context to derive the proper key.
 func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
-	if p.Keys == nil || len(p.Keys) == 0 {
-		if p.Key == nil || len(p.Key) == 0 {
-			return nil, certutil.InternalError{Err: "unable to access the key; no key versions found"}
-		}
-		p.migrateKeyToKeysMap()
-	}
-
-	if len(p.Keys) == 0 {
+	if p.Keys == nil || p.LatestVersion == 0 {
 		return nil, certutil.InternalError{Err: "unable to access the key; no key versions found"}
 	}
 
-	if ver <= 0 || ver > len(p.Keys) {
+	if p.LatestVersion == 0 {
+		return nil, certutil.InternalError{Err: "unable to access the key; no key versions found"}
+	}
+
+	if ver <= 0 || ver > p.LatestVersion {
 		return nil, certutil.UserError{Err: "invalid key version"}
 	}
 
@@ -147,7 +472,7 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 	}
 
 	// Derive the key that should be used
-	key, err := p.DeriveKey(context, len(p.Keys))
+	key, err := p.DeriveKey(context, p.LatestVersion)
 	if err != nil {
 		return "", certutil.InternalError{Err: err.Error()}
 	}
@@ -188,7 +513,7 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString(full)
 
 	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(len(p.Keys)) + ":" + encoded
+	encoded = "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded
 
 	return encoded, nil
 }
@@ -210,12 +535,13 @@ func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 	}
 
 	if ver == 0 {
-		// Compatibility mode with initial implementation, where keys start at zero
+		// Compatibility mode with initial implementation, where keys start at
+		// zero
 		ver = 1
 	}
 
 	if p.MinDecryptionVersion > 0 && ver < p.MinDecryptionVersion {
-		return "", certutil.UserError{Err: "ciphertext version is disallowed by policy (too old)"}
+		return "", certutil.UserError{Err: ErrTooOld}
 	}
 
 	// Derive the key that should be used
@@ -264,7 +590,10 @@ func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 
 func (p *Policy) rotate(storage logical.Storage) error {
 	if p.Keys == nil {
-		p.migrateKeyToKeysMap()
+		// This is an initial key rotation when generating a new policy. We
+		// don't need to call migrate here because if we've called getPolicy to
+		// get the policy in the first place it will have been run.
+		p.Keys = KeyEntryMap{}
 	}
 
 	// Generate a 256bit key
@@ -273,21 +602,25 @@ func (p *Policy) rotate(storage logical.Storage) error {
 	if err != nil {
 		return err
 	}
-	p.Keys[len(p.Keys)+1] = KeyEntry{
+
+	p.LatestVersion += 1
+
+	p.Keys[p.LatestVersion] = KeyEntry{
 		Key:          newKey,
 		CreationTime: time.Now().Unix(),
 	}
 
-	return p.Persist(storage, p.Name)
+	// This ensures that with new key creations min decryption version is set
+	// to 1 rather than the int default of 0, since keys start at 1 (either
+	// fresh or after migration to the key map)
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
+	}
+
+	return p.Persist(storage)
 }
 
 func (p *Policy) migrateKeyToKeysMap() {
-	if p.Key == nil || len(p.Key) == 0 {
-		p.Key = nil
-		p.Keys = KeyEntryMap{}
-		return
-	}
-
 	p.Keys = KeyEntryMap{
 		1: KeyEntry{
 			Key:          p.Key,
@@ -295,66 +628,4 @@ func (p *Policy) migrateKeyToKeysMap() {
 		},
 	}
 	p.Key = nil
-}
-
-func deserializePolicy(buf []byte) (*Policy, error) {
-	p := &Policy{
-		Keys: KeyEntryMap{},
-	}
-	if err := json.Unmarshal(buf, p); err != nil {
-		return nil, err
-	}
-
-	return p, nil
-}
-
-func getPolicy(req *logical.Request, name string) (*Policy, error) {
-	// Check if the policy already exists
-	raw, err := req.Storage.Get("policy/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if raw == nil {
-		return nil, nil
-	}
-
-	// Decode the policy
-	p, err := deserializePolicy(raw.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure we've moved from Key -> Keys
-	if p.Key != nil && len(p.Key) > 0 {
-		p.migrateKeyToKeysMap()
-
-		err = p.Persist(req.Storage, name)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return p, nil
-}
-
-// generatePolicy is used to create a new named policy with
-// a randomly generated key
-func generatePolicy(storage logical.Storage, name string, derived bool) (*Policy, error) {
-	// Create the policy object
-	p := &Policy{
-		Name:       name,
-		CipherMode: "aes-gcm",
-		Derived:    derived,
-	}
-	if derived {
-		p.KDFMode = kdfMode
-	}
-
-	err := p.rotate(storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return the policy
-	return p, nil
 }

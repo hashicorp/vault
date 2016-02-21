@@ -52,7 +52,7 @@ func testAccPreCheck(t *testing.T) {
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
 			"value": os.Getenv("PG_URL"),
@@ -62,7 +62,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
 		Data: map[string]interface{}{
 			"sql": testRole,
@@ -105,7 +105,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 
 			returnedRows := func() int {
 				stmt, err := db.Prepare(fmt.Sprintf(
-					"SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee='%s';",
+					"SELECT DISTINCT schemaname FROM pg_tables WHERE has_table_privilege('%s', 'information_schema.role_column_grants', 'select');",
 					d.Username))
 				if err != nil {
 					return -1
@@ -126,7 +126,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			}
 
 			userRows := returnedRows()
-			if userRows != 1 {
+			if userRows != 2 {
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 
@@ -149,7 +149,8 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			}
 
 			userRows = returnedRows()
-			if userRows != 0 {
+			// User shouldn't exist so returnedRows() should encounter an error and exit with -1
+			if userRows != -1 {
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 

@@ -60,6 +60,10 @@ type Backend struct {
 	salt   *salt.Salt
 }
 
+func (b *Backend) GetHash(data string) string {
+	return audit.HashString(b.salt, data)
+}
+
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if !b.logRaw {
 		// Before we copy the structure we must nil out some data

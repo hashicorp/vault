@@ -81,12 +81,14 @@ var BuiltinBackends = map[string]Factory{
 	"inmem": func(map[string]string) (Backend, error) {
 		return NewInmem(), nil
 	},
-	"consul":    newConsulBackend,
-	"zookeeper": newZookeeperBackend,
-	"file":      newFileBackend,
-	"s3":        newS3Backend,
-	"etcd":      newEtcdBackend,
-	"mysql":     newMySQLBackend,
+	"consul":     newConsulBackend,
+	"zookeeper":  newZookeeperBackend,
+	"file":       newFileBackend,
+	"s3":         newS3Backend,
+	"dynamodb":   newDynamoDBBackend,
+	"etcd":       newEtcdBackend,
+	"mysql":      newMySQLBackend,
+	"postgresql": newPostgreSQLBackend,
 }
 
 // PermitPool is a wrapper around a semaphore library to keep things

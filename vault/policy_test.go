@@ -1,45 +1,10 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
-
-func TestPolicy_TakesPrecedence(t *testing.T) {
-	type tcase struct {
-		a, b       string
-		precedence bool
-	}
-	tests := []tcase{
-		tcase{PathPolicyDeny, PathPolicyDeny, true},
-		tcase{PathPolicyDeny, PathPolicyRead, true},
-		tcase{PathPolicyDeny, PathPolicyWrite, true},
-		tcase{PathPolicyDeny, PathPolicySudo, true},
-
-		tcase{PathPolicyRead, PathPolicyDeny, false},
-		tcase{PathPolicyRead, PathPolicyRead, false},
-		tcase{PathPolicyRead, PathPolicyWrite, false},
-		tcase{PathPolicyRead, PathPolicySudo, false},
-
-		tcase{PathPolicyWrite, PathPolicyDeny, false},
-		tcase{PathPolicyWrite, PathPolicyRead, true},
-		tcase{PathPolicyWrite, PathPolicyWrite, false},
-		tcase{PathPolicyWrite, PathPolicySudo, false},
-
-		tcase{PathPolicySudo, PathPolicyDeny, false},
-		tcase{PathPolicySudo, PathPolicyRead, true},
-		tcase{PathPolicySudo, PathPolicyWrite, true},
-		tcase{PathPolicySudo, PathPolicySudo, false},
-	}
-	for idx, test := range tests {
-		a := &PathPolicy{Policy: test.a}
-		b := &PathPolicy{Policy: test.b}
-		if out := a.TakesPrecedence(b); out != test.precedence {
-			t.Fatalf("bad: idx %d expect: %v out: %v",
-				idx, test.precedence, out)
-		}
-	}
-}
 
 func TestPolicy_Parse(t *testing.T) {
 	p, err := Parse(rawPolicy)
@@ -51,13 +16,47 @@ func TestPolicy_Parse(t *testing.T) {
 		t.Fatalf("bad: %#v", p)
 	}
 
-	expect := []*PathPolicy{
-		&PathPolicy{"", "deny", true},
-		&PathPolicy{"stage/", "sudo", true},
-		&PathPolicy{"prod/version", "read", false},
+	expect := []*PathCapabilities{
+		&PathCapabilities{"", "deny",
+			[]string{
+				"deny",
+			}, DenyCapabilityInt, true},
+		&PathCapabilities{"stage/", "sudo",
+			[]string{
+				"create",
+				"read",
+				"update",
+				"delete",
+				"list",
+				"sudo",
+			}, CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
+				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt, true},
+		&PathCapabilities{"prod/version", "read",
+			[]string{
+				"read",
+				"list",
+			}, ReadCapabilityInt | ListCapabilityInt, false},
+		&PathCapabilities{"foo/bar", "read",
+			[]string{
+				"read",
+				"list",
+			}, ReadCapabilityInt | ListCapabilityInt, false},
+		&PathCapabilities{"foo/bar", "",
+			[]string{
+				"create",
+				"sudo",
+			}, CreateCapabilityInt | SudoCapabilityInt, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
-		t.Fatalf("bad: %#v", p)
+		ret := fmt.Sprintf("bad:\nexpected:\n")
+		for _, v := range expect {
+			ret = fmt.Sprintf("%s\n%#v", ret, *v)
+		}
+		ret = fmt.Sprintf("%s\n\ngot:\n", ret)
+		for _, v := range p.Paths {
+			ret = fmt.Sprintf("%s\n%#v", ret, *v)
+		}
+		t.Fatalf("%s\n", ret)
 	}
 }
 
@@ -78,5 +77,16 @@ path "stage/*" {
 # Limited read privilege to production
 path "prod/version" {
 	policy = "read"
+}
+
+# Read access to foobar
+path "foo/bar" {
+	policy = "read"
+}
+
+# Add capabilities for creation and sudo to foobar
+# This will be separate; they are combined when compiled into an ACL
+path "foo/bar" {
+	capabilities = ["create", "sudo"]
 }
 `

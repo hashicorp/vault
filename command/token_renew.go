@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
 )
 
 // TokenRenewCommand is a Command that mounts a new mount.
@@ -47,7 +49,14 @@ func (c *TokenRenewCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Auth().Token().Renew(token, increment)
+	// If the given token is the same as the client's, use renew-self instead
+	// as this is far more likely to be allowed via policy
+	var secret *api.Secret
+	if client.Token() == token {
+		secret, err = client.Auth().Token().RenewSelf(increment)
+	} else {
+		secret, err = client.Auth().Token().Renew(token, increment)
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error renewing token: %s", err))
@@ -82,7 +91,7 @@ General Options:
 Token Renew Options:
 
   -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json.
+                          delimited table. This can also be json or yaml.
 
 `
 	return strings.TrimSpace(helpText)

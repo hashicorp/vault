@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -57,7 +57,10 @@ func TestSalt(t *testing.T) {
 }
 
 func TestSaltID(t *testing.T) {
-	salt := uuid.GenerateUUID()
+	salt, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
 	id := "foobarbaz"
 
 	sid1 := SaltID(salt, id, SHA1Hash)

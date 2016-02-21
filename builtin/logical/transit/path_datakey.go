@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathDatakey() *framework.Path {
+func (b *backend) pathDatakey() *framework.Path {
 	return &framework.Path{
 		Pattern: "datakey/" + framework.GenericNameRegex("plaintext") + "/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -39,7 +39,7 @@ and 512 bits are supported. Defaults to 256.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathDatakeyWrite,
+			logical.UpdateOperation: b.pathDatakeyWrite,
 		},
 
 		HelpSynopsis:    pathDatakeyHelpSyn,
@@ -47,7 +47,7 @@ and 512 bits are supported. Defaults to 256.`,
 	}
 }
 
-func pathDatakeyWrite(
+func (b *backend) pathDatakeyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
@@ -73,14 +73,22 @@ func pathDatakeyWrite(
 	}
 
 	// Get the policy
-	p, err := getPolicy(req, name)
+	lp, err := b.policies.getPolicy(req, name)
 	if err != nil {
 		return nil, err
 	}
 
 	// Error if invalid policy
-	if p == nil {
+	if lp == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
+	lp.RLock()
+	defer lp.RUnlock()
+
+	// Verify if wasn't deleted before we grabbed the lock
+	if lp.policy == nil {
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
 	newKey := make([]byte, 32)
@@ -99,7 +107,7 @@ func pathDatakeyWrite(
 		return nil, err
 	}
 
-	ciphertext, err := p.Encrypt(context, base64.StdEncoding.EncodeToString(newKey))
+	ciphertext, err := lp.policy.Encrypt(context, base64.StdEncoding.EncodeToString(newKey))
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

@@ -31,7 +31,7 @@ func pathConfigAccess() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathConfigAccessWrite,
+			logical.UpdateOperation: pathConfigAccessWrite,
 		},
 	}
 }
