@@ -22,11 +22,6 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"certs/*",
-				"crls/*",
-			},
-
 			Unauthenticated: []string{
 				"login",
 			},
