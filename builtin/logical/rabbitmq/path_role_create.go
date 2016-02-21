@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/michaelklishin/rabbit-hole"
@@ -56,11 +56,18 @@ func (b *backend) pathRoleCreateRead(
 	if len(displayName) > 26 {
 		displayName = displayName[:26]
 	}
-	username := fmt.Sprintf("%s-%s", displayName, uuid.GenerateUUID())
+	userUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	username := fmt.Sprintf("%s-%s", displayName, userUUID)
 	if len(username) > 63 {
 		username = username[:63]
 	}
-	password := uuid.GenerateUUID()
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get our connection
 	client, err := b.Client(req.Storage)
