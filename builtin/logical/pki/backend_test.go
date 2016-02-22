@@ -1084,9 +1084,17 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	// combinations with allowed toggles of the role
 	addCnTests := func() {
 		cnMap := structs.New(commonNames).Map()
-		// For the number of tests being run, this is known to hit all
-		// of the various values below
-		mathRand := mathrand.New(mathrand.NewSource(1))
+		/*
+			// For the number of tests being run, a seed of 1 has been tested
+			// to hit all of the various values below. However, for normal
+			// testing we use a randomized time for maximum fuzziness.
+		*/
+		var mathRand *mathrand.Rand
+		if len(os.Getenv("VAULT_PKITESTS_FIXED_SEED")) > 0 {
+			mathRand = mathrand.New(mathrand.NewSource(1))
+		} else {
+			mathRand = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
+		}
 		for name, allowedInt := range cnMap {
 			roleVals.KeyType = "rsa"
 			roleVals.KeyBits = 2048
