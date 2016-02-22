@@ -53,7 +53,7 @@ func TestBackend_RSAKey(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount += len(testCase.Steps)
+	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -83,7 +83,7 @@ func TestBackend_ECKey(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount += len(testCase.Steps)
+	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -111,7 +111,7 @@ func TestBackend_CSRValues(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount += len(testCase.Steps)
+	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -139,7 +139,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount += len(testCase.Steps)
+	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -178,14 +178,14 @@ func TestBackend_RSARoles(t *testing.T) {
 		},
 	}
 
+	stepCount = len(testCase.Steps)
+
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
 		}
 	}
-
-	stepCount += len(testCase.Steps)
 
 	logicaltest.Test(t, testCase)
 }
@@ -220,14 +220,14 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 		},
 	}
 
+	stepCount = len(testCase.Steps)
+
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
 		}
 	}
-
-	stepCount += len(testCase.Steps)
 
 	logicaltest.Test(t, testCase)
 }
@@ -262,14 +262,14 @@ func TestBackend_ECRoles(t *testing.T) {
 		},
 	}
 
+	stepCount = len(testCase.Steps)
+
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
 		}
 	}
-
-	stepCount += len(testCase.Steps)
 
 	logicaltest.Test(t, testCase)
 }
@@ -304,14 +304,14 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 		},
 	}
 
+	stepCount = len(testCase.Steps)
+
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
 		}
 	}
-
-	stepCount += len(testCase.Steps)
 
 	logicaltest.Test(t, testCase)
 }
@@ -1101,6 +1101,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	mathRand := mathrand.New(mathrand.NewSource(seed))
 	t.Logf("seed under test: %v", seed)
 
+	// Used by tests not toggling common names to turn off the behavior of random key bit fuzziness
+	keybitSizeRandOff := false
+
 	genericErrorOkCheck := func(resp *logical.Response) error {
 		if resp.IsError() {
 			return nil
@@ -1110,8 +1113,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	// Adds tests with the currently configured issue/role information
 	addTests := func(testCheck logicaltest.TestCheckFunc) {
-		//fmt.Printf("role vals: %#v\n", roleVals)
-		//fmt.Printf("issue vals: %#v\n", issueTestStep)
+		stepCount += 1
+		//t.Logf("test step %d\nrole vals: %#v\n", stepCount, roleVals)
+		stepCount += 1
+		//t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
 		roleTestStep.Data = structs.New(roleVals).Map()
 		ret = append(ret, roleTestStep)
 		issueTestStep.Data = structs.New(issueVals).Map()
@@ -1226,6 +1231,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			issueTestStep.ErrorOk = !allowed
 
 			validity, _ := time.ParseDuration(roleVals.MaxTTL)
+
+			var testBitSize int
+
 			if useCSRs {
 				rsaKeyBits := []int{2048, 4096}
 				ecKeyBits := []int{224, 256, 384, 521}
@@ -1238,13 +1246,16 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					// If we don't expect an error already, randomly choose a
 					// key size and expect an error if it's less than the role
 					// setting
-					testBitSize := roleVals.KeyBits
-					if !issueTestStep.ErrorOk {
+					testBitSize = roleVals.KeyBits
+					if !keybitSizeRandOff && !issueTestStep.ErrorOk {
 						testBitSize = rsaKeyBits[mathRand.Int()%2]
 					}
 
 					if testBitSize < roleVals.KeyBits {
+						t.Logf("roleVals.KeyBits: %d, testBitSize: %d, issueTestStep.ErrorOk: %t, stepCount: %d, setting true", roleVals.KeyBits, testBitSize, issueTestStep.ErrorOk, stepCount)
 						issueTestStep.ErrorOk = true
+					} else {
+						t.Logf("roleVals.KeyBits: %d, testBitSize: %d, issueTestStep.ErrorOk: %t, stepCount: %d", roleVals.KeyBits, testBitSize, issueTestStep.ErrorOk, stepCount)
 					}
 
 					privKey, _ = rsa.GenerateKey(rand.Reader, testBitSize)
@@ -1257,8 +1268,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					// If we don't expect an error already, randomly choose a
 					// key size and expect an error if it's less than the role
 					// setting
-					testBitSize := roleVals.KeyBits
-					if !issueTestStep.ErrorOk {
+					testBitSize = roleVals.KeyBits
+					if !keybitSizeRandOff && !issueTestStep.ErrorOk {
 						testBitSize = ecKeyBits[mathRand.Int()%4]
 					}
 
@@ -1293,6 +1304,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					Bytes: csr,
 				}
 				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+
 				addTests(getCnCheck(issueVals.CommonName, roleVals, privKey, usage, validity))
 			} else {
 				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, usage, validity))
@@ -1338,6 +1350,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.EnforceHostnames = false
 		commonNames.NonHostname = true
+		addCnTests()
+
+		// Ensure that we end up with acceptable key sizes since they won't be
+		// toggled any longer
+		keybitSizeRandOff = true
 		addCnTests()
 	}
 	// IP SAN tests
