@@ -102,7 +102,7 @@ Usage: vault write [options] path [data]
   you're using for more information on key structure.
 
   Data is sent via additional arguments in "key=value" pairs. If value
-  begins with an "@", then it is loaded from a file. If you want to start
+  begins with an "@", then it is loaded from a JSON file. If you want to start
   the value with a literal "@", then prefix the "@" with a slash: "\@".
 
 General Options:
