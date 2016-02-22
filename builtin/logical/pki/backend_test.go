@@ -1252,10 +1252,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					}
 
 					if testBitSize < roleVals.KeyBits {
-						t.Logf("roleVals.KeyBits: %d, testBitSize: %d, issueTestStep.ErrorOk: %t, stepCount: %d, setting true", roleVals.KeyBits, testBitSize, issueTestStep.ErrorOk, stepCount)
 						issueTestStep.ErrorOk = true
-					} else {
-						t.Logf("roleVals.KeyBits: %d, testBitSize: %d, issueTestStep.ErrorOk: %t, stepCount: %d", roleVals.KeyBits, testBitSize, issueTestStep.ErrorOk, stepCount)
 					}
 
 					privKey, _ = rsa.GenerateKey(rand.Reader, testBitSize)
