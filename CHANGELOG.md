@@ -24,7 +24,9 @@ IMPROVEMENTS:
    minimum number of bits according to the role. The exception is intermediate
    CA signing and the `sign-verbatim` path [GH-1104]
  * secret/mysql: While configuring mysql backend, avoid verification of 
-   connection_url by disabling it using verify_connection option. [GH-1096]
+   connection_url by disabling it using verify_connection option [GH-1096]
+ * secret/postgresql: While configuring mysql backend, avoid verification of 
+   connection_url by disabling it using verify_connection option [GH-1096]
 
 BUG FIXES:
 
@@ -34,10 +36,9 @@ BUG FIXES:
    permission scenarios [GH-1053]
  * secret/pki: If a cert is not found during lookup of a serial number,
    respond with a 400 rather than a 500 [GH-1085]
- * secret/aws: Capping on length of usernames for both IAM and STS types. [GH-1102]
- * secret/postgresql: Make connection_url to work. Also, While configuring postgresql
-   backend, avoid verification of connection_url by disabling it using verify_connection
-   option. [GH-1112]
+ * secret/aws: Capping on length of usernames for both IAM and STS types
+   [GH-1102]
+ * secret/postgresql: Make connection_url properly [GH-1112]
 
 ## 0.5.0 (February 10, 2016)
 
