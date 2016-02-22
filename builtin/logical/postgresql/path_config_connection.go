@@ -22,6 +22,11 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Description: `DB connection string. Use 'connection_url' instead.
 This will be deprecated.`,
 			},
+			"verify_connection": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: `If set, connection_url is verified by actually connecting to the database`,
+			},
 			"max_open_connections": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `Maximum number of open connections to the database;
@@ -51,8 +56,15 @@ reduced to the same size.`,
 
 func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	connString := data.Get("value").(string)
+	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
+	if connURL == "" {
+		if connValue == "" {
+			return logical.ErrorResponse("connection_url parameter must be supplied"), nil
+		} else {
+			connURL = connValue
+		}
+	}
 
 	maxOpenConns := data.Get("max_open_connections").(int)
 	if maxOpenConns == 0 {
@@ -67,21 +79,25 @@ func (b *backend) pathConnectionWrite(
 		maxIdleConns = maxOpenConns
 	}
 
-	// Verify the string
-	db, err := sql.Open("postgres", connString)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error validating connection info: %s", err)), nil
-	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error validating connection info: %s", err)), nil
+	// Don't check the connection_url if verification is disabled
+	verifyConnection := data.Get("verify_connection").(bool)
+	if verifyConnection {
+		// Verify the string
+		db, err := sql.Open("postgres", connURL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error validating connection info: %s", err)), nil
+		}
+		defer db.Close()
+		if err := db.Ping(); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error validating connection info: %s", err)), nil
+		}
 	}
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
-		ConnectionString:   connString,
+		ConnectionString:   connValue,
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
 		MaxIdleConnections: maxIdleConns,

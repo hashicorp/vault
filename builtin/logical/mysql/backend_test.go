@@ -33,6 +33,7 @@ func TestBackend_basic(t *testing.T) {
 		},
 	})
 }
+
 func TestBackend_configConnection(t *testing.T) {
 	b := Backend()
 	d1 := map[string]interface{}{
@@ -58,6 +59,7 @@ func TestBackend_configConnection(t *testing.T) {
 		},
 	})
 }
+
 func TestBackend_roleCrud(t *testing.T) {
 	b := Backend()
 
@@ -108,7 +110,6 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 		Data:      d,
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
-			log.Printf("vishal: testAccStepConfig: resp: %#v\n", resp)
 			if expectError {
 				if resp.Data == nil {
 					return fmt.Errorf("data is nil")
