@@ -40,14 +40,6 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 		}
 	}
 	if certEntry != nil {
-		// Verify that it is also deleted from certs/
-		// in case of partial failure from an earlier run.
-		certEntry, _ = fetchCertBySerial(req, "certs/", serial)
-		if certEntry == nil {
-			// Everything seems sane, so don't rebuild the CRL
-			return nil, nil
-		}
-
 		// Set the revocation info to the existing values
 		alreadyRevoked = true
 
@@ -111,8 +103,6 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
 	}
 
-	err = req.Storage.Delete("certs/" + serial)
-
 	if err != nil {
 		return nil, fmt.Errorf("Error deleting cert from valid-certs location")
 	}
@@ -160,14 +150,6 @@ func buildCRL(b *backend, req *logical.Request) error {
 		revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 		if err != nil {
 			return certutil.InternalError{Err: fmt.Sprintf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)}
-		}
-
-		if revokedCert.NotAfter.Before(time.Now()) {
-			err = req.Storage.Delete(serial)
-			if err != nil {
-				return certutil.InternalError{Err: fmt.Sprintf("Unable to delete revoked, expired certificate with serial %s: %s", serial, err)}
-			}
-			continue
 		}
 
 		revokedCerts = append(revokedCerts, pkix.RevokedCertificate{
