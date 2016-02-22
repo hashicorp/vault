@@ -16,6 +16,7 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -178,7 +179,48 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		for i, v := range testCase.Steps {
+			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+		}
+	}
+
+	stepCount += len(testCase.Steps)
+
+	logicaltest.Test(t, testCase)
+}
+
+// Generates and tests steps that walk through the various possibilities
+// of role flags to ensure that they are properly restricted
+// Uses the RSA CA key
+func TestBackend_RSARoles_CSR(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "config/ca",
+				Data: map[string]interface{}{
+					"pem_bundle": rsaCAKey + rsaCACert,
+				},
+			},
+		},
+	}
+
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
@@ -221,6 +263,47 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
+	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+		for i, v := range testCase.Steps {
+			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+		}
+	}
+
+	stepCount += len(testCase.Steps)
+
+	logicaltest.Test(t, testCase)
+}
+
+// Generates and tests steps that walk through the various possibilities
+// of role flags to ensure that they are properly restricted
+// Uses the EC CA key
+func TestBackend_ECRoles_CSR(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "config/ca",
+				Data: map[string]interface{}{
+					"pem_bundle": ecCAKey + ecCACert,
+				},
+			},
+		},
+	}
+
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
@@ -999,6 +1082,25 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	/*
+		// For the number of tests being run, a seed of 1 has been tested
+		// to hit all of the various values below. However, for normal
+		// testing we use a randomized time for maximum fuzziness.
+	*/
+	var seed int64 = 1
+	fixedSeed := os.Getenv("VAULT_PKITESTS_FIXED_SEED")
+	if len(fixedSeed) == 0 {
+		seed = time.Now().UnixNano()
+	} else {
+		var err error
+		seed, err = strconv.ParseInt(fixedSeed, 10, 64)
+		if err != nil {
+			t.Fatalf("error parsing fixed seed of %s: %v", fixedSeed, err)
+		}
+	}
+	mathRand := mathrand.New(mathrand.NewSource(seed))
+	t.Logf("seed under test: %v", seed)
+
 	genericErrorOkCheck := func(resp *logical.Response) error {
 		if resp.IsError() {
 			return nil
@@ -1084,17 +1186,6 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	// combinations with allowed toggles of the role
 	addCnTests := func() {
 		cnMap := structs.New(commonNames).Map()
-		/*
-			// For the number of tests being run, a seed of 1 has been tested
-			// to hit all of the various values below. However, for normal
-			// testing we use a randomized time for maximum fuzziness.
-		*/
-		var mathRand *mathrand.Rand
-		if len(os.Getenv("VAULT_PKITESTS_FIXED_SEED")) > 0 {
-			mathRand = mathrand.New(mathrand.NewSource(1))
-		} else {
-			mathRand = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
-		}
 		for name, allowedInt := range cnMap {
 			roleVals.KeyType = "rsa"
 			roleVals.KeyBits = 2048
