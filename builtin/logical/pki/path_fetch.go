@@ -125,12 +125,18 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	}
 
 	certEntry, funcErr = fetchCertBySerial(req, req.Path, serial)
-	switch funcErr.(type) {
-	case certutil.UserError:
-		response = logical.ErrorResponse(funcErr.Error())
-		goto reply
-	case certutil.InternalError:
-		retErr = funcErr
+	if funcErr != nil {
+		switch funcErr.(type) {
+		case certutil.UserError:
+			response = logical.ErrorResponse(funcErr.Error())
+			goto reply
+		case certutil.InternalError:
+			retErr = funcErr
+			goto reply
+		}
+	}
+	if certEntry == nil {
+		response = logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial))
 		goto reply
 	}
 

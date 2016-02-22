@@ -31,8 +31,14 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 	var revInfo revocationInfo
 
 	certEntry, err := fetchCertBySerial(req, "revoked/", serial)
-	// Don't check error because it's expected that it may fail here;
-	// just check for existence
+	if err != nil {
+		switch err.(type) {
+		case certutil.UserError:
+			return logical.ErrorResponse(err.Error()), nil
+		case certutil.InternalError:
+			return nil, err
+		}
+	}
 	if certEntry != nil {
 		// Verify that it is also deleted from certs/
 		// in case of partial failure from an earlier run.
@@ -42,8 +48,7 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 			return nil, nil
 		}
 
-		// Still exists in certs/; set the revocation info, below it will
-		// be removed from certs/ and the CRL rotated
+		// Set the revocation info to the existing values
 		alreadyRevoked = true
 
 		revEntry, err := req.Storage.Get("revoked/" + serial)
@@ -59,11 +64,16 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 
 	if !alreadyRevoked {
 		certEntry, err = fetchCertBySerial(req, "certs/", serial)
-		switch err.(type) {
-		case certutil.UserError:
-			return logical.ErrorResponse(err.Error()), nil
-		case certutil.InternalError:
-			return nil, err
+		if err != nil {
+			switch err.(type) {
+			case certutil.UserError:
+				return logical.ErrorResponse(err.Error()), nil
+			case certutil.InternalError:
+				return nil, err
+			}
+		}
+		if certEntry == nil {
+			return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial)), nil
 		}
 
 		cert, err := x509.ParseCertificate(certEntry.Value)
