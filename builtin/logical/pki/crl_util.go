@@ -103,10 +103,6 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("Error deleting cert from valid-certs location")
-	}
-
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"revocation_time": revInfo.RevocationTime,
