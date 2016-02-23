@@ -6,7 +6,7 @@ DEPRECATIONS/BREAKING CHANGES:
    keys are considered unsafe and are disallowed in the Internet PKI. The `pki`
    backend has enforced SHA256 hashes in signatures from the beginning, and
    software that can handle these hashes should be able to handle larger key
-   lengths. [GH-1095]
+   sizes. [GH-1095]
 
 IMPROVEMENTS:
 
@@ -16,29 +16,31 @@ IMPROVEMENTS:
    nonce [GH-1054] 
  * credential/cert: Don't require root/sudo tokens for the `certs/` and `crls/`
    paths; use normal ACL behavior instead [GH-468]
- * deps: Use the standardized Go 1.6 vendoring system
- * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
-   204 [GH-1086]
- * secret/github: Github backend will check the validity of original token
+ * credential/github: Github backend will check the validity of original token
    during renewal time [GH-1047]
+ * deps: Use the standardized Go 1.6 vendoring system
+ * secret/aws: Inform users of AWS-imposed policy restrictions around STS
+   tokens if they attempt to use an invalid policy [GH-1113]
+ * secret/mysql: While configuring mysql backend, avoid verification of 
+   connection_url by disabling it using verify_connection option [GH-1096]
  * secret/pki: Submitted CSRs are now verified to have the correct key type and
    minimum number of bits according to the role. The exception is intermediate
    CA signing and the `sign-verbatim` path [GH-1104]
- * secret/mysql: While configuring mysql backend, avoid verification of 
-   connection_url by disabling it using verify_connection option [GH-1096]
  * secret/postgresql: While configuring mysql backend, avoid verification of 
    connection_url by disabling it using verify_connection option [GH-1096]
+ * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
+   204 [GH-1086]
 
 BUG FIXES:
 
  * credential/ldap: Properly escape values being provided to search filters
    [GH-1100]
- * secret/postgresql: Add extra revocation statements to better handle more
-   permission scenarios [GH-1053]
- * secret/pki: If a cert is not found during lookup of a serial number,
-   respond with a 400 rather than a 500 [GH-1085]
  * secret/aws: Capping on length of usernames for both IAM and STS types
    [GH-1102]
+ * secret/pki: If a cert is not found during lookup of a serial number,
+   respond with a 400 rather than a 500 [GH-1085]
+ * secret/postgresql: Add extra revocation statements to better handle more
+   permission scenarios [GH-1053]
  * secret/postgresql: Make connection_url properly [GH-1112]
 
 ## 0.5.0 (February 10, 2016)
