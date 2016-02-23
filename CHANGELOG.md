@@ -10,12 +10,13 @@ DEPRECATIONS/BREAKING CHANGES:
 
 IMPROVEMENTS:
 
- * deps: Use the standardized Go 1.6 vendoring system
+ * api/health: Add the server's time in UTC to health responses [GH-1117]
  * command/rekey and command/generate-root: These now return the status at
    attempt initialization time, rather than requiring a separate fetch for the
    nonce [GH-1054] 
  * credential/cert: Don't require root/sudo tokens for the `certs/` and `crls/`
    paths; use normal ACL behavior instead [GH-468]
+ * deps: Use the standardized Go 1.6 vendoring system
  * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
    204 [GH-1086]
  * secret/github: Github backend will check the validity of original token
