@@ -26,6 +26,7 @@ func TestSysHealth_get(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	expected["server_time_utc"] = actual["server_time_utc"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}

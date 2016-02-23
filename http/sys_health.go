@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/vault/vault"
 )
@@ -44,9 +45,10 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 
 	// Format the body
 	body := &HealthResponse{
-		Initialized: init,
-		Sealed:      sealed,
-		Standby:     standby,
+		Initialized:   init,
+		Sealed:        sealed,
+		Standby:       standby,
+		ServerTimeUTC: time.Now().UTC().Unix(),
 	}
 
 	// Generate the response
@@ -57,7 +59,8 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 }
 
 type HealthResponse struct {
-	Initialized bool `json:"initialized"`
-	Sealed      bool `json:"sealed"`
-	Standby     bool `json:"standby"`
+	Initialized   bool  `json:"initialized"`
+	Sealed        bool  `json:"sealed"`
+	Standby       bool  `json:"standby"`
+	ServerTimeUTC int64 `json:"server_time_utc"`
 }
