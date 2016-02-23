@@ -12,7 +12,7 @@ func handleSysInit(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "GET":
 			handleSysInitGet(core, w, r)
-		case "PUT":
+		case "PUT", "POST":
 			handleSysInitPut(core, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
