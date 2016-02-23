@@ -16,14 +16,14 @@ const (
 	// Default path at which SSH backend will be mounted in Vault server
 	SSHHelperDefaultMountPoint = "ssh"
 
-	// Echo request message sent as OTP by the ssh-helper
+	// Echo request message sent as OTP by the vault-ssh-helper
 	VerifyEchoRequest = "verify-echo-request"
 
 	// Echo response message sent as a response to OTP matching echo request
 	VerifyEchoResponse = "verify-echo-response"
 )
 
-// SSHHelper is a structure representing a ssh-helper which can talk to vault server
+// SSHHelper is a structure representing a vault-ssh-helper which can talk to vault server
 // in order to verify the OTP entered by the user. It contains the path at which
 // SSH backend is mounted at the server.
 type SSHHelper struct {
@@ -45,20 +45,21 @@ type SSHVerifyResponse struct {
 	IP string `mapstructure:"ip"`
 }
 
-// SSHHelperConfig is a structure which represents the entries from the ssh-helper's configuration file.
+// SSHHelperConfig is a structure which represents the entries from the vault-ssh-helper's configuration file.
 type SSHHelperConfig struct {
 	VaultAddr       string `hcl:"vault_addr"`
 	SSHMountPoint   string `hcl:"ssh_mount_point"`
 	CACert          string `hcl:"ca_cert"`
 	CAPath          string `hcl:"ca_path"`
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
+	TLSSkipVerify   bool   `hcl:"tls_skip_verify"`
 }
 
 // TLSClient returns a HTTP client that uses TLS verification (TLS 1.2) for a given
 // certificate pool.
 func (c *SSHHelperConfig) SetTLSParameters(clientConfig *Config, certPool *x509.CertPool) {
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: c.TLSSkipVerify,
 		MinVersion:         tls.VersionTLS12,
 		RootCAs:            certPool,
 	}
@@ -69,7 +70,7 @@ func (c *SSHHelperConfig) SetTLSParameters(clientConfig *Config, certPool *x509.
 }
 
 // NewClient returns a new client for the configuration. This client will be used by the
-// ssh-helper to communicate with Vault server and verify the OTP entered by user.
+// vault-ssh-helper to communicate with Vault server and verify the OTP entered by user.
 // If the configuration supplies Vault SSL certificates, then the client will
 // have TLS configured in its transport.
 func (c *SSHHelperConfig) NewClient() (*Client, error) {
@@ -80,7 +81,7 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 	clientConfig.Address = c.VaultAddr
 
 	// Check if certificates are provided via config file.
-	if c.CACert != "" || c.CAPath != "" {
+	if c.CACert != "" || c.CAPath != "" || c.TLSSkipVerify {
 		var certPool *x509.CertPool
 		var err error
 		if c.CACert != "" {
