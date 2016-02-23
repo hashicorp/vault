@@ -44,6 +44,8 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
 			testAccStepReadSTS(t, "test"),
+			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
+			testAccStepReadSTSWithArnPolicy(t, "test"),
 		},
 	})
 }
@@ -161,6 +163,21 @@ func testAccStepReadSTS(t *testing.T, name string) logicaltest.TestStep {
 				return err
 			}
 
+			return nil
+		},
+	}
+}
+
+func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "sts/" + name,
+		ErrorOk:   true,
+		Check: func(resp *logical.Response) error {
+			if resp.Data["error"] !=
+				"Can't generate STS credentials for a managed policy; use an inline policy instead" {
+				t.Fatalf("bad: %v", resp)
+			}
 			return nil
 		},
 	}

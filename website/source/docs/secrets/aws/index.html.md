@@ -115,7 +115,8 @@ security_token  <nil>
 ```
 
 If you want keys with an STS token use the 'sts' endpoint instead of 'creds.'
-The aws/sts endpoint will always fetch STS credentials with a 1hr ttl.
+The aws/sts endpoint will always fetch STS credentials with a 1hr ttl. Note that STS credentials can only be generated
+for user inline policies.
 
 ```text
 $vault read aws/sts/deploy
