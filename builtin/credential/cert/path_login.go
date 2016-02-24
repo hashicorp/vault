@@ -80,32 +80,39 @@ func (b *backend) pathLogin(
 
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var matched *ParsedCert
-	if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
+	config, err := b.Config(req.Storage)
+	if err != nil {
 		return nil, err
-	} else if resp != nil {
-		return resp, nil
-	} else {
-		matched = verifyResp
 	}
 
-	if matched == nil {
-		return nil, nil
-	}
+	if config == nil || config.VerifyCert {
+		var matched *ParsedCert
+		if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
+			return nil, err
+		} else if resp != nil {
+			return resp, nil
+		} else {
+			matched = verifyResp
+		}
 
-	clientCerts := req.Connection.ConnState.PeerCertificates
-	if len(clientCerts) == 0 {
-		return logical.ErrorResponse("no client certificate found"), nil
-	}
-	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
-	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
+		if matched == nil {
+			return nil, nil
+		}
 
-	// Certificate should not only match a registered certificate policy but it should match the exact same
-	// certificate which was used to login
-	if req.Auth.InternalData["subject_key_id"] != skid && req.Auth.InternalData["authority_key_id"] != akid {
-		return logical.ErrorResponse("client certificate during renewal not matching client certificate used during login"), nil
-	}
+		clientCerts := req.Connection.ConnState.PeerCertificates
+		if len(clientCerts) == 0 {
+			return logical.ErrorResponse("no client certificate found"), nil
+		}
+		skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
+		akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
+		// Certificate should not only match a registered certificate policy but it should match the exact same
+		// certificate which was used to login
+		if req.Auth.InternalData["subject_key_id"] != skid && req.Auth.InternalData["authority_key_id"] != akid {
+			return logical.ErrorResponse("client certificate during renewal not matching client certificate used during login"), nil
+		}
+
+	}
 	// Get the cert and use its TTL
 	cert, err := b.Cert(req.Storage, req.Auth.Metadata["cert_name"])
 	if err != nil {

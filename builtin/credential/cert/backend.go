@@ -22,12 +22,16 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
+			Root: []string{
+				"config",
+			},
 			Unauthenticated: []string{
 				"login",
 			},
 		},
 
 		Paths: append([]*framework.Path{
+			pathConfig(&b),
 			pathLogin(&b),
 			pathCerts(&b),
 			pathCRLs(&b),
