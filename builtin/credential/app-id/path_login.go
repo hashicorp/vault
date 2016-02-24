@@ -44,7 +44,7 @@ func (b *backend) pathLogin(
 	userId := data.Get("user_id").(string)
 
 	var displayName string
-	if dispName, resp, err := b.verifyCredentials(req, appId, userId, true); err != nil {
+	if dispName, resp, err := b.verifyCredentials(req, appId, userId); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -89,7 +89,7 @@ func (b *backend) pathLoginRenew(
 
 	// Skipping CIDR verification to enable renewal from machines other than
 	// the ones encompassed by CIDR block.
-	if _, resp, err := b.verifyCredentials(req, appId, userId, false); err != nil {
+	if _, resp, err := b.verifyCredentials(req, appId, userId); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -108,7 +108,7 @@ func (b *backend) pathLoginRenew(
 	return framework.LeaseExtend(0, 0, b.System())(req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, appId, userId string, verifyCIDR bool) (string, *logical.Response, error) {
+func (b *backend) verifyCredentials(req *logical.Request, appId, userId string) (string, *logical.Response, error) {
 	// Ensure both appId and userId are provided
 	if appId == "" || userId == "" {
 		return "", logical.ErrorResponse("missing 'app_id' or 'user_id'"), nil
@@ -124,7 +124,7 @@ func (b *backend) verifyCredentials(req *logical.Request, appId, userId string, 
 	}
 
 	// If there is a CIDR block restriction, check that
-	if raw, ok := appsMap["cidr_block"]; ok && verifyCIDR {
+	if raw, ok := appsMap["cidr_block"]; ok {
 		_, cidr, err := net.ParseCIDR(raw.(string))
 		if err != nil {
 			return "", nil, fmt.Errorf("invalid restriction cidr: %s", err)
