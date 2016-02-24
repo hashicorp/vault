@@ -30,6 +30,8 @@ IMPROVEMENTS:
    connection_url by disabling it using verify_connection option [GH-1096]
  * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
    204 [GH-1086]
+ * credential/app-id: App ID backend will check the validity of app-id and user-id
+   during renewal time [GH-1039]
 
 BUG FIXES:
 
