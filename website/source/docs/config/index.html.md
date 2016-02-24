@@ -151,6 +151,9 @@ to help you, but may refer you to the backend author.
   * `s3` - Store data within an S3 bucket [S3](https://aws.amazon.com/s3/).
     This backend does not support HA. This is a community-supported backend.
 
+  * `azure` - Store data in an Azure Storage container [Azure](https://azure.microsoft.com/en-us/services/storage/).
+    This backend does not support HA. This is a community-supported backend.
+
   * `mysql` - Store data within MySQL. This backend does not support HA. This
     is a community-supported backend.
 
@@ -281,7 +284,7 @@ The following optional settings can be used to configure zNode ACLs:
 If neither of these is set, the backend will not authenticate with Zookeeper
 and will set the OPEN_ACL_UNSAFE ACL on all nodes. In this scenario, anyone
 connected to Zookeeper could change Vault’s znodes and, potentially, take Vault
-out of service. 
+out of service.
 
 Some sample configurations:
 
@@ -358,6 +361,14 @@ make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
 will cause Vault to attempt to retrieve credentials from the metadata service.
 You are responsible for ensuring your instance is launched with the appropriate
 profile enabled. Vault will handle renewing profile credentials as they rotate.
+
+#### Backend Reference: Azure (Community-Supported)
+
+  * `accountName` (required) - The Azure Storage account name
+  * `accountKey`  (required) - The Azure Storage account key
+  * `container`   (required) - The Azure Storage Blob container name
+
+The current implementation is limited to a maximum of 4 MBytes per blob/file. 
 
 #### Backend Reference: MySQL (Community-Supported)
 
