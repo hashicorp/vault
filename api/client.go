@@ -25,6 +25,7 @@ const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 
 var (
 	errRedirect = errors.New("redirect")
@@ -81,6 +82,7 @@ func (c *Config) ReadEnvironment() error {
 	var envClientKey string
 	var envInsecure bool
 	var foundInsecure bool
+	var envTLSServerName string
 
 	var newCertPool *x509.CertPool
 	var clientCert tls.Certificate
@@ -108,6 +110,9 @@ func (c *Config) ReadEnvironment() error {
 			return fmt.Errorf("Could not parse VAULT_SKIP_VERIFY")
 		}
 		foundInsecure = true
+	}
+	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
+		envTLSServerName = v
 	}
 	// If we need custom TLS configuration, then set it
 	if envCACert != "" || envCAPath != "" || envClientCert != "" || envClientKey != "" || envInsecure {
@@ -145,6 +150,9 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if foundClientCert {
 		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
+	}
+	if envTLSServerName != "" {
+		clientTLSConfig.ServerName = envTLSServerName
 	}
 
 	return nil
