@@ -114,16 +114,6 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		goto reply
 	}
 
-	_, funcErr = fetchCAInfo(req)
-	switch funcErr.(type) {
-	case certutil.UserError:
-		response = logical.ErrorResponse(fmt.Sprintf("%s", funcErr))
-		goto reply
-	case certutil.InternalError:
-		retErr = funcErr
-		goto reply
-	}
-
 	certEntry, funcErr = fetchCertBySerial(req, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
