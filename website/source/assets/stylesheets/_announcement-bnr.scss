@@ -25,6 +25,7 @@
     top: 4px;
 
     &:hover{
+      text-decoration: none;
       svg{
         rect{
           fill: $blue;
