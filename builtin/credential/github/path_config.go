@@ -98,14 +98,14 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	var result config
-	if entry != nil {
-		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, fmt.Errorf("error reading configuration: %s", err)
-		}
+	if entry == nil {
+		return nil, nil
 	}
 
+	var result config
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, fmt.Errorf("error reading configuration: %s", err)
+	}
 	return &result, nil
 }
 
