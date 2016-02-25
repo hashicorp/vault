@@ -57,7 +57,7 @@ func (b *backend) pathTidyWrite(
 	if tidyCertStore {
 		serials, err := req.Storage.List("certs/")
 		if err != nil {
-			return nil, fmt.Errorf("error fetching list of revoked certs: %s", err)
+			return nil, fmt.Errorf("error fetching list of certs: %s", err)
 		}
 
 		for _, serial := range serials {
@@ -67,7 +67,7 @@ func (b *backend) pathTidyWrite(
 			}
 
 			if certEntry == nil {
-				return nil, fmt.Errorf("revoked certificate entry for serial %s is nil", serial)
+				return nil, fmt.Errorf("certificate entry for serial %s is nil", serial)
 			}
 
 			if certEntry.Value == nil || len(certEntry.Value) == 0 {
@@ -158,7 +158,8 @@ from revocation information must be enabled with 'tidy_revocation_list'.
 The 'safety_buffer' parameter is useful to ensure that clock skew amongst your
 hosts cannot lead to a certificate being removed from the CRL while it is still
 considered valid by other hosts (for instance, if their clocks are a few
-minutes behind).
+minutes behind). The 'safety_buffer' parameter can be an integer number of
+seconds or a string duration like "72h".
 
 All certificates and/or revocation information currently stored in the backend
 will be checked when this endpoint is hit. The expiration of the

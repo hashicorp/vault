@@ -1583,13 +1583,13 @@ subpath for interactive help output.
       <li>
       <span class="param">safety_buffer</span>
       <span class="param-flags">optional</span>
-        A duration (given as a string; defaults to `72h`) used as a safety
-        buffer to ensure certificates are not expunged prematurely; as an
-        example, this can keep certificates from being removed from the CRL
-        that, due to clock skew, might still be considered valid on other
-        hosts. For a certificate to be expunged, the time must be after the
-        expiration time of the certificate (according to the local clock) plus
-        the duration of `safety_buffer`.
+        A duration (given as an integer number of seconds or a string; defaults
+        to `72h`) used as a safety buffer to ensure certificates are not
+        expunged prematurely; as an example, this can keep certificates from
+        being removed from the CRL that, due to clock skew, might still be
+        considered valid on other hosts. For a certificate to be expunged, the
+        time must be after the expiration time of the certificate (according to
+        the local clock) plus the duration of `safety_buffer`.
       </li>
     </ul>
   </dd>
