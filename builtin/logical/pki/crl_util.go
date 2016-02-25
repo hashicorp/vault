@@ -112,9 +112,6 @@ func revokeCert(b *backend, req *logical.Request, serial string) (*logical.Respo
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-//
-// If a certificate has already expired, it will be removed entirely rather than
-// become part of the new CRL.
 func buildCRL(b *backend, req *logical.Request) error {
 	revokedSerials, err := req.Storage.List("revoked/")
 	if err != nil {

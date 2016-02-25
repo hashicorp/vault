@@ -54,8 +54,8 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 }
 
 func (b *backend) pathRotateCRLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.revokeStorageLock.RLock()
+	defer b.revokeStorageLock.RUnlock()
 
 	crlErr := buildCRL(b, req)
 	switch crlErr.(type) {

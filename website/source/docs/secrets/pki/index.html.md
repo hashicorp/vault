@@ -1549,3 +1549,53 @@ subpath for interactive help output.
 
   </dd>
 </dl>
+
+### /pki/tidy
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows tidying up the backend storage and/or CRL by removing certificates
+    that have expired and are past a certain buffer period beyond their
+    expiration time.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/tidy`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">tidy_cert_store</span>
+        <span class="param-flags">optional</span>
+        Whether to tidy up the certificate store. Defaults to `false`.
+      </li>
+      <li>
+      <span class="param">tidy_revocation_list</span>
+      <span class="param-flags">optional</span>
+        Whether to tidy up the revocation list (CRL). Defaults to `false`.
+      </li>
+      <li>
+      <span class="param">safety_buffer</span>
+      <span class="param-flags">optional</span>
+        A duration (given as an integer number of seconds or a string; defaults
+        to `72h`) used as a safety buffer to ensure certificates are not
+        expunged prematurely; as an example, this can keep certificates from
+        being removed from the CRL that, due to clock skew, might still be
+        considered valid on other hosts. For a certificate to be expunged, the
+        time must be after the expiration time of the certificate (according to
+        the local clock) plus the duration of `safety_buffer`.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` status code.
+  </dd>
+</dl>

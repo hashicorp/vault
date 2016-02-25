@@ -49,6 +49,7 @@ func Backend() *framework.Backend {
 			pathFetchCRLViaCertPath(&b),
 			pathFetchValid(&b),
 			pathRevoke(&b),
+			pathTidy(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -57,7 +58,6 @@ func Backend() *framework.Backend {
 	}
 
 	b.crlLifetime = time.Hour * 72
-	b.revokeStorageLock = &sync.Mutex{}
 
 	return b.Backend
 }
@@ -66,7 +66,7 @@ type backend struct {
 	*framework.Backend
 
 	crlLifetime       time.Duration
-	revokeStorageLock *sync.Mutex
+	revokeStorageLock sync.RWMutex
 }
 
 const backendHelp = `

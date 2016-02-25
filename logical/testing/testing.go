@@ -61,6 +61,10 @@ type TestStep struct {
 	// step will be called
 	Check TestCheckFunc
 
+	// PreFlight is called directly before execution of the request, allowing
+	// modification of the request paramters (e.g. Path) with dynamic values.
+	PreFlight PreFlightFunc
+
 	// ErrorOk, if true, will let erroneous responses through to the check
 	ErrorOk bool
 
@@ -76,6 +80,10 @@ type TestStep struct {
 
 // TestCheckFunc is the callback used for Check in TestStep.
 type TestCheckFunc func(*logical.Response) error
+
+// PreFlightFunc is used to modify request parameters directly before execution
+// in each TestStep.
+type PreFlightFunc func(*logical.Request) error
 
 // TestTeardownFunc is the callback used for Teardown in TestCase.
 type TestTeardownFunc func() error
@@ -182,13 +190,10 @@ func Test(t TestT, c TestCase) {
 	for i, s := range c.Steps {
 		log.Printf("[WARN] Executing test step %d", i+1)
 
-		// Make sure to prefix the path with where we mounted the thing
-		path := fmt.Sprintf("%s/%s", prefix, s.Path)
-
 		// Create the request
 		req := &logical.Request{
 			Operation: s.Operation,
-			Path:      path,
+			Path:      s.Path,
 			Data:      s.Data,
 		}
 		if !s.Unauthenticated {
@@ -200,6 +205,19 @@ func Test(t TestT, c TestCase) {
 		if s.ConnState != nil {
 			req.Connection = &logical.Connection{ConnState: s.ConnState}
 		}
+
+		if s.PreFlight != nil {
+			ct := req.ClientToken
+			req.ClientToken = ""
+			if err := s.PreFlight(req); err != nil {
+				t.Error(fmt.Sprintf("Failed preflight for step %d: %s", i+1, err))
+				break
+			}
+			req.ClientToken = ct
+		}
+
+		// Make sure to prefix the path with where we mounted the thing
+		req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
 
 		// Make the request
 		resp, err := core.HandleRequest(req)

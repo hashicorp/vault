@@ -29,7 +29,8 @@ import (
 )
 
 var (
-	stepCount = 0
+	stepCount       = 0
+	serialUnderTest string
 )
 
 // Performs basic tests on CA functionality
@@ -650,6 +651,11 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 // Generates steps to test out CA configuration -- certificates + CRL expiry,
 // and ensure that the certificates are readable after storing them
 func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
+	setSerialUnderTest := func(req *logical.Request) error {
+		req.Path = serialUnderTest
+		return nil
+	}
+
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
@@ -836,7 +842,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "ttl")
 				reqdata["csr"] = intdata["intermediatecsr"].(string)
 				reqdata["common_name"] = "Intermediate Cert"
-				reqdata["ttl"] = "90h"
+				reqdata["ttl"] = "10s"
 				return nil
 			},
 		},
@@ -851,6 +857,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "ttl")
 				intdata["intermediatecert"] = resp.Data["certificate"].(string)
 				reqdata["serial_number"] = resp.Data["serial_number"].(string)
+				reqdata["rsa_int_serial_number"] = resp.Data["serial_number"].(string)
 				reqdata["certificate"] = resp.Data["certificate"].(string)
 				reqdata["pem_bundle"] = intdata["intermediatekey"].(string) + "\n" + resp.Data["certificate"].(string)
 				return nil
@@ -972,7 +979,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "ttl")
 				reqdata["csr"] = intdata["intermediatecsr"].(string)
 				reqdata["common_name"] = "Intermediate Cert"
-				reqdata["ttl"] = "90h"
+				reqdata["ttl"] = "10s"
 				return nil
 			},
 		},
@@ -987,6 +994,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "ttl")
 				intdata["intermediatecert"] = resp.Data["certificate"].(string)
 				reqdata["serial_number"] = resp.Data["serial_number"].(string)
+				reqdata["ec_int_serial_number"] = resp.Data["serial_number"].(string)
 				reqdata["certificate"] = resp.Data["certificate"].(string)
 				reqdata["pem_bundle"] = intdata["intermediatekey"].(string) + "\n" + resp.Data["certificate"].(string)
 				return nil
@@ -1040,13 +1048,220 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					revokedString := certutil.GetOctalFormatted(revEntry.SerialNumber.Bytes(), ":")
 					if revokedString == reqdata["serial_number"].(string) {
 						found = true
-
 					}
 				}
 				if !found {
 					t.Fatalf("did not find %s in CRL", reqdata["serial_number"].(string))
 				}
 				delete(reqdata, "serial_number")
+
+				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		// Make sure both serial numbers we expect to find are found
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				// Give time for the certificates to pass the safety buffer
+				t.Logf("Sleeping for 15 seconds to allow safety buffer time to pass before testing tidying")
+				time.Sleep(15 * time.Second)
+
+				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		// This shouldn't do anything since the safety buffer is too long
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "tidy",
+			Data: map[string]interface{}{
+				"safety_buffer":        "3h",
+				"tidy_cert_store":      true,
+				"tidy_revocation_list": true,
+			},
+		},
+
+		// We still expect to find these
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		// Both should appear in the CRL
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "crl",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				crlBytes := resp.Data["http_raw_body"].([]byte)
+				certList, err := x509.ParseCRL(crlBytes)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				revokedList := certList.TBSCertList.RevokedCertificates
+				if len(revokedList) != 2 {
+					t.Fatalf("length of revoked list not 2; %d", len(revokedList))
+				}
+				foundRsa := false
+				foundEc := false
+				for _, revEntry := range revokedList {
+					revokedString := certutil.GetOctalFormatted(revEntry.SerialNumber.Bytes(), ":")
+					if revokedString == reqdata["rsa_int_serial_number"].(string) {
+						foundRsa = true
+					}
+					if revokedString == reqdata["ec_int_serial_number"].(string) {
+						foundEc = true
+					}
+				}
+				if !foundRsa || !foundEc {
+					t.Fatalf("did not find an expected entry in CRL")
+				}
+
+				return nil
+			},
+		},
+
+		// This shouldn't do anything since the boolean values default to false
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "tidy",
+			Data: map[string]interface{}{
+				"safety_buffer": "1s",
+			},
+		},
+
+		// We still expect to find these
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		// This should remove the values since the safety buffer is short
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "tidy",
+			Data: map[string]interface{}{
+				"safety_buffer":        "1s",
+				"tidy_cert_store":      true,
+				"tidy_revocation_list": true,
+			},
+		},
+
+		// We do *not* expect to find these
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
+					return fmt.Errorf("didn't get an expected error")
+				}
+
+				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
+					return fmt.Errorf("didn't get an expected error")
+				}
+
+				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		// Both should be gone from the CRL
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "crl",
+			Data:      reqdata,
+			Check: func(resp *logical.Response) error {
+				crlBytes := resp.Data["http_raw_body"].([]byte)
+				certList, err := x509.ParseCRL(crlBytes)
+				if err != nil {
+					t.Fatalf("err: %s", err)
+				}
+				revokedList := certList.TBSCertList.RevokedCertificates
+				if len(revokedList) != 0 {
+					t.Fatalf("length of revoked list not 0; %d", len(revokedList))
+				}
+
 				return nil
 			},
 		},
