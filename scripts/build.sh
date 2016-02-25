@@ -17,7 +17,7 @@ GIT_DIRTY=$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)
 
 # Determine the arch/os combos we're building for
 XC_ARCH=${XC_ARCH:-"386 amd64 arm"}
-XC_OS=${XC_OS:-linux darwin windows freebsd openbsd}
+XC_OS=${XC_OS:-linux darwin windows freebsd openbsd netbsd solaris}
 
 GOPATH=${GOPATH:-$(go env GOPATH)}
 case $(uname) in
@@ -42,8 +42,6 @@ fi
 echo "==> Building..."
 gox \
     -os="${XC_OS}" \
-    -os="!freebsd" \
-    -os="!openbsd" \
     -arch="${XC_ARCH}" \
     -ldflags "-X github.com/hashicorp/vault/version.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
