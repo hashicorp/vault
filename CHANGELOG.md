@@ -11,7 +11,7 @@ DEPRECATIONS/BREAKING CHANGES:
    including from the CRL. Doing so could lead to a situation where a time
    mismatch between the Vault server and clients could result in a certificate
    that would not be considered expired by a client being removed from the CRL.
-   [GH-1127]
+   The new `pki/tidy` endpoint can be used to trigger expirations. [GH-1129]
 
 IMPROVEMENTS:
 
@@ -33,6 +33,8 @@ IMPROVEMENTS:
  * secret/pki: Submitted CSRs are now verified to have the correct key type and
    minimum number of bits according to the role. The exception is intermediate
    CA signing and the `sign-verbatim` path [GH-1104]
+ * secret/pki: New `tidy` endpoint to allow expunging expired certificates.
+   [GH-1129]
  * secret/postgresql: While configuring mysql backend, avoid verification of 
    connection_url by disabling it using verify_connection option [GH-1096]
  * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
