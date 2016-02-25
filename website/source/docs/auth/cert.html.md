@@ -375,3 +375,36 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   </dd>
 </dl>
+
+### /auth/cert/config
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configuration options for the backend.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/config`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">disable_binding</span>
+        <span class="param-flags">optional</span>
+	  If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>

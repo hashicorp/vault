@@ -309,7 +309,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
-func (m *ExpirationManager) RenewToken(source string, token string,
+func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
 	increment time.Duration) (*logical.Auth, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 	// Compute the Lease ID
@@ -327,7 +327,7 @@ func (m *ExpirationManager) RenewToken(source string, token string,
 	}
 
 	// Attempt to renew the auth entry
-	resp, err := m.renewAuthEntry(le, increment)
+	resp, err := m.renewAuthEntry(req, le, increment)
 	if err != nil {
 		return nil, err
 	}
@@ -550,14 +550,15 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 }
 
 // renewAuthEntry is used to attempt renew of an auth entry
-func (m *ExpirationManager) renewAuthEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
 	auth.IssueTime = le.IssueTime
 	auth.Increment = increment
 	auth.ClientToken = ""
 
-	req := logical.RenewAuthRequest(le.Path, &auth, nil)
-	resp, err := m.router.Route(req)
+	authReq := logical.RenewAuthRequest(le.Path, &auth, nil)
+	authReq.Connection = req.Connection
+	resp, err := m.router.Route(authReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}

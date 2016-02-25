@@ -28,6 +28,7 @@ func Backend() *backend {
 		},
 
 		Paths: append([]*framework.Path{
+			pathConfig(&b),
 			pathLogin(&b),
 			pathCerts(&b),
 			pathCRLs(&b),
