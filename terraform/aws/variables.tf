@@ -3,7 +3,7 @@
 //-------------------------------------------------------------------
 
 variable "download-url" {
-    default = "https://releases.hashicorp.com/vault/0.5.0/vault_0.5.0_linux_amd64.zip"
+    default = "https://releases.hashicorp.com/vault/0.5.1/vault_0.5.1_linux_amd64.zip"
     description = "URL to download Vault"
 }
 
