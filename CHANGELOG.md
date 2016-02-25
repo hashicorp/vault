@@ -12,6 +12,10 @@ DEPRECATIONS/BREAKING CHANGES:
    mismatch between the Vault server and clients could result in a certificate
    that would not be considered expired by a client being removed from the CRL.
    The new `pki/tidy` endpoint can be used to trigger expirations. [GH-1129]
+ * The `cert` backend now performs a variant of channel binding at renewal time
+   for increased security. In order to not overly burden clients, a notion of
+   identity is used. This functionality can be disabled. See the 0.5.1 upgrade
+   guide for more specific information [GH-1127]
 
 FEATURES:
 
@@ -35,15 +39,15 @@ IMPROVEMENTS:
  * deps: Use the standardized Go 1.6 vendoring system
  * secret/aws: Inform users of AWS-imposed policy restrictions around STS
    tokens if they attempt to use an invalid policy [GH-1113]
- * secret/mysql: While configuring mysql backend, avoid verification of 
-   connection_url by disabling it using verify_connection option [GH-1096]
+ * secret/mysql: The MySQL backend now allows disabling verification of the
+   `connection_url` [GH-1096]
  * secret/pki: Submitted CSRs are now verified to have the correct key type and
    minimum number of bits according to the role. The exception is intermediate
    CA signing and the `sign-verbatim` path [GH-1104]
  * secret/pki: New `tidy` endpoint to allow expunging expired certificates.
    [GH-1129]
- * secret/postgresql: While configuring mysql backend, avoid verification of 
-   connection_url by disabling it using verify_connection option [GH-1096]
+ * secret/postgresql: The PostgreSQL backend now allows disabling verification
+   of the `connection_url` [GH-1096]
  * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
    204 [GH-1086]
  * credential/app-id: App ID backend will check the validity of app-id and user-id
