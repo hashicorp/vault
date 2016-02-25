@@ -22,9 +22,6 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config",
-			},
 			Unauthenticated: []string{
 				"login",
 			},

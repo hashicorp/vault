@@ -396,9 +396,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>
     <ul>
       <li>
-        <span class="param">verify_cert</span>
+        <span class="param">disable_binding</span>
         <span class="param-flags">optional</span>
-        If set, during renewal, checks if the presented client certificate matches the client certificate used during login. Defaults to true.
+	  If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.
       </li>
     </ul>
   </dd>

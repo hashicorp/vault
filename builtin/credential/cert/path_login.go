@@ -85,7 +85,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	if config == nil || config.VerifyCert {
+	if !config.DisableBinding {
 		var matched *ParsedCert
 		if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
 			return nil, err
@@ -106,10 +106,10 @@ func (b *backend) pathLoginRenew(
 		skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 		akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-		// Certificate should not only match a registered certificate policy but it should match the exact same
-		// certificate which was used to login
+		// Certificate should not only match a registered certificate policy.
+		// Also, the identity of the certificate presented should match the identity of the certificate used during login
 		if req.Auth.InternalData["subject_key_id"] != skid && req.Auth.InternalData["authority_key_id"] != akid {
-			return logical.ErrorResponse("client certificate during renewal not matching client certificate used during login"), nil
+			return logical.ErrorResponse("client identity during renewal not matching client identity used during login"), nil
 		}
 
 	}
