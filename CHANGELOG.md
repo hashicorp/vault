@@ -13,6 +13,11 @@ DEPRECATIONS/BREAKING CHANGES:
    that would not be considered expired by a client being removed from the CRL.
    The new `pki/tidy` endpoint can be used to trigger expirations. [GH-1129]
 
+FEATURES:
+
+ * **Codebase Audit**: Vault's 0.5 codebase was audited by iSEC. (The terms of
+   the audit contract do not allow us to make the results public.) [GH-220]
+
 IMPROVEMENTS:
 
  * api/health: Add the server's time in UTC to health responses [GH-1117]
