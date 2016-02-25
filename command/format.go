@@ -16,20 +16,20 @@ import (
 )
 
 func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret)
+	return outputWithFormat(ui, format, secret, secret)
 }
 
 func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret.Data["keys"])
+	return outputWithFormat(ui, format, secret, secret.Data["keys"])
 }
 
-func outputWithFormat(ui cli.Ui, format string, data interface{}) int {
+func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
 	formatter, ok := Formatters[strings.ToLower(format)]
 	if !ok {
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
 		return 1
 	}
-	if err := formatter.Output(ui, data); err != nil {
+	if err := formatter.Output(ui, secret, data); err != nil {
 		ui.Error(fmt.Sprintf("Could not output secret: %s", err.Error()))
 		return 1
 	}
@@ -37,7 +37,7 @@ func outputWithFormat(ui cli.Ui, format string, data interface{}) int {
 }
 
 type Formatter interface {
-	Output(ui cli.Ui, data interface{}) error
+	Output(ui cli.Ui, secret *api.Secret, data interface{}) error
 }
 
 var Formatters = map[string]Formatter{
@@ -50,7 +50,7 @@ var Formatters = map[string]Formatter{
 type JsonFormatter struct {
 }
 
-func (j JsonFormatter) Output(ui cli.Ui, data interface{}) error {
+func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	b, err := json.Marshal(data)
 	if err == nil {
 		var out bytes.Buffer
@@ -64,7 +64,7 @@ func (j JsonFormatter) Output(ui cli.Ui, data interface{}) error {
 type YamlFormatter struct {
 }
 
-func (y YamlFormatter) Output(ui cli.Ui, data interface{}) error {
+func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	b, err := yaml.Marshal(data)
 	if err == nil {
 		ui.Output(strings.TrimSpace(string(b)))
@@ -76,18 +76,18 @@ func (y YamlFormatter) Output(ui cli.Ui, data interface{}) error {
 type TableFormatter struct {
 }
 
-func (t TableFormatter) Output(ui cli.Ui, data interface{}) error {
+func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	// TODO: this should really use reflection like the other formatters do
 	if s, ok := data.(*api.Secret); ok {
-		return t.OutputSecret(ui, s)
+		return t.OutputSecret(ui, secret, s)
 	}
 	if s, ok := data.([]interface{}); ok {
-		return t.OutputList(ui, s)
+		return t.OutputList(ui, secret, s)
 	}
 	return errors.New("Cannot use the table formatter for this type")
 }
 
-func (t TableFormatter) OutputList(ui cli.Ui, list []interface{}) error {
+func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interface{}) error {
 	config := columnize.DefaultConfig()
 	config.Delim = "♨"
 	config.Glue = "\t"
@@ -107,11 +107,19 @@ func (t TableFormatter) OutputList(ui cli.Ui, list []interface{}) error {
 		input = append(input, fmt.Sprintf("%s", k))
 	}
 
+	if len(secret.Warnings) != 0 {
+		input = append(input, "")
+		input = append(input, "The following warnings were returned from the Vault server:")
+		for _, warning := range secret.Warnings {
+			input = append(input, fmt.Sprintf("* %s", warning))
+		}
+	}
+
 	ui.Output(columnize.Format(input, config))
 	return nil
 }
 
-func (t TableFormatter) OutputSecret(ui cli.Ui, s *api.Secret) error {
+func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 	config := columnize.DefaultConfig()
 	config.Delim = "♨"
 	config.Glue = "\t"

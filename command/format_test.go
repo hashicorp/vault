@@ -38,7 +38,7 @@ func (m mockUi) Warn(s string) {
 
 func TestJsonFormatter(t *testing.T) {
 	ui := mockUi{t: t, SampleData: "something"}
-	if err := outputWithFormat(ui, "json", ui); err != 0 {
+	if err := outputWithFormat(ui, "json", nil, ui); err != 0 {
 		t.Fatal(err)
 	}
 	var newUi mockUi
@@ -54,7 +54,7 @@ func TestJsonFormatter(t *testing.T) {
 
 func TestYamlFormatter(t *testing.T) {
 	ui := mockUi{t: t, SampleData: "something"}
-	if err := outputWithFormat(ui, "yaml", ui); err != 0 {
+	if err := outputWithFormat(ui, "yaml", nil, ui); err != 0 {
 		t.Fatal(err)
 	}
 	var newUi mockUi
@@ -72,7 +72,7 @@ func TestYamlFormatter(t *testing.T) {
 func TestTableFormatter(t *testing.T) {
 	ui := mockUi{t: t}
 	s := api.Secret{Data: map[string]interface{}{"k": "something"}}
-	if err := outputWithFormat(ui, "table", &s); err != 0 {
+	if err := outputWithFormat(ui, "table", &s, &s); err != 0 {
 		t.Fatal(err)
 	}
 	if !strings.Contains(output, "something") {
