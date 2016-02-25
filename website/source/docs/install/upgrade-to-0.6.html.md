@@ -1,15 +1,17 @@
 ---
 layout: "install"
-page_title: "Upgrading to Vault 0.5.1"
-sidebar_current: "docs-install-upgrade-to-0.5.1"
+page_title: "Upgrading to Vault 0.6"
+sidebar_current: "docs-install-upgrade-to-0.6"
 description: |-
-  Learn how to upgrade to Vault 0.5.1
+  Learn how to upgrade to Vault 0.6
 ---
 
 # Overview
 
-This page contains the list of breaking changes for Vault 0.5.1. Please read it
+This page contains the list of breaking changes for Vault 0.6. Please read it
 carefully.
+
+Please note that this includes the full list of breaking changes _since Vault 0.5_. Some of these changes were introduced in later releases in the Vault 0.5.x series.
 
 ## PKI Backend Disallows RSA Keys < 2048 Bits
 
