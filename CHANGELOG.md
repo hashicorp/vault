@@ -1,4 +1,4 @@
-## 0.5.1 (Unreleased)
+## 0.5.1 (February 25th, 2016)
 
 DEPRECATIONS/BREAKING CHANGES:
 
@@ -54,7 +54,7 @@ BUG FIXES:
    respond with a 400 rather than a 500 [GH-1085]
  * secret/postgresql: Add extra revocation statements to better handle more
    permission scenarios [GH-1053]
- * secret/postgresql: Make connection_url properly [GH-1112]
+ * secret/postgresql: Make connection_url work properly [GH-1112]
 
 ## 0.5.0 (February 10, 2016)
 
