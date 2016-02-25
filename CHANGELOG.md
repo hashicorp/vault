@@ -20,6 +20,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api: The `VAULT_TLS_SERVER_NAME` environment variable can be used to control
+   the SNI header during TLS connections [GH-1131]
  * api/health: Add the server's time in UTC to health responses [GH-1117]
  * command/rekey and command/generate-root: These now return the status at
    attempt initialization time, rather than requiring a separate fetch for the
