@@ -32,6 +32,8 @@ IMPROVEMENTS:
    204 [GH-1086]
  * credential/app-id: App ID backend will check the validity of app-id and user-id
    during renewal time [GH-1039]
+ * credential/cert: TLS Certificates backend, during renewal, will now match the
+   client identity with the client identity used during login [GH-1127]
 
 BUG FIXES:
 
