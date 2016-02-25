@@ -14,7 +14,7 @@ bin: generate
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 dev: generate
-	@TF_DEV=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # test runs the unit tests and vets the code
 test: generate
