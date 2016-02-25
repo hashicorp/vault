@@ -2,11 +2,16 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
-* secret/pki: RSA keys less than 2048 bits are no longer supported. 1024-bit
-   keys are considered unsafe and are disallowed in the Internet PKI. The `pki`
-   backend has enforced SHA256 hashes in signatures from the beginning, and
-   software that can handle these hashes should be able to handle larger key
-   sizes. [GH-1095]
+ * RSA keys less than 2048 bits are no longer supported in the PKI backend.
+   1024-bit keys are considered unsafe and are disallowed in the Internet PKI.
+   The `pki` backend has enforced SHA256 hashes in signatures from the
+   beginning, and software that can handle these hashes should be able to
+   handle larger key sizes. [GH-1095]
+ * The PKI backend now does not automatically delete expired certificates,
+   including from the CRL. Doing so could lead to a situation where a time
+   mismatch between the Vault server and clients could result in a certificate
+   that would not be considered expired by a client being removed from the CRL.
+   [GH-1127]
 
 IMPROVEMENTS:
 
@@ -16,8 +21,10 @@ IMPROVEMENTS:
    nonce [GH-1054] 
  * credential/cert: Don't require root/sudo tokens for the `certs/` and `crls/`
    paths; use normal ACL behavior instead [GH-468]
- * credential/github: Github backend will check the validity of original token
-   during renewal time [GH-1047]
+ * credential/github: The validity of the token used for login will be checked
+   at renewal time [GH-1047]
+ * credential/github: The `config` endpoint no longer requires a root token;
+   normal ACL path matching applies
  * deps: Use the standardized Go 1.6 vendoring system
  * secret/aws: Inform users of AWS-imposed policy restrictions around STS
    tokens if they attempt to use an invalid policy [GH-1113]
