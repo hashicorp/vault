@@ -338,10 +338,10 @@ Rekey Options:
                           public PGP keys, or Keybase usernames specified as
                           "keybase:<username>". The number of given entries
                           must match 'key-shares'. The output unseal keys will
-                          encrypted and hex-encoded, in order, with the given
-                          public keys.  If you want to use them with the 'vault
-                          unseal' command, you will need to hex decode and
-                          decrypt; this will be the plaintext unseal key.
+                          be encrypted and hex-encoded, in order, with the
+                          given public keys.  If you want to use them with the
+                          'vault unseal' command, you will need to hex decode
+                          and decrypt; this will be the plaintext unseal key.
 
   -backup=false           If true, and if the key shares are PGP-encrypted, a
                           plaintext backup of the PGP-encrypted keys will be
