@@ -671,39 +671,6 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	}
 }
 
-func TestCore_HandleRequest_NoConnection(t *testing.T) {
-	noop := &NoopBackend{
-		Response: &logical.Response{},
-	}
-	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
-		return noop, nil
-	}
-
-	// Enable the logical backend
-	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
-	req.Data["type"] = "noop"
-	req.Data["description"] = "foo"
-	req.ClientToken = root
-	_, err := c.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Attempt to request with connection data
-	req = &logical.Request{
-		Path:       "foo/login",
-		Connection: &logical.Connection{},
-	}
-	req.ClientToken = root
-	if _, err := c.HandleRequest(req); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if noop.Requests[0].Connection != nil {
-		t.Fatalf("bad: %#v", noop.Requests)
-	}
-}
-
 func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 	noop := &NoopBackend{
 		Response: &logical.Response{},

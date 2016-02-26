@@ -156,7 +156,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	}
 
 	// Should not be able to renew, no expiration
-	_, err = exp.RenewToken("auth/github/login", root.ID, 0)
+	_, err = exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
 	if err.Error() != "lease not found or lease is not renewable" {
 		t.Fatalf("err: %v", err)
 	}
@@ -419,7 +419,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 	}
 
 	// Renew the token
-	out, err := exp.RenewToken("auth/token/login", root.ID, 0)
+	out, err := exp.RenewToken(&logical.Request{}, "auth/token/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -450,7 +450,7 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	}
 
 	// Attempt to renew the token
-	_, err = exp.RenewToken("auth/github/login", root.ID, 0)
+	_, err = exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
 	if err.Error() != "lease is not renewable" {
 		t.Fatalf("err: %v", err)
 	}
@@ -851,7 +851,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		ExpireTime: time.Now().Add(time.Minute),
 	}
 
-	resp, err := exp.renewAuthEntry(le, time.Second)
+	resp, err := exp.renewAuthEntry(&logical.Request{}, le, time.Second)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
