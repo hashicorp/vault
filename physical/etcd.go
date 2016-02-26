@@ -159,7 +159,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 		syncErr := c.Sync(ctx)
 		cancel()
 		if syncErr != nil {
-			return nil, EtcdSyncClusterError
+			return nil, fmt.Errorf("%s: %s", EtcdSyncClusterError, syncErr)
 		}
 	case "no", "false", "n", "0":
 	default:
