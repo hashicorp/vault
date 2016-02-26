@@ -2,6 +2,9 @@
 
 BUG FIXES:
 
+* logical/cassandra: Apply hyphen/underscore replacement to the entire
+  generated username, not just the UUID, in order to handle token display name
+  hyphens [GH-1140]
 * physical/etcd: Output actual error when cluster sync fails [GH-1141]
 
 ## 0.5.1 (February 25th, 2016)
