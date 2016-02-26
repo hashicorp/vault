@@ -47,7 +47,8 @@ func (b *backend) pathCredsCreateRead(
 	if err != nil {
 		return nil, err
 	}
-	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, strings.Replace(userUUID, "-", "_", -1), time.Now().Unix())
+	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, userUUID, time.Now().Unix())
+	username = strings.Replace(username, "-", "_", -1)
 	password, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
