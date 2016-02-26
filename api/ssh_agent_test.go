@@ -7,7 +7,7 @@ import (
 
 func TestSSH_CreateTLSClient(t *testing.T) {
 	// load the default configuration
-	config, err := LoadSSHAgentConfig("./test-fixtures/agent_config.hcl")
+	config, err := LoadSSHHelperConfig("./test-fixtures/agent_config.hcl")
 	if err != nil {
 		panic(fmt.Sprintf("error loading agent's config file: %s", err))
 	}
