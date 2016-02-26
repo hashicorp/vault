@@ -1,7 +1,11 @@
 ## 0.5.2 (Unreleased)
 
-## 0.5.1 (February 25th, 2016)
+BUG FIXES:
 
+* physical/etcd: Output actual error when cluster sync fails [GH-1141]
+
+## 0.5.1 (February 25th, 2016)
+ 
 DEPRECATIONS/BREAKING CHANGES:
 
  * RSA keys less than 2048 bits are no longer supported in the PKI backend.
