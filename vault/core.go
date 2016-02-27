@@ -1157,21 +1157,44 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	return true, nil
 }
 
-// Seal is used to re-seal the Vault. This requires the Vault to
-// be unsealed again to perform any further operations.
-func (c *Core) Seal(token string) (retErr error) {
-	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
+// Seal is used to seal the vault
+func (c *Core) Seal(token string) error {
+	return c.stepDownAndSeal(token, true)
+}
+
+// StepDown is used to step down from leadership
+func (c *Core) StepDown(token string) error {
+	return c.stepDownAndSeal(token, false)
+}
+
+// stepDownAndSeal is used to step down from leadership and, optionally,
+// re-seal the Vault. If sealed, this requires the Vault to be unsealed again
+// to perform any further operations.
+func (c *Core) stepDownAndSeal(token string, seal bool) (retErr error) {
+	if seal {
+		defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
+	} else {
+		defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
+	}
+
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 	if c.sealed {
+		return nil
+	}
+	if !seal && (c.ha == nil || c.standby) {
 		return nil
 	}
 
 	// Validate the token is a root token
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
-		Path:        "sys/seal",
 		ClientToken: token,
+	}
+	if seal {
+		req.Path = "sys/seal"
+	} else {
+		req.Path = "sys/step-down"
 	}
 	acl, te, err := c.fetchACLandTokenEntry(req)
 
@@ -1189,8 +1212,8 @@ func (c *Core) Seal(token string) (retErr error) {
 		// just returning with an error and recommending a vault restart, which
 		// essentially does the same thing.
 		if c.standby {
-			c.logger.Printf("[ERR] core: vault cannot be sealed when in standby mode; please restart instead")
-			return errors.New("vault cannot be sealed when in standby mode; please restart instead")
+			c.logger.Printf("[ERR] core: vault cannot step down or be sealed when in standby mode; please restart instead")
+			return errors.New("vault cannot step down or be sealed when in standby mode; please restart instead")
 		}
 		return err
 	}
@@ -1207,19 +1230,22 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Seal the Vault
-	err = c.sealInternal()
-	if err == nil && retErr == ErrInternalError {
-		c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
+	if seal {
+		err = c.sealInternal()
+		if err == nil && retErr == ErrInternalError {
+			c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
+		} else {
+			retErr = err
+		}
 	} else {
-		retErr = err
+		c.stepDownInternal()
 	}
 
 	return
 }
 
-// sealInternal is an internal method used to seal the vault.
-// It does not do any authorization checking. The stateLock must
-// be held prior to calling.
+// sealInternal is an internal method used to seal the vault.  It does not do
+// any authorization checking. The stateLock must be held prior to calling.
 func (c *Core) sealInternal() error {
 	// Enable that we are sealed to prevent furthur transactions
 	c.sealed = true
@@ -1244,7 +1270,18 @@ func (c *Core) sealInternal() error {
 		return err
 	}
 	c.logger.Printf("[INFO] core: vault is sealed")
+
 	return nil
+}
+
+// stepDownInternal is an internal method used to step down from active duty.
+// It does not do any authorization checking.
+func (c *Core) stepDownInternal() {
+	// Merely trigger the loop to re-run. This value will cause the
+	// loop to run through giving up leadership, but without triggering
+	// the return at the end of the next loop run, since it's not
+	// closed
+	c.standbyStopCh <- struct{}{}
 }
 
 // postUnseal is invoked after the barrier is unsealed, but before
@@ -1443,6 +1480,10 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		if preSealErr != nil {
 			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
 		}
+
+		// If we've merely stepped down, we could instantly grab the lock
+		// again. Give the other nodes a chance.
+		time.Sleep(time.Second)
 	}
 }
 

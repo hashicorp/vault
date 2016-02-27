@@ -34,6 +34,29 @@ func handleSysSeal(core *vault.Core) http.Handler {
 	})
 }
 
+func handleSysStepDown(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "PUT":
+		case "POST":
+		default:
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
+		// Get the auth for the request so we can access the token directly
+		req := requestAuth(r, &logical.Request{})
+
+		// Seal with the token above
+		if err := core.StepDown(req.ClientToken); err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		respondOk(w, nil)
+	})
+}
+
 func handleSysUnseal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
