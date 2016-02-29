@@ -130,7 +130,7 @@ func testAccStepReadCRL(t *testing.T, connState tls.ConnectionState) logicaltest
 				t.Fatalf("bad: expected CRL with length 1, got %d", len(crlInfo.Serials))
 			}
 			if _, ok := crlInfo.Serials["637101449987587619778072672905061040630001617053"]; !ok {
-				t.Fatalf("bad: serial number 13 not found in CRL")
+				t.Fatalf("bad: expected serial number not found in CRL")
 			}
 			return nil
 		},
