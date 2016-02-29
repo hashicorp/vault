@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -33,6 +34,9 @@ const (
 var (
 	// displayNameSanitize is used to sanitize a display name given to a token.
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
+
+	// prefixSanitize is used to ensure a prefix in a role is valid.
+	prefixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -88,7 +92,76 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 		Paths: []*framework.Path{
 			&framework.Path{
-				Pattern: "create-orphan$",
+				Pattern: "roles/?$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: t.tokenStoreRoleList,
+				},
+
+				//				HelpSynopsis:    pathRoleHelpSyn,
+				//				HelpDescription: pathRoleHelpDesc,
+			},
+
+			&framework.Path{
+				Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+				Fields: map[string]*framework.FieldSchema{
+					"role_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Name of the role",
+					},
+
+					"allowed_policies": &framework.FieldSchema{
+						Type:    framework.TypeString,
+						Default: "",
+						Description: `If set, tokens created via this role
+can be created with any subset of this list,
+rather than the normal semantics of a subset
+of the client token's policies. This
+parameter should be sent as a comma-delimited
+string.`,
+					},
+
+					"orphan": &framework.FieldSchema{
+						Type:    framework.TypeBool,
+						Default: false,
+						Description: `If true, tokens created via this role
+will be orphan tokens (have no parent)`,
+					},
+
+					"period": &framework.FieldSchema{
+						Type:    framework.TypeDurationSecond,
+						Default: 0,
+						Description: `If set, tokens created via this role
+will have no max lifetime; instead, their
+renewal period will be fixed to this value.
+This takes an integer number of seconds,
+or a string duration (e.g. "24h").`,
+					},
+
+					"prefix": &framework.FieldSchema{
+						Type:    framework.TypeString,
+						Default: "",
+						Description: `If set, tokens created via this role
+will contain the given prefix as a part of
+their path. This can be used to assist use
+of the 'revoke-prefix' endpoint later on.
+The given prefix must match the regular
+expression ` + prefixSanitize.String(),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   t.tokenStoreRoleRead,
+					logical.UpdateOperation: t.tokenStoreRoleCreate,
+					logical.DeleteOperation: t.tokenStoreRoleDelete,
+				},
+
+				//				HelpSynopsis:    pathRoleHelpSyn,
+				//				HelpDescription: pathRoleHelpDesc,
+			},
+
+			&framework.Path{
+				Pattern: "create-orphan/$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: t.handleCreateOrphan,
@@ -96,6 +169,24 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
 				HelpDescription: strings.TrimSpace(tokenCreateOrphanHelp),
+			},
+
+			&framework.Path{
+				Pattern: "create/" + framework.GenericNameRegex("role_name"),
+
+				Fields: map[string]*framework.FieldSchema{
+					"role_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Name of the role",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleCreateRole,
+				},
+
+				//HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
+				//HelpDescription: strings.TrimSpace(tokenCreateOrphanHelp),
 			},
 
 			&framework.Path{
@@ -272,6 +363,28 @@ type TokenEntry struct {
 	NumUses      int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
 	CreationTime int64             // Time of token creation
 	TTL          time.Duration     // Duration set when token was created
+	Role         string            // If set, the role that was used for parameters at creation time
+}
+
+// tsRoleEntry contains token store role information
+type tsRoleEntry struct {
+	// The name of the role. Embedded so it can be used for pathing
+	Name string `json:"name"`
+
+	// The policies that creation functions using this role can assign to a token,
+	// escaping or further locking down normal subset checking
+	AllowedPolicies []string `json:"allowed_policies"`
+
+	// If true, tokens created using this role will be orphans
+	Orphan bool `json:"orphan"`
+
+	// If non-zero, tokens created using this role will be able to be renewed
+	// forever, but will have a fixed renewal period of this value
+	Period time.Duration `json:"period"`
+
+	// If set, a prefix will be set on leases, making it easier to revoke using
+	// 'revoke-prefix'.
+	Prefix string `json:"prefix"`
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -530,23 +643,38 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	return nil
 }
 
+// handleCreateRole handles the auth/token/create path for a role
+func (ts *TokenStore) handleCreateRole(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("role_name").(string)
+	roleEntry, err := ts.getTokenStoreRole(req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("unknown role %s", name)), nil
+	}
+
+	return ts.handleCreateCommon(req, d, false, roleEntry)
+}
+
 // handleCreate handles the auth/token/create path for creation of new orphan
 // tokens
 func (ts *TokenStore) handleCreateOrphan(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return ts.handleCreateCommon(req, d, true)
+	return ts.handleCreateCommon(req, d, true, nil)
 }
 
 // handleCreate handles the auth/token/create path for creation of new non-orphan
 // tokens
 func (ts *TokenStore) handleCreate(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return ts.handleCreateCommon(req, d, false)
+	return ts.handleCreateCommon(req, d, false, nil)
 }
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(
-	req *logical.Request, d *framework.FieldData, orphan bool) (*logical.Response, error) {
+	req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(req.ClientToken)
 	if err != nil || parent == nil {
@@ -596,6 +724,15 @@ func (ts *TokenStore) handleCreateCommon(
 		CreationTime: time.Now().Unix(),
 	}
 
+	if role != nil {
+		te.Role = role.Name
+
+		te.Path = fmt.Sprintf("%s/%s", te.Path, role.Name)
+		if role.Prefix != "" {
+			te.Path = fmt.Sprintf("%s/%s", te.Path, role.Prefix)
+		}
+	}
+
 	// Attach the given display name if any
 	if data.DisplayName != "" {
 		full := "token-" + data.DisplayName
@@ -613,11 +750,20 @@ func (ts *TokenStore) handleCreateCommon(
 		te.ID = data.ID
 	}
 
-	// Only permit policies to be a subset unless the client has root or sudo privileges
-	if len(data.Policies) == 0 {
+	switch {
+	// If we have a role, we don't even consider parent policies; the role
+	// allowed policies trumps all
+	case role != nil:
+		if !strListSubset(role.AllowedPolicies, data.Policies) {
+			return logical.ErrorResponse("token policies must be subset of the role's allowed policies"), logical.ErrInvalidRequest
+		}
+
+	case len(data.Policies) == 0:
 		data.Policies = parent.Policies
-	}
-	if !isSudo && !strListSubset(parent.Policies, data.Policies) {
+
+	// When a role is not in use, only permit policies to be a subset unless
+	// the client has root or sudo privileges
+	case !isSudo && !strListSubset(parent.Policies, data.Policies):
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
 
@@ -641,52 +787,63 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 	sort.Strings(te.Policies)
 
-	// Only allow an orphan token if the client has sudo policy
-	if data.NoParent {
+	switch {
+	case role != nil:
+		if role.Orphan {
+			te.Parent = ""
+		}
+
+	case data.NoParent:
+		// Only allow an orphan token if the client has sudo policy
 		if !isSudo {
 			return logical.ErrorResponse("root or sudo privileges required to create orphan token"),
 				logical.ErrInvalidRequest
 		}
 
 		te.Parent = ""
-	} else {
+
+	default:
 		// This comes from create-orphan, which can be properly ACLd
 		if orphan {
 			te.Parent = ""
 		}
 	}
 
-	// Parse the TTL/lease if any
-	if data.TTL != "" {
-		dur, err := time.ParseDuration(data.TTL)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	if role != nil && role.Period > 0 {
+		te.TTL = role.Period
+	} else {
+		// Parse the TTL/lease if any
+		if data.TTL != "" {
+			dur, err := time.ParseDuration(data.TTL)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			}
+			if dur < 0 {
+				return logical.ErrorResponse("ttl must be positive"), logical.ErrInvalidRequest
+			}
+			te.TTL = dur
+		} else if data.Lease != "" {
+			dur, err := time.ParseDuration(data.Lease)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			}
+			if dur < 0 {
+				return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
+			}
+			te.TTL = dur
 		}
-		if dur < 0 {
-			return logical.ErrorResponse("ttl must be positive"), logical.ErrInvalidRequest
-		}
-		te.TTL = dur
-	} else if data.Lease != "" {
-		dur, err := time.ParseDuration(data.Lease)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		}
-		if dur < 0 {
-			return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
-		}
-		te.TTL = dur
-	}
 
-	sysView := ts.System()
+		sysView := ts.System()
 
-	// Set the default lease if non-provided, root tokens are exempt
-	if te.TTL == 0 && !strListContains(te.Policies, "root") {
-		te.TTL = sysView.DefaultLeaseTTL()
-	}
+		// Set the default lease if non-provided, root tokens are exempt
+		if te.TTL == 0 && !strListContains(te.Policies, "root") {
+			te.TTL = sysView.DefaultLeaseTTL()
+		}
 
-	// Limit the lease duration
-	if te.TTL > sysView.MaxLeaseTTL() {
-		te.TTL = sysView.MaxLeaseTTL()
+		// Limit the lease duration
+		if te.TTL > sysView.MaxLeaseTTL() {
+			te.TTL = sysView.MaxLeaseTTL()
+		}
 	}
 
 	// Create the token
@@ -705,6 +862,9 @@ func (ts *TokenStore) handleCreateCommon(
 				Renewable: true,
 			},
 			ClientToken: te.ID,
+			InternalData: map[string]interface{}{
+				"id": te.ID,
+			},
 		},
 	}
 
@@ -840,6 +1000,7 @@ func (ts *TokenStore) handleLookup(
 			"creation_time": int64(out.CreationTime),
 			"creation_ttl":  int64(out.TTL.Seconds()),
 			"ttl":           int64(0),
+			"role":          out.Role,
 		},
 	}
 
@@ -917,9 +1078,148 @@ func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
 
 func (ts *TokenStore) authRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if req.Auth == nil {
+		return nil, fmt.Errorf("request auth is nil")
+	}
 
 	f := framework.LeaseExtend(0, 0, ts.System())
+
+	idInt, ok := req.Auth.InternalData["id"]
+	if !ok {
+		// Fall back here; this is pre-roles so there are no stored IDs, so use previous behavior
+		return f(req, d)
+	}
+
+	id, ok := idInt.(string)
+	if !ok {
+		return nil, fmt.Errorf("found id in internal data but could not interpret as string")
+	}
+
+	te, err := ts.Lookup(id)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up token: %s", err)
+	}
+	if te == nil {
+		return nil, fmt.Errorf("no token entry found during lookup")
+	}
+
+	// No role? Use normal LeaseExtend semantics
+	if te.Role == "" {
+		return f(req, d)
+	}
+
+	role, err := ts.getTokenStoreRole(req.Storage, te.Role)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
+	}
+
+	if role == nil {
+		resp, err := f(req, d)
+		if resp != nil {
+			resp.AddWarning(fmt.Sprintf("The token was created via role %s, but that role could no longer be found. Renewal fell back to normal token renewal semantics; if this token was a periodic token, this could mean that it can no longer be renewed.", te.Role))
+		}
+		return resp, err
+	}
+
+	if role.Period != 0 {
+		req.Auth.TTL = role.Period
+		return &logical.Response{Auth: req.Auth}, nil
+	}
+
 	return f(req, d)
+}
+
+func (ts *TokenStore) getTokenStoreRole(s logical.Storage, n string) (*tsRoleEntry, error) {
+	entry, err := s.Get("role/" + n)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result tsRoleEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("role/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
+func (ts *TokenStore) tokenStoreRoleDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete("role/" + data.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	role, err := ts.getTokenStoreRole(req.Storage, data.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	resp := &logical.Response{
+		Data: structs.New(role).Map(),
+	}
+
+	return resp, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleCreate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("role_name").(string)
+	if name == "" {
+		return logical.ErrorResponse("role name cannot be empty"), nil
+	}
+
+	prefix := data.Get("prefix").(string)
+	if prefix != "" {
+		matched := prefixSanitize.MatchString(prefix)
+		if !matched {
+			return logical.ErrorResponse(fmt.Sprintf("given role prefix contains invalid characters; must match %s", prefixSanitize.String())), nil
+		}
+	}
+
+	entry := &tsRoleEntry{
+		Name:   name,
+		Orphan: data.Get("orphan").(bool),
+		Period: time.Second * time.Duration(data.Get("period").(int)),
+		Prefix: prefix,
+	}
+
+	allowedPolicies := data.Get("allowed_policies").(string)
+	if allowedPolicies != "" {
+		entry.AllowedPolicies = strings.Split(allowedPolicies, ",")
+	}
+
+	// Store it
+	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(jsonEntry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 const (

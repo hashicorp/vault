@@ -16,7 +16,7 @@ type TokenCreateCommand struct {
 
 func (c *TokenCreateCommand) Run(args []string) int {
 	var format string
-	var id, displayName, lease, ttl string
+	var id, displayName, lease, ttl, role string
 	var orphan, noDefaultPolicy bool
 	var metadata map[string]string
 	var numUses int
@@ -27,6 +27,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	flags.StringVar(&id, "id", "", "")
 	flags.StringVar(&lease, "lease", "", "")
 	flags.StringVar(&ttl, "ttl", "", "")
+	flags.StringVar(&role, "role", "", "")
 	flags.BoolVar(&orphan, "orphan", false, "")
 	flags.BoolVar(&noDefaultPolicy, "no-default-policy", false, "")
 	flags.IntVar(&numUses, "use-limit", 0, "")
@@ -55,7 +56,8 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	if ttl == "" {
 		ttl = lease
 	}
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+
+	tcr := &api.TokenCreateRequest{
 		ID:              id,
 		Policies:        policies,
 		Metadata:        metadata,
@@ -64,7 +66,14 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		NoDefaultPolicy: noDefaultPolicy,
 		DisplayName:     displayName,
 		NumUses:         numUses,
-	})
+	}
+
+	var secret *api.Secret
+	if role != "" {
+		secret, err = client.Auth().Token().CreateWithRole(tcr, role)
+	} else {
+		secret, err = client.Auth().Token().Create(tcr)
+	}
 
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(

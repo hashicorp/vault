@@ -592,23 +592,6 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			return nil, auth, ErrInternalError
 		}
 
-		sysView := c.router.MatchingSystemView(req.Path)
-		if sysView == nil {
-			c.logger.Println("[ERR] core: unable to retrieve system view from router")
-			return nil, auth, ErrInternalError
-		}
-
-		// Apply the default lease if none given
-		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.TTL = sysView.DefaultLeaseTTL()
-		}
-
-		// Limit the lease duration
-		maxTTL := sysView.MaxLeaseTTL()
-		if resp.Auth.TTL > maxTTL {
-			resp.Auth.TTL = maxTTL
-		}
-
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, resp.Auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
