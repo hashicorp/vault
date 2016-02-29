@@ -19,6 +19,10 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		return
+	}
+
 	config, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
@@ -35,6 +39,10 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_management(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		return
+	}
+
 	config, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
@@ -51,6 +59,10 @@ func TestBackend_management(t *testing.T) {
 }
 
 func TestBackend_crud(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		return
+	}
+
 	_, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
@@ -67,6 +79,10 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		return
+	}
+
 	_, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
