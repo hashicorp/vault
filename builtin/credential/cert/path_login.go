@@ -134,28 +134,54 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	connState := req.Connection.ConnState
 
 	// Load the trusted certificates
-	roots, trusted := b.loadTrustedCerts(req.Storage)
+	roots, trusted, nonCAPool, trustedNonCAs := b.loadTrustedCerts(req.Storage)
 
 	// Validate the connection state is trusted
-	trustedChains, err := validateConnState(roots, connState)
-	if err != nil {
-		return nil, nil, err
-	}
+	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
+	// with the backend.
+	if len(trustedNonCAs) != 0 {
+		_, err := validateConnState(nonCAPool, connState)
+		if err != nil {
+			return nil, nil, err
+		}
+		// Match the trusted non-CA chain with the policy
+		return b.matchNonCAPolicy(connState.PeerCertificates, trustedNonCAs), nil, nil
+	} else {
+		trustedChains, err := validateConnState(roots, connState)
+		if err != nil {
+			return nil, nil, err
+		}
 
-	// If no trusted chain was found, client is not authenticated
-	if len(trustedChains) == 0 {
-		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
-	}
+		// If no trusted chain was found, client is not authenticated
+		if len(trustedChains) == 0 {
+			return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
+		}
 
-	validChain := b.checkForValidChain(req.Storage, trustedChains)
-	if !validChain {
-		return nil, logical.ErrorResponse(
-			"no chain containing non-revoked certificates could be found for this login certificate",
-		), nil
-	}
+		validChain := b.checkForValidChain(req.Storage, trustedChains)
+		if !validChain {
+			return nil, logical.ErrorResponse(
+				"no chain containing non-revoked certificates could be found for this login certificate",
+			), nil
+		}
 
-	// Match the trusted chain with the policy
-	return b.matchPolicy(trustedChains, trusted), nil, nil
+		// Match the trusted chain with the policy
+		return b.matchPolicy(trustedChains, trusted), nil, nil
+	}
+}
+
+// matchNonCAPolicy is used to match the client cert with the registered non-CA
+// policy to establish client identity.
+func (b *backend) matchNonCAPolicy(peerCertificates []*x509.Certificate, trustedNonCAs []*ParsedCert) *ParsedCert {
+	for _, trustedNonCA := range trustedNonCAs {
+		for _, tCert := range trustedNonCA.Certificates {
+			for _, cCert := range peerCertificates {
+				if tCert.Equal(cCert) {
+					return trustedNonCA
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // matchPolicy is used to match the associated policy with the certificate that
@@ -177,8 +203,9 @@ func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCer
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert) {
+func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert, nonCAPool *x509.CertPool, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
+	nonCAPool = x509.NewCertPool()
 	names, err := store.List("cert/")
 	if err != nil {
 		b.Logger().Printf("[ERR] cert: failed to list trusted certs: %v", err)
@@ -195,15 +222,25 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 			b.Logger().Printf("[ERR] cert: failed to parse certificate for '%s'", name)
 			continue
 		}
-		for _, p := range parsed {
-			pool.AddCert(p)
-		}
+		if !parsed[0].IsCA {
+			for _, p := range parsed {
+				nonCAPool.AddCert(p)
+			}
+			trustedNonCAs = append(trustedNonCAs, &ParsedCert{
+				Entry:        entry,
+				Certificates: parsed,
+			})
+		} else {
+			for _, p := range parsed {
+				pool.AddCert(p)
+			}
 
-		// Create a ParsedCert entry
-		trusted = append(trusted, &ParsedCert{
-			Entry:        entry,
-			Certificates: parsed,
-		})
+			// Create a ParsedCert entry
+			trusted = append(trusted, &ParsedCert{
+				Entry:        entry,
+				Certificates: parsed,
+			})
+		}
 	}
 	return
 }
@@ -257,6 +294,7 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		Intermediates: x509.NewCertPool(),
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
+
 	certs := cs.PeerCertificates
 	if len(certs) == 0 {
 		return nil, nil
