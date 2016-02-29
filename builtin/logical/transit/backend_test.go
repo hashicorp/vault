@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -547,6 +548,11 @@ func TestKeyUpgrade(t *testing.T) {
 }
 
 func TestPolicyFuzzing(t *testing.T) {
+	// Don't run if not during acceptance tests
+	if os.Getenv("TF_ACC") == "" {
+		return
+	}
+
 	be := Backend()
 
 	storage := &logical.LockingInmemStorage{}
