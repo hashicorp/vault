@@ -134,10 +134,7 @@ func (b *backend) pathCertWrite(
 	}
 
 	// If the certificate is not a CA cert, then ensure that x509.ExtKeyUsageClientAuth is set
-	if !parsed[0].IsCA {
-		if parsed[0].ExtKeyUsage == nil {
-			return logical.ErrorResponse("non-CA certificates should have TLS web client authentication set as an extended key usage"), nil
-		}
+	if !parsed[0].IsCA && parsed[0].ExtKeyUsage != nil {
 		var clientAuth bool
 		for _, usage := range parsed[0].ExtKeyUsage {
 			if usage == x509.ExtKeyUsageClientAuth {
@@ -145,7 +142,7 @@ func (b *backend) pathCertWrite(
 			}
 		}
 		if !clientAuth {
-			return logical.ErrorResponse("non-CA certificates should have TLS web client authentication set as an extended key usage"), nil
+			return logical.ErrorResponse("non-CA certificates should have TLS client authentication set as an extended key usage"), nil
 		}
 	}
 

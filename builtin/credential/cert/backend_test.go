@@ -227,7 +227,7 @@ func testAccStepCert(
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
-		ErrorOk:   true,
+		ErrorOk:   expectError,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
 			"policies":     policies,
