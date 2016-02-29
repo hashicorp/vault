@@ -369,22 +369,22 @@ type TokenEntry struct {
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
 	// The name of the role. Embedded so it can be used for pathing
-	Name string `json:"name"`
+	Name string `json:"name" mapstructure:"name" structs:"name"`
 
 	// The policies that creation functions using this role can assign to a token,
 	// escaping or further locking down normal subset checking
-	AllowedPolicies []string `json:"allowed_policies"`
+	AllowedPolicies []string `json:"allowed_policies" mapstructure:"allowed_policies" structs:"allowed_policies"`
 
 	// If true, tokens created using this role will be orphans
-	Orphan bool `json:"orphan"`
+	Orphan bool `json:"orphan" mapstructure:"orphan" structs:"orphan"`
 
 	// If non-zero, tokens created using this role will be able to be renewed
 	// forever, but will have a fixed renewal period of this value
-	Period time.Duration `json:"period"`
+	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
 
 	// If set, a prefix will be set on leases, making it easier to revoke using
 	// 'revoke-prefix'.
-	Prefix string `json:"prefix"`
+	Prefix string `json:"prefix" mapstructure:"prefix" structs:"prefix"`
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -1130,7 +1130,7 @@ func (ts *TokenStore) authRenew(
 }
 
 func (ts *TokenStore) getTokenStoreRole(s logical.Storage, n string) (*tsRoleEntry, error) {
-	entry, err := s.Get("role/" + n)
+	entry, err := s.Get("roles/" + n)
 	if err != nil {
 		return nil, err
 	}
@@ -1148,17 +1148,22 @@ func (ts *TokenStore) getTokenStoreRole(s logical.Storage, n string) (*tsRoleEnt
 
 func (ts *TokenStore) tokenStoreRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List("roles/")
 	if err != nil {
 		return nil, err
 	}
 
-	return logical.ListResponse(entries), nil
+	ret := make([]string, len(entries))
+	for i, entry := range entries {
+		ret[i] = strings.TrimPrefix(entry, "roles/")
+	}
+
+	return logical.ListResponse(ret), nil
 }
 
 func (ts *TokenStore) tokenStoreRoleDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+	err := req.Storage.Delete("roles/" + data.Get("role_name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1168,7 +1173,7 @@ func (ts *TokenStore) tokenStoreRoleDelete(
 
 func (ts *TokenStore) tokenStoreRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := ts.getTokenStoreRole(req.Storage, data.Get("name").(string))
+	role, err := ts.getTokenStoreRole(req.Storage, data.Get("role_name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1211,7 +1216,7 @@ func (ts *TokenStore) tokenStoreRoleCreate(
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+	jsonEntry, err := logical.StorageEntryJSON("roles/"+name, entry)
 	if err != nil {
 		return nil, err
 	}

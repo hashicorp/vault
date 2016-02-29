@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 func getBackendConfig(c *Core) *logical.BackendConfig {
@@ -15,6 +16,38 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 			DefaultLeaseTTLVal: time.Hour * 24,
 			MaxLeaseTTLVal:     time.Hour * 24 * 30,
 		},
+	}
+}
+
+func testMakeToken(t *testing.T, ts *TokenStore, root, client, ttl string, policy []string) {
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["id"] = client
+	req.Data["policies"] = policy
+	req.Data["ttl"] = ttl
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken != client {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func testCoreMakeToken(t *testing.T, c *Core, root, client, ttl string, policy []string) {
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
+	req.ClientToken = root
+	req.Data["id"] = client
+	req.Data["policies"] = policy
+	req.Data["ttl"] = ttl
+
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken != client {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 
@@ -1074,34 +1107,106 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	}
 }
 
-func testMakeToken(t *testing.T, ts *TokenStore, root, client, ttl string, policy []string) {
-	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+func TestTokenStore_RoleCRUD(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "roles/test")
 	req.ClientToken = root
-	req.Data["id"] = client
-	req.Data["policies"] = policy
-	req.Data["ttl"] = ttl
 
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Auth.ClientToken != client {
-		t.Fatalf("bad: %#v", resp)
+	if resp != nil {
+		t.Fatalf("should not see a role")
 	}
-}
 
-func testCoreMakeToken(t *testing.T, c *Core, root, client, ttl string, policy []string) {
-	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
-	req.ClientToken = root
-	req.Data["id"] = client
-	req.Data["policies"] = policy
-	req.Data["ttl"] = ttl
+	req.Operation = logical.UpdateOperation
+	req.Data = map[string]interface{}{
+		"orphan":           true,
+		"period":           "72h",
+		"allowed_policies": "test1,test2",
+		"prefix":           "happenin",
+	}
 
-	resp, err := c.HandleRequest(req)
+	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp.Auth.ClientToken != client {
-		t.Fatalf("bad: %#v", resp)
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Data = map[string]interface{}{}
+
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("got a nil response")
+	}
+
+	var actual tsRoleEntry
+	err = mapstructure.WeakDecode(resp.Data, &actual)
+	if err != nil {
+		t.Fatalf("error decoding role json: %v", err)
+	}
+
+	expected := tsRoleEntry{
+		Name:            "test",
+		Orphan:          true,
+		Period:          72 * time.Hour,
+		AllowedPolicies: []string{"test1", "test2"},
+		Prefix:          "happenin",
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
+	}
+
+	req.Operation = logical.ListOperation
+	req.Path = "roles"
+	req.Data = map[string]interface{}{}
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("got a nil response")
+	}
+	keysInt, ok := resp.Data["keys"]
+	if !ok {
+		t.Fatalf("did not find keys in response")
+	}
+	keys, ok := keysInt.([]string)
+	if !ok {
+		t.Fatalf("could not convert keys interface to key list")
+	}
+	if len(keys) != 1 {
+		t.Fatalf("unexpected number of keys: %d", len(keys))
+	}
+	if keys[0] != "test" {
+		t.Fatalf("expected \"test\", got \"%s\"", keys[0])
+	}
+
+	req.Operation = logical.DeleteOperation
+	req.Path = "roles/test"
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Operation = logical.ReadOperation
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
 	}
 }
