@@ -138,7 +138,7 @@ func (b *backend) pathCertWrite(
 		if parsed[0].ExtKeyUsage == nil {
 			return logical.ErrorResponse("non-CA certificates should have TLS web client authentication set as an extended key usage"), nil
 		}
-		var bool clientAuth
+		var clientAuth bool
 		for _, usage := range parsed[0].ExtKeyUsage {
 			if usage == x509.ExtKeyUsageClientAuth {
 				clientAuth = true

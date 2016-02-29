@@ -27,6 +27,33 @@ func testFactory(t *testing.T) logical.Backend {
 	return b
 }
 
+// Test the certificates being registered to the backend
+func TestBackend_CertWrites(t *testing.T) {
+	// CA cert
+	ca1, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Non CA Cert
+	ca2, err := ioutil.ReadFile("test-fixtures/keys/cert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// Non CA cert without TLS web client authentication
+	ca3, err := ioutil.ReadFile("test-fixtures/noclientauthcert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", ca1, "foo", false),
+			testAccStepCert(t, "web", ca2, "foo", false),
+			testAccStepCert(t, "web", ca3, "foo", true),
+		},
+	})
+}
+
 // Test a client trusted by a CA
 func TestBackend_basic_CA(t *testing.T) {
 	connState := testConnState(t, "test-fixtures/keys/cert.pem",
@@ -38,7 +65,7 @@ func TestBackend_basic_CA(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepCert(t, "web", ca, "foo"),
+			testAccStepCert(t, "web", ca, "foo", false),
 			testAccStepLogin(t, connState),
 			testAccStepCertLease(t, "web", ca, "foo"),
 			testAccStepCertTTL(t, "web", ca, "foo"),
@@ -86,7 +113,7 @@ func TestBackend_basic_singleCert(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepCert(t, "web", ca, "foo"),
+			testAccStepCert(t, "web", ca, "foo", false),
 			testAccStepLogin(t, connState),
 		},
 	})
@@ -196,15 +223,22 @@ func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logica
 }
 
 func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
+		ErrorOk:   true,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
 			"policies":     policies,
 			"display_name": name,
 			"lease":        1000,
+		},
+		Check: func(resp *logical.Response) error {
+			if resp == nil && expectError {
+				return fmt.Errorf("expected error but received nil")
+			}
+			return nil
 		},
 	}
 }
