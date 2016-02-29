@@ -127,6 +127,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"id":           root,
 			"ttl":          float64(0),
 			"creation_ttl": float64(0),
+			"role":         "",
 		},
 		"warnings": nilWarnings,
 		"auth":     nil,

@@ -161,7 +161,7 @@ expression ` + prefixSanitize.String(),
 			},
 
 			&framework.Path{
-				Pattern: "create-orphan/$",
+				Pattern: "create-orphan$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: t.handleCreateOrphan,

@@ -872,6 +872,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"num_uses":     0,
 		"creation_ttl": int64(0),
 		"ttl":          int64(0),
+		"role":         "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -904,6 +905,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"num_uses":     0,
 		"creation_ttl": int64(3600),
 		"ttl":          int64(3600),
+		"role":         "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1006,6 +1008,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"num_uses":     0,
 		"creation_ttl": int64(0),
 		"ttl":          int64(0),
+		"role":         "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
