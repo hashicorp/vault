@@ -1322,8 +1322,9 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatal("error stepping down core 1")
 	}
 
-	// Give time to switch leaders
-	time.Sleep(2 * time.Second)
+	// Give time to switch leaders -- core 1 will still be waiting on its
+	// cooling off period so give it a full 10 seconds to recover
+	time.Sleep(10 * time.Second)
 
 	// Core2 should be in standby
 	standby, err = core2.Standby()
