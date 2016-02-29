@@ -29,9 +29,9 @@ func testFactory(t *testing.T) logical.Backend {
 
 // Test a client trusted by a CA
 func TestBackend_basic_CA(t *testing.T) {
-	connState := testConnState(t, "../../../test/keys/cert.pem",
-		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
-	ca, err := ioutil.ReadFile("../../../test/root/rootcacert.pem")
+	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -51,13 +51,13 @@ func TestBackend_basic_CA(t *testing.T) {
 
 // Test CRL behavior
 func TestBackend_CRLs(t *testing.T) {
-	connState := testConnState(t, "../../../test/keys/cert.pem",
-		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
-	ca, err := ioutil.ReadFile("../../../test/root/rootcacert.pem")
+	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	crl, err := ioutil.ReadFile("../../../test/root/root.crl")
+	crl, err := ioutil.ReadFile("test-fixtures/root/root.crl")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -77,9 +77,9 @@ func TestBackend_CRLs(t *testing.T) {
 
 // Test a self-signed client that is trusted
 func TestBackend_basic_singleCert(t *testing.T) {
-	connState := testConnState(t, "../../../test/keys/cert.pem",
-		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
-	ca, err := ioutil.ReadFile("../../../test/root/rootcacert.pem")
+	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -94,8 +94,8 @@ func TestBackend_basic_singleCert(t *testing.T) {
 
 // Test an untrusted self-signed client
 func TestBackend_untrusted(t *testing.T) {
-	connState := testConnState(t, "../../../test/keys/cert.pem",
-		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
+	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
