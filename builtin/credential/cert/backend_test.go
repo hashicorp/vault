@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -28,9 +29,9 @@ func testFactory(t *testing.T) logical.Backend {
 
 // Test a client trusted by a CA
 func TestBackend_basic_CA(t *testing.T) {
-	connState := testConnState(t, "../../../test/key/ourdomain.cer",
-		"../../../test/key/ourdomain.key")
-	ca, err := ioutil.ReadFile("../../../test/ca/root.cer")
+	connState := testConnState(t, "../../../test/keys/cert.pem",
+		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("../../../test/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -50,13 +51,13 @@ func TestBackend_basic_CA(t *testing.T) {
 
 // Test CRL behavior
 func TestBackend_CRLs(t *testing.T) {
-	connState := testConnState(t, "../../../test/key/ourdomain.cer",
-		"../../../test/key/ourdomain.key")
-	ca, err := ioutil.ReadFile("../../../test/ca/root.cer")
+	connState := testConnState(t, "../../../test/keys/cert.pem",
+		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("../../../test/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	crl, err := ioutil.ReadFile("../../../test/ca/root.crl")
+	crl, err := ioutil.ReadFile("../../../test/root/root.crl")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -76,9 +77,9 @@ func TestBackend_CRLs(t *testing.T) {
 
 // Test a self-signed client that is trusted
 func TestBackend_basic_singleCert(t *testing.T) {
-	connState := testConnState(t, "../../../test/unsigned/cert.pem",
-		"../../../test/unsigned/key.pem")
-	ca, err := ioutil.ReadFile("../../../test/unsigned/cert.pem")
+	connState := testConnState(t, "../../../test/keys/cert.pem",
+		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("../../../test/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -93,8 +94,8 @@ func TestBackend_basic_singleCert(t *testing.T) {
 
 // Test an untrusted self-signed client
 func TestBackend_untrusted(t *testing.T) {
-	connState := testConnState(t, "../../../test/unsigned/cert.pem",
-		"../../../test/unsigned/key.pem")
+	connState := testConnState(t, "../../../test/keys/cert.pem",
+		"../../../test/keys/key.pem", "../../../test/root/rootcacert.pem")
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -128,8 +129,8 @@ func testAccStepReadCRL(t *testing.T, connState tls.ConnectionState) logicaltest
 			if len(crlInfo.Serials) != 1 {
 				t.Fatalf("bad: expected CRL with length 1, got %d", len(crlInfo.Serials))
 			}
-			if _, ok := crlInfo.Serials["13"]; !ok {
-				t.Fatalf("bad: serial number 13 not found in CRL")
+			if _, ok := crlInfo.Serials["637101449987587619778072672905061040630001617053"]; !ok {
+				t.Fatalf("bad: expected serial number not found in CRL")
 			}
 			return nil
 		},
@@ -249,15 +250,20 @@ func testAccStepCertNoLease(
 	}
 }
 
-func testConnState(t *testing.T, certPath, keyPath string) tls.ConnectionState {
+func testConnState(t *testing.T, certPath, keyPath, rootCertPath string) tls.ConnectionState {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	rootCAs, err := api.LoadCACert(rootCertPath)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	listenConf := &tls.Config{
 		Certificates:       []tls.Certificate{cert},
 		ClientAuth:         tls.RequestClientCert,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: false,
+		RootCAs:            rootCAs,
 	}
 	dialConf := new(tls.Config)
 	*dialConf = *listenConf
