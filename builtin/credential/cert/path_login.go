@@ -142,28 +142,28 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	if len(trustedNonCAs) != 0 {
 		// Match the trusted chain with the policy
 		return b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs), nil, nil
-	} else {
-		// Validate the connection state is trusted
-		trustedChains, err := validateConnState(roots, connState)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// If no trusted chain was found, client is not authenticated
-		if len(trustedChains) == 0 {
-			return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
-		}
-
-		validChain := b.checkForValidChain(req.Storage, trustedChains)
-		if !validChain {
-			return nil, logical.ErrorResponse(
-				"no chain containing non-revoked certificates could be found for this login certificate",
-			), nil
-		}
-
-		// Match the trusted chain with the policy
-		return b.matchPolicy(trustedChains, trusted), nil, nil
 	}
+
+	// Validate the connection state is trusted
+	trustedChains, err := validateConnState(roots, connState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// If no trusted chain was found, client is not authenticated
+	if len(trustedChains) == 0 {
+		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
+	}
+
+	validChain := b.checkForValidChain(req.Storage, trustedChains)
+	if !validChain {
+		return nil, logical.ErrorResponse(
+			"no chain containing non-revoked certificates could be found for this login certificate",
+		), nil
+	}
+
+	// Match the trusted chain with the policy
+	return b.matchPolicy(trustedChains, trusted), nil, nil
 }
 
 // matchNonCAPolicy is used to match the client cert with the registered non-CA
@@ -171,7 +171,7 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 func (b *backend) matchNonCAPolicy(clientCert *x509.Certificate, trustedNonCAs []*ParsedCert) *ParsedCert {
 	for _, trustedNonCA := range trustedNonCAs {
 		tCert := trustedNonCA.Certificates[0]
-		if tCert.SerialNumber.String() == clientCert.SerialNumber.String() && bytes.Equal(tCert.RawIssuer, clientCert.RawIssuer) {
+		if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 && bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
 			return trustedNonCA
 		}
 	}

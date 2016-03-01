@@ -137,8 +137,9 @@ func (b *backend) pathCertWrite(
 	if !parsed[0].IsCA && parsed[0].ExtKeyUsage != nil {
 		var clientAuth bool
 		for _, usage := range parsed[0].ExtKeyUsage {
-			if usage == x509.ExtKeyUsageClientAuth {
+			if usage == x509.ExtKeyUsageClientAuth || usage == x509.ExtKeyUsageAny {
 				clientAuth = true
+				break
 			}
 		}
 		if !clientAuth {
