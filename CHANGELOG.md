@@ -1,11 +1,11 @@
 ## 0.5.2 (Unreleased)
 
 IMPROVEMENTS:
-
  * credential/cert: Non-CA certificates can be used for authentication. They
    must be matched exactly (issuer and serial number) for authentication, and
    the certificate must carry the client authentication or 'any' extended usage
-   attributes. [GH-1148]
+   attributes. [GH-1153]
+ * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
 
 BUG FIXES:
 
