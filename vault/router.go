@@ -105,7 +105,7 @@ func (r *Router) Remount(src, dst string) error {
 }
 
 // Taint is used to mark a path as tainted. This means only RollbackOperation
-// RenewOperation requests are allowed to proceed
+// RevokeOperation requests are allowed to proceed
 func (r *Router) Taint(path string) error {
 	r.l.Lock()
 	defer r.l.Unlock()
