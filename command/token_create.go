@@ -105,6 +105,8 @@ Usage: vault token-create [options]
   Metadata associated with the token (specified with "-metadata") is
   written to the audit log when the token is used.
 
+  If a role is specified, the role may override parameters specified here.
+
 General Options:
 
   ` + generalOptionsUsage() + `
@@ -145,6 +147,10 @@ Token Options:
   -format=table           The format for output. By default it is a whitespace-
                           delimited table. This can also be json or yaml.
 
+  -role=name              If set, the token will be created against the named
+                          role. The role may override other parameters. This
+                          requires the client to have permissions on the
+                          appropriate endpoint (auth/token/create/<name>).
 `
 	return strings.TrimSpace(helpText)
 }

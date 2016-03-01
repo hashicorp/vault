@@ -101,8 +101,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					logical.ListOperation: t.tokenStoreRoleList,
 				},
 
-				//				HelpSynopsis:    pathRoleHelpSyn,
-				//				HelpDescription: pathRoleHelpDesc,
+				HelpSynopsis:    tokenListRolesHelp,
+				HelpDescription: tokenListRolesHelp,
 			},
 
 			&framework.Path{
@@ -159,8 +159,8 @@ expression ` + prefixSanitize.String(),
 					logical.DeleteOperation: t.tokenStoreRoleDelete,
 				},
 
-				//				HelpSynopsis:    pathRoleHelpSyn,
-				//				HelpDescription: pathRoleHelpDesc,
+				HelpSynopsis:    tokenPathRolesHelp,
+				HelpDescription: tokenPathRolesHelp,
 			},
 
 			&framework.Path{
@@ -188,8 +188,8 @@ expression ` + prefixSanitize.String(),
 					logical.UpdateOperation: t.handleCreateRole,
 				},
 
-				//HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
-				//HelpDescription: strings.TrimSpace(tokenCreateOrphanHelp),
+				HelpSynopsis:    strings.TrimSpace(tokenCreateRoleHelp),
+				HelpDescription: strings.TrimSpace(tokenCreateRoleHelp),
 			},
 
 			&framework.Path{
@@ -1239,7 +1239,10 @@ which are enforced on every request. This backend also allows for generating sub
 as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp       = `The token create path is used to create new tokens.`
 	tokenCreateOrphanHelp = `The token create path is used to create new orphan tokens.`
+	tokenCreateRoleHelp   = `This token create path is used to create new tokens adhering to the given role.`
+	tokenListRolesHelp    = `This endpoint lists configured roles.`
 	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
+	tokenPathRolesHelp    = `This endpoint allows creating, reading, and deleting roles.`
 	tokenRevokeHelp       = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
 	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
