@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -14,32 +14,45 @@ type TokenRenewCommand struct {
 }
 
 func (c *TokenRenewCommand) Run(args []string) int {
-	var format string
+	var format, increment string
 	flags := c.Meta.FlagSet("token-renew", FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
+	flags.StringVar(&increment, "increment", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
 	args = flags.Args()
-	if len(args) < 1 {
+	if len(args) > 2 {
 		flags.Usage()
 		c.Ui.Error(fmt.Sprintf(
-			"\ntoken-renew expects at least one argument"))
+			"\ntoken-renew expects at most two arguments"))
 		return 1
 	}
 
-	var increment int
-	token := args[0]
-	if len(args) > 1 {
-		value, err := strconv.ParseInt(args[1], 10, 0)
+	var token string
+	if len(args) > 0 {
+		token = args[0]
+	}
+
+	var inc int
+	if len(args) == 2 {
+		dur, err := time.ParseDuration(args[1])
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Invalid increment: %s", err))
 			return 1
 		}
 
-		increment = int(value)
+		inc = int(dur / time.Second)
+	} else if increment != "" {
+		dur, err := time.ParseDuration(increment)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Invalid increment: %s", err))
+			return 1
+		}
+
+		inc = int(dur / time.Second)
 	}
 
 	client, err := c.Client()
@@ -52,10 +65,10 @@ func (c *TokenRenewCommand) Run(args []string) int {
 	// If the given token is the same as the client's, use renew-self instead
 	// as this is far more likely to be allowed via policy
 	var secret *api.Secret
-	if client.Token() == token {
-		secret, err = client.Auth().Token().RenewSelf(increment)
+	if token == "" {
+		secret, err = client.Auth().Token().RenewSelf(inc)
 	} else {
-		secret, err = client.Auth().Token().Renew(token, increment)
+		secret, err = client.Auth().Token().Renew(token, inc)
 	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -72,23 +85,31 @@ func (c *TokenRenewCommand) Synopsis() string {
 
 func (c *TokenRenewCommand) Help() string {
 	helpText := `
-Usage: vault token-renew [options] token [increment]
+Usage: vault token-renew [options] [token] [increment]
 
-  Renew an auth token, extending the amount of time it can be used.
-  Token is renewable only if there is a lease associated with it.
+  Renew an auth token, extending the amount of time it can be used. If a token
+  is given to the command, '/auth/token/renew' will be called with the given
+  token; otherwise, '/auth/token/renew-self' will be called with the client
+  token.
 
-  This command is similar to "renew", but "renew" is only for lease IDs.
-  This command is only for tokens.
+  This command is similar to "renew", but "renew" is only for leases; this
+  command is only for tokens.
 
-  An optional increment can be given to request a certain number of
-  seconds to increment the lease. This request is advisory; Vault may not
-  adhere to it at all.
+  An optional increment can be given to request a certain number of seconds to
+  increment the lease. This request is advisory; Vault may not adhere to it at
+  all. If a token is being passed in on the command line, the increment can as
+  well; otherwise it must be passed in via the '-increment' flag.
 
 General Options:
 
   ` + generalOptionsUsage() + `
 
 Token Renew Options:
+
+  -increment=3600         The desired increment. If not supplied, Vault will
+                          use the default TTL. If supplied, it may still be
+                          ignored. This can be submitted as an integer number
+                          of seconds or a string duration (e.g. "72h").
 
   -format=table           The format for output. By default it is a whitespace-
                           delimited table. This can also be json or yaml.
