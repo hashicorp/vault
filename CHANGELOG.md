@@ -1,11 +1,18 @@
 ## 0.5.2 (Unreleased)
 
+IMPROVEMENTS:
+
+ * credential/cert: Non-CA certificates can be used for authentication. They
+   must be matched exactly (issuer and serial number) for authentication, and
+   the certificate must carry the client authentication or 'any' extended usage
+   attributes. [GH-1148]
+
 BUG FIXES:
 
-* logical/cassandra: Apply hyphen/underscore replacement to the entire
-  generated username, not just the UUID, in order to handle token display name
-  hyphens [GH-1140]
-* physical/etcd: Output actual error when cluster sync fails [GH-1141]
+ * logical/cassandra: Apply hyphen/underscore replacement to the entire
+   generated username, not just the UUID, in order to handle token display name
+   hyphens [GH-1140]
+ * physical/etcd: Output actual error when cluster sync fails [GH-1141]
 
 ## 0.5.1 (February 25th, 2016)
  
