@@ -140,8 +140,10 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
-		// Match the trusted chain with the policy
-		return b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs), nil, nil
+		policy := b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs)
+		if policy != nil {
+			return policy, nil, nil
+		}
 	}
 
 	// Validate the connection state is trusted
