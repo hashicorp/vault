@@ -1,7 +1,9 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -1211,5 +1213,274 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 	if resp != nil {
 		t.Fatalf("expected a nil response")
+	}
+}
+
+func TestTokenStore_RoleAllowedRoles(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies": "test1,test2",
+	}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Data = map[string]interface{}{}
+
+	req.Path = "create/test"
+	req.Data["policies"] = []string{"foo"}
+	resp, err = ts.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"test2"}
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_RoleOrphan(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"orphan": true,
+	}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Path = "create/test"
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, err := ts.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if out.Parent != "" {
+		t.Fatalf("expected orphan token, but found a parent")
+	}
+
+	if !strings.HasPrefix(out.Path, "auth/token/create/test") {
+		t.Fatalf("expected role in path but did not find it")
+	}
+}
+
+func TestTokenStore_RolePrefix(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"prefix": "happenin",
+	}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Path = "create/test"
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, err := ts.Lookup(resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !strings.HasPrefix(out.Path, "auth/token/create/test") {
+		t.Fatalf("expected role in path but did not find it")
+	}
+
+	if !strings.HasPrefix(out.Path, "auth/token/create/test/happenin") {
+		t.Fatalf("expected role in path but did not find it")
+	}
+}
+
+func TestTokenStore_RolePeriod(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.defaultLeaseTTL = 5 * time.Second
+	core.maxLeaseTTL = 5 * time.Second
+
+	// Note: these requests are sent to Core since Core handles registration
+	// with the expiration manager and we need the storage to be consistent
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"period": 300,
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// This first set of logic is to verify that a normal non-root token will
+	// be given a TTL of 5 seconds, and that renewing will not cause the TTL to
+	// increase since that's the configured backend max. Then we verify that
+	// increment works.
+	{
+		req.Path = "auth/token/create"
+		req.Data = map[string]interface{}{
+			"policies": []string{"default"},
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl > 5 {
+			t.Fatalf("TTL too large")
+		}
+
+		// Let the TTL go down a bit to 3 seconds
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 3 {
+			t.Fatalf("TTL too large")
+		}
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 1 {
+			t.Fatalf("TTL too large")
+		}
+	}
+
+	// Now we create a token against the role. We should be able to renew;
+	// increment should be ignored as well.
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create/test"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 299 {
+			t.Fatalf("TTL too small")
+		}
+
+		// Let the TTL go down a bit to 3 seconds
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl < 299 {
+			t.Fatalf("TTL too small")
+		}
 	}
 }

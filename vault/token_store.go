@@ -29,6 +29,9 @@ const (
 	// tokenSubPath is the sub-path used for the token store
 	// view. This is nested under the system view.
 	tokenSubPath = "token/"
+
+	// rolesPrefix is the prefix used to store role information
+	rolesPrefix = "roles/"
 )
 
 var (
@@ -311,6 +314,7 @@ expression ` + prefixSanitize.String(),
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
+						Default:     0,
 						Description: "The desired increment in seconds to the token expiration",
 					},
 				},
@@ -333,6 +337,7 @@ expression ` + prefixSanitize.String(),
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
+						Default:     0,
 						Description: "The desired increment in seconds to the token expiration",
 					},
 				},
@@ -647,7 +652,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 func (ts *TokenStore) handleCreateRole(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("role_name").(string)
-	roleEntry, err := ts.getTokenStoreRole(req.Storage, name)
+	roleEntry, err := ts.getTokenStoreRole(name)
 	if err != nil {
 		return nil, err
 	}
@@ -1082,7 +1087,7 @@ func (ts *TokenStore) authRenew(
 		return nil, fmt.Errorf("request auth is nil")
 	}
 
-	f := framework.LeaseExtend(0, 0, ts.System())
+	f := framework.LeaseExtend(req.Auth.Increment, 0, ts.System())
 
 	idInt, ok := req.Auth.InternalData["id"]
 	if !ok {
@@ -1108,7 +1113,7 @@ func (ts *TokenStore) authRenew(
 		return f(req, d)
 	}
 
-	role, err := ts.getTokenStoreRole(req.Storage, te.Role)
+	role, err := ts.getTokenStoreRole(te.Role)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
 	}
@@ -1129,8 +1134,8 @@ func (ts *TokenStore) authRenew(
 	return f(req, d)
 }
 
-func (ts *TokenStore) getTokenStoreRole(s logical.Storage, n string) (*tsRoleEntry, error) {
-	entry, err := s.Get("roles/" + n)
+func (ts *TokenStore) getTokenStoreRole(name string) (*tsRoleEntry, error) {
+	entry, err := ts.view.Get(fmt.Sprintf("%s%s", rolesPrefix, name))
 	if err != nil {
 		return nil, err
 	}
@@ -1148,14 +1153,14 @@ func (ts *TokenStore) getTokenStoreRole(s logical.Storage, n string) (*tsRoleEnt
 
 func (ts *TokenStore) tokenStoreRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("roles/")
+	entries, err := ts.view.List(rolesPrefix)
 	if err != nil {
 		return nil, err
 	}
 
 	ret := make([]string, len(entries))
 	for i, entry := range entries {
-		ret[i] = strings.TrimPrefix(entry, "roles/")
+		ret[i] = strings.TrimPrefix(entry, rolesPrefix)
 	}
 
 	return logical.ListResponse(ret), nil
@@ -1163,7 +1168,7 @@ func (ts *TokenStore) tokenStoreRoleList(
 
 func (ts *TokenStore) tokenStoreRoleDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("roles/" + data.Get("role_name").(string))
+	err := ts.view.Delete(fmt.Sprintf("%s%s", rolesPrefix, data.Get("role_name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -1173,7 +1178,7 @@ func (ts *TokenStore) tokenStoreRoleDelete(
 
 func (ts *TokenStore) tokenStoreRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := ts.getTokenStoreRole(req.Storage, data.Get("role_name").(string))
+	role, err := ts.getTokenStoreRole(data.Get("role_name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1216,11 +1221,11 @@ func (ts *TokenStore) tokenStoreRoleCreate(
 	}
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("roles/"+name, entry)
+	jsonEntry, err := logical.StorageEntryJSON(fmt.Sprintf("%s%s", rolesPrefix, name), entry)
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonEntry); err != nil {
+	if err := ts.view.Put(jsonEntry); err != nil {
 		return nil, err
 	}
 
