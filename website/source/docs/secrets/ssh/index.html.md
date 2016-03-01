@@ -207,7 +207,7 @@ Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
 `cidr_list` is a comma separated list of CIDR blocks for which a role can generate
-credentials for. If this is empty, the role can only generate credentials if it belongs
+credentials. If this is empty, the role can only generate credentials if it belongs
 to the set of zero-address roles.
 
 Zero-address roles, configured via `/ssh/config/zeroaddress` endpoint, takes comma separated list
@@ -621,10 +621,8 @@ username@ip:~$
       <li>
         <span class="param">roles</span>
         <span class="param-flags">required</span>
-        (String)
-        Comma separated list of role names which allows credentials to be requested
-        for any IP address. CIDR blocks previously registered under these roles will
-        be ignored.
+        A string containing comma separated list of role names which allows credentials to be requested
+        for any IP address. CIDR blocks previously registered under these roles will be ignored.
       </li>
     </ul>
   </dd>
