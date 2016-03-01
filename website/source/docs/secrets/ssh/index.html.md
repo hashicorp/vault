@@ -206,8 +206,12 @@ $ vault write ssh/roles/dynamic_key_role \
 Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
-`cidr_list` is optional and defaults to the zero address (0.0.0.0/0), e.g. all
-hosts.
+`cidr_list` is a comma separated list of CIDR blocks for which a role can generate
+credentials for. If this is empty, the role can only generate credentials if it belongs
+to the set of zero-address roles.
+
+Zero-address roles, configured via `/ssh/config/zeroaddress` endpoint, takes comma separated list
+of role names that can generate credentials for any IP address.
 
 Use the `install_script` option to provide an install script if the remote
 hosts do not resemble a typical Linux machine. The default script is compiled
@@ -388,7 +392,6 @@ username@ip:~$
 	      (String)
 	      Comma separated list of CIDR blocks for which the role is
         applicable for.	CIDR blocks can belong to more than one role.
-        Defaults to the zero address (0.0.0.0/0).
       </li>
       <li>
         <span class="param">exclude_cidr_list</span>
@@ -559,6 +562,102 @@ username@ip:~$
   <dd>
     A `204` response code.
   </dd>
+
+### /ssh/config/zeroaddress
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the list of configured zero-address roles.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/ssh/config/zeroaddress`</dd>
+
+  <dt>Parameters</dt>
+  <dd>None</dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```json
+{  
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{  
+      "roles":[  
+         "otp_key_role"
+      ]
+   },
+   "warnings":null,
+   "auth":null
+}
+```
+
+  </dd>
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configures zero-address roles.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/ssh/config/zeroaddress`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">roles</span>
+        <span class="param-flags">required</span>
+        (String)
+        Comma separated list of role names which allows credentials to be requested
+        for any IP address. CIDR blocks previously registered under these roles will
+        be ignored.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the zero-address roles configuration.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/ssh/config/zeroaddress`</dd>
+
+  <dt>Parameters</dt>
+  <dd>None</dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+
+
+
 ### /ssh/creds/
 #### POST
 
