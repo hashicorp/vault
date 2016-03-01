@@ -476,7 +476,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
         "period": 3600,
         "allowed_policies": ["web", "stage"],
         "orphan": true,
-        "prefix": ""
+        "path_suffix": ""
       }
     }
     ```
@@ -565,14 +565,14 @@ of the header should be "X-Vault-Token" and the value should be the token.
         string (e.g. `"72h"`).
       </li>
       <li>
-        <span class="param">prefix</span>
+        <span class="param">path_suffix</span>
         <span class="param-flags">optional</span>
-        If set, tokens created against this role will have the given prefix as
+        If set, tokens created against this role will have the given suffix as
         part of their path in addition to the role name. This can be useful in
         certain scenarios, such as keeping the same role name in the future but
         revoking all tokens created against it before some point in time. The
-        prefix can be changed, allowing new callers to have the new prefix as
-        part of their path, and then tokens with the old prefix can be revoked
+        suffix can be changed, allowing new callers to have the new suffix as
+        part of their path, and then tokens with the old suffix can be revoked
         via `revoke-prefix`.
       </li>
     </ul>

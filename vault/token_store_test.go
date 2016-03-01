@@ -1131,7 +1131,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"orphan":           true,
 		"period":           "72h",
 		"allowed_policies": "test1,test2",
-		"prefix":           "happenin",
+		"path_suffix":      "happenin",
 	}
 
 	resp, err = ts.HandleRequest(req)
@@ -1164,7 +1164,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		Orphan:          true,
 		Period:          72 * time.Hour,
 		AllowedPolicies: []string{"test1", "test2"},
-		Prefix:          "happenin",
+		PathSuffix:      "happenin",
 	}
 
 	if !reflect.DeepEqual(expected, actual) {
@@ -1292,13 +1292,13 @@ func TestTokenStore_RoleOrphan(t *testing.T) {
 	}
 }
 
-func TestTokenStore_RolePrefix(t *testing.T) {
+func TestTokenStore_RolePathSuffix(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
-		"prefix": "happenin",
+		"path_suffix": "happenin",
 	}
 
 	resp, err := ts.HandleRequest(req)
@@ -1323,11 +1323,7 @@ func TestTokenStore_RolePrefix(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if !strings.HasPrefix(out.Path, "auth/token/create/test") {
-		t.Fatalf("expected role in path but did not find it")
-	}
-
-	if !strings.HasPrefix(out.Path, "auth/token/create/test/happenin") {
+	if out.Path != "auth/token/create/test/happenin" {
 		t.Fatalf("expected role in path but did not find it")
 	}
 }

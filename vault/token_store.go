@@ -38,8 +38,8 @@ var (
 	// displayNameSanitize is used to sanitize a display name given to a token.
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 
-	// prefixSanitize is used to ensure a prefix in a role is valid.
-	prefixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
+	// pathSuffixSanitize is used to ensure a path suffix in a role is valid.
+	pathSuffixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -141,15 +141,15 @@ This takes an integer number of seconds,
 or a string duration (e.g. "24h").`,
 					},
 
-					"prefix": &framework.FieldSchema{
+					"path_suffix": &framework.FieldSchema{
 						Type:    framework.TypeString,
 						Default: "",
 						Description: `If set, tokens created via this role
-will contain the given prefix as a part of
+will contain the given suffix as a part of
 their path. This can be used to assist use
 of the 'revoke-prefix' endpoint later on.
-The given prefix must match the regular
-expression ` + prefixSanitize.String(),
+The given suffix must match the regular
+expression ` + pathSuffixSanitize.String(),
 					},
 				},
 
@@ -185,7 +185,7 @@ expression ` + prefixSanitize.String(),
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: t.handleCreateRole,
+					logical.UpdateOperation: t.handleCreateAgainstRole,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateRoleHelp),
@@ -387,9 +387,9 @@ type tsRoleEntry struct {
 	// forever, but will have a fixed renewal period of this value
 	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
 
-	// If set, a prefix will be set on leases, making it easier to revoke using
-	// 'revoke-prefix'.
-	Prefix string `json:"prefix" mapstructure:"prefix" structs:"prefix"`
+	// If set, a suffix will be set on the token path, making it easier to
+	// revoke using 'revoke-prefix'.
+	PathSuffix string `json:"path_suffix" mapstructure:"path_suffix" structs:"path_suffix"`
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -648,11 +648,11 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	return nil
 }
 
-// handleCreateRole handles the auth/token/create path for a role
-func (ts *TokenStore) handleCreateRole(
+// handleCreateAgainstRole handles the auth/token/create path for a role
+func (ts *TokenStore) handleCreateAgainstRole(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("role_name").(string)
-	roleEntry, err := ts.getTokenStoreRole(name)
+	roleEntry, err := ts.tokenStoreRole(name)
 	if err != nil {
 		return nil, err
 	}
@@ -733,8 +733,8 @@ func (ts *TokenStore) handleCreateCommon(
 		te.Role = role.Name
 
 		te.Path = fmt.Sprintf("%s/%s", te.Path, role.Name)
-		if role.Prefix != "" {
-			te.Path = fmt.Sprintf("%s/%s", te.Path, role.Prefix)
+		if role.PathSuffix != "" {
+			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
 		}
 	}
 
@@ -1113,7 +1113,7 @@ func (ts *TokenStore) authRenew(
 		return f(req, d)
 	}
 
-	role, err := ts.getTokenStoreRole(te.Role)
+	role, err := ts.tokenStoreRole(te.Role)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
 	}
@@ -1134,7 +1134,7 @@ func (ts *TokenStore) authRenew(
 	return f(req, d)
 }
 
-func (ts *TokenStore) getTokenStoreRole(name string) (*tsRoleEntry, error) {
+func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
 	entry, err := ts.view.Get(fmt.Sprintf("%s%s", rolesPrefix, name))
 	if err != nil {
 		return nil, err
@@ -1178,7 +1178,7 @@ func (ts *TokenStore) tokenStoreRoleDelete(
 
 func (ts *TokenStore) tokenStoreRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := ts.getTokenStoreRole(data.Get("role_name").(string))
+	role, err := ts.tokenStoreRole(data.Get("role_name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1200,19 +1200,19 @@ func (ts *TokenStore) tokenStoreRoleCreate(
 		return logical.ErrorResponse("role name cannot be empty"), nil
 	}
 
-	prefix := data.Get("prefix").(string)
-	if prefix != "" {
-		matched := prefixSanitize.MatchString(prefix)
+	pathSuffix := data.Get("path_suffix").(string)
+	if pathSuffix != "" {
+		matched := pathSuffixSanitize.MatchString(pathSuffix)
 		if !matched {
-			return logical.ErrorResponse(fmt.Sprintf("given role prefix contains invalid characters; must match %s", prefixSanitize.String())), nil
+			return logical.ErrorResponse(fmt.Sprintf("given role path suffix contains invalid characters; must match %s", pathSuffixSanitize.String())), nil
 		}
 	}
 
 	entry := &tsRoleEntry{
-		Name:   name,
-		Orphan: data.Get("orphan").(bool),
-		Period: time.Second * time.Duration(data.Get("period").(int)),
-		Prefix: prefix,
+		Name:       name,
+		Orphan:     data.Get("orphan").(bool),
+		Period:     time.Second * time.Duration(data.Get("period").(int)),
+		PathSuffix: pathSuffix,
 	}
 
 	allowedPolicies := data.Get("allowed_policies").(string)
