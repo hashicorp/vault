@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -252,6 +253,28 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
 				HelpDescription: strings.TrimSpace(tokenRenewHelp),
+			},
+
+			&framework.Path{
+				Pattern: "capabilities",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token of which capabilities are being requested",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path for which token's capabilities are being fetched",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleCapabilitiesUpdate,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenCapabilitiesHelp),
+				HelpDescription: strings.TrimSpace(tokenCapabilitiesHelp),
 			},
 		},
 	}
@@ -528,6 +551,24 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 		return fmt.Errorf("failed to revoke entry: %v", err)
 	}
 	return nil
+}
+
+// handleCapabilitiesUpdate handles the auth/token/capabilities path for fetching
+// capabilities of a token on a given path
+func (ts *TokenStore) handleCapabilitiesUpdate(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("vishal: vault/token_store.go: handleCapabilitiesRead: req:%#v data:%#v\n", req, d)
+	log.Println(d.Get("token").(string))
+	te, err := ts.Lookup(d.Get("token").(string))
+	if err != nil {
+		log.Printf("vishal: token lookup err:%#v\n", err)
+	}
+	if te == nil {
+		return logical.ErrorResponse("token does not exist"), nil
+	}
+	log.Printf("vishal: te.Policies:%#v\n", te.Policies)
+	log.Println(d.Get("path").(string))
+	return ts.handleCreateCommon(req, d, true)
 }
 
 // handleCreate handles the auth/token/create path for creation of new orphan
@@ -936,4 +977,5 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
 	tokenRenewHelp        = `This endpoint will renew the given token and prevent expiration.`
 	tokenRenewSelfHelp    = `This endpoint will renew the token used to call it and prevent expiration.`
+	tokenCapabilitiesHelp = `This endpoint will return the capabilities of the given token on a given path.`
 )
