@@ -37,15 +37,11 @@ func (c *TokenRenewCommand) Run(args []string) int {
 	}
 
 	var inc int
+	// If both are specified prefer the argument
 	if len(args) == 2 {
-		dur, err := time.ParseDuration(args[1])
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Invalid increment: %s", err))
-			return 1
-		}
-
-		inc = int(dur / time.Second)
-	} else if increment != "" {
+		increment = args[1]
+	}
+	if increment != "" {
 		dur, err := time.ParseDuration(increment)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Invalid increment: %s", err))
