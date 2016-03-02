@@ -6,6 +6,9 @@ IMPROVEMENTS:
    the certificate must carry the client authentication or 'any' extended usage
    attributes. [GH-1153]
  * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
+ * command/token-renew: Allow no token to be passed in; use `renew-self` in
+   this case. Change the behavior for any token being passed in to use `renew`.
+   [GH-1150]
 
 BUG FIXES:
 
