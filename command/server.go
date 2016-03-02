@@ -41,9 +41,10 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly bool
 	var configPath []string
-	var logLevel string
+	var logLevel, rootTokenID string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
+	flags.StringVar(&rootTokenID, "root-token-id", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -53,10 +54,17 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Validation
-	if !dev && len(configPath) == 0 {
-		c.Ui.Error("At least one config path must be specified with -config")
-		flags.Usage()
-		return 1
+	if !dev {
+		switch {
+		case len(configPath) == 0:
+			c.Ui.Error("At least one config path must be specified with -config")
+			flags.Usage()
+			return 1
+		case rootTokenID != "":
+			c.Ui.Error("Root token ID can only be specified with -dev")
+			flags.Usage()
+			return 1
+		}
 	}
 
 	// Load the configuration
@@ -193,7 +201,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// If we're in dev mode, then initialize the core
 	if dev {
-		init, err := c.enableDev(core)
+		init, err := c.enableDev(core, rootTokenID)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing dev mode: %s", err))
@@ -319,7 +327,7 @@ func (c *ServerCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
+func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.InitResult, error) {
 	// Initialize it with a basic single key
 	init, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    1,
@@ -340,6 +348,39 @@ func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
 	}
 	if !unsealed {
 		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+	}
+
+	if rootTokenID != "" {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: init.RootToken,
+			Path:        "auth/token/create",
+			Data: map[string]interface{}{
+				"id":                rootTokenID,
+				"policies":          []string{"root"},
+				"no_parent":         true,
+				"no_default_policy": true,
+			},
+		}
+		resp, err := core.HandleRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create root token with ID %s: %s", rootTokenID, err)
+		}
+		if resp == nil {
+			return nil, fmt.Errorf("nil response when creating root token with ID %s", rootTokenID)
+		}
+		if resp.Auth == nil {
+			return nil, fmt.Errorf("nil auth when creating root token with ID %s", rootTokenID)
+		}
+
+		init.RootToken = resp.Auth.ClientToken
+
+		req.Path = "auth/token/revoke-self"
+		req.Data = nil
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to revoke initial root token: %s", err)
+		}
 	}
 
 	// Set the token
@@ -507,6 +548,9 @@ General Options:
                       to stderr. Supported values: "trace", "debug", "info",
                       "warn", "err"
 
+  -root-token-id=""   If set, the root token returned in Dev mode will have the
+                      given ID. This *only* has an effect when running in Dev
+                      mode.
 `
 	return strings.TrimSpace(helpText)
 }
