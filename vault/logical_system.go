@@ -246,6 +246,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.handlePolicyList,
+					logical.ListOperation: b.handlePolicyList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
@@ -815,7 +816,12 @@ func (b *SystemBackend) handlePolicyList(
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
-	return logical.ListResponse(policies), err
+	resp := logical.ListResponse(policies)
+
+	// Backwords compatibility
+	resp.Data["policies"] = resp.Data["keys"]
+
+	return resp, err
 }
 
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
