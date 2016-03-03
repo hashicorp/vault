@@ -114,14 +114,9 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					},
 
 					"allowed_policies": &framework.FieldSchema{
-						Type:    framework.TypeString,
-						Default: "",
-						Description: `If set, tokens created via this role
-can be created with any subset of this list,
-rather than the normal semantics of a subset
-of the client token's policies. This
-parameter should be sent as a comma-delimited
-string.`,
+						Type:        framework.TypeString,
+						Default:     "",
+						Description: tokenAllowedPoliciesHelp,
 					},
 
 					"orphan": &framework.FieldSchema{
@@ -132,24 +127,15 @@ will be orphan tokens (have no parent)`,
 					},
 
 					"period": &framework.FieldSchema{
-						Type:    framework.TypeDurationSecond,
-						Default: 0,
-						Description: `If set, tokens created via this role
-will have no max lifetime; instead, their
-renewal period will be fixed to this value.
-This takes an integer number of seconds,
-or a string duration (e.g. "24h").`,
+						Type:        framework.TypeDurationSecond,
+						Default:     0,
+						Description: tokenPeriodHelp,
 					},
 
 					"path_suffix": &framework.FieldSchema{
-						Type:    framework.TypeString,
-						Default: "",
-						Description: `If set, tokens created via this role
-will contain the given suffix as a part of
-their path. This can be used to assist use
-of the 'revoke-prefix' endpoint later on.
-The given suffix must match the regular
-expression ` + pathSuffixSanitize.String(),
+						Type:        framework.TypeString,
+						Default:     "",
+						Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
 					},
 				},
 
@@ -1237,16 +1223,33 @@ const (
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
 as revocation of tokens. The tokens are renewable if associated with a lease.`
-	tokenCreateHelp       = `The token create path is used to create new tokens.`
-	tokenCreateOrphanHelp = `The token create path is used to create new orphan tokens.`
-	tokenCreateRoleHelp   = `This token create path is used to create new tokens adhering to the given role.`
-	tokenListRolesHelp    = `This endpoint lists configured roles.`
-	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
-	tokenPathRolesHelp    = `This endpoint allows creating, reading, and deleting roles.`
-	tokenRevokeHelp       = `This endpoint will delete the given token and all of its child tokens.`
-	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
-	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
-	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
-	tokenRenewHelp        = `This endpoint will renew the given token and prevent expiration.`
-	tokenRenewSelfHelp    = `This endpoint will renew the token used to call it and prevent expiration.`
+	tokenCreateHelp          = `The token create path is used to create new tokens.`
+	tokenCreateOrphanHelp    = `The token create path is used to create new orphan tokens.`
+	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
+	tokenListRolesHelp       = `This endpoint lists configured roles.`
+	tokenLookupHelp          = `This endpoint will lookup a token and its properties.`
+	tokenPathRolesHelp       = `This endpoint allows creating, reading, and deleting roles.`
+	tokenRevokeHelp          = `This endpoint will delete the given token and all of its child tokens.`
+	tokenRevokeSelfHelp      = `This endpoint will delete the token used to call it and all of its child tokens.`
+	tokenRevokeOrphanHelp    = `This endpoint will delete the token and orphan its child tokens.`
+	tokenRevokePrefixHelp    = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
+	tokenRenewHelp           = `This endpoint will renew the given token and prevent expiration.`
+	tokenRenewSelfHelp       = `This endpoint will renew the token used to call it and prevent expiration.`
+	tokenAllowedPoliciesHelp = `If set, tokens created via this role
+can be created with any subset of this list,
+rather than the normal semantics of a subset
+of the client token's policies. This
+parameter should be sent as a comma-delimited
+string.`
+	tokenPeriodHelp = `If set, tokens created via this role
+will have no max lifetime; instead, their
+renewal period will be fixed to this value.
+This takes an integer number of seconds,
+or a string duration (e.g. "24h").`
+	tokenPathSuffixHelp = `If set, tokens created via this role
+will contain the given suffix as a part of
+their path. This can be used to assist use
+of the 'revoke-prefix' endpoint later on.
+The given suffix must match the regular
+expression `
 )
