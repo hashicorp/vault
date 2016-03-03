@@ -1,9 +1,7 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -280,50 +278,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 			},
 
 			&framework.Path{
-				Pattern: "capabilities-self",
-
-				Fields: map[string]*framework.FieldSchema{
-					"token": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token of which capabilities are being requested",
-					},
-					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path for which token's capabilities are being fetched",
-					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleCapabilitiesUpdate,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "capabilities",
-
-				Fields: map[string]*framework.FieldSchema{
-					"token": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token of which capabilities are being requested",
-					},
-					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path for which token's capabilities are being fetched",
-					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleCapabilitiesUpdate,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
-			},
-
-			&framework.Path{
 				Pattern: "audit-hash/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -415,17 +369,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["key-status"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["key-status"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "rotate$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRotate,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
 
 			&framework.Path{
@@ -908,61 +851,6 @@ func (b *SystemBackend) handlePolicyRead(
 			"rules": policy.Raw,
 		},
 	}, nil
-}
-
-// handleTokenCapabilitiesUpdate handles the "token-capabilities" endpoint to
-// fetch the capabilities of a token on a given path
-func (b *SystemBackend) handleCapabilitiesUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	log.Printf("\n\nvishal: logical_system: handleCapabilitiesUpdate: req:%#v data:%#v\n", req, data)
-	tokenStore := b.Core.tokenStore
-	token := data.Get("token").(string)
-	if token == "" {
-		token = req.ClientToken
-	}
-	if token == "" {
-		return logical.ErrorResponse("missing token"), nil
-	}
-	path := data.Get("path").(string)
-	if path == "" {
-		return logical.ErrorResponse("missing path"), nil
-	}
-	log.Printf("vishal: received: clientToken:%s token:%s path:%s\n", req.ClientToken, token, path)
-	te, err := tokenStore.Lookup(token)
-	if err != nil {
-		return nil, err
-	}
-	if te == nil {
-		return nil, errors.New("invalid token")
-	}
-	log.Printf("vishal: tokenEntry.Policies: %#v\n", te.Policies)
-	if te.Policies == nil {
-		return nil, nil
-	}
-	for _, tePolicy := range te.Policies {
-		log.Printf("vishal: tePolicy:%s", tePolicy)
-		if tePolicy == "root" {
-			// Add all the capabilities
-		}
-		policy, err := b.Core.policyStore.GetPolicy(tePolicy)
-		if err != nil {
-			return nil, err
-		}
-		if policy == nil {
-			return logical.ErrorResponse(fmt.Sprintf("policy '%s' not found", tePolicy)), nil
-		}
-		if policy.Paths == nil {
-			return logical.ErrorResponse(fmt.Sprintf("policy '%s' does not contain any paths", tePolicy)), nil
-		}
-		for _, pathCapability := range policy.Paths {
-			log.Printf("vishal: pathCapability: %#v\n", pathCapability)
-			log.Printf("vishal: pathCapability.Prefix: %s\n", pathCapability.Prefix)
-			log.Printf("vishal: pathCapability.Capabilities: %#v\n", pathCapability.Capabilities)
-			if path == pathCapability.Prefix {
-				log.Printf("vishal: found a match!!!!!!!!!!!\n")
-			}
-		}
-	}
-	return nil, nil
 }
 
 // handlePolicySet handles the "policy/<name>" endpoint to set a policy
