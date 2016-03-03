@@ -1,6 +1,6 @@
 package api
 
-func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
+func (c *Sys) CapabilitiesSelf(path string) (*CapabilitiesResponse, error) {
 	body := map[string]string{
 		"path": path,
 	}
@@ -16,12 +16,12 @@ func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	var result capabilitiesResp
+	var result CapabilitiesResponse
 	err = resp.DecodeJSON(&result)
-	return result.Capabilities, err
+	return &result, err
 }
 
-func (c *Sys) Capabilities(token, path string) ([]string, error) {
+func (c *Sys) Capabilities(token, path string) (*CapabilitiesResponse, error) {
 	body := map[string]string{
 		"token": token,
 		"path":  path,
@@ -38,11 +38,12 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	var result capabilitiesResp
+	var result CapabilitiesResponse
 	err = resp.DecodeJSON(&result)
-	return result.Capabilities, err
+	return &result, err
 }
 
-type capabilitiesResp struct {
+type CapabilitiesResponse struct {
+	Message      string   `json:"message"`
 	Capabilities []string `json:"capabilities"`
 }

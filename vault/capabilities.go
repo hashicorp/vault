@@ -8,6 +8,7 @@ import (
 
 // CapabilitiesResult holds the result of fetching the capabilities of token on a path
 type CapabilitiesResult struct {
+	Root         bool
 	Capabilities []string
 }
 
@@ -33,46 +34,32 @@ func (c *Core) Capabilities(token, path string) (*CapabilitiesResult, error) {
 		return nil, nil
 	}
 
-	maps := make(map[string]bool)
+	var result CapabilitiesResult
+	capabilities := make(map[string]bool)
 	for _, tePolicy := range te.Policies {
 		if tePolicy == "root" {
-			//TODO: check if the path is actually a valid path. Otherwise, there is no
-			// meaning in returning the capabilities
-			// Add all the capabilities
-			maps["create"] = true
-			maps["read"] = true
-			maps["update"] = true
-			maps["delete"] = true
-			maps["list"] = true
-			maps["sudo"] = true
+			result.Root = true
 			break
 		}
 		policy, err := c.policyStore.GetPolicy(tePolicy)
 		if err != nil {
 			return nil, err
 		}
-		if policy == nil {
-			return nil, fmt.Errorf("policy '%s' not found", tePolicy)
-		}
-
-		if policy.Paths == nil {
-			return nil, fmt.Errorf("policy '%s' does not contain any paths", tePolicy)
-		}
 		for _, pathCapability := range policy.Paths {
 			switch pathCapability.Glob {
 			case true:
 				if strings.HasPrefix(path, pathCapability.Prefix) {
 					for _, capability := range pathCapability.Capabilities {
-						if _, ok := maps[capability]; !ok {
-							maps[capability] = true
+						if _, ok := capabilities[capability]; !ok {
+							capabilities[capability] = true
 						}
 					}
 				}
 			case false:
 				if path == pathCapability.Prefix {
 					for _, capability := range pathCapability.Capabilities {
-						if _, ok := maps[capability]; !ok {
-							maps[capability] = true
+						if _, ok := capabilities[capability]; !ok {
+							capabilities[capability] = true
 						}
 					}
 				}
@@ -80,12 +67,9 @@ func (c *Core) Capabilities(token, path string) (*CapabilitiesResult, error) {
 		}
 	}
 
-	var capabilities []string
-	for capability, _ := range maps {
-		capabilities = append(capabilities, capability)
+	for capability, _ := range capabilities {
+		result.Capabilities = append(result.Capabilities, capability)
 	}
-	sort.Strings(capabilities)
-	return &CapabilitiesResult{
-		Capabilities: capabilities,
-	}, nil
+	sort.Strings(result.Capabilities)
+	return &result, nil
 }

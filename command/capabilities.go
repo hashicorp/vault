@@ -3,6 +3,8 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
 )
 
 // CapabilitiesCommand is a Command that enables a new endpoint.
@@ -45,7 +47,7 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	var capabilities []string
+	var capabilities *api.CapabilitiesResponse
 	if token == "" {
 		capabilities, err = client.Sys().CapabilitiesSelf(path)
 	} else {
@@ -57,7 +59,7 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Capabilities: %s", capabilities))
+	c.Ui.Output(fmt.Sprintf("Capabilities:%s\nMessage:%s\n", capabilities.Capabilities, capabilities.Message))
 	return 0
 }
 
