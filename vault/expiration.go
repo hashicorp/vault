@@ -173,6 +173,14 @@ func (m *ExpirationManager) Stop() error {
 // Revoke is used to revoke a secret named by the given LeaseID
 func (m *ExpirationManager) Revoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
+
+	return m.revokeCommon(leaseID, false)
+}
+
+// revokeCommon does the heavy lifting. If force is true, we ignore a problem
+// during revocation and still remove entries/index/lease timers
+func (m *ExpirationManager) revokeCommon(leaseID string, force bool) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -185,7 +193,7 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	}
 
 	// Revoke the entry
-	if err := m.revokeEntry(le); err != nil {
+	if err := m.revokeEntry(le); err != nil && !force {
 		return err
 	}
 
@@ -209,32 +217,21 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	return nil
 }
 
+// RevokeForce works similarly to RevokePrefix but continues in the case of a
+// revocation error; this is mostly meant for recovery operations
+func (m *ExpirationManager) RevokeForce(prefix string) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
+
+	return m.revokePrefixCommon(prefix, true)
+}
+
 // RevokePrefix is used to revoke all secrets with a given prefix.
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
-	// Ensure there is a trailing slash
-	if !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
-	}
 
-	// Accumulate existing leases
-	sub := m.idView.SubView(prefix)
-	existing, err := CollectKeys(sub)
-	if err != nil {
-		return fmt.Errorf("failed to scan for leases: %v", err)
-	}
-
-	// Revoke all the keys
-	for idx, suffix := range existing {
-		leaseID := prefix + suffix
-		if err := m.Revoke(leaseID); err != nil {
-			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
-				leaseID, idx+1, len(existing), err)
-		}
-	}
-	return nil
+	return m.revokePrefixCommon(prefix, false)
 }
 
 // RevokeByToken is used to revoke all the secrets issued with
@@ -250,6 +247,30 @@ func (m *ExpirationManager) RevokeByToken(token string) error {
 	// Revoke all the keys
 	for idx, leaseID := range existing {
 		if err := m.Revoke(leaseID); err != nil {
+			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
+				leaseID, idx+1, len(existing), err)
+		}
+	}
+	return nil
+}
+
+func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error {
+	// Ensure there is a trailing slash
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
+	// Accumulate existing leases
+	sub := m.idView.SubView(prefix)
+	existing, err := CollectKeys(sub)
+	if err != nil {
+		return fmt.Errorf("failed to scan for leases: %v", err)
+	}
+
+	// Revoke all the keys
+	for idx, suffix := range existing {
+		leaseID := prefix + suffix
+		if err := m.revokeCommon(leaseID, force); err != nil {
 			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
 				leaseID, idx+1, len(existing), err)
 		}

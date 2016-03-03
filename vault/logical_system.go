@@ -186,6 +186,24 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 			},
 
 			&framework.Path{
+				Pattern: "revoke-force/(?P<prefix>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"prefix": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["revoke-force-path"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleRevokeForce,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-force"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["revoke-force"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -733,11 +751,29 @@ func (b *SystemBackend) handleRevoke(
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefix(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRevokePrefixCommon(req, data, false)
+}
+
+// handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
+func (b *SystemBackend) handleRevokeForce(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRevokePrefixCommon(req, data, true)
+}
+
+// handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
+func (b *SystemBackend) handleRevokePrefixCommon(
+	req *logical.Request, data *framework.FieldData, force bool) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
 	// Invoke the expiration manager directly
-	if err := b.Core.expiration.RevokePrefix(prefix); err != nil {
+	var err error
+	if force {
+		err = b.Core.expiration.RevokeForce(prefix)
+	} else {
+		err = b.Core.expiration.RevokePrefix(prefix)
+	}
+	if err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: revoke prefix '%s' failed: %v", prefix, err)
 		return handleError(err)
 	}
@@ -1207,6 +1243,23 @@ all matching leases.
 	},
 
 	"revoke-prefix-path": {
+		`The path to revoke keys under. Example: "prod/aws/ops"`,
+		"",
+	},
+
+	"revoke-force": {
+		"Revoke all secrets generated in a given prefix, ignoring errors.",
+		`
+See the path help for 'revoke-prefix'; this behaves the same, except that it
+ignores errors encountered during revocation. This can be used in certain
+recovery situations; for instance, when you want to unmount a backend, but it
+is impossible to fix revocation errors and these errors prevent the unmount
+from proceeding. This is a DANGEROUS operation as it removes Vault's oversight
+of external secrets. Access to this prefix should be tightly controlled.
+		`,
+	},
+
+	"revoke-force-path": {
 		`The path to revoke keys under. Example: "prod/aws/ops"`,
 		"",
 	},
