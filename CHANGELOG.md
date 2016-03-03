@@ -1,11 +1,6 @@
 ## 0.5.2 (Unreleased)
 
 IMPROVEMENTS:
- * credential/cert: Non-CA certificates can be used for authentication. They
-   must be matched exactly (issuer and serial number) for authentication, and
-   the certificate must carry the client authentication or 'any' extended usage
-   attributes. [GH-1153]
- * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
  * command/server: The initial root token ID when running in `-dev` mode can
    now be specified via `-dev-root-token-id` or the environment variable
    `VAULT_DEV_ROOT_TOKEN_ID` [GH-1162]
@@ -15,6 +10,11 @@ IMPROVEMENTS:
  * command/token-renew: Allow no token to be passed in; use `renew-self` in
    this case. Change the behavior for any token being passed in to use `renew`.
    [GH-1150]
+ * credential/cert: Non-CA certificates can be used for authentication. They
+   must be matched exactly (issuer and serial number) for authentication, and
+   the certificate must carry the client authentication or 'any' extended usage
+   attributes. [GH-1153]
+ * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
 
 BUG FIXES:
 
