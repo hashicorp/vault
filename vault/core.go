@@ -1269,7 +1269,11 @@ func (c *Core) StepDown(token string) error {
 		return logical.ErrPermissionDenied
 	}
 
-	c.manualStepDownCh <- struct{}{}
+	select {
+	case c.manualStepDownCh <- struct{}{}:
+	default:
+		c.logger.Printf("[WARN] core: manual step-down operation already queued")
+	}
 
 	return nil
 }
