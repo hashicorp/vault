@@ -8,6 +8,9 @@ IMPROVEMENTS:
  * command/server: The listen address when running in `-dev` mode can now be
    specified via `-dev-listen-address` or the environment variable
    `VAULT_DEV_LISTEN_ADDRESS` [GH-1169]
+ * command/step-down: New `vault step-down` command and API endpoint to force
+   the targeted node to give up active status, but without sealing. The node
+   will wait ten seconds before attempting too grab the lock again. [GH-1146]
  * command/token-renew: Allow no token to be passed in; use `renew-self` in
    this case. Change the behavior for any token being passed in to use `renew`.
    [GH-1150]
