@@ -8,89 +8,50 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysCapabilitiesSelf(core *vault.Core) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" && r.Method != "PUT" {
-			respondError(w, http.StatusMethodNotAllowed, nil)
-			return
-		}
-		log.Printf("vishal: handleSysCapabilitiesSelf: r:%#v, r.URL:%s r.URL.Path:%s\n", r, r.URL, r.URL.Path)
-		// Parse the request if we can
-		var req capabilitiesRequest
-		if err := parseRequest(r, &req); err != nil {
-			respondError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "sys/capabilities-self",
-			//			Connection: getConnection(r),
-			Data: map[string]interface{}{
-				"path": req.Path,
-			},
-		}))
-		if !ok {
-			return
-		}
-		if resp == nil {
-			respondError(w, http.StatusNotFound, nil)
-			return
-		}
-
-		var capabilities []string
-		capabilitiesRaw, ok := resp.Data["keys"]
-		if ok {
-			capabilities = capabilitiesRaw.([]string)
-		}
-
-		respondOk(w, &capabilitiesResponse{Capabilities: capabilities})
-	})
-}
-
 func handleSysCapabilities(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" && r.Method != "PUT" {
+		switch r.Method {
+		case "PUT":
+		case "POST":
+		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
-		log.Printf("vishal: handleSysCapabilities: r: %#v\n", r)
+
+		log.Printf("r.URL.Path: %s\n", r.URL.Path)
+		// Get the auth for the request so we can access the token directly
+		req := requestAuth(r, &logical.Request{})
+		log.Printf("handleSysCapabilities req:%#v\n", req)
+
 		// Parse the request if we can
-		var req capabilitiesRequest
-		if err := parseRequest(r, &req); err != nil {
+		var data capabilitiesRequest
+		if err := parseRequest(r, &data); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
+		if data.Token == "" {
+			data.Token = req.ClientToken
+		}
 
-		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation:  logical.UpdateOperation,
-			Path:       "sys/capabilities",
-			Connection: getConnection(r),
-			Data: map[string]interface{}{
-				"token": req.Token,
-				"path":  req.Path,
-			},
-		}))
-		if !ok {
+		capabilities, err := core.Capabilities(data.Token, data.Path)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if resp == nil {
-			respondError(w, http.StatusNotFound, nil)
+		if capabilities == nil {
+			respondOk(w, &capabilitiesResponse{Capabilities: nil})
 			return
 		}
 
-		var capabilities []string
-		capabilitiesRaw, ok := resp.Data["keys"]
-		if ok {
-			capabilities = capabilitiesRaw.([]string)
-		}
-
-		respondOk(w, &capabilitiesResponse{Capabilities: capabilities})
+		respondOk(w, &capabilitiesResponse{
+			Capabilities: capabilities.Capabilities,
+		})
 	})
+
 }
 
 type capabilitiesResponse struct {
-	Capabilities []string `json:"policies"`
+	Capabilities []string `json:"capabilities"`
 }
 
 type capabilitiesRequest struct {
