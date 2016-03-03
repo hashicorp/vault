@@ -99,6 +99,8 @@ As expected, the value previously set is returned to us.
     return a value. Note that no policy-based filtering is performed on
     returned keys; it is not recommended to put sensitive or secret values as
     key names. The values themselves are not accessible via this command.
+    List results are scoped to the current token and keys belonging to another
+    token are not visible.
   </dd>
 
   <dt>Method</dt>
