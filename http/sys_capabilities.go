@@ -32,28 +32,34 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 			data.Token = req.ClientToken
 		}
 
-		capabilities, err := core.Capabilities(data.Token, data.Path)
+		resp, err := core.Capabilities(data.Token, data.Path)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if capabilities == nil {
-			respondOk(w, &capabilitiesResponse{Message: "Token has no capabilities on the given path"})
+		if resp == nil {
+			respondOk(w, &capabilitiesResponse{
+				Message:      "Token has no capabilities on the path",
+				Capabilities: nil,
+			})
 			return
 		}
 
-		var response capabilitiesResponse
-		switch capabilities.Root {
+		var result capabilitiesResponse
+		switch resp.Root {
 		case true:
-			response.Message = `Thij is a 'root' token. It has all the capabilities on all the paths.
-This token can be used on any valid path.`
-			response.Capabilities = nil
+			result.Message = "This is a 'root' token. It has all the capabilities on all the 'valid' paths."
+			result.Capabilities = nil
 		case false:
-			response.Message = ""
-			response.Capabilities = capabilities.Capabilities
+			if len(resp.Capabilities) == 0 {
+				result.Message = "Token has no capabilities on the path"
+			} else {
+				result.Message = ""
+			}
+			result.Capabilities = resp.Capabilities
 		}
 
-		respondOk(w, response)
+		respondOk(w, result)
 	})
 
 }

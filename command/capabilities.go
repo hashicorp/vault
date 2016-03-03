@@ -47,11 +47,11 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	var capabilities *api.CapabilitiesResponse
+	var resp *api.CapabilitiesResponse
 	if token == "" {
-		capabilities, err = client.Sys().CapabilitiesSelf(path)
+		resp, err = client.Sys().CapabilitiesSelf(path)
 	} else {
-		capabilities, err = client.Sys().Capabilities(token, path)
+		resp, err = client.Sys().Capabilities(token, path)
 	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -59,7 +59,10 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Capabilities:%s\nMessage:%s\n", capabilities.Capabilities, capabilities.Message))
+	c.Ui.Output(fmt.Sprintf("Capabilities: %s", resp.Capabilities))
+	if resp.Message != "" {
+		c.Ui.Output(fmt.Sprintf("Message: %s", resp.Message))
+	}
 	return 0
 }
 
@@ -72,9 +75,9 @@ func (c *CapabilitiesCommand) Help() string {
 Usage: vault capabilities [options] [token] path
 
   Fetch the capabilities of a token on a given path.
-  If a token is given to the command '/sys/capabilities' will be called with
-  the given token; otherwise '/sys/capabilities-self' will be called with the
-  client token.
+  If a token is provided to the command, API '/sys/capabilities' will be invoked
+  with the given token; otherwise API '/sys/capabilities-self' will be invoked with
+  the client token.
 
 General Options:
 
