@@ -1106,9 +1106,6 @@ func TestCore_Standby_Seal(t *testing.T) {
 	// Wait for core to become active
 	testWaitActive(t, core)
 
-	// Ensure that the original clean function has stopped running
-	time.Sleep(2 * time.Second)
-
 	// Check the leader is local
 	isLeader, advertise, err := core.Leader()
 	if err != nil {
@@ -1213,9 +1210,6 @@ func TestCore_StepDown(t *testing.T) {
 
 	// Wait for core to become active
 	testWaitActive(t, core)
-
-	// Ensure that the original clean function has stopped running
-	time.Sleep(2 * time.Second)
 
 	// Check the leader is local
 	isLeader, advertise, err := core.Leader()
