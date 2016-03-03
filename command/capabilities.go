@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -31,11 +30,9 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 	switch len(args) {
 	case 1:
 		// only path is provided
-		log.Printf("only path is provided")
 		path = args[0]
 	case 2:
 		// both token and path are provided
-		log.Printf("both token and path are provided")
 		token = args[0]
 		path = args[1]
 	default:
@@ -48,7 +45,6 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	log.Printf("vishal: token:'%s' path:'%s'\n", token, path)
 	var capabilities []string
 	if token == "" {
 		capabilities, err = client.Sys().CapabilitiesSelf(path)
@@ -61,7 +57,7 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Capabilities: '%s'", capabilities))
+	c.Ui.Output(fmt.Sprintf("Capabilities: %s", capabilities))
 	return 0
 }
 

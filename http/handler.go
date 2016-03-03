@@ -32,6 +32,8 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
+	mux.Handle("/v1/sys/capabilities", handleSysCapabilities(core))
+	mux.Handle("/v1/sys/capabilities-self", handleSysCapabilities(core))
 	mux.Handle("/v1/sys/", handleLogical(core, true))
 	mux.Handle("/v1/", handleLogical(core, false))
 
