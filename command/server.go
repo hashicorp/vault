@@ -41,11 +41,11 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly bool
 	var configPath []string
-	var logLevel, devRootTokenID, devAddress string
+	var logLevel, devRootTokenID, devListenAddress string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
-	flags.StringVar(&devAddress, "dev-address", "", "")
+	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -54,8 +54,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if len(os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")) > 0 {
+	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" {
 		devRootTokenID = os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")
+	}
+
+	if os.Getenv("VAULT_DEV_LISTEN_ADDRESS") != "" {
+		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
 	// Validation
@@ -69,6 +73,10 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("Root token ID can only be specified with -dev")
 			flags.Usage()
 			return 1
+		case devListenAddress != "":
+			c.Ui.Error("Development address can only be specified with -dev")
+			flags.Usage()
+			return 1
 		}
 	}
 
@@ -76,6 +84,9 @@ func (c *ServerCommand) Run(args []string) int {
 	var config *server.Config
 	if dev {
 		config = server.DevConfig()
+		if devListenAddress != "" {
+			config.Listeners[0].Config["address"] = devListenAddress
+		}
 	}
 	for _, path := range configPath {
 		current, err := server.LoadConfig(path)
@@ -541,21 +552,28 @@ Usage: vault server [options]
 
 General Options:
 
-  -config=<path>        Path to the configuration file or directory. This can be
-                        specified multiple times. If it is a directory, all
-                        files with a ".hcl" or ".json" suffix will be loaded.
+  -config=<path>          Path to the configuration file or directory. This can
+                          be specified multiple times. If it is a directory,
+                          all files with a ".hcl" or ".json" suffix will be
+                          loaded.
 
-  -dev                  Enables Dev mode. In this mode, Vault is completely
-                        in-memory and unsealed. Do not run the Dev server in
-                        production!
+  -dev                    Enables Dev mode. In this mode, Vault is completely
+                          in-memory and unsealed. Do not run the Dev server in
+                          production!
 
-  -dev-root-token-id="" If set, the root token returned in Dev mode will have the
-                        given ID. This *only* has an effect when running in Dev
-                        mode.
+  -dev-root-token-id=""   If set, the root token returned in Dev mode will have
+                          the given ID. This *only* has an effect when running
+                          in Dev mode. Can also be specified with the
+                          VAULT_DEV_ROOT_TOKEN_ID environment variable.
 
-  -log-level=info       Log verbosity. Defaults to "info", will be outputted
-                        to stderr. Supported values: "trace", "debug", "info",
-                        "warn", "err"
+  -dev-listen-address=""  If set, this overrides the normal Dev mode listen
+                          address of "127.0.0.1:8200". Can also be specified
+                          with the VAULT_DEV_LISTEN_ADDRESS environment
+                          variable.
+
+  -log-level=info         Log verbosity. Defaults to "info", will be output to
+                          stderr. Supported values: "trace", "debug", "info",
+                          "warn", "err"
 `
 	return strings.TrimSpace(helpText)
 }
