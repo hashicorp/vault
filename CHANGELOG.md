@@ -9,6 +9,9 @@ IMPROVEMENTS:
  * command/server: The initial root token ID when running in `-dev` mode can
    now be specified via `-dev-root-token-id` or the environment variable
    `VAULT_DEV_ROOT_TOKEN_ID` [GH-1162]
+ * command/server: The listen address when running in `-dev` mode can now be
+   specified via `-dev-listen-address` or the environment variable
+   `VAULT_DEV_LISTEN_ADDRESS` [GH-1169]
  * command/token-renew: Allow no token to be passed in; use `renew-self` in
    this case. Change the behavior for any token being passed in to use `renew`.
    [GH-1150]
