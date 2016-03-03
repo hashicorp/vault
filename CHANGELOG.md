@@ -1,6 +1,7 @@
 ## 0.5.2 (Unreleased)
 
 IMPROVEMENTS:
+ * core: Ignore leading `/` in policy paths [GH-1170]
  * command/server: The initial root token ID when running in `-dev` mode can
    now be specified via `-dev-root-token-id` or the environment variable
    `VAULT_DEV_ROOT_TOKEN_ID` [GH-1162]
