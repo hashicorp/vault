@@ -41,16 +41,21 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly bool
 	var configPath []string
-	var logLevel, rootTokenID string
+	var logLevel, devRootTokenID, devAddress string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
-	flags.StringVar(&rootTokenID, "root-token-id", "", "")
+	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
+	flags.StringVar(&devAddress, "dev-address", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
 		return 1
+	}
+
+	if len(os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")) > 0 {
+		devRootTokenID = os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")
 	}
 
 	// Validation
@@ -60,7 +65,7 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("At least one config path must be specified with -config")
 			flags.Usage()
 			return 1
-		case rootTokenID != "":
+		case devRootTokenID != "":
 			c.Ui.Error("Root token ID can only be specified with -dev")
 			flags.Usage()
 			return 1
@@ -201,7 +206,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// If we're in dev mode, then initialize the core
 	if dev {
-		init, err := c.enableDev(core, rootTokenID)
+		init, err := c.enableDev(core, devRootTokenID)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing dev mode: %s", err))
@@ -536,21 +541,21 @@ Usage: vault server [options]
 
 General Options:
 
-  -config=<path>      Path to the configuration file or directory. This can be
-                      specified multiple times. If it is a directory, all
-                      files with a ".hcl" or ".json" suffix will be loaded.
+  -config=<path>        Path to the configuration file or directory. This can be
+                        specified multiple times. If it is a directory, all
+                        files with a ".hcl" or ".json" suffix will be loaded.
 
-  -dev                Enables Dev mode. In this mode, Vault is completely
-                      in-memory and unsealed. Do not run the Dev server in
-                      production!
+  -dev                  Enables Dev mode. In this mode, Vault is completely
+                        in-memory and unsealed. Do not run the Dev server in
+                        production!
 
-  -log-level=info     Log verbosity. Defaults to "info", will be outputted
-                      to stderr. Supported values: "trace", "debug", "info",
-                      "warn", "err"
+  -dev-root-token-id="" If set, the root token returned in Dev mode will have the
+                        given ID. This *only* has an effect when running in Dev
+                        mode.
 
-  -root-token-id=""   If set, the root token returned in Dev mode will have the
-                      given ID. This *only* has an effect when running in Dev
-                      mode.
+  -log-level=info       Log verbosity. Defaults to "info", will be outputted
+                        to stderr. Supported values: "trace", "debug", "info",
+                        "warn", "err"
 `
 	return strings.TrimSpace(helpText)
 }
