@@ -63,8 +63,7 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 			default:
 				// Insert the capabilities in this new policy into the existing
-				// value; since it's a pointer we can just modify the
-				// underlying data
+				// value
 				tree.Insert(pc.Prefix, existing|pc.CapabilitiesBitmap)
 			}
 		}
