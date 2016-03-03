@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.6",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -101,6 +98,10 @@
 			"ImportPath": "github.com/coreos/etcd/pkg/types",
 			"Comment": "v2.3.0-alpha.1-20-gc9d233d",
 			"Rev": "c9d233d69ac0f21580910ba232494a6a5c02a373"
+		},
+		{
+			"ImportPath": "github.com/denisenkom/go-mssqldb",
+			"Rev": "6e7f3d73dade2e5566f87d18c3a1d00d2ce33421"
 		},
 		{
 			"ImportPath": "github.com/duosecurity/duo_api_golang",
@@ -249,6 +250,10 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
+			"Rev": "1f22c0103821b9390939b6776727195525381532"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/md4",
 			"Rev": "1f22c0103821b9390939b6776727195525381532"
 		},
 		{
