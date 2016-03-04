@@ -895,16 +895,7 @@ func (ts *TokenStore) handleRenew(
 	}
 
 	// Renew the token and its children
-	auth, err := ts.expiration.RenewToken(req, te.Path, te.ID, increment)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Auth: auth,
-	}
-	return resp, nil
+	return ts.expiration.RenewToken(req, te.Path, te.ID, increment)
 }
 
 func (ts *TokenStore) destroyCubbyhole(saltedID string) error {

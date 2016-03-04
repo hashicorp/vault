@@ -310,7 +310,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
-	increment time.Duration) (*logical.Auth, error) {
+	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 	// Compute the Lease ID
 	leaseID := path.Join(source, m.tokenStore.SaltID(token))
@@ -331,13 +331,16 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	if err != nil {
 		return nil, err
 	}
+	if resp.IsError() {
+		return resp, nil
+	}
 
 	// Fast-path if there is no renewal
 	if resp == nil {
 		return nil, nil
 	}
 	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
-		return resp.Auth, nil
+		return resp, nil
 	}
 
 	// Attach the ClientToken
@@ -354,7 +357,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Update the expiration time
 	m.updatePending(le, resp.Auth.LeaseTotal())
-	return resp.Auth, nil
+	return resp, nil
 }
 
 // Register is used to take a request and response with an associated
