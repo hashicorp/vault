@@ -343,7 +343,9 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	}
 
 	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
-		return &logical.Response{}, nil
+		return &logical.Response{
+			Auth: resp.Auth,
+		}, nil
 	}
 
 	// Attach the ClientToken
