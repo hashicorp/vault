@@ -337,11 +337,13 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	}
 
 	if resp.IsError() {
-		return resp, nil
+		return &logical.Response{
+			Data: resp.Data,
+		}, nil
 	}
 
 	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
-		return resp, nil
+		return &logical.Response{}, nil
 	}
 
 	// Attach the ClientToken
@@ -358,7 +360,9 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Update the expiration time
 	m.updatePending(le, resp.Auth.LeaseTotal())
-	return resp, nil
+	return &logical.Response{
+		Auth: resp.Auth,
+	}, nil
 }
 
 // Register is used to take a request and response with an associated
