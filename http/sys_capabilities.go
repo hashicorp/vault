@@ -39,7 +39,6 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 		}
 		if resp == nil {
 			respondOk(w, &capabilitiesResponse{
-				Message:      "Token has no capabilities on the path",
 				Capabilities: nil,
 			})
 			return
@@ -48,14 +47,8 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 		var result capabilitiesResponse
 		switch resp.Root {
 		case true:
-			result.Message = "This is a 'root' token. It has all the capabilities on all the 'valid' paths."
 			result.Capabilities = nil
 		case false:
-			if len(resp.Capabilities) == 0 {
-				result.Message = "Token has no capabilities on the path"
-			} else {
-				result.Message = ""
-			}
 			result.Capabilities = resp.Capabilities
 		}
 
@@ -65,7 +58,6 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 }
 
 type capabilitiesResponse struct {
-	Message      string   `json:"message"`
 	Capabilities []string `json:"capabilities"`
 }
 

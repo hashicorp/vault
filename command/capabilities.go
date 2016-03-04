@@ -60,9 +60,6 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 	}
 
 	c.Ui.Output(fmt.Sprintf("Capabilities: %s", resp.Capabilities))
-	if resp.Message != "" {
-		c.Ui.Output(fmt.Sprintf("Message: %s", resp.Message))
-	}
 	return 0
 }
 

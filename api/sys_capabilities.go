@@ -44,6 +44,5 @@ func (c *Sys) Capabilities(token, path string) (*CapabilitiesResponse, error) {
 }
 
 type CapabilitiesResponse struct {
-	Message      string   `json:"message"`
 	Capabilities []string `json:"capabilities"`
 }

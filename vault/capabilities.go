@@ -38,7 +38,9 @@ func (c *Core) Capabilities(token, path string) (*CapabilitiesResponse, error) {
 	capabilities := make(map[string]bool)
 	for _, tePolicy := range te.Policies {
 		if tePolicy == "root" {
-			result.Root = true
+			capabilities = map[string]bool{
+				"root": true,
+			}
 			break
 		}
 		policy, err := c.policyStore.GetPolicy(tePolicy)
@@ -49,8 +51,8 @@ func (c *Core) Capabilities(token, path string) (*CapabilitiesResponse, error) {
 			continue
 		}
 		for _, pathCapability := range policy.Paths {
-			switch pathCapability.Glob {
-			case true:
+			switch {
+			case pathCapability.Glob:
 				if strings.HasPrefix(path, pathCapability.Prefix) {
 					for _, capability := range pathCapability.Capabilities {
 						if _, ok := capabilities[capability]; !ok {
@@ -58,7 +60,7 @@ func (c *Core) Capabilities(token, path string) (*CapabilitiesResponse, error) {
 						}
 					}
 				}
-			case false:
+			default:
 				if path == pathCapability.Prefix {
 					for _, capability := range pathCapability.Capabilities {
 						if _, ok := capabilities[capability]; !ok {
@@ -71,7 +73,7 @@ func (c *Core) Capabilities(token, path string) (*CapabilitiesResponse, error) {
 	}
 
 	if len(capabilities) == 0 {
-		result.Capabilities = nil
+		result.Capabilities = []string{"deny"}
 		return &result, nil
 	}
 
