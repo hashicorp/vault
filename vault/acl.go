@@ -71,6 +71,56 @@ func NewACL(policies []*Policy) (*ACL, error) {
 	return a, nil
 }
 
+func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
+	// Fast-path root
+	if a.root {
+		return []string{"root"}
+	}
+
+	// Find an exact matching rule, look for glob if no match
+	var capabilities uint32
+	raw, ok := a.exactRules.Get(path)
+	if ok {
+		capabilities = raw.(uint32)
+		goto CHECK
+	}
+
+	// Find a glob rule, default deny if no match
+	_, raw, ok = a.globRules.LongestPrefix(path)
+	if !ok {
+		return nil
+	} else {
+		capabilities = raw.(uint32)
+	}
+
+CHECK:
+
+	if capabilities&SudoCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, SudoCapability)
+	}
+	if capabilities&ReadCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, ReadCapability)
+	}
+	if capabilities&ListCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, ListCapability)
+	}
+	if capabilities&UpdateCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, UpdateCapability)
+	}
+	if capabilities&DeleteCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, DeleteCapability)
+	}
+	if capabilities&CreateCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, CreateCapability)
+	}
+	// If "deny" capability is explicitly set, then ignore all other capabilities
+	if capabilities&DenyCapabilityInt > 0 {
+		pathCapabilities = []string{DenyCapability}
+	}
+
+	return
+}
+
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
