@@ -27,6 +27,8 @@ BUG FIXES:
    generated username, not just the UUID, in order to handle token display name
    hyphens [GH-1140]
  * physical/etcd: Output actual error when cluster sync fails [GH-1141]
+ * vault/expiration: Not letting the error responses from the backends to skip
+   during renewals [GH-1176]
 
 ## 0.5.1 (February 25th, 2016)
  
