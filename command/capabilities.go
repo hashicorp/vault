@@ -3,8 +3,6 @@ package command
 import (
 	"fmt"
 	"strings"
-
-	"github.com/hashicorp/vault/api"
 )
 
 // CapabilitiesCommand is a Command that enables a new endpoint.
@@ -29,15 +27,12 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 
 	var token string
 	var path string
-	switch len(args) {
-	case 1:
-		// only path is provided
+	switch {
+	case len(args) == 1:
 		path = args[0]
-	case 2:
-		// both token and path are provided
+	case len(args) == 2:
 		token = args[0]
 		path = args[1]
-	default:
 	}
 
 	client, err := c.Client()
@@ -47,11 +42,11 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	var resp *api.CapabilitiesResponse
+	var capabilities []string
 	if token == "" {
-		resp, err = client.Sys().CapabilitiesSelf(path)
+		capabilities, err = client.Sys().CapabilitiesSelf(path)
 	} else {
-		resp, err = client.Sys().Capabilities(token, path)
+		capabilities, err = client.Sys().Capabilities(token, path)
 	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -59,12 +54,12 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Capabilities: %s", resp.Capabilities))
+	c.Ui.Output(fmt.Sprintf("Capabilities: %s", capabilities))
 	return 0
 }
 
 func (c *CapabilitiesCommand) Synopsis() string {
-	return "Fetch the capabilities of a given token on a given path"
+	return "Fetch the capabilities of a token on a given path"
 }
 
 func (c *CapabilitiesCommand) Help() string {
@@ -75,6 +70,9 @@ Usage: vault capabilities [options] [token] path
   If a token is provided to the command, API '/sys/capabilities' will be invoked
   with the given token; otherwise API '/sys/capabilities-self' will be invoked with
   the client token.
+
+  Note that this command will respond with a ["deny"] capability if the given path
+  is invalid.
 
 General Options:
 

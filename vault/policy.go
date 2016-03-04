@@ -15,6 +15,7 @@ const (
 	DeleteCapability = "delete"
 	ListCapability   = "list"
 	SudoCapability   = "sudo"
+	RootCapability   = "root"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"

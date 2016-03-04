@@ -32,27 +32,15 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 			data.Token = req.ClientToken
 		}
 
-		resp, err := core.Capabilities(data.Token, data.Path)
+		capabilities, err := core.Capabilities(data.Token, data.Path)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if resp == nil {
-			respondOk(w, &capabilitiesResponse{
-				Capabilities: nil,
-			})
-			return
-		}
 
-		var result capabilitiesResponse
-		switch resp.Root {
-		case true:
-			result.Capabilities = nil
-		case false:
-			result.Capabilities = resp.Capabilities
-		}
-
-		respondOk(w, result)
+		respondOk(w, &capabilitiesResponse{
+			Capabilities: capabilities,
+		})
 	})
 
 }

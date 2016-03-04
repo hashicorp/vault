@@ -74,7 +74,7 @@ func NewACL(policies []*Policy) (*ACL, error) {
 func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	// Fast-path root
 	if a.root {
-		return []string{"root"}
+		return []string{RootCapability}
 	}
 
 	// Find an exact matching rule, look for glob if no match
@@ -88,13 +88,12 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	// Find a glob rule, default deny if no match
 	_, raw, ok = a.globRules.LongestPrefix(path)
 	if !ok {
-		return nil
+		return []string{DenyCapability}
 	} else {
 		capabilities = raw.(uint32)
 	}
 
 CHECK:
-
 	if capabilities&SudoCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, SudoCapability)
 	}
@@ -113,11 +112,12 @@ CHECK:
 	if capabilities&CreateCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, CreateCapability)
 	}
-	// If "deny" capability is explicitly set, then ignore all other capabilities
-	if capabilities&DenyCapabilityInt > 0 {
+
+	// If "deny" is explicitly set or if the path has no capabilities at all,
+	// set the path capabilities to "deny"
+	if capabilities&DenyCapabilityInt > 0 || len(pathCapabilities) == 0 {
 		pathCapabilities = []string{DenyCapability}
 	}
-
 	return
 }
 
