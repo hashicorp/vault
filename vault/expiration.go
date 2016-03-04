@@ -331,14 +331,15 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	if err != nil {
 		return nil, err
 	}
+
+	if resp == nil {
+		return nil, nil
+	}
+
 	if resp.IsError() {
 		return resp, nil
 	}
 
-	// Fast-path if there is no renewal
-	if resp == nil {
-		return nil, nil
-	}
 	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
 		return resp, nil
 	}
