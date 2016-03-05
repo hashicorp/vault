@@ -33,6 +33,10 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 	case len(args) == 2:
 		token = args[0]
 		path = args[1]
+	default:
+		flags.Usage()
+		c.Ui.Error(fmt.Sprintf("\ncapabilities expects at least one argument"))
+		return 1
 	}
 
 	client, err := c.Client()
@@ -67,12 +71,13 @@ func (c *CapabilitiesCommand) Help() string {
 Usage: vault capabilities [options] [token] path
 
   Fetch the capabilities of a token on a given path.
-  If a token is provided to the command, API '/sys/capabilities' will be invoked
-  with the given token; otherwise API '/sys/capabilities-self' will be invoked with
-  the client token.
+  If a token is provided as an argument, '/sys/capabilities' endpoint will be invoked
+  with the given token; otherwise '/sys/capabilities-self' endpoing will be invoked
+  with the client token.
 
-  Note that this command will respond with a ["deny"] capability if the given path
-  is invalid.
+  If a token does not have any capability on a given path, or if any of the policies
+  belonging to the token explicitly had ["deny"] capability, or if the argument path
+  is invalid, this command will respond with a ["deny"].
 
 General Options:
 
