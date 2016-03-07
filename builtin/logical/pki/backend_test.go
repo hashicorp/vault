@@ -914,6 +914,26 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
 				delete(reqdata, "certificate")
+
+				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
+
+				return nil
+			},
+		},
+
+		// We expect to find a zero revocation time
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				if resp.Data["revocation_time"].(int64) != 0 {
+					return fmt.Errorf("expected a zero revocation time")
+				}
+
 				return nil
 			},
 		},
@@ -1051,10 +1071,29 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Data:      reqdata,
 			Check: func(resp *logical.Response) error {
 				delete(reqdata, "certificate")
+
+				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
+
 				return nil
 			},
 		},
 
+		// We expect to find a zero revocation time
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			PreFlight: setSerialUnderTest,
+			Check: func(resp *logical.Response) error {
+				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				if resp.Data["revocation_time"].(int64) != 0 {
+					return fmt.Errorf("expected a zero revocation time")
+				}
+
+				return nil
+			},
+		},
 		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "revoke",
@@ -1102,6 +1141,10 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
+				if resp.Data["revocation_time"].(int64) == 0 {
+					return fmt.Errorf("expected a non-zero revocation time")
+				}
+
 				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
 
 				return nil
@@ -1114,6 +1157,10 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Check: func(resp *logical.Response) error {
 				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
+				}
+
+				if resp.Data["revocation_time"].(int64) == 0 {
+					return fmt.Errorf("expected a non-zero revocation time")
 				}
 
 				// Give time for the certificates to pass the safety buffer
