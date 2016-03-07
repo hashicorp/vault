@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -67,8 +68,10 @@ func (b *backend) pathLogin(
 			Policies:    matched.Entry.Policies,
 			DisplayName: matched.Entry.DisplayName,
 			Metadata: map[string]string{
-				"cert_name":   matched.Entry.Name,
-				"common_name": clientCerts[0].Subject.CommonName,
+				"cert_name":        matched.Entry.Name,
+				"common_name":      clientCerts[0].Subject.CommonName,
+				"subject_key_id":   certutil.GetOctalFormatted(clientCerts[0].SubjectKeyId, ":"),
+				"authority_key_id": certutil.GetOctalFormatted(clientCerts[0].AuthorityKeyId, ":"),
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
