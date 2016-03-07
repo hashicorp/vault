@@ -100,7 +100,7 @@ func TestBackend_role_lease(t *testing.T) {
 
 func testStartConsulServer(t *testing.T) (map[string]interface{}, *os.Process) {
 	if _, err := exec.LookPath("consul"); err != nil {
-		t.Skipf("consul not found: %s", err)
+		t.Errorf("consul not found: %s", err)
 	}
 
 	td, err := ioutil.TempDir("", "vault")
