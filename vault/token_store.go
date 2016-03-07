@@ -120,10 +120,9 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					},
 
 					"orphan": &framework.FieldSchema{
-						Type:    framework.TypeBool,
-						Default: false,
-						Description: `If true, tokens created via this role
-will be orphan tokens (have no parent)`,
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: tokenOrphanHelp,
 					},
 
 					"period": &framework.FieldSchema{
@@ -715,6 +714,11 @@ func (ts *TokenStore) handleCreateCommon(
 		CreationTime: time.Now().Unix(),
 	}
 
+	// If the role is not nil, we add the role name as part of the token's
+	// path. This makes it much easier to later revoke tokens that were issued
+	// by a role (using revoke-prefix). Users can further specify a PathSuffix
+	// in the role; that way they can use something like "v1", "v2" to indicate
+	// role revisions, and revoke only tokens issued with a previous revision.
 	if role != nil {
 		te.Role = role.Name
 
@@ -1064,6 +1068,10 @@ func (ts *TokenStore) authRenew(
 		return nil, fmt.Errorf("request auth is nil")
 	}
 
+	if req.Auth.ClientToken == "" {
+		panic("nil client token")
+	}
+
 	f := framework.LeaseExtend(req.Auth.Increment, 0, ts.System())
 
 	idInt, ok := req.Auth.InternalData["id"]
@@ -1096,13 +1104,13 @@ func (ts *TokenStore) authRenew(
 	}
 
 	if role == nil {
-		resp, err := f(req, d)
-		if resp != nil {
-			resp.AddWarning(fmt.Sprintf("The token was created via role %s, but that role could no longer be found. Renewal fell back to normal token renewal semantics; if this token was a periodic token, this could mean that it can no longer be renewed.", te.Role))
-		}
-		return resp, err
+		return logical.ErrorResponse(fmt.Sprintf("original token role (%s) could not be found, not renewing", te.Role)), nil
 	}
 
+	// If role.Period is not zero, this is a periodic token. The TTL for a
+	// periodic token is always the same (the role's period value). It is not
+	// subject to normal maximum TTL checks that would come from calling
+	// LeaseExtend, so we fast path it.
 	if role.Period != 0 {
 		req.Auth.TTL = role.Period
 		return &logical.Response{Auth: req.Auth}, nil
@@ -1232,6 +1240,8 @@ rather than the normal semantics of a subset
 of the client token's policies. This
 parameter should be sent as a comma-delimited
 string.`
+	tokenOrphanHelp = `If true, tokens created via this role
+will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role
 will have no max lifetime; instead, their
 renewal period will be fixed to this value.
