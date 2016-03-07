@@ -19,6 +19,8 @@ IMPROVEMENTS:
    must be matched exactly (issuer and serial number) for authentication, and
    the certificate must carry the client authentication or 'any' extended usage
    attributes. [GH-1153]
+ * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
+   endpoint [GH-1180]
  * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
 
 BUG FIXES:
