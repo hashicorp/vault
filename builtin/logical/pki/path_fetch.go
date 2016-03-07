@@ -74,12 +74,11 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	var serial string
-	var pemType string
-	var contentType string
-	var certEntry *logical.StorageEntry
+	var serial, pemType, contentType string
+	var certEntry, revokedEntry *logical.StorageEntry
 	var funcErr error
 	var certificate []byte
+	var revocationTime int64
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -140,6 +139,26 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		certificate = pem.EncodeToMemory(&block)
 	}
 
+	revokedEntry, funcErr = fetchCertBySerial(req, "revoked/", serial)
+	if funcErr != nil {
+		switch funcErr.(type) {
+		case certutil.UserError:
+			response = logical.ErrorResponse(funcErr.Error())
+			goto reply
+		case certutil.InternalError:
+			retErr = funcErr
+			goto reply
+		}
+	}
+	if revokedEntry != nil {
+		var revInfo revocationInfo
+		err := revokedEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)), nil
+		}
+		revocationTime = revInfo.RevocationTime
+	}
+
 reply:
 	switch {
 	case len(contentType) != 0:
@@ -157,6 +176,7 @@ reply:
 		response = nil
 	default:
 		response.Data["certificate"] = string(certificate)
+		response.Data["revocation_time"] = revocationTime
 	}
 
 	return
