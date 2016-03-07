@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -34,8 +35,15 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 
 		capabilities, err := core.Capabilities(data.Token, data.Path)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
-			return
+			if errwrap.Contains(err, "invalid token") ||
+				errwrap.Contains(err, "missing path") ||
+				errwrap.Contains(err, "missing token") {
+				respondError(w, http.StatusBadRequest, err)
+				return
+			} else {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
 		}
 
 		respondOk(w, &capabilitiesResponse{

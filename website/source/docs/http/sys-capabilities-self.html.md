@@ -26,7 +26,7 @@ description: |-
       <li>
         <span class="param">path</span>
         <span class="param-flags">required</span>
-	Path on which the client token's capabilities will be checked.
+        Path on which the client token's capabilities will be checked.
       </li>
     </ul>
   </dd>
@@ -35,9 +35,9 @@ description: |-
   <dd>
 
     ```javascript
-	{
-		"capabilities": ["read", "list"]
-	}
+    {
+        "capabilities": ["read", "list"]
+    }
     ```
 
   </dd>

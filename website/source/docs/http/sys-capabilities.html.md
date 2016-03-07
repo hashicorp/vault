@@ -25,12 +25,12 @@ description: |-
       <li>
         <span class="param">token</span>
         <span class="param-flags">required</span>
-	Token for which capabilities are being queried.
+        Token for which capabilities are being queried.
       </li>
       <li>
         <span class="param">path</span>
         <span class="param-flags">required</span>
-	Path on which the token's capabilities will be checked.
+        Path on which the token's capabilities will be checked.
       </li>
     </ul>
   </dd>
@@ -39,9 +39,9 @@ description: |-
   <dd>
 
     ```javascript
-	{
-		"capabilities": ["read", "list"]
-	}
+    {
+        "capabilities": ["read", "list"]
+    }
     ```
 
   </dd>

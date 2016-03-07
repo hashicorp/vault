@@ -71,12 +71,12 @@ func (c *CapabilitiesCommand) Help() string {
 Usage: vault capabilities [options] [token] path
 
   Fetch the capabilities of a token on a given path.
-  If a token is provided as an argument, '/sys/capabilities' endpoint will be invoked
-  with the given token; otherwise '/sys/capabilities-self' endpoing will be invoked
+  If a token is provided as an argument, the '/sys/capabilities' endpoint will be invoked
+  with the given token; otherwise the '/sys/capabilities-self' endpoint will be invoked
   with the client token.
 
   If a token does not have any capability on a given path, or if any of the policies
-  belonging to the token explicitly had ["deny"] capability, or if the argument path
+  belonging to the token explicitly have ["deny"] capability, or if the argument path
   is invalid, this command will respond with a ["deny"].
 
 General Options:

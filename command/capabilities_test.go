@@ -39,6 +39,6 @@ func TestCapabilities_Basic(t *testing.T) {
 
 	args = []string{"-address", addr, "invalidtoken", "test"}
 	if code := c.Run(args); code == 0 {
-		t.Fatalf("expected failure due to no invalid token")
+		t.Fatalf("expected failure due to invalid token")
 	}
 }
