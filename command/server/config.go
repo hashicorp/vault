@@ -44,6 +44,7 @@ func DevConfig() *Config {
 			&Listener{
 				Type: "tcp",
 				Config: map[string]string{
+					"address":     "127.0.0.1:8200",
 					"tls_disable": "1",
 				},
 			},

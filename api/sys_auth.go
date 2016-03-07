@@ -18,10 +18,6 @@ func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
 }
 
 func (c *Sys) EnableAuth(path, authType, desc string) error {
-	if err := c.checkAuthPath(path); err != nil {
-		return err
-	}
-
 	body := map[string]string{
 		"type":        authType,
 		"description": desc,
@@ -42,24 +38,12 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 }
 
 func (c *Sys) DisableAuth(path string) error {
-	if err := c.checkAuthPath(path); err != nil {
-		return err
-	}
-
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
 	return err
-}
-
-func (c *Sys) checkAuthPath(path string) error {
-	if path[0] == '/' {
-		return fmt.Errorf("path must not start with /: %s", path)
-	}
-
-	return nil
 }
 
 // Structures for the requests/resposne are all down here. They aren't

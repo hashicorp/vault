@@ -41,9 +41,11 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly bool
 	var configPath []string
-	var logLevel string
+	var logLevel, devRootTokenID, devListenAddress string
 	flags := c.Meta.FlagSet("server", FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
+	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
+	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -52,17 +54,39 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" {
+		devRootTokenID = os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")
+	}
+
+	if os.Getenv("VAULT_DEV_LISTEN_ADDRESS") != "" {
+		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
+	}
+
 	// Validation
-	if !dev && len(configPath) == 0 {
-		c.Ui.Error("At least one config path must be specified with -config")
-		flags.Usage()
-		return 1
+	if !dev {
+		switch {
+		case len(configPath) == 0:
+			c.Ui.Error("At least one config path must be specified with -config")
+			flags.Usage()
+			return 1
+		case devRootTokenID != "":
+			c.Ui.Error("Root token ID can only be specified with -dev")
+			flags.Usage()
+			return 1
+		case devListenAddress != "":
+			c.Ui.Error("Development address can only be specified with -dev")
+			flags.Usage()
+			return 1
+		}
 	}
 
 	// Load the configuration
 	var config *server.Config
 	if dev {
 		config = server.DevConfig()
+		if devListenAddress != "" {
+			config.Listeners[0].Config["address"] = devListenAddress
+		}
 	}
 	for _, path := range configPath {
 		current, err := server.LoadConfig(path)
@@ -193,7 +217,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// If we're in dev mode, then initialize the core
 	if dev {
-		init, err := c.enableDev(core)
+		init, err := c.enableDev(core, devRootTokenID)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing dev mode: %s", err))
@@ -215,7 +239,7 @@ func (c *ServerCommand) Run(args []string) int {
 				"immediately begin using the Vault CLI.\n\n"+
 				"The only step you need to take is to set the following\n"+
 				"environment variables:\n\n"+
-				"    "+export+" VAULT_ADDR="+quote+"http://127.0.0.1:8200"+quote+"\n\n"+
+				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"]+quote+"\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
 				"Unseal Key: %s\nRoot Token: %s\n",
@@ -319,7 +343,7 @@ func (c *ServerCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
+func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.InitResult, error) {
 	// Initialize it with a basic single key
 	init, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    1,
@@ -340,6 +364,39 @@ func (c *ServerCommand) enableDev(core *vault.Core) (*vault.InitResult, error) {
 	}
 	if !unsealed {
 		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+	}
+
+	if rootTokenID != "" {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: init.RootToken,
+			Path:        "auth/token/create",
+			Data: map[string]interface{}{
+				"id":                rootTokenID,
+				"policies":          []string{"root"},
+				"no_parent":         true,
+				"no_default_policy": true,
+			},
+		}
+		resp, err := core.HandleRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create root token with ID %s: %s", rootTokenID, err)
+		}
+		if resp == nil {
+			return nil, fmt.Errorf("nil response when creating root token with ID %s", rootTokenID)
+		}
+		if resp.Auth == nil {
+			return nil, fmt.Errorf("nil auth when creating root token with ID %s", rootTokenID)
+		}
+
+		init.RootToken = resp.Auth.ClientToken
+
+		req.Path = "auth/token/revoke-self"
+		req.Data = nil
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to revoke initial root token: %s", err)
+		}
 	}
 
 	// Set the token
@@ -495,18 +552,28 @@ Usage: vault server [options]
 
 General Options:
 
-  -config=<path>      Path to the configuration file or directory. This can be
-                      specified multiple times. If it is a directory, all
-                      files with a ".hcl" or ".json" suffix will be loaded.
+  -config=<path>          Path to the configuration file or directory. This can
+                          be specified multiple times. If it is a directory,
+                          all files with a ".hcl" or ".json" suffix will be
+                          loaded.
 
-  -dev                Enables Dev mode. In this mode, Vault is completely
-                      in-memory and unsealed. Do not run the Dev server in
-                      production!
+  -dev                    Enables Dev mode. In this mode, Vault is completely
+                          in-memory and unsealed. Do not run the Dev server in
+                          production!
 
-  -log-level=info     Log verbosity. Defaults to "info", will be outputted
-                      to stderr. Supported values: "trace", "debug", "info",
-                      "warn", "err"
+  -dev-root-token-id=""   If set, the root token returned in Dev mode will have
+                          the given ID. This *only* has an effect when running
+                          in Dev mode. Can also be specified with the
+                          VAULT_DEV_ROOT_TOKEN_ID environment variable.
 
+  -dev-listen-address=""  If set, this overrides the normal Dev mode listen
+                          address of "127.0.0.1:8200". Can also be specified
+                          with the VAULT_DEV_LISTEN_ADDRESS environment
+                          variable.
+
+  -log-level=info         Log verbosity. Defaults to "info", will be output to
+                          stderr. Supported values: "trace", "debug", "info",
+                          "warn", "err"
 `
 	return strings.TrimSpace(helpText)
 }

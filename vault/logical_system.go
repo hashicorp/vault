@@ -246,6 +246,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.handlePolicyList,
+					logical.ListOperation: b.handlePolicyList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
@@ -465,6 +466,8 @@ func (b *SystemBackend) handleMount(
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 
+	path = sanitizeMountPath(path)
+
 	var config MountConfig
 
 	var apiConfig struct {
@@ -561,6 +564,8 @@ func (b *SystemBackend) handleUnmount(
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
 
+	suffix = sanitizeMountPath(suffix)
+
 	// Attempt unmount
 	if err := b.Core.unmount(suffix); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: unmount '%s' failed: %v", suffix, err)
@@ -582,6 +587,9 @@ func (b *SystemBackend) handleRemount(
 			logical.ErrInvalidRequest
 	}
 
+	fromPath = sanitizeMountPath(fromPath)
+	toPath = sanitizeMountPath(toPath)
+
 	// Attempt remount
 	if err := b.Core.remount(fromPath, toPath); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
@@ -601,9 +609,7 @@ func (b *SystemBackend) handleMountTuneRead(
 			logical.ErrInvalidRequest
 	}
 
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
+	path = sanitizeMountPath(path)
 
 	sysView := b.Core.router.MatchingSystemView(path)
 	if sysView == nil {
@@ -632,9 +638,7 @@ func (b *SystemBackend) handleMountTuneWrite(
 			logical.ErrInvalidRequest
 	}
 
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
+	path = sanitizeMountPath(path)
 
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
@@ -776,6 +780,8 @@ func (b *SystemBackend) handleEnableAuth(
 			logical.ErrInvalidRequest
 	}
 
+	path = sanitizeMountPath(path)
+
 	// Create the mount entry
 	me := &MountEntry{
 		Path:        path,
@@ -799,6 +805,8 @@ func (b *SystemBackend) handleDisableAuth(
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
 
+	suffix = sanitizeMountPath(suffix)
+
 	// Attempt disable
 	if err := b.Core.disableCredential(suffix); err != nil {
 		b.Backend.Logger().Printf("[ERR] sys: disable auth '%s' failed: %v", suffix, err)
@@ -815,7 +823,12 @@ func (b *SystemBackend) handlePolicyList(
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
-	return logical.ListResponse(policies), err
+	resp := logical.ListResponse(policies)
+
+	// Backwords compatibility
+	resp.Data["policies"] = resp.Data["keys"]
+
+	return resp, err
 }
 
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
@@ -902,9 +915,7 @@ func (b *SystemBackend) handleAuditHash(
 		return logical.ErrorResponse("the \"input\" parameter is empty"), nil
 	}
 
-	if !strings.HasSuffix(path, "/") {
-		path += "/"
-	}
+	path = sanitizeMountPath(path)
 
 	hash, err := b.Core.auditBroker.GetHash(path, input)
 	if err != nil {
@@ -1081,6 +1092,18 @@ func (b *SystemBackend) handleRotate(
 		})
 	}
 	return nil, nil
+}
+
+func sanitizeMountPath(path string) string {
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+
+	return path
 }
 
 const sysHelpRoot = `

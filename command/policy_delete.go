@@ -53,7 +53,7 @@ Usage: vault policy-delete [options] name
 
   Delete a policy with the given name.
 
-  One the policy is deleted, all users associated with the policy will
+  Once the policy is deleted, all users associated with the policy will
   be affected immediately. When a user is associated with a policy that
   doesn't exist, it is identical to not being associated with that policy.
 

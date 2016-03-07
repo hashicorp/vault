@@ -74,6 +74,12 @@ func Parse(rules string) (*Policy, error) {
 
 	// Validate the path policy
 	for _, pc := range p.Paths {
+		// Strip a leading '/' as paths in Vault start after the / in the API
+		// path
+		if len(pc.Prefix) > 0 && pc.Prefix[0] == '/' {
+			pc.Prefix = pc.Prefix[1:]
+		}
+
 		// Strip the glob character if found
 		if strings.HasSuffix(pc.Prefix, "*") {
 			pc.Prefix = strings.TrimSuffix(pc.Prefix, "*")

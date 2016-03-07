@@ -85,6 +85,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 		t.Fatalf("unseal err: %s", err)
 	}
 
+	// Attempt to fix raciness in this test by giving the first core a chance
+	// to grab the lock
+	time.Sleep(time.Second)
+
 	// Create a second HA Vault
 	conf2 := &vault.CoreConfig{
 		Physical:      inmha,

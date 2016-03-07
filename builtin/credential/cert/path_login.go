@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -134,7 +135,16 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	connState := req.Connection.ConnState
 
 	// Load the trusted certificates
-	roots, trusted := b.loadTrustedCerts(req.Storage)
+	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage)
+
+	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
+	// with the backend.
+	if len(trustedNonCAs) != 0 {
+		policy := b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs)
+		if policy != nil {
+			return policy, nil, nil
+		}
+	}
 
 	// Validate the connection state is trusted
 	trustedChains, err := validateConnState(roots, connState)
@@ -158,6 +168,18 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	return b.matchPolicy(trustedChains, trusted), nil, nil
 }
 
+// matchNonCAPolicy is used to match the client cert with the registered non-CA
+// policies to establish client identity.
+func (b *backend) matchNonCAPolicy(clientCert *x509.Certificate, trustedNonCAs []*ParsedCert) *ParsedCert {
+	for _, trustedNonCA := range trustedNonCAs {
+		tCert := trustedNonCA.Certificates[0]
+		if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 && bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
+			return trustedNonCA
+		}
+	}
+	return nil
+}
+
 // matchPolicy is used to match the associated policy with the certificate that
 // was used to establish the client identity.
 func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCert) *ParsedCert {
@@ -177,7 +199,7 @@ func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCer
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert) {
+func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
 	names, err := store.List("cert/")
 	if err != nil {
@@ -195,15 +217,22 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 			b.Logger().Printf("[ERR] cert: failed to parse certificate for '%s'", name)
 			continue
 		}
-		for _, p := range parsed {
-			pool.AddCert(p)
-		}
+		if !parsed[0].IsCA {
+			trustedNonCAs = append(trustedNonCAs, &ParsedCert{
+				Entry:        entry,
+				Certificates: parsed,
+			})
+		} else {
+			for _, p := range parsed {
+				pool.AddCert(p)
+			}
 
-		// Create a ParsedCert entry
-		trusted = append(trusted, &ParsedCert{
-			Entry:        entry,
-			Certificates: parsed,
-		})
+			// Create a ParsedCert entry
+			trusted = append(trusted, &ParsedCert{
+				Entry:        entry,
+				Certificates: parsed,
+			})
+		}
 	}
 	return
 }
@@ -257,6 +286,7 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		Intermediates: x509.NewCertPool(),
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
+
 	certs := cs.PeerCertificates
 	if len(certs) == 0 {
 		return nil, nil

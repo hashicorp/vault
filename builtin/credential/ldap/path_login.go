@@ -76,7 +76,7 @@ func (b *backend) pathLoginRenew(
 
 	sort.Strings(policies)
 	if strings.Join(policies, ",") != prevpolicies {
-		return logical.ErrorResponse("policies have changed, revoking login"), nil
+		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
 	return framework.LeaseExtend(0, 0, b.System())(req, d)

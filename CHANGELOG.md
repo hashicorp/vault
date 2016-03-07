@@ -1,11 +1,34 @@
 ## 0.5.2 (Unreleased)
 
+IMPROVEMENTS:
+ * core: Ignore leading `/` in policy paths [GH-1170]
+ * core: Ignore leading `/` in mount paths [GH-1172]
+ * command/server: The initial root token ID when running in `-dev` mode can
+   now be specified via `-dev-root-token-id` or the environment variable
+   `VAULT_DEV_ROOT_TOKEN_ID` [GH-1162]
+ * command/server: The listen address when running in `-dev` mode can now be
+   specified via `-dev-listen-address` or the environment variable
+   `VAULT_DEV_LISTEN_ADDRESS` [GH-1169]
+ * command/step-down: New `vault step-down` command and API endpoint to force
+   the targeted node to give up active status, but without sealing. The node
+   will wait ten seconds before attempting too grab the lock again. [GH-1146]
+ * command/token-renew: Allow no token to be passed in; use `renew-self` in
+   this case. Change the behavior for any token being passed in to use `renew`.
+   [GH-1150]
+ * credential/cert: Non-CA certificates can be used for authentication. They
+   must be matched exactly (issuer and serial number) for authentication, and
+   the certificate must carry the client authentication or 'any' extended usage
+   attributes. [GH-1153]
+ * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
+
 BUG FIXES:
 
-* logical/cassandra: Apply hyphen/underscore replacement to the entire
-  generated username, not just the UUID, in order to handle token display name
-  hyphens [GH-1140]
-* physical/etcd: Output actual error when cluster sync fails [GH-1141]
+ * logical/cassandra: Apply hyphen/underscore replacement to the entire
+   generated username, not just the UUID, in order to handle token display name
+   hyphens [GH-1140]
+ * physical/etcd: Output actual error when cluster sync fails [GH-1141]
+ * vault/expiration: Not letting the error responses from the backends to skip
+   during renewals [GH-1176]
 
 ## 0.5.1 (February 25th, 2016)
  

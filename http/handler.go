@@ -23,29 +23,16 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
+	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/mounts", proxySysRequest(core))
-	mux.Handle("/v1/sys/mounts/", proxySysRequest(core))
-	mux.Handle("/v1/sys/remount", proxySysRequest(core))
-	mux.Handle("/v1/sys/policy", handleSysListPolicies(core))
-	mux.Handle("/v1/sys/policy/", handleSysPolicy(core))
 	mux.Handle("/v1/sys/renew/", handleLogical(core, false))
-	mux.Handle("/v1/sys/revoke/", proxySysRequest(core))
-	mux.Handle("/v1/sys/revoke-prefix/", proxySysRequest(core))
-	mux.Handle("/v1/sys/auth", proxySysRequest(core))
-	mux.Handle("/v1/sys/auth/", proxySysRequest(core))
-	mux.Handle("/v1/sys/audit-hash/", proxySysRequest(core))
-	mux.Handle("/v1/sys/audit", proxySysRequest(core))
-	mux.Handle("/v1/sys/audit/", proxySysRequest(core))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/rotate", proxySysRequest(core))
-	mux.Handle("/v1/sys/key-status", proxySysRequest(core))
 	mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core))
 	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
-	mux.Handle("/v1/sys/rekey/backup", proxySysRequest(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
+	mux.Handle("/v1/sys/", handleLogical(core, true))
 	mux.Handle("/v1/", handleLogical(core, false))
 
 	// Wrap the handler in another handler to trigger all help paths.
@@ -212,10 +199,6 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
-}
-
-func proxySysRequest(core *vault.Core) http.Handler {
-	return handleLogical(core, true)
 }
 
 type ErrorResponse struct {

@@ -80,7 +80,8 @@ path "prod/version" {
 }
 
 # Read access to foobar
-path "foo/bar" {
+# Also tests stripping of leading slash
+path "/foo/bar" {
 	policy = "read"
 }
 

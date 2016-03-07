@@ -224,6 +224,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"step-down": func() (cli.Command, error) {
+			return &command.StepDownCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"mount": func() (cli.Command, error) {
 			return &command.MountCommand{
 				Meta: meta,
