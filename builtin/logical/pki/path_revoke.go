@@ -2,6 +2,7 @@ package pki
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -46,6 +47,10 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 	if len(serial) == 0 {
 		return logical.ErrorResponse("The serial number must be provided"), nil
 	}
+
+	// We store and identify by lowercase colon-separated hex, but other
+	// utilities use dashes and/or uppercase, so normalize
+	serial = strings.Replace(strings.ToLower(serial), "-", ":", -1)
 
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
