@@ -1,6 +1,8 @@
 ## 0.5.2 (Unreleased)
 
 IMPROVEMENTS:
+ * sys: Added new endpoints `sys/capabilities` and `sys/capabilities-self` to
+   fetch the capabilities of a token on a given path [GH-1171]
  * core: Ignore leading `/` in policy paths [GH-1170]
  * core: Ignore leading `/` in mount paths [GH-1172]
  * command/server: The initial root token ID when running in `-dev` mode can
