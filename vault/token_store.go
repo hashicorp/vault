@@ -264,6 +264,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
 	ID           string            // ID of this entry, generally a random UUID
+	AccessorID   string            // Accessor ID for this token, a random UUID
 	Parent       string            // Parent token, used for revocation trees
 	Policies     []string          // Which named policies should be used
 	Path         string            // Used for audit trails, this is something like "auth/user/login"
@@ -300,6 +301,19 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	return te, nil
 }
 
+// CreateAccessorID is used to create an identifier for the token ID.
+func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "createAccessorID"}, time.Now())
+
+	// Create a random accessor ID
+	accessorUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	entry.AccessorID = accessorUUID
+	return nil
+}
+
 // Create is used to create a new token entry. The entry is assigned
 // a newly generated ID if not provided.
 func (ts *TokenStore) create(entry *TokenEntry) error {
@@ -311,6 +325,11 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 			return err
 		}
 		entry.ID = entryUUID
+	}
+
+	err := ts.createAccessorID(entry)
+	if err != nil {
+		return err
 	}
 
 	return ts.storeCommon(entry, true)
@@ -705,6 +724,7 @@ func (ts *TokenStore) handleCreateCommon(
 				Renewable: true,
 			},
 			ClientToken: te.ID,
+			AccessorID:  te.AccessorID,
 		},
 	}
 
