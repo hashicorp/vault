@@ -290,6 +290,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"capabilities": func() (cli.Command, error) {
+			return &command.CapabilitiesCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			versionInfo := version.GetVersion()
 
