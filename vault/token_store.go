@@ -139,7 +139,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: t.handleLookupAccessor,
+					logical.UpdateOperation: t.handleLookupAccessor,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenLookupAccessorHelp),
@@ -343,7 +343,7 @@ func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
 	entry.AccessorID = accessorUUID
 
 	// Create index entry, mapping the Accessor ID to the Token ID
-	path := lookupPrefix + ts.SaltID(entry.ID) + "/" + ts.SaltID(entry.AccessorID)
+	path := lookupPrefix + ts.SaltID(entry.AccessorID)
 	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %v", err)
@@ -527,7 +527,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 
 	// Clear the accessor ID index if any
 	if entry != nil && entry.AccessorID != "" {
-		path := lookupPrefix + ts.SaltID(entry.ID) + "/" + ts.SaltID(entry.AccessorID)
+		path := lookupPrefix + ts.SaltID(entry.AccessorID)
 		if ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -596,15 +596,56 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 
 // handleLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor ID
-func (ts *TokenStore) handleLookupAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("token_store.go: handleLookupAccessor req: %#v d: %#v\n", req, d)
-	return nil, nil
+func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	accessorID := data.Get("accessor_id").(string)
+	if accessorID == "" {
+		return logical.ErrorResponse("missing accessor_id"), nil
+	}
+
+	entry, err := ts.view.Get(lookupPrefix + ts.SaltID(accessorID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read token using accessor ID: %s", err)
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("invalid accessor ID")
+	}
+
+	// Prepare the field data required for a lookup call
+	d := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"token": string(entry.Value),
+		},
+		Schema: map[string]*framework.FieldSchema{
+			"token": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Token to lookup",
+			},
+		},
+	}
+	resp, err := ts.handleLookup(req, d)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("failed to lookup the token")
+	}
+	if resp.IsError() {
+		return resp, nil
+
+	}
+
+	// Remove the token ID from the response
+	if resp.Data != nil && resp.Data["id"] != "" {
+		resp.Data["id"] = ""
+	}
+
+	return resp, nil
 }
 
 // handleRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor ID
-func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("token_store.go: handleRevokeAccessor req: %#v d: %#v\n", req, d)
+func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	log.Printf("token_store.go: handleRevokeAccessor req: %#v d: %#v\n", req, data)
 	return nil, nil
 }
 
