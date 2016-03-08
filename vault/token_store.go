@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -663,7 +662,6 @@ func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework
 // handleRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor ID
 func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	log.Printf("token_store.go: handleRevokeAccessor req: %#v d: %#v\n", req, data)
 	accessorID := data.Get("accessor_id").(string)
 	if accessorID == "" {
 		return logical.ErrorResponse("missing accessor_id"), nil

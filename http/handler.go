@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -79,7 +80,12 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		return resp, false
 	}
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		// Keep on adding error types here to set proper HTTP status code
+		if errwrap.ContainsType(err, new(vault.ErrUserInput)) {
+			respondError(w, http.StatusBadRequest, err)
+		} else {
+			respondError(w, http.StatusInternalServerError, err)
+		}
 		return resp, false
 	}
 
