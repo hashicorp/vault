@@ -23,6 +23,8 @@ IMPROVEMENTS:
    allows more flexible searching/revocation in the audit logs [GH-1183]
  * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
    endpoint [GH-1180]
+ * secret/pki: Sanitize serial number in `pki/revoke` endpoint to allow some
+   other formats [GH-1187]
  * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
 
 BUG FIXES:
