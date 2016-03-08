@@ -35,9 +35,7 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 
 		capabilities, err := core.Capabilities(data.Token, data.Path)
 		if err != nil {
-			if errwrap.Contains(err, "invalid token") ||
-				errwrap.Contains(err, "missing path") ||
-				errwrap.Contains(err, "missing token") {
+			if errwrap.ContainsType(err, new(vault.ErrUserInput)) {
 				respondError(w, http.StatusBadRequest, err)
 				return
 			} else {

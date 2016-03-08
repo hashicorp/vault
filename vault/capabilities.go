@@ -1,19 +1,29 @@
 package vault
 
-import (
-	"fmt"
+// Struct to identify user input errors.
+// This is helpful in responding the appropriate status codes to clients
+// from the HTTP endpoints.
+type ErrUserInput struct {
+	Message string
+}
 
-	"github.com/hashicorp/errwrap"
-)
+// Implementing error interface
+func (e *ErrUserInput) Error() string {
+	return e.Message
+}
 
 // Capabilities is used to fetch the capabilities of the given token on the given path
 func (c *Core) Capabilities(token, path string) ([]string, error) {
 	if path == "" {
-		return nil, errwrap.Wrapf("{{err}}", fmt.Errorf("missing path"))
+		return nil, &ErrUserInput{
+			Message: "missing path",
+		}
 	}
 
 	if token == "" {
-		return nil, errwrap.Wrapf("{{err}}", fmt.Errorf("missing token"))
+		return nil, &ErrUserInput{
+			Message: "missing token",
+		}
 	}
 
 	te, err := c.tokenStore.Lookup(token)
@@ -21,7 +31,9 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 	if te == nil {
-		return nil, errwrap.Wrapf("{{err}}", fmt.Errorf("invalid token"))
+		return nil, &ErrUserInput{
+			Message: "invalid token",
+		}
 	}
 
 	if te.Policies == nil {
