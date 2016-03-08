@@ -311,6 +311,17 @@ func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
 		return err
 	}
 	entry.AccessorID = accessorUUID
+
+	// Create salted token and accessor IDs
+	saltedTokenId := ts.SaltID(entry.ID)
+	saltedAccessorID := ts.SaltID(entry.AccessorID)
+
+	// Create index, mapping the Accessor ID to the Token ID
+	path := lookupPrefix + saltedTokenId + "/" + saltedAccessorID
+	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
+	if err := ts.view.Put(le); err != nil {
+		return fmt.Errorf("failed to persist accessor index entry: %v", err)
+	}
 	return nil
 }
 
