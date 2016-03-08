@@ -313,11 +313,9 @@ func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
 	entry.AccessorID = accessorUUID
 
 	// Create salted token and accessor IDs
-	saltedTokenId := ts.SaltID(entry.ID)
-	saltedAccessorID := ts.SaltID(entry.AccessorID)
 
 	// Create index, mapping the Accessor ID to the Token ID
-	path := lookupPrefix + saltedTokenId + "/" + saltedAccessorID
+	path := lookupPrefix + ts.SaltID(entry.ID) + "/" + ts.SaltID(entry.AccessorID)
 	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %v", err)
@@ -494,6 +492,14 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 	// Clear the secondary index if any
 	if entry != nil && entry.Parent != "" {
 		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+		if ts.view.Delete(path); err != nil {
+			return fmt.Errorf("failed to delete entry: %v", err)
+		}
+	}
+
+	// Clear the accessor ID index if any
+	if entry != nil && entry.AccessorID != "" {
+		path := lookupPrefix + ts.SaltID(entry.ID) + "/" + ts.SaltID(entry.AccessorID)
 		if ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
