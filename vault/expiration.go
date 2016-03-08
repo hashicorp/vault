@@ -193,8 +193,12 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force bool) error {
 	}
 
 	// Revoke the entry
-	if err := m.revokeEntry(le); err != nil && !force {
-		return err
+	if err := m.revokeEntry(le); err != nil {
+		if !force {
+			return err
+		} else {
+			m.logger.Printf("[WARN]: revocation from the backend failed, but in force mode so ignoring; error was: %s", err)
+		}
 	}
 
 	// Delete the entry
