@@ -132,7 +132,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup-accessor$",
+				Pattern: "lookup-accessor/(?P<accessor>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{

@@ -58,8 +58,7 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor")
-	req.Data["accessor"] = out.Accessor
+	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor/"+out.Accessor)
 
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
