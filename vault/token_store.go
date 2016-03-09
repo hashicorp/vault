@@ -142,11 +142,11 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: t.handleLookupAccessor,
+					logical.UpdateOperation: t.handleUpdateLookupAccessor,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(tokenLookupAccessorHelp),
-				HelpDescription: strings.TrimSpace(tokenLookupAccessorHelp),
+				HelpSynopsis:    strings.TrimSpace(lookupAccessorHelp),
+				HelpDescription: strings.TrimSpace(lookupAccessorHelp),
 			},
 
 			&framework.Path{
@@ -178,11 +178,11 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: t.handleRevokeAccessor,
+					logical.UpdateOperation: t.handleUpdateRevokeAccessor,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(tokenRevokeAccessorHelp),
-				HelpDescription: strings.TrimSpace(tokenRevokeAccessorHelp),
+				HelpSynopsis:    strings.TrimSpace(revokeAccessorHelp),
+				HelpDescription: strings.TrimSpace(revokeAccessorHelp),
 			},
 
 			&framework.Path{
@@ -342,7 +342,7 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 }
 
 // createAccessor is used to create an identifier for the token ID.
-// An storage index, mapping the accessor to the token ID is also created.
+// A storage index, mapping the accessor to the token ID is also created.
 func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
 
@@ -617,9 +617,9 @@ func (ts *TokenStore) lookupByAccessor(accessor string) (string, error) {
 	return string(entry.Value), nil
 }
 
-// handleLookupAccessor handles the auth/token/lookup-accessor path for returning
+// handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor
-func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
 		return nil, &StatusBadRequest{Err: "missing accessor"}
@@ -662,9 +662,9 @@ func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework
 	return resp, nil
 }
 
-// handleRevokeAccessor handles the auth/token/revoke-accessor path for revoking
+// handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor
-func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
 		return nil, &StatusBadRequest{Err: "missing accessor"}
@@ -1071,15 +1071,15 @@ const (
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
 as revocation of tokens. The tokens are renewable if associated with a lease.`
-	tokenCreateHelp         = `The token create path is used to create new tokens.`
-	tokenCreateOrphanHelp   = `The token create path is used to create new orphan tokens.`
-	tokenLookupHelp         = `This endpoint will lookup a token and its properties.`
-	tokenLookupAccessorHelp = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
-	tokenRevokeHelp         = `This endpoint will delete the given token and all of its child tokens.`
-	tokenRevokeSelfHelp     = `This endpoint will delete the token used to call it and all of its child tokens.`
-	tokenRevokeAccessorHelp = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
-	tokenRevokeOrphanHelp   = `This endpoint will delete the token and orphan its child tokens.`
-	tokenRevokePrefixHelp   = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
-	tokenRenewHelp          = `This endpoint will renew the given token and prevent expiration.`
-	tokenRenewSelfHelp      = `This endpoint will renew the token used to call it and prevent expiration.`
+	tokenCreateHelp       = `The token create path is used to create new tokens.`
+	tokenCreateOrphanHelp = `The token create path is used to create new orphan tokens.`
+	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
+	lookupAccessorHelp    = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
+	tokenRevokeHelp       = `This endpoint will delete the given token and all of its child tokens.`
+	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
+	revokeAccessorHelp    = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
+	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
+	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
+	tokenRenewHelp        = `This endpoint will renew the given token and prevent expiration.`
+	tokenRenewSelfHelp    = `This endpoint will renew the token used to call it and prevent expiration.`
 )
