@@ -346,7 +346,8 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, err
 	}
 
-	// Check if the lease is renewable
+	// Check if the lease is renewable. Note that this also checks for a nil
+	// lease and errors in that case as well.
 	if err := le.renewable(); err != nil {
 		return nil, err
 	}
@@ -584,12 +585,17 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	return resp, nil
 }
 
-// renewAuthEntry is used to attempt renew of an auth entry
+// renewAuthEntry is used to attempt renew of an auth entry. Only the token
+// store should get the actual token ID intact.
 func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
 	auth.IssueTime = le.IssueTime
 	auth.Increment = increment
-	auth.ClientToken = ""
+	if strings.HasPrefix(le.Path, "auth/token/") {
+		auth.ClientToken = le.ClientToken
+	} else {
+		auth.ClientToken = ""
+	}
 
 	authReq := logical.RenewAuthRequest(le.Path, &auth, nil)
 	authReq.Connection = req.Connection

@@ -302,6 +302,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"creation_ttl": float64(0),
 		"ttl":          float64(0),
 		"path":         "auth/token/root",
+		"role":         "",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -383,6 +384,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"creation_ttl": float64(0),
 		"ttl":          float64(0),
 		"path":         "auth/token/root",
+		"role":         "",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
