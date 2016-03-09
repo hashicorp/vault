@@ -169,7 +169,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor ID associated with the token being revoked",
+						Description: "Accessor ID of the token",
 					},
 				},
 
@@ -338,6 +338,7 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 }
 
 // CreateAccessorID is used to create an identifier for the token ID.
+// An storage index, mapping the accessor ID to the token ID is also created.
 func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "createAccessorID"}, time.Now())
 
@@ -352,7 +353,7 @@ func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
 	path := lookupPrefix + ts.SaltID(entry.AccessorID)
 	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
 	if err := ts.view.Put(le); err != nil {
-		return fmt.Errorf("failed to persist accessor index entry: %v", err)
+		return fmt.Errorf("failed to persist accessor ID index entry: %v", err)
 	}
 	return nil
 }
@@ -606,9 +607,7 @@ func (ts *TokenStore) lookupByAccessorID(accessorID string) (string, error) {
 		return "", fmt.Errorf("failed to read index using accessor ID: %s", err)
 	}
 	if entry == nil {
-		return "", &StatusBadRequest{
-			Message: "invalid accessor ID",
-		}
+		return "", &StatusBadRequest{Err: "invalid accessor ID"}
 	}
 
 	return string(entry.Value), nil
@@ -619,7 +618,7 @@ func (ts *TokenStore) lookupByAccessorID(accessorID string) (string, error) {
 func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accessorID := data.Get("accessor_id").(string)
 	if accessorID == "" {
-		return logical.ErrorResponse("missing accessor_id"), nil
+		return nil, &StatusBadRequest{Err: "missing accessor_id"}
 	}
 
 	tokenID, err := ts.lookupByAccessorID(accessorID)
@@ -664,7 +663,7 @@ func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework
 func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accessorID := data.Get("accessor_id").(string)
 	if accessorID == "" {
-		return logical.ErrorResponse("missing accessor_id"), nil
+		return nil, &StatusBadRequest{Err: "missing accessor_id"}
 	}
 
 	tokenID, err := ts.lookupByAccessorID(accessorID)
@@ -1071,11 +1070,10 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp         = `The token create path is used to create new tokens.`
 	tokenCreateOrphanHelp   = `The token create path is used to create new orphan tokens.`
 	tokenLookupHelp         = `This endpoint will lookup a token and its properties.`
-	tokenLookupAccessorHelp = `This endpoint will lookup an accessor and its properties.
-This will not return the token ID associated with the accessor ID.`
+	tokenLookupAccessorHelp = `This endpoint will lookup a token associated with the given accessor ID and its properties. Response will not contain the token ID.`
 	tokenRevokeHelp         = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp     = `This endpoint will delete the token used to call it and all of its child tokens.`
-	tokenRevokeAccessorHelp = `This endpoint will delete the token associated with the accessor ID`
+	tokenRevokeAccessorHelp = `This endpoint will delete the token associated with the accessor ID and all of its child tokens.`
 	tokenRevokeOrphanHelp   = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRevokePrefixHelp   = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
 	tokenRenewHelp          = `This endpoint will renew the given token and prevent expiration.`

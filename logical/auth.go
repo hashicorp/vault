@@ -38,7 +38,7 @@ type Auth struct {
 	// to perform management functionalities (especially revocation) when
 	// ClientToken in the audit logs are obfuscated. AccessorID can be used
 	// to revoke a ClientToken and to lookup the capabilities of the ClientToken,
-	// all without actually knowing the ClientToken.
+	// both without actually knowing the ClientToken.
 	AccessorID string
 }
 

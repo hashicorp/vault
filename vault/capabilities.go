@@ -4,27 +4,23 @@ package vault
 // This is helpful in responding the appropriate status codes to clients
 // from the HTTP endpoints.
 type StatusBadRequest struct {
-	Message string
+	Err string
 }
 
 // Implementing error interface
-func (e *StatusBadRequest) Error() string {
-	return e.Message
+func (s *StatusBadRequest) Error() string {
+	return s.Err
 }
 
-// CapabilitiesAccessor is used to fetch the capabilities of the token associated with
-// the token accessor an the given path
+// CapabilitiesAccessor is used to fetch the capabilities of the token
+// which associated with the given accessorID on the given path
 func (c *Core) CapabilitiesAccessor(accessorID, path string) ([]string, error) {
 	if path == "" {
-		return nil, &StatusBadRequest{
-			Message: "missing path",
-		}
+		return nil, &StatusBadRequest{Err: "missing path"}
 	}
 
 	if accessorID == "" {
-		return nil, &StatusBadRequest{
-			Message: "missing accessor_id",
-		}
+		return nil, &StatusBadRequest{Err: "missing accessor_id"}
 	}
 
 	token, err := c.tokenStore.lookupByAccessorID(accessorID)
@@ -38,15 +34,11 @@ func (c *Core) CapabilitiesAccessor(accessorID, path string) ([]string, error) {
 // Capabilities is used to fetch the capabilities of the given token on the given path
 func (c *Core) Capabilities(token, path string) ([]string, error) {
 	if path == "" {
-		return nil, &StatusBadRequest{
-			Message: "missing path",
-		}
+		return nil, &StatusBadRequest{Err: "missing path"}
 	}
 
 	if token == "" {
-		return nil, &StatusBadRequest{
-			Message: "missing token",
-		}
+		return nil, &StatusBadRequest{Err: "missing token"}
 	}
 
 	te, err := c.tokenStore.Lookup(token)
@@ -54,9 +46,7 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 	if te == nil {
-		return nil, &StatusBadRequest{
-			Message: "invalid token",
-		}
+		return nil, &StatusBadRequest{Err: "invalid token"}
 	}
 
 	if te.Policies == nil {
