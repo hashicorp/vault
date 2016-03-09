@@ -984,6 +984,7 @@ func (ts *TokenStore) handleLookup(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"id":            out.ID,
+			"accessor":      out.Accessor,
 			"policies":      out.Policies,
 			"path":          out.Path,
 			"meta":          out.Meta,
