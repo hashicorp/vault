@@ -11,9 +11,10 @@ type RevokeCommand struct {
 }
 
 func (c *RevokeCommand) Run(args []string) int {
-	var prefix bool
+	var prefix, force bool
 	flags := c.Meta.FlagSet("revoke", FlagSetDefault)
 	flags.BoolVar(&prefix, "prefix", false, "")
+	flags.BoolVar(&force, "force", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -35,9 +36,16 @@ func (c *RevokeCommand) Run(args []string) int {
 		return 2
 	}
 
-	if prefix {
+	switch {
+	case force && !prefix:
+		c.Ui.Error(fmt.Sprintf(
+			"-force requires -prefix"))
+		return 1
+	case force && prefix:
+		err = client.Sys().RevokeForce(leaseId)
+	case prefix:
 		err = client.Sys().RevokePrefix(leaseId)
-	} else {
+	default:
 		err = client.Sys().Revoke(leaseId)
 	}
 	if err != nil {
@@ -60,12 +68,16 @@ Usage: vault revoke [options] id
 
   Revoke a secret by its lease ID.
 
-  This command revokes a secret by its lease ID that was returned
-  with it. Once the key is revoked, it is no longer valid.
+  This command revokes a secret by its lease ID that was returned with it. Once
+  the key is revoked, it is no longer valid.
 
-  With the -prefix flag, the revoke is done by prefix: any secret prefixed
-  with the given partial ID is revoked. Lease IDs are structured in such
-  a way to make revocation of prefixes useful.
+  With the -prefix flag, the revoke is done by prefix: any secret prefixed with
+  the given partial ID is revoked. Lease IDs are structured in such a way to
+  make revocation of prefixes useful.
+
+  With the -force flag, the lease is removed from Vault even if the revocation
+  fails. This is meant for certain recovery scenarios and should not be used
+  lightly. This option requires -prefix.
 
 General Options:
 
@@ -76,6 +88,8 @@ Revoke Options:
   -prefix=true            Revoke all secrets with the matching prefix. This
                           defaults to false: an exact revocation.
 
+  -force=true             Delete the lease even if the actual revocation
+                          operation fails.
 `
 	return strings.TrimSpace(helpText)
 }
