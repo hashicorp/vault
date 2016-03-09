@@ -141,6 +141,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	actualDataMap := actual["data"].(map[string]interface{})
 	delete(actualDataMap, "creation_time")
+	delete(actualDataMap, "accessor")
 	actual["data"] = actualDataMap
 	delete(actual, "lease_id")
 	if !reflect.DeepEqual(actual, expected) {
@@ -181,6 +182,7 @@ func TestLogical_CreateToken(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
+	delete(actual["auth"].(map[string]interface{}), "accessor")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
 	}

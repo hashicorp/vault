@@ -124,6 +124,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 		if resp.Auth != nil {
 			logicalResp.Auth = &Auth{
 				ClientToken:   resp.Auth.ClientToken,
+				Accessor:      resp.Auth.Accessor,
 				Policies:      resp.Auth.Policies,
 				Metadata:      resp.Auth.Metadata,
 				LeaseDuration: int(resp.Auth.TTL.Seconds()),
@@ -218,6 +219,7 @@ type LogicalResponse struct {
 
 type Auth struct {
 	ClientToken   string            `json:"client_token"`
+	Accessor      string            `json:"accessor"`
 	Policies      []string          `json:"policies"`
 	Metadata      map[string]string `json:"metadata"`
 	LeaseDuration int               `json:"lease_duration"`

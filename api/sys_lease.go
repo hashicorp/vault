@@ -34,3 +34,12 @@ func (c *Sys) RevokePrefix(id string) error {
 	}
 	return err
 }
+
+func (c *Sys) RevokeForce(id string) error {
+	r := c.c.NewRequest("PUT", "/v1/sys/revoke-force/"+id)
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}

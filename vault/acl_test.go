@@ -1,10 +1,55 @@
 package vault
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestACL_Capabilities(t *testing.T) {
+	// Create the root policy ACL
+	policy := []*Policy{&Policy{Name: "root"}}
+	acl, err := NewACL(policy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual := acl.Capabilities("any/path")
+	expected := []string{"root"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+
+	policies, err := Parse(aclPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	acl, err = NewACL([]*Policy{policies})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual = acl.Capabilities("dev")
+	expected = []string{"deny"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", "deny", actual, expected)
+	}
+
+	actual = acl.Capabilities("dev/")
+	expected = []string{"sudo", "read", "list", "update", "delete", "create"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", "dev/", actual, expected)
+	}
+
+	actual = acl.Capabilities("stage/aws/test")
+	expected = []string{"sudo", "read", "list", "update"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", "stage/aws/test", actual, expected)
+	}
+
+}
 
 func TestACL_Root(t *testing.T) {
 	// Create the root policy ACL

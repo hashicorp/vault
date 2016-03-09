@@ -143,6 +143,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 
 	if s.Auth != nil {
 		input = append(input, fmt.Sprintf("token %s %s", config.Delim, s.Auth.ClientToken))
+		input = append(input, fmt.Sprintf("token_accessor %s %s", config.Delim, s.Auth.Accessor))
 		input = append(input, fmt.Sprintf("token_duration %s %d", config.Delim, s.Auth.LeaseDuration))
 		input = append(input, fmt.Sprintf("token_renewable %s %v", config.Delim, s.Auth.Renewable))
 		input = append(input, fmt.Sprintf("token_policies %s %v", config.Delim, s.Auth.Policies))

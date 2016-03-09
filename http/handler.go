@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -32,6 +33,9 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
+	mux.Handle("/v1/sys/capabilities", handleSysCapabilities(core))
+	mux.Handle("/v1/sys/capabilities-self", handleSysCapabilities(core))
+	mux.Handle("/v1/sys/capabilities-accessor", handleSysCapabilitiesAccessor(core))
 	mux.Handle("/v1/sys/", handleLogical(core, true))
 	mux.Handle("/v1/", handleLogical(core, false))
 
@@ -77,7 +81,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		return resp, false
 	}
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondErrorStatus(w, err)
 		return resp, false
 	}
 
@@ -135,6 +139,18 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	}
 
 	return req
+}
+
+// Determines the type of the error being returned and sets the HTTP
+// status code appropriately
+func respondErrorStatus(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	switch {
+	// Keep adding more error types here to appropriate the status codes
+	case errwrap.ContainsType(err, new(vault.StatusBadRequest)):
+		status = http.StatusBadRequest
+	}
+	respondError(w, status, err)
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {

@@ -680,8 +680,9 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			return nil, auth, ErrInternalError
 		}
 
-		// Populate the client token
+		// Populate the client token and accessor
 		auth.ClientToken = te.ID
+		auth.Accessor = te.Accessor
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
