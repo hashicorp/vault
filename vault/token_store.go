@@ -114,7 +114,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup/" + framework.GenericNameRegex("token"),
+				Pattern: "lookup/(?P<token>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -168,7 +168,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-accessor/" + framework.GenericNameRegex("accessor"),
+				Pattern: "revoke-accessor/(?P<accessor>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
@@ -197,7 +197,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke/" + framework.GenericNameRegex("token"),
+				Pattern: "revoke/(?P<token>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -215,7 +215,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-orphan/" + framework.GenericNameRegex("token"),
+				Pattern: "revoke-orphan/(?P<token>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -233,7 +233,6 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				// Do not use framework.GenericNameRegex as prefix may contain forward slashes
 				Pattern: "revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -274,7 +273,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "renew/" + framework.GenericNameRegex("token"),
+				Pattern: "renew/(?P<token>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
