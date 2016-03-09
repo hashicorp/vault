@@ -140,9 +140,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   t.tokenStoreRoleRead,
-					logical.UpdateOperation: t.tokenStoreRoleCreate,
+					logical.CreateOperation: t.tokenStoreRoleCreateUpdate,
+					logical.UpdateOperation: t.tokenStoreRoleCreateUpdate,
 					logical.DeleteOperation: t.tokenStoreRoleDelete,
 				},
+
+				ExistenceCheck: t.tokenStoreRoleExistenceCheck,
 
 				HelpSynopsis:    tokenPathRolesHelp,
 				HelpDescription: tokenPathRolesHelp,
@@ -1164,31 +1167,78 @@ func (ts *TokenStore) tokenStoreRoleRead(
 	return resp, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleCreate(
+func (ts *TokenStore) tokenStoreRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	name := data.Get("role_name").(string)
+	if name == "" {
+		return false, fmt.Errorf("role name cannot be empty")
+	}
+	role, err := ts.tokenStoreRole(name)
+	if err != nil {
+		return false, err
+	}
+
+	return role != nil, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("role_name").(string)
 	if name == "" {
 		return logical.ErrorResponse("role name cannot be empty"), nil
 	}
+	entry, err := ts.tokenStoreRole(name)
+	if err != nil {
+		return nil, err
+	}
 
-	pathSuffix := data.Get("path_suffix").(string)
-	if pathSuffix != "" {
-		matched := pathSuffixSanitize.MatchString(pathSuffix)
-		if !matched {
-			return logical.ErrorResponse(fmt.Sprintf("given role path suffix contains invalid characters; must match %s", pathSuffixSanitize.String())), nil
+	// Due to the existence check, entry will only be nil if it's a create
+	// operation, so just create a new one
+	if entry == nil {
+		entry = &tsRoleEntry{
+			Name: name,
 		}
 	}
 
-	entry := &tsRoleEntry{
-		Name:       name,
-		Orphan:     data.Get("orphan").(bool),
-		Period:     time.Second * time.Duration(data.Get("period").(int)),
-		PathSuffix: pathSuffix,
+	// In this series of blocks, if we do not find a user-provided value and
+	// it's a creation operation, we call data.Get to get the appropriate
+	// default
+
+	orphanInt, ok := data.GetOk("orphan")
+	if ok {
+		entry.Orphan = orphanInt.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		entry.Orphan = data.Get("orphan").(bool)
 	}
 
-	allowedPolicies := data.Get("allowed_policies").(string)
-	if allowedPolicies != "" {
-		entry.AllowedPolicies = strings.Split(allowedPolicies, ",")
+	periodInt, ok := data.GetOk("period")
+	if ok {
+		entry.Period = time.Second * time.Duration(periodInt.(int))
+	} else if req.Operation == logical.CreateOperation {
+		entry.Period = time.Second * time.Duration(data.Get("period").(int))
+	}
+
+	pathSuffixInt, ok := data.GetOk("path_suffix")
+	if ok {
+		pathSuffix := pathSuffixInt.(string)
+		if pathSuffix != "" {
+			matched := pathSuffixSanitize.MatchString(pathSuffix)
+			if !matched {
+				return logical.ErrorResponse(fmt.Sprintf("given role path suffix contains invalid characters; must match %s", pathSuffixSanitize.String())), nil
+			}
+			entry.PathSuffix = pathSuffix
+		}
+	} else if req.Operation == logical.CreateOperation {
+		entry.PathSuffix = data.Get("path_suffix").(string)
+	}
+
+	allowedPoliciesInt, ok := data.GetOk("allowed_policies")
+	if ok {
+		allowedPolicies := allowedPoliciesInt.(string)
+		if allowedPolicies != "" {
+			entry.AllowedPolicies = strings.Split(allowedPolicies, ",")
+		}
+	} else if req.Operation == logical.CreateOperation {
+		entry.AllowedPolicies = strings.Split(data.Get("allowed_policies").(string), ",")
 	}
 
 	// Store it

@@ -1113,12 +1113,12 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 }
 
 func TestTokenStore_RoleCRUD(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
+	core, _, _, root := TestCoreWithTokenStore(t)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "roles/test")
+	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/roles/test")
 	req.ClientToken = root
 
-	resp, err := ts.HandleRequest(req)
+	resp, err := core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -1126,7 +1126,8 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("should not see a role")
 	}
 
-	req.Operation = logical.UpdateOperation
+	// First test creation
+	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
 		"orphan":           true,
 		"period":           "72h",
@@ -1134,7 +1135,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":      "happenin",
 	}
 
-	resp, err = ts.HandleRequest(req)
+	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -1145,7 +1146,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = ts.HandleRequest(req)
+	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -1171,10 +1172,55 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
 	}
 
-	req.Operation = logical.ListOperation
-	req.Path = "roles"
+	// Now test updating; this should be set to an UpdateOperation
+	// automatically due to the existence check
+	req.Operation = logical.CreateOperation
+	req.Data = map[string]interface{}{
+		"period":           "79h",
+		"allowed_policies": "test3",
+		"path_suffix":      "happenin",
+	}
+
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
-	resp, err = ts.HandleRequest(req)
+
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("got a nil response")
+	}
+
+	err = mapstructure.WeakDecode(resp.Data, &actual)
+	if err != nil {
+		t.Fatalf("error decoding role json: %v", err)
+	}
+
+	expected = tsRoleEntry{
+		Name:            "test",
+		Orphan:          true,
+		Period:          79 * time.Hour,
+		AllowedPolicies: []string{"test3"},
+		PathSuffix:      "happenin",
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
+	}
+
+	req.Operation = logical.ListOperation
+	req.Path = "auth/token/roles"
+	req.Data = map[string]interface{}{}
+	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -1197,8 +1243,8 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	req.Operation = logical.DeleteOperation
-	req.Path = "roles/test"
-	resp, err = ts.HandleRequest(req)
+	req.Path = "auth/token/roles/test"
+	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -1207,7 +1253,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	req.Operation = logical.ReadOperation
-	resp, err = ts.HandleRequest(req)
+	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
