@@ -1,5 +1,7 @@
 # HCL
 
+[![GoDoc](https://godoc.org/github.com/hashicorp/hcl?status.png)](https://godoc.org/github.com/hashicorp/hcl) [![Build Status](https://travis-ci.org/hashicorp/hcl.svg?branch=master)](https://travis-ci.org/hashicorp/hcl)
+
 HCL (HashiCorp Configuration Language) is a configuration language built
 by HashiCorp. The goal of HCL is to build a structured configuration language
 that is both human and machine friendly for use with command-line tools, but
@@ -46,10 +48,8 @@ and JSON as the interoperability layer.
 
 ## Syntax
 
-The complete grammar
-[can be found here](https://github.com/hashicorp/hcl/blob/master/hcl/parse.y),
-if you're more comfortable reading specifics, but a high-level overview
-of the syntax and grammar are listed here.
+For a complete grammar, please see the parser itself. A high-level overview
+of the syntax and grammar is listed here.
 
   * Single line comments start with `#` or `//`
 
@@ -63,6 +63,16 @@ of the syntax and grammar are listed here.
 
   * Strings are double-quoted and can contain any UTF-8 characters.
     Example: `"Hello, World"`
+
+  * Multi-line strings start with `<<EOF` at the end of a line, and end
+    with `EOF` on its own line ([here documents](https://en.wikipedia.org/wiki/Here_document)).
+    Any text may be used in place of `EOF`. Example:
+```
+<<FOO
+hello
+world
+FOO
+```
 
   * Numbers are assumed to be base 10. If you prefix a number with 0x,
     it is treated as a hexadecimal. If it is prefixed with 0, it is
@@ -82,3 +92,13 @@ variable "ami" {
     description = "the AMI to use"
 }
 ```
+
+## Thanks
+
+Thanks to:
+
+  * [@vstakhov](https://github.com/vstakhov) - The original libucl parser
+    and syntax that HCL was based off of.
+
+  * [@fatih](https://github.com/fatih) - The rewritten HCL parser
+    in pure Go (no goyacc) and support for a printer.
