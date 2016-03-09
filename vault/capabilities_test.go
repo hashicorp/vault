@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestCapabilitiesAccessor_Basic(t *testing.T) {
+func TestCapabilitiesAccessor(t *testing.T) {
 	c, _, token := TestCoreUnsealed(t)
 
 	// Lookup the token in the store to get root token's accessor
@@ -60,7 +60,7 @@ func TestCapabilitiesAccessor_Basic(t *testing.T) {
 	}
 }
 
-func TestCapabilities_Basic(t *testing.T) {
+func TestCapabilities(t *testing.T) {
 	c, _, token := TestCoreUnsealed(t)
 
 	actual, err := c.Capabilities(token, "path")
