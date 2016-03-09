@@ -1,6 +1,10 @@
 ## 0.5.2 (Unreleased)
 
 IMPROVEMENTS:
+ * auth/token,sys/capabilities: Added new endpoints `auth/token/lookup-accessor`,
+   `auth/token/revoke-accessor` and `sys/capabilities-accessor`, which enables
+   performing the respective actions with just the accessor of the tokens,
+   without having access to the actual token [GH-1188]
  * sys: Added new endpoints `sys/capabilities` and `sys/capabilities-self` to
    fetch the capabilities of a token on a given path [GH-1171]
  * core: Ignore leading `/` in policy paths [GH-1170]
