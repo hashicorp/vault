@@ -156,14 +156,15 @@ The root credentials need permission to perform various IAM actions. These are t
       "Action": [
         "iam:CreateAccessKey",
         "iam:CreateUser",
-        "iam:PutUserPolicy",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUser"
+        "iam:DeleteUserPolicy",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
         "iam:ListGroupsForUser",
         "iam:ListUserPolicies",
-        "iam:ListAccessKeys",
-        "iam:DeleteAccessKey",
-        "iam:DeleteUserPolicy",
+        "iam:PutUserPolicy",
         "iam:RemoveUserFromGroup",
-        "iam:DeleteUser"
       ],
       "Resource": [
         "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
