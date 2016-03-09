@@ -749,8 +749,12 @@ func (ts *TokenStore) handleCreateCommon(
 	// If we have a role, we don't even consider parent policies; the role
 	// allowed policies trumps all
 	case role != nil:
-		if !strListSubset(role.AllowedPolicies, data.Policies) {
-			return logical.ErrorResponse("token policies must be subset of the role's allowed policies"), logical.ErrInvalidRequest
+		if len(data.Policies) == 0 {
+			data.Policies = role.AllowedPolicies
+		} else {
+			if !strListSubset(role.AllowedPolicies, data.Policies) {
+				return logical.ErrorResponse("token policies must be subset of the role's allowed policies"), logical.ErrInvalidRequest
+			}
 		}
 
 	case len(data.Policies) == 0:
