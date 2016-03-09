@@ -412,3 +412,91 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
+### /auth/token/lookup-accessor
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Fetch the properties of the token associated with the accessor, except the token ID.
+      This is meant for purposes where there is no access to token ID but there is need
+      to fetch the properties of a token.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/lookup-accessor`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">accessor</span>
+        <span class="param-flags">required</span>
+            Accessor of the token to lookup.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+   {
+	"lease_id": "",
+	"renewable": false,
+	"lease_duration": 0,
+	"data": {
+		"creation_time": 1457533232,
+		"creation_ttl": 2592000,
+		"display_name": "token",
+		"id": "",
+		"meta": null,
+		"num_uses": 0,
+		"orphan": false,
+		"path": "auth/token/create",
+		"policies": ["default", "web"],
+		"ttl": 2591976
+	},
+	"warnings": null,
+	"auth": null
+   }
+    ```
+  </dd>
+</dl>
+
+### /auth/token/revoke-accessor
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Revoke the token associated with the accessor and all the child tokens.
+      This is meant for purposes where there is no access to token ID but
+      there is need to revoke a token and its children.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/revoke-accessor`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">accessor</span>
+        <span class="param-flags">required</span>
+            Accessor of the token.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+

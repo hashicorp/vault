@@ -137,7 +137,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor to lookup",
+						Description: "Accessor of the token to lookup",
 					},
 				},
 
@@ -341,7 +341,7 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	return te, nil
 }
 
-// CreateAccessor is used to create an identifier for the token ID.
+// createAccessor is used to create an identifier for the token ID.
 // An storage index, mapping the accessor to the token ID is also created.
 func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
@@ -353,7 +353,7 @@ func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	}
 	entry.Accessor = accessorUUID
 
-	// Create index entry, mapping the Accessor to the Token ID
+	// Create index entry, mapping the accessor to the token ID
 	path := accessorPrefix + ts.SaltID(entry.Accessor)
 	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
 	if err := ts.view.Put(le); err != nil {
