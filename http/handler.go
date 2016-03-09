@@ -147,7 +147,7 @@ func respondErrorStatus(w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
 	switch {
 	// Keep adding more error types here to appropriate the status codes
-	case errwrap.ContainsType(err, new(vault.ErrUserInput)):
+	case errwrap.ContainsType(err, new(vault.StatusBadRequest)):
 		status = http.StatusBadRequest
 	}
 	respondError(w, status, err)

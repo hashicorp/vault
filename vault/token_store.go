@@ -606,7 +606,7 @@ func (ts *TokenStore) lookupByAccessorID(accessorID string) (string, error) {
 		return "", fmt.Errorf("failed to read index using accessor ID: %s", err)
 	}
 	if entry == nil {
-		return "", &ErrUserInput{
+		return "", &StatusBadRequest{
 			Message: "invalid accessor ID",
 		}
 	}

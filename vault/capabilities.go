@@ -3,12 +3,12 @@ package vault
 // Struct to identify user input errors.
 // This is helpful in responding the appropriate status codes to clients
 // from the HTTP endpoints.
-type ErrUserInput struct {
+type StatusBadRequest struct {
 	Message string
 }
 
 // Implementing error interface
-func (e *ErrUserInput) Error() string {
+func (e *StatusBadRequest) Error() string {
 	return e.Message
 }
 
@@ -16,13 +16,13 @@ func (e *ErrUserInput) Error() string {
 // the token accessor an the given path
 func (c *Core) CapabilitiesAccessor(accessorID, path string) ([]string, error) {
 	if path == "" {
-		return nil, &ErrUserInput{
+		return nil, &StatusBadRequest{
 			Message: "missing path",
 		}
 	}
 
 	if accessorID == "" {
-		return nil, &ErrUserInput{
+		return nil, &StatusBadRequest{
 			Message: "missing accessor_id",
 		}
 	}
@@ -38,13 +38,13 @@ func (c *Core) CapabilitiesAccessor(accessorID, path string) ([]string, error) {
 // Capabilities is used to fetch the capabilities of the given token on the given path
 func (c *Core) Capabilities(token, path string) ([]string, error) {
 	if path == "" {
-		return nil, &ErrUserInput{
+		return nil, &StatusBadRequest{
 			Message: "missing path",
 		}
 	}
 
 	if token == "" {
-		return nil, &ErrUserInput{
+		return nil, &StatusBadRequest{
 			Message: "missing token",
 		}
 	}
@@ -54,7 +54,7 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 	if te == nil {
-		return nil, &ErrUserInput{
+		return nil, &StatusBadRequest{
 			Message: "invalid token",
 		}
 	}
