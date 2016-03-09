@@ -471,6 +471,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 
 	expected := &TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
@@ -501,6 +502,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 
 	expected := &TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
@@ -564,6 +566,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 
 	expected := &TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
@@ -920,6 +923,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"id":           root,
+		"accessor":     resp.Data["accessor"].(string),
 		"policies":     []string{"root"},
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
@@ -952,6 +956,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 	exp = map[string]interface{}{
 		"id":           "client",
+		"accessor":     resp.Data["accessor"],
 		"policies":     []string{"default", "foo"},
 		"path":         "auth/token/create",
 		"meta":         map[string]string(nil),
@@ -1054,6 +1059,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"id":           root,
+		"accessor":     resp.Data["accessor"],
 		"policies":     []string{"root"},
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),

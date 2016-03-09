@@ -233,7 +233,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-prefix/" + framework.GenericNameRegex("prefix"),
+				// Do not use framework.GenericNameRegex as prefix may contain forward slashes
+				Pattern: "revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{

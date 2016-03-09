@@ -309,6 +309,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 
 	expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
+	expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
 
 	if !reflect.DeepEqual(actual["data"], expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual["data"])
@@ -389,6 +390,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 
 	expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
+	expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
 
 	if !reflect.DeepEqual(actual["data"], expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual["data"])
