@@ -1,12 +1,20 @@
 ## 0.5.2 (Unreleased)
 
+FEATURES:
+
+ * **Token Accessors**: Vault now provides an accessor with each issued token.
+   This accessor is an identifier that can be used for a limited set of
+   actions, notably for token revocation. This value is logged in plaintext to
+   audit logs, and in combination with the plaintext metadata logged to audit
+   logs, provides a searchable and straightforward way to revoke particular
+   users' or services' tokens in many cases.
+
 IMPROVEMENTS:
- * auth/token,sys/capabilities: Added new endpoints `auth/token/lookup-accessor`,
-   `auth/token/revoke-accessor` and `sys/capabilities-accessor`, which enables
-   performing the respective actions with just the accessor of the tokens,
-   without having access to the actual token [GH-1188]
- * sys: Added new endpoints `sys/capabilities` and `sys/capabilities-self` to
-   fetch the capabilities of a token on a given path [GH-1171]
+ * auth/token,sys/capabilities: Added new endpoints
+   `auth/token/lookup-accessor`, `auth/token/revoke-accessor` and
+   `sys/capabilities-accessor`, which enables performing the respective actions
+   with just the accessor of the tokens, without having access to the actual
+   token [GH-1188]
  * core: Ignore leading `/` in policy paths [GH-1170]
  * core: Ignore leading `/` in mount paths [GH-1172]
  * command/server: The initial root token ID when running in `-dev` mode can
@@ -31,7 +39,10 @@ IMPROVEMENTS:
    endpoint [GH-1180]
  * secret/pki: Sanitize serial number in `pki/revoke` endpoint to allow some
    other formats [GH-1187]
- * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint. [GH-1154]
+ * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint.
+   [GH-1154]
+ * sys: Added new endpoints `sys/capabilities` and `sys/capabilities-self` to
+   fetch the capabilities of a token on a given path [GH-1171]
 
 BUG FIXES:
 
