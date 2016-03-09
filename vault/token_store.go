@@ -21,6 +21,10 @@ const (
 	// primary ID based index
 	lookupPrefix = "id/"
 
+	// accessorPrefix is the prefix used to store the index from
+	// Accessor to Token ID
+	accessorPrefix = "accessor/"
+
 	// parentPrefix is the prefix used to store tokens for their
 	// secondar parent based index
 	parentPrefix = "parent/"
@@ -133,7 +137,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor ID to lookup",
+						Description: "Accessor to lookup",
 					},
 				},
 
@@ -169,7 +173,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor ID of the token",
+						Description: "Accessor of the token",
 					},
 				},
 
@@ -300,7 +304,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
 	ID           string            // ID of this entry, generally a random UUID
-	Accessor     string            // Accessor ID for this token, a random UUID
+	Accessor     string            // Accessor for this token, a random UUID
 	Parent       string            // Parent token, used for revocation trees
 	Policies     []string          // Which named policies should be used
 	Path         string            // Used for audit trails, this is something like "auth/user/login"
@@ -338,22 +342,22 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 }
 
 // CreateAccessor is used to create an identifier for the token ID.
-// An storage index, mapping the accessor ID to the token ID is also created.
+// An storage index, mapping the accessor to the token ID is also created.
 func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
 
-	// Create a random accessor ID
+	// Create a random accessor
 	accessorUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
 	}
 	entry.Accessor = accessorUUID
 
-	// Create index entry, mapping the Accessor ID to the Token ID
-	path := lookupPrefix + ts.SaltID(entry.Accessor)
+	// Create index entry, mapping the Accessor to the Token ID
+	path := accessorPrefix + ts.SaltID(entry.Accessor)
 	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
 	if err := ts.view.Put(le); err != nil {
-		return fmt.Errorf("failed to persist accessor ID index entry: %v", err)
+		return fmt.Errorf("failed to persist accessor index entry: %v", err)
 	}
 	return nil
 }
@@ -532,9 +536,9 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 		}
 	}
 
-	// Clear the accessor ID index if any
+	// Clear the accessor index if any
 	if entry != nil && entry.Accessor != "" {
-		path := lookupPrefix + ts.SaltID(entry.Accessor)
+		path := accessorPrefix + ts.SaltID(entry.Accessor)
 		if ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -602,19 +606,19 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 }
 
 func (ts *TokenStore) lookupByAccessor(accessor string) (string, error) {
-	entry, err := ts.view.Get(lookupPrefix + ts.SaltID(accessor))
+	entry, err := ts.view.Get(accessorPrefix + ts.SaltID(accessor))
 	if err != nil {
-		return "", fmt.Errorf("failed to read index using accessor ID: %s", err)
+		return "", fmt.Errorf("failed to read index using accessor: %s", err)
 	}
 	if entry == nil {
-		return "", &StatusBadRequest{Err: "invalid accessor ID"}
+		return "", &StatusBadRequest{Err: "invalid accessor"}
 	}
 
 	return string(entry.Value), nil
 }
 
 // handleLookupAccessor handles the auth/token/lookup-accessor path for returning
-// the properties of the token associated with the accessor ID
+// the properties of the token associated with the accessor
 func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
@@ -651,7 +655,7 @@ func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework
 	}
 
 	// Remove the token ID from the response
-	if resp.Data != nil && resp.Data["id"] != "" {
+	if resp.Data != nil {
 		resp.Data["id"] = ""
 	}
 
@@ -659,7 +663,7 @@ func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework
 }
 
 // handleRevokeAccessor handles the auth/token/revoke-accessor path for revoking
-// the token associated with the accessor ID
+// the token associated with the accessor
 func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
@@ -1070,10 +1074,10 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp         = `The token create path is used to create new tokens.`
 	tokenCreateOrphanHelp   = `The token create path is used to create new orphan tokens.`
 	tokenLookupHelp         = `This endpoint will lookup a token and its properties.`
-	tokenLookupAccessorHelp = `This endpoint will lookup a token associated with the given accessor ID and its properties. Response will not contain the token ID.`
+	tokenLookupAccessorHelp = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenRevokeHelp         = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp     = `This endpoint will delete the token used to call it and all of its child tokens.`
-	tokenRevokeAccessorHelp = `This endpoint will delete the token associated with the accessor ID and all of its child tokens.`
+	tokenRevokeAccessorHelp = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
 	tokenRevokeOrphanHelp   = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRevokePrefixHelp   = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
 	tokenRenewHelp          = `This endpoint will renew the given token and prevent expiration.`
