@@ -8,6 +8,12 @@ FEATURES:
    audit logs, and in combination with the plaintext metadata logged to audit
    logs, provides a searchable and straightforward way to revoke particular
    users' or services' tokens in many cases.
+ * **Token Credential Backend Roles**: Roles can now be created in the `token`
+   credential backend that allow modifying token behavior in ways that are not
+   otherwise exposed or easily delegated. This allows creating tokens with a
+   fixed set (or subset) of policies (rather than a subset of the calling
+   token's), periodic tokens with a fixed TTL but no expiration, specified
+   prefixes, and orphans.
 
 IMPROVEMENTS:
  * auth/token,sys/capabilities: Added new endpoints
@@ -35,6 +41,7 @@ IMPROVEMENTS:
    attributes. [GH-1153]
  * credential/cert: Subject and Authority key IDs are output in metadata; this
    allows more flexible searching/revocation in the audit logs [GH-1183]
+ * credential/token: Add roles [GH-1155]
  * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
    endpoint [GH-1180]
  * secret/pki: Sanitize serial number in `pki/revoke` endpoint to allow some
