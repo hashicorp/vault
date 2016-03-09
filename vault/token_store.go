@@ -861,9 +861,6 @@ func (ts *TokenStore) handleCreateCommon(
 				Renewable: true,
 			},
 			ClientToken: te.ID,
-			InternalData: map[string]interface{}{
-				"id": te.ID,
-			},
 		},
 	}
 
@@ -1072,24 +1069,9 @@ func (ts *TokenStore) authRenew(
 		return nil, fmt.Errorf("request auth is nil")
 	}
 
-	if req.Auth.ClientToken == "" {
-		panic("nil client token")
-	}
-
 	f := framework.LeaseExtend(req.Auth.Increment, 0, ts.System())
 
-	idInt, ok := req.Auth.InternalData["id"]
-	if !ok {
-		// Fall back here; this is pre-roles so there are no stored IDs, so use previous behavior
-		return f(req, d)
-	}
-
-	id, ok := idInt.(string)
-	if !ok {
-		return nil, fmt.Errorf("found id in internal data but could not interpret as string")
-	}
-
-	te, err := ts.Lookup(id)
+	te, err := ts.Lookup(req.Auth.ClientToken)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up token: %s", err)
 	}

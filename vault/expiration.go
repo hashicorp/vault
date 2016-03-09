@@ -560,12 +560,17 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	return resp, nil
 }
 
-// renewAuthEntry is used to attempt renew of an auth entry
+// renewAuthEntry is used to attempt renew of an auth entry. Only the token
+// store should get the actual token ID intact.
 func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
 	auth.IssueTime = le.IssueTime
 	auth.Increment = increment
-	auth.ClientToken = ""
+	if strings.HasPrefix(le.Path, "auth/token/") {
+		auth.ClientToken = le.ClientToken
+	} else {
+		auth.ClientToken = ""
+	}
 
 	authReq := logical.RenewAuthRequest(le.Path, &auth, nil)
 	authReq.Connection = req.Connection
