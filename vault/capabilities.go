@@ -12,6 +12,29 @@ func (e *ErrUserInput) Error() string {
 	return e.Message
 }
 
+// CapabilitiesAccessor is used to fetch the capabilities of the token associated with
+// the token accessor an the given path
+func (c *Core) CapabilitiesAccessor(accessorID, path string) ([]string, error) {
+	if path == "" {
+		return nil, &ErrUserInput{
+			Message: "missing path",
+		}
+	}
+
+	if accessorID == "" {
+		return nil, &ErrUserInput{
+			Message: "missing accessor_id",
+		}
+	}
+
+	token, err := c.tokenStore.lookupByAccessorID(accessorID)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Capabilities(token, path)
+}
+
 // Capabilities is used to fetch the capabilities of the given token on the given path
 func (c *Core) Capabilities(token, path string) ([]string, error) {
 	if path == "" {
