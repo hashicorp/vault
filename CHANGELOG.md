@@ -43,6 +43,9 @@ IMPROVEMENTS:
    [GH-1154]
  * sys: Added new endpoints `sys/capabilities` and `sys/capabilities-self` to
    fetch the capabilities of a token on a given path [GH-1171]
+ * sys: Added `sys/revoke-force`, which enables a user to ignore backend errors
+   when revoking a lease, necessary in some emergency/failure scenarios
+   [GH-1168]
 
 BUG FIXES:
 
