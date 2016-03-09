@@ -29,19 +29,19 @@ func TestBackend_Config(t *testing.T) {
 		"token": os.Getenv("GITHUB_TOKEN"),
 	}
 	config_data1 := map[string]interface{}{
-		"organization": "hashicorp",
+		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "",
 		"max_ttl":      "",
 	}
 	expectedTTL1, _ := time.ParseDuration("24h0m0s")
 	config_data2 := map[string]interface{}{
-		"organization": "hashicorp",
+		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "1h",
 		"max_ttl":      "2h",
 	}
 	expectedTTL2, _ := time.ParseDuration("1h0m0s")
 	config_data3 := map[string]interface{}{
-		"organization": "hashicorp",
+		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "50h",
 		"max_ttl":      "50h",
 	}
