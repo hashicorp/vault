@@ -18,6 +18,94 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
+func TestTokenStore_AccessorIndex(t *testing.T) {
+	_, ts, _, _ := TestCoreWithTokenStore(t)
+
+	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
+	if err := ts.create(ent); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	out, err := ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure that accessor is created
+	if out == nil || out.Accessor == "" {
+		t.Fatalf("bad: %#v", out)
+	}
+
+	token, err := ts.lookupByAccessor(out.Accessor)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Verify that the value returned from the index matches the token ID
+	if token != ent.ID {
+		t.Fatalf("bad: got\n%s\nexpected\n%s\n", token, ent.ID)
+	}
+}
+
+func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
+	out, err := ts.Lookup("tokenid")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if out == nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor/"+out.Accessor)
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data == nil {
+		t.Fatalf("response should contain data")
+	}
+
+	if resp.Data["accessor"].(string) == "" {
+		t.Fatalf("accessor should not be empty")
+	}
+
+	// Verify that the lookup-accessor operation does not return the token ID
+	if resp.Data["id"].(string) != "" {
+		t.Fatalf("token ID should not be returned")
+	}
+}
+
+func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
+	out, err := ts.Lookup("tokenid")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if out == nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor/"+out.Accessor)
+
+	_, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	out, err = ts.Lookup("tokenid")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if out != nil {
+		t.Fatalf("bad:\ngot %#v\nexpected: nil\n", out)
+	}
+}
+
 func TestTokenStore_RootToken(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
@@ -382,6 +470,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 
 	expected := &TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
@@ -412,6 +501,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 
 	expected := &TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
@@ -475,6 +565,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 
 	expected := &TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
@@ -831,6 +922,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"id":           root,
+		"accessor":     resp.Data["accessor"].(string),
 		"policies":     []string{"root"},
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),
@@ -863,6 +955,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 	exp = map[string]interface{}{
 		"id":           "client",
+		"accessor":     resp.Data["accessor"],
 		"policies":     []string{"default", "foo"},
 		"path":         "auth/token/create",
 		"meta":         map[string]string(nil),
@@ -965,6 +1058,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 
 	exp := map[string]interface{}{
 		"id":           root,
+		"accessor":     resp.Data["accessor"],
 		"policies":     []string{"root"},
 		"path":         "auth/token/root",
 		"meta":         map[string]string(nil),

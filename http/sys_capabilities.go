@@ -4,10 +4,39 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func handleSysCapabilitiesAccessor(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "PUT":
+		case "POST":
+		default:
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
+		// Parse the request if we can
+		var data capabilitiesAccessorRequest
+		if err := parseRequest(r, &data); err != nil {
+			respondError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		capabilities, err := core.CapabilitiesAccessor(data.Accessor, data.Path)
+		if err != nil {
+			respondErrorStatus(w, err)
+			return
+		}
+
+		respondOk(w, &capabilitiesResponse{
+			Capabilities: capabilities,
+		})
+	})
+
+}
 
 func handleSysCapabilities(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -19,9 +48,6 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 			return
 		}
 
-		// Get the auth for the request so we can access the token directly
-		req := requestAuth(r, &logical.Request{})
-
 		// Parse the request if we can
 		var data capabilitiesRequest
 		if err := parseRequest(r, &data); err != nil {
@@ -30,18 +56,15 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 		}
 
 		if strings.HasPrefix(r.URL.Path, "/v1/sys/capabilities-self") {
+			// Get the auth for the request so we can access the token directly
+			req := requestAuth(r, &logical.Request{})
 			data.Token = req.ClientToken
 		}
 
 		capabilities, err := core.Capabilities(data.Token, data.Path)
 		if err != nil {
-			if errwrap.ContainsType(err, new(vault.ErrUserInput)) {
-				respondError(w, http.StatusBadRequest, err)
-				return
-			} else {
-				respondError(w, http.StatusInternalServerError, err)
-				return
-			}
+			respondErrorStatus(w, err)
+			return
 		}
 
 		respondOk(w, &capabilitiesResponse{
@@ -58,4 +81,9 @@ type capabilitiesResponse struct {
 type capabilitiesRequest struct {
 	Token string `json:"token"`
 	Path  string `json:"path"`
+}
+
+type capabilitiesAccessorRequest struct {
+	Accessor string `json:"accessor"`
+	Path     string `json:"path"`
 }

@@ -787,6 +787,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 	expect := &TokenEntry{
 		ID:       clientToken,
+		Accessor: te.Accessor,
 		Parent:   "",
 		Policies: []string{"foo", "bar", "default"},
 		Path:     "auth/foo/login",
@@ -986,6 +987,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 	expect := &TokenEntry{
 		ID:           clientToken,
+		Accessor:     te.Accessor,
 		Parent:       root,
 		Policies:     []string{"default", "foo"},
 		Path:         "auth/token/create",
@@ -1030,6 +1032,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	}
 	expect := &TokenEntry{
 		ID:           clientToken,
+		Accessor:     te.Accessor,
 		Parent:       root,
 		Policies:     []string{"foo"},
 		Path:         "auth/token/create",

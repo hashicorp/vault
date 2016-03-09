@@ -33,6 +33,13 @@ type Auth struct {
 	// This will be filled in by Vault core when an auth structure is
 	// returned. Setting this manually will have no effect.
 	ClientToken string
+
+	// Accessor is the identifier for the ClientToken. This can be used
+	// to perform management functionalities (especially revocation) when
+	// ClientToken in the audit logs are obfuscated. Accessor can be used
+	// to revoke a ClientToken and to lookup the capabilities of the ClientToken,
+	// both without actually knowing the ClientToken.
+	Accessor string
 }
 
 func (a *Auth) GoString() string {
