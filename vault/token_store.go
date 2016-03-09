@@ -131,7 +131,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "lookup-accessor$",
 
 				Fields: map[string]*framework.FieldSchema{
-					"accessor_id": &framework.FieldSchema{
+					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: "Accessor ID to lookup",
 					},
@@ -167,7 +167,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Pattern: "revoke-accessor$",
 
 				Fields: map[string]*framework.FieldSchema{
-					"accessor_id": &framework.FieldSchema{
+					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: "Accessor ID of the token",
 					},
@@ -300,7 +300,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
 	ID           string            // ID of this entry, generally a random UUID
-	AccessorID   string            // Accessor ID for this token, a random UUID
+	Accessor     string            // Accessor ID for this token, a random UUID
 	Parent       string            // Parent token, used for revocation trees
 	Policies     []string          // Which named policies should be used
 	Path         string            // Used for audit trails, this is something like "auth/user/login"
@@ -337,20 +337,20 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	return te, nil
 }
 
-// CreateAccessorID is used to create an identifier for the token ID.
+// CreateAccessor is used to create an identifier for the token ID.
 // An storage index, mapping the accessor ID to the token ID is also created.
-func (ts *TokenStore) createAccessorID(entry *TokenEntry) error {
-	defer metrics.MeasureSince([]string{"token", "createAccessorID"}, time.Now())
+func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
 
 	// Create a random accessor ID
 	accessorUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
 	}
-	entry.AccessorID = accessorUUID
+	entry.Accessor = accessorUUID
 
 	// Create index entry, mapping the Accessor ID to the Token ID
-	path := lookupPrefix + ts.SaltID(entry.AccessorID)
+	path := lookupPrefix + ts.SaltID(entry.Accessor)
 	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist accessor ID index entry: %v", err)
@@ -371,7 +371,7 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
-	err := ts.createAccessorID(entry)
+	err := ts.createAccessor(entry)
 	if err != nil {
 		return err
 	}
@@ -533,8 +533,8 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 	}
 
 	// Clear the accessor ID index if any
-	if entry != nil && entry.AccessorID != "" {
-		path := lookupPrefix + ts.SaltID(entry.AccessorID)
+	if entry != nil && entry.Accessor != "" {
+		path := lookupPrefix + ts.SaltID(entry.Accessor)
 		if ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -601,8 +601,8 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	return nil
 }
 
-func (ts *TokenStore) lookupByAccessorID(accessorID string) (string, error) {
-	entry, err := ts.view.Get(lookupPrefix + ts.SaltID(accessorID))
+func (ts *TokenStore) lookupByAccessor(accessor string) (string, error) {
+	entry, err := ts.view.Get(lookupPrefix + ts.SaltID(accessor))
 	if err != nil {
 		return "", fmt.Errorf("failed to read index using accessor ID: %s", err)
 	}
@@ -616,12 +616,12 @@ func (ts *TokenStore) lookupByAccessorID(accessorID string) (string, error) {
 // handleLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor ID
 func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	accessorID := data.Get("accessor_id").(string)
-	if accessorID == "" {
-		return nil, &StatusBadRequest{Err: "missing accessor_id"}
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &StatusBadRequest{Err: "missing accessor"}
 	}
 
-	tokenID, err := ts.lookupByAccessorID(accessorID)
+	tokenID, err := ts.lookupByAccessor(accessor)
 	if err != nil {
 		return nil, err
 	}
@@ -661,12 +661,12 @@ func (ts *TokenStore) handleLookupAccessor(req *logical.Request, data *framework
 // handleRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor ID
 func (ts *TokenStore) handleRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	accessorID := data.Get("accessor_id").(string)
-	if accessorID == "" {
-		return nil, &StatusBadRequest{Err: "missing accessor_id"}
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &StatusBadRequest{Err: "missing accessor"}
 	}
 
-	tokenID, err := ts.lookupByAccessorID(accessorID)
+	tokenID, err := ts.lookupByAccessor(accessor)
 	if err != nil {
 		return nil, err
 	}
@@ -853,7 +853,7 @@ func (ts *TokenStore) handleCreateCommon(
 				Renewable: true,
 			},
 			ClientToken: te.ID,
-			AccessorID:  te.AccessorID,
+			Accessor:    te.Accessor,
 		},
 	}
 

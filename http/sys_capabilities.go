@@ -25,7 +25,7 @@ func handleSysCapabilitiesAccessor(core *vault.Core) http.Handler {
 			return
 		}
 
-		capabilities, err := core.CapabilitiesAccessor(data.AccessorID, data.Path)
+		capabilities, err := core.CapabilitiesAccessor(data.Accessor, data.Path)
 		if err != nil {
 			respondErrorStatus(w, err)
 			return
@@ -84,6 +84,6 @@ type capabilitiesRequest struct {
 }
 
 type capabilitiesAccessorRequest struct {
-	AccessorID string `json:"accessor_id"`
-	Path       string `json:"path"`
+	Accessor string `json:"accessor"`
+	Path     string `json:"path"`
 }
