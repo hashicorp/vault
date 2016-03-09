@@ -90,8 +90,7 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
-	req.Data["accessor"] = out.Accessor
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor/"+out.Accessor)
 
 	_, err = ts.HandleRequest(req)
 	if err != nil {

@@ -467,7 +467,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke-accessor
+### /auth/token/revoke-accessor/
 #### POST
 
 <dl class="api">
@@ -482,17 +482,11 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke-accessor`</dd>
+  <dd>`/auth/token/revoke-accessor/<accessor>`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">accessor</span>
-        <span class="param-flags">required</span>
-            Accessor of the token.
-      </li>
-    </ul>
+      None
   </dd>
 
   <dt>Returns</dt>
