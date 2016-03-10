@@ -1150,7 +1150,7 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
-// handleRreload is used to invoke configured reload functions
+// handleReload is used to invoke configured reload functions
 func (b *SystemBackend) handleReload(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	reloadData := data.Get("data").(map[string]interface{})
