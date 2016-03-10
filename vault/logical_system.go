@@ -50,8 +50,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 					logical.DeleteOperation: b.handleRekeyDelete,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["mount_tune"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rekey_backup"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rekey_backup"][0]),
 			},
 
 			&framework.Path{
@@ -1393,5 +1393,10 @@ Enable a new audit backend or disable an existing backend.
 		data going to the storage backend. The old encryption keys are kept so
 		that data encrypted using those keys can still be decrypted.
 		`,
+	},
+
+	"rekey_backup": {
+		"Allows fetching or deleting the backup of the rotated unseal keys.",
+		"",
 	},
 }
