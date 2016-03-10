@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/hashicorp/go-multierror"
@@ -67,8 +66,6 @@ func ParseConfig(contents string) (*Config, error) {
 	if !ok {
 		return nil, fmt.Errorf("Failed to parse config: does not contain a root object")
 	}
-
-	log.Println(fmt.Sprintf("%#v", list))
 
 	valid := []string{
 		"token_helper",
