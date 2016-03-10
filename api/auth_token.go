@@ -52,6 +52,18 @@ func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
+	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-accessor/"+accessor)
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *TokenAuth) LookupSelf() (*Secret, error) {
 	r := c.c.NewRequest("GET", "/v1/auth/token/lookup-self")
 
