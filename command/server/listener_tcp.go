@@ -3,9 +3,11 @@ package server
 import (
 	"net"
 	"time"
+
+	"github.com/hashicorp/vault/vault"
 )
 
-func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, error) {
+func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, vault.ReloadFunc, error) {
 	addr, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"
@@ -13,7 +15,7 @@ func tcpListenerFactory(config map[string]string) (net.Listener, map[string]stri
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	ln = tcpKeepAliveListener{ln.(*net.TCPListener)}

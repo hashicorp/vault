@@ -169,6 +169,9 @@ type InitResult struct {
 	RootToken    string
 }
 
+// ReloadFunc are functions that are called when a reload is requested.
+type ReloadFunc func(map[string]interface{}) error
+
 // ErrInvalidKey is returned if there is an error with a
 // provided unseal key.
 type ErrInvalidKey struct {
@@ -231,6 +234,9 @@ type Core struct {
 	rekeyConfig   *SealConfig
 	rekeyProgress [][]byte
 	rekeyLock     sync.Mutex
+
+	// reloadFuncs is the list of functions to call due to a reload request
+	reloadFuncs map[string]ReloadFunc
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
@@ -1645,4 +1651,12 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			return
 		}
 	}
+}
+
+// AddReloadFunc adds a reload func
+func (c *Core) AddReloadFunc(name string, reloadFunc ReloadFunc) {
+	if c.reloadFuncs == nil {
+		c.reloadFuncs = map[string]ReloadFunc{}
+	}
+	c.reloadFuncs[name] = reloadFunc
 }

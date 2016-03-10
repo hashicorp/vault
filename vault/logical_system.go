@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -35,11 +36,30 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				"audit",
 				"audit/*",
 				"raw/*",
+				"reload",
 				"rotate",
 			},
 		},
 
 		Paths: []*framework.Path{
+			&framework.Path{
+				Pattern: "reload$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"data": &framework.FieldSchema{
+						Type:    framework.TypeMap,
+						Default: map[string]interface{}{},
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleReload,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["reload"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["reload"][1]),
+			},
+
 			&framework.Path{
 				Pattern: "rekey/backup$",
 
@@ -1130,6 +1150,26 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
+// handleRreload is used to invoke configured reload functions
+func (b *SystemBackend) handleReload(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	reloadData := data.Get("data").(map[string]interface{})
+
+	var respErr *multierror.Error
+
+	for name, reloadFunc := range b.Core.reloadFuncs {
+		err := reloadFunc(reloadData)
+		if err != nil {
+			b.Core.logger.Printf("[ERR] %s reload function was unsuccessful: %s", name, err)
+			respErr = multierror.Append(respErr, err)
+		} else {
+			b.Core.logger.Printf("[INFO] %s reload function was successful", name)
+		}
+	}
+
+	return nil, respErr.ErrorOrNil()
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -1398,5 +1438,14 @@ Enable a new audit backend or disable an existing backend.
 	"rekey_backup": {
 		"Allows fetching or deleting the backup of the rotated unseal keys.",
 		"",
+	},
+
+	"reload": {
+		"Allows reloading limited aspects of Vault's configuration dynamically.",
+		`
+Reload allows limited aspects of Vault's configuration to be reloaded
+dynamically. Data given to the reload endpoint will be passed straight through
+to the various reload functions inside Vault.
+`,
 	},
 }

@@ -274,7 +274,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, err := server.NewListener(lnConfig.Type, lnConfig.Config)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
@@ -295,6 +295,8 @@ func (c *ServerCommand) Run(args []string) int {
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 		lns = append(lns, ln)
+
+		core.AddReloadFunc("listener-"+ln.Addr().String(), reloadFunc)
 	}
 
 	infoKeys = append(infoKeys, "version")
