@@ -21,6 +21,12 @@ func TestLoadConfigFile(t *testing.T) {
 					"address": "127.0.0.1:443",
 				},
 			},
+			&Listener{
+				Type: "tcp",
+				Config: map[string]string{
+					"address": "127.0.0.1:444",
+				},
+			},
 		},
 
 		Backend: &Backend{
