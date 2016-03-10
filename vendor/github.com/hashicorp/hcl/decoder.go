@@ -466,6 +466,14 @@ func (d *decoder) decodeStruct(name string, node ast.Node, result reflect.Value)
 		node = ot.List
 	}
 
+	// Handle the special case where the object itself is a literal. Previously
+	// the yacc parser would always ensure top-level elements were arrays. The new
+	// parser does not make the same guarantees, thus we need to convert any
+	// top-level literal elements into a list.
+	if _, ok := node.(*ast.LiteralType); ok {
+		node = &ast.ObjectList{Items: []*ast.ObjectItem{item}}
+	}
+
 	list, ok := node.(*ast.ObjectList)
 	if !ok {
 		return &parser.PosError{
