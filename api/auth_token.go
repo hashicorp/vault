@@ -110,6 +110,19 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// RevokeAccessor revokes a token associated with the given accessor
+// along with all the child tokens.
+func (c *TokenAuth) RevokeAccessor(accessor string) error {
+	r := c.c.NewRequest("POST", "/v1/auth/token/revoke-accessor/"+accessor)
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 // RevokeOrphan revokes a token without revoking the tree underneath it (so
 // child tokens are orphaned rather than revoked)
 func (c *TokenAuth) RevokeOrphan(token string) error {
@@ -127,18 +140,6 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 // e.g. all tokens issued by a certain credential mount
 func (c *TokenAuth) RevokePrefix(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-prefix/"+token)
-	resp, err := c.c.RawRequest(r)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
-}
-
-// RevokeSelf revokes the token making the call
-func (c *TokenAuth) RevokeSelf() error {
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return err

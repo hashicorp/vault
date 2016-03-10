@@ -76,12 +76,12 @@ func (c *TokenLookupCommand) Synopsis() string {
 
 func (c *TokenLookupCommand) Help() string {
 	helpText := `
-Usage: vault token-lookup [options] [token]
+Usage: vault token-lookup [options] [token|accessor]
 
-  Displays information about the specified token. If no token is specified,
-  the operation is performed on the currently authenticated token i.e. lookup-self.
-  Information about the token can also be retrieved using the token accessor
-  by setting the '-accessor' flag.
+  Displays information about the specified token. If no token is specified, the
+  operation is performed on the currently authenticated token i.e. lookup-self.
+  Information about the token can be retrieved using the token accessor via the 
+  '-accessor' flag.
 
 General Options:
 
