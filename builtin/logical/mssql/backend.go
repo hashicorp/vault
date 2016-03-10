@@ -73,18 +73,18 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	if err := entry.DecodeJSON(&connConfig); err != nil {
 		return nil, err
 	}
-	conn := connConfig.ConnectionParams
+	connString := connConfig.ConnectionString
 
-	b.db, err = sql.Open("mssql", BuildDsn(conn))
+	db, err := sql.Open("mssql", connString)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set some connection pool settings. We don't need much of this,
 	// since the request rate shouldn't be high.
-	b.db.SetMaxOpenConns(connConfig.MaxOpenConnections)
+	db.SetMaxOpenConns(connConfig.MaxOpenConnections)
 
-	stmt, err := b.db.Prepare("SELECT db_name();")
+	stmt, err := db.Prepare("SELECT db_name();")
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +95,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 		return nil, err
 	}
 
+	b.db = db
 	return b.db, nil
 }
 

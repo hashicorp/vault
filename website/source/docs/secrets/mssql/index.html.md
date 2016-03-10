@@ -41,7 +41,7 @@ instance. This is done by providing a DSN (Data Source Name):
 
 ```
 $ vault write mssql/config/connection \
-    value="server=localhost;port=1433;user id=sa;password=Password!;database=AdventureWorks;/"
+    connection_string="server=localhost;port=1433;user id=sa;password=Password!;database=AdventureWorks;app name=vault;"
 Success! Data written to: mssql/config/connection
 ```
 
@@ -59,7 +59,7 @@ by Vault. This is done by writing to the `config/lease` key:
 $ vault write mssql/config/lease \
     lease=1h \
     lease_max=24h
-Success! Data written to: mssql`/config/lease
+Success! Data written to: mssql/config/lease
 ```
 
 This restricts each credential to being valid or leased for 1 hour
@@ -73,7 +73,7 @@ a "readonly" role:
 
 ```
 $ vault write mssql/roles/readonly \
-    sql="CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}'; CREATE USER [{{name}}] FOR LOGIN [{{name}}]; GRANT SELECT ON SCHEMA::dbo TO [{{name}}]"
+    sql="CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}'; USE AdventureWorks; CREATE USER [{{name}}] FOR LOGIN [{{name}}]; GRANT SELECT ON SCHEMA::dbo TO [{{name}}]"
 Success! Data written to: mssql/roles/readonly
 ```
 
@@ -81,9 +81,9 @@ By writing to the `roles/readonly` path we are defining the `readonly` role.
 This role will be created by evaluating the given `sql` statements. By
 default, the `{{name}}` and `{{password}}` fields will be populated by
 Vault with dynamically generated values. This SQL statement is creating
-the named login on the server and user on the default database for the
-connection, and then granting it `SELECT` on the `dbo` schema. More complex
-`GRANT` queries can be used to customize the privileges of the role.
+the named login on the server, user on the AdventureWorks database, and
+then granting it `SELECT` on the `dbo` schema. More complex `GRANT` queries
+can be used to customize the privileges of the role.
 
 To generate a new set of credentials, we simply read from that role:
 
@@ -128,7 +128,7 @@ allowed to read.
   <dd>
     <ul>
       <li>
-        <span class="param">value</span>
+        <span class="param">connection_string</span>
         <span class="param-flags">required</span>
         The MSSQL DSN
       </li>
@@ -141,6 +141,16 @@ allowed to read.
         <span class="param-flags">optional</span>
         Maximum number of open connections to the database.
 	Defaults to 2.
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">verify_connection</span>
+        <span class="param-flags">optional</span>
+	If set, connection_string is verified by actually connecting to the database.
+	Defaults to true.
       </li>
     </ul>
   </dd>

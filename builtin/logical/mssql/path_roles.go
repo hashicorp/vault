@@ -114,7 +114,8 @@ func (b *backend) pathRoleCreate(
 	// Test the query by trying to prepare it
 	for _, query := range SplitSQL(sql) {
 		stmt, err := db.Prepare(Query(query, map[string]string{
-			"name": "foo",
+			"name":     "foo",
+			"password": "bar",
 		}))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(

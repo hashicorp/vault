@@ -57,8 +57,8 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("MSSQL_PARAMS"); v == "" {
-		t.Fatal("MSSQL_PARAMS must be set for acceptance tests")
+	if v := os.Getenv("MSSQL_DSN"); v == "" {
+		t.Fatal("MSSQL_DSN must be set for acceptance tests")
 	}
 }
 
@@ -67,7 +67,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"connection_params": os.Getenv("MSSQL_PARAMS"),
+			"connection_string": os.Getenv("MSSQL_DSN"),
 		},
 	}
 }
