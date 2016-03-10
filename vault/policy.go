@@ -91,18 +91,19 @@ func Parse(rules string) (*Policy, error) {
 	}
 
 	// Create the initial policy and store the raw text of the rules
-	p := &Policy{Raw: rules}
+	var p Policy
+	p.Raw = rules
 	if err := hcl.DecodeObject(&p, list); err != nil {
 		return nil, fmt.Errorf("Failed to parse policy: %s", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
-		if err := parsePaths(p, o); err != nil {
+		if err := parsePaths(&p, o); err != nil {
 			return nil, fmt.Errorf("Failed to parse policy: %s", err)
 		}
 	}
 
-	return p, nil
+	return &p, nil
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList) error {
