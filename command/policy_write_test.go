@@ -24,7 +24,7 @@ func TestPolicyWrite(t *testing.T) {
 	args := []string{
 		"-address", addr,
 		"foo",
-		"./test-fixtures/config.hcl",
+		"./test-fixtures/policy.hcl",
 	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
