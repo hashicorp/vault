@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -44,22 +46,65 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("Error expanding config path: %s", err)
 	}
 
-	var config Config
 	contents, err := ioutil.ReadFile(path)
-	if !os.IsNotExist(err) {
-		if err != nil {
-			return nil, err
-		}
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
 
-		obj, err := hcl.Parse(string(contents))
-		if err != nil {
-			return nil, err
-		}
+	return ParseConfig(string(contents))
+}
 
-		if err := hcl.DecodeObject(&config, obj); err != nil {
-			return nil, err
+// ParseConfig parses the given configuration as a string.
+func ParseConfig(contents string) (*Config, error) {
+	root, err := hcl.Parse(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	// Top-level item should be the object list
+	list, ok := root.Node.(*ast.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("Failed to parse config: does not contain a root object")
+	}
+
+	valid := []string{
+		"token_helper",
+	}
+	if err := checkHCLKeys(list, valid); err != nil {
+		return nil, err
+	}
+
+	var c Config
+	if err := hcl.DecodeObject(&c, list); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func checkHCLKeys(node ast.Node, valid []string) error {
+	var list *ast.ObjectList
+	switch n := node.(type) {
+	case *ast.ObjectList:
+		list = n
+	case *ast.ObjectType:
+		list = n.List
+	default:
+		return fmt.Errorf("cannot check HCL keys of type %T", n)
+	}
+
+	validMap := make(map[string]struct{}, len(valid))
+	for _, v := range valid {
+		validMap[v] = struct{}{}
+	}
+
+	var result error
+	for _, item := range list.Items {
+		key := item.Keys[0].Token.Value().(string)
+		if _, ok := validMap[key]; !ok {
+			result = multierror.Append(result, fmt.Errorf(
+				"invalid key '%s' on line %d", key, item.Assign.Line))
 		}
 	}
 
-	return &config, nil
+	return result
 }
