@@ -1,10 +1,42 @@
 package vault
 
 import (
-	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
+
+var rawPolicy = strings.TrimSpace(`
+# Developer policy
+name = "dev"
+
+# Deny all paths by default
+path "*" {
+	policy = "deny"
+}
+
+# Allow full access to staging
+path "stage/*" {
+	policy = "sudo"
+}
+
+# Limited read privilege to production
+path "prod/version" {
+	policy = "read"
+}
+
+# Read access to foobar
+# Also tests stripping of leading slash
+path "/foo/bar" {
+	policy = "read"
+}
+
+# Add capabilities for creation and sudo to foobar
+# This will be separate; they are combined when compiled into an ACL
+path "foo/bar" {
+	capabilities = ["create", "sudo"]
+}
+`)
 
 func TestPolicy_Parse(t *testing.T) {
 	p, err := Parse(rawPolicy)
@@ -13,7 +45,7 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 
 	if p.Name != "dev" {
-		t.Fatalf("bad: %#v", p)
+		t.Fatalf("bad name: %q", p.Name)
 	}
 
 	expect := []*PathCapabilities{
@@ -48,46 +80,71 @@ func TestPolicy_Parse(t *testing.T) {
 			}, CreateCapabilityInt | SudoCapabilityInt, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
-		ret := fmt.Sprintf("bad:\nexpected:\n")
-		for _, v := range expect {
-			ret = fmt.Sprintf("%s\n%#v", ret, *v)
-		}
-		ret = fmt.Sprintf("%s\n\ngot:\n", ret)
-		for _, v := range p.Paths {
-			ret = fmt.Sprintf("%s\n%#v", ret, *v)
-		}
-		t.Fatalf("%s\n", ret)
+		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)
 	}
 }
 
-var rawPolicy = `
-# Developer policy
-name = "dev"
+func TestPolicy_ParseBadRoot(t *testing.T) {
+	_, err := Parse(strings.TrimSpace(`
+name = "test"
+bad  = "foo"
+nope = "yes"
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
 
-# Deny all paths by default
-path "*" {
-	policy = "deny"
+	if !strings.Contains(err.Error(), "invalid key 'bad' on line 2") {
+		t.Errorf("bad error: %q", err)
+	}
+
+	if !strings.Contains(err.Error(), "invalid key 'nope' on line 3") {
+		t.Errorf("bad error: %q", err)
+	}
 }
 
-# Allow full access to staging
-path "stage/*" {
-	policy = "sudo"
+func TestPolicy_ParseBadPath(t *testing.T) {
+	_, err := Parse(strings.TrimSpace(`
+path "/" {
+	capabilities = ["read"]
+	capabilites  = ["read"]
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), "invalid key 'capabilites' on line 3") {
+		t.Errorf("bad error: %s", err)
+	}
 }
 
-# Limited read privilege to production
-path "prod/version" {
-	policy = "read"
+func TestPolicy_ParseBadPolicy(t *testing.T) {
+	_, err := Parse(strings.TrimSpace(`
+path "/" {
+	policy = "banana"
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `path "/": invalid policy 'banana'`) {
+		t.Errorf("bad error: %s", err)
+	}
 }
 
-# Read access to foobar
-# Also tests stripping of leading slash
-path "/foo/bar" {
-	policy = "read"
+func TestPolicy_ParseBadCapabilities(t *testing.T) {
+	_, err := Parse(strings.TrimSpace(`
+path "/" {
+	capabilities = ["read", "banana"]
 }
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
 
-# Add capabilities for creation and sudo to foobar
-# This will be separate; they are combined when compiled into an ACL
-path "foo/bar" {
-	capabilities = ["create", "sudo"]
+	if !strings.Contains(err.Error(), `path "/": invalid capability 'banana'`) {
+		t.Errorf("bad error: %s", err)
+	}
 }
-`
