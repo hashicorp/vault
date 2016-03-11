@@ -12,7 +12,7 @@ import (
 )
 
 // ListenerFactory is the factory function to create a listener.
-type ListenerFactory func(map[string]string) (net.Listener, map[string]string, ReloadFactory, error)
+type ListenerFactory func(map[string]string) (net.Listener, map[string]string, ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
@@ -28,7 +28,7 @@ var tlsLookup = map[string]uint16{
 
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
-func NewListener(t string, config map[string]string) (net.Listener, map[string]string, ReloadFactory, error) {
+func NewListener(t string, config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
 	f, ok := BuiltinListeners[t]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown listener type: %s", t)
@@ -40,7 +40,7 @@ func NewListener(t string, config map[string]string) (net.Listener, map[string]s
 func listenerWrapTLS(
 	ln net.Listener,
 	props map[string]string,
-	config map[string]string) (net.Listener, map[string]string, ReloadFactory, error) {
+	config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if v, ok := config["tls_disable"]; ok {
@@ -64,10 +64,10 @@ func listenerWrapTLS(
 	}
 
 	cg := &certificateGetter{
-		id: "listen|" + ln.Addr().String(),
+		id: config["address"],
 	}
 
-	if err := cg.reload(cg.id, config); err != nil {
+	if err := cg.reload(config); err != nil {
 		return nil, nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
 	}
 
@@ -87,10 +87,7 @@ func listenerWrapTLS(
 
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
-	reloadFac := func() (string, ReloadFunc) {
-		return cg.id, cg.reload
-	}
-	return ln, props, reloadFac, nil
+	return ln, props, cg.reload, nil
 }
 
 type certificateGetter struct {
@@ -101,8 +98,8 @@ type certificateGetter struct {
 	id string
 }
 
-func (cg *certificateGetter) reload(id string, config map[string]string) error {
-	if id != cg.id {
+func (cg *certificateGetter) reload(config map[string]string) error {
+	if config["address"] != cg.id {
 		return nil
 	}
 

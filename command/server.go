@@ -40,7 +40,7 @@ type ServerCommand struct {
 
 	Meta
 
-	ReloadFuncs map[string]server.ReloadFunc
+	ReloadFuncs []server.ReloadFunc
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -279,7 +279,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFactory, err := server.NewListener(lnConfig.Type, lnConfig.Config)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
@@ -301,9 +301,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 		lns = append(lns, ln)
 
-		if reloadFactory != nil {
-			relId, relFunc := reloadFactory()
-			c.ReloadFuncs[relId] = relFunc
+		if reloadFunc != nil {
+			c.ReloadFuncs = append(c.ReloadFuncs, reloadFunc)
 		}
 	}
 
@@ -578,9 +577,9 @@ func (c *ServerCommand) Reload(configPath []string) error {
 	// Call reload on the listeners. This will call each listener with each
 	// config block, but they verify the ID.
 	for _, lnConfig := range config.Listeners {
-		for id, relFunc := range c.ReloadFuncs {
-			if err := relFunc(id, lnConfig.Config); err != nil {
-				retErr := fmt.Errorf("Error encountered reloading configuration for %s: %s", id, err)
+		for _, relFunc := range c.ReloadFuncs {
+			if err := relFunc(lnConfig.Config); err != nil {
+				retErr := fmt.Errorf("Error encountered reloading configuration: %s", err)
 				reloadErrors = multierror.Append(retErr)
 			}
 		}

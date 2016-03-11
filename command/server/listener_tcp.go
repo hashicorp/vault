@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, ReloadFactory, error) {
+func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
 	addr, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"
