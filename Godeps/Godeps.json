@@ -185,7 +185,7 @@
 		},
 		{
 			"ImportPath": "github.com/hashicorp/hcl",
-			"Rev": "4de51957ef8d4aba6e285ddfc587633bbfc7c0e8"
+			"Rev": "71c7409f1abba841e528a80556ed2c67671744c3"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/logutils",

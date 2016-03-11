@@ -1,20 +1,17 @@
 {
-    "listener": {
-        "tcp": {
-            "address": "127.0.0.1:443"
-        }
-    },
-
-    "backend": {
-        "consul": {
-            "foo": "bar"
-        }
-    },
-
-    "telemetry": {
-        "statsite_address": "baz"
-    },
-
-    "max_lease_ttl": "10h",
-    "default_lease_ttl": "10h"
+  "listener":{
+    "tcp":{
+      "address":"127.0.0.1:443"
+    }
+  },
+  "backend":{
+    "consul":{
+      "foo":"bar"
+    }
+  },
+  "telemetry":{
+    "statsite_address":"baz"
+  },
+  "max_lease_ttl":"10h",
+  "default_lease_ttl":"10h"
 }

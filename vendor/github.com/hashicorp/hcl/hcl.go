@@ -1,4 +1,4 @@
-// hcl is a package for decoding HCL into usable Go structures.
+// Package hcl decodes HCL into usable Go structures.
 //
 // hcl input can come in either pure HCL format or JSON format.
 // It can be parsed into an AST, and then decoded into a structure,
