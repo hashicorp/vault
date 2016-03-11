@@ -12,7 +12,9 @@ type TokenRevokeCommand struct {
 
 func (c *TokenRevokeCommand) Run(args []string) int {
 	var mode string
+	var accessor bool
 	flags := c.Meta.FlagSet("token-revoke", FlagSetDefault)
+	flags.BoolVar(&accessor, "accessor", false, "")
 	flags.StringVar(&mode, "mode", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -37,16 +39,21 @@ func (c *TokenRevokeCommand) Run(args []string) int {
 	}
 
 	var fn func(string) error
-	switch mode {
-	case "":
+	// Handle all 6 possible combinations
+	switch {
+	case !accessor && mode == "":
 		fn = client.Auth().Token().RevokeTree
-	case "orphan":
+	case !accessor && mode == "orphan":
 		fn = client.Auth().Token().RevokeOrphan
-	case "path":
+	case !accessor && mode == "path":
 		fn = client.Auth().Token().RevokePrefix
-	default:
-		c.Ui.Error(fmt.Sprintf(
-			"Unknown revocation mode: %s", mode))
+	case accessor && mode == "":
+		fn = client.Auth().Token().RevokeAccessor
+	case accessor && mode == "orphan":
+		c.Ui.Error("token-revoke cannot be run for 'orphan' mode when 'accessor' flag is set")
+		return 1
+	case accessor && mode == "path":
+		c.Ui.Error("token-revoke cannot be run for 'path' mode when 'accessor' flag is set")
 		return 1
 	}
 
@@ -66,7 +73,7 @@ func (c *TokenRevokeCommand) Synopsis() string {
 
 func (c *TokenRevokeCommand) Help() string {
 	helpText := `
-Usage: vault token-revoke [options] token
+Usage: vault token-revoke [options] [token|accessor]
 
   Revoke one or more auth tokens.
 
@@ -86,11 +93,22 @@ Usage: vault token-revoke [options] token
       prefix will be deleted, along with all their children. In this case
       the "token" arg above is actually a "path".
 
+  Token can be revoked using the token accessor. This can be done by
+  setting the '-accessor' flag. Note that when '-accessor' flag is set,
+  '-mode' should not be set for 'orphan' or 'path'. This is because,
+  a token accessor always revokes the token along with it's child tokens.
+
 General Options:
 
   ` + generalOptionsUsage() + `
 
 Token Options:
+
+  -accessor               A boolean flag, if set, treats the argument as an accessor of the token.
+                          Note that accessor can also be used for looking up the token properties
+                          via '/auth/token/lookup-accessor/<accessor>' endpoint.
+                          Accessor is used when there is no access to token ID.
+
 
   -mode=value             The type of revocation to do. See the documentation
                           above for more information.
