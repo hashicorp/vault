@@ -950,7 +950,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	if auth.ClientToken != clientToken {
 		t.Fatalf("bad client token: %#v", auth)
 	}
-	if len(auth.Policies) != 2 || auth.Policies[0] != "foo" || auth.Policies[1] != "bar" {
+	if len(auth.Policies) != 3 || auth.Policies[0] != "foo" || auth.Policies[1] != "bar" || auth.Policies[2] != "default" {
 		t.Fatalf("bad: %#v", auth)
 	}
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], lreq) {
