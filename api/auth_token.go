@@ -149,6 +149,18 @@ func (c *TokenAuth) RevokePrefix(token string) error {
 	return nil
 }
 
+// RevokeSelf revokes the token making the call
+func (c *TokenAuth) RevokeSelf(token string) error {
+	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 // RevokeTree is the "normal" revoke operation that revokes the given token and
 // the entire tree underneath -- all of its child tokens, their child tokens,
 // etc.
