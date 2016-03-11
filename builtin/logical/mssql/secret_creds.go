@@ -33,15 +33,15 @@ func secretCreds(b *backend) *framework.Secret {
 func (b *backend) secretCredsRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
-	lease, err := b.Lease(req.Storage)
+	leaseConfig, err := b.LeaseConfig(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if lease == nil {
-		lease = &configLease{}
+	if leaseConfig == nil {
+		leaseConfig = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
+	f := framework.LeaseExtend(leaseConfig.TTL, leaseConfig.TTLMax, b.System())
 	return f(req, d)
 }
 

@@ -105,8 +105,8 @@ func (b *backend) ResetDB() {
 	b.db = nil
 }
 
-// Lease returns the lease information
-func (b *backend) Lease(s logical.Storage) (*configLease, error) {
+// LeaseConfig returns the lease configuration
+func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
 	entry, err := s.Get("config/lease")
 	if err != nil {
 		return nil, err
@@ -129,5 +129,5 @@ The MSSQL backend dynamically generates database users.
 After mounting this backend, configure it using the endpoints within
 the "config/" path.
 
-This backend does not support Azure SQL Databases
+This backend does not support Azure SQL Databases.
 `

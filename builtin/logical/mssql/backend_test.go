@@ -142,8 +142,8 @@ func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/lease",
 		Data: map[string]interface{}{
-			"lease":     "1h5m",
-			"lease_max": "24h",
+			"ttl":     "1h5m",
+			"ttl_max": "24h",
 		},
 	}
 }
@@ -153,7 +153,7 @@ func testAccStepReadLease(t *testing.T) logicaltest.TestStep {
 		Operation: logical.ReadOperation,
 		Path:      "config/lease",
 		Check: func(resp *logical.Response) error {
-			if resp.Data["lease"] != "1h5m0s" || resp.Data["lease_max"] != "24h0m0s" {
+			if resp.Data["ttl"] != "1h5m0s" || resp.Data["ttl_max"] != "24h0m0s" {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 

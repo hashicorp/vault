@@ -2,7 +2,6 @@ package mssql
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
@@ -41,13 +40,13 @@ func (b *backend) pathCredsCreateRead(
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
 
-	// Determine if we have a lease
-	lease, err := b.Lease(req.Storage)
+	// Determine if we have a lease configuration
+	leaseConfig, err := b.LeaseConfig(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+	if leaseConfig == nil {
+		leaseConfig = &configLease{}
 	}
 
 	// Generate our username and password
@@ -108,7 +107,7 @@ func (b *backend) pathCredsCreateRead(
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.TTL = lease.Lease
+	resp.Secret.TTL = leaseConfig.TTL
 	return resp, nil
 }
 
