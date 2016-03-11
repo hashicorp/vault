@@ -2,6 +2,8 @@
 
 FEATURES:
 
+ * **MSSQL Backend**: Generate dynamic unique MSSQL database credentials based
+   on configured roles [GH-998]
  * **Token Accessors**: Vault now provides an accessor with each issued token.
    This accessor is an identifier that can be used for a limited set of
    actions, notably for token revocation. This value is logged in plaintext to
