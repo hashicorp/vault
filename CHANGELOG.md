@@ -55,6 +55,8 @@ IMPROVEMENTS:
  * sys: Added `sys/revoke-force`, which enables a user to ignore backend errors
    when revoking a lease, necessary in some emergency/failure scenarios
    [GH-1168]
+ * sys: The return codes from `sys/health` can now be user-specified via query
+   parameters [GH-1199]
 
 BUG FIXES:
 
