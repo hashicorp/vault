@@ -88,7 +88,7 @@ func dirUnix() (string, error) {
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
 		// If "getent" is missing, ignore it
-		if err != exec.ErrNotFound {
+		if err == exec.ErrNotFound {
 			return "", err
 		}
 	} else {

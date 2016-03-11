@@ -10,7 +10,8 @@ import (
 	"io"
 )
 
-// We limit how far copy back-references can go, the same as the C++ code.
+// maxOffset limits how far copy back-references can go, the same as the C++
+// code.
 const maxOffset = 1 << 15
 
 // emitLiteral writes a literal chunk and returns the number of bytes written.
@@ -94,30 +95,22 @@ func Encode(dst, src []byte) []byte {
 	for len(src) > 0 {
 		p := src
 		src = nil
-		if len(p) > maxInternalEncodeSrcLen {
-			p, src = p[:maxInternalEncodeSrcLen], p[maxInternalEncodeSrcLen:]
+		if len(p) > maxBlockSize {
+			p, src = p[:maxBlockSize], p[maxBlockSize:]
 		}
-		d += encode(dst[d:], p)
+		d += encodeBlock(dst[d:], p)
 	}
 	return dst[:d]
 }
 
-// maxInternalEncodeSrcLen must be less than math.MaxInt32, so that in the
-// (internal) encode function, it is safe to have the s variable (which indexes
-// the src slice), and therefore the hash table entries, to have type int32
-// instead of int.
-const maxInternalEncodeSrcLen = 0x40000000
-
-// encode encodes a non-empty src to a guaranteed-large-enough dst. It assumes
-// that the varint-encoded length of the decompressed bytes has already been
-// written.
+// encodeBlock encodes a non-empty src to a guaranteed-large-enough dst. It
+// assumes that the varint-encoded length of the decompressed bytes has already
+// been written.
 //
 // It also assumes that:
 //	len(dst) >= MaxEncodedLen(len(src)) &&
-// 	0 < len(src) &&
-//	len(src) <= maxInternalEncodeSrcLen &&
-// 	maxInternalEncodeSrcLen < math.MaxInt32.
-func encode(dst, src []byte) (d int) {
+// 	0 < len(src) && len(src) <= maxBlockSize
+func encodeBlock(dst, src []byte) (d int) {
 	// Return early if src is short.
 	if len(src) <= 4 {
 		return emitLiteral(dst, src)
@@ -258,7 +251,7 @@ func NewWriter(w io.Writer) *Writer {
 func NewBufferedWriter(w io.Writer) *Writer {
 	return &Writer{
 		w:    w,
-		ibuf: make([]byte, 0, maxUncompressedChunkLen),
+		ibuf: make([]byte, 0, maxBlockSize),
 		obuf: make([]byte, obufLen),
 	}
 }
@@ -342,8 +335,8 @@ func (w *Writer) write(p []byte) (nRet int, errRet error) {
 		}
 
 		var uncompressed []byte
-		if len(p) > maxUncompressedChunkLen {
-			uncompressed, p = p[:maxUncompressedChunkLen], p[maxUncompressedChunkLen:]
+		if len(p) > maxBlockSize {
+			uncompressed, p = p[:maxBlockSize], p[maxBlockSize:]
 		} else {
 			uncompressed, p = p, nil
 		}

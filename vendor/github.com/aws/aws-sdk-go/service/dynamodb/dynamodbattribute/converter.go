@@ -1,50 +1,3 @@
-// Package dynamodbattribute provides conversion utilities from dynamodb.AttributeValue
-// to concrete Go types and structures. These conversion utilities allow you to
-// convert a Struct, Slice, Map, or Scalar value to or from dynamodb.AttributeValue.
-// These are most useful to serialize concrete types to dynamodb.AttributeValue for
-// requests or unmarshalling the dynamodb.AttributeValue into a well known typed form.
-//
-// Converting []byte fields to dynamodb.AttributeValue are only currently supported
-// if the input is a map[string]interface{} type. []byte within typed structs are not
-// converted correctly and are converted into base64 strings. This is a known bug,
-// and will be fixed in a later release.
-//
-// Convert concrete type to dynamodb.AttributeValue: See (ExampleConvertTo)
-//
-//     type Record struct {
-//         MyField string
-//         Letters []string
-//         A2Num   map[string]int
-//     }
-//
-//     ...
-//
-//     r := Record{
-//         MyField: "dynamodbattribute.ConvertToX example",
-//         Letters: []string{"a", "b", "c", "d"},
-//         A2Num:   map[string]int{"a": 1, "b": 2, "c": 3},
-//     }
-//     av, err := dynamodbattribute.ConvertTo(r)
-//     fmt.Println(av, err)
-//
-// Convert dynamodb.AttributeValue to Concrete type: See (ExampleConvertFrom)
-//
-//     r2 := Record{}
-//     err = dynamodbattribute.ConvertFrom(av, &r2)
-//     fmt.Println(err, reflect.DeepEqual(r, r2))
-//
-// Use Conversion utilities with DynamoDB.PutItem: See ()
-//
-//     svc := dynamodb.New(nil)
-//     item, err := dynamodbattribute.ConvertToMap(r)
-//     if err != nil {
-//         fmt.Println("Failed to convert", err)
-//         return
-//     }
-//     result, err := svc.PutItem(&dynamodb.PutItemInput{
-//         Item:      item,
-//         TableName: aws.String("exampleTable"),
-//     })
 package dynamodbattribute
 
 import (
@@ -64,6 +17,8 @@ import (
 //
 // If in contains any structs, it is first JSON encoded/decoded it to convert it
 // to a map[string]interface{}, so `json` struct tags are respected.
+//
+// Deprecated: Use MarshalMap instead
 func ConvertToMap(in interface{}) (item map[string]*dynamodb.AttributeValue, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -110,6 +65,8 @@ func ConvertToMap(in interface{}) (item map[string]*dynamodb.AttributeValue, err
 // If v points to a struct, the result is first converted it to a
 // map[string]interface{}, then JSON encoded/decoded it to convert to a struct,
 // so `json` struct tags are respected.
+//
+// Deprecated: Use UnmarshalMap instead
 func ConvertFromMap(item map[string]*dynamodb.AttributeValue, v interface{}) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -155,8 +112,15 @@ func ConvertFromMap(item map[string]*dynamodb.AttributeValue, v interface{}) (er
 // ConvertToList accepts an array or slice and converts it to a
 // []*dynamodb.AttributeValue.
 //
+// Converting []byte fields to dynamodb.AttributeValue are only currently supported
+// if the input is a map[string]interface{} type. []byte within typed structs are not
+// converted correctly and are converted into base64 strings. This is a known bug,
+// and will be fixed in a later release.
+//
 // If in contains any structs, it is first JSON encoded/decoded it to convert it
 // to a []interface{}, so `json` struct tags are respected.
+//
+// Deprecated: Use MarshalList instead
 func ConvertToList(in interface{}) (item []*dynamodb.AttributeValue, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -204,6 +168,8 @@ func ConvertToList(in interface{}) (item []*dynamodb.AttributeValue, err error) 
 // If v contains any structs, the result is first converted it to a
 // []interface{}, then JSON encoded/decoded it to convert to a typed array or
 // slice, so `json` struct tags are respected.
+//
+// Deprecated: Use UnmarshalList instead
 func ConvertFromList(item []*dynamodb.AttributeValue, v interface{}) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -250,6 +216,8 @@ func ConvertFromList(item []*dynamodb.AttributeValue, v interface{}) (err error)
 //
 // If in contains any structs, it is first JSON encoded/decoded it to convert it
 // to a interface{}, so `json` struct tags are respected.
+//
+// Deprecated: Use Marshal instead
 func ConvertTo(in interface{}) (item *dynamodb.AttributeValue, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -278,6 +246,8 @@ func ConvertTo(in interface{}) (item *dynamodb.AttributeValue, err error) {
 // If v contains any structs, the result is first converted it to a interface{},
 // then JSON encoded/decoded it to convert to a struct, so `json` struct tags
 // are respected.
+//
+// Deprecated: Use Unmarshal instead
 func ConvertFrom(item *dynamodb.AttributeValue, v interface{}) (err error) {
 	defer func() {
 		if r := recover(); r != nil {

@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"gopkg.in/yaml.v2"
+	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 )
 
 // Marshals the object into JSON then converts JSON to YAML and returns the

@@ -46,18 +46,25 @@ const (
 	chunkHeaderSize = 4
 	magicChunk      = "\xff\x06\x00\x00" + magicBody
 	magicBody       = "sNaPpY"
-	// https://github.com/google/snappy/blob/master/framing_format.txt says
-	// that "the uncompressed data in a chunk must be no longer than 65536 bytes".
-	maxUncompressedChunkLen = 65536
 
-	// maxEncodedLenOfMaxUncompressedChunkLen equals
-	// MaxEncodedLen(maxUncompressedChunkLen), but is hard coded to be a const
-	// instead of a variable, so that obufLen can also be a const. Their
-	// equivalence is confirmed by TestMaxEncodedLenOfMaxUncompressedChunkLen.
-	maxEncodedLenOfMaxUncompressedChunkLen = 76490
+	// maxBlockSize is the maximum size of the input to encodeBlock. It is not
+	// part of the wire format per se, but some parts of the encoder assume
+	// that an offset fits into a uint16.
+	//
+	// Also, for the framing format (Writer type instead of Encode function),
+	// https://github.com/google/snappy/blob/master/framing_format.txt says
+	// that "the uncompressed data in a chunk must be no longer than 65536
+	// bytes".
+	maxBlockSize = 65536
+
+	// maxEncodedLenOfMaxBlockSize equals MaxEncodedLen(maxBlockSize), but is
+	// hard coded to be a const instead of a variable, so that obufLen can also
+	// be a const. Their equivalence is confirmed by
+	// TestMaxEncodedLenOfMaxBlockSize.
+	maxEncodedLenOfMaxBlockSize = 76490
 
 	obufHeaderLen = len(magicChunk) + checksumSize + chunkHeaderSize
-	obufLen       = obufHeaderLen + maxEncodedLenOfMaxUncompressedChunkLen
+	obufLen       = obufHeaderLen + maxEncodedLenOfMaxBlockSize
 )
 
 const (

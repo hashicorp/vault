@@ -184,9 +184,9 @@ type SetOptions struct {
 	// a TTL of 0.
 	TTL time.Duration
 
-	// When refresh is set to true a TTL value can be updated
+	// Refresh set to true means a TTL value can be updated
 	// without firing a watch or changing the node value. A
-	// value must not provided when refreshing a key.
+	// value must not be provided when refreshing a key.
 	Refresh bool
 
 	// Dir specifies whether or not this Node should be created as a directory.
@@ -311,6 +311,7 @@ func (n *Node) TTLDuration() time.Duration {
 type Nodes []*Node
 
 // interfaces for sorting
+
 func (ns Nodes) Len() int           { return len(ns) }
 func (ns Nodes) Less(i, j int) bool { return ns[i].Key < ns[j].Key }
 func (ns Nodes) Swap(i, j int)      { ns[i], ns[j] = ns[j], ns[i] }

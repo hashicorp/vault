@@ -53,7 +53,8 @@ type Session struct {
 	schemaEvents *eventDeouncer
 
 	// ring metadata
-	hosts []HostInfo
+	hosts           []HostInfo
+	useSystemSchema bool
 
 	cfg ClusterConfig
 
@@ -165,6 +166,8 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		s.Close()
 		return nil, ErrNoConnectionsStarted
 	}
+
+	s.useSystemSchema = hosts[0].Version().Major >= 3
 
 	return s, nil
 }
@@ -427,7 +430,7 @@ func (s *Session) routingKeyInfo(stmt string) (*routingKeyInfo, error) {
 	table := info.request.columns[0].Table
 
 	var keyspaceMetadata *KeyspaceMetadata
-	keyspaceMetadata, inflight.err = s.KeyspaceMetadata(s.cfg.Keyspace)
+	keyspaceMetadata, inflight.err = s.KeyspaceMetadata(info.request.columns[0].Keyspace)
 	if inflight.err != nil {
 		// don't cache this error
 		s.routingKeyInfoCache.Remove(stmt)

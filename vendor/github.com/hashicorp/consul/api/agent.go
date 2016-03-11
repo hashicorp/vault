@@ -200,21 +200,26 @@ func (a *Agent) ServiceDeregister(serviceID string) error {
 
 // PassTTL is used to set a TTL check to the passing state
 func (a *Agent) PassTTL(checkID, note string) error {
-	return a.UpdateTTL(checkID, note, "pass")
+	return a.updateTTL(checkID, note, "pass")
 }
 
 // WarnTTL is used to set a TTL check to the warning state
 func (a *Agent) WarnTTL(checkID, note string) error {
-	return a.UpdateTTL(checkID, note, "warn")
+	return a.updateTTL(checkID, note, "warn")
 }
 
 // FailTTL is used to set a TTL check to the failing state
 func (a *Agent) FailTTL(checkID, note string) error {
-	return a.UpdateTTL(checkID, note, "fail")
+	return a.updateTTL(checkID, note, "fail")
 }
 
-// UpdateTTL is used to update the TTL of a check
-func (a *Agent) UpdateTTL(checkID, note, status string) error {
+// updateTTL is used to update the TTL of a check. This is the internal
+// method that uses the old API that's present in Consul versions prior
+// to 0.6.4. Since Consul didn't have an analogous "update" API before it
+// seemed ok to break this (former) UpdateTTL in favor of the new UpdateTTL
+// below, but keep the old Pass/Warn/Fail methods using the old API under the
+// hood.
+func (a *Agent) updateTTL(checkID, note, status string) error {
 	switch status {
 	case "pass":
 	case "warn":
@@ -225,6 +230,50 @@ func (a *Agent) UpdateTTL(checkID, note, status string) error {
 	endpoint := fmt.Sprintf("/v1/agent/check/%s/%s", status, checkID)
 	r := a.c.newRequest("PUT", endpoint)
 	r.params.Set("note", note)
+	_, resp, err := requireOK(a.c.doRequest(r))
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
+// checkUpdate is the payload for a PUT for a check update.
+type checkUpdate struct {
+	// Status us one of the structs.Health* states, "passing", "warning", or
+	// "critical".
+	Status string
+
+	// Output is the information to post to the UI for operators as the
+	// output of the process that decided to hit the TTL check. This is
+	// different from the note field that's associated with the check
+	// itself.
+	Output string
+}
+
+// UpdateTTL is used to update the TTL of a check. This uses the newer API
+// that was introduced in Consul 0.6.4 and later. We translate the old status
+// strings for compatibility (though a newer version of Consul will still be
+// required to use this API).
+func (a *Agent) UpdateTTL(checkID, output, status string) error {
+	switch status {
+	case "pass", "passing":
+		status = "passing"
+	case "warn", "warning":
+		status = "warning"
+	case "fail", "critical":
+		status = "critical"
+	default:
+		return fmt.Errorf("Invalid status: %s", status)
+	}
+
+	endpoint := fmt.Sprintf("/v1/agent/check/update/%s", checkID)
+	r := a.c.newRequest("PUT", endpoint)
+	r.obj = &checkUpdate{
+		Status: status,
+		Output: output,
+	}
+
 	_, resp, err := requireOK(a.c.doRequest(r))
 	if err != nil {
 		return err

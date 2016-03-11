@@ -6,6 +6,7 @@
 package github
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 )
@@ -144,6 +145,33 @@ func (s *RepositoriesService) GetCommit(owner, repo, sha string) (*RepositoryCom
 	}
 
 	return commit, resp, err
+}
+
+// GetCommitSHA1 gets the SHA-1 of a commit reference.  If a last-known SHA1 is
+// supplied and no new commits have occurred, a 304 Unmodified response is returned.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
+func (s *RepositoriesService) GetCommitSHA1(owner, repo, ref, lastSHA string) (string, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/commits/%v", owner, repo, ref)
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	if lastSHA != "" {
+		req.Header.Set("If-None-Match", `"`+lastSHA+`"`)
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeCommitReferenceSHAPreview)
+
+	var buf bytes.Buffer
+	resp, err := s.client.Do(req, &buf)
+	if err != nil {
+		return "", resp, err
+	}
+
+	return buf.String(), resp, err
 }
 
 // CompareCommits compares a range of commits with each other.

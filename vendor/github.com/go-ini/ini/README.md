@@ -62,6 +62,14 @@ When you cannot decide how many data sources to load at the beginning, you still
 err := cfg.Append("other file", []byte("other raw data"))
 ```
 
+If you have a list of files with possibilities that some of them may not available at the time, and you don't know exactly which ones, you can use `LooseLoad` to ignore nonexistent files without returning error.
+
+```go
+cfg, err := ini.LooseLoad("filename", "filename_404")
+```
+
+The cool thing is, whenever the file is available to load while you're calling `Reload` method, it will be counted as usual.
+
 ### Working with sections
 
 To get a section, you would need to:

@@ -41,15 +41,16 @@ type TableMetadata struct {
 
 // schema metadata for a column
 type ColumnMetadata struct {
-	Keyspace       string
-	Table          string
-	Name           string
-	ComponentIndex int
-	Kind           string
-	Validator      string
-	Type           TypeInfo
-	Order          ColumnOrder
-	Index          ColumnIndexMetadata
+	Keyspace        string
+	Table           string
+	Name            string
+	ComponentIndex  int
+	Kind            string
+	Validator       string
+	Type            TypeInfo
+	ClusteringOrder string
+	Order           ColumnOrder
+	Index           ColumnIndexMetadata
 }
 
 // the ordering of the column with regard to its comparator
@@ -170,11 +171,19 @@ func compileMetadata(
 	// add columns from the schema data
 	for i := range columns {
 		// decode the validator for TypeInfo and order
-		validatorParsed := parseType(columns[i].Validator)
-		columns[i].Type = validatorParsed.types[0]
-		columns[i].Order = ASC
-		if validatorParsed.reversed[0] {
-			columns[i].Order = DESC
+		if columns[i].ClusteringOrder != "" { // Cassandra 3.x+
+			columns[i].Type = NativeType{typ: getCassandraType(columns[i].Validator)}
+			columns[i].Order = ASC
+			if columns[i].ClusteringOrder == "desc" {
+				columns[i].Order = DESC
+			}
+		} else {
+			validatorParsed := parseType(columns[i].Validator)
+			columns[i].Type = validatorParsed.types[0]
+			columns[i].Order = ASC
+			if validatorParsed.reversed[0] {
+				columns[i].Order = DESC
+			}
 		}
 
 		table := keyspace.Tables[columns[i].Table]
@@ -305,11 +314,16 @@ func compileV2Metadata(tables []TableMetadata) {
 	for i := range tables {
 		table := &tables[i]
 
-		keyValidatorParsed := parseType(table.KeyValidator)
-		table.PartitionKey = make([]*ColumnMetadata, len(keyValidatorParsed.types))
-
 		clusteringColumnCount := componentColumnCountOfType(table.Columns, CLUSTERING_KEY)
 		table.ClusteringColumns = make([]*ColumnMetadata, clusteringColumnCount)
+
+		if table.KeyValidator != "" {
+			keyValidatorParsed := parseType(table.KeyValidator)
+			table.PartitionKey = make([]*ColumnMetadata, len(keyValidatorParsed.types))
+		} else { // Cassandra 3.x+
+			partitionKeyCount := componentColumnCountOfType(table.Columns, PARTITION_KEY)
+			table.PartitionKey = make([]*ColumnMetadata, partitionKeyCount)
+		}
 
 		for _, columnName := range table.OrderedColumns {
 			column := table.Columns[columnName]
@@ -319,7 +333,6 @@ func compileV2Metadata(tables []TableMetadata) {
 				table.ClusteringColumns[column.ComponentIndex] = column
 			}
 		}
-
 	}
 }
 
@@ -336,27 +349,52 @@ func componentColumnCountOfType(columns map[string]*ColumnMetadata, kind string)
 
 // query only for the keyspace metadata for the specified keyspace from system.schema_keyspace
 func getKeyspaceMetadata(session *Session, keyspaceName string) (*KeyspaceMetadata, error) {
-	const stmt = `
+	keyspace := &KeyspaceMetadata{Name: keyspaceName}
+
+	if session.useSystemSchema { // Cassandra 3.x+
+		const stmt = `
+		SELECT durable_writes, replication
+		FROM system_schema.keyspaces
+		WHERE keyspace_name = ?`
+
+		var replication map[string]string
+
+		iter := session.control.query(stmt, keyspaceName)
+		iter.Scan(&keyspace.DurableWrites, &replication)
+		err := iter.Close()
+		if err != nil {
+			return nil, fmt.Errorf("Error querying keyspace schema: %v", err)
+		}
+
+		keyspace.StrategyClass = replication["class"]
+
+		keyspace.StrategyOptions = make(map[string]interface{})
+		for k, v := range replication {
+			keyspace.StrategyOptions[k] = v
+		}
+	} else {
+
+		const stmt = `
 		SELECT durable_writes, strategy_class, strategy_options
 		FROM system.schema_keyspaces
 		WHERE keyspace_name = ?`
 
-	keyspace := &KeyspaceMetadata{Name: keyspaceName}
-	var strategyOptionsJSON []byte
+		var strategyOptionsJSON []byte
 
-	iter := session.control.query(stmt, keyspaceName)
-	iter.Scan(&keyspace.DurableWrites, &keyspace.StrategyClass, &strategyOptionsJSON)
-	err := iter.Close()
-	if err != nil {
-		return nil, fmt.Errorf("Error querying keyspace schema: %v", err)
-	}
+		iter := session.control.query(stmt, keyspaceName)
+		iter.Scan(&keyspace.DurableWrites, &keyspace.StrategyClass, &strategyOptionsJSON)
+		err := iter.Close()
+		if err != nil {
+			return nil, fmt.Errorf("Error querying keyspace schema: %v", err)
+		}
 
-	err = json.Unmarshal(strategyOptionsJSON, &keyspace.StrategyOptions)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"Invalid JSON value '%s' as strategy_options for in keyspace '%s': %v",
-			strategyOptionsJSON, keyspace.Name, err,
-		)
+		err = json.Unmarshal(strategyOptionsJSON, &keyspace.StrategyOptions)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"Invalid JSON value '%s' as strategy_options for in keyspace '%s': %v",
+				strategyOptionsJSON, keyspace.Name, err,
+			)
+		}
 	}
 
 	return keyspace, nil
@@ -373,7 +411,19 @@ func getTableMetadata(session *Session, keyspaceName string) ([]TableMetadata, e
 		columnAliasesJSON []byte
 	)
 
-	if session.cfg.ProtoVersion < protoVersion4 {
+	if session.useSystemSchema { // Cassandra 3.x+
+		stmt = `
+		SELECT
+			table_name
+		FROM system_schema.tables
+		WHERE keyspace_name = ?`
+
+		scan = func(iter *Iter, table *TableMetadata) bool {
+			return iter.Scan(
+				&table.Name,
+			)
+		}
+	} else if session.cfg.ProtoVersion < protoVersion4 {
 		// we have key aliases
 		// TODO: Do we need key_aliases?
 		stmt = `
@@ -503,6 +553,32 @@ func getColumnMetadata(
 				&column.Index.Name,
 				&column.Index.Type,
 				&indexOptionsJSON,
+			)
+		}
+	} else if session.useSystemSchema { // Cassandra 3.x+
+		stmt = `
+			SELECT
+				table_name,
+				column_name,
+				clustering_order,
+				type,
+				kind,
+				position
+			FROM system_schema.columns
+			WHERE keyspace_name = ?
+			`
+		scan = func(
+			iter *Iter,
+			column *ColumnMetadata,
+			indexOptionsJSON *[]byte,
+		) bool {
+			return iter.Scan(
+				&column.Table,
+				&column.Name,
+				&column.ClusteringOrder,
+				&column.Validator,
+				&column.Kind,
+				&column.ComponentIndex,
 			)
 		}
 	} else {
