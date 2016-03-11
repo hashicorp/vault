@@ -48,17 +48,19 @@ Success! Data written to: mssql/config/connection
 In this case, we've configured Vault with the user "sa" and password "Password!",
 connecting to an instance at "localhost" on port 1433. It is not necessary
 that Vault has the sa login, but the user must have privileges to create
-logins, create users on the database, and manage processes. The server roles
-`securityadmin` and `processadmin` are examples of built-in roles that grant
-these permissions.
+logins and manage processes. The fixed server roles `securityadmin` and
+`processadmin` are examples of built-in roles that grant these permissions. The
+user also must have privileges to create database users and grant permissions in
+the databases that Vault manages.  The fixed database roles `db_accessadmin` and
+`db_securityadmin` are examples or built-in roles that grant these permissions.
 
 Optionally, we can configure the lease settings for credentials generated
 by Vault. This is done by writing to the `config/lease` key:
 
 ```
 $ vault write mssql/config/lease \
-    lease=1h \
-    lease_max=24h
+    ttl=1h \
+    ttl_max=24h
 Success! Data written to: mssql/config/lease
 ```
 
@@ -115,7 +117,6 @@ allowed to read.
   <dt>Description</dt>
   <dd>
     Configures the connection DSN used to communicate with Sql Server.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -168,8 +169,6 @@ allowed to read.
   <dt>Description</dt>
   <dd>
     Configures the lease settings for generated credentials.
-    If not configured, leases default to 1 hour. This is a root
-    protected endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -182,15 +181,15 @@ allowed to read.
   <dd>
     <ul>
       <li>
-        <span class="param">lease</span>
+        <span class="param">ttl</span>
         <span class="param-flags">required</span>
-        The lease value provided as a string duration
+        The ttl value provided as a string duration
         with time suffix. Hour is the largest suffix.
       </li>
       <li>
-        <span class="param">lease_max</span>
+        <span class="param">ttl_max</span>
         <span class="param-flags">required</span>
-        The maximum lease value provided as a string duration
+        The maximum ttl value provided as a string duration
         with time suffix. Hour is the largest suffix.
       </li>
     </ul>
