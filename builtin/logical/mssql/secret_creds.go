@@ -121,8 +121,7 @@ func (b *backend) secretCredsRevoke(
 		if err != nil {
 			return nil, err
 		}
-		revokeStmts = append(revokeStmts, fmt.Sprintf(
-			"USE [%s]; DROP USER IF EXISTS [%s];", dbName, qUsername))
+		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName, username, username))
 	}
 
 	// we do not stop on error, as we want to remove as
@@ -163,12 +162,23 @@ func (b *backend) secretCredsRevoke(
 	return nil, nil
 }
 
+const dropUserSQL = `
+USE [%s]
+IF EXISTS
+  (SELECT name
+   FROM sys.database_principals
+   WHERE name = N'%s')
+BEGIN
+  DROP USER [%s]
+END
+`
+
 const dropLoginSQL = `
 IF EXISTS
   (SELECT name
    FROM master.sys.server_principals
-   WHERE name = '%s')
+   WHERE name = N'%s')
 BEGIN
-    DROP LOGIN [%s]
+  DROP LOGIN [%s]
 END
 `
