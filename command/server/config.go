@@ -15,6 +15,13 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 )
 
+// ReloadFunc are functions that are called when a reload is requested.
+type ReloadFunc func(string, map[string]string) error
+
+// ReloadFactory can be called to return the desired ID and the associated
+// reload function.
+type ReloadFactory func() (string, ReloadFunc)
+
 // Config is the configuration for the vault server.
 type Config struct {
 	Listeners []*Listener `hcl:"-"`

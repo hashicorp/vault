@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -35,7 +36,11 @@ type ServerCommand struct {
 	LogicalBackends    map[string]logical.Factory
 
 	ShutdownCh <-chan struct{}
+	SighupCh   <-chan struct{}
+
 	Meta
+
+	ReloadFuncs map[string]server.ReloadFunc
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -274,7 +279,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config)
+		ln, props, reloadFactory, err := server.NewListener(lnConfig.Type, lnConfig.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
@@ -296,7 +301,10 @@ func (c *ServerCommand) Run(args []string) int {
 
 		lns = append(lns, ln)
 
-		core.AddReloadFunc("listener-"+ln.Addr().String(), reloadFunc)
+		if reloadFactory != nil {
+			relId, relFunc := reloadFactory()
+			c.ReloadFuncs[relId] = relFunc
+		}
 	}
 
 	infoKeys = append(infoKeys, "version")
@@ -335,11 +343,23 @@ func (c *ServerCommand) Run(args []string) int {
 	logGate.Flush()
 
 	// Wait for shutdown
-	select {
-	case <-c.ShutdownCh:
-		c.Ui.Output("==> Vault shutdown triggered")
-		if err := core.Shutdown(); err != nil {
-			c.Ui.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+	shutdownTriggered := false
+	for {
+		select {
+		case <-c.ShutdownCh:
+			c.Ui.Output("==> Vault shutdown triggered")
+			if err := core.Shutdown(); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+			}
+			shutdownTriggered = true
+		case <-c.SighupCh:
+			c.Ui.Output("==> Vault reload triggered")
+			if err := c.Reload(configPath); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+			}
+		}
+		if shutdownTriggered {
+			break
 		}
 	}
 	return 0
@@ -530,6 +550,46 @@ func (c *ServerCommand) setupTelementry(config *server.Config) error {
 		metrics.NewGlobal(metricsConf, inm)
 	}
 	return nil
+}
+
+func (c *ServerCommand) Reload(configPath []string) error {
+	// Read the new config
+	var config *server.Config
+	for _, path := range configPath {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			retErr := fmt.Errorf("Error loading configuration from %s: %s", path, err)
+			c.Ui.Error(retErr.Error())
+			return retErr
+		}
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	// Ensure at least one config was found.
+	if config == nil {
+		retErr := fmt.Errorf("No configuration files found")
+		c.Ui.Error(retErr.Error())
+		return retErr
+	}
+
+	var reloadErrors *multierror.Error
+	// Call reload on the listeners. This will call each listener with each
+	// config block, but they verify the ID.
+	for _, lnConfig := range config.Listeners {
+		for id, relFunc := range c.ReloadFuncs {
+			if err := relFunc(id, lnConfig.Config); err != nil {
+				retErr := fmt.Errorf("Error encountered reloading configuration for %s: %s", id, err)
+				reloadErrors = multierror.Append(retErr)
+			}
+		}
+	}
+
+	return reloadErrors.ErrorOrNil()
 }
 
 func (c *ServerCommand) Synopsis() string {

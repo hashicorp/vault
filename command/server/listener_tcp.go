@@ -3,11 +3,9 @@ package server
 import (
 	"net"
 	"time"
-
-	"github.com/hashicorp/vault/vault"
 )
 
-func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, ReloadFactory, error) {
 	addr, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"

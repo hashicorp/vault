@@ -9,12 +9,10 @@ import (
 	"net"
 	"strconv"
 	"sync"
-
-	"github.com/hashicorp/vault/vault"
 )
 
 // ListenerFactory is the factory function to create a listener.
-type ListenerFactory func(map[string]string) (net.Listener, map[string]string, vault.ReloadFunc, error)
+type ListenerFactory func(map[string]string) (net.Listener, map[string]string, ReloadFactory, error)
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
@@ -30,7 +28,7 @@ var tlsLookup = map[string]uint16{
 
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
-func NewListener(t string, config map[string]string) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+func NewListener(t string, config map[string]string) (net.Listener, map[string]string, ReloadFactory, error) {
 	f, ok := BuiltinListeners[t]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown listener type: %s", t)
@@ -42,7 +40,7 @@ func NewListener(t string, config map[string]string) (net.Listener, map[string]s
 func listenerWrapTLS(
 	ln net.Listener,
 	props map[string]string,
-	config map[string]string) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+	config map[string]string) (net.Listener, map[string]string, ReloadFactory, error) {
 	props["tls"] = "disabled"
 
 	if v, ok := config["tls_disable"]; ok {
@@ -66,10 +64,10 @@ func listenerWrapTLS(
 	}
 
 	cg := &certificateGetter{
-		config: config,
+		id: "listen|" + ln.Addr().String(),
 	}
 
-	if err := cg.reload(nil); err != nil {
+	if err := cg.reload(cg.id, config); err != nil {
 		return nil, nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
 	}
 
@@ -89,18 +87,25 @@ func listenerWrapTLS(
 
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
-	return ln, props, cg.reload, nil
+	return ln, props, func() (string, ReloadFunc) {
+		return cg.id, cg.reload
+	}, nil
 }
 
 type certificateGetter struct {
 	sync.RWMutex
 
-	config map[string]string
-	cert   *tls.Certificate
+	cert *tls.Certificate
+
+	id string
 }
 
-func (cg *certificateGetter) reload(map[string]interface{}) error {
-	cert, err := tls.LoadX509KeyPair(cg.config["tls_cert_file"], cg.config["tls_key_file"])
+func (cg *certificateGetter) reload(id string, config map[string]string) error {
+	if id != cg.id {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(config["tls_cert_file"], config["tls_key_file"])
 	if err != nil {
 		return err
 	}

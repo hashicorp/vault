@@ -79,6 +79,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"ssh":        ssh.Factory,
 				},
 				ShutdownCh: makeShutdownCh(),
+				SighupCh:   makeSighupCh(),
 			}, nil
 		},
 
@@ -317,6 +318,23 @@ func makeShutdownCh() <-chan struct{} {
 
 	signalCh := make(chan os.Signal, 4)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		for {
+			<-signalCh
+			resultCh <- struct{}{}
+		}
+	}()
+	return resultCh
+}
+
+// makeSighupCh returns a channel that can be used for SIGHUP
+// reloading. This channel will send a message for every
+// SIGHUP received.
+func makeSighupCh() <-chan struct{} {
+	resultCh := make(chan struct{})
+
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGHUP)
 	go func() {
 		for {
 			<-signalCh
