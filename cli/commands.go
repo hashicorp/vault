@@ -298,6 +298,12 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"bootstrap-pki": func() (cli.Command, error) {
+			return &command.BootstrapPKICommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"version": func() (cli.Command, error) {
 			versionInfo := version.GetVersion()
 
