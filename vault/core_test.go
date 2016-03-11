@@ -789,7 +789,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		ID:       clientToken,
 		Accessor: te.Accessor,
 		Parent:   "",
-		Policies: []string{"foo", "bar", "default"},
+		Policies: []string{"bar", "default", "foo"},
 		Path:     "auth/foo/login",
 		Meta: map[string]string{
 			"user": "armon",
@@ -950,7 +950,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	if auth.ClientToken != clientToken {
 		t.Fatalf("bad client token: %#v", auth)
 	}
-	if len(auth.Policies) != 3 || auth.Policies[0] != "foo" || auth.Policies[1] != "bar" || auth.Policies[2] != "default" {
+	if len(auth.Policies) != 3 || auth.Policies[0] != "bar" || auth.Policies[1] != "default" || auth.Policies[2] != "foo" {
 		t.Fatalf("bad: %#v", auth)
 	}
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], lreq) {

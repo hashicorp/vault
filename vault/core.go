@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -674,8 +675,11 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		if !strListSubset(te.Policies, []string{"root"}) {
 			// Append 'default' policy to the token being created
 			te.Policies = append(te.Policies, "default")
+			sort.Strings(te.Policies)
+
 			// Update the response with the policies associated with token
 			auth.Policies = append(auth.Policies, "default")
+			sort.Strings(auth.Policies)
 		}
 
 		if err := c.tokenStore.create(&te); err != nil {
