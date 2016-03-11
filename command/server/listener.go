@@ -87,9 +87,10 @@ func listenerWrapTLS(
 
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
-	return ln, props, func() (string, ReloadFunc) {
+	reloadFac := func() (string, ReloadFunc) {
 		return cg.id, cg.reload
-	}, nil
+	}
+	return ln, props, reloadFac, nil
 }
 
 type certificateGetter struct {
