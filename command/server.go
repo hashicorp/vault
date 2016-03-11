@@ -344,7 +344,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Wait for shutdown
 	shutdownTriggered := false
-	for {
+	for !shutdownTriggered {
 		select {
 		case <-c.ShutdownCh:
 			c.Ui.Output("==> Vault shutdown triggered")
@@ -357,9 +357,6 @@ func (c *ServerCommand) Run(args []string) int {
 			if err := c.Reload(configPath); err != nil {
 				c.Ui.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
-		}
-		if shutdownTriggered {
-			break
 		}
 	}
 	return 0
