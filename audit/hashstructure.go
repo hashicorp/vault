@@ -32,6 +32,10 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			token := fn(s.ClientToken)
 			s.ClientToken = token
 		}
+		if s.Accessor != "" {
+			accessor := fn(s.Accessor)
+			s.Accessor = accessor
+		}
 
 	case *logical.Request:
 		if s == nil {

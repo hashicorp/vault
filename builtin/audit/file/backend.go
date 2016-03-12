@@ -15,12 +15,22 @@ import (
 
 func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.Salt == nil {
-		return nil, fmt.Errorf("Nil salt passed in")
+		return nil, fmt.Errorf("nil salt")
 	}
 
 	path, ok := conf.Config["path"]
 	if !ok {
 		return nil, fmt.Errorf("path is required")
+	}
+
+	// Check if hashing of accessor is disabled
+	hashAccessor := true
+	if hashAccessorRaw, ok := conf.Config["hash_accessor"]; ok {
+		value, err := strconv.ParseBool(hashAccessorRaw)
+		if err != nil {
+			return nil, err
+		}
+		hashAccessor = value
 	}
 
 	// Check if raw logging is enabled
@@ -34,9 +44,10 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	b := &Backend{
-		path:   path,
-		logRaw: logRaw,
-		salt:   conf.Salt,
+		path:         path,
+		logRaw:       logRaw,
+		hashAccessor: hashAccessor,
+		salt:         conf.Salt,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -55,9 +66,10 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 // It doesn't do anything more at the moment to assist with rotation
 // or reset the write cursor, this should be done in the future.
 type Backend struct {
-	path   string
-	logRaw bool
-	salt   *salt.Salt
+	path         string
+	logRaw       bool
+	hashAccessor bool
+	salt         *salt.Salt
 
 	once sync.Once
 	f    *os.File
@@ -103,6 +115,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
+
 	}
 
 	var format audit.FormatJSON
@@ -149,14 +162,33 @@ func (b *Backend) LogResponse(
 		resp = cp.(*logical.Response)
 
 		// Hash any sensitive information
+
+		// Cache and restore accessor in the auth
+		var accessor string
+		if !b.hashAccessor && auth != nil && auth.Accessor != "" {
+			accessor = auth.Accessor
+		}
 		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
+		if !b.hashAccessor && auth != nil && auth.Accessor != "" {
+			auth.Accessor = accessor
+		}
+
 		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
+
+		// Cache and restore accessor in the response
+		accessor = ""
+		if !b.hashAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+			accessor = resp.Auth.Accessor
+		}
 		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
+		}
+		if !b.hashAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+			resp.Auth.Accessor = accessor
 		}
 	}
 
