@@ -15,8 +15,8 @@ backend: it appends logs to a file. It does not currently assist with any log ro
 
 Each line in the audit log is a JSON object. The `type` field specifies what type of
 object it is. Currently, only two types exist: `request` and `response`. The line contains
-all of the information for any given request and response. All the sensitive information
-is first hashed before logging in the audit logs, by default.
+all of the information for any given request and response. By default, all the sensitive
+information is first hashed before logging in the audit logs.
 
 ## Enabling
 
@@ -31,7 +31,7 @@ $ vault audit-enable file path=/var/log/vault_audit.log
 Any number of `file` audit logs can be created by enabling it with different `id`s.
 
 ```
-$ vault audit-enable -id="file_backend" file path=/home/user/vault_audit.log
+$ vault audit-enable -id="vault_audit_1" file path=/home/user/vault_audit.log
 ```
 
 Note the difference between `audit-enable` command options and the `file` backend

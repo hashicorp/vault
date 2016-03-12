@@ -86,7 +86,7 @@ block.
     <ul>
       <li>
        <span class="param">type</span>
-        <span class="param-flags">lequired</span>
+        <span class="param-flags">required</span>
             The path to where the audit log will be written. If this
             path exists, the audit backend will append to it.
       </li>
@@ -100,6 +100,7 @@ block.
         <span class="param">options</span>
         <span class="param-flags">optional</span>
            Configuration options of the backend in JSON format.
+           Refer to `syslog` and `file` audit backend options.
       </li>
     </ul>
   </dd>

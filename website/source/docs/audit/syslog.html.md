@@ -18,8 +18,8 @@ and should not be enabled if any standby Vault instances do not support it.
 
 Each line in the audit log is a JSON object. The `type` field specifies what type of
 object it is. Currently, only two types exist: `request` and `response`. The line contains
-all of the information for any given request and response. All the sensitive information
-is first hashed before logging in the audit logs, by default.
+all of the information for any given request and response. By default, all the sensitive
+information is first hashed before logging in the audit logs.
 
 ## Enabling
 
