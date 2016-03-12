@@ -67,3 +67,40 @@ Vault will not respond to requests if audit backends are blocked because
 audit logs are critically important and ignoring blocked requests opens
 an avenue for attack. Be absolutely certain that your audit backends cannot
 block.
+
+## API
+
+### /sys/audit/[path]
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Enables audit backend at the specified path.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dd>
+    <ul>
+      <li>
+       <span class="param">type</span>
+        <span class="param-flags">lequired</span>
+            The path to where the audit log will be written. If this
+            path exists, the audit backend will append to it.
+      </li>
+      <li>
+        <span class="param">description</span>
+        <span class="param-flags">optional</span>
+            A boolean, if set, logs the security sensitive information without
+            hashing, in the raw format. Defaults to `false`.
+      </li>
+      <li>
+        <span class="param">options</span>
+        <span class="param-flags">optional</span>
+           Configuration options of the backend in JSON format.
+      </li>
+    </ul>
+  </dd>
+</dl>
