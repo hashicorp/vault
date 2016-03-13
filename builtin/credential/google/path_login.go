@@ -17,7 +17,7 @@ func pathLogin(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"code": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "GitHub personal API token",
+				Description: "Google authentication code",
 			},
 		},
 
@@ -59,7 +59,7 @@ func (b *backend) pathLogin(
 			Policies: verifyResp.Policies,
 			Metadata: map[string]string{
 				"username": *verifyResp.User.Login,
-				"org":      *verifyResp.Org.Login,
+				"domain":      *verifyResp.Org.Login,
 			},
 			DisplayName: *verifyResp.User.Login,
 			LeaseOptions: logical.LeaseOptions{
@@ -73,7 +73,7 @@ func (b *backend) pathLogin(
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
-	token := req.Auth.InternalData["token"].(string)
+	token := req.Auth.InternalData["code"].(string)
 
 	var verifyResp *verifyCredentialsResp
 	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
@@ -100,7 +100,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	if err != nil {
 		return nil, nil, err
 	}
-	if config.Org == "" {
+	if config.Domain == "" {
 		return nil, logical.ErrorResponse(
 			"configure the github credential backend first"), nil
 	}
@@ -110,13 +110,8 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 		return nil, nil, err
 	}
 
-	if config.BaseURL != "" {
-		parsedURL, err := url.Parse(config.BaseURL)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Successfully parsed base_url when set but failing to parse now: %s", err)
-		}
-		client.BaseURL = parsedURL
-	}
+	parsedURL, err := url.Parse("https://api.github.com")
+	client.BaseURL = parsedURL
 
 	// Get the user
 	user, _, err := client.Users.Get("")
@@ -145,7 +140,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	for _, o := range allOrgs {
-		if *o.Login == config.Org {
+		if *o.Login == config.Domain {
 			org = &o
 			break
 		}

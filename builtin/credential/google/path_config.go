@@ -2,7 +2,6 @@ package google
 
 import (
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -13,16 +12,9 @@ func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"domain": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The organization users must be part of",
-			},
-
-			"base_url": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The API endpoint to use. Useful if you
-are running GitHub Enterprise or an
-API-compatible authentication server.`,
+				Description: "The domain users must be part of",
 			},
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -42,14 +34,7 @@ API-compatible authentication server.`,
 
 func (b *backend) pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	organization := data.Get("organization").(string)
-	baseURL := data.Get("base_url").(string)
-	if len(baseURL) != 0 {
-		_, err := url.Parse(baseURL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
-		}
-	}
+	domain := data.Get("domain").(string)
 
 	var ttl time.Duration
 	var err error
@@ -75,8 +60,7 @@ func (b *backend) pathConfigWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("config", config{
-		Org:     organization,
-		BaseURL: baseURL,
+		Domain:     domain,
 		TTL:     ttl,
 		MaxTTL:  maxTTL,
 	})
@@ -110,8 +94,7 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	Org     string        `json:"organization"`
-	BaseURL string        `json:"base_url"`
-	TTL     time.Duration `json:"ttl"`
-	MaxTTL  time.Duration `json:"max_ttl"`
+	Domain string        `json:"domain"`
+	TTL    time.Duration `json:"ttl"`
+	MaxTTL time.Duration `json:"max_ttl"`
 }

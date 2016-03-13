@@ -10,6 +10,22 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
+const GOOGLE_CODE_ENV_VAR_NAME = "GOOGLE_CODE"
+const GOOGLE_DOMAIN_ENV_VAR_NAME = "GOOGLE_DOMAIN"
+
+func environmentVariable(name string) string {
+
+	return os.Getenv(name)
+}
+
+func googleCode() string {
+	return environmentVariable(GOOGLE_CODE_ENV_VAR_NAME)
+}
+
+func googleDomain() string {
+	return environmentVariable(GOOGLE_DOMAIN_ENV_VAR_NAME)
+}
+
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 2
@@ -25,23 +41,22 @@ func TestBackend_Config(t *testing.T) {
 	}
 
 	login_data := map[string]interface{}{
-		// This token has to be replaced with a working token for the test to work.
-		"code": os.Getenv("GITHUB_TOKEN"),
+		"code": googleCode(),
 	}
 	config_data1 := map[string]interface{}{
-		"organization": os.Getenv("GITHUB_ORG"),
+		"domain": googleDomain(),
 		"ttl":          "",
 		"max_ttl":      "",
 	}
 	expectedTTL1, _ := time.ParseDuration("24h0m0s")
 	config_data2 := map[string]interface{}{
-		"organization": os.Getenv("GITHUB_ORG"),
+		"domain": googleDomain(),
 		"ttl":          "1h",
 		"max_ttl":      "2h",
 	}
 	expectedTTL2, _ := time.ParseDuration("1h0m0s")
 	config_data3 := map[string]interface{}{
-		"organization": os.Getenv("GITHUB_ORG"),
+		"domain": googleDomain(),
 		"ttl":          "50h",
 		"max_ttl":      "50h",
 	}
@@ -110,25 +125,16 @@ func TestBackend_basic(t *testing.T) {
 			testAccMap(t, "default", "root"),
 			testAccMap(t, "oWnErs", "root"),
 			testAccLogin(t, []string{"root"}),
-			testAccStepConfigWithBaseURL(t),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
 		},
 	})
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("GITHUB_TOKEN"); v == "" {
-		t.Fatal("GITHUB_TOKEN must be set for acceptance tests")
-	}
-
-	if v := os.Getenv("GITHUB_ORG"); v == "" {
-		t.Fatal("GITHUB_ORG must be set for acceptance tests")
-	}
-
-	if v := os.Getenv("GITHUB_BASEURL"); v == "" {
-		t.Fatal("GITHUB_BASEURL must be set for acceptance tests (use 'https://api.github.com' if you don't know what you're doing)")
+	requiredEnvVars := []string{ GOOGLE_CODE_ENV_VAR_NAME, GOOGLE_DOMAIN_ENV_VAR_NAME }
+	for _, envVar := range requiredEnvVars {
+		if value := environmentVariable(envVar); value == "" {
+			t.Fatal(fmt.Sprintf("missing environment variable %s", envVar))
+		}
 	}
 }
 
@@ -137,18 +143,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			"organization": os.Getenv("GITHUB_ORG"),
-		},
-	}
-}
-
-func testAccStepConfigWithBaseURL(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "config",
-		Data: map[string]interface{}{
-			"organization": os.Getenv("GITHUB_ORG"),
-			"base_url":     os.Getenv("GITHUB_BASEURL"),
+			"domain": googleDomain(),
 		},
 	}
 }
@@ -168,7 +163,7 @@ func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"code": os.Getenv("GITHUB_TOKEN"),
+			"code": googleCode(),
 		},
 		Unauthenticated: true,
 

@@ -70,7 +70,7 @@ const backendHelp = `
 The Google credential provider allows authentication via Google.
 
 Users provide a personal access code to log in, and the credential
-provider verifies they're part of the correct organization and then
+provider verifies they're part of the correct domain and then
 maps the user to a set of Vault policies according to the teams they're
 part of.
 
