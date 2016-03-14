@@ -166,7 +166,7 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
-		if !b.hashAccessor && auth != nil && auth.Accessor != "" {
+		if accessor != "" {
 			auth.Accessor = accessor
 		}
 
@@ -182,7 +182,7 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
 		}
-		if !b.hashAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+		if accessor != "" {
 			resp.Auth.Accessor = accessor
 		}
 	}
