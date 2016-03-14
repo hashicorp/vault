@@ -40,7 +40,7 @@ type ServerCommand struct {
 
 	Meta
 
-	ReloadFuncs []server.ReloadFunc
+	ReloadFuncs map[string][]server.ReloadFunc
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -302,7 +302,9 @@ func (c *ServerCommand) Run(args []string) int {
 		lns = append(lns, ln)
 
 		if reloadFunc != nil {
-			c.ReloadFuncs = append(c.ReloadFuncs, reloadFunc)
+			relSlice := c.ReloadFuncs["listener|"+lnConfig.Type]
+			relSlice = append(relSlice, reloadFunc)
+			c.ReloadFuncs["listener|"+lnConfig.Type] = relSlice
 		}
 	}
 
@@ -575,9 +577,9 @@ func (c *ServerCommand) Reload(configPath []string) error {
 
 	var reloadErrors *multierror.Error
 	// Call reload on the listeners. This will call each listener with each
-	// config block, but they verify the ID.
+	// config block, but they verify the address.
 	for _, lnConfig := range config.Listeners {
-		for _, relFunc := range c.ReloadFuncs {
+		for _, relFunc := range c.ReloadFuncs["listener|"+lnConfig.Type] {
 			if err := relFunc(lnConfig.Config); err != nil {
 				retErr := fmt.Errorf("Error encountered reloading configuration: %s", err)
 				reloadErrors = multierror.Append(retErr)

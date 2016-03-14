@@ -7,6 +7,7 @@ import (
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/version"
 
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
@@ -78,8 +79,9 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"mysql":      mysql.Factory,
 					"ssh":        ssh.Factory,
 				},
-				ShutdownCh: makeShutdownCh(),
-				SighupCh:   makeSighupCh(),
+				ShutdownCh:  makeShutdownCh(),
+				SighupCh:    makeSighupCh(),
+				ReloadFuncs: map[string][]server.ReloadFunc{},
 			}, nil
 		},
 
