@@ -6,10 +6,11 @@ FEATURES:
    on configured roles [GH-998]
  * **Token Accessors**: Vault now provides an accessor with each issued token.
    This accessor is an identifier that can be used for a limited set of
-   actions, notably for token revocation. This value is logged in plaintext to
-   audit logs, and in combination with the plaintext metadata logged to audit
-   logs, provides a searchable and straightforward way to revoke particular
-   users' or services' tokens in many cases.
+   actions, notably for token revocation. This value is by default logged in
+   plaintext to audit logs, and in combination with the plaintext metadata
+   logged to audit logs, provides a searchable and straightforward way to
+   revoke particular users' or services' tokens in many cases. At enable time,
+   audit backends can be configured to HMAC the accessor instead.
  * **Token Credential Backend Roles**: Roles can now be created in the `token`
    credential backend that allow modifying token behavior in ways that are not
    otherwise exposed or easily delegated. This allows creating tokens with a
@@ -25,6 +26,9 @@ IMPROVEMENTS:
    token [GH-1188]
  * core: Ignore leading `/` in policy paths [GH-1170]
  * core: Ignore leading `/` in mount paths [GH-1172]
+ * command/policy-write: Provided HCL is now validated for format violations
+   and provides helpful information around where the violation occurred
+   [GH-1200]
  * command/server: The initial root token ID when running in `-dev` mode can
    now be specified via `-dev-root-token-id` or the environment variable
    `VAULT_DEV_ROOT_TOKEN_ID` [GH-1162]
@@ -33,7 +37,7 @@ IMPROVEMENTS:
    `VAULT_DEV_LISTEN_ADDRESS` [GH-1169]
  * command/step-down: New `vault step-down` command and API endpoint to force
    the targeted node to give up active status, but without sealing. The node
-   will wait ten seconds before attempting too grab the lock again. [GH-1146]
+   will wait ten seconds before attempting to grab the lock again. [GH-1146]
  * command/token-renew: Allow no token to be passed in; use `renew-self` in
    this case. Change the behavior for any token being passed in to use `renew`.
    [GH-1150]
