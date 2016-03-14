@@ -179,7 +179,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/lookup/
+### /auth/token/lookup[/token]
 #### GET
 
 <dl class="api">
@@ -197,6 +197,51 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dt>Parameters</dt>
   <dd>
     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+        "id": "ClientToken",
+        "policies": ["web", "stage"],
+        "path": "auth/github/login",
+        "meta": {"user": "armon", "organization": "hashicorp"},
+        "display_name": "github-armon",
+        "num_uses": 0,
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns information about the client token provided in the request body.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/lookup`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">token</span>
+        <span class="param-flags">required</span>
+            Token to lookup.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -265,7 +310,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/renew/
+### /auth/token/renew[/token]
 #### POST
 
 <dl class="api">
@@ -280,9 +325,18 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/renew/<token>`</dd>
+  <dd>`/auth/token/renew</token>`</dd>
 
   <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">token</span>
+        <span class="param-flags">required</span>
+            Token to revoke. This can be part of the URL or the body.
+      </li>
+    </ul>
+  </dd>
   <dd>
     <ul>
       <li>
@@ -312,7 +366,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke/
+### /auth/token/revoke[/token]
 #### POST
 
 <dl class="api">
@@ -326,11 +380,17 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke/<token>`</dd>
+  <dd>`/auth/token/revoke</token>`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <ul>
+      <li>
+        <span class="param">token</span>
+        <span class="param-flags">required</span>
+            Token to revoke. This can be part of the URL or the body.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -365,7 +425,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke-orphan/
+### /auth/token/revoke-orphan[/token]
 #### POST
 
 <dl class="api">
@@ -381,11 +441,17 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke-orphan/<token>`</dd>
+  <dd>`/auth/token/revoke-orphan</token>`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <ul>
+      <li>
+        <span class="param">token</span>
+        <span class="param-flags">required</span>
+            Token to revoke. This can be part of the URL or the body.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -393,7 +459,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke-prefix/
+### /auth/token/revoke-prefix[/prefix]
 #### POST
 
 <dl class="api">
@@ -409,11 +475,17 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke-prefix/<prefix>`</dd>
+  <dd>`/auth/token/revoke-prefix</prefix>`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <ul>
+      <li>
+        <span class="param">token</span>
+        <span class="param-flags">required</span>
+            Token source prefix to revoke. This can be part of the URL or the body.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -584,7 +656,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/lookup-accessor
+### /auth/token/lookup-accessor[/accessor]
 #### POST
 
 <dl class="api">
@@ -599,7 +671,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/lookup-accessor`</dd>
+  <dd>`/auth/token/lookup-accessor</accessor>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -607,7 +679,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">accessor</span>
         <span class="param-flags">required</span>
-            Accessor of the token to lookup.
+            Accessor of the token to lookup. This can be part of the URL or the body.
       </li>
     </ul>
   </dd>
@@ -639,7 +711,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke-accessor/
+### /auth/token/revoke-accessor[/accessor]
 #### POST
 
 <dl class="api">
@@ -654,11 +726,17 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke-accessor/<accessor>`</dd>
+  <dd>`/auth/token/revoke-accessor</accessor>`</dd>
 
   <dt>Parameters</dt>
   <dd>
-      None
+    <ul>
+      <li>
+        <span class="param">accessor</span>
+        <span class="param-flags">required</span>
+            Accessor of the token. This can be part of the URL or the body.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
