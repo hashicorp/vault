@@ -60,7 +60,7 @@ Following are the configuration options available for the backend.
             hashing, in the raw format. Defaults to `false`.
       </li>
       <li>
-        <span class="param">hash_accessor</span>
+        <span class="param">hmac_accessor</span>
         <span class="param-flags">optional</span>
             A boolean, if set, skips the hashing of token accessor. This option
             is useful only when `log_raw` is `false`.

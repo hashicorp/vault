@@ -24,13 +24,13 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	// Check if hashing of accessor is disabled
-	hashAccessor := true
-	if hashAccessorRaw, ok := conf.Config["hash_accessor"]; ok {
-		value, err := strconv.ParseBool(hashAccessorRaw)
+	hmacAccessor := true
+	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
+		value, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
 			return nil, err
 		}
-		hashAccessor = value
+		hmacAccessor = value
 	}
 
 	// Check if raw logging is enabled
@@ -46,7 +46,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	b := &Backend{
 		path:         path,
 		logRaw:       logRaw,
-		hashAccessor: hashAccessor,
+		hmacAccessor: hmacAccessor,
 		salt:         conf.Salt,
 	}
 
@@ -68,7 +68,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 type Backend struct {
 	path         string
 	logRaw       bool
-	hashAccessor bool
+	hmacAccessor bool
 	salt         *salt.Salt
 
 	once sync.Once
@@ -165,7 +165,7 @@ func (b *Backend) LogResponse(
 
 		// Cache and restore accessor in the auth
 		var accessor string
-		if !b.hashAccessor && auth != nil && auth.Accessor != "" {
+		if !b.hmacAccessor && auth != nil && auth.Accessor != "" {
 			accessor = auth.Accessor
 		}
 		if err := audit.Hash(b.salt, auth); err != nil {
@@ -181,7 +181,7 @@ func (b *Backend) LogResponse(
 
 		// Cache and restore accessor in the response
 		accessor = ""
-		if !b.hashAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+		if !b.hmacAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
 			accessor = resp.Auth.Accessor
 		}
 		if err := audit.Hash(b.salt, resp); err != nil {
