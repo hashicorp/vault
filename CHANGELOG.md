@@ -64,6 +64,8 @@ IMPROVEMENTS:
    [GH-1168]
  * sys: The return codes from `sys/health` can now be user-specified via query
    parameters [GH-1199]
+ * auth/token: Endpoints optionally accepts tokens from the HTTP body than just
+   from the URLs. [GH-1211]
 
 BUG FIXES:
 
