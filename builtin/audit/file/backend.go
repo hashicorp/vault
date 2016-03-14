@@ -18,9 +18,9 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		return nil, fmt.Errorf("nil salt")
 	}
 
-	path, ok := conf.Config["path"]
+	path, ok := conf.Config["file_path"]
 	if !ok {
-		return nil, fmt.Errorf("path is required")
+		return nil, fmt.Errorf("file_path is required")
 	}
 
 	// Check if hashing of accessor is disabled

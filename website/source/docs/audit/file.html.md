@@ -25,13 +25,13 @@ information is first hashed before logging in the audit logs.
 Audit `file` backend can be enabled by the following command.
 
 ```
-$ vault audit-enable file path=/var/log/vault_audit.log
+$ vault audit-enable file file_path=/var/log/vault_audit.log
 ```
 
-Any number of `file` audit logs can be created by enabling it with different `id`s.
+Any number of `file` audit logs can be created by enabling it with different `path`s.
 
 ```
-$ vault audit-enable -id="vault_audit_1" file path=/home/user/vault_audit.log
+$ vault audit-enable -path="vault_audit_1" file file_path=/home/user/vault_audit.log
 ```
 
 Note the difference between `audit-enable` command options and the `file` backend
@@ -43,7 +43,7 @@ Following are the configuration options available for the backend.
   <dd>
     <ul>
       <li>
-        <span class="param">path</span>
+        <span class="param">file_path</span>
         <span class="param-flags">required</span>
             The path to where the audit log will be written. If this
             path exists, the audit backend will append to it.
