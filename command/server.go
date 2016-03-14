@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -35,8 +37,8 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 
-	ShutdownCh <-chan struct{}
-	SighupCh   <-chan struct{}
+	ShutdownCh chan struct{}
+	SighupCh   chan struct{}
 
 	Meta
 
@@ -636,4 +638,38 @@ General Options:
                           "warn", "err"
 `
 	return strings.TrimSpace(helpText)
+}
+
+// MakeShutdownCh returns a channel that can be used for shutdown
+// notifications for commands. This channel will send a message for every
+// interrupt or SIGTERM received.
+func MakeShutdownCh() chan struct{} {
+	resultCh := make(chan struct{})
+
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		for {
+			<-signalCh
+			resultCh <- struct{}{}
+		}
+	}()
+	return resultCh
+}
+
+// MakeSighupCh returns a channel that can be used for SIGHUP
+// reloading. This channel will send a message for every
+// SIGHUP received.
+func MakeSighupCh() chan struct{} {
+	resultCh := make(chan struct{})
+
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGHUP)
+	go func() {
+		for {
+			<-signalCh
+			resultCh <- struct{}{}
+		}
+	}()
+	return resultCh
 }

@@ -32,6 +32,9 @@ telemetry {
 After the configuration is written, use the `-config` flag with `vault server`
 to specify where the configuration is.
 
+Starting with 0.5.2, limited configuration options can be changed on-the-fly by
+sending a SIGHUP to the server process. These are denoted below.
+
 ## Reference
 
 * `backend` (required) - Configures the storage backend where Vault data
@@ -93,10 +96,10 @@ The supported options are:
       by default that TLS will be used.
 
   * `tls_cert_file` (required unless disabled) - The path to the certificate
-      for TLS.
+      for TLS. This is reloaded via SIGHUP.
 
   * `tls_key_file` (required unless disabled) - The path to the private key
-      for the certificate.
+      for the certificate. This is reloaded via SIGHUP.
 
   * `tls_min_version` (optional) - **(Vault > 0.2)** If provided, specifies
       the minimum supported version of TLS. Accepted values are "tls10", "tls11"

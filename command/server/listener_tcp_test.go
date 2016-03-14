@@ -41,11 +41,7 @@ func TestTCPListener_tls(t *testing.T) {
 	defer os.RemoveAll(td)
 
 	// Setup initial certs
-	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
-	ioutil.WriteFile(td+"reload_curr.pem", inBytes, 0777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
-	ioutil.WriteFile(td+"reload_curr.key", inBytes, 0777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
+	inBytes, _ := ioutil.ReadFile(wd + "reload_ca.pem")
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(inBytes)
 	if !ok {
@@ -54,8 +50,8 @@ func TestTCPListener_tls(t *testing.T) {
 
 	ln, _, _, err := tcpListenerFactory(map[string]string{
 		"address":       "127.0.0.1:0",
-		"tls_cert_file": td + "reload_curr.pem",
-		"tls_key_file":  td + "reload_curr.key",
+		"tls_cert_file": wd + "reload_foo.pem",
+		"tls_key_file":  wd + "reload_foo.key",
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -75,22 +71,4 @@ func TestTCPListener_tls(t *testing.T) {
 	}
 
 	testListenerImpl(t, ln, connFn, "foo.example.com")
-	/*
-		inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
-		ioutil.WriteFile(td+"reload_curr.pem", inBytes, 0777)
-		inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
-		ioutil.WriteFile(td+"reload_curr.key", inBytes, 0777)
-
-		req := logical.TestRequest(t, logical.UpdateOperation, "sys/reload")
-		req.ClientToken = root
-		resp, err := core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		if resp != nil {
-			t.Fatal("expected nil response")
-		}
-
-		testListenerImpl(t, ln, connFn, "bar.example.com")
-	*/
 }

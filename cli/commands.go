@@ -2,8 +2,6 @@ package cli
 
 import (
 	"os"
-	"os/signal"
-	"syscall"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
@@ -79,8 +77,8 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"mysql":      mysql.Factory,
 					"ssh":        ssh.Factory,
 				},
-				ShutdownCh:  makeShutdownCh(),
-				SighupCh:    makeSighupCh(),
+				ShutdownCh:  command.MakeShutdownCh(),
+				SighupCh:    command.MakeSighupCh(),
 				ReloadFuncs: map[string][]server.ReloadFunc{},
 			}, nil
 		},
@@ -310,38 +308,4 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 	}
-}
-
-// makeShutdownCh returns a channel that can be used for shutdown
-// notifications for commands. This channel will send a message for every
-// interrupt or SIGTERM received.
-func makeShutdownCh() <-chan struct{} {
-	resultCh := make(chan struct{})
-
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		for {
-			<-signalCh
-			resultCh <- struct{}{}
-		}
-	}()
-	return resultCh
-}
-
-// makeSighupCh returns a channel that can be used for SIGHUP
-// reloading. This channel will send a message for every
-// SIGHUP received.
-func makeSighupCh() <-chan struct{} {
-	resultCh := make(chan struct{})
-
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGHUP)
-	go func() {
-		for {
-			<-signalCh
-			resultCh <- struct{}{}
-		}
-	}()
-	return resultCh
 }
