@@ -196,7 +196,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup(/(?P<token>.+))?",
+				Pattern: "lookup" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -215,7 +215,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup-accessor/(?P<accessor>.+)",
+				Pattern: "lookup-accessor" + framework.OptionalParamRegex("accessor"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
@@ -251,7 +251,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-accessor/(?P<accessor>.+)",
+				Pattern: "revoke-accessor" + framework.OptionalParamRegex("accessor"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
@@ -280,7 +280,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke/(?P<token>.+)",
+				Pattern: "revoke" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -298,7 +298,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-orphan/(?P<token>.+)",
+				Pattern: "revoke-orphan" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -316,7 +316,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-prefix/(?P<prefix>.+)",
+				Pattern: "revoke-prefix" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -357,7 +357,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "renew/(?P<token>.+)",
+				Pattern: "renew" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{

@@ -14,6 +14,12 @@ func GenericNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>\\w[\\w-.]+\\w)", name)
 }
 
+// Helper which returns a regex string for optionally accepting the a field
+// from the API URL
+func OptionalParamRegex(name string) string {
+	return fmt.Sprintf("(/(?P<%s>.+))?", name)
+}
+
 // PathAppend is a helper for appending lists of paths into a single
 // list.
 func PathAppend(paths ...[]*Path) []*Path {
