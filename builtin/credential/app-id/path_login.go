@@ -14,9 +14,33 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathLoginWithAppIDPath(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "login/(?P<app_id>.+)",
+		Fields: map[string]*framework.FieldSchema{
+			"app_id": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The unique app ID",
+			},
+
+			"user_id": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The unique user ID",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathLogin,
+		},
+
+		HelpSynopsis:    pathLoginSyn,
+		HelpDescription: pathLoginDesc,
+	}
+}
+
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "login",
+		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
 			"app_id": &framework.FieldSchema{
 				Type:        framework.TypeString,

@@ -68,11 +68,13 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+				"login/*",
 			},
 		},
 
 		Paths: framework.PathAppend([]*framework.Path{
 			pathLogin(&b),
+			pathLoginWithAppIDPath(&b),
 		},
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
