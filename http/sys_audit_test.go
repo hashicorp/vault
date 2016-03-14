@@ -23,6 +23,7 @@ func TestSysAudit(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"noop/": map[string]interface{}{
+			"path":        "noop/",
 			"type":        "noop",
 			"description": "",
 			"options":     map[string]interface{}{},
@@ -31,7 +32,7 @@ func TestSysAudit(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected:\n%#v actual:\n%#v\n", expected, actual)
 	}
 }
 
