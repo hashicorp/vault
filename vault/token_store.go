@@ -196,7 +196,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup/(?P<token>.+)",
+				Pattern: "lookup(/(?P<token>.+))?",
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -206,7 +206,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: t.handleLookup,
+					logical.ReadOperation:   t.handleLookup,
+					logical.UpdateOperation: t.handleLookup,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
