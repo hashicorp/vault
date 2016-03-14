@@ -41,6 +41,9 @@ IMPROVEMENTS:
  * command/token-renew: Allow no token to be passed in; use `renew-self` in
    this case. Change the behavior for any token being passed in to use `renew`.
    [GH-1150]
+ * credential/app-id: Allow `app-id` parameter to be given in the login path;
+   this causes the `app-id` to be part of the token path, making it easier to
+   use with `revoke-prefix` [GH-424]
  * credential/cert: Non-CA certificates can be used for authentication. They
    must be matched exactly (issuer and serial number) for authentication, and
    the certificate must carry the client authentication or 'any' extended usage
