@@ -15,6 +15,7 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepMapAppId(t),
 			testAccStepMapUserId(t),
 			testAccLogin(t, ""),
+			testAccLoginAppIDInPath(t, ""),
 			testAccLoginInvalid(t),
 			testAccStepDeleteUserId(t),
 			testAccLoginDeleted(t),
@@ -42,6 +43,7 @@ func TestBackend_displayName(t *testing.T) {
 			testAccStepMapAppIdDisplayName(t),
 			testAccStepMapUserId(t),
 			testAccLogin(t, "tubbin"),
+			testAccLoginAppIDInPath(t, "tubbin"),
 			testAccLoginInvalid(t),
 			testAccStepDeleteUserId(t),
 			testAccLoginDeleted(t),
@@ -175,7 +177,30 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 		Unauthenticated: true,
 
 		Check: logicaltest.TestCheckMulti(
-			logicaltest.TestCheckAuth([]string{"bar", "foo"}),
+			logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
+			logicaltest.TestCheckAuthDisplayName(display),
+			checkTTL,
+		),
+	}
+}
+
+func testAccLoginAppIDInPath(t *testing.T, display string) logicaltest.TestStep {
+	checkTTL := func(resp *logical.Response) error {
+		if resp.Auth.LeaseOptions.TTL.String() != "720h0m0s" {
+			return fmt.Errorf("invalid TTL")
+		}
+		return nil
+	}
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/foo",
+		Data: map[string]interface{}{
+			"user_id": "42",
+		},
+		Unauthenticated: true,
+
+		Check: logicaltest.TestCheckMulti(
+			logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
 			logicaltest.TestCheckAuthDisplayName(display),
 			checkTTL,
 		),
@@ -185,7 +210,7 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
 	check := logicaltest.TestCheckError()
 	if !err {
-		check = logicaltest.TestCheckAuth([]string{"bar", "foo"})
+		check = logicaltest.TestCheckAuth([]string{"bar", "default", "foo"})
 	}
 
 	return logicaltest.TestStep{
