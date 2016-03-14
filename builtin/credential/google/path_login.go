@@ -2,13 +2,16 @@ package google
 
 import (
 	"fmt"
-	"net/url"
 	"reflect"
 	"sort"
 
-	"github.com/google/go-github/github"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"golang.org/x/net/context"
+	oauth "google.golang.org/api/oauth2/v2"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -58,10 +61,10 @@ func (b *backend) pathLogin(
 			},
 			Policies: verifyResp.Policies,
 			Metadata: map[string]string{
-				"username": *verifyResp.User.Login,
-				"domain":      *verifyResp.Org.Login,
+				"username": 	verifyResp.User,
+				"domain":      	verifyResp.Domain,
 			},
-			DisplayName: *verifyResp.User.Login,
+			DisplayName: 		verifyResp.Name,
 			LeaseOptions: logical.LeaseOptions{
 				TTL:       ttl,
 				Renewable: true,
@@ -70,6 +73,7 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
+//TODO: nathang this is probably wrong... we can't renew login with the redeemed code... understand this flow and fix
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
@@ -95,92 +99,86 @@ func (b *backend) pathLoginRenew(
 	return framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
+func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyCredentialsResp, *logical.Response, error) {
+
 	config, err := b.Config(req.Storage)
+
 	if err != nil {
 		return nil, nil, err
 	}
 	if config.Domain == "" {
 		return nil, logical.ErrorResponse(
-			"configure the github credential backend first"), nil
+			"configure the google credential backend first"), nil
 	}
 
-	client, err := b.Client(token)
-	if err != nil {
+	googleConfig := &oauth2.Config{
+		ClientID:     "158113233735-figmusvbkf0ui8g8u58am2tkumf9cnl8.apps.googleusercontent.com",
+		ClientSecret: "45UnnkbRwpUNkrCl9d8x3U48",
+		Endpoint:     google.Endpoint,
+		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
+		Scopes:       []string{ "email" },
+	}
+
+	//TODO: nathang compute the url to the google auth code
+	//url := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline)
+	tok, err := googleConfig.Exchange(oauth2.NoContext, code)
+	if (err != nil) {
 		return nil, nil, err
 	}
 
-	parsedURL, err := url.Parse("https://api.github.com")
-	client.BaseURL = parsedURL
-
-	// Get the user
-	user, _, err := client.Users.Get("")
-	if err != nil {
+	httpClient := googleConfig.Client(context.Background(), tok)
+	service, err := oauth.New(httpClient)
+	if (err != nil) {
 		return nil, nil, err
 	}
 
-	// Verify that the user is part of the organization
-	var org *github.Organization
-
-	orgOpt := &github.ListOptions{
-		PerPage: 100,
+	me := oauth.NewUserinfoV2MeService(service)
+	info, err := me.Get().Do()
+	if (err != nil) {
+		return nil, nil, err
 	}
 
-	var allOrgs []github.Organization
-	for {
-		orgs, resp, err := client.Organizations.List("", orgOpt)
-		if err != nil {
-			return nil, nil, err
-		}
-		allOrgs = append(allOrgs, orgs...)
-		if resp.NextPage == 0 {
-			break
-		}
-		orgOpt.Page = resp.NextPage
+	user := info.Email
+	domain := info.Hd
+
+
+	if domain != config.Domain {
+		return nil, logical.ErrorResponse("user is not part of required domain"), nil
 	}
 
-	for _, o := range allOrgs {
-		if *o.Login == config.Domain {
-			org = &o
-			break
-		}
-	}
-	if org == nil {
-		return nil, logical.ErrorResponse("user is not part of required org"), nil
-	}
-
+	teamNames := []string{ "default" }
 	// Get the teams that this user is part of to determine the policies
-	var teamNames []string
-
-	teamOpt := &github.ListOptions{
-		PerPage: 100,
-	}
-
-	var allTeams []github.Team
-	for {
-		teams, resp, err := client.Organizations.ListUserTeams(teamOpt)
-		if err != nil {
-			return nil, nil, err
-		}
-		allTeams = append(allTeams, teams...)
-		if resp.NextPage == 0 {
-			break
-		}
-		teamOpt.Page = resp.NextPage
-	}
-
-	for _, t := range allTeams {
-		// We only care about teams that are part of the organization we use
-		if *t.Organization.ID != *org.ID {
-			continue
-		}
-
-		// Append the names so we can get the policies
-		teamNames = append(teamNames, *t.Name)
-		if *t.Name != *t.Slug {
-			teamNames = append(teamNames, *t.Slug)
-		}
-	}
+	//var teamNames []string
+	//
+	//teamOpt := &github.ListOptions{
+	//	PerPage: 100,
+	//}
+	//
+	//var allTeams []github.Team
+	//for {
+	//	teams, resp, err := client.Organizations.ListUserTeams(teamOpt)
+	//	if err != nil {
+	//		return nil, nil, err
+	//	}
+	//	allTeams = append(allTeams, teams...)
+	//	if resp.NextPage == 0 {
+	//		break
+	//	}
+	//	teamOpt.Page = resp.NextPage
+	//}
+	//
+	//for _, t := range allTeams {
+	//	// We only care about teams that are part of the organization we use
+	//	if *t.Organization.ID != *org.ID {
+	//		continue
+	//	}
+	//
+	//	// Append the names so we can get the policies
+	//	teamNames = append(teamNames, *t.Name)
+	//	if *t.Name != *t.Slug {
+	//		teamNames = append(teamNames, *t.Slug)
+	//	}
+	//}
 
 	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
 	if err != nil {
@@ -188,13 +186,14 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 	return &verifyCredentialsResp{
 		User:     user,
-		Org:      org,
+		Domain:      domain,
 		Policies: policiesList,
 	}, nil, nil
 }
 
 type verifyCredentialsResp struct {
-	User     *github.User
-	Org      *github.Organization
+	User    string
+	Domain  string
+	Name	string
 	Policies []string
 }

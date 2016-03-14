@@ -1,8 +1,6 @@
 package google
 
 import (
-	"github.com/google/go-github/github"
-	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/oauth2"
@@ -46,16 +44,6 @@ type backend struct {
 	Map *framework.PolicyMap
 }
 
-// Client returns the GitHub client to communicate to GitHub via the
-// configured settings.
-func (b *backend) Client(token string) (*github.Client, error) {
-	tc := cleanhttp.DefaultClient()
-	if token != "" {
-		tc = oauth2.NewClient(oauth2.NoContext, &tokenSource{Value: token})
-	}
-
-	return github.NewClient(tc), nil
-}
 
 // tokenSource is an oauth2.TokenSource implementation.
 type tokenSource struct {

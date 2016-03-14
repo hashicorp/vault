@@ -123,7 +123,6 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
 			testAccLogin(t, []string{"root"}),
 		},
 	})
