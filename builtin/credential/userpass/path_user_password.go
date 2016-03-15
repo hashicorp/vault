@@ -12,7 +12,7 @@ import (
 
 func pathUserPassword(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "users/password/" + framework.GenericNameRegex("name"),
+		Pattern: "users/" + framework.GenericNameRegex("name") + "/password$",
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

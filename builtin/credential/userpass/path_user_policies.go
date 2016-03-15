@@ -10,7 +10,7 @@ import (
 
 func pathUserPolicies(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "users/policies/" + framework.GenericNameRegex("name"),
+		Pattern: "users/" + framework.GenericNameRegex("name") + "/policies$",
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

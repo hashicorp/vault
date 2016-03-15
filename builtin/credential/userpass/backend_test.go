@@ -109,7 +109,7 @@ func TestBackend_userCrud(t *testing.T) {
 	})
 }
 
-func TestBacken_userCreateOperation(t *testing.T) {
+func TestBackend_userCreateOperation(t *testing.T) {
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -184,7 +184,7 @@ func TestBackend_policiesUpdate(t *testing.T) {
 func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "users/password/" + user,
+		Path:      "users/" + user + "/password",
 		Data: map[string]interface{}{
 			"password": password,
 		},
@@ -194,7 +194,7 @@ func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestSte
 func testUpdatePolicies(t *testing.T, user, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "users/policies/" + user,
+		Path:      "users/" + user + "/policies",
 		Data: map[string]interface{}{
 			"policies": policies,
 		},
