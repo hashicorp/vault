@@ -43,12 +43,29 @@ func pathUsers(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathUserDelete,
 			logical.ReadOperation:   b.pathUserRead,
-			logical.UpdateOperation:  b.pathUserWrite,
+			logical.UpdateOperation: b.pathUserWrite,
+			logical.CreateOperation: b.pathUserWrite,
 		},
+
+		ExistenceCheck: b.userExistenceCheck,
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
 	}
+}
+
+func (b *backend) userExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	username := data.Get("name").(string)
+	if username == "" {
+		return false, fmt.Errorf("name cannot be empty")
+	}
+
+	entry, err := req.Storage.Get("user/" + strings.ToLower(username))
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
 }
 
 func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
@@ -66,6 +83,15 @@ func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
 	}
 
 	return &result, nil
+}
+
+func (b *backend) SetUser(s logical.Storage, username string, userEntry *UserEntry) error {
+	entry, err := logical.StorageEntryJSON("user/"+username, userEntry)
+	if err != nil {
+		return err
+	}
+
+	return s.Put(entry)
 }
 
 func (b *backend) pathUserDelete(
@@ -98,7 +124,15 @@ func (b *backend) pathUserRead(
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
+	if name == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
 	password := d.Get("password").(string)
+	if password == "" {
+		return nil, fmt.Errorf("missing password")
+	}
+
 	policies := strings.Split(d.Get("policies").(string), ",")
 	for i, p := range policies {
 		policies[i] = strings.TrimSpace(p)
@@ -117,17 +151,13 @@ func (b *backend) pathUserWrite(
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}
 
-	// Store it
-	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
+	err = b.SetUser(req.Storage, name, &UserEntry{
 		PasswordHash: hash,
 		Policies:     policies,
 		TTL:          ttl,
 		MaxTTL:       maxTTL,
 	})
 	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
 
