@@ -10,6 +10,19 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathListCerts(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/?",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathCertList,
+		},
+
+		HelpSynopsis:    pathCertHelpSyn,
+		HelpDescription: pathCertHelpDesc,
+	}
+}
+
 func pathCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
@@ -83,6 +96,15 @@ func (b *backend) pathCertDelete(
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (b *backend) pathCertList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	certs, err := req.Storage.List("cert/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(certs), nil
 }
 
 func (b *backend) pathCertRead(

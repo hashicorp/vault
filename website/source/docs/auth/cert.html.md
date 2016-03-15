@@ -124,7 +124,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the named role and CA cert from the backend mount. Requires `sudo` access.
+    Deletes the named role and CA cert from the backend mount.
   </dd>
 
   <dt>Method</dt>
@@ -149,7 +149,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Gets information associated with the named role. Requires `sudo` access.
+    Gets information associated with the named role.
   </dd>
 
   <dt>Method</dt>
@@ -185,12 +185,50 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists configured certificate names.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/certs/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "keys": ["cert1", "cert2"]
+      },
+      "warnings": null,
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Sets a CA cert and associated parameters in a role name. Requires `sudo` access.
+    Sets a CA cert and associated parameters in a role name.
   </dd>
 
   <dt>Method</dt>
@@ -243,7 +281,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the named CRL from the backend mount. Requires `sudo` access.
+    Deletes the named CRL from the backend mount.
   </dd>
 
   <dt>Method</dt>
@@ -268,9 +306,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Gets information associated with the named CRL (currently, the serial numbers contained within).
-    As the serials can be integers up to an arbitrary size, these are returned as strings. Requires
-    `sudo` access.
+    Gets information associated with the named CRL (currently, the serial
+    numbers contained within).  As the serials can be integers up to an
+    arbitrary size, these are returned as strings.
   </dd>
 
   <dt>Method</dt>
@@ -311,7 +349,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Sets a named CRL. Requires `sudo` access.
+    Sets a named CRL.
   </dd>
 
   <dt>Method</dt>
