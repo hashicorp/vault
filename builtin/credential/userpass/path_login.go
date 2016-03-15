@@ -39,7 +39,7 @@ func (b *backend) pathLogin(
 	password := d.Get("password").(string)
 
 	// Get the user and validate auth
-	user, err := b.User(req.Storage, username)
+	user, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (b *backend) pathLogin(
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the user
-	user, err := b.User(req.Storage, req.Auth.Metadata["username"])
+	user, err := b.user(req.Storage, req.Auth.Metadata["username"])
 	if err != nil {
 		return nil, err
 	}

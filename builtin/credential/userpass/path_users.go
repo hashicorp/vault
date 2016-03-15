@@ -68,7 +68,7 @@ func (b *backend) userExistenceCheck(req *logical.Request, data *framework.Field
 	return entry != nil, nil
 }
 
-func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
+func (b *backend) user(s logical.Storage, n string) (*UserEntry, error) {
 	entry, err := s.Get("user/" + strings.ToLower(n))
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (b *backend) pathUserDelete(
 
 func (b *backend) pathUserRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.User(req.Storage, strings.ToLower(d.Get("name").(string)))
+	user, err := b.user(req.Storage, strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -123,45 +123,41 @@ func (b *backend) pathUserRead(
 
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := strings.ToLower(d.Get("name").(string))
-	if name == "" {
-		return nil, fmt.Errorf("missing username")
+	username := strings.ToLower(d.Get("name").(string))
+	user, err := b.user(req.Storage, username)
+	if err != nil {
+		return nil, err
+	}
+	// Due to existence check, user will only be nil if it's a create operation
+	if user == nil {
+		user = &UserEntry{}
 	}
 
 	password := d.Get("password").(string)
 	if password == "" {
 		return nil, fmt.Errorf("missing password")
 	}
-
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
-
 	// Generate a hash of the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
+	user.PasswordHash = hash
+
+	policies := strings.Split(d.Get("policies").(string), ",")
+	for i, p := range policies {
+		policies[i] = strings.TrimSpace(p)
+	}
+	user.Policies = policies
 
 	ttlStr := d.Get("ttl").(string)
 	maxTTLStr := d.Get("max_ttl").(string)
-	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
+	user.TTL, user.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}
 
-	err = b.SetUser(req.Storage, name, &UserEntry{
-		PasswordHash: hash,
-		Policies:     policies,
-		TTL:          ttl,
-		MaxTTL:       maxTTL,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, b.SetUser(req.Storage, username, user)
 }
 
 type UserEntry struct {

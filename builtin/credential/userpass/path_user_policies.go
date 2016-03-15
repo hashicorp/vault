@@ -42,7 +42,7 @@ func (b *backend) pathUserPoliciesUpdate(
 		policies[i] = strings.TrimSpace(p)
 	}
 
-	userEntry, err := b.User(req.Storage, username)
+	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
