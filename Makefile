@@ -3,7 +3,8 @@ VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf 
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/cover \
-	golang.org/x/tools/cmd/vet
+	golang.org/x/tools/cmd/vet \
+	github.com/tebeka/selenium
 
 default: test
 
@@ -26,7 +27,7 @@ testacc: generate
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
+	TF_ACC=1 go test -v $(TEST) $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
 testrace: generate
@@ -57,5 +58,8 @@ bootstrap:
 		echo "Installing $$tool" ; \
 		go get $$tool; \
 	done
+
+	$(GOPATH)/src/github.com/tebeka/selenium/selenium.sh download
+
 
 .PHONY: bin default generate test vet bootstrap

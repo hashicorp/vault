@@ -106,10 +106,11 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 	if err != nil {
 		return nil, nil, err
 	}
-	if config.Domain == "" {
-		return nil, logical.ErrorResponse(
-			"configure the google credential backend first"), nil
-	}
+	//TODO: nathang configure the backend with application id, not domain
+	//if config.Domain == "" {
+	//	return nil, logical.ErrorResponse(
+	//		"configure the google credential backend first"), nil
+	//}
 
 	googleConfig := &oauth2.Config{
 		ClientID:     "158113233735-figmusvbkf0ui8g8u58am2tkumf9cnl8.apps.googleusercontent.com",
@@ -143,7 +144,7 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 
 
 	if domain != config.Domain {
-		return nil, logical.ErrorResponse("user is not part of required domain"), nil
+		return nil, logical.ErrorResponse(fmt.Sprintf("user is of domain %s, not part of required domain %s", domain, config.Domain)), nil
 	}
 
 	teamNames := []string{ "default" }
