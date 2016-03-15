@@ -17,6 +17,9 @@ FEATURES:
    fixed set (or subset) of policies (rather than a subset of the calling
    token's), periodic tokens with a fixed TTL but no expiration, specified
    prefixes, and orphans.
+ * **Listener Certificate Reloading**: Vault's configured listeners now reload
+   their TLS certificate and private key when the Vault process receives a
+   SIGHUP.
 
 IMPROVEMENTS:
  * auth/token: Endpoints optionally accept tokens from the HTTP body rather
@@ -37,6 +40,8 @@ IMPROVEMENTS:
  * command/server: The listen address when running in `-dev` mode can now be
    specified via `-dev-listen-address` or the environment variable
    `VAULT_DEV_LISTEN_ADDRESS` [GH-1169]
+ * command/server: The configured listeners now reload their TLS
+   certificates/keys when Vault is SIGHUP'd [GH-1196]
  * command/step-down: New `vault step-down` command and API endpoint to force
    the targeted node to give up active status, but without sealing. The node
    will wait ten seconds before attempting to grab the lock again. [GH-1146]
@@ -53,6 +58,7 @@ IMPROVEMENTS:
  * credential/cert: Subject and Authority key IDs are output in metadata; this
    allows more flexible searching/revocation in the audit logs [GH-1183]
  * credential/token: Add roles [GH-1155]
+ * secret/mssql: Add MSSQL backend [GH-998]
  * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
    endpoint [GH-1180]
  * secret/pki: Sanitize serial number in `pki/revoke` endpoint to allow some
