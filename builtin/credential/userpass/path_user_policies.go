@@ -1,9 +1,6 @@
 package userpass
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -30,34 +27,10 @@ func pathUserPolicies(b *backend) *framework.Path {
 		HelpDescription: pathUserPoliciesHelpDesc,
 	}
 }
+
 func (b *backend) pathUserPoliciesUpdate(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("name").(string))
-	if username == "" {
-		return nil, fmt.Errorf("missing username")
-	}
-
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
-
-	userEntry, err := b.user(req.Storage, username)
-	if err != nil {
-		return nil, err
-	}
-	if userEntry == nil {
-		return nil, nil
-	}
-
-	userEntry.Policies = policies
-
-	// Store the UserEntry
-	err = b.SetUser(req.Storage, username, userEntry)
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return b.userCreateUpdate(req, d)
 }
 
 const pathUserPoliciesHelpSyn = `

@@ -121,43 +121,56 @@ func (b *backend) pathUserRead(
 	}, nil
 }
 
-func (b *backend) pathUserWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("name").(string))
-	user, err := b.user(req.Storage, username)
+	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
 	// Due to existence check, user will only be nil if it's a create operation
-	if user == nil {
-		user = &UserEntry{}
+	if userEntry == nil {
+		userEntry = &UserEntry{}
 	}
 
+	// Set/update the values of UserEntry only if fields are supplied
+	if passwordRaw, ok := d.GetOk("password"); ok {
+		// Generate a hash of the password
+		hash, err := bcrypt.GenerateFromPassword([]byte(passwordRaw.(string)), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		userEntry.PasswordHash = hash
+	}
+
+	if policiesRaw, ok := d.GetOk("policies"); ok {
+		policies := strings.Split(policiesRaw.(string), ",")
+		for i, p := range policies {
+			policies[i] = strings.TrimSpace(p)
+		}
+		userEntry.Policies = policies
+	}
+
+	ttlStrRaw, ttlSet := d.GetOk("ttl")
+	maxTTLStrRaw, maxTTLSet := d.GetOk("max_ttl")
+	if ttlSet || maxTTLSet {
+		ttlStr := ttlStrRaw.(string)
+		maxTTLStr := maxTTLStrRaw.(string)
+		userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
+		}
+	}
+
+	return nil, b.SetUser(req.Storage, username, userEntry)
+}
+
+func (b *backend) pathUserWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	password := d.Get("password").(string)
 	if password == "" {
 		return nil, fmt.Errorf("missing password")
 	}
-	// Generate a hash of the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
-	user.PasswordHash = hash
-
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
-	user.Policies = policies
-
-	ttlStr := d.Get("ttl").(string)
-	maxTTLStr := d.Get("max_ttl").(string)
-	user.TTL, user.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
-	}
-
-	return nil, b.SetUser(req.Storage, username, user)
+	return b.userCreateUpdate(req, d)
 }
 
 type UserEntry struct {
