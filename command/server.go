@@ -8,13 +8,16 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -34,8 +37,12 @@ type ServerCommand struct {
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
 
-	ShutdownCh <-chan struct{}
+	ShutdownCh chan struct{}
+	SighupCh   chan struct{}
+
 	Meta
+
+	ReloadFuncs map[string][]server.ReloadFunc
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -274,7 +281,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, err := server.NewListener(lnConfig.Type, lnConfig.Config)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
@@ -295,6 +302,12 @@ func (c *ServerCommand) Run(args []string) int {
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 		lns = append(lns, ln)
+
+		if reloadFunc != nil {
+			relSlice := c.ReloadFuncs["listener|"+lnConfig.Type]
+			relSlice = append(relSlice, reloadFunc)
+			c.ReloadFuncs["listener|"+lnConfig.Type] = relSlice
+		}
 	}
 
 	infoKeys = append(infoKeys, "version")
@@ -333,11 +346,20 @@ func (c *ServerCommand) Run(args []string) int {
 	logGate.Flush()
 
 	// Wait for shutdown
-	select {
-	case <-c.ShutdownCh:
-		c.Ui.Output("==> Vault shutdown triggered")
-		if err := core.Shutdown(); err != nil {
-			c.Ui.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+	shutdownTriggered := false
+	for !shutdownTriggered {
+		select {
+		case <-c.ShutdownCh:
+			c.Ui.Output("==> Vault shutdown triggered")
+			if err := core.Shutdown(); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+			}
+			shutdownTriggered = true
+		case <-c.SighupCh:
+			c.Ui.Output("==> Vault reload triggered")
+			if err := c.Reload(configPath); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+			}
 		}
 	}
 	return 0
@@ -530,6 +552,46 @@ func (c *ServerCommand) setupTelementry(config *server.Config) error {
 	return nil
 }
 
+func (c *ServerCommand) Reload(configPath []string) error {
+	// Read the new config
+	var config *server.Config
+	for _, path := range configPath {
+		current, err := server.LoadConfig(path)
+		if err != nil {
+			retErr := fmt.Errorf("Error loading configuration from %s: %s", path, err)
+			c.Ui.Error(retErr.Error())
+			return retErr
+		}
+
+		if config == nil {
+			config = current
+		} else {
+			config = config.Merge(current)
+		}
+	}
+
+	// Ensure at least one config was found.
+	if config == nil {
+		retErr := fmt.Errorf("No configuration files found")
+		c.Ui.Error(retErr.Error())
+		return retErr
+	}
+
+	var reloadErrors *multierror.Error
+	// Call reload on the listeners. This will call each listener with each
+	// config block, but they verify the address.
+	for _, lnConfig := range config.Listeners {
+		for _, relFunc := range c.ReloadFuncs["listener|"+lnConfig.Type] {
+			if err := relFunc(lnConfig.Config); err != nil {
+				retErr := fmt.Errorf("Error encountered reloading configuration: %s", err)
+				reloadErrors = multierror.Append(retErr)
+			}
+		}
+	}
+
+	return reloadErrors.ErrorOrNil()
+}
+
 func (c *ServerCommand) Synopsis() string {
 	return "Start a Vault server"
 }
@@ -576,4 +638,38 @@ General Options:
                           "warn", "err"
 `
 	return strings.TrimSpace(helpText)
+}
+
+// MakeShutdownCh returns a channel that can be used for shutdown
+// notifications for commands. This channel will send a message for every
+// interrupt or SIGTERM received.
+func MakeShutdownCh() chan struct{} {
+	resultCh := make(chan struct{})
+
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		for {
+			<-signalCh
+			resultCh <- struct{}{}
+		}
+	}()
+	return resultCh
+}
+
+// MakeSighupCh returns a channel that can be used for SIGHUP
+// reloading. This channel will send a message for every
+// SIGHUP received.
+func MakeSighupCh() chan struct{} {
+	resultCh := make(chan struct{})
+
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGHUP)
+	go func() {
+		for {
+			<-signalCh
+			resultCh <- struct{}{}
+		}
+	}()
+	return resultCh
 }
