@@ -46,7 +46,7 @@ func (b *backend) pathUserPasswordUpdate(
 		return nil, fmt.Errorf("missing password")
 	}
 
-	userEntry, err := b.User(req.Storage, strings.ToLower(d.Get("name").(string)))
+	userEntry, err := b.User(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
