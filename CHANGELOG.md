@@ -57,6 +57,7 @@ IMPROVEMENTS:
    attributes. [GH-1153]
  * credential/cert: Subject and Authority key IDs are output in metadata; this
    allows more flexible searching/revocation in the audit logs [GH-1183]
+ * credential/cert: Support listing configured certs [GH-1212]
  * credential/token: Add roles [GH-1155]
  * secret/mssql: Add MSSQL backend [GH-998]
  * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
