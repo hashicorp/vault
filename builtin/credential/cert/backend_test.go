@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"testing"
 	"time"
 
@@ -44,14 +45,17 @@ func TestBackend_CertWrites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
+
+	tc := logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepCert(t, "web", ca1, "foo", false),
-			testAccStepCert(t, "web", ca2, "foo", false),
-			testAccStepCert(t, "web", ca3, "foo", true),
+			testAccStepCert(t, "aaa", ca1, "foo", false),
+			testAccStepCert(t, "bbb", ca2, "foo", false),
+			testAccStepCert(t, "ccc", ca3, "foo", true),
 		},
-	})
+	}
+	tc.Steps = append(tc.Steps, testAccStepListCerts(t, []string{"aaa", "bbb"})...)
+	logicaltest.Test(t, tc)
 }
 
 // Test a client trusted by a CA
@@ -183,7 +187,7 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 				t.Fatalf("bad lease length: %#v", resp.Auth)
 			}
 
-			fn := logicaltest.TestCheckAuth([]string{"foo"})
+			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
 			return fn(resp)
 		},
 	}
@@ -200,7 +204,7 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 				t.Fatalf("bad lease length: %#v", resp.Auth)
 			}
 
-			fn := logicaltest.TestCheckAuth([]string{"foo"})
+			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
 			return fn(resp)
 		},
 	}
@@ -219,6 +223,52 @@ func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logica
 			return nil
 		},
 		ErrorOk: true,
+	}
+}
+
+func testAccStepListCerts(
+	t *testing.T, certs []string) []logicaltest.TestStep {
+	return []logicaltest.TestStep{
+		logicaltest.TestStep{
+			Operation: logical.ListOperation,
+			Path:      "certs",
+			Check: func(resp *logical.Response) error {
+				if resp == nil {
+					return fmt.Errorf("nil response")
+				}
+				if resp.Data == nil {
+					return fmt.Errorf("nil data")
+				}
+				if resp.Data["keys"] == interface{}(nil) {
+					return fmt.Errorf("nil keys")
+				}
+				keys := resp.Data["keys"].([]string)
+				if !reflect.DeepEqual(keys, certs) {
+					return fmt.Errorf("mismatch: keys is %#v, certs is %#v", keys, certs)
+				}
+				return nil
+			},
+		}, logicaltest.TestStep{
+			Operation: logical.ListOperation,
+			Path:      "certs/",
+			Check: func(resp *logical.Response) error {
+				if resp == nil {
+					return fmt.Errorf("nil response")
+				}
+				if resp.Data == nil {
+					return fmt.Errorf("nil data")
+				}
+				if resp.Data["keys"] == interface{}(nil) {
+					return fmt.Errorf("nil keys")
+				}
+				keys := resp.Data["keys"].([]string)
+				if !reflect.DeepEqual(keys, certs) {
+					return fmt.Errorf("mismatch: keys is %#v, certs is %#v", keys, certs)
+				}
+
+				return nil
+			},
+		},
 	}
 }
 
