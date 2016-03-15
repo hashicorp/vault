@@ -672,14 +672,29 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
-		if !strListSubset(te.Policies, []string{"root"}) {
-			// Append 'default' policy to the token being created
-			te.Policies = append(te.Policies, "default")
-			sort.Strings(te.Policies)
+		if strListSubset(te.Policies, []string{"root"}) {
+			te.Policies = []string{"root"}
+		} else {
+			// Use a map to filter out/prevent duplicates
+			policyMap := map[string]bool{}
+			for _, policy := range te.Policies {
+				if policy == "" {
+					// Don't allow a policy with no name, even though it is a valid
+					// slice member
+					continue
+				}
+				policyMap[policy] = true
+			}
 
-			// Update the response with the policies associated with token
-			auth.Policies = append(auth.Policies, "default")
-			sort.Strings(auth.Policies)
+			// Add the default policy
+			policyMap["default"] = true
+
+			te.Policies = []string{}
+			for k, _ := range policyMap {
+				te.Policies = append(te.Policies, k)
+			}
+
+			sort.Strings(te.Policies)
 		}
 
 		if err := c.tokenStore.create(&te); err != nil {
@@ -690,6 +705,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		// Populate the client token and accessor
 		auth.ClientToken = te.ID
 		auth.Accessor = te.Accessor
+		auth.Policies = te.Policies
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
