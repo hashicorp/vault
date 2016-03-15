@@ -252,6 +252,19 @@ func testAccStepListCerts(
 			Operation: logical.ListOperation,
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {
+				if resp == nil {
+					return fmt.Errorf("nil response")
+				}
+				if resp.Data == nil {
+					return fmt.Errorf("nil data")
+				}
+				if resp.Data["keys"] == interface{}(nil) {
+					return fmt.Errorf("nil keys")
+				}
+				keys := resp.Data["keys"].([]string)
+				if !reflect.DeepEqual(keys, certs) {
+					return fmt.Errorf("mismatch: keys is %#v, certs is %#v", keys, certs)
+				}
 
 				return nil
 			},
