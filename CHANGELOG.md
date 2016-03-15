@@ -19,6 +19,8 @@ FEATURES:
    prefixes, and orphans.
 
 IMPROVEMENTS:
+ * auth/token: Endpoints optionally accept tokens from the HTTP body rather
+   than just from the URLs [GH-1211]
  * auth/token,sys/capabilities: Added new endpoints
    `auth/token/lookup-accessor`, `auth/token/revoke-accessor` and
    `sys/capabilities-accessor`, which enables performing the respective actions
@@ -64,8 +66,6 @@ IMPROVEMENTS:
    [GH-1168]
  * sys: The return codes from `sys/health` can now be user-specified via query
    parameters [GH-1199]
- * auth/token: Endpoints optionally accepts tokens from the HTTP body than just
-   from the URLs. [GH-1211]
 
 BUG FIXES:
 
