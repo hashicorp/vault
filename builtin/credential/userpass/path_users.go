@@ -12,9 +12,9 @@ import (
 
 func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "users/" + framework.GenericNameRegex("name"),
+		Pattern: "users/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},
@@ -55,9 +55,9 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	username := data.Get("name").(string)
+	username := data.Get("username").(string)
 	if username == "" {
-		return false, fmt.Errorf("name cannot be empty")
+		return false, fmt.Errorf("missing username")
 	}
 
 	entry, err := req.Storage.Get("user/" + strings.ToLower(username))
@@ -96,7 +96,7 @@ func (b *backend) SetUser(s logical.Storage, username string, userEntry *UserEnt
 
 func (b *backend) pathUserDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("name").(string)))
+	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("username").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (b *backend) pathUserDelete(
 
 func (b *backend) pathUserRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.user(req.Storage, strings.ToLower(d.Get("name").(string)))
+	user, err := b.user(req.Storage, strings.ToLower(d.Get("username").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (b *backend) pathUserRead(
 }
 
 func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("name").(string))
+	username := strings.ToLower(d.Get("username").(string))
 	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err

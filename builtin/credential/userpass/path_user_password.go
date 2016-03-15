@@ -9,9 +9,9 @@ import (
 
 func pathUserPassword(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "users/" + framework.GenericNameRegex("name") + "/password$",
+		Pattern: "users/" + framework.GenericNameRegex("username") + "/password$",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},

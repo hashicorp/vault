@@ -2,6 +2,7 @@ package userpass
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -11,9 +12,9 @@ import (
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "login/" + framework.GenericNameRegex("name"),
+		Pattern: "login/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Username of the user.",
 			},
@@ -35,8 +36,15 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLogin(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("name").(string))
+	username := strings.ToLower(d.Get("username").(string))
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
 	password := d.Get("password").(string)
+	if password == "" {
+		return nil, fmt.Errorf("missing password")
+	}
 
 	// Get the user and validate auth
 	user, err := b.user(req.Storage, username)
