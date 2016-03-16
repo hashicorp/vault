@@ -166,7 +166,7 @@ func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	password := d.Get("password").(string)
 	if req.Operation == logical.CreateOperation && password == "" {
-		return nil, fmt.Errorf("missing password")
+		return logical.ErrorResponse("missing password"), logical.ErrInvalidRequest
 	}
 	return b.userCreateUpdate(req, d)
 }
