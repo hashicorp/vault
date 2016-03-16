@@ -1,4 +1,4 @@
-// +build windows plan9 darwin freebsd openbsd
+// +build windows plan9 darwin freebsd openbsd netbsd
 
 package mlock
 
