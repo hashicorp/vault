@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/tebeka/selenium"
 )
@@ -61,17 +59,7 @@ func element(id string, wd selenium.WebDriver, t *testing.T) (selenium.WebElemen
 	return element, err
 }
 
-func googleCode(t *testing.T, authCodeUrl string) string {
-
-	googleConfig := &oauth2.Config{
-		ClientID:     googleClientId(),
-		ClientSecret: googleClientSecret(),
-		Endpoint:     google.Endpoint,
-		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
-		Scopes:       []string{ "email" },
-	}
-
-	authUrl := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline, oauth2.ApprovalForce)
+func googleCode(t *testing.T, authUrl string) string {
 
 	user := environmentVariable(GOOGLE_USERNAME_ENV_VAR_NAME)
 	pass := environmentVariable(GOOGLE_PASSWORD_ENV_VAR_NAME)
