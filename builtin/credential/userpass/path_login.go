@@ -37,9 +37,6 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLogin(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("username").(string))
-	if username == "" {
-		return nil, fmt.Errorf("missing username")
-	}
 
 	password := d.Get("password").(string)
 	if password == "" {
@@ -52,7 +49,7 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 	if user == nil {
-		return logical.ErrorResponse("unknown username or password"), nil
+		return logical.ErrorResponse("username does not exist"), nil
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,

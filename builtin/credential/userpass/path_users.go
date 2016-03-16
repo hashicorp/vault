@@ -130,7 +130,6 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		userEntry = &UserEntry{}
 	}
 
-	// "password" will always be set here
 	if _, ok := d.GetOk("password"); ok {
 		err = b.updateUserPassword(req, d, userEntry)
 		if err != nil {

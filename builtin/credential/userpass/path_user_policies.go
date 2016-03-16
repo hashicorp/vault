@@ -33,6 +33,8 @@ func pathUserPolicies(b *backend) *framework.Path {
 	}
 }
 
+// By always returning true, this endpoint will be enforced to be invoked only upon UpdateOperation.
+// The existence of user will be checked in the operation handler.
 func (b *backend) userPoliciesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
 	return true, nil
 }
