@@ -249,7 +249,7 @@ func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Durati
 			return 0, 0, fmt.Errorf("\"max_ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
 		}
 	}
-	if ttl > maxTTL {
+	if ttl > maxTTL && maxTTL != 0 {
 		ttl = maxTTL
 	}
 	return
