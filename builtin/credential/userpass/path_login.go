@@ -49,7 +49,7 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 	if user == nil {
-		return logical.ErrorResponse("username does not exist"), nil
+		return logical.ErrorResponse("invalid username or password"), nil
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
@@ -57,11 +57,11 @@ func (b *backend) pathLogin(
 	passwordBytes := []byte(password)
 	if user.PasswordHash != nil {
 		if err := bcrypt.CompareHashAndPassword(user.PasswordHash, passwordBytes); err != nil {
-			return logical.ErrorResponse("unknown username or password"), nil
+			return logical.ErrorResponse("invalid username or password"), nil
 		}
 	} else {
 		if subtle.ConstantTimeCompare([]byte(user.Password), passwordBytes) != 1 {
-			return logical.ErrorResponse("unknown username or password"), nil
+			return logical.ErrorResponse("invalid username or password"), nil
 		}
 	}
 
