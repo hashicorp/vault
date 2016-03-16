@@ -13,6 +13,8 @@ import (
 	"github.com/tebeka/selenium"
 )
 
+const GOOGLE_APPLICATION_ID_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_APPLICATION_ID"
+const GOOGLE_APPLICATION_SECRET_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_APPLICATION_SECRET"
 const GOOGLE_USERNAME_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_USERNAME"
 const GOOGLE_PASSWORD_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_PASSWORD"
 const GOOGLE_DOMAIN_ENV_VAR_NAME = "GOOGLE_DOMAIN"
@@ -22,18 +24,54 @@ func environmentVariable(name string) string {
 	return os.Getenv(name)
 }
 
+func googleClientId() string {
+	return environmentVariable(GOOGLE_APPLICATION_ID_ENV_VAR_NAME)
+}
+
+func googleClientSecret() string {
+	return environmentVariable(GOOGLE_APPLICATION_SECRET_ENV_VAR_NAME)
+}
+
+func handleError(msg string, wd selenium.WebDriver, t *testing.T, err error) {
+	if err != nil {
+		currentUrl, getUrlErr := wd.CurrentURL()
+		var errorUrl string
+		if getUrlErr != nil {
+			errorUrl = "unknown url (url retrieval failed)"
+		} else {
+			errorUrl = currentUrl
+		}
+		t.Error(fmt.Sprintf("error while %s at url %s, error details: %s\n", msg, errorUrl, err.Error()))
+	}
+	return
+}
+
+func handleFindElementError(id string, wd selenium.WebDriver, t *testing.T, err error) {
+	msg := fmt.Sprintf("retrieving element by id %s", id)
+	handleError(msg, wd, t, err)
+	return
+}
+
+func element(id string, wd selenium.WebDriver, t *testing.T) (selenium.WebElement, error) {
+
+	element, err := wd.FindElement(selenium.ById, id)
+
+	handleFindElementError(id, wd, t, err)
+
+	return element, err
+}
+
 func googleCode(t *testing.T) string {
 
 	googleConfig := &oauth2.Config{
-		ClientID:     "158113233735-figmusvbkf0ui8g8u58am2tkumf9cnl8.apps.googleusercontent.com",
-		ClientSecret: "45UnnkbRwpUNkrCl9d8x3U48",
+		ClientID:     googleClientId(),
+		ClientSecret: googleClientSecret(),
 		Endpoint:     google.Endpoint,
 		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
 		Scopes:       []string{ "email" },
 	}
 
-	//TODO: nathang also read the test application data
-	authUrl := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline)
+	authUrl := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline, oauth2.ApprovalForce)
 
 	user := environmentVariable(GOOGLE_USERNAME_ENV_VAR_NAME)
 	pass := environmentVariable(GOOGLE_PASSWORD_ENV_VAR_NAME)
@@ -46,69 +84,47 @@ func googleCode(t *testing.T) string {
 	wd, _ := selenium.NewRemote(caps, "")
 	defer wd.Quit()
 
-	wd.SetAsyncScriptTimeout(10000)
-	wd.SetImplicitWaitTimeout(10000)
-	wd.SetPageLoadTimeout(10000)
+	wd.SetAsyncScriptTimeout(30000)
+	wd.SetImplicitWaitTimeout(30000)
+	wd.SetPageLoadTimeout(30000)
 	wd.MaximizeWindow("")
 	wd.Get(authUrl)
-	fmt.Printf("authentication url: %s", authUrl)
 
-	var currentUrl string
+	var err error
 
-	currentUrl, _ = wd.CurrentURL()
-	fmt.Printf("url before authentication %s\n", currentUrl)
-
-	emailInput, err := wd.FindElement(selenium.ById, "Email")
-	if err != nil {
-		t.Error(err.Error())
-	}
+	emailInput, _ := element("Email", wd, t)
 	err = emailInput.SendKeys(user)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	handleError("filling out user text box", wd, t, err)
 
-	passInput, err := wd.FindElement(selenium.ById, "Passwd")
+	//two flows here, one fill out user + pass, the other fill user, click next, enter pass...
+	passwordTextInputId := "Passwd"
+	passInput, err := wd.FindElement(selenium.ById, passwordTextInputId)
 	if err != nil {
-		t.Error(err.Error())
+		nextButton, _ := element("next", wd, t)
+		err = nextButton.Click()
+		handleError("clicking next after inserting email", wd, t, err)
+		passInput, _ = element(passwordTextInputId, wd, t)
 	}
 	err = passInput.SendKeys(pass)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	handleError("filling out password text box", wd, t, err)
 
-	authenticateButton, err := wd.FindElement(selenium.ById, "signIn")
-	if err != nil {
-		t.Error(err.Error())
-	}
+	authenticateButton, err := element("signIn", wd, t)
 	err = authenticateButton.Click()
-	if err != nil {
-		t.Error(err.Error())
+	handleError("clicking sign in after filling password", wd, t, err)
+
+	authorizeButtonId := "submit_approve_access"
+	authorizeButton, _ := element(authorizeButtonId, wd, t)
+	authorizationButtonEnabled, _ :=  authorizeButton.IsEnabled()
+	for i := 0 ; (!authorizationButtonEnabled) && (i < 100) ; i++ {
+		time.Sleep(100 * time.Millisecond)
+		authorizationButtonEnabled, _ =  authorizeButton.IsEnabled()
 	}
+	_, err = wd.ExecuteScript(fmt.Sprintf(`document.getElementById("%s").click();`, authorizeButtonId), []interface{}{})
+	handleError("authorizing application with required permissions", wd, t, err)
 
-	currentUrl, _ = wd.CurrentURL()
-	fmt.Printf("url after authentication %s\n", currentUrl)
-
-	time.Sleep(10 * time.Second)
-
-	_, err = wd.ExecuteScript(`
-	document.getElementById("submit_approve_access").click();
-	`, []interface{}{})
-	if err != nil {
-		t.Error(err.Error())
-	}
-
-	currentUrl, _ = wd.CurrentURL()
-	fmt.Printf("url after authorize %s\n", currentUrl)
-
-	codeElement, err := wd.FindElement(selenium.ById, "code")
-	if err != nil {
-		t.Error(err.Error())
-	}
-
+	codeElement, err := element("code", wd, t)
 	code, err := codeElement.GetAttribute("value")
-	if err != nil {
-		t.Error(err.Error())
-	}
+	handleError("retrieving value of code", wd, t, err)
 
 	return code
 }
@@ -141,18 +157,24 @@ func TestBackend_Config(t *testing.T) {
 		"domain": googleDomain(),
 		"ttl":          "",
 		"max_ttl":      "",
+		"applicationId": googleClientId(),
+		"applicationSecret": googleClientSecret(),
 	}
 	expectedTTL1, _ := time.ParseDuration("24h0m0s")
 	config_data2 := map[string]interface{}{
 		"domain": googleDomain(),
 		"ttl":          "1h",
 		"max_ttl":      "2h",
+		"applicationId": googleClientId(),
+		"applicationSecret": googleClientSecret(),
 	}
 	expectedTTL2, _ := time.ParseDuration("1h0m0s")
 	config_data3 := map[string]interface{}{
 		"domain": googleDomain(),
 		"ttl":          "50h",
 		"max_ttl":      "50h",
+		"applicationId": googleClientId(),
+		"applicationSecret": googleClientSecret(),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -232,7 +254,13 @@ func testAccPreCheck(t *testing.T) {
 
 	//TODO: nathang - make sure selenium server is on? start selenium server? stop selenium server?
 
-	requiredEnvVars := []string{ GOOGLE_USERNAME_ENV_VAR_NAME, GOOGLE_PASSWORD_ENV_VAR_NAME }
+	requiredEnvVars := []string{
+		GOOGLE_USERNAME_ENV_VAR_NAME,
+		GOOGLE_PASSWORD_ENV_VAR_NAME,
+		GOOGLE_APPLICATION_ID_ENV_VAR_NAME,
+		GOOGLE_APPLICATION_SECRET_ENV_VAR_NAME,
+	}
+
 	for _, envVar := range requiredEnvVars {
 		if value := environmentVariable(envVar); value == "" {
 			t.Fatal(fmt.Sprintf("missing environment variable %s", envVar))
@@ -246,6 +274,8 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Path:      "config",
 		Data: map[string]interface{}{
 			"domain": googleDomain(),
+			"applicationId": googleClientId(),
+			"applicationSecret": googleClientSecret(),
 		},
 	}
 }
@@ -264,8 +294,10 @@ func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
-		Data: map[string]interface{}{
-			"code": googleCode(t),
+		Data:	nil,
+		PreFlight: func(r *logical.Request) error {
+			r.Data = loginData(t)
+			return nil
 		},
 		Unauthenticated: true,
 

@@ -106,15 +106,20 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 	if err != nil {
 		return nil, nil, err
 	}
-	//TODO: nathang configure the backend with application id, not domain
-	//if config.Domain == "" {
-	//	return nil, logical.ErrorResponse(
-	//		"configure the google credential backend first"), nil
-	//}
+
+	if config.ApplicationId == "" {
+		return nil, logical.ErrorResponse(
+			"configure the google credential backend with applicationId first"), nil
+	}
+
+	if config.ApplicationSecret == "" {
+		return nil, logical.ErrorResponse(
+			"configure the google credential backend with applicationSecret first"), nil
+	}
 
 	googleConfig := &oauth2.Config{
-		ClientID:     "158113233735-figmusvbkf0ui8g8u58am2tkumf9cnl8.apps.googleusercontent.com",
-		ClientSecret: "45UnnkbRwpUNkrCl9d8x3U48",
+		ClientID:     config.ApplicationId,
+		ClientSecret: config.ApplicationSecret,
 		Endpoint:     google.Endpoint,
 		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
 		Scopes:       []string{ "email" },

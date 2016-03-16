@@ -17,7 +17,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	code, ok := m["code"]
 	if !ok {
-		return "", fmt.Errorf("'code' var must be set, open a browser to: https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=158113233735-figmusvbkf0ui8g8u58am2tkumf9cnl8.apps.googleusercontent.com&redirect_uri=urn:ietf:wg:oauth:2.0:oob&scope=email")
+		//TODO: nathang implement this path... :D
+		return "", fmt.Errorf("'code' var must be set, access read auth/google/code_url for a link to obtain the code from google")
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)
@@ -35,12 +36,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 }
 
 func (h *CLIHandler) Help() string {
-//TODO nathang: client_id is something that is set on the config_path, not hardcode to my specific test app...
+
 	help := `
 The Google credential provider allows you to authenticate with Google.
 To use it, specify the "code" parameter. The value should be a personal access
-code for your Google account. You can generate a personal access token by browsing to google url
-https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=158113233735-figmusvbkf0ui8g8u58am2tkumf9cnl8.apps.googleusercontent.com&redirect_uri=urn:ietf:wg:oauth:2.0:oob&scope=email
+code for your Google account. You can generate a personal access token by browsing to a google url.
+after configuring the backend with a google application secret and id to identify as, access auth/google/code_url to see the url.
 
     Example: vault auth -method=google code=<code>
 

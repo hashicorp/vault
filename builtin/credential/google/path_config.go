@@ -16,6 +16,14 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The domain users must be part of",
 			},
+			"applicationId": &framework.FieldSchema{
+				Type:	     framework.TypeString,
+				Description: "google application id",
+			},
+			"applicationSecret": &framework.FieldSchema{
+				Type:	     framework.TypeString,
+				Description: "google application secret",
+			},
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `Duration after which authentication will be expired`,
@@ -35,6 +43,8 @@ func pathConfig(b *backend) *framework.Path {
 func (b *backend) pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	domain := data.Get("domain").(string)
+	applicationId := data.Get("applicationId").(string)
+	applicationSecret := data.Get("applicationSecret").(string)
 
 	var ttl time.Duration
 	var err error
@@ -63,6 +73,8 @@ func (b *backend) pathConfigWrite(
 		Domain:     domain,
 		TTL:     ttl,
 		MaxTTL:  maxTTL,
+		ApplicationId: applicationId,
+		ApplicationSecret: applicationSecret,
 	})
 
 	if err != nil {
@@ -95,6 +107,8 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 
 type config struct {
 	Domain string        `json:"domain"`
+	ApplicationId string `json:"applicationId"`
+	ApplicationSecret string `json:"applicationSecret"`
 	TTL    time.Duration `json:"ttl"`
 	MaxTTL time.Duration `json:"max_ttl"`
 }
