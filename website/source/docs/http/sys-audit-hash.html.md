@@ -27,7 +27,7 @@ description: |-
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/audit-hash/<name>`</dd>
+  <dd>`/sys/audit-hash/<path>`</dd>
 
   <dt>Parameters</dt>
   <dd>

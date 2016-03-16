@@ -47,7 +47,7 @@ func (c *AuditListCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Type | Description | Options"}
+	columns := []string{"Path | Type | Description | Options"}
 	for _, path := range paths {
 		audit := audits[path]
 		opts := make([]string, 0, len(audit.Options))
@@ -56,7 +56,7 @@ func (c *AuditListCommand) Run(args []string) int {
 		}
 
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s", audit.Type, audit.Description, strings.Join(opts, " ")))
+			"%s | %s | %s | %s", audit.Path, audit.Type, audit.Description, strings.Join(opts, " ")))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))

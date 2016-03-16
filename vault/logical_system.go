@@ -932,6 +932,7 @@ func (b *SystemBackend) handleAuditTable(
 	}
 	for _, entry := range b.Core.audit.Entries {
 		info := map[string]interface{}{
+			"path":        entry.Path,
 			"type":        entry.Type,
 			"description": entry.Description,
 			"options":     entry.Options,
