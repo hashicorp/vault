@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func pathUsers(b *backend) *framework.Path {
@@ -132,33 +131,36 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		userEntry = &UserEntry{}
 	}
 
-	// Set/update the values of UserEntry only if fields are supplied
-	if passwordRaw, ok := d.GetOk("password"); ok {
-		// Generate a hash of the password
-		hash, err := bcrypt.GenerateFromPassword([]byte(passwordRaw.(string)), bcrypt.DefaultCost)
+	// "password" will always be set here
+	err = b.updateUserPassword(req, d, userEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := d.GetOk("policies"); ok {
+		err = b.updateUserPolicies(req, d, userEntry)
 		if err != nil {
 			return nil, err
 		}
-		userEntry.PasswordHash = hash
 	}
 
-	if policiesRaw, ok := d.GetOk("policies"); ok {
-		policies := strings.Split(policiesRaw.(string), ",")
-		for i, p := range policies {
-			policies[i] = strings.TrimSpace(p)
-		}
-		userEntry.Policies = policies
+	ttlStr := ""
+	if ttlStrRaw, ok := d.GetOk("ttl"); ok {
+		ttlStr = ttlStrRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		ttlStr = d.Get("ttl").(string)
 	}
 
-	_, ttlSet := d.GetOk("ttl")
-	_, maxTTLSet := d.GetOk("max_ttl")
-	if ttlSet || maxTTLSet {
-		ttlStr := d.Get("ttl").(string)
-		maxTTLStr := d.Get("max_ttl").(string)
-		userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
-		}
+	maxTTLStr := ""
+	if maxTTLStrRaw, ok := d.GetOk("max_ttl"); ok {
+		maxTTLStr = maxTTLStrRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		maxTTLStr = d.Get("max_ttl").(string)
+	}
+
+	userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}
 
 	return nil, b.setUser(req.Storage, username, userEntry)
