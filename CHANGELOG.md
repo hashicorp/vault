@@ -1,4 +1,4 @@
-## 0.5.2 (Unreleased)
+## 0.5.2 (March 16th, 2016)
 
 FEATURES:
 
@@ -58,6 +58,9 @@ IMPROVEMENTS:
  * credential/cert: Subject and Authority key IDs are output in metadata; this
    allows more flexible searching/revocation in the audit logs [GH-1183]
  * credential/cert: Support listing configured certs [GH-1212]
+ * credential/userpass: Add support for `create`/`update` capability
+   distinction in user path, and add user-specific endpoints to allow changing
+   the password and policies [GH-1216]
  * credential/token: Add roles [GH-1155]
  * secret/mssql: Add MSSQL backend [GH-998]
  * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
