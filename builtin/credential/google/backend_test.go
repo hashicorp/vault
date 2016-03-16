@@ -61,7 +61,7 @@ func element(id string, wd selenium.WebDriver, t *testing.T) (selenium.WebElemen
 	return element, err
 }
 
-func googleCode(t *testing.T) string {
+func googleCode(t *testing.T, authCodeUrl string) string {
 
 	googleConfig := &oauth2.Config{
 		ClientID:     googleClientId(),
@@ -129,15 +129,17 @@ func googleCode(t *testing.T) string {
 	return code
 }
 
-func loginData(t *testing.T) map[string]interface{} {
+func loginData(t *testing.T, authCodeUrl string) map[string]interface{} {
 	return map[string]interface{}{
-		"code": googleCode(t),
+		"code": googleCode(t, authCodeUrl),
 	}
 }
 
 func googleDomain() string {
 	return environmentVariable(GOOGLE_DOMAIN_ENV_VAR_NAME)
 }
+
+const SHARED_AUTH_CODE_URL = "auth_code"
 
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
@@ -152,6 +154,8 @@ func TestBackend_Config(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
+
+	stepsSharedState := map[string]string{}
 
 	config_data1 := map[string]interface{}{
 		"domain": googleDomain(),
@@ -182,16 +186,17 @@ func TestBackend_Config(t *testing.T) {
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, config_data1),
-			testLoginWrite(t, expectedTTL1.Nanoseconds(), false),
+			testAuthCodeUrl(t, &stepsSharedState),
+			testLoginWrite(t, &stepsSharedState, expectedTTL1.Nanoseconds(), false),
 			testConfigWrite(t, config_data2),
-			testLoginWrite(t, expectedTTL2.Nanoseconds(), false),
+			testLoginWrite(t, &stepsSharedState, expectedTTL2.Nanoseconds(), false),
 			testConfigWrite(t, config_data3),
-			testLoginWrite(t, 0, true),
+			testLoginWrite(t, &stepsSharedState, 0, true),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, expectedTTL int64, expectFail bool) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, stepsSharedState *map[string]string, expectedTTL int64, expectFail bool) logicaltest.TestStep {
 
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -199,7 +204,7 @@ func testLoginWrite(t *testing.T, expectedTTL int64, expectFail bool) logicaltes
 		ErrorOk:   true,
 		Data:      nil,
 		PreFlight: func(r *logical.Request) error {
-			r.Data = loginData(t)
+			r.Data = loginData(t, (*stepsSharedState)[SHARED_AUTH_CODE_URL])
 			return nil
 		},
 		Check: func(resp *logical.Response) error {
@@ -239,15 +244,29 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
+	stepsSharedState := map[string]string{}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
+			testAuthCodeUrl(t, &stepsSharedState),
 			testAccMap(t, "default", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccLogin(t, &stepsSharedState, []string{"root"}),
 		},
 	})
+}
+
+func testAuthCodeUrl(t *testing.T, stepsSharedState *map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path: PATH_CODE_URL,
+		Check: func(resp *logical.Response) error {
+			(*stepsSharedState)[SHARED_AUTH_CODE_URL] = resp.Data["url"].(string)
+			return nil
+		},
+	}
 }
 
 func testAccPreCheck(t *testing.T) {
@@ -290,13 +309,13 @@ func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	}
 }
 
-func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
+func testAccLogin(t *testing.T, stepsSharedState *map[string]string, keys []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data:	nil,
 		PreFlight: func(r *logical.Request) error {
-			r.Data = loginData(t)
+			r.Data = loginData(t, (*stepsSharedState)[SHARED_AUTH_CODE_URL])
 			return nil
 		},
 		Unauthenticated: true,

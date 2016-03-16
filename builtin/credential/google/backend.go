@@ -24,12 +24,14 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+				PATH_CODE_URL,
 			},
 		},
 
 		Paths: append([]*framework.Path{
 			pathConfig(&b),
 			pathLogin(&b),
+			pathCodeUrl(&b),
 		}, b.Map.Paths()...),
 
 		AuthRenew: b.pathLoginRenew,
