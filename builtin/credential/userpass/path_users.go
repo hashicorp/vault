@@ -85,7 +85,7 @@ func (b *backend) user(s logical.Storage, n string) (*UserEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) SetUser(s logical.Storage, username string, userEntry *UserEntry) error {
+func (b *backend) setUser(s logical.Storage, username string, userEntry *UserEntry) error {
 	entry, err := logical.StorageEntryJSON("user/"+username, userEntry)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		}
 	}
 
-	return nil, b.SetUser(req.Storage, username, userEntry)
+	return nil, b.setUser(req.Storage, username, userEntry)
 }
 
 func (b *backend) pathUserWrite(
