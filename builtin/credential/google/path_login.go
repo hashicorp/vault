@@ -125,8 +125,6 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 		Scopes:       []string{ "email" },
 	}
 
-	//TODO: nathang compute the url to the google auth code
-	//url := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline)
 	tok, err := googleConfig.Exchange(oauth2.NoContext, code)
 	if (err != nil) {
 		return nil, nil, err

@@ -17,8 +17,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	code, ok := m["code"]
 	if !ok {
-		//TODO: nathang implement this path... :D
-		return "", fmt.Errorf("'code' var must be set, access read auth/google/code_url for a link to obtain the code from google")
+		return "", fmt.Errorf("'code' var must be set, access read auth/%s/%s for a link to obtain the code from google", mount, PATH_CODE_URL)
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)
