@@ -54,12 +54,7 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	username := data.Get("username").(string)
-	if username == "" {
-		return false, fmt.Errorf("missing username")
-	}
-
-	userEntry, err := b.user(req.Storage, username)
+	userEntry, err := b.user(req.Storage, data.Get("username").(string))
 	if err != nil {
 		return false, err
 	}
@@ -67,8 +62,12 @@ func (b *backend) userExistenceCheck(req *logical.Request, data *framework.Field
 	return userEntry != nil, nil
 }
 
-func (b *backend) user(s logical.Storage, n string) (*UserEntry, error) {
-	entry, err := s.Get("user/" + strings.ToLower(n))
+func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
+	entry, err := s.Get("user/" + strings.ToLower(username))
 	if err != nil {
 		return nil, err
 	}
@@ -132,9 +131,11 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 	}
 
 	// "password" will always be set here
-	err = b.updateUserPassword(req, d, userEntry)
-	if err != nil {
-		return nil, err
+	if _, ok := d.GetOk("password"); ok {
+		err = b.updateUserPassword(req, d, userEntry)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if _, ok := d.GetOk("policies"); ok {
@@ -144,18 +145,14 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		}
 	}
 
-	ttlStr := ""
+	ttlStr := userEntry.TTL.String()
 	if ttlStrRaw, ok := d.GetOk("ttl"); ok {
 		ttlStr = ttlStrRaw.(string)
-	} else if req.Operation == logical.CreateOperation {
-		ttlStr = d.Get("ttl").(string)
 	}
 
-	maxTTLStr := ""
+	maxTTLStr := userEntry.MaxTTL.String()
 	if maxTTLStrRaw, ok := d.GetOk("max_ttl"); ok {
 		maxTTLStr = maxTTLStrRaw.(string)
-	} else if req.Operation == logical.CreateOperation {
-		maxTTLStr = d.Get("max_ttl").(string)
 	}
 
 	userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
@@ -169,7 +166,7 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	password := d.Get("password").(string)
-	if password == "" {
+	if req.Operation == logical.CreateOperation && password == "" {
 		return nil, fmt.Errorf("missing password")
 	}
 	return b.userCreateUpdate(req, d)

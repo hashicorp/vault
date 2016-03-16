@@ -24,6 +24,8 @@ func pathUserPassword(b *backend) *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.userPasswordExistenceCheck,
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUserPasswordUpdate,
 		},
@@ -31,6 +33,10 @@ func pathUserPassword(b *backend) *framework.Path {
 		HelpSynopsis:    pathUserPasswordHelpSyn,
 		HelpDescription: pathUserPasswordHelpDesc,
 	}
+}
+
+func (b *backend) userPasswordExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	return true, nil
 }
 
 func (b *backend) pathUserPasswordUpdate(
@@ -41,6 +47,9 @@ func (b *backend) pathUserPasswordUpdate(
 	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
+	}
+	if userEntry == nil {
+		return nil, fmt.Errorf("username does not exist")
 	}
 
 	err = b.updateUserPassword(req, d, userEntry)

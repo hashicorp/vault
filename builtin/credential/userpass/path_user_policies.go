@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -21,6 +22,8 @@ func pathUserPolicies(b *backend) *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.userPoliciesExistenceCheck,
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUserPoliciesUpdate,
 		},
@@ -28,6 +31,10 @@ func pathUserPolicies(b *backend) *framework.Path {
 		HelpSynopsis:    pathUserPoliciesHelpSyn,
 		HelpDescription: pathUserPoliciesHelpDesc,
 	}
+}
+
+func (b *backend) userPoliciesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	return true, nil
 }
 
 func (b *backend) pathUserPoliciesUpdate(
@@ -38,6 +45,9 @@ func (b *backend) pathUserPoliciesUpdate(
 	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
+	}
+	if userEntry == nil {
+		return nil, fmt.Errorf("username does not exist")
 	}
 
 	err = b.updateUserPolicies(req, d, userEntry)
