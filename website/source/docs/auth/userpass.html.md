@@ -102,6 +102,7 @@ necessary.
   <dt>Description</dt>
   <dd>
       Create a new user or update an existing user.
+      This path honors the distinction between the `create` and `update` capabilities inside ACL policies.
   </dd>
 
   <dt>Method</dt>

@@ -60,12 +60,12 @@ func (b *backend) userExistenceCheck(req *logical.Request, data *framework.Field
 		return false, fmt.Errorf("missing username")
 	}
 
-	entry, err := req.Storage.Get("user/" + strings.ToLower(username))
+	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return false, err
 	}
 
-	return entry != nil, nil
+	return userEntry != nil, nil
 }
 
 func (b *backend) user(s logical.Storage, n string) (*UserEntry, error) {
@@ -150,11 +150,11 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		userEntry.Policies = policies
 	}
 
-	ttlStrRaw, ttlSet := d.GetOk("ttl")
-	maxTTLStrRaw, maxTTLSet := d.GetOk("max_ttl")
+	_, ttlSet := d.GetOk("ttl")
+	_, maxTTLSet := d.GetOk("max_ttl")
 	if ttlSet || maxTTLSet {
-		ttlStr := ttlStrRaw.(string)
-		maxTTLStr := maxTTLStrRaw.(string)
+		ttlStr := d.Get("ttl").(string)
+		maxTTLStr := d.Get("max_ttl").(string)
 		userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
