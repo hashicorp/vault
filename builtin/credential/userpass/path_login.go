@@ -2,6 +2,7 @@ package userpass
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -11,9 +12,9 @@ import (
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "login/" + framework.GenericNameRegex("name"),
+		Pattern: "login/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Username of the user.",
 			},
@@ -35,16 +36,20 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLogin(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("name").(string))
+	username := strings.ToLower(d.Get("username").(string))
+
 	password := d.Get("password").(string)
+	if password == "" {
+		return nil, fmt.Errorf("missing password")
+	}
 
 	// Get the user and validate auth
-	user, err := b.User(req.Storage, username)
+	user, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
-		return logical.ErrorResponse("unknown username or password"), nil
+		return logical.ErrorResponse("username does not exist"), nil
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
@@ -78,7 +83,7 @@ func (b *backend) pathLogin(
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the user
-	user, err := b.User(req.Storage, req.Auth.Metadata["username"])
+	user, err := b.user(req.Storage, req.Auth.Metadata["username"])
 	if err != nil {
 		return nil, err
 	}
