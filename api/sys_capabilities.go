@@ -1,5 +1,7 @@
 package api
 
+import "log"
+
 func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 	body := map[string]string{
 		"path": path,
@@ -16,6 +18,7 @@ func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
+	log.Printf("capabilities self: resp: %#v\n", resp.Body)
 	var result CapabilitiesResponse
 	err = resp.DecodeJSON(&result)
 	return result.Capabilities, err
@@ -38,6 +41,7 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
+	log.Printf("capabilities: resp: %#v\n", resp.Body)
 	var result CapabilitiesResponse
 	err = resp.DecodeJSON(&result)
 	return result.Capabilities, err

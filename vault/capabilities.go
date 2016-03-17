@@ -12,25 +12,6 @@ func (s *StatusBadRequest) Error() string {
 	return s.Err
 }
 
-// CapabilitiesAccessor is used to fetch the capabilities of the token
-// which associated with the given accessor on the given path
-func (c *Core) CapabilitiesAccessor(accessor, path string) ([]string, error) {
-	if path == "" {
-		return nil, &StatusBadRequest{Err: "missing path"}
-	}
-
-	if accessor == "" {
-		return nil, &StatusBadRequest{Err: "missing accessor"}
-	}
-
-	token, err := c.tokenStore.lookupByAccessor(accessor)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.Capabilities(token, path)
-}
-
 // Capabilities is used to fetch the capabilities of the given token on the given path
 func (c *Core) Capabilities(token, path string) ([]string, error) {
 	if path == "" {

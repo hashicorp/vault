@@ -461,67 +461,35 @@ type SystemBackend struct {
 
 func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("handleCapabilities: request: %#v\n data:%#v\n", req, d)
-	token := d.Get("token").(string)
-	if token == "" {
-		return logical.ErrorResponse("missing token"), nil
-	}
-
-	path := d.Get("path").(string)
-	if path == "" {
-		return logical.ErrorResponse("missing path"), nil
-	}
-
-	te, err := b.Core.tokenStore.Lookup(token)
-	if err != nil {
-		return nil, err
-	}
-	if te == nil {
-		return logical.ErrorResponse("invalid token"), nil
-	}
-
-	if te.Policies == nil {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"capabilities": []string{DenyCapability},
-			},
-		}, nil
-	}
-
-	var policies []*Policy
-	for _, tePolicy := range te.Policies {
-		policy, err := b.Core.policyStore.GetPolicy(tePolicy)
-		if err != nil {
-			return nil, err
-		}
-		policies = append(policies, policy)
-	}
-
-	if len(policies) == 0 {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"capabilities": []string{DenyCapability},
-			},
-		}, nil
-	}
-
-	acl, err := NewACL(policies)
+	capabilities, err := b.Core.Capabilities(d.Get("token").(string), d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"capabilities": acl.Capabilities(path),
+			"capabilities": capabilities,
 		},
 	}, nil
 }
 
 func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	log.Printf("handleCapabilitiesAccessor: request: %#v\n data:%#v\n", req, d)
-	capabilities, err := b.Core.CapabilitiesAccessor(d.Get("accessor").(string), d.Get("path").(string))
+	accessor := d.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &StatusBadRequest{Err: "missing accessor"}
+	}
+
+	token, err := b.Core.tokenStore.lookupByAccessor(accessor)
 	if err != nil {
 		return nil, err
 	}
+
+	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"capabilities": capabilities,
