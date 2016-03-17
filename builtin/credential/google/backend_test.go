@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"net/http"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -259,8 +260,6 @@ func testAuthCodeUrl(t *testing.T, stepsSharedState *map[string]string) logicalt
 
 func testAccPreCheck(t *testing.T) {
 
-	//TODO: nathang - make sure selenium server is on? start selenium server? stop selenium server?
-
 	requiredEnvVars := []string{
 		GOOGLE_USERNAME_ENV_VAR_NAME,
 		GOOGLE_PASSWORD_ENV_VAR_NAME,
@@ -272,6 +271,11 @@ func testAccPreCheck(t *testing.T) {
 		if value := environmentVariable(envVar); value == "" {
 			t.Fatal(fmt.Sprintf("missing environment variable %s", envVar))
 		}
+	}
+
+	_, err := http.Get("http://127.0.0.1:4444/wd/hub")
+	if (err != nil) {
+		t.Fatal("google integration tests require selenium server. use: 'make selenium testacc' instead of 'make testacc' to have one provided for you.")
 	}
 }
 

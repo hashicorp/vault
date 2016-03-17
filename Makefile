@@ -21,6 +21,11 @@ dev: generate
 test: generate
 	VAULT_TOKEN= TF_ACC= go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
+# needed for some testacc tests (google)
+selenium:
+	$(GOPATH)/src/github.com/tebeka/selenium/selenium.sh start
+
+
 # testacc runs acceptance tests
 testacc: generate
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -28,6 +33,7 @@ testacc: generate
 		exit 1; \
 	fi
 	TF_ACC=1 go test -v $(TEST) $(TESTARGS) -timeout 45m
+	@$(GOPATH)/src/github.com/tebeka/selenium/selenium.sh stop || true
 
 # testrace runs the race checker
 testrace: generate

@@ -30,13 +30,11 @@ func (b *backend) pathCodeUrl(
 	}
 
 	if config.ApplicationId == "" {
-		return logical.ErrorResponse(
-			"configure the google credential backend with applicationId first"), nil
+		return logical.ErrorResponse(configErrorMsg), nil
 	}
 
 	if config.ApplicationSecret == "" {
-		return logical.ErrorResponse(
-			"configure the google credential backend with applicationSecret first"), nil
+		return logical.ErrorResponse(configErrorMsg), nil
 	}
 
 	googleConfig := &oauth2.Config{

@@ -3,7 +3,6 @@ package google
 import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"golang.org/x/oauth2"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -44,16 +43,6 @@ type backend struct {
 	*framework.Backend
 
 	Map *framework.PolicyMap
-}
-
-
-// tokenSource is an oauth2.TokenSource implementation.
-type tokenSource struct {
-	Value string
-}
-
-func (t *tokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{AccessToken: t.Value}, nil
 }
 
 const backendHelp = `

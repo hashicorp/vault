@@ -88,6 +88,9 @@ func (b *backend) pathConfigWrite(
 	return nil, nil
 }
 
+const configErrorMsg = `configure the google credential backend with applicationId first:
+	vault write auth/google/config applicationId=$GOOGLE_TESTING_ONLY_APPLICATION_ID applicationSecret=$GOOGLE_TESTING_ONLY_APPLICATION_SECRET`
+
 // Config returns the configuration for this backend.
 func (b *backend) Config(s logical.Storage) (*config, error) {
 	entry, err := s.Get("config")

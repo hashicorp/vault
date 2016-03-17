@@ -108,13 +108,11 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 	}
 
 	if config.ApplicationId == "" {
-		return nil, logical.ErrorResponse(
-			"configure the google credential backend with applicationId first"), nil
+		return nil, logical.ErrorResponse(configErrorMsg), nil
 	}
 
 	if config.ApplicationSecret == "" {
-		return nil, logical.ErrorResponse(
-			"configure the google credential backend with applicationSecret first"), nil
+		return nil, logical.ErrorResponse(configErrorMsg), nil
 	}
 
 	googleConfig := &oauth2.Config{
