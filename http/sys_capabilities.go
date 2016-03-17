@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -98,21 +99,8 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 			return
 		}
 
+		log.Printf("http: response: %#v\n", resp)
 		respondLogical(w, r, path, false, resp)
 	})
 
-}
-
-type capabilitiesResponse struct {
-	Capabilities []string `json:"capabilities"`
-}
-
-type capabilitiesRequest struct {
-	Token string `json:"token"`
-	Path  string `json:"path"`
-}
-
-type capabilitiesAccessorRequest struct {
-	Accessor string `json:"accessor"`
-	Path     string `json:"path"`
 }

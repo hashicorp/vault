@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -459,8 +458,8 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
+// handleCapabilitiesreturns the ACL capabilities of the token for a given path
 func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("handleCapabilities: request: %#v\n data:%#v\n", req, d)
 	capabilities, err := b.Core.Capabilities(d.Get("token").(string), d.Get("path").(string))
 	if err != nil {
 		return nil, err
@@ -473,8 +472,9 @@ func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.Fi
 	}, nil
 }
 
+// handleCapabilitiesAccessor returns the ACL capabilities of the token associted
+// with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("handleCapabilitiesAccessor: request: %#v\n data:%#v\n", req, d)
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {
 		return nil, &StatusBadRequest{Err: "missing accessor"}
