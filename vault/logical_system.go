@@ -56,11 +56,32 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleCapabilitiesAccessorUpdate,
+					logical.UpdateOperation: b.handleCapabilitiesAccessor,
 				},
 
 				HelpSynopsis:    "help_synopsis_capabilities_accessor",
 				HelpDescription: "help_description_capabilities_accessor",
+			},
+			&framework.Path{
+				Pattern: "capabilities$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path for which capabilities are being queried.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleCapabilities,
+				},
+
+				HelpSynopsis:    "help_synopsis_capabilities",
+				HelpDescription: "help_description_capabilities",
 			},
 
 			&framework.Path{
@@ -438,17 +459,66 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
-func (b *SystemBackend) handleCapabilitiesAccessorUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	log.Printf("handleCapabilitiesAccessorUpdate: request: %#v\n data:%#v\n", req, d)
-	accessor := d.Get("accessor").(string)
-	if accessor == "" {
-		return logical.ErrorResponse("missing accessor"), nil
+func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("handleCapabilities: request: %#v\n data:%#v\n", req, d)
+	token := d.Get("token").(string)
+	if token == "" {
+		return logical.ErrorResponse("missing token"), nil
 	}
+
 	path := d.Get("path").(string)
-	if accessor == "" {
+	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
 	}
-	capabilities, err := b.Core.CapabilitiesAccessor(accessor, path)
+
+	te, err := b.Core.tokenStore.Lookup(token)
+	if err != nil {
+		return nil, err
+	}
+	if te == nil {
+		return logical.ErrorResponse("invalid token"), nil
+	}
+
+	if te.Policies == nil {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"capabilities": []string{DenyCapability},
+			},
+		}, nil
+	}
+
+	var policies []*Policy
+	for _, tePolicy := range te.Policies {
+		policy, err := b.Core.policyStore.GetPolicy(tePolicy)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, policy)
+	}
+
+	if len(policies) == 0 {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"capabilities": []string{DenyCapability},
+			},
+		}, nil
+	}
+
+	acl, err := NewACL(policies)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"capabilities": acl.Capabilities(path),
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("handleCapabilitiesAccessor: request: %#v\n data:%#v\n", req, d)
+	capabilities, err := b.Core.CapabilitiesAccessor(d.Get("accessor").(string), d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
