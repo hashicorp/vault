@@ -43,7 +43,7 @@ func pathConfig(b *backend) *framework.Path {
 func (b *backend) pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	domain := data.Get("domain").(string)
-	applicationId := data.Get("applicationId").(string)
+	applicationID := data.Get("applicationId").(string)
 	applicationSecret := data.Get("applicationSecret").(string)
 
 	var ttl time.Duration
@@ -73,7 +73,7 @@ func (b *backend) pathConfigWrite(
 		Domain:     domain,
 		TTL:     ttl,
 		MaxTTL:  maxTTL,
-		ApplicationId: applicationId,
+		ApplicationID: applicationID,
 		ApplicationSecret: applicationSecret,
 	})
 
@@ -109,9 +109,9 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	Domain string        `json:"domain"`
-	ApplicationId string `json:"applicationId"`
+	Domain            string        `json:"domain"`
+	ApplicationID     string `json:"applicationId"`
 	ApplicationSecret string `json:"applicationSecret"`
-	TTL    time.Duration `json:"ttl"`
-	MaxTTL time.Duration `json:"max_ttl"`
+	TTL               time.Duration `json:"ttl"`
+	MaxTTL            time.Duration `json:"max_ttl"`
 }

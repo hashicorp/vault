@@ -8,19 +8,19 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-const PATH_CODE_URL = "code_url"
+const codeURLPath = "code_url"
 
-func pathCodeUrl(b *backend) *framework.Path {
+func pathCodeURL(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: PATH_CODE_URL,
+		Pattern: codeURLPath,
 		Fields: map[string]*framework.FieldSchema{},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathCodeUrl,
+			logical.ReadOperation: b.pathCodeURL,
 		},
 	}
 }
 
-func (b *backend) pathCodeUrl(
+func (b *backend) pathCodeURL(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	config, err := b.Config(req.Storage)
@@ -29,7 +29,7 @@ func (b *backend) pathCodeUrl(
 		return nil, err
 	}
 
-	if config.ApplicationId == "" {
+	if config.ApplicationID == "" {
 		return logical.ErrorResponse(configErrorMsg), nil
 	}
 
@@ -38,18 +38,18 @@ func (b *backend) pathCodeUrl(
 	}
 
 	googleConfig := &oauth2.Config{
-		ClientID:     config.ApplicationId,
+		ClientID:     config.ApplicationID,
 		ClientSecret: config.ApplicationSecret,
 		Endpoint:     google.Endpoint,
 		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
 		Scopes:       []string{ "email" },
 	}
 
-	authUrl := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline, oauth2.ApprovalForce)
+	authURL := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline, oauth2.ApprovalForce)
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"url": authUrl,
+			"url": authURL,
 		},
 	}, nil
 }

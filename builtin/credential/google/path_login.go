@@ -107,7 +107,7 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 		return nil, nil, err
 	}
 
-	if config.ApplicationId == "" {
+	if config.ApplicationID == "" {
 		return nil, logical.ErrorResponse(configErrorMsg), nil
 	}
 
@@ -116,7 +116,7 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 	}
 
 	googleConfig := &oauth2.Config{
-		ClientID:     config.ApplicationId,
+		ClientID:     config.ApplicationID,
 		ClientSecret: config.ApplicationSecret,
 		Endpoint:     google.Endpoint,
 		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",

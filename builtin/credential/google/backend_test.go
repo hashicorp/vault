@@ -12,35 +12,35 @@ import (
 	"github.com/tebeka/selenium"
 )
 
-const GOOGLE_APPLICATION_ID_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_APPLICATION_ID"
-const GOOGLE_APPLICATION_SECRET_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_APPLICATION_SECRET"
-const GOOGLE_USERNAME_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_USERNAME"
-const GOOGLE_PASSWORD_ENV_VAR_NAME = "GOOGLE_TESTING_ONLY_PASSWORD"
-const GOOGLE_DOMAIN_ENV_VAR_NAME = "GOOGLE_DOMAIN"
+const GoogleApplicationIDEnvVarName = "GOOGLE_TESTING_ONLY_APPLICATION_ID"
+const GoogleApplicationSecretEnvVarName = "GOOGLE_TESTING_ONLY_APPLICATION_SECRET"
+const GoogleUsernameEnvVarName = "GOOGLE_TESTING_ONLY_USERNAME"
+const GooglePasswordEnvVarName = "GOOGLE_TESTING_ONLY_PASSWORD"
+const GoogleDomainEnvVarName = "GOOGLE_DOMAIN"
 
 func environmentVariable(name string) string {
 
 	return os.Getenv(name)
 }
 
-func googleClientId() string {
-	return environmentVariable(GOOGLE_APPLICATION_ID_ENV_VAR_NAME)
+func googleClientID() string {
+	return environmentVariable(GoogleApplicationIDEnvVarName)
 }
 
 func googleClientSecret() string {
-	return environmentVariable(GOOGLE_APPLICATION_SECRET_ENV_VAR_NAME)
+	return environmentVariable(GoogleApplicationSecretEnvVarName)
 }
 
 func handleError(msg string, wd selenium.WebDriver, t *testing.T, err error) {
 	if err != nil {
-		currentUrl, getUrlErr := wd.CurrentURL()
-		var errorUrl string
-		if getUrlErr != nil {
-			errorUrl = "unknown url (url retrieval failed)"
+		currentURL, getURLErr := wd.CurrentURL()
+		var errorURL string
+		if getURLErr != nil {
+			errorURL = "unknown url (url retrieval failed)"
 		} else {
-			errorUrl = currentUrl
+			errorURL = currentURL
 		}
-		t.Error(fmt.Sprintf("error while %s at url %s, error details: %s\n", msg, errorUrl, err.Error()))
+		t.Errorf("error while %s at url %s, error details: %s\n", msg, errorURL, err.Error())
 	}
 	return
 }
@@ -60,10 +60,10 @@ func element(id string, wd selenium.WebDriver, t *testing.T) (selenium.WebElemen
 	return element, err
 }
 
-func googleCode(t *testing.T, authUrl string) string {
+func googleCode(t *testing.T, authURL string) string {
 
-	user := environmentVariable(GOOGLE_USERNAME_ENV_VAR_NAME)
-	pass := environmentVariable(GOOGLE_PASSWORD_ENV_VAR_NAME)
+	user := environmentVariable(GoogleUsernameEnvVarName)
+	pass := environmentVariable(GooglePasswordEnvVarName)
 
 	caps := selenium.Capabilities {
 		"browserName": "htmlunit",
@@ -77,7 +77,7 @@ func googleCode(t *testing.T, authUrl string) string {
 	wd.SetImplicitWaitTimeout(30000)
 	wd.SetPageLoadTimeout(30000)
 	wd.MaximizeWindow("")
-	wd.Get(authUrl)
+	wd.Get(authURL)
 
 	var err error
 
@@ -86,13 +86,13 @@ func googleCode(t *testing.T, authUrl string) string {
 	handleError("filling out user text box", wd, t, err)
 
 	//two flows here, one fill out user + pass, the other fill user, click next, enter pass...
-	passwordTextInputId := "Passwd"
-	passInput, err := wd.FindElement(selenium.ById, passwordTextInputId)
+	passwordTextInputID := "Passwd"
+	passInput, err := wd.FindElement(selenium.ById, passwordTextInputID)
 	if err != nil {
 		nextButton, _ := element("next", wd, t)
 		err = nextButton.Click()
 		handleError("clicking next after inserting email", wd, t, err)
-		passInput, _ = element(passwordTextInputId, wd, t)
+		passInput, _ = element(passwordTextInputID, wd, t)
 	}
 	err = passInput.SendKeys(pass)
 	handleError("filling out password text box", wd, t, err)
@@ -101,14 +101,14 @@ func googleCode(t *testing.T, authUrl string) string {
 	err = authenticateButton.Click()
 	handleError("clicking sign in after filling password", wd, t, err)
 
-	authorizeButtonId := "submit_approve_access"
-	authorizeButton, _ := element(authorizeButtonId, wd, t)
+	authorizeButtonID := "submit_approve_access"
+	authorizeButton, _ := element(authorizeButtonID, wd, t)
 	authorizationButtonEnabled, _ :=  authorizeButton.IsEnabled()
 	for i := 0 ; (!authorizationButtonEnabled) && (i < 100) ; i++ {
 		time.Sleep(100 * time.Millisecond)
 		authorizationButtonEnabled, _ =  authorizeButton.IsEnabled()
 	}
-	_, err = wd.ExecuteScript(fmt.Sprintf(`document.getElementById("%s").click();`, authorizeButtonId), []interface{}{})
+	_, err = wd.ExecuteScript(fmt.Sprintf(`document.getElementById("%s").click();`, authorizeButtonID), []interface{}{})
 	handleError("authorizing application with required permissions", wd, t, err)
 
 	codeElement, err := element("code", wd, t)
@@ -118,17 +118,17 @@ func googleCode(t *testing.T, authUrl string) string {
 	return code
 }
 
-func loginData(t *testing.T, authCodeUrl string) map[string]interface{} {
+func loginData(t *testing.T, authCodeURL string) map[string]interface{} {
 	return map[string]interface{}{
-		"code": googleCode(t, authCodeUrl),
+		"code": googleCode(t, authCodeURL),
 	}
 }
 
 func googleDomain() string {
-	return environmentVariable(GOOGLE_DOMAIN_ENV_VAR_NAME)
+	return environmentVariable(GoogleDomainEnvVarName)
 }
 
-const SHARED_AUTH_CODE_URL = "auth_code"
+const sharedAuthCodeURL = "auth_code"
 
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
@@ -146,27 +146,27 @@ func TestBackend_Config(t *testing.T) {
 
 	stepsSharedState := map[string]string{}
 
-	config_data1 := map[string]interface{}{
+	configData1 := map[string]interface{}{
 		"domain": googleDomain(),
 		"ttl":          "",
 		"max_ttl":      "",
-		"applicationId": googleClientId(),
+		"applicationId": googleClientID(),
 		"applicationSecret": googleClientSecret(),
 	}
 	expectedTTL1, _ := time.ParseDuration("24h0m0s")
-	config_data2 := map[string]interface{}{
+	configData2 := map[string]interface{}{
 		"domain": googleDomain(),
 		"ttl":          "1h",
 		"max_ttl":      "2h",
-		"applicationId": googleClientId(),
+		"applicationId": googleClientID(),
 		"applicationSecret": googleClientSecret(),
 	}
 	expectedTTL2, _ := time.ParseDuration("1h0m0s")
-	config_data3 := map[string]interface{}{
+	configData3 := map[string]interface{}{
 		"domain": googleDomain(),
 		"ttl":          "50h",
 		"max_ttl":      "50h",
-		"applicationId": googleClientId(),
+		"applicationId": googleClientID(),
 		"applicationSecret": googleClientSecret(),
 	}
 
@@ -174,12 +174,12 @@ func TestBackend_Config(t *testing.T) {
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
-			testConfigWrite(t, config_data1),
-			testAuthCodeUrl(t, &stepsSharedState),
+			testConfigWrite(t, configData1),
+			testAuthCodeURL(t, &stepsSharedState),
 			testLoginWrite(t, &stepsSharedState, expectedTTL1.Nanoseconds(), false),
-			testConfigWrite(t, config_data2),
+			testConfigWrite(t, configData2),
 			testLoginWrite(t, &stepsSharedState, expectedTTL2.Nanoseconds(), false),
-			testConfigWrite(t, config_data3),
+			testConfigWrite(t, configData3),
 			testLoginWrite(t, &stepsSharedState, 0, true),
 		},
 	})
@@ -193,7 +193,7 @@ func testLoginWrite(t *testing.T, stepsSharedState *map[string]string, expectedT
 		ErrorOk:   true,
 		Data:      nil,
 		PreFlight: func(r *logical.Request) error {
-			r.Data = loginData(t, (*stepsSharedState)[SHARED_AUTH_CODE_URL])
+			r.Data = loginData(t, (*stepsSharedState)[sharedAuthCodeURL])
 			return nil
 		},
 		Check: func(resp *logical.Response) error {
@@ -240,19 +240,19 @@ func TestBackend_basic(t *testing.T) {
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAuthCodeUrl(t, &stepsSharedState),
+			testAuthCodeURL(t, &stepsSharedState),
 			testAccMap(t, "default", "root"),
 			testAccLogin(t, &stepsSharedState, []string{"root"}),
 		},
 	})
 }
 
-func testAuthCodeUrl(t *testing.T, stepsSharedState *map[string]string) logicaltest.TestStep {
+func testAuthCodeURL(t *testing.T, stepsSharedState *map[string]string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path: PATH_CODE_URL,
+		Path: codeURLPath,
 		Check: func(resp *logical.Response) error {
-			(*stepsSharedState)[SHARED_AUTH_CODE_URL] = resp.Data["url"].(string)
+			(*stepsSharedState)[sharedAuthCodeURL] = resp.Data["url"].(string)
 			return nil
 		},
 	}
@@ -261,10 +261,10 @@ func testAuthCodeUrl(t *testing.T, stepsSharedState *map[string]string) logicalt
 func testAccPreCheck(t *testing.T) {
 
 	requiredEnvVars := []string{
-		GOOGLE_USERNAME_ENV_VAR_NAME,
-		GOOGLE_PASSWORD_ENV_VAR_NAME,
-		GOOGLE_APPLICATION_ID_ENV_VAR_NAME,
-		GOOGLE_APPLICATION_SECRET_ENV_VAR_NAME,
+		GoogleUsernameEnvVarName,
+		GooglePasswordEnvVarName,
+		GoogleApplicationIDEnvVarName,
+		GoogleApplicationSecretEnvVarName,
 	}
 
 	for _, envVar := range requiredEnvVars {
@@ -285,7 +285,7 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Path:      "config",
 		Data: map[string]interface{}{
 			"domain": googleDomain(),
-			"applicationId": googleClientId(),
+			"applicationId": googleClientID(),
 			"applicationSecret": googleClientSecret(),
 		},
 	}
@@ -307,7 +307,7 @@ func testAccLogin(t *testing.T, stepsSharedState *map[string]string, keys []stri
 		Path:      "login",
 		Data:	nil,
 		PreFlight: func(r *logical.Request) error {
-			r.Data = loginData(t, (*stepsSharedState)[SHARED_AUTH_CODE_URL])
+			r.Data = loginData(t, (*stepsSharedState)[sharedAuthCodeURL])
 			return nil
 		},
 		Unauthenticated: true,

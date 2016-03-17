@@ -7,8 +7,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+//CLIHandler for "vault auth -method=google ..."
 type CLIHandler struct{}
 
+//Auth logic for handling the google authentication code
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	mount, ok := m["mount"]
 	if !ok {
@@ -17,7 +19,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	code, ok := m["code"]
 	if !ok {
-		return "", fmt.Errorf("'code' var must be set, access read auth/%s/%s for a link to obtain the code from google", mount, PATH_CODE_URL)
+		return "", fmt.Errorf("'code' var must be set: 'vault read auth/%s/%s' for a link to obtain the code from google", mount, codeURLPath)
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)
@@ -34,6 +36,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	return secret.Auth.ClientToken, nil
 }
 
+//Help message on how to authenticate with google
 func (h *CLIHandler) Help() string {
 
 	help := `

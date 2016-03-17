@@ -5,10 +5,12 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+//Factory for google backend
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return Backend().Setup(conf)
 }
 
+//Backend for google
 func Backend() *framework.Backend {
 	var b backend
 	b.Map = &framework.PolicyMap{
@@ -23,14 +25,14 @@ func Backend() *framework.Backend {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
-				PATH_CODE_URL,
+				codeURLPath,
 			},
 		},
 
 		Paths: append([]*framework.Path{
 			pathConfig(&b),
 			pathLogin(&b),
-			pathCodeUrl(&b),
+			pathCodeURL(&b),
 		}, b.Map.Paths()...),
 
 		AuthRenew: b.pathLoginRenew,
