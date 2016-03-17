@@ -4,6 +4,8 @@ IMPROVEMENTS:
 
  * command/write: `-format` and `-field` can now be used with the `write`
    command [GH-1228]
+ * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
+   DNS or Email Subject Alternate Names [GH-1220]
 
 ## 0.5.2 (March 16th, 2016)
 
