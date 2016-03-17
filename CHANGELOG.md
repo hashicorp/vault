@@ -1,3 +1,10 @@
+## 0.6.0 (Unreleased)
+
+IMPROVEMENTS:
+
+ * command/write: `-format` and `-field` can now be used with the `write`
+   command [GH-1228]
+
 ## 0.5.2 (March 16th, 2016)
 
 FEATURES:
@@ -23,6 +30,7 @@ FEATURES:
    SIGHUP.
 
 IMPROVEMENTS:
+
  * auth/token: Endpoints optionally accept tokens from the HTTP body rather
    than just from the URLs [GH-1211]
  * auth/token,sys/capabilities: Added new endpoints
