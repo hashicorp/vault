@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+ * credential/cert: Renewal requests are rejected if the set of policies has
+   changed since the token was issued [GH-477]
  * command/write: `-format` and `-field` can now be used with the `write`
    command [GH-1228]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
