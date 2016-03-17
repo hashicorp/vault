@@ -28,13 +28,21 @@ func TestSysCapabilitiesAccessor(t *testing.T) {
 		"path":     "testpath",
 	})
 
-	var actual map[string][]string
+	var result map[string]interface{}
 	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
+	testResponseBody(t, resp, &result)
 
-	expected := map[string][]string{
-		"capabilities": []string{"root"},
+	err = resp.DecodeJSON(&result)
+	if err != nil {
+		return nil, err
 	}
+	var actual []string
+	capabilitiesRaw := result["data"].(map[string]interface{})["capabilities"].([]interface{})
+	for _, capability := range capabilitiesRaw {
+		actual = append(actual, capability.(string))
+	}
+
+	expected := []string{"root"}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
@@ -69,11 +77,19 @@ func TestSysCapabilitiesAccessor(t *testing.T) {
 		"path":     "testpath",
 	})
 	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
+	testResponseBody(t, resp, &result)
 
-	expected = map[string][]string{
-		"capabilities": []string{"sudo", "read"},
+	err = resp.DecodeJSON(&result)
+	if err != nil {
+		return nil, err
 	}
+	var actual []string
+	capabilitiesRaw := result["data"].(map[string]interface{})["capabilities"].([]interface{})
+	for _, capability := range capabilitiesRaw {
+		actual = append(actual, capability.(string))
+	}
+
+	expected := []string{"sudo", "read"}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}

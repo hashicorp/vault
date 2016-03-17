@@ -477,7 +477,7 @@ func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.Fi
 func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {
-		return nil, &StatusBadRequest{Err: "missing accessor"}
+		return logical.ErrorResponse("missing accessor"), nil
 	}
 
 	token, err := b.Core.tokenStore.lookupByAccessor(accessor)
