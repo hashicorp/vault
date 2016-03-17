@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
@@ -382,4 +383,123 @@ func testConnState(t *testing.T, certPath, keyPath, rootCertPath string) tls.Con
 	// Grab the current state
 	connState := serverConn.(*tls.Conn).ConnectionState()
 	return connState
+}
+
+func Test_Renew(t *testing.T) {
+	storage := &logical.InmemStorage{}
+
+	lb, err := Factory(&logical.BackendConfig{
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+		StorageView: storage,
+	})
+	if err != nil {
+		t.Fatal("error: %s", err)
+	}
+
+	b := lb.(*backend)
+	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Connection: &logical.Connection{
+			ConnState: &connState,
+		},
+		Storage: storage,
+		Auth:    &logical.Auth{},
+	}
+
+	fd := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"name":        "test",
+			"certificate": ca,
+			"policies":    "foo,bar",
+		},
+		Schema: pathCerts(b).Fields,
+	}
+
+	resp, err := b.pathCertWrite(req, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.pathLogin(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Auth.InternalData = resp.Auth.InternalData
+	req.Auth.Metadata = resp.Auth.Metadata
+	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
+	req.Auth.IssueTime = time.Now()
+
+	// Normal renewal
+	resp, err = b.pathLoginRenew(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error: %#v", *resp)
+	}
+
+	// Change the policies -- this should fail
+	fd.Raw["policies"] = "zip,zap"
+	resp, err = b.pathCertWrite(req, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.pathLoginRenew(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if !resp.IsError() {
+		t.Fatal("expected error")
+	}
+
+	// Put the policies back, this shold be okay
+	fd.Raw["policies"] = "bar,foo"
+	resp, err = b.pathCertWrite(req, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.pathLoginRenew(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatal("got error: %#v", *resp)
+	}
+
+	// Delete CA, make sure we can't renew
+	resp, err = b.pathCertDelete(req, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.pathLoginRenew(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if !resp.IsError() {
+		t.Fatal("expected error")
+	}
 }
