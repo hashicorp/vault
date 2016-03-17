@@ -1,7 +1,6 @@
 package http
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
@@ -11,7 +10,6 @@ import (
 
 func handleSysCapabilitiesAccessor(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			respondError(w, http.StatusNotFound, nil)
 			return
@@ -55,7 +53,6 @@ func handleSysCapabilitiesAccessor(core *vault.Core) http.Handler {
 
 func handleSysCapabilities(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
 			respondError(w, http.StatusNotFound, nil)
 			return
@@ -81,7 +78,6 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 		}
 
 		if path == "sys/capabilities-self" {
-			// Get the auth for the request so we can access the token directly
 			req := requestAuth(r, &logical.Request{})
 			path = "sys/capabilities"
 			data["token"] = req.ClientToken
@@ -99,7 +95,6 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 			return
 		}
 
-		log.Printf("http: response: %#v\n", resp)
 		respondLogical(w, r, path, false, resp)
 	})
 

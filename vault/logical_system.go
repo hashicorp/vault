@@ -46,11 +46,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				Fields: map[string]*framework.FieldSchema{
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token.",
+						Description: "Accessor of the token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Path for which capabilities are being queried.",
+						Description: "Path on which capabilities are being queried.",
 					},
 				},
 
@@ -58,8 +58,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 					logical.UpdateOperation: b.handleCapabilitiesAccessor,
 				},
 
-				HelpSynopsis:    "help_synopsis_capabilities_accessor",
-				HelpDescription: "help_description_capabilities_accessor",
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
 			},
 			&framework.Path{
 				Pattern: "capabilities$",
@@ -67,11 +67,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token",
+						Description: "Token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Path for which capabilities are being queried.",
+						Description: "Path on which capabilities are being queried.",
 					},
 				},
 
@@ -79,8 +79,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 					logical.UpdateOperation: b.handleCapabilities,
 				},
 
-				HelpSynopsis:    "help_synopsis_capabilities",
-				HelpDescription: "help_description_capabilities",
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][0]),
 			},
 
 			&framework.Path{
@@ -1481,5 +1481,13 @@ Enable a new audit backend or disable an existing backend.
 	"rekey_backup": {
 		"Allows fetching or deleting the backup of the rotated unseal keys.",
 		"",
+	},
+
+	"capabilities": {
+		"Fetches the capabilities of the given token on the given path.",
+	},
+
+	"capabilities_accessor": {
+		"Fetches the capabilities of the token associated with the given token, on the given path.",
 	},
 }
