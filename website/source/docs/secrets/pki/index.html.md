@@ -765,6 +765,14 @@ subpath for interactive help output.
         The number of bits to use. Defaults to `2048`. Must be changed to a
         valid value if the `key_type` is `ec`.
       </li>
+      <li>
+        <span class="param">exclude_cn_from_sans</span>
+        <span class="param-flags">optional</span>
+        If set, the given `common_name` will not be included in DNS or Email
+        Subject Alternate Names (as appropriate). Useful if the CN is not a
+        hostname or email address, but is instead some human-readable
+        identifier.
+      </li>
     </ul>
   </dd>
 
@@ -877,6 +885,14 @@ subpath for interactive help output.
         defaults to `pem`. If `der`, the output is base64 encoded. If
         `pem_bundle`, the `certificate` field will contain the private key,
         certificate, and issuing CA, concatenated.
+      </li>
+      <li>
+        <span class="param">exclude_cn_from_sans</span>
+        <span class="param-flags">optional</span>
+        If set, the given `common_name` will not be included in DNS or Email
+        Subject Alternate Names (as appropriate). Useful if the CN is not a
+        hostname or email address, but is instead some human-readable
+        identifier.
       </li>
     </ul>
   </dd>
@@ -1081,6 +1097,7 @@ subpath for interactive help output.
         If set, when used with the CSR signing endpoint, the common name in the
         CSR will be used instead of taken from the JSON data. This does `not`
         include any requested SANs in the CSR. Defaults to `false`.
+      </li>
     </ul>
   </dd>
 
@@ -1248,8 +1265,8 @@ subpath for interactive help output.
         max).
       </li>
       <li>
-      <span class="param">format</span>
-      <span class="param-flags">optional</span>
+        <span class="param">format</span>
+        <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
         `pem_bundle`, the `certificate` field will contain the private key (if exported),
@@ -1274,6 +1291,14 @@ subpath for interactive help output.
         has a maximum path length set, in which case the path length is set to
         one less than that of the signing certificate.  A limit of `0` means a
         literal path length of zero.
+      </li>
+      <li>
+        <span class="param">exclude_cn_from_sans</span>
+        <span class="param-flags">optional</span>
+        If set, the given `common_name` will not be included in DNS or Email
+        Subject Alternate Names (as appropriate). Useful if the CN is not a
+        hostname or email address, but is instead some human-readable
+        identifier.
       </li>
     </ul>
   </dd>
@@ -1367,6 +1392,14 @@ subpath for interactive help output.
         literal path length of zero.
       </li>
       <li>
+        <span class="param">exclude_cn_from_sans</span>
+        <span class="param-flags">optional</span>
+        If set, the given `common_name` will not be included in DNS or Email
+        Subject Alternate Names (as appropriate). Useful if the CN is not a
+        hostname or email address, but is instead some human-readable
+        identifier.
+      </li>
+      <li>
         <span class="param">use_csr_values</span>
         <span class="param-flags">optional</span>
         If set to `true`, then: 1) Subject information, including names and
@@ -1447,19 +1480,27 @@ subpath for interactive help output.
         valid if the role allows IP SANs (which is the default).
       </li>
       <li>
-      <span class="param">ttl</span>
-      <span class="param-flags">optional</span>
+        <span class="param">ttl</span>
+        <span class="param-flags">optional</span>
         Requested Time To Live. Cannot be greater than the role's `max_ttl`
         value. If not provided, the role's `ttl` value will be used. Note that
         the role values default to system values if not explicitly set.
       </li>
       <li>
-      <span class="param">format</span>
-      <span class="param-flags">optional</span>
+        <span class="param">format</span>
+        <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
         `pem_bundle`, the `certificate` field will contain the certificate and
         issuing CA, concatenated.
+      </li>
+      <li>
+        <span class="param">exclude_cn_from_sans</span>
+        <span class="param-flags">optional</span>
+        If set, the given `common_name` will not be included in DNS or Email
+        Subject Alternate Names (as appropriate). Useful if the CN is not a
+        hostname or email address, but is instead some human-readable
+        identifier.
       </li>
     </ul>
   </dd>
