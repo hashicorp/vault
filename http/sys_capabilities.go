@@ -10,6 +10,17 @@ import (
 
 func handleSysCapabilitiesAccessor(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Determine the path...
+		if !strings.HasPrefix(r.URL.Path, "/v1/") {
+			respondError(w, http.StatusNotFound, nil)
+			return
+		}
+		path := r.URL.Path[len("/v1/"):]
+		if path == "" {
+			respondError(w, http.StatusNotFound, nil)
+			return
+		}
+
 		switch r.Method {
 		case "PUT":
 		case "POST":
@@ -18,28 +29,42 @@ func handleSysCapabilitiesAccessor(core *vault.Core) http.Handler {
 			return
 		}
 
-		// Parse the request if we can
-		var data capabilitiesAccessorRequest
+		var data map[string]interface{}
 		if err := parseRequest(r, &data); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		capabilities, err := core.CapabilitiesAccessor(data.Accessor, data.Path)
-		if err != nil {
-			respondErrorStatus(w, err)
+		// Perform ACL checking, audit logging and route the request to
+		// the system backend for request processing
+		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
+			Operation:  logical.UpdateOperation,
+			Path:       path,
+			Data:       data,
+			Connection: getConnection(r),
+		}))
+		if !ok {
 			return
 		}
 
-		respondOk(w, &capabilitiesResponse{
-			Capabilities: capabilities,
-		})
+		respondLogical(w, r, path, false, resp)
 	})
 
 }
 
 func handleSysCapabilities(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Determine the path...
+		if !strings.HasPrefix(r.URL.Path, "/v1/") {
+			respondError(w, http.StatusNotFound, nil)
+			return
+		}
+		path := r.URL.Path[len("/v1/"):]
+		if path == "" {
+			respondError(w, http.StatusNotFound, nil)
+			return
+		}
+
 		switch r.Method {
 		case "PUT":
 		case "POST":
@@ -48,8 +73,7 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 			return
 		}
 
-		// Parse the request if we can
-		var data capabilitiesRequest
+		var data map[string]interface{}
 		if err := parseRequest(r, &data); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
@@ -58,10 +82,24 @@ func handleSysCapabilities(core *vault.Core) http.Handler {
 		if strings.HasPrefix(r.URL.Path, "/v1/sys/capabilities-self") {
 			// Get the auth for the request so we can access the token directly
 			req := requestAuth(r, &logical.Request{})
-			data.Token = req.ClientToken
+			data["token"] = req.ClientToken
 		}
 
-		capabilities, err := core.Capabilities(data.Token, data.Path)
+		// Perform ACL checking, audit logging and route the request to
+		// the system backend for request processing
+		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
+			Operation:  logical.UpdateOperation,
+			Path:       path,
+			Data:       data,
+			Connection: getConnection(r),
+		}))
+		if !ok {
+			return
+		}
+
+		respondLogical(w, r, path, false, resp)
+
+		capabilities, err := core.Capabilities(data["token"].(string), data["path"].(string))
 		if err != nil {
 			respondErrorStatus(w, err)
 			return

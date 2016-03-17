@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -40,6 +41,28 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 		},
 
 		Paths: []*framework.Path{
+			&framework.Path{
+				Pattern: "capabilities-accessor$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"accessor": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Accessor of the token.",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path for which capabilities are being queried.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleCapabilitiesAccessorUpdate,
+				},
+
+				HelpSynopsis:    "help_synopsis_capabilities_accessor",
+				HelpDescription: "help_description_capabilities_accessor",
+			},
+
 			&framework.Path{
 				Pattern: "rekey/backup$",
 
@@ -413,6 +436,27 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 type SystemBackend struct {
 	Core    *Core
 	Backend *framework.Backend
+}
+
+func (b *SystemBackend) handleCapabilitiesAccessorUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	log.Printf("handleCapabilitiesAccessorUpdate: request: %#v\n data:%#v\n", req, d)
+	accessor := d.Get("accessor").(string)
+	if accessor == "" {
+		return logical.ErrorResponse("missing accessor"), nil
+	}
+	path := d.Get("path").(string)
+	if accessor == "" {
+		return logical.ErrorResponse("missing path"), nil
+	}
+	capabilities, err := b.Core.CapabilitiesAccessor(accessor, path)
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"capabilities": capabilities,
+		},
+	}, nil
 }
 
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
