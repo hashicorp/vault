@@ -557,6 +557,48 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
+				case !reflect.DeepEqual([]string{"Intermediate Cert"}, cert.DNSNames):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"Intermediate Cert"}, cert.DNSNames)
+				}
+
+				return nil
+			},
+		},
+
+		// Same as above but exclude adding to sans
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "root/sign-intermediate",
+			Data: map[string]interface{}{
+				"common_name":          "Intermediate Cert",
+				"csr":                  string(csrPem2048),
+				"format":               "der",
+				"exclude_cn_from_sans": true,
+			},
+			Check: func(resp *logical.Response) error {
+				certString := resp.Data["certificate"].(string)
+				if certString == "" {
+					return fmt.Errorf("no certificate returned")
+				}
+				certBytes, _ := base64.StdEncoding.DecodeString(certString)
+				certs, err := x509.ParseCertificates(certBytes)
+				if err != nil {
+					return fmt.Errorf("returned cert cannot be parsed: %v", err)
+				}
+				if len(certs) != 1 {
+					return fmt.Errorf("unexpected returned length of certificates: %d", len(certs))
+				}
+				cert := certs[0]
+
+				switch {
+				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
+				case !reflect.DeepEqual(expected.CRLDistributionPoints, cert.CRLDistributionPoints):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
+				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
+				case !reflect.DeepEqual([]string(nil), cert.DNSNames):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string(nil), cert.DNSNames)
 				}
 
 				return nil

@@ -559,15 +559,17 @@ func generateCreationBundle(b *backend,
 	dnsNames := []string{}
 	emailAddresses := []string{}
 	{
-		if strings.Contains(cn, "@") {
-			// Note: emails are not disallowed if the role's email protection
-			// flag is false, because they may well be included for
-			// informational purposes; it is up to the verifying party to
-			// ensure that email addresses in a subject alternate name can be
-			// used for the purpose for which they are presented
-			emailAddresses = append(emailAddresses, cn)
-		} else {
-			dnsNames = append(dnsNames, cn)
+		if !data.Get("exclude_cn_from_sans").(bool) {
+			if strings.Contains(cn, "@") {
+				// Note: emails are not disallowed if the role's email protection
+				// flag is false, because they may well be included for
+				// informational purposes; it is up to the verifying party to
+				// ensure that email addresses in a subject alternate name can be
+				// used for the purpose for which they are presented
+				emailAddresses = append(emailAddresses, cn)
+			} else {
+				dnsNames = append(dnsNames, cn)
+			}
 		}
 		cnAltInt, ok := data.GetOk("alt_names")
 		if ok {
