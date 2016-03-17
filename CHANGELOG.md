@@ -6,11 +6,12 @@ FEATURES:
    on configured roles [GH-998]
  * **Token Accessors**: Vault now provides an accessor with each issued token.
    This accessor is an identifier that can be used for a limited set of
-   actions, notably for token revocation. This value is by default logged in
+   actions, notably for token revocation. This value can be logged in
    plaintext to audit logs, and in combination with the plaintext metadata
    logged to audit logs, provides a searchable and straightforward way to
-   revoke particular users' or services' tokens in many cases. At enable time,
-   audit backends can be configured to HMAC the accessor instead.
+   revoke particular users' or services' tokens in many cases. To enable
+   plaintext audit logging of these accessors, set `hmac_accessor=false` when
+   enabling an audit backend.
  * **Token Credential Backend Roles**: Roles can now be created in the `token`
    credential backend that allow modifying token behavior in ways that are not
    otherwise exposed or easily delegated. This allows creating tokens with a
