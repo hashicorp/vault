@@ -141,7 +141,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Writer:   logGate,
 	}, "", log.LstdFlags)
 
-	if err := c.setupTelementry(config); err != nil {
+	if err := c.setupTelemetry(config); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
@@ -503,8 +503,8 @@ func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
 	return url.String(), nil
 }
 
-// setupTelementry is used to setup the telemetry sub-systems
-func (c *ServerCommand) setupTelementry(config *server.Config) error {
+// setupTelemetry is used to setup the telemetry sub-systems
+func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
