@@ -44,10 +44,7 @@ func Handler(core *vault.Core) http.Handler {
 }
 
 func sysCapabilitiesCallback(req *logical.Request) error {
-	if req.Path == "sys/capabilities-self" {
-		req.Path = "sys/capabilities"
-		req.Data["token"] = req.ClientToken
-	}
+	req.Data["token"] = req.ClientToken
 	return nil
 }
 

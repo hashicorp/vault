@@ -82,6 +82,27 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][0]),
 			},
+			&framework.Path{
+				Pattern: "capabilities-self$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token for which capabilities are being queried.",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path on which capabilities are being queried.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleCapabilities,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][0]),
+			},
 
 			&framework.Path{
 				Pattern: "rekey/backup$",
