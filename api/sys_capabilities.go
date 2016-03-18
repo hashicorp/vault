@@ -16,9 +16,17 @@ func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	var result CapabilitiesResponse
+	var result map[string]interface{}
 	err = resp.DecodeJSON(&result)
-	return result.Capabilities, err
+	if err != nil {
+		return nil, err
+	}
+	var capabilities []string
+	capabilitiesRaw := result["capabilities"].([]interface{})
+	for _, capability := range capabilitiesRaw {
+		capabilities = append(capabilities, capability.(string))
+	}
+	return capabilities, nil
 }
 
 func (c *Sys) Capabilities(token, path string) ([]string, error) {
@@ -38,11 +46,15 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	var result CapabilitiesResponse
+	var result map[string]interface{}
 	err = resp.DecodeJSON(&result)
-	return result.Capabilities, err
-}
-
-type CapabilitiesResponse struct {
-	Capabilities []string `json:"capabilities"`
+	if err != nil {
+		return nil, err
+	}
+	var capabilities []string
+	capabilitiesRaw := result["capabilities"].([]interface{})
+	for _, capability := range capabilitiesRaw {
+		capabilities = append(capabilities, capability.(string))
+	}
+	return capabilities, nil
 }

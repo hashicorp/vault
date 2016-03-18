@@ -113,6 +113,125 @@ func TestSystemBackend_unmount(t *testing.T) {
 	}
 }
 
+var capabilitiesPolicy = `
+name = "test"
+path "foo/bar*" {
+	capabilities = ["create", "sudo", "update"]
+}
+path "sys/capabilities*" {
+	capabilities = ["update"]
+}
+`
+
+func TestSystemBackend_Capabilities(t *testing.T) {
+	testCapabilities(t, "capabilities")
+	testCapabilities(t, "capabilities-self")
+}
+
+func testCapabilities(t *testing.T, endpoint string) {
+	core, b, rootToken := testCoreSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, endpoint)
+	req.Data["token"] = rootToken
+	req.Data["path"] = "any_path"
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	actual := resp.Data["capabilities"]
+	expected := []string{"root"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+
+	policy, _ := Parse(capabilitiesPolicy)
+	err = core.policyStore.SetPolicy(policy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	req = logical.TestRequest(t, logical.UpdateOperation, endpoint)
+	req.Data["token"] = "tokenid"
+	req.Data["path"] = "foo/bar"
+
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	actual = resp.Data["capabilities"]
+	expected = []string{"create", "sudo", "update"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+}
+
+func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
+	core, b, rootToken := testCoreSystemBackend(t)
+	te, err := core.tokenStore.Lookup(rootToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "capabilities-accessor")
+	// Accessor of root token
+	req.Data["accessor"] = te.Accessor
+	req.Data["path"] = "any_path"
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	actual := resp.Data["capabilities"]
+	expected := []string{"root"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+
+	policy, _ := Parse(capabilitiesPolicy)
+	err = core.policyStore.SetPolicy(policy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+
+	te, err = core.tokenStore.Lookup("tokenid")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "capabilities-accessor")
+	req.Data["accessor"] = te.Accessor
+	req.Data["path"] = "foo/bar"
+
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	actual = resp.Data["capabilities"]
+	expected = []string{"create", "sudo", "update"}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+}
+
 func TestSystemBackend_unmount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 

@@ -41,6 +41,71 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 
 		Paths: []*framework.Path{
 			&framework.Path{
+				Pattern: "capabilities-accessor$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"accessor": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Accessor of the token for which capabilities are being queried.",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path on which capabilities are being queried.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleCapabilitiesAccessor,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "capabilities$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token for which capabilities are being queried.",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path on which capabilities are being queried.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleCapabilities,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][1]),
+			},
+			&framework.Path{
+				Pattern: "capabilities-self$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token for which capabilities are being queried.",
+					},
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Path on which capabilities are being queried.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleCapabilities,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_self"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities_self"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "rekey/backup$",
 
 				Fields: map[string]*framework.FieldSchema{},
@@ -413,6 +478,45 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 type SystemBackend struct {
 	Core    *Core
 	Backend *framework.Backend
+}
+
+// handleCapabilitiesreturns the ACL capabilities of the token for a given path
+func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	capabilities, err := b.Core.Capabilities(d.Get("token").(string), d.Get("path").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"capabilities": capabilities,
+		},
+	}, nil
+}
+
+// handleCapabilitiesAccessor returns the ACL capabilities of the token associted
+// with the given accessor for a given path.
+func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	accessor := d.Get("accessor").(string)
+	if accessor == "" {
+		return logical.ErrorResponse("missing accessor"), nil
+	}
+
+	token, err := b.Core.tokenStore.lookupByAccessor(accessor)
+	if err != nil {
+		return nil, err
+	}
+
+	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"capabilities": capabilities,
+		},
+	}, nil
 }
 
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
@@ -1399,5 +1503,23 @@ Enable a new audit backend or disable an existing backend.
 	"rekey_backup": {
 		"Allows fetching or deleting the backup of the rotated unseal keys.",
 		"",
+	},
+
+	"capabilities": {
+		"Fetches the capabilities of the given token on the given path.",
+		`Returns the capabilities of the given token on the path.
+		The path will be searched for a path match in all the policies associated with the token.`,
+	},
+
+	"capabilities_self": {
+		"Fetches the capabilities of the given token on the given path.",
+		`Returns the capabilities of the client token on the path.
+		The path will be searched for a path match in all the policies associated with the client token.`,
+	},
+
+	"capabilities_accessor": {
+		"Fetches the capabilities of the token associated with the given token, on the given path.",
+		`When there is no access to the token, token accessor can be used to fetch the token's capabilities
+		on a given path.`,
 	},
 }
