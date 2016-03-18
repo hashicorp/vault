@@ -38,7 +38,7 @@ func TestCapabilities(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	expected = []string{"sudo", "read", "create"}
+	expected = []string{"create", "read", "sudo"}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
