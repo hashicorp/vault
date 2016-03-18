@@ -168,7 +168,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 	}
 
 	actual = resp.Data["capabilities"]
-	expected = []string{"sudo", "update", "create"}
+	expected = []string{"create", "sudo", "update"}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
@@ -226,7 +226,7 @@ func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 	}
 
 	actual = resp.Data["capabilities"]
-	expected = []string{"sudo", "update", "create"}
+	expected = []string{"create", "sudo", "update"}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}

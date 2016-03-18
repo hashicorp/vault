@@ -1,5 +1,7 @@
 package vault
 
+import "sort"
+
 // Struct to identify user input errors.
 // This is helpful in responding the appropriate status codes to clients
 // from the HTTP endpoints.
@@ -52,5 +54,7 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 
-	return acl.Capabilities(path), nil
+	capabilities := acl.Capabilities(path)
+	sort.Strings(capabilities)
+	return capabilities, nil
 }
