@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-type PrepareRequest func(req *logical.Request) error
+type PrepareRequestFunc func(req *logical.Request) error
 
-func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequest) http.Handler {
+func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {

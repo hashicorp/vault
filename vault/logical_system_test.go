@@ -2,6 +2,7 @@ package vault
 
 import (
 	"crypto/sha256"
+	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -111,6 +112,18 @@ func TestSystemBackend_unmount(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+}
+
+func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
+	core, b, token := testCoreSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "capabilities-accessor")
+	lookupResp, err := core.tokenStore.Lookup(token)
+	if err != nil {
+		t.Fatalf(err)
+	}
+	log.Printf("b: %#v\n", b)
+	log.Printf("req: %#v\n", req)
+	log.Printf("lookupResp: %#v\n", lookupResp)
 }
 
 func TestSystemBackend_unmount_invalid(t *testing.T) {
