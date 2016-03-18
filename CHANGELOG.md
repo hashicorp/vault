@@ -8,6 +8,8 @@ IMPROVEMENTS:
    command [GH-1228]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
+ * sys/capabilities: Enforcing ACL checks for requests that query the capabilities
+   of a token on a given path [GH-1221]
 
 ## 0.5.2 (March 16th, 2016)
 
