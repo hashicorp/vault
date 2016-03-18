@@ -2,17 +2,17 @@
 
 IMPROVEMENTS:
 
- * credential/cert: Renewal requests are rejected if the set of policies has
-   changed since the token was issued [GH-477]
+ * command/auth: Restoring the previous authenticated token if the `auth` command
+   fails to authenticate the provided token [GH-1233]
  * command/write: `-format` and `-field` can now be used with the `write`
    command [GH-1228]
+ * credential/cert: Renewal requests are rejected if the set of policies has
+   changed since the token was issued [GH-477]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforcing ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
- * command/auth: Restoring the previous authenticated token if the `auth` command
-   fails to authenticate the provided token [GH-1233]
-
+ 
 ## 0.5.2 (March 16th, 2016)
 
 FEATURES:
