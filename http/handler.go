@@ -26,23 +26,31 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/renew/", handleLogical(core, false))
+	mux.Handle("/v1/sys/renew/", handleLogical(core, false, nil))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
 	mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core))
 	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
-	mux.Handle("/v1/sys/capabilities", handleSysCapabilities(core))
-	mux.Handle("/v1/sys/capabilities-self", handleSysCapabilities(core))
-	mux.Handle("/v1/sys/capabilities-accessor", handleSysCapabilitiesAccessor(core))
-	mux.Handle("/v1/sys/", handleLogical(core, true))
-	mux.Handle("/v1/", handleLogical(core, false))
+	//mux.Handle("/v1/sys/capabilities", handleLogical(core, false, sysCapabilitiesCallback))
+	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesCallback))
+	//mux.Handle("/v1/sys/capabilities-accessor", handleSysCapabilitiesAccessor(core))
+	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
+	mux.Handle("/v1/", handleLogical(core, false, nil))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
 
 	return handler
+}
+
+func sysCapabilitiesCallback(req *logical.Request) error {
+	if req.Path == "sys/capabilities-self" {
+		req.Path = "sys/capabilities"
+		req.Data["token"] = req.ClientToken
+	}
+	return nil
 }
 
 // stripPrefix is a helper to strip a prefix from the path. It will

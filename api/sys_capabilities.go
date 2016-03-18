@@ -22,7 +22,7 @@ func (c *Sys) CapabilitiesSelf(path string) ([]string, error) {
 		return nil, err
 	}
 	var capabilities []string
-	capabilitiesRaw := result["data"].(map[string]interface{})["capabilities"].([]interface{})
+	capabilitiesRaw := result["capabilities"].([]interface{})
 	for _, capability := range capabilitiesRaw {
 		capabilities = append(capabilities, capability.(string))
 	}
@@ -52,7 +52,7 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 	var capabilities []string
-	capabilitiesRaw := result["data"].(map[string]interface{})["capabilities"].([]interface{})
+	capabilitiesRaw := result["capabilities"].([]interface{})
 	for _, capability := range capabilitiesRaw {
 		capabilities = append(capabilities, capability.(string))
 	}
