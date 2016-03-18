@@ -59,8 +59,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "capabilities$",
 
@@ -80,7 +81,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][1]),
 			},
 			&framework.Path{
 				Pattern: "capabilities-self$",
@@ -100,8 +101,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 					logical.UpdateOperation: b.handleCapabilities,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["capabilities"][0]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_self"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["capabilities_self"][1]),
 			},
 
 			&framework.Path{
@@ -1506,9 +1507,19 @@ Enable a new audit backend or disable an existing backend.
 
 	"capabilities": {
 		"Fetches the capabilities of the given token on the given path.",
+		`Returns the capabilities of the given token on the path.
+		The path will be searched for a path match in all the policies associated with the token.`,
+	},
+
+	"capabilities_self": {
+		"Fetches the capabilities of the given token on the given path.",
+		`Returns the capabilities of the client token on the path.
+		The path will be searched for a path match in all the policies associated with the client token.`,
 	},
 
 	"capabilities_accessor": {
 		"Fetches the capabilities of the token associated with the given token, on the given path.",
+		`When there is no access to the token, token accessor can be used to fetch the token's capabilities
+		on a given path.`,
 	},
 }

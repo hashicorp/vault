@@ -33,7 +33,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
 	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
 	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
-	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesCallback))
+	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesSelfCallback))
 	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
 	mux.Handle("/v1/", handleLogical(core, false, nil))
 
@@ -43,7 +43,14 @@ func Handler(core *vault.Core) http.Handler {
 	return handler
 }
 
-func sysCapabilitiesCallback(req *logical.Request) error {
+// ClientToken is required in the handler of sys/capabilities-self endpoint in
+// system backend. But the ClientToken gets obfuscated before the request gets
+// forwarded to any logical backend. So, setting the ClientToken in the data
+// field for this request.
+func sysCapabilitiesSelfCallback(req *logical.Request) error {
+	if req == nil || req.Data == nil {
+		return fmt.Errorf("invalid request")
+	}
 	req.Data["token"] = req.ClientToken
 	return nil
 }
