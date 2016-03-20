@@ -6,7 +6,7 @@ description: |-
   The '/sys/step-down' endpoint causes the node to give up active status.
 ---
 
-# /sys/seal
+# /sys/step-down
 
 <dl>
   <dt>Description</dt>
