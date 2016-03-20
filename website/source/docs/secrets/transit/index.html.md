@@ -450,7 +450,7 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Generate a new high-entropy key and the valued encrypted with the named
+    Generate a new high-entropy key and the value encrypted with the named
     key. Optionally return the plaintext of the key as well. Whether plaintext
     is returned depends on the path; as a result, you can use Vault ACL
     policies to control whether a user is allowed to retrieve the plaintext
