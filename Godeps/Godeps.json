@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.6",
+	"GodepVersion": "v60",
 	"Packages": [
 		"./..."
 	],
@@ -262,6 +263,10 @@
 			"Rev": "733b8bc2648778c6f3f3aad3cc576ba9ad28eec8"
 		},
 		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "62e4364d64b32762febb61f2c88c0a29bc49a225"
+		},
+		{
 			"ImportPath": "github.com/golang/snappy",
 			"Rev": "5f1c01d9f64b941dd9582c638279d046eda6ca31"
 		},
@@ -404,6 +409,11 @@
 			"Rev": "218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f"
 		},
 		{
+			"ImportPath": "github.com/tebeka/selenium",
+			"Comment": "v0.8.5-31-gb74d4ed",
+			"Rev": "b74d4edef359b67717298bb492c298065ed599d1"
+		},
+		{
 			"ImportPath": "golang.org/x/crypto/bcrypt",
 			"Rev": "de93d05161db39bcbd84d3da2e54c4a18f37f0b1"
 		},
@@ -464,7 +474,15 @@
 			"Rev": "e7da8edaa52631091740908acaf2c2d4c9b3ce90"
 		},
 		{
+			"ImportPath": "golang.org/x/net/context/ctxhttp",
+			"Rev": "e7da8edaa52631091740908acaf2c2d4c9b3ce90"
+		},
+		{
 			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "045497edb6234273d67dbc25da3f2ddbc4c4cacf"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/google",
 			"Rev": "045497edb6234273d67dbc25da3f2ddbc4c4cacf"
 		},
 		{
@@ -472,8 +490,72 @@
 			"Rev": "045497edb6234273d67dbc25da3f2ddbc4c4cacf"
 		},
 		{
+			"ImportPath": "golang.org/x/oauth2/jws",
+			"Rev": "045497edb6234273d67dbc25da3f2ddbc4c4cacf"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/jwt",
+			"Rev": "045497edb6234273d67dbc25da3f2ddbc4c4cacf"
+		},
+		{
 			"ImportPath": "golang.org/x/sys/unix",
 			"Rev": "7a56174f0086b32866ebd746a794417edbc678a1"
+		},
+		{
+			"ImportPath": "google.golang.org/api/gensupport",
+			"Rev": "fceeaa645c4015c833842e6ed6052b2dda667079"
+		},
+		{
+			"ImportPath": "google.golang.org/api/googleapi",
+			"Rev": "fceeaa645c4015c833842e6ed6052b2dda667079"
+		},
+		{
+			"ImportPath": "google.golang.org/api/googleapi/internal/uritemplates",
+			"Rev": "fceeaa645c4015c833842e6ed6052b2dda667079"
+		},
+		{
+			"ImportPath": "google.golang.org/api/oauth2/v2",
+			"Rev": "fceeaa645c4015c833842e6ed6052b2dda667079"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal/app_identity",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal/base",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal/datastore",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal/log",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal/modules",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/appengine/internal/remote_api",
+			"Rev": "12d5545dc1cfa6047a286d5e853841b6471f4c19"
+		},
+		{
+			"ImportPath": "google.golang.org/cloud/compute/metadata",
+			"Rev": "ab6762587120f590adf808437a5819b991ac2d20"
+		},
+		{
+			"ImportPath": "google.golang.org/cloud/internal",
+			"Rev": "ab6762587120f590adf808437a5819b991ac2d20"
 		},
 		{
 			"ImportPath": "gopkg.in/asn1-ber.v1",
