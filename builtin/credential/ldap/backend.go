@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"strings"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -148,12 +149,17 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 				if dnAttr.Name == "memberOf" {
 					for _,value := range dnAttr.Values {
 						memberOfDN, err := ldap.ParseDN(value)
-						if err != nil || len(memberOfDN.RDNs) == 0 || len(memberOfDN.RDNs[0].Attributes) == 0 {
-							continue
+						if err != nil {
+							return nil, nil, err
 						}
-						// I assume the standard states that CN is the first RDN attribute
-						gname := memberOfDN.RDNs[0].Attributes[0].Value;
-						ldapGroups[gname] = true
+
+						for _, rdn := range memberOfDN.RDNs {
+							for _, rdnTypeAndValue := range rdn.Attributes {
+								if strings.EqualFold(rdnTypeAndValue.Type, "CN") {
+									ldapGroups[rdnTypeAndValue.Value] = true
+								}
+							}
+						}
 					}
 				}
 			}
@@ -164,6 +170,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Find groups by searching in groupDN for any of the memberUid, member or uniqueMember attributes
+	// and retrieving the CN in the DN result
 	sresult, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
@@ -175,11 +182,16 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	for _, e := range sresult.Entries {
 		dn, err := ldap.ParseDN(e.DN)
-		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
-			continue
+		if err != nil {
+			return nil, nil, err
 		}
-		gname := dn.RDNs[0].Attributes[0].Value
-		ldapGroups[gname] = true;
+		for _, rdn := range dn.RDNs {
+			for _, rdnTypeAndValue := range rdn.Attributes {
+				if strings.EqualFold(rdnTypeAndValue.Type, "CN" ) {
+					ldapGroups[rdnTypeAndValue.Value] = true
+				}
+			}
+		}
 	}
 
 	var allgroups []string
