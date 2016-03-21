@@ -128,7 +128,6 @@ func googleDomain() string {
 	return environmentVariable(GoogleDomainEnvVarName)
 }
 
-const sharedAuthCodeURL = "auth_code"
 
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
@@ -144,7 +143,7 @@ func TestBackend_Config(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	stepsSharedState := map[string]string{}
+	stepsSharedState := &sharedTestState{}
 
 	configData1 := map[string]interface{}{
 		"domain": googleDomain(),
@@ -169,23 +168,49 @@ func TestBackend_Config(t *testing.T) {
 		"applicationId": googleClientID(),
 		"applicationSecret": googleClientSecret(),
 	}
+	testRenewTokenConfigData4 := map[string]interface{}{
+		"ttl":          "51h",
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, configData1),
-			testAuthCodeURL(t, &stepsSharedState),
-			testLoginWrite(t, &stepsSharedState, expectedTTL1.Nanoseconds(), false),
+			testAuthCodeURL(t, stepsSharedState),
+			testLoginWrite(t, stepsSharedState, expectedTTL1.Nanoseconds(), false),
+			testRenewToken(t, testRenewTokenConfigData4, stepsSharedState),
 			testConfigWrite(t, configData2),
-			testLoginWrite(t, &stepsSharedState, expectedTTL2.Nanoseconds(), false),
+			testLoginWrite(t, stepsSharedState, expectedTTL2.Nanoseconds(), false),
 			testConfigWrite(t, configData3),
-			testLoginWrite(t, &stepsSharedState, 0, true),
+			testLoginWrite(t, stepsSharedState, 0, true),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, stepsSharedState *map[string]string, expectedTTL int64, expectFail bool) logicaltest.TestStep {
+type sharedTestState struct {
+	authCodeUrl string
+	auth *logical.Auth
+}
+
+func testRenewToken(t *testing.T, testRenewTokenConfigData4 map[string]interface{}, sharedState *sharedTestState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: 	logical.RenewOperation,
+		Data:		testRenewTokenConfigData4,
+		PreFlight: func(r *logical.Request) error {
+			r.Auth = sharedState.auth
+			return nil
+		},
+		Check: func(resp *logical.Response) error {
+			if resp.IsError() {
+				return fmt.Errorf("token renewal failed")
+			}
+			return nil
+		},
+	}
+}
+
+func testLoginWrite(t *testing.T, stepsSharedState *sharedTestState, expectedTTL int64, expectFail bool) logicaltest.TestStep {
 
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -193,7 +218,7 @@ func testLoginWrite(t *testing.T, stepsSharedState *map[string]string, expectedT
 		ErrorOk:   true,
 		Data:      nil,
 		PreFlight: func(r *logical.Request) error {
-			r.Data = loginData(t, (*stepsSharedState)[sharedAuthCodeURL])
+			r.Data = loginData(t, stepsSharedState.authCodeUrl)
 			return nil
 		},
 		Check: func(resp *logical.Response) error {
@@ -205,6 +230,7 @@ func testLoginWrite(t *testing.T, stepsSharedState *map[string]string, expectedT
 			if actualTTL != expectedTTL {
 				return fmt.Errorf("TTL mismatched. Expected: %d Actual: %d", expectedTTL, resp.Auth.LeaseOptions.TTL.Nanoseconds())
 			}
+			stepsSharedState.auth = resp.Auth
 			return nil
 		},
 	}
@@ -233,26 +259,26 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	stepsSharedState := map[string]string{}
+	stepsSharedState := &sharedTestState{}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAuthCodeURL(t, &stepsSharedState),
+			testAuthCodeURL(t, stepsSharedState),
 			testAccMap(t, "default", "root"),
-			testAccLogin(t, &stepsSharedState, []string{"root"}),
+			testAccLogin(t, stepsSharedState, []string{"root"}),
 		},
 	})
 }
 
-func testAuthCodeURL(t *testing.T, stepsSharedState *map[string]string) logicaltest.TestStep {
+func testAuthCodeURL(t *testing.T, stepsSharedState *sharedTestState) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path: codeURLPath,
 		Check: func(resp *logical.Response) error {
-			(*stepsSharedState)[sharedAuthCodeURL] = resp.Data["url"].(string)
+			stepsSharedState.authCodeUrl = resp.Data["url"].(string)
 			return nil
 		},
 	}
@@ -301,13 +327,13 @@ func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	}
 }
 
-func testAccLogin(t *testing.T, stepsSharedState *map[string]string, keys []string) logicaltest.TestStep {
+func testAccLogin(t *testing.T, stepsSharedState *sharedTestState, keys []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Data:	nil,
 		PreFlight: func(r *logical.Request) error {
-			r.Data = loginData(t, (*stepsSharedState)[sharedAuthCodeURL])
+			r.Data = loginData(t, stepsSharedState.authCodeUrl)
 			return nil
 		},
 		Unauthenticated: true,

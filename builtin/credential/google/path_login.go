@@ -12,6 +12,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/net/context"
 	oauth "google.golang.org/api/oauth2/v2"
+	"errors"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -76,6 +77,8 @@ func (b *backend) pathLogin(
 //TODO: nathang this is probably wrong... we can't renew login with the redeemed code... understand this flow and fix
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	return nil, errors.New("google path login renew not implemented yet")
 
 	token := req.Auth.InternalData["code"].(string)
 
