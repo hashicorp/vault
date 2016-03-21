@@ -98,6 +98,8 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
+
+	// Format binddn
 	binddn := ""
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		if err = c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
@@ -112,7 +114,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search for binddn failed: %v", err)), nil
 		}
 		if len(sresult.Entries) != 1 {
-			return nil, logical.ErrorResponse("LDAP search for binddn 0 or not uniq"), nil
+			return nil, logical.ErrorResponse("LDAP search for binddn 0 or not unique"), nil
 		}
 		binddn = sresult.Entries[0].DN
 	} else {
@@ -127,8 +129,10 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	userdn := ""
+	ldapGroups := make(map[string]bool)
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
+		// and the groups from memberOf attributes
 		sresult, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
@@ -139,13 +143,27 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 		for _, e := range sresult.Entries {
 			userdn = e.DN
+			// Find the groups the user is member of from the 'memberOf' attribute extracting the CN
+			for _,dnAttr := range e.Attributes {
+				if dnAttr.Name == "memberOf" {
+					for _,value := range dnAttr.Values {
+						memberOfDN, err := ldap.ParseDN(value)
+						if err != nil || len(memberOfDN.RDNs) == 0 || len(memberOfDN.RDNs[0].Attributes) == 0 {
+							continue
+						}
+						// I assume the standard states that CN is the first RDN attribute
+						gname := memberOfDN.RDNs[0].Attributes[0].Value;
+						ldapGroups[gname] = true
+					}
+				}
+			}
 		}
+
 	} else {
 		userdn = binddn
 	}
 
-	// Enumerate all groups the user is member of. The search filter should
-	// work with both openldap and MS AD standard schemas.
+	// Find groups by searching in groupDN for any of the memberUid, member or uniqueMember attributes
 	sresult, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
@@ -155,23 +173,28 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
 	}
 
-	var allgroups []string
-	var policies []string
-
-	user, err := b.User(req.Storage, username)
-	if err == nil && user != nil {
-		allgroups = append(allgroups, user.Groups...)
-	}
-
 	for _, e := range sresult.Entries {
 		dn, err := ldap.ParseDN(e.DN)
 		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
 			continue
 		}
 		gname := dn.RDNs[0].Attributes[0].Value
-		allgroups = append(allgroups, gname)
+		ldapGroups[gname] = true;
 	}
 
+	var allgroups []string
+	// Import the custom added groups from ldap backend
+	user, err := b.User(req.Storage, username)
+	if err == nil && user != nil {
+		allgroups = append(allgroups, user.Groups...)
+	}
+	// add the LDAP groups
+	for key, _ := range ldapGroups {
+		allgroups = append(allgroups, key)
+	}
+
+	// Retrieve policies
+	var policies []string
 	for _, gname := range allgroups {
 		group, err := b.Group(req.Storage, gname)
 		if err == nil && group != nil {
