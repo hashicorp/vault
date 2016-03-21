@@ -110,6 +110,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Backend = c2.Backend
 	}
 
+	result.HABackend = c.HABackend
+	if c2.HABackend != nil {
+		result.HABackend = c2.HABackend
+	}
+
 	result.Telemetry = c.Telemetry
 	if c2.Telemetry != nil {
 		result.Telemetry = c2.Telemetry
