@@ -7,11 +7,16 @@ import (
 
 //Factory for google backend
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	_, err := b.Setup(conf)
+	if err != nil {
+		return b, err
+	}
+	return b, nil
 }
 
 //Backend for google
-func Backend() *framework.Backend {
+func Backend() *backend {
 	var b backend
 	b.Map = &framework.PolicyMap{
 		PathMap: framework.PathMap{
@@ -38,7 +43,7 @@ func Backend() *framework.Backend {
 		AuthRenew: b.pathLoginRenew,
 	}
 
-	return b.Backend
+	return &b
 }
 
 type backend struct {

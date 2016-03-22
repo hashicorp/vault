@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/tebeka/selenium"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 const GoogleApplicationIDEnvVarName = "GOOGLE_TESTING_ONLY_APPLICATION_ID"
@@ -168,9 +169,6 @@ func TestBackend_Config(t *testing.T) {
 		"applicationId": googleClientID(),
 		"applicationSecret": googleClientSecret(),
 	}
-	testRenewTokenConfigData4 := map[string]interface{}{
-		"ttl":          "51h",
-	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -179,7 +177,6 @@ func TestBackend_Config(t *testing.T) {
 			testConfigWrite(t, configData1),
 			testAuthCodeURL(t, stepsSharedState),
 			testLoginWrite(t, stepsSharedState, expectedTTL1.Nanoseconds(), false),
-			testRenewToken(t, testRenewTokenConfigData4, stepsSharedState),
 			testConfigWrite(t, configData2),
 			testLoginWrite(t, stepsSharedState, expectedTTL2.Nanoseconds(), false),
 			testConfigWrite(t, configData3),
@@ -191,23 +188,6 @@ func TestBackend_Config(t *testing.T) {
 type sharedTestState struct {
 	authCodeUrl string
 	auth *logical.Auth
-}
-
-func testRenewToken(t *testing.T, testRenewTokenConfigData4 map[string]interface{}, sharedState *sharedTestState) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: 	logical.RenewOperation,
-		Data:		testRenewTokenConfigData4,
-		PreFlight: func(r *logical.Request) error {
-			r.Auth = sharedState.auth
-			return nil
-		},
-		Check: func(resp *logical.Response) error {
-			if resp.IsError() {
-				return fmt.Errorf("token renewal failed")
-			}
-			return nil
-		},
-	}
 }
 
 func testLoginWrite(t *testing.T, stepsSharedState *sharedTestState, expectedTTL int64, expectFail bool) logicaltest.TestStep {
@@ -230,7 +210,6 @@ func testLoginWrite(t *testing.T, stepsSharedState *sharedTestState, expectedTTL
 			if actualTTL != expectedTTL {
 				return fmt.Errorf("TTL mismatched. Expected: %d Actual: %d", expectedTTL, resp.Auth.LeaseOptions.TTL.Nanoseconds())
 			}
-			stepsSharedState.auth = resp.Auth
 			return nil
 		},
 	}
@@ -341,3 +320,72 @@ func testAccLogin(t *testing.T, stepsSharedState *sharedTestState, keys []string
 		Check: logicaltest.TestCheckAuth(keys),
 	}
 }
+
+func Test_Renew(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	ttl, _ := time.ParseDuration("1m")
+	conf, err := logical.StorageEntryJSON("config", config{
+		Domain:     googleDomain(),
+		TTL:        ttl,
+		MaxTTL:     ttl,
+		ApplicationID: googleClientID(),
+		ApplicationSecret: googleClientSecret(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	storage.Put(conf)
+
+	lb, err := Factory(&logical.BackendConfig{
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+		StorageView: storage,
+	})
+	if err != nil {
+		t.Fatal("error: %s", err)
+	}
+
+	b := lb.(*backend)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code := codeUrl(googleClientID(), googleClientSecret())
+
+	fd := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"code": googleCode(t, code),
+		},
+		Schema: pathLogin(b).Fields,
+	}
+
+	req := &logical.Request{
+		Storage: storage,
+		Auth:    &logical.Auth{},
+	}
+
+	resp, err := b.pathLogin(req, fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Auth.InternalData = resp.Auth.InternalData
+	req.Auth.Metadata = resp.Auth.Metadata
+	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
+	req.Auth.IssueTime = time.Now()
+	req.Auth.Policies = resp.Auth.Policies
+
+	resp, err = b.pathLoginRenew(req, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error: %#v", *resp)
+	}
+}
+

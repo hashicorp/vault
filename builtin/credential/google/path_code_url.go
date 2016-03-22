@@ -37,20 +37,27 @@ func (b *backend) pathCodeURL(
 		return logical.ErrorResponse(configErrorMsg), nil
 	}
 
-	googleConfig := &oauth2.Config{
-		ClientID:     config.ApplicationID,
-		ClientSecret: config.ApplicationSecret,
-		Endpoint:     google.Endpoint,
-		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
-		Scopes:       []string{ "email" },
-	}
-
-	authURL := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOnline, oauth2.ApprovalForce)
+	authURL := codeUrl(config.ApplicationID, config.ApplicationSecret)
 
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"url": authURL,
 		},
 	}, nil
+}
+
+func codeUrl(applicationId string, applicationSecret string) string {
+
+	googleConfig := &oauth2.Config{
+		ClientID:     applicationId,
+		ClientSecret: applicationSecret,
+		Endpoint:     google.Endpoint,
+		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
+		Scopes:       []string{ "email" },
+	}
+
+	authURL := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+
+	return authURL
 }
 

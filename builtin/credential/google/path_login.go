@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"errors"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -11,8 +12,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/net/context"
-	oauth "google.golang.org/api/oauth2/v2"
-	"errors"
+	goauth "google.golang.org/api/oauth2/v2"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -31,13 +31,15 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
+const refreshToken = "refreshToken"
+
 func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	code := data.Get("code").(string)
 
 	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(req, code); err != nil {
+	if verifyResponse, resp, err := b.verifyCredentials(req, code, nil); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -55,11 +57,13 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse(fmt.Sprintf("[ERR]:%s", err)), nil
 	}
 
+	internalData := map[string]interface{}{
+		refreshToken: verifyResp.RefreshToken,
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{
-				"code": code,
-			},
+			InternalData: internalData,
 			Policies: verifyResp.Policies,
 			Metadata: map[string]string{
 				"username": 	verifyResp.User,
@@ -74,16 +78,18 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
-//TODO: nathang this is probably wrong... we can't renew login with the redeemed code... understand this flow and fix
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
-	return nil, errors.New("google path login renew not implemented yet")
-
-	token := req.Auth.InternalData["code"].(string)
+	previousToken := req.Auth.InternalData[refreshToken]
+	if (previousToken == nil) {
+		return nil, errors.New("no refresh token from previous login")
+	}
+	refreshToken := previousToken.(*oauth2.Token)
 
 	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
+
+	if verifyResponse, resp, err := b.verifyCredentials(req, "", refreshToken); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -92,7 +98,7 @@ func (b *backend) pathLoginRenew(
 	}
 	sort.Strings(req.Auth.Policies)
 	if !reflect.DeepEqual(verifyResp.Policies, req.Auth.Policies) {
-		return logical.ErrorResponse("policies do not match"), nil
+		return logical.ErrorResponse(fmt.Sprintf("policies do not match.\nnew policies: %s\nold policies:%s\n", verifyResp.Policies, req.Auth.Policies)), nil
 	}
 
 	config, err := b.Config(req.Storage)
@@ -102,7 +108,7 @@ func (b *backend) pathLoginRenew(
 	return framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyCredentialsResp, *logical.Response, error) {
+func (b *backend) verifyCredentials(req *logical.Request, code string, tok *oauth2.Token) (*verifyCredentialsResp, *logical.Response, error) {
 
 	config, err := b.Config(req.Storage)
 
@@ -126,18 +132,20 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 		Scopes:       []string{ "email" },
 	}
 
-	tok, err := googleConfig.Exchange(oauth2.NoContext, code)
-	if (err != nil) {
-		return nil, nil, err
+	if (tok == nil && code != "") {
+		tok, err = googleConfig.Exchange(oauth2.NoContext, code)
+		if (err != nil) {
+			return nil, nil, err
+		}
 	}
 
 	httpClient := googleConfig.Client(context.Background(), tok)
-	service, err := oauth.New(httpClient)
+	service, err := goauth.New(httpClient)
 	if (err != nil) {
 		return nil, nil, err
 	}
 
-	me := oauth.NewUserinfoV2MeService(service)
+	me := goauth.NewUserinfoV2MeService(service)
 	info, err := me.Get().Do()
 	if (err != nil) {
 		return nil, nil, err
@@ -148,7 +156,7 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 
 
 	if domain != config.Domain {
-		return nil, logical.ErrorResponse(fmt.Sprintf("user is of domain %s, not part of required domain %s", domain, config.Domain)), nil
+		return nil, logical.ErrorResponse(fmt.Sprintf("user %s is of domain %s, not part of required domain %s", user, domain, config.Domain)), nil
 	}
 
 	teamNames := []string{ "default" }
@@ -193,6 +201,8 @@ func (b *backend) verifyCredentials(req *logical.Request, code string) (*verifyC
 		User:     user,
 		Domain:      domain,
 		Policies: policiesList,
+		RefreshToken: tok,
+		Name: info.Name,
 	}, nil, nil
 }
 
@@ -201,4 +211,5 @@ type verifyCredentialsResp struct {
 	Domain  string
 	Name	string
 	Policies []string
+	RefreshToken *oauth2.Token
 }
