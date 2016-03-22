@@ -26,6 +26,8 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 			return
 		}
 
+	
+
 		// Determine the operation
 		var op logical.Operation
 		switch r.Method {
@@ -43,6 +45,13 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 				}
 				if list {
 					op = logical.ListOperation
+				}
+			}
+			dataStr :=  queryVals.Get("data")
+			if dataStr != "" {
+				dataOnly, err := strconv.ParseBool(dataStr)
+				if err != nil {
+					respondError(w, http.StatusBadRequest, nil)
 				}
 			}
 		case "POST", "PUT":
