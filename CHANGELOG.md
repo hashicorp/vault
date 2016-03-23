@@ -12,6 +12,11 @@ IMPROVEMENTS:
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforcing ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
+
+BUG FIXES:
+
+ * secret/pki: Don't check whether a certificate is destined to be a CA
+   certificate if sign-verbatim endpoint is used [GH-1250]
  
 ## 0.5.2 (March 16th, 2016)
 
