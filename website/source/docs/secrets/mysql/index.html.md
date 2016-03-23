@@ -41,7 +41,7 @@ instance. This is done by providing a DSN (Data Source Name):
 
 ```
 $ vault write mysql/config/connection \
-    connection_url="root:root@tcp(192.168.33.10:3306)/"
+    value="root:root@tcp(192.168.33.10:3306)/"
 Success! Data written to: mysql/config/connection
 ```
 
