@@ -512,10 +512,6 @@ func signCert(b *backend,
 		return nil, err
 	}
 
-	if useCSRValues && !isCA {
-		return nil, certutil.UserError{Err: "cannot use CSR values with a non-CA certificate"}
-	}
-
 	creationBundle.IsCA = isCA
 	creationBundle.UseCSRValues = useCSRValues
 
