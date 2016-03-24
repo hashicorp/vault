@@ -47,7 +47,7 @@ func EquivalentPolicies(a, b []string) bool {
 		return false
 	}
 
-	for i := range a {
+	for i := range sortedA {
 		if sortedA[i] != sortedB[i] {
 			return false
 		}
