@@ -321,6 +321,10 @@ func testAccLogin(t *testing.T, stepsSharedState *sharedTestState, keys []string
 	}
 }
 
+type AuthContainer struct {
+	Auth *logical.Auth
+}
+
 func Test_Renew(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	ttl, _ := time.ParseDuration("1m")
@@ -371,11 +375,22 @@ func Test_Renew(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Auth.InternalData = resp.Auth.InternalData
+
+	//serialization and deserialization happens in real flow and effects the structure of the token
+	authContainer := &AuthContainer{
+		Auth: resp.Auth,
+	}
+	storageEntry, err := logical.StorageEntryJSON("key", authContainer)
+	if (err != nil) {
+		t.Fatal(err)
+	}
+	storageEntry.DecodeJSON(&authContainer)
+
+	req.Auth.InternalData = authContainer.Auth.InternalData
 	req.Auth.Metadata = resp.Auth.Metadata
 	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
 	req.Auth.IssueTime = time.Now()
-	req.Auth.Policies = resp.Auth.Policies
+	req.Auth.Policies = append(resp.Auth.Policies, "default") //this happens in core
 
 	resp, err = b.pathLoginRenew(req, nil)
 	if err != nil {

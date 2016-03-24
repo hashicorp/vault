@@ -13,6 +13,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/net/context"
 	goauth "google.golang.org/api/oauth2/v2"
+	"time"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -78,14 +79,43 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
+func sliceToMap(slice []string) map[string]bool{
+	m := map[string]bool{}
+	for _, element := range slice {
+		m[element] = true
+	}
+	return m
+}
+
+//copied from vault/util... make public?
+func strListContains(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
-	previousToken := req.Auth.InternalData[refreshToken]
-	if (previousToken == nil) {
+	previousTokenObject := req.Auth.InternalData[refreshToken]
+	if (previousTokenObject == nil) {
 		return nil, errors.New("no refresh token from previous login")
 	}
-	refreshToken := previousToken.(*oauth2.Token)
+	previousTokenMap := previousTokenObject.(map[string]interface{})
+	expiryString := previousTokenMap["expiry"].(string)
+	expiry, err := time.Parse(time.RFC3339Nano, expiryString)
+	if (err != nil) {
+		return nil, fmt.Errorf("could not parse time (%s) from persisted token", expiryString)
+	}
+	refreshToken := &oauth2.Token{
+		AccessToken: previousTokenMap["access_token"].(string),
+		TokenType: previousTokenMap["token_type"].(string),
+		RefreshToken: previousTokenMap["refresh_token"].(string),
+		Expiry: expiry,
+	}
 
 	var verifyResp *verifyCredentialsResp
 
@@ -97,8 +127,8 @@ func (b *backend) pathLoginRenew(
 		verifyResp = verifyResponse
 	}
 	sort.Strings(req.Auth.Policies)
-	if !reflect.DeepEqual(verifyResp.Policies, req.Auth.Policies) {
-		return logical.ErrorResponse(fmt.Sprintf("policies do not match.\nnew policies: %s\nold policies:%s\n", verifyResp.Policies, req.Auth.Policies)), nil
+	if !reflect.DeepEqual(sliceToMap(verifyResp.Policies), sliceToMap(req.Auth.Policies)) {
+		return logical.ErrorResponse(fmt.Sprintf("policies do not match. new policies: %s. old policies: %s.", verifyResp.Policies, req.Auth.Policies)), nil
 	}
 
 	config, err := b.Config(req.Storage)
@@ -194,6 +224,13 @@ func (b *backend) verifyCredentials(req *logical.Request, code string, tok *oaut
 	//}
 
 	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
+	//be compatible with core, see issue https://github.com/hashicorp/vault/issues/1256
+	if strListContains(policiesList, "root") {
+		policiesList = []string{"root"}
+	} else {
+		policiesList = append(policiesList, "default")
+	}
+
 	if err != nil {
 		return nil, nil, err
 	}
