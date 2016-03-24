@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -130,8 +129,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	if !policies.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
-		return logical.ErrorResponse(fmt.Sprintf("policies have changed (%#v vs %#v), not renewing", cert.Policies, req.Auth.Policies)), nil
-		//		return logical.ErrorResponse("policies have changed, not renewing"), nil
+		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
 	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
