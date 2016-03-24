@@ -7,10 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/policies"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -59,16 +59,12 @@ func (b *backend) pathLogin(
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-	// We want to sort here so we can check properly during renewal)
-	sort.Strings(matched.Entry.Policies)
-
 	// Generate a response
 	resp := &logical.Response{
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{
 				"subject_key_id":   skid,
 				"authority_key_id": akid,
-				"policies":         strings.Join(matched.Entry.Policies, ","),
 			},
 			Policies:    matched.Entry.Policies,
 			DisplayName: matched.Entry.DisplayName,
@@ -132,9 +128,7 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	policies := cert.Policies
-	sort.Strings(policies)
-	if strings.Join(policies, ",") != req.Auth.InternalData["policies"] {
+	if !policies.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 

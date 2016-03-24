@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/policies"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -67,15 +68,13 @@ func (b *backend) pathLoginRenew(
 
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
-	prevpolicies := req.Auth.Metadata["policies"]
 
-	policies, resp, err := b.Login(req, username, password)
-	if len(policies) == 0 {
+	loginPolicies, resp, err := b.Login(req, username, password)
+	if len(loginPolicies) == 0 {
 		return resp, err
 	}
 
-	sort.Strings(policies)
-	if strings.Join(policies, ",") != prevpolicies {
+	if !policies.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
