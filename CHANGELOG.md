@@ -15,6 +15,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * credential/various: Fix renewal conditions when `default` policy is not
+   contained in the backend config [GH-1256]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
  
