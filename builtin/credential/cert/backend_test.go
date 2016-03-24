@@ -436,6 +436,7 @@ func Test_Renew(t *testing.T) {
 	req.Auth.InternalData = resp.Auth.InternalData
 	req.Auth.Metadata = resp.Auth.Metadata
 	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
+	req.Auth.Policies = resp.Auth.Policies
 	req.Auth.IssueTime = time.Now()
 
 	// Normal renewal

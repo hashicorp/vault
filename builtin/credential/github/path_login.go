@@ -3,10 +3,9 @@ package github
 import (
 	"fmt"
 	"net/url"
-	"reflect"
-	"sort"
 
 	"github.com/google/go-github/github"
+	"github.com/hashicorp/vault/helper/policies"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -83,8 +82,7 @@ func (b *backend) pathLoginRenew(
 	} else {
 		verifyResp = verifyResponse
 	}
-	sort.Strings(req.Auth.Policies)
-	if !reflect.DeepEqual(verifyResp.Policies, req.Auth.Policies) {
+	if !policies.EquivalentPolicies(verifyResp.Policies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies do not match"), nil
 	}
 

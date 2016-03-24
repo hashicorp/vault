@@ -246,7 +246,7 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"foo", "bar"}),
+		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
 	}
 }
 

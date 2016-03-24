@@ -6,10 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
-	"reflect"
-	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/policies"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -120,12 +119,11 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Get the policies associated with the app
-	policies, err := b.MapAppId.Policies(req.Storage, appId)
+	mapPolicies, err := b.MapAppId.Policies(req.Storage, appId)
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(req.Auth.Policies)
-	if !reflect.DeepEqual(policies, req.Auth.Policies) {
+	if !policies.EquivalentPolicies(mapPolicies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies do not match"), nil
 	}
 
