@@ -5,10 +5,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 )
 
 const codeURLPath = "code_url"
+const codeURLResponsePropertyName = "url"
+const readCodeUrlPathHelp = "run 'vault read auth/" + BackendName + "/" + codeURLPath + "' for a link to obtain an auth code from google"
 
 func pathCodeURL(b *backend) *framework.Path {
 	return &framework.Path{
@@ -29,32 +30,22 @@ func (b *backend) pathCodeURL(
 		return nil, err
 	}
 
-	if config.ApplicationID == "" {
-		return logical.ErrorResponse(configErrorMsg), nil
-	}
-
-	if config.ApplicationSecret == "" {
-		return logical.ErrorResponse(configErrorMsg), nil
+	if config.ApplicationID == "" || config.ApplicationSecret == "" {
+		return logical.ErrorResponse(writeConfigPathHelp), nil
 	}
 
 	authURL := codeUrl(config.ApplicationID, config.ApplicationSecret)
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"url": authURL,
+			codeURLResponsePropertyName: authURL,
 		},
 	}, nil
 }
 
 func codeUrl(applicationId string, applicationSecret string) string {
 
-	googleConfig := &oauth2.Config{
-		ClientID:     applicationId,
-		ClientSecret: applicationSecret,
-		Endpoint:     google.Endpoint,
-		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
-		Scopes:       []string{ "email" },
-	}
+	googleConfig := applicationOauth2Config(applicationId, applicationSecret)
 
 	authURL := googleConfig.AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 

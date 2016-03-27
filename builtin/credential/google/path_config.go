@@ -8,27 +8,39 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const configPath = "config"
+
+const domainConfigPropertyName = "domain"
+const applicationIdConfigPropertyName = "applicationId"
+const applicationSecretConfigPropertyName = "applicationSecret"
+const TTLConfigPropertyName = "ttl"
+const maxTTLConfigPropertyName = "max_ttl"
+
+const writeConfigPathHelp = `configure the google credential backend with applicationId and applicationSecret first:
+vault write auth/google/config applicationId=$GOOGLE_APPLICATION_ID applicationSecret=$GOOGLE_APPLICATION_SECRET domain=example.com`
+
+
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config",
+		Pattern: configPath,
 		Fields: map[string]*framework.FieldSchema{
-			"domain": &framework.FieldSchema{
+			domainConfigPropertyName: &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The domain users must be part of",
 			},
-			"applicationId": &framework.FieldSchema{
+			applicationIdConfigPropertyName: &framework.FieldSchema{
 				Type:	     framework.TypeString,
 				Description: "google application id",
 			},
-			"applicationSecret": &framework.FieldSchema{
+			applicationSecretConfigPropertyName: &framework.FieldSchema{
 				Type:	     framework.TypeString,
 				Description: "google application secret",
 			},
-			"ttl": &framework.FieldSchema{
+			TTLConfigPropertyName: &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `Duration after which authentication will be expired`,
 			},
-			"max_ttl": &framework.FieldSchema{
+			maxTTLConfigPropertyName: &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `Maximum duration after which authentication will be expired`,
 			},
@@ -40,36 +52,38 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
+const configEntry = "config"
+
 func (b *backend) pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	domain := data.Get("domain").(string)
-	applicationID := data.Get("applicationId").(string)
-	applicationSecret := data.Get("applicationSecret").(string)
+	domain := data.Get(domainConfigPropertyName).(string)
+	applicationID := data.Get(applicationIdConfigPropertyName).(string)
+	applicationSecret := data.Get(applicationSecretConfigPropertyName).(string)
 
 	var ttl time.Duration
 	var err error
-	ttlRaw, ok := data.GetOk("ttl")
+	ttlRaw, ok := data.GetOk(TTLConfigPropertyName)
 	if !ok || len(ttlRaw.(string)) == 0 {
 		ttl = 0
 	} else {
 		ttl, err = time.ParseDuration(ttlRaw.(string))
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid 'ttl':%s", err)), nil
+			return logical.ErrorResponse(fmt.Sprintf("Invalid '%s':%s", TTLConfigPropertyName , err)), nil
 		}
 	}
 
 	var maxTTL time.Duration
-	maxTTLRaw, ok := data.GetOk("max_ttl")
+	maxTTLRaw, ok := data.GetOk(maxTTLConfigPropertyName)
 	if !ok || len(maxTTLRaw.(string)) == 0 {
 		maxTTL = 0
 	} else {
 		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid 'max_ttl':%s", err)), nil
+			return logical.ErrorResponse(fmt.Sprintf("Invalid '%s':%s", maxTTLConfigPropertyName , err)), nil
 		}
 	}
 
-	entry, err := logical.StorageEntryJSON("config", config{
+	entry, err := logical.StorageEntryJSON(configEntry, config{
 		Domain:     domain,
 		TTL:     ttl,
 		MaxTTL:  maxTTL,
@@ -88,12 +102,11 @@ func (b *backend) pathConfigWrite(
 	return nil, nil
 }
 
-const configErrorMsg = `configure the google credential backend with applicationId first:
-	vault write auth/google/config applicationId=$GOOGLE_TESTING_ONLY_APPLICATION_ID applicationSecret=$GOOGLE_TESTING_ONLY_APPLICATION_SECRET`
+
 
 // Config returns the configuration for this backend.
 func (b *backend) Config(s logical.Storage) (*config, error) {
-	entry, err := s.Get("config")
+	entry, err := s.Get(configEntry)
 	if err != nil {
 		return nil, err
 	}

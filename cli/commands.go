@@ -64,7 +64,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"cert":     credCert.Factory,
 					"app-id":   credAppId.Factory,
 					"github":   credGitHub.Factory,
-					"google":   credGoogle.Factory,
+					credGoogle.BackendName:   credGoogle.Factory,
 					"userpass": credUserpass.Factory,
 					"ldap":     credLdap.Factory,
 				},

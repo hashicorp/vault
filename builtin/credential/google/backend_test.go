@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
-	"github.com/tebeka/selenium"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
@@ -32,96 +31,9 @@ func googleClientSecret() string {
 	return environmentVariable(GoogleApplicationSecretEnvVarName)
 }
 
-func handleError(msg string, wd selenium.WebDriver, t *testing.T, err error) {
-	if err != nil {
-		currentURL, getURLErr := wd.CurrentURL()
-		var errorURL string
-		if getURLErr != nil {
-			errorURL = "unknown url (url retrieval failed)"
-		} else {
-			errorURL = currentURL
-		}
-		t.Errorf("error while %s at url %s, error details: %s\n", msg, errorURL, err.Error())
-	}
-	return
-}
-
-func handleFindElementError(id string, wd selenium.WebDriver, t *testing.T, err error) {
-	msg := fmt.Sprintf("retrieving element by id %s", id)
-	handleError(msg, wd, t, err)
-	return
-}
-
-func element(id string, wd selenium.WebDriver, t *testing.T) (selenium.WebElement, error) {
-
-	element, err := wd.FindElement(selenium.ById, id)
-
-	handleFindElementError(id, wd, t, err)
-
-	return element, err
-}
-
-func googleCode(t *testing.T, authURL string) string {
-
-	user := environmentVariable(GoogleUsernameEnvVarName)
-	pass := environmentVariable(GooglePasswordEnvVarName)
-
-	caps := selenium.Capabilities {
-		"browserName": "htmlunit",
-		"javascriptEnabled": true,
-	}
-
-	wd, _ := selenium.NewRemote(caps, "")
-	defer wd.Quit()
-
-	wd.SetAsyncScriptTimeout(30000)
-	wd.SetImplicitWaitTimeout(30000)
-	wd.SetPageLoadTimeout(30000)
-	wd.MaximizeWindow("")
-	wd.Get(authURL)
-
-	var err error
-
-	emailInput, _ := element("Email", wd, t)
-	err = emailInput.SendKeys(user)
-	handleError("filling out user text box", wd, t, err)
-
-	//two flows here, one fill out user + pass, the other fill user, click next, enter pass...
-	passwordTextInputID := "Passwd"
-	passInput, err := wd.FindElement(selenium.ById, passwordTextInputID)
-	if err != nil {
-		nextButton, _ := element("next", wd, t)
-		err = nextButton.Click()
-		handleError("clicking next after inserting email", wd, t, err)
-		passInput, _ = element(passwordTextInputID, wd, t)
-	}
-	err = passInput.SendKeys(pass)
-	handleError("filling out password text box", wd, t, err)
-
-	authenticateButton, err := element("signIn", wd, t)
-	err = authenticateButton.Click()
-	handleError("clicking sign in after filling password", wd, t, err)
-
-	authorizeButtonID := "submit_approve_access"
-	authorizeButton, _ := element(authorizeButtonID, wd, t)
-	authorizationButtonEnabled, _ :=  authorizeButton.IsEnabled()
-	for i := 0 ; (!authorizationButtonEnabled) && (i < 100) ; i++ {
-		time.Sleep(100 * time.Millisecond)
-		authorizationButtonEnabled, _ =  authorizeButton.IsEnabled()
-	}
-	_, err = wd.ExecuteScript(fmt.Sprintf(`document.getElementById("%s").click();`, authorizeButtonID), []interface{}{})
-	handleError("authorizing application with required permissions", wd, t, err)
-
-	codeElement, err := element("code", wd, t)
-	code, err := codeElement.GetAttribute("value")
-	handleError("retrieving value of code", wd, t, err)
-
-	return code
-}
-
 func loginData(t *testing.T, authCodeURL string) map[string]interface{} {
 	return map[string]interface{}{
-		"code": googleCode(t, authCodeURL),
+		googleAuthCodeParameterName: googleCode(t, authCodeURL),
 	}
 }
 
@@ -147,27 +59,27 @@ func TestBackend_Config(t *testing.T) {
 	stepsSharedState := &sharedTestState{}
 
 	configData1 := map[string]interface{}{
-		"domain": googleDomain(),
-		"ttl":          "",
-		"max_ttl":      "",
-		"applicationId": googleClientID(),
-		"applicationSecret": googleClientSecret(),
+		domainConfigPropertyName: googleDomain(),
+		TTLConfigPropertyName:          "",
+		maxTTLConfigPropertyName:      "",
+		applicationIdConfigPropertyName: googleClientID(),
+		applicationSecretConfigPropertyName: googleClientSecret(),
 	}
 	expectedTTL1, _ := time.ParseDuration("24h0m0s")
 	configData2 := map[string]interface{}{
-		"domain": googleDomain(),
-		"ttl":          "1h",
-		"max_ttl":      "2h",
-		"applicationId": googleClientID(),
-		"applicationSecret": googleClientSecret(),
+		domainConfigPropertyName: googleDomain(),
+		TTLConfigPropertyName:          "1h",
+		maxTTLConfigPropertyName:      "2h",
+		applicationIdConfigPropertyName: googleClientID(),
+		applicationSecretConfigPropertyName: googleClientSecret(),
 	}
 	expectedTTL2, _ := time.ParseDuration("1h0m0s")
 	configData3 := map[string]interface{}{
-		"domain": googleDomain(),
-		"ttl":          "50h",
-		"max_ttl":      "50h",
-		"applicationId": googleClientID(),
-		"applicationSecret": googleClientSecret(),
+		domainConfigPropertyName: googleDomain(),
+		TTLConfigPropertyName:          "50h",
+		maxTTLConfigPropertyName:      "50h",
+		applicationIdConfigPropertyName: googleClientID(),
+		applicationSecretConfigPropertyName: googleClientSecret(),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -194,7 +106,7 @@ func testLoginWrite(t *testing.T, stepsSharedState *sharedTestState, expectedTTL
 
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "login",
+		Path:      loginPath,
 		ErrorOk:   true,
 		Data:      nil,
 		PreFlight: func(r *logical.Request) error {
@@ -219,7 +131,7 @@ func testLoginWrite(t *testing.T, stepsSharedState *sharedTestState, expectedTTL
 func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config",
+		Path:      configPath,
 		Data:      d,
 	}
 }
@@ -257,7 +169,7 @@ func testAuthCodeURL(t *testing.T, stepsSharedState *sharedTestState) logicaltes
 		Operation: logical.ReadOperation,
 		Path: codeURLPath,
 		Check: func(resp *logical.Response) error {
-			stepsSharedState.authCodeUrl = resp.Data["url"].(string)
+			stepsSharedState.authCodeUrl = resp.Data[codeURLResponsePropertyName].(string)
 			return nil
 		},
 	}
@@ -287,11 +199,11 @@ func testAccPreCheck(t *testing.T) {
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "config",
+		Path:      configPath,
 		Data: map[string]interface{}{
-			"domain": googleDomain(),
-			"applicationId": googleClientID(),
-			"applicationSecret": googleClientSecret(),
+			domainConfigPropertyName: googleDomain(),
+			applicationIdConfigPropertyName: googleClientID(),
+			applicationSecretConfigPropertyName: googleClientSecret(),
 		},
 	}
 }
@@ -309,7 +221,7 @@ func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 func testAccLogin(t *testing.T, stepsSharedState *sharedTestState, keys []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "login",
+		Path:      loginPath,
 		Data:	nil,
 		PreFlight: func(r *logical.Request) error {
 			r.Data = loginData(t, stepsSharedState.authCodeUrl)
@@ -361,7 +273,7 @@ func Test_Renew(t *testing.T) {
 
 	fd := &framework.FieldData{
 		Raw: map[string]interface{}{
-			"code": googleCode(t, code),
+			googleAuthCodeParameterName: googleCode(t, code),
 		},
 		Schema: pathLogin(b).Fields,
 	}

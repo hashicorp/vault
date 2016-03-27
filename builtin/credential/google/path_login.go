@@ -10,17 +10,19 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	"golang.org/x/net/context"
 	goauth "google.golang.org/api/oauth2/v2"
 	"time"
 )
 
+const loginPath = "login"
+const googleAuthCodeParameterName = "code"
+
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "login",
+		Pattern: loginPath,
 		Fields: map[string]*framework.FieldSchema{
-			"code": &framework.FieldSchema{
+			googleAuthCodeParameterName: &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Google authentication code",
 			},
@@ -37,7 +39,7 @@ const refreshToken = "refreshToken"
 func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	code := data.Get("code").(string)
+	code := data.Get(googleAuthCodeParameterName).(string)
 
 	var verifyResp *verifyCredentialsResp
 	if verifyResponse, resp, err := b.verifyCredentials(req, code, nil); err != nil {
@@ -77,24 +79,6 @@ func (b *backend) pathLogin(
 			},
 		},
 	}, nil
-}
-
-func sliceToMap(slice []string) map[string]bool{
-	m := map[string]bool{}
-	for _, element := range slice {
-		m[element] = true
-	}
-	return m
-}
-
-//copied from vault/util... make public?
-func strListContains(haystack []string, needle string) bool {
-	for _, item := range haystack {
-		if item == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func (b *backend) pathLoginRenew(
@@ -147,20 +131,14 @@ func (b *backend) verifyCredentials(req *logical.Request, code string, tok *oaut
 	}
 
 	if config.ApplicationID == "" {
-		return nil, logical.ErrorResponse(configErrorMsg), nil
+		return nil, logical.ErrorResponse(writeConfigPathHelp), nil
 	}
 
 	if config.ApplicationSecret == "" {
-		return nil, logical.ErrorResponse(configErrorMsg), nil
+		return nil, logical.ErrorResponse(writeConfigPathHelp), nil
 	}
 
-	googleConfig := &oauth2.Config{
-		ClientID:     config.ApplicationID,
-		ClientSecret: config.ApplicationSecret,
-		Endpoint:     google.Endpoint,
-		RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
-		Scopes:       []string{ "email" },
-	}
+	googleConfig := applicationOauth2Config(config.ApplicationID, config.ApplicationSecret)
 
 	if (tok == nil && code != "") {
 		tok, err = googleConfig.Exchange(oauth2.NoContext, code)
