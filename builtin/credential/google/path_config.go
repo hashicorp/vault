@@ -54,33 +54,41 @@ func pathConfig(b *backend) *framework.Path {
 
 const configEntry = "config"
 
+func readDurationFromData(data *framework.FieldData, property string) (time.Duration, *logical.Response) {
+	ttlRaw, ok := data.GetOk(property)
+	var ttl time.Duration
+	var err error
+	var rsp *logical.Response
+	if !ok || len(ttlRaw.(string)) == 0 {
+		ttl = 0
+		rsp = nil
+	} else {
+		ttl, err = time.ParseDuration(ttlRaw.(string))
+		if err != nil {
+			rsp = logical.ErrorResponse(fmt.Sprintf("Invalid '%s':%s", property , err))
+		}
+	}
+	return ttl, rsp
+}
+
 func (b *backend) pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	domain := data.Get(domainConfigPropertyName).(string)
 	applicationID := data.Get(applicationIdConfigPropertyName).(string)
 	applicationSecret := data.Get(applicationSecretConfigPropertyName).(string)
 
+	var rsp *logical.Response
 	var ttl time.Duration
-	var err error
-	ttlRaw, ok := data.GetOk(TTLConfigPropertyName)
-	if !ok || len(ttlRaw.(string)) == 0 {
-		ttl = 0
-	} else {
-		ttl, err = time.ParseDuration(ttlRaw.(string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid '%s':%s", TTLConfigPropertyName , err)), nil
-		}
+
+	ttl, rsp = readDurationFromData(data, TTLConfigPropertyName)
+	if (rsp != nil) {
+		return rsp, nil
 	}
 
 	var maxTTL time.Duration
-	maxTTLRaw, ok := data.GetOk(maxTTLConfigPropertyName)
-	if !ok || len(maxTTLRaw.(string)) == 0 {
-		maxTTL = 0
-	} else {
-		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid '%s':%s", maxTTLConfigPropertyName , err)), nil
-		}
+	maxTTL, rsp = readDurationFromData(data, maxTTLConfigPropertyName)
+	if (rsp != nil) {
+		return rsp, nil
 	}
 
 	entry, err := logical.StorageEntryJSON(configEntry, config{
