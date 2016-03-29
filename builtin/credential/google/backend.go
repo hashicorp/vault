@@ -35,14 +35,15 @@ Key/Value Pairs:
     ` + googleAuthCodeParameterName + `=<code>     The Google access code for authentication.
 `
 
+const usersToPoliciesMapPath = "users"
+
 //Backend for google
 func Backend() *backend {
 	var b backend
 	b.Map = &framework.PolicyMap{
 		PathMap: framework.PathMap{
-			Name: "teams",
+			Name: usersToPoliciesMapPath,
 		},
-		DefaultKey: "default",
 	}
 	b.Backend = &framework.Backend{
 		Help: googleBackendHelp,

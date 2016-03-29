@@ -2,7 +2,6 @@ package google
 
 import (
 	"fmt"
-	"os"
 	"testing"
 	"time"
 	"net/http"
@@ -14,14 +13,7 @@ import (
 
 const GoogleApplicationIDEnvVarName = "GOOGLE_TESTING_ONLY_APPLICATION_ID"
 const GoogleApplicationSecretEnvVarName = "GOOGLE_TESTING_ONLY_APPLICATION_SECRET"
-const GoogleUsernameEnvVarName = "GOOGLE_TESTING_ONLY_USERNAME"
-const GooglePasswordEnvVarName = "GOOGLE_TESTING_ONLY_PASSWORD"
 const GoogleDomainEnvVarName = "GOOGLE_DOMAIN"
-
-func environmentVariable(name string) string {
-
-	return os.Getenv(name)
-}
 
 func googleClientID() string {
 	return environmentVariable(GoogleApplicationIDEnvVarName)
@@ -39,6 +31,14 @@ func loginData(t *testing.T, authCodeURL string) map[string]interface{} {
 
 func googleDomain() string {
 	return environmentVariable(GoogleDomainEnvVarName)
+}
+
+func googleUsername() string {
+
+	user := googleUser()
+	name := localPartFromEmail(user)
+
+	return name
 }
 
 
@@ -136,6 +136,8 @@ func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestSte
 	}
 }
 
+const testPolicy = "myVeryOwnTestPolicy"
+
 func TestBackend_basic(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
@@ -158,8 +160,8 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAuthCodeURL(t, stepsSharedState),
-			testAccMap(t, "default", "root"),
-			testAccLogin(t, stepsSharedState, []string{"root"}),
+			testUserPolicyMap(t, googleUsername(), testPolicy),
+			testAccLogin(t, stepsSharedState, []string{ testPolicy, "default" }),
 		},
 	})
 }
@@ -208,10 +210,10 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
+func testUserPolicyMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "map/teams/" + k,
+		Path:      "map/" + usersToPoliciesMapPath + "/" + k,
 		Data: map[string]interface{}{
 			"value": v,
 		},

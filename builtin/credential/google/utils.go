@@ -3,6 +3,8 @@ package google
 import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"os"
+	"strings"
 )
 
 func applicationOauth2Config(applicationId string, applicationSecret string) *oauth2.Config {
@@ -31,4 +33,22 @@ func sliceToMap(slice []string) map[string]bool{
 		m[element] = true
 	}
 	return m
+}
+
+func environmentVariable(name string) string {
+
+	return os.Getenv(name)
+}
+
+func localPartFromEmail(email string) string {
+
+	var name string
+
+	if index := strings.Index(email, "@") ; index > -1 {
+		name = email[:index]
+	} else {
+		name = email
+	}
+
+	return name
 }

@@ -167,41 +167,9 @@ func (b *backend) verifyCredentials(req *logical.Request, code string, tok *oaut
 		return nil, logical.ErrorResponse(fmt.Sprintf("user %s is of domain %s, not part of required domain %s", user, domain, config.Domain)), nil
 	}
 
-	teamNames := []string{ "default" }
-	// Get the teams that this user is part of to determine the policies
-	//var teamNames []string
-	//
-	//teamOpt := &github.ListOptions{
-	//	PerPage: 100,
-	//}
-	//
-	//var allTeams []github.Team
-	//for {
-	//	teams, resp, err := client.Organizations.ListUserTeams(teamOpt)
-	//	if err != nil {
-	//		return nil, nil, err
-	//	}
-	//	allTeams = append(allTeams, teams...)
-	//	if resp.NextPage == 0 {
-	//		break
-	//	}
-	//	teamOpt.Page = resp.NextPage
-	//}
-	//
-	//for _, t := range allTeams {
-	//	// We only care about teams that are part of the organization we use
-	//	if *t.Organization.ID != *org.ID {
-	//		continue
-	//	}
-	//
-	//	// Append the names so we can get the policies
-	//	teamNames = append(teamNames, *t.Name)
-	//	if *t.Name != *t.Slug {
-	//		teamNames = append(teamNames, *t.Slug)
-	//	}
-	//}
+	userId := localPartFromEmail(user)
 
-	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
+	policiesList, err := b.Map.Policies(req.Storage, userId)
 	//be compatible with core, see issue https://github.com/hashicorp/vault/issues/1256
 	if strListContains(policiesList, "root") {
 		policiesList = []string{"root"}

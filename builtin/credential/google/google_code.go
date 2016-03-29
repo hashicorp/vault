@@ -36,9 +36,16 @@ func element(id string, wd selenium.WebDriver, t *testing.T) (selenium.WebElemen
 	return element, err
 }
 
+const GoogleUsernameEnvVarName = "GOOGLE_TESTING_ONLY_USERNAME"
+const GooglePasswordEnvVarName = "GOOGLE_TESTING_ONLY_PASSWORD"
+
+func googleUser() string {
+	return environmentVariable(GoogleUsernameEnvVarName)
+}
+
 func googleCode(t *testing.T, authURL string) string {
 
-	user := environmentVariable(GoogleUsernameEnvVarName)
+	user := googleUser()
 	pass := environmentVariable(GooglePasswordEnvVarName)
 
 	caps := selenium.Capabilities {
