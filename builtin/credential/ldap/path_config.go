@@ -183,6 +183,9 @@ func (b *backend) pathConfigWrite(
 	if cerr != nil {
 		return logical.ErrorResponse(cerr.Error()), nil
 	}
+	if conn == nil {
+		return logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
+	}
 	conn.Close()
 
 	entry, err := logical.StorageEntryJSON("config", cfg)

@@ -98,6 +98,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
+	if c == nil {
+		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
+	}
 	binddn := ""
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		if err = c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
