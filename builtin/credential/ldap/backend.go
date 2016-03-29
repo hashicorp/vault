@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/helper/mfa"
@@ -149,11 +150,14 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	// Enumerate all groups the user is member of. The search filter should
 	// work with both openldap and MS AD standard schemas.
-	sresult, err := c.Search(&ldap.SearchRequest{
+	sr := &ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
 		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
-	})
+	}
+	log.Println(sr.BaseDN)
+	log.Println(sr.Filter)
+	sresult, err := c.Search(sr)
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
 	}
