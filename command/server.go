@@ -314,7 +314,8 @@ func (c *ServerCommand) Run(args []string) int {
 	info["version"] = version.GetVersion().String()
 
 	// Server configuration output
-	padding := 18
+	padding := 24
+	sort.Strings(infoKeys)
 	c.Ui.Output("==> Vault server configuration:\n")
 	for _, k := range infoKeys {
 		c.Ui.Output(fmt.Sprintf(
