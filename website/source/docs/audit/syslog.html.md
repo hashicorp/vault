@@ -62,7 +62,7 @@ Following are the configuration options available for the backend.
       <li>
         <span class="param">hmac_accessor</span>
         <span class="param-flags">optional</span>
-            A boolean, if set, skips the hashing of token accessor. This option
+            A boolean, if set, enables the hashing of token accessor. Defaults to `true`. This option
             is useful only when `log_raw` is `false`.
       </li>
     </ul>
