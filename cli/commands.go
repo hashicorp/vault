@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
+	"github.com/hashicorp/vault/builtin/logical/redshift"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
@@ -70,6 +71,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"aws":        aws.Factory,
 					"consul":     consul.Factory,
 					"postgresql": postgresql.Factory,
+					"redshift": redshift.Factory,
 					"cassandra":  cassandra.Factory,
 					"pki":        pki.Factory,
 					"transit":    transit.Factory,
@@ -241,12 +243,6 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 
 		"mounts": func() (cli.Command, error) {
 			return &command.MountsCommand{
-				Meta: meta,
-			}, nil
-		},
-
-		"mount-tune": func() (cli.Command, error) {
-			return &command.MountTuneCommand{
 				Meta: meta,
 			}, nil
 		},
