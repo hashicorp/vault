@@ -902,9 +902,9 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	switch {
-	// If we have a role, we don't even consider parent policies; the role
-	// allowed policies trumps all
-	case role != nil:
+	// If we have a role, and the role defines policies, we don't even consider
+	// parent policies; the role allowed policies trumps all
+	case role != nil && len(role.AllowedPolicies) > 0:
 		if len(data.Policies) == 0 {
 			data.Policies = role.AllowedPolicies
 		} else {
