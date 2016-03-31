@@ -1063,8 +1063,14 @@ func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/auth/github/")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/github/")
 	resp, err := ts.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error since prefix does not start with 'auth/'")
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/auth/github/")
+	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}

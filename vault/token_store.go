@@ -1109,6 +1109,10 @@ func (ts *TokenStore) handleRevokePrefix(
 		return logical.ErrorResponse("missing source prefix"), logical.ErrInvalidRequest
 	}
 
+	if !strings.HasPrefix(prefix, "auth/") {
+		return logical.ErrorResponse("prefix to revoke must begin with 'auth/'"), logical.ErrInvalidRequest
+	}
+
 	// Revoke using the prefix
 	if err := ts.expiration.RevokePrefix(prefix); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
