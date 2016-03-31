@@ -15,6 +15,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * credential/ldap: Fix problem where certain error conditions when configuring
+   or opening LDAP connections would cause a panic instead of return a useful
+   error message [GH-1262]
  * credential/token: Fall back to normal parent-token semantics if
    `allowed_policies` is empty for a role. Using `allowed_policies` of
    `default` resulted in the same behavior anyways. [GH-1276]
