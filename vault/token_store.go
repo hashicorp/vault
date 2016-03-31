@@ -653,7 +653,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 
 	// Revoke all secrets under this token
 	if entry != nil {
-		if err := ts.expiration.RevokeByToken(entry.ID); err != nil {
+		if err := ts.expiration.RevokeByToken(entry); err != nil {
 			return err
 		}
 	}
