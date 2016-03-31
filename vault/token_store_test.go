@@ -1041,52 +1041,6 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
-	exp := mockExpiration(t)
-	ts := exp.tokenStore
-
-	// Create new token
-	root, err := ts.rootToken()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Create a new token
-	auth := &logical.Auth{
-		ClientToken: root.ID,
-		LeaseOptions: logical.LeaseOptions{
-			TTL: time.Hour,
-		},
-	}
-	err = exp.RegisterAuth("auth/github/login", auth)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/github/")
-	resp, err := ts.HandleRequest(req)
-	if err == nil {
-		t.Fatalf("expected error since prefix does not start with 'auth/'")
-	}
-
-	req = logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/auth/github/")
-	resp, err = ts.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	out, err := ts.Lookup(root.ID)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if out != nil {
-		t.Fatalf("bad: %v", out)
-	}
-}
-
 func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
