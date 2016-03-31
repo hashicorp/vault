@@ -91,10 +91,9 @@ block.
             path exists, the audit backend will append to it.
       </li>
       <li>
-        <span class="param">log_raw</span>
+        <span class="param">description</span>
         <span class="param-flags">optional</span>
-            A boolean, if set, logs the security sensitive information without
-            hashing, in the raw format. Defaults to `false`.
+            A description.
       </li>
       <li>
         <span class="param">options</span>
