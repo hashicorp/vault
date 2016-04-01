@@ -98,7 +98,6 @@ Usage: vault status [options]
   code also reflects the seal status (0 unsealed, 2 sealed, 1 error).
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

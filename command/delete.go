@@ -62,7 +62,6 @@ Usage: vault delete [options] path
   whether delete is supported for a path and what the behavior is.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

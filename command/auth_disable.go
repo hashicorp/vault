@@ -64,7 +64,6 @@ Usage: vault auth-disable [options] path
   If the command is exited early, the tokens will still be revoked.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

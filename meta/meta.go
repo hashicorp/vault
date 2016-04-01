@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
@@ -261,7 +260,7 @@ func GeneralOptionsUsage() string {
 
   -client-cert=path       Path to a PEM encoded client certificate for TLS
                           authentication to the Vault server. Must also specify
-                          -client-key.  Overrides the VAULT_CLIENT_CERT
+                          -client-key. Overrides the VAULT_CLIENT_CERT
                           environment variable if set.
 
   -client-key=path        Path to an unencrypted PEM encoded private key
@@ -270,8 +269,8 @@ func GeneralOptionsUsage() string {
                           if set.
 
   -tls-skip-verify        Do not verify TLS certificate. This is highly
-                          not recommended.  Verification will also be skipped
+                          not recommended. Verification will also be skipped
                           if VAULT_SKIP_VERIFY is set.
-	`
-	return strings.TrimSpace(general)
+`
+	return general
 }

@@ -58,7 +58,6 @@ Usage: vault seal [options]
   This is the same as running "vault unseal -reset".
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

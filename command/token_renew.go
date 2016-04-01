@@ -98,9 +98,7 @@ Usage: vault token-renew [options] [token] [increment]
   well; otherwise it must be passed in via the '-increment' flag.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Token Renew Options:
 
   -increment=3600         The desired increment. If not supplied, Vault will

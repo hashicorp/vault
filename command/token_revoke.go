@@ -101,9 +101,7 @@ Usage: vault token-revoke [options] [token|accessor]
   a token accessor always revokes the token along with it's child tokens.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Token Options:
 
   -accessor               A boolean flag, if set, treats the argument as an accessor of the token.

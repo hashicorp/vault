@@ -301,9 +301,7 @@ Usage: vault rekey [options] [key]
   keys be provided.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Rekey Options:
 
   -init                   Initialize the rekey operation by setting the desired

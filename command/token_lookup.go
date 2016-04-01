@@ -85,9 +85,7 @@ Usage: vault token-lookup [options] [token|accessor]
   '-accessor' flag.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Token Lookup Options:
   -accessor               A boolean flag, if set, treats the argument as an accessor of the token.
                           Note that the response of the command when this is set, will not contain

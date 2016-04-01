@@ -84,7 +84,6 @@ Usage: vault policy-write [options] name path
   loaded from the file at the given path.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

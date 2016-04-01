@@ -82,7 +82,6 @@ Usage: vault capabilities [options] [token] path
   is invalid, this command will respond with a ["deny"].
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

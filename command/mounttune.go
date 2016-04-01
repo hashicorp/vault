@@ -71,9 +71,7 @@ func (c *MountTuneCommand) Help() string {
   Example: vault mount-tune -default-lease-ttl="24h" secret
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Mount Options:
 
   -default-lease-ttl=<duration>  Default lease time-to-live for this backend.

@@ -83,9 +83,7 @@ Usage: vault list [options] path
   and endpoint-specific.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Read Options:
 
   -format=table           The format for output. By default it is a whitespace-

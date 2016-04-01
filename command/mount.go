@@ -83,9 +83,7 @@ Usage: vault mount [options] type
   secrets.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Mount Options:
 
   -description=<desc>            Human-friendly description of the purpose for

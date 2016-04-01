@@ -86,7 +86,6 @@ Usage: vault mounts [options]
   A TTL of 'system' indicates that the system default is being used.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

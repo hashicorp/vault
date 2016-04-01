@@ -134,9 +134,7 @@ Usage: vault write [options] path [data]
   prefix the "@" with a slash: "\@".
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Write Options:
 
   -f | -force             Force the write to continue without any data values

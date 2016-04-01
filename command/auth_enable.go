@@ -72,9 +72,7 @@ Usage: vault auth-enable [options] type
   access Vault.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Auth Enable Options:
 
   -description=<desc>     Human-friendly description of the purpose for the

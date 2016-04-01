@@ -65,7 +65,6 @@ Usage: vault audit-disable [options] id
   type of the backend).
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

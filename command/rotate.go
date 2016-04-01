@@ -62,7 +62,6 @@ Usage: vault rotate [options]
   disruptive.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

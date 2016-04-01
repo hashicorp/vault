@@ -109,9 +109,7 @@ Usage: vault token-create [options]
   If a role is specified, the role may override parameters specified here.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Token Options:
 
   -id="7699125c-d8...."   The token value that clients will use to authenticate

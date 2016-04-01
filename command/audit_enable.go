@@ -96,9 +96,7 @@ Usage: vault audit-enable [options] type [config...]
   Example: vault audit-enable file path=audit.log
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Audit Enable Options:
 
   -description=<desc>     A human-friendly description for the backend. This

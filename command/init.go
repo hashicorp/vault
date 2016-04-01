@@ -106,9 +106,7 @@ Usage: vault init [options]
   This command can't be called on an already-initialized Vault.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Init Options:
 
   -check                  Don't actually initialize, just check if Vault is

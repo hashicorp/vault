@@ -82,9 +82,7 @@ Usage: vault revoke [options] id
   lightly. This option requires -prefix.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Revoke Options:
 
   -prefix=true            Revoke all secrets with the matching prefix. This

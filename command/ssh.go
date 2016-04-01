@@ -256,9 +256,7 @@ Usage: vault ssh [options] username@ip
   See [https://github.com/hashicorp/vault-ssh-agent]
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 SSH Options:
 
   -role             Role to be used to create the key.

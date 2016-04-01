@@ -71,7 +71,6 @@ Usage: vault path-help [options] path
   the mount points of the backends are unknown.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

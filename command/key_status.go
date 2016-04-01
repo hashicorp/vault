@@ -50,7 +50,6 @@ Usage: vault key-status [options]
   the current key term and the key installation time.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

@@ -62,7 +62,6 @@ Usage: vault unmount [options] path
   by this backend will be revoked and its Vault data will be deleted.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

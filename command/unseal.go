@@ -115,9 +115,7 @@ Usage: vault unseal [options] [key]
   only exists to assist in scripting.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Unseal Options:
 
   -reset                  Reset the unsealing process by throwing away

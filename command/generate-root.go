@@ -315,9 +315,7 @@ Usage: vault generate-root [options] [key]
   final token value will be encrypted with this public key and base64-encoded.
   
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Rekey Options:
 
   -init                   Initialize the root generation attempt. This can only

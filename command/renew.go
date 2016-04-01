@@ -80,9 +80,7 @@ Usage: vault renew [options] id [increment]
   is not required to honor this request.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Renew Options:
 
   -format=table           The format for output. By default it is a whitespace-

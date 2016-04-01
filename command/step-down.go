@@ -50,7 +50,6 @@ Usage: vault step-down [options]
   same node to re-grab the lock and become active again.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

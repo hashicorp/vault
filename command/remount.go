@@ -68,8 +68,7 @@ Usage: vault remount [options] from to
   Example: vault remount secret/ generic/
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 
 	return strings.TrimSpace(helpText)
 }

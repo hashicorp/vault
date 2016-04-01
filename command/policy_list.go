@@ -87,7 +87,6 @@ Usage: vault policies [options] [name]
   If a name of a policy is specified, that policy is outputted.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

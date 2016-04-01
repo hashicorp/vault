@@ -101,9 +101,7 @@ Usage: vault read [options] path
   backends in use to determine key structure.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Read Options:
 
   -format=table           The format for output. By default it is a whitespace-

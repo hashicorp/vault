@@ -60,7 +60,6 @@ Usage: vault policy-delete [options] name
   doesn't exist, it is identical to not being associated with that policy.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

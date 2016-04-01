@@ -79,7 +79,6 @@ Usage: vault audit-list [options]
   only a root Vault user can view this.
 
 General Options:
-
-  ` + meta.GeneralOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }
