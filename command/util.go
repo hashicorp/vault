@@ -1,13 +1,10 @@
 package command
 
-import (
-	"github.com/hashicorp/vault/command/token"
-	"github.com/hashicorp/vault/meta"
-)
+import "github.com/hashicorp/vault/command/token"
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
-func DefaultTokenHelper(m *meta.Meta) (token.TokenHelper, error) {
-	config, err := m.Config()
+func DefaultTokenHelper() (token.TokenHelper, error) {
+	config, err := LoadConfig("")
 	if err != nil {
 		return nil, err
 	}

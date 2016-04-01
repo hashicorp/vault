@@ -24,7 +24,7 @@ import (
 // default FlagSet returned by Meta.FlagSet.
 type FlagSetFlags uint
 
-type TokenHelperFunc func(*Meta) (token.TokenHelper, error)
+type TokenHelperFunc func() (token.TokenHelper, error)
 
 const (
 	FlagSetNone    FlagSetFlags = 0
@@ -39,8 +39,7 @@ type Meta struct {
 	Ui          cli.Ui
 
 	// The things below can be set, but aren't common
-	ForceAddress string  // Address to force for API clients
-	ForceConfig  *Config // Force a config, don't load from disk
+	ForceAddress string // Address to force for API clients
 
 	// These are set by the command line flags.
 	flagAddress    string
@@ -49,10 +48,6 @@ type Meta struct {
 	flagClientCert string
 	flagClientKey  string
 	flagInsecure   bool
-
-	// These are internal and shouldn't be modified or access by anyone
-	// except Meta.
-	config *Config
 
 	// Queried if no token can be found
 	TokenHelper TokenHelperFunc
@@ -127,7 +122,7 @@ func (m *Meta) Client() (*api.Client, error) {
 	if token == "" {
 		if m.TokenHelper != nil {
 			// If we have a token, then set that
-			tokenHelper, err := m.TokenHelper(m)
+			tokenHelper, err := m.TokenHelper()
 			if err != nil {
 				return nil, err
 			}
@@ -144,25 +139,6 @@ func (m *Meta) Client() (*api.Client, error) {
 	}
 
 	return client, nil
-}
-
-// Config loads the configuration and returns it. If the configuration
-// is already loaded, it is returned.
-func (m *Meta) Config() (*Config, error) {
-	if m.config != nil {
-		return m.config, nil
-	}
-	if m.ForceConfig != nil {
-		return m.ForceConfig, nil
-	}
-
-	var err error
-	m.config, err = LoadConfig("")
-	if err != nil {
-		return nil, err
-	}
-
-	return m.config, nil
 }
 
 // FlagSet returns a FlagSet with the common flags that every

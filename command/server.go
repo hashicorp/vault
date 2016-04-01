@@ -424,7 +424,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 	}
 
 	// Set the token
-	tokenHelper, err := c.TokenHelper(&c.Meta)
+	tokenHelper, err := c.TokenHelper()
 	if err != nil {
 		return nil, err
 	}

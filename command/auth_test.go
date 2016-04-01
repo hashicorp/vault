@@ -69,7 +69,7 @@ func TestAuth_token(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	helper, err := c.TokenHelper(&c.Meta)
+	helper, err := c.TokenHelper()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -166,7 +166,7 @@ func TestAuth_method(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	helper, err := c.TokenHelper(&c.Meta)
+	helper, err := c.TokenHelper()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

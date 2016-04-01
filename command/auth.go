@@ -52,7 +52,7 @@ func (c *AuthCommand) Run(args []string) int {
 
 	args = flags.Args()
 
-	tokenHelper, err := c.TokenHelper(&c.Meta)
+	tokenHelper, err := c.TokenHelper()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing token helper: %s\n\n"+

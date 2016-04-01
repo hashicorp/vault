@@ -1,4 +1,4 @@
-package meta
+package command
 
 import (
 	"path/filepath"
@@ -15,7 +15,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	expected := &Config{
+	expected := &DefaultConfig{
 		TokenHelper: "foo",
 	}
 	if !reflect.DeepEqual(expected, config) {
