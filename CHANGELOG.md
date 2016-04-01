@@ -6,6 +6,7 @@ IMPROVEMENTS:
    fails to authenticate the provided token [GH-1233]
  * command/write: `-format` and `-field` can now be used with the `write`
    command [GH-1228]
+ * core: Don't keep lease timers around when tokens are revoked [GH-1277]
  * credential/cert: Renewal requests are rejected if the set of policies has
    changed since the token was issued [GH-477]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
