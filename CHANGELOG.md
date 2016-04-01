@@ -1,5 +1,29 @@
 ## 0.6.0 (Unreleased)
 
+SECURITY:
+
+ * Although `sys/revoke-prefix` was intended to revoke prefixes of secrets (via
+   lease IDs, which incorporate path information) and
+   `auth/token/revoke-prefix` was intended to revoke prefixes of tokens (using
+   the tokens' paths and, since 0.5.2, role information), in implementation
+   they both behaved exactly the same way since a single component in Vault is
+   responsible for managing lifetimes of both, and the type of the tracked
+   lifetime was not being checked. The end result was that either endpoint
+   could revoke both secret leases and tokens. We consider this a very minor
+   security issue as there are a number of mitigating factors: both endpoints
+   require `sudo` capability in addition to write capability, preventing
+   blanket ACL path globs from providing access; both work by using the prefix
+   to revoke as a part of the endpoint path, allowing them to be properly
+   ACL'd; and both are intended for emergency scenarios and users should
+   already not generally have access to either one. In order to prevent
+   confusion, we have simply removed `auth/token/revoke-prefix` in 0.6, and
+   `sys/revoke-prefix` will be meant for both leases and tokens instead.
+
+DEPRECATIONS/BREAKING CHANGES:
+
+ * `auth/token/revoke-prefix` has been removed. See the security notice for
+   details. [GH-1280]
+
 IMPROVEMENTS:
 
  * command/auth: Restore the previous authenticated token if the `auth` command
