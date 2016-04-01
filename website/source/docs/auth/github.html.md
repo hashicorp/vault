@@ -113,7 +113,7 @@ Success! Data written to: auth/github/map/teams/admins
 The above would make anyone in the "admins" team a root user in Vault
 (not recommended).
 
-You can then auth with a user that is a member of the "admin" team using a Personal Access Token with the `read:org` scope.
+You can then auth with a user that is a member of the "admins" team using a Personal Access Token with the `read:org` scope.
 
 ```
 $ vault auth -method=github token=000000905b381e723b3d6a7d52f148a5d43c4b45
