@@ -24,6 +24,8 @@ import (
 // default FlagSet returned by Meta.FlagSet.
 type FlagSetFlags uint
 
+type TokenHelperFunc func(*Meta) (token.TokenHelper, error)
+
 const (
 	FlagSetNone    FlagSetFlags = 0
 	FlagSetServer  FlagSetFlags = 1 << iota
@@ -51,6 +53,9 @@ type Meta struct {
 	// These are internal and shouldn't be modified or access by anyone
 	// except Meta.
 	config *Config
+
+	// Queried if no token can be found
+	TokenHelper TokenHelperFunc
 }
 
 // Client returns the API client to a Vault server given the configured
@@ -120,14 +125,16 @@ func (m *Meta) Client() (*api.Client, error) {
 
 	// If we don't have a token, check the token helper
 	if token == "" {
-		// If we have a token, then set that
-		tokenHelper, err := m.TokenHelper()
-		if err != nil {
-			return nil, err
-		}
-		token, err = tokenHelper.Get()
-		if err != nil {
-			return nil, err
+		if m.TokenHelper != nil {
+			// If we have a token, then set that
+			tokenHelper, err := m.TokenHelper(m)
+			if err != nil {
+				return nil, err
+			}
+			token, err = tokenHelper.Get()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -191,25 +198,6 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 	f.SetOutput(errW)
 
 	return f
-}
-
-// TokenHelper returns the token helper that is configured for Vault.
-func (m *Meta) TokenHelper() (token.TokenHelper, error) {
-	config, err := m.Config()
-	if err != nil {
-		return nil, err
-	}
-
-	path := config.TokenHelper
-	if path == "" {
-		return &token.InternalTokenHelper{}, nil
-	}
-
-	path, err = token.ExternalTokenHelperPath(path)
-	if err != nil {
-		return nil, err
-	}
-	return &token.ExternalTokenHelper{BinaryPath: path}, nil
 }
 
 func (m *Meta) loadCACert(path string) (*x509.CertPool, error) {

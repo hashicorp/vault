@@ -35,7 +35,9 @@ import (
 // parameter lets you set meta options for all commands.
 func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 	if metaPtr == nil {
-		metaPtr = new(meta.Meta)
+		metaPtr = &meta.Meta{
+			TokenHelper: command.DefaultTokenHelper,
+		}
 	}
 
 	if metaPtr.Ui == nil {
