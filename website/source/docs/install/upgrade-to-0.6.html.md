@@ -59,3 +59,9 @@ backend), this is a useful approach compared to strict issuer/serial number
 checking.
 
 You can use the new `cert/config` endpoint to disable this behavior.
+
+## The `auth/token/revoke-prefix` Endpoint Has Been Removed
+
+As part of addressing a minor security issue, this endpoint has been removed in
+favor of using `sys/revoke-prefix` for prefix-based revocation of both tokens
+and secrets leases.
