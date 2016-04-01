@@ -3,16 +3,18 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // RevokeCommand is a Command that mounts a new mount.
 type RevokeCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *RevokeCommand) Run(args []string) int {
 	var prefix, force bool
-	flags := c.Meta.FlagSet("revoke", FlagSetDefault)
+	flags := c.Meta.FlagSet("revoke", meta.FlagSetDefault)
 	flags.BoolVar(&prefix, "prefix", false, "")
 	flags.BoolVar(&force, "force", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -81,7 +83,7 @@ Usage: vault revoke [options] id
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Revoke Options:
 

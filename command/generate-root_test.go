@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -24,7 +25,7 @@ func TestGenerateRoot_Cancel(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &GenerateRootCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -62,7 +63,7 @@ func TestGenerateRoot_status(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &GenerateRootCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -96,7 +97,7 @@ func TestGenerateRoot_OTP(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &GenerateRootCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -201,7 +202,7 @@ func TestGenerateRoot_PGP(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &GenerateRootCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}

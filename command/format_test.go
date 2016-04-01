@@ -2,10 +2,11 @@ package command
 
 import (
 	"encoding/json"
-	"github.com/ghodss/yaml"
-	"github.com/hashicorp/vault/api"
 	"strings"
 	"testing"
+
+	"github.com/ghodss/yaml"
+	"github.com/hashicorp/vault/api"
 )
 
 var output string

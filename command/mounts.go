@@ -6,16 +6,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/meta"
 	"github.com/ryanuber/columnize"
 )
 
 // MountsCommand is a Command that lists the mounts.
 type MountsCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *MountsCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("mounts", FlagSetDefault)
+	flags := c.Meta.FlagSet("mounts", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -86,6 +87,6 @@ Usage: vault mounts [options]
 
 General Options:
 
-  ` + generalOptionsUsage()
+  ` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

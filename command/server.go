@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/mlock"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
@@ -40,7 +41,7 @@ type ServerCommand struct {
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
 
-	Meta
+	meta.Meta
 
 	ReloadFuncs map[string][]server.ReloadFunc
 }
@@ -49,7 +50,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress string
-	flags := c.Meta.FlagSet("server", FlagSetDefault)
+	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")

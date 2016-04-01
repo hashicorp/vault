@@ -5,18 +5,19 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // TokenLookupCommand is a Command that outputs details about the
 // provided.
 type TokenLookupCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *TokenLookupCommand) Run(args []string) int {
 	var format string
 	var accessor bool
-	flags := c.Meta.FlagSet("token-lookup", FlagSetDefault)
+	flags := c.Meta.FlagSet("token-lookup", meta.FlagSetDefault)
 	flags.BoolVar(&accessor, "accessor", false, "")
 	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -85,7 +86,7 @@ Usage: vault token-lookup [options] [token|accessor]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Token Lookup Options:
   -accessor               A boolean flag, if set, treats the argument as an accessor of the token.

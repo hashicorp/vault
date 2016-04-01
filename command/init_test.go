@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -15,7 +16,7 @@ import (
 func TestInit(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -61,7 +62,7 @@ func TestInit(t *testing.T) {
 func TestInit_Check(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -100,7 +101,7 @@ func TestInit_Check(t *testing.T) {
 func TestInit_custom(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -150,7 +151,7 @@ func TestInit_custom(t *testing.T) {
 func TestInit_PGP(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}

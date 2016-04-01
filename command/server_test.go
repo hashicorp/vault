@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/cli"
 )
 
@@ -66,7 +67,7 @@ listener "tcp" {
 func TestServer_CommonHA(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &ServerCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -94,7 +95,7 @@ func TestServer_CommonHA(t *testing.T) {
 func TestServer_GoodSeparateHA(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &ServerCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -122,7 +123,7 @@ func TestServer_GoodSeparateHA(t *testing.T) {
 func TestServer_BadSeparateHA(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &ServerCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -177,7 +178,7 @@ func TestServer_ReloadListener(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &ServerCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 		ShutdownCh:  MakeShutdownCh(),

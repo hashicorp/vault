@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // ListCommand is a Command that lists data from the Vault.
 type ListCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *ListCommand) Run(args []string) int {
@@ -18,7 +19,7 @@ func (c *ListCommand) Run(args []string) int {
 	var err error
 	var secret *api.Secret
 	var flags *flag.FlagSet
-	flags = c.Meta.FlagSet("list", FlagSetDefault)
+	flags = c.Meta.FlagSet("list", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -83,7 +84,7 @@ Usage: vault list [options] path
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Read Options:
 

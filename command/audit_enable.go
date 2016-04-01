@@ -7,12 +7,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/kv-builder"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
 )
 
 // AuditEnableCommand is a Command that mounts a new mount.
 type AuditEnableCommand struct {
-	Meta
+	meta.Meta
 
 	// A test stdin that can be used for tests
 	testStdin io.Reader
@@ -20,7 +21,7 @@ type AuditEnableCommand struct {
 
 func (c *AuditEnableCommand) Run(args []string) int {
 	var desc, path string
-	flags := c.Meta.FlagSet("audit-enable", FlagSetDefault)
+	flags := c.Meta.FlagSet("audit-enable", meta.FlagSetDefault)
 	flags.StringVar(&desc, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -96,7 +97,7 @@ Usage: vault audit-enable [options] type [config...]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Audit Enable Options:
 

@@ -7,11 +7,12 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/flag-kv"
 	"github.com/hashicorp/vault/helper/flag-slice"
+	"github.com/hashicorp/vault/meta"
 )
 
 // TokenCreateCommand is a Command that mounts a new mount.
 type TokenCreateCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *TokenCreateCommand) Run(args []string) int {
@@ -21,7 +22,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	var metadata map[string]string
 	var numUses int
 	var policies []string
-	flags := c.Meta.FlagSet("mount", FlagSetDefault)
+	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&displayName, "display-name", "", "")
 	flags.StringVar(&id, "id", "", "")
@@ -109,7 +110,7 @@ Usage: vault token-create [options]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Token Options:
 

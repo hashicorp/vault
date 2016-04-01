@@ -6,18 +6,19 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/meta"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
 type InitCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares int
 	var pgpKeys pgpkeys.PubKeyFilesFlag
 	var check bool
-	flags := c.Meta.FlagSet("init", FlagSetDefault)
+	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
@@ -106,7 +107,7 @@ Usage: vault init [options]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Init Options:
 

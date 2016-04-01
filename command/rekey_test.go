@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -22,7 +23,7 @@ func TestRekey(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -48,7 +49,7 @@ func TestRekey_arg(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -75,7 +76,7 @@ func TestRekey_init(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -110,7 +111,7 @@ func TestRekey_cancel(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -142,7 +143,7 @@ func TestRekey_status(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -179,7 +180,7 @@ func TestRekey_init_pgp(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}

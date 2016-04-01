@@ -10,6 +10,7 @@ import (
 
 	logicalssh "github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -87,7 +88,7 @@ func testSSH(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	mountCmd := &MountCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -120,7 +121,7 @@ func testSSH(t *testing.T) {
 	}
 
 	writeCmd := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -150,7 +151,7 @@ func testSSH(t *testing.T) {
 	}
 
 	sshCmd := &SSHCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

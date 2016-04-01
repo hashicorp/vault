@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // TokenRenewCommand is a Command that mounts a new mount.
 type TokenRenewCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *TokenRenewCommand) Run(args []string) int {
 	var format, increment string
-	flags := c.Meta.FlagSet("token-renew", FlagSetDefault)
+	flags := c.Meta.FlagSet("token-renew", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&increment, "increment", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -98,7 +99,7 @@ Usage: vault token-renew [options] [token] [increment]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Token Renew Options:
 

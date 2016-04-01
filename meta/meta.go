@@ -1,4 +1,4 @@
-package command
+package meta
 
 import (
 	"bufio"
@@ -279,9 +279,9 @@ func (m *Meta) loadCertFromPEM(path string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-// generalOptionsUsage returns the usage documenation for commonly
+// GeneralOptionsUsage returns the usage documenation for commonly
 // available options
-func generalOptionsUsage() string {
+func GeneralOptionsUsage() string {
 	general := `
   -address=addr           The address of the Vault server.
                           Overrides the VAULT_ADDR environment variable if set.

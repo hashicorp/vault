@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/kv-builder"
 	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ryanuber/columnize"
 )
@@ -24,7 +25,7 @@ type AuthHandler interface {
 
 // AuthCommand is a Command that handles authentication.
 type AuthCommand struct {
-	Meta
+	meta.Meta
 
 	Handlers map[string]AuthHandler
 
@@ -35,7 +36,7 @@ type AuthCommand struct {
 func (c *AuthCommand) Run(args []string) int {
 	var method string
 	var methods, methodHelp, noVerify bool
-	flags := c.Meta.FlagSet("auth", FlagSetDefault)
+	flags := c.Meta.FlagSet("auth", meta.FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
 	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.BoolVar(&noVerify, "no-verify", false, "")
@@ -299,7 +300,7 @@ Usage: vault auth [options] [token or config...]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Auth Options:
 

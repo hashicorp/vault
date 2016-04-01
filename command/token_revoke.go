@@ -3,17 +3,19 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // TokenRevokeCommand is a Command that mounts a new mount.
 type TokenRevokeCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *TokenRevokeCommand) Run(args []string) int {
 	var mode string
 	var accessor bool
-	flags := c.Meta.FlagSet("token-revoke", FlagSetDefault)
+	flags := c.Meta.FlagSet("token-revoke", meta.FlagSetDefault)
 	flags.BoolVar(&accessor, "accessor", false, "")
 	flags.StringVar(&mode, "mode", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -100,7 +102,7 @@ Usage: vault token-revoke [options] [token|accessor]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Token Options:
 

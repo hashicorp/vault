@@ -1,4 +1,4 @@
-package command
+package meta
 
 import (
 	"path/filepath"
@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 )
+
+const FixturePath = "./test-fixtures"
 
 func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig(filepath.Join(FixturePath, "config.hcl"))

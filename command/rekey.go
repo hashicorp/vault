@@ -9,11 +9,12 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/meta"
 )
 
 // RekeyCommand is a Command that rekeys the vault.
 type RekeyCommand struct {
-	Meta
+	meta.Meta
 
 	// Key can be used to pre-seed the key. If it is set, it will not
 	// be asked with the `password` helper.
@@ -28,7 +29,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	var shares, threshold int
 	var nonce string
 	var pgpKeys pgpkeys.PubKeyFilesFlag
-	flags := c.Meta.FlagSet("rekey", FlagSetDefault)
+	flags := c.Meta.FlagSet("rekey", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
 	flags.BoolVar(&cancel, "cancel", false, "")
 	flags.BoolVar(&status, "status", false, "")
@@ -301,7 +302,7 @@ Usage: vault rekey [options] [key]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Rekey Options:
 

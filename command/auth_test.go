@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -24,7 +25,7 @@ func TestAuth_methods(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -53,7 +54,7 @@ func TestAuth_token(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -91,7 +92,7 @@ func TestAuth_stdin(t *testing.T) {
 	stdinR, stdinW := io.Pipe()
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 		testStdin: stdinR,
@@ -120,7 +121,7 @@ func TestAuth_badToken(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -146,7 +147,7 @@ func TestAuth_method(t *testing.T) {
 		Handlers: map[string]AuthHandler{
 			"test": &testAuthHandler{},
 		},
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}

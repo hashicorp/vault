@@ -5,16 +5,17 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // MountCommand is a Command that mounts a new mount.
 type MountCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *MountCommand) Run(args []string) int {
 	var description, path, defaultLeaseTTL, maxLeaseTTL string
-	flags := c.Meta.FlagSet("mount", FlagSetDefault)
+	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
@@ -83,7 +84,7 @@ Usage: vault mount [options] type
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Mount Options:
 

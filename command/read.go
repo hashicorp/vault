@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // ReadCommand is a Command that reads data from the Vault.
 type ReadCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *ReadCommand) Run(args []string) int {
@@ -21,7 +22,7 @@ func (c *ReadCommand) Run(args []string) int {
 	var err error
 	var secret *api.Secret
 	var flags *flag.FlagSet
-	flags = c.Meta.FlagSet("read", FlagSetDefault)
+	flags = c.Meta.FlagSet("read", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&field, "field", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -101,7 +102,7 @@ Usage: vault read [options] path
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Read Options:
 
