@@ -456,6 +456,65 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_revokePrefixAuth(t *testing.T) {
+	core, ts, _, _ := TestCoreWithTokenStore(t)
+	bc := &logical.BackendConfig{
+		Logger: core.logger,
+		System: logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Hour * 24,
+			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		},
+	}
+	b := NewSystemBackend(core, bc)
+	exp := ts.expiration
+
+	te := &TokenEntry{
+		ID:   "foo",
+		Path: "auth/github/login/bar",
+	}
+	err := ts.create(te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	te, err = ts.Lookup("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("token entry was nil")
+	}
+
+	// Create a new token
+	auth := &logical.Auth{
+		ClientToken: te.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL: time.Hour,
+		},
+	}
+	err = exp.RegisterAuth(te.Path, auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/auth/github/")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	te, err = ts.Lookup(te.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if te != nil {
+		t.Fatalf("bad: %v", te)
+	}
+}
+
 func TestSystemBackend_authTable(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "auth")
