@@ -180,7 +180,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 			allgroups = append(allgroups, gname)
 		}
 	} else {
-		resp.AddWarning("No group DN configured; only policies from locally-defined groups added")
+		resp.AddWarning("no group DN configured; only policies from locally-defined groups available")
 	}
 
 	for _, gname := range allgroups {
@@ -191,7 +191,12 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if len(policies) == 0 {
-		resp.Data["error"] = "user is not a member of any authorized group"
+		errStr := "user is not a member of any authorized group"
+		if len(resp.Warnings()) > 0 {
+			errStr = fmt.Sprintf("%s; additionally, %s", errStr, resp.Warnings()[0])
+		}
+
+		resp.Data["error"] = errStr
 		return nil, resp, nil
 	}
 
