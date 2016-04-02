@@ -147,32 +147,40 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		userdn = binddn
 	}
 
-	// Enumerate all groups the user is member of. The search filter should
-	// work with both openldap and MS AD standard schemas.
-	sresult, err := c.Search(&ldap.SearchRequest{
-		BaseDN: cfg.GroupDN,
-		Scope:  2, // subtree
-		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
-	})
-	if err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
-	}
-
 	var allgroups []string
 	var policies []string
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
 
+	// Fetch custom (local) groups the user has been added to
 	user, err := b.User(req.Storage, username)
 	if err == nil && user != nil {
 		allgroups = append(allgroups, user.Groups...)
 	}
 
-	for _, e := range sresult.Entries {
-		dn, err := ldap.ParseDN(e.DN)
-		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
-			continue
+	if cfg.GroupDN != "" {
+		// Enumerate all groups the user is member of. The search filter should
+		// work with both openldap and MS AD standard schemas.
+		sresult, err := c.Search(&ldap.SearchRequest{
+			BaseDN: cfg.GroupDN,
+			Scope:  2, // subtree
+			Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
+		})
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
 		}
-		gname := dn.RDNs[0].Attributes[0].Value
-		allgroups = append(allgroups, gname)
+
+		for _, e := range sresult.Entries {
+			dn, err := ldap.ParseDN(e.DN)
+			if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
+				continue
+			}
+			gname := dn.RDNs[0].Attributes[0].Value
+			allgroups = append(allgroups, gname)
+		}
+	} else {
+		resp.AddWarning("No group DN configured; only policies from locally-defined groups added")
 	}
 
 	for _, gname := range allgroups {
@@ -183,10 +191,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if len(policies) == 0 {
-		return nil, logical.ErrorResponse("user is not member of any authorized group"), nil
+		resp.Data["error"] = "user is not a member of any authorized group"
+		return nil, resp, nil
 	}
 
-	return policies, nil, nil
+	return policies, resp, nil
 }
 
 const backendHelp = `
