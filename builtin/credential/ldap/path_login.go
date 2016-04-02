@@ -39,28 +39,36 @@ func (b *backend) pathLogin(
 	password := d.Get("password").(string)
 
 	policies, resp, err := b.Login(req, username, password)
-	if len(policies) == 0 {
-		return resp, err
+	// Handle an internal error
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		// Handle a logical error
+		if resp.IsError() {
+			return resp, nil
+		}
+	} else {
+		resp = &logical.Response{}
 	}
 
 	sort.Strings(policies)
 
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Policies: policies,
-			Metadata: map[string]string{
-				"username": username,
-				"policies": strings.Join(policies, ","),
-			},
-			InternalData: map[string]interface{}{
-				"password": password,
-			},
-			DisplayName: username,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-			},
+	resp.Auth = &logical.Auth{
+		Policies: policies,
+		Metadata: map[string]string{
+			"username": username,
+			"policies": strings.Join(policies, ","),
 		},
-	}, nil
+		InternalData: map[string]interface{}{
+			"password": password,
+		},
+		DisplayName: username,
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(
