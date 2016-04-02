@@ -33,6 +33,8 @@ IMPROVEMENTS:
  * core: Don't keep lease timers around when tokens are revoked [GH-1277]
  * credential/cert: Renewal requests are rejected if the set of policies has
    changed since the token was issued [GH-477]
+ * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
+   only return policies for local groups, plus a warning [GH-1283]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
