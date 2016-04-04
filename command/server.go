@@ -158,11 +158,16 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+
+	var seal vault.Seal = &vault.DefaultSeal{}
+
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
 		AdvertiseAddr:      config.Backend.AdvertiseAddr,
 		HAPhysical:         nil,
-		Seal:               &vault.DefaultSeal{},
+		Seal:               seal,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
@@ -261,8 +266,6 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Compile server information for output later
-	infoKeys := make([]string, 0, 10)
-	info := make(map[string]string)
 	info["backend"] = config.Backend.Type
 	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
