@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/audit"
@@ -161,6 +162,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Physical:           backend,
 		AdvertiseAddr:      config.Backend.AdvertiseAddr,
 		HAPhysical:         nil,
+		Seal:               &vault.DefaultSeal{},
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
@@ -217,10 +219,12 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the core
-	core, err := vault.NewCore(coreConfig)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))
-		return 1
+	core, newCoreError := vault.NewCore(coreConfig)
+	if newCoreError != nil {
+		if !errwrap.ContainsType(newCoreError, new(vault.NonFatalError)) {
+			c.Ui.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			return 1
+		}
 	}
 
 	// If we're in dev mode, then initialize the core
@@ -341,6 +345,11 @@ func (c *ServerCommand) Run(args []string) int {
 		go server.Serve(ln)
 	}
 
+	if newCoreError != nil {
+		c.Ui.Output("==> Warning:\n\nNon-fatal error during initialization; check the logs for more information.")
+		c.Ui.Output("")
+	}
+
 	// Output the header that the server has started
 	c.Ui.Output("==> Vault server started! Log data will stream in below:\n")
 
@@ -372,7 +381,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 	init, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
-	})
+	}, nil)
 	if err != nil {
 		return nil, err
 	}

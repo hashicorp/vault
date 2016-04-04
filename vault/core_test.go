@@ -39,135 +39,6 @@ func TestSealConfig_Invalid(t *testing.T) {
 	}
 }
 
-func TestCore_Init(t *testing.T) {
-	inm := physical.NewInmem()
-	conf := &CoreConfig{
-		Physical:     inm,
-		DisableMlock: true,
-		LogicalBackends: map[string]logical.Factory{
-			"generic": LeasedPassthroughBackendFactory,
-		},
-	}
-	c, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	init, err := c.Initialized()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if init {
-		t.Fatalf("should not be init")
-	}
-
-	// Check the seal configuration
-	outConf, err := c.SealConfig()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if outConf != nil {
-		t.Fatalf("bad: %v", outConf)
-	}
-
-	sealConf := &SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
-	}
-	res, err := c.Initialize(sealConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if len(res.SecretShares) != 1 {
-		t.Fatalf("Bad: %v", res)
-	}
-	if res.RootToken == "" {
-		t.Fatalf("Bad: %v", res)
-	}
-
-	_, err = c.Initialize(sealConf)
-	if err != ErrAlreadyInit {
-		t.Fatalf("err: %v", err)
-	}
-
-	init, err = c.Initialized()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if !init {
-		t.Fatalf("should be init")
-	}
-
-	// Check the seal configuration
-	outConf, err = c.SealConfig()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !reflect.DeepEqual(outConf, sealConf) {
-		t.Fatalf("bad: %v expect: %v", outConf, sealConf)
-	}
-
-	// New Core, same backend
-	c2, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	_, err = c2.Initialize(sealConf)
-	if err != ErrAlreadyInit {
-		t.Fatalf("err: %v", err)
-	}
-
-	init, err = c2.Initialized()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if !init {
-		t.Fatalf("should be init")
-	}
-
-	// Check the seal configuration
-	outConf, err = c2.SealConfig()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !reflect.DeepEqual(outConf, sealConf) {
-		t.Fatalf("bad: %v expect: %v", outConf, sealConf)
-	}
-}
-
-func TestCore_Init_MultiShare(t *testing.T) {
-	c := TestCore(t)
-	sealConf := &SealConfig{
-		SecretShares:    5,
-		SecretThreshold: 3,
-	}
-	res, err := c.Initialize(sealConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if len(res.SecretShares) != 5 {
-		t.Fatalf("Bad: %v", res)
-	}
-	if res.RootToken == "" {
-		t.Fatalf("Bad: %v", res)
-	}
-
-	// Check the seal configuration
-	outConf, err := c.SealConfig()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !reflect.DeepEqual(outConf, sealConf) {
-		t.Fatalf("bad: %v expect: %v", outConf, sealConf)
-	}
-}
-
 func TestCore_Unseal_MultiShare(t *testing.T) {
 	c := TestCore(t)
 
@@ -180,7 +51,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		SecretShares:    5,
 		SecretThreshold: 3,
 	}
-	res, err := c.Initialize(sealConf)
+	res, err := c.Initialize(sealConf, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -265,7 +136,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		SecretShares:    1,
 		SecretThreshold: 1,
 	}
-	res, err := c.Initialize(sealConf)
+	res, err := c.Initialize(sealConf, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -320,7 +191,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	res, err := c.Initialize(sealConf)
+	res, err := c.Initialize(sealConf, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2123,98 +1994,5 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	// Verify the response
 	if resp.Data["term"] != 2 {
 		t.Fatalf("bad: %#v", resp)
-	}
-}
-
-func TestCore_Standby_Rekey(t *testing.T) {
-	// Create the first core and initialize it
-	inm := physical.NewInmem()
-	inmha := physical.NewInmemHA()
-	advertiseOriginal := "http://127.0.0.1:8200"
-	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
-	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
-	}
-
-	// Wait for core to become active
-	testWaitActive(t, core)
-
-	// Create a second core, attached to same in-memory store
-	advertiseOriginal2 := "http://127.0.0.1:8500"
-	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
-	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
-	}
-
-	// Rekey the master key
-	newConf := &SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
-	}
-	err = core.RekeyInit(newConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	// Fetch new config with generated nonce
-	rkconf, err := core.RekeyConfig()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if rkconf == nil {
-		t.Fatalf("bad: no rekey config received")
-	}
-	result, err := core.RekeyUpdate(key, rkconf.Nonce)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if result == nil {
-		t.Fatalf("rekey failed")
-	}
-
-	// Seal the first core, should step down
-	err = core.Seal(root)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Wait for core2 to become active
-	testWaitActive(t, core2)
-
-	// Rekey the master key again
-	err = core2.RekeyInit(newConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	// Fetch new config with generated nonce
-	rkconf, err = core2.RekeyConfig()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if rkconf == nil {
-		t.Fatalf("bad: no rekey config received")
-	}
-	result, err = core2.RekeyUpdate(result.SecretShares[0], rkconf.Nonce)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if result == nil {
-		t.Fatalf("rekey failed")
 	}
 }

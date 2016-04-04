@@ -22,7 +22,8 @@ func TestRekey(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
-		Key: hex.EncodeToString(key),
+		Key:         hex.EncodeToString(key),
+		RecoveryKey: false,
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -33,7 +34,7 @@ func TestRekey(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.SealConfig()
+	config, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -49,6 +50,7 @@ func TestRekey_arg(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
+		RecoveryKey: false,
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -59,7 +61,7 @@ func TestRekey_arg(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.SealConfig()
+	config, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -91,7 +93,7 @@ func TestRekey_init(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.RekeyConfig()
+	config, err := core.RekeyConfig(false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -126,7 +128,7 @@ func TestRekey_cancel(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.RekeyConfig()
+	config, err := core.RekeyConfig(false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -204,7 +206,7 @@ func TestRekey_init_pgp(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	config, err := core.RekeyConfig()
+	config, err := core.RekeyConfig(false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

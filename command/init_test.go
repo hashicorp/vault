@@ -46,7 +46,7 @@ func TestInit(t *testing.T) {
 		t.Fatal("should be initialized")
 	}
 
-	sealConf, err := core.SealConfig()
+	sealConf, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -55,7 +55,7 @@ func TestInit(t *testing.T) {
 		SecretThreshold: 3,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
-		t.Fatalf("bad: %#v", sealConf)
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 }
 
@@ -135,7 +135,7 @@ func TestInit_custom(t *testing.T) {
 		t.Fatal("should be initialized")
 	}
 
-	sealConf, err := core.SealConfig()
+	sealConf, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -144,7 +144,7 @@ func TestInit_custom(t *testing.T) {
 		SecretThreshold: 3,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
-		t.Fatalf("bad: %#v", sealConf)
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 }
 
@@ -207,7 +207,7 @@ func TestInit_PGP(t *testing.T) {
 		t.Fatal("should be initialized")
 	}
 
-	sealConf, err := core.SealConfig()
+	sealConf, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -227,7 +227,7 @@ func TestInit_PGP(t *testing.T) {
 		PGPKeys:         pgpKeys,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
-		t.Fatalf("bad:\nexpected: %#v\ngot: %#v", expected, sealConf)
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 
 	re, err := regexp.Compile("\\s+Initial Root Token:\\s+(.*)")

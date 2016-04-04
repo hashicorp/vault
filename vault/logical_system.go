@@ -111,8 +111,22 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				Fields: map[string]*framework.FieldSchema{},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleRekeyRetrieve,
-					logical.DeleteOperation: b.handleRekeyDelete,
+					logical.ReadOperation:   b.handleRekeyRetrieveBarrier,
+					logical.DeleteOperation: b.handleRekeyDeleteBarrier,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rekey_backup"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rekey_backup"][0]),
+			},
+
+			&framework.Path{
+				Pattern: "rekey/recovery-key-backup$",
+
+				Fields: map[string]*framework.FieldSchema{},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleRekeyRetrieveRecovery,
+					logical.DeleteOperation: b.handleRekeyDeleteRecovery,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rekey_backup"][0]),
@@ -522,8 +536,10 @@ func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *fram
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
 // rekey operation
 func (b *SystemBackend) handleRekeyRetrieve(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	backup, err := b.Core.RekeyRetrieveBackup()
+	req *logical.Request,
+	data *framework.FieldData,
+	recovery bool) (*logical.Response, error) {
+	backup, err := b.Core.RekeyRetrieveBackup(recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %v", err)
 	}
@@ -542,16 +558,37 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	return resp, nil
 }
 
+func (b *SystemBackend) handleRekeyRetrieveBarrier(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyRetrieve(req, data, false)
+}
+
+func (b *SystemBackend) handleRekeyRetrieveRecovery(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyRetrieve(req, data, true)
+}
+
 // handleRekeyDelete deletes backed-up, PGP-encrypted unseal keys from a rekey
 // operation
 func (b *SystemBackend) handleRekeyDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := b.Core.RekeyDeleteBackup()
+	req *logical.Request,
+	data *framework.FieldData,
+	recovery bool) (*logical.Response, error) {
+	err := b.Core.RekeyDeleteBackup(recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %v", err)
 	}
 
 	return nil, nil
+}
+func (b *SystemBackend) handleRekeyDeleteBarrier(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyDelete(req, data, false)
+}
+
+func (b *SystemBackend) handleRekeyDeleteRecovery(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyDelete(req, data, true)
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table

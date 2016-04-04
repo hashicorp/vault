@@ -146,7 +146,7 @@ func Test(t TestT, c TestCase) {
 	init, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal("error initializing core: ", err)
 	}
