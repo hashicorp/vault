@@ -17,7 +17,7 @@ import (
 )
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
-const TestEnvVar = "TF_ACC"
+const TestEnvVar = "VAULT_ACC"
 
 // TestCase is a single set of tests to run for a backend. A TestCase
 // should generally map 1:1 to each test method for your acceptance
@@ -45,7 +45,7 @@ type TestCase struct {
 	Teardown TestTeardownFunc
 
 	// AcceptanceTest, if set, the test case will be run only if
-	// the environment variable TF_ACC is set. If not this test case
+	// the environment variable VAULT_ACC is set. If not this test case
 	// will be run as a unit test.
 	AcceptanceTest bool
 }
@@ -95,7 +95,7 @@ type TestTeardownFunc func() error
 
 // Test performs an acceptance test on a backend with the given test case.
 //
-// Tests are not run unless an environmental variable "TF_ACC" is
+// Tests are not run unless an environmental variable "VAULT_ACC" is
 // set to some non-empty value. This is to avoid test cases surprising
 // a user by creating real resources.
 //

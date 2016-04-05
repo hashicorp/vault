@@ -19,7 +19,7 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -40,7 +40,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_management(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -61,7 +61,7 @@ func TestBackend_management(t *testing.T) {
 }
 
 func TestBackend_crud(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -82,7 +82,7 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 

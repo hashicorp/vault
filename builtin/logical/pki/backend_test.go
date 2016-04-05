@@ -36,7 +36,7 @@ var (
 // Performs basic tests on CA functionality
 // Uses the RSA CA key
 func TestBackend_RSAKey(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -71,7 +71,7 @@ func TestBackend_RSAKey(t *testing.T) {
 // Performs basic tests on CA functionality
 // Uses the EC CA key
 func TestBackend_ECKey(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -104,7 +104,7 @@ func TestBackend_ECKey(t *testing.T) {
 }
 
 func TestBackend_CSRValues(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -137,7 +137,7 @@ func TestBackend_CSRValues(t *testing.T) {
 }
 
 func TestBackend_URLsCRUD(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -173,7 +173,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
 func TestBackend_RSARoles(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -220,7 +220,7 @@ func TestBackend_RSARoles(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
 func TestBackend_RSARoles_CSR(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -267,7 +267,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the EC CA key
 func TestBackend_ECRoles(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
@@ -314,7 +314,7 @@ func TestBackend_ECRoles(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the EC CA key
 func TestBackend_ECRoles_CSR(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 

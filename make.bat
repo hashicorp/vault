@@ -44,7 +44,7 @@ REM testacc runs acceptance tests.
 	call :testsetup
 	if x%_TEST% == x./... goto testacc_fail
 	if x%_TEST% == x.\... goto testacc_fail
-	set TF_ACC=1
+	set VAULT_ACC=1
 	go test %_TEST% -v %TESTARGS% -timeout 45m
 	exit /b %ERRORLEVEL%
 :testacc_fail
@@ -57,13 +57,13 @@ REM testrace runs the race checker.
 	go test -race %_TEST% %TESTARGS%
 	exit /b %ERRORLEVEL%
 
-REM testsetup calls `go generate` and defines the variables TF_ACC
-REM and _TEST. TF_ACC is always cleared. _TEST defaults to the value
+REM testsetup calls `go generate` and defines the variables VAULT_ACC
+REM and _TEST. VAULT_ACC is always cleared. _TEST defaults to the value
 REM of the TEST environment variable, provided that TEST is defined,
 REM otherwise _TEST it is set to "./...".
 :testsetup
 	call :generate
-	set TF_ACC=
+	set VAULT_ACC=
 	set _TEST=./...
 	if defined TEST set _TEST=%TEST%
 	goto :eof
