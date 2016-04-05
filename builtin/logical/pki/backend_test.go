@@ -54,8 +54,9 @@ func TestBackend_RSAKey(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -88,8 +89,9 @@ func TestBackend_ECKey(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -120,8 +122,9 @@ func TestBackend_CSRValues(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -152,8 +155,9 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -187,7 +191,8 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -233,7 +238,8 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -279,7 +285,8 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -325,7 +332,8 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,

@@ -43,6 +43,11 @@ type TestCase struct {
 	// in the case that the test can't guarantee all resources were
 	// properly cleaned up.
 	Teardown TestTeardownFunc
+
+	// AcceptanceTest, if set, the test case will be run only if
+	// the environment variable TF_ACC is set. If not this test case
+	// will be run as a unit test.
+	AcceptanceTest bool
 }
 
 // TestStep is a single step within a TestCase.
