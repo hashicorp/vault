@@ -26,8 +26,9 @@ func getBackend(t *testing.T) logical.Backend {
 
 func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  getBackend(t),
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
@@ -38,8 +39,9 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basicSTS(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  getBackend(t),
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
@@ -57,7 +59,8 @@ func TestBackend_policyCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: getBackend(t),
+		AcceptanceTest: true,
+		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
@@ -261,8 +264,9 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 
 func TestBackend_basicPolicyArnRef(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  getBackend(t),
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
@@ -273,7 +277,8 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 
 func TestBackend_policyArnCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: getBackend(t),
+		AcceptanceTest: true,
+		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),

@@ -30,7 +30,8 @@ func TestBackend_basic(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			testAccStepGroup(t, "scientists", "foo"),
@@ -45,7 +46,8 @@ func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlWithAuthBind(t),
 			testAccStepGroup(t, "scientists", "foo"),
@@ -60,7 +62,8 @@ func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlWithDiscover(t),
 			testAccStepGroup(t, "scientists", "foo"),
@@ -75,7 +78,8 @@ func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlNoGroupDN(t),
 			testAccStepGroup(t, "scientists", "foo"),
@@ -90,7 +94,8 @@ func TestBackend_groupCrud(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepGroup(t, "g1", "foo"),
 			testAccStepReadGroup(t, "g1", "foo"),
@@ -212,7 +217,8 @@ func TestBackend_userCrud(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "g1", "bar"),
 			testAccStepReadUser(t, "g1", "bar"),

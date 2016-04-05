@@ -48,7 +48,8 @@ func TestBackend_CertWrites(t *testing.T) {
 	}
 
 	tc := logicaltest.TestCase{
-		Backend: testFactory(t),
+		AcceptanceTest: true,
+		Backend:        testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "aaa", ca1, "foo", false),
 			testAccStepCert(t, "bbb", ca2, "foo", false),
@@ -68,7 +69,8 @@ func TestBackend_basic_CA(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		AcceptanceTest: true,
+		Backend:        testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", false),
 			testAccStepLogin(t, connState),
@@ -94,7 +96,8 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		AcceptanceTest: true,
+		Backend:        testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCertNoLease(t, "web", ca, "foo"),
 			testAccStepLoginDefaultLease(t, connState),
@@ -116,7 +119,8 @@ func TestBackend_basic_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		AcceptanceTest: true,
+		Backend:        testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", false),
 			testAccStepLogin(t, connState),
@@ -129,7 +133,8 @@ func TestBackend_untrusted(t *testing.T) {
 	connState := testConnState(t, "test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		AcceptanceTest: true,
+		Backend:        testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepLoginInvalid(t, connState),
 		},
