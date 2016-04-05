@@ -106,7 +106,7 @@ type TestTeardownFunc func() error
 func Test(t TestT, c TestCase) {
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
-	if os.Getenv(TestEnvVar) == "" {
+	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf(
 			"Acceptance tests skipped unless env '%s' set",
 			TestEnvVar))
