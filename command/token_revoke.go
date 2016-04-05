@@ -48,7 +48,7 @@ func (c *TokenRevokeCommand) Run(args []string) int {
 	case !accessor && mode == "orphan":
 		fn = client.Auth().Token().RevokeOrphan
 	case !accessor && mode == "path":
-		fn = client.Auth().Token().RevokePrefix
+		fn = client.Sys().RevokePrefix
 	case accessor && mode == "":
 		fn = client.Auth().Token().RevokeAccessor
 	case accessor && mode == "orphan":
@@ -93,7 +93,8 @@ Usage: vault token-revoke [options] [token|accessor]
 
     * With the "path" value, tokens created from the given auth path
       prefix will be deleted, along with all their children. In this case
-      the "token" arg above is actually a "path".
+      the "token" arg above is actually a "path". This mode does *not*
+      work with token values or parts of token values.
 
   Token can be revoked using the token accessor. This can be done by
   setting the '-accessor' flag. Note that when '-accessor' flag is set,
