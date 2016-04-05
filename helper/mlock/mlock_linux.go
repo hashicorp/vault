@@ -2,7 +2,11 @@
 
 package mlock
 
-import "syscall"
+import (
+	"syscall"
+
+	"golang.org/x/sys/unix"
+)
 
 func init() {
 	supported = true
@@ -10,5 +14,5 @@ func init() {
 
 func lockMemory() error {
 	// Mlockall prevents all current and future pages from being swapped out.
-	return syscall.Mlockall(syscall.MCL_CURRENT | syscall.MCL_FUTURE)
+	return unix.Mlockall(syscall.MCL_CURRENT | syscall.MCL_FUTURE)
 }
