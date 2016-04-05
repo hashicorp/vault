@@ -554,7 +554,7 @@ func TestKeyUpgrade(t *testing.T) {
 
 func TestPolicyFuzzing(t *testing.T) {
 	// Don't run if not during acceptance tests
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv("VAULT_ACC") == "" {
 		return
 	}
 
