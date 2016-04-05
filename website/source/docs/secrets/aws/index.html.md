@@ -195,6 +195,9 @@ If either of those conditions are not met, a "403 not-authorized" error will be 
 
 See http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html for more details.
 
+Vault 0.5.1 or later is recommended when using STS tokens to avoid validation errors for exceeding
+the AWS limit of 32 characters on STS token names.
+
 ## A Note on Consistency
 
 Unfortunately, IAM credentials are eventually consistent with respect to other
