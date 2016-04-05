@@ -187,7 +187,7 @@ Vault generates STS tokens using the IAM credentials passed to aws/config.
 
 Those credentials must have two properties:
 
-- They must have permissions to call sts:GetFederatedToken.
+- They must have permissions to call `sts:GetFederationToken`.
 - The capabilities of those credentials have to be at least as permissive as those requested
 by policies attached to the STS creds.
 
