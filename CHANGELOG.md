@@ -39,7 +39,6 @@ IMPROVEMENTS:
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
- * core: Use `mlockall(2)` on FreeBSD, NetBSD, OpenBSD, and Darwin [GH-1297]
 
 BUG FIXES:
 
