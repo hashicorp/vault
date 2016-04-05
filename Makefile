@@ -3,7 +3,8 @@ VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf 
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/cover \
-	golang.org/x/tools/cmd/vet
+	golang.org/x/tools/cmd/vet \
+	github.com/tebeka/selenium
 
 default: test
 
@@ -20,13 +21,22 @@ dev: generate
 test: generate
 	VAULT_TOKEN= TF_ACC= go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
+KILL_SELENIUM = @ ([ -e "/tmp/selenium.pid" ] && ($(GOPATH)/src/github.com/tebeka/selenium/selenium.sh stop ; rm /tmp/selenium.pid))
+
+# needed for some testacc tests (google)
+selenium:
+	-$(KILL_SELENIUM)
+	@$(GOPATH)/src/github.com/tebeka/selenium/selenium.sh start
+
+
 # testacc runs acceptance tests
 testacc: generate
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
+	-TF_ACC=1 go test -v $(TEST) $(TESTARGS) -timeout 45m
+	$(KILL_SELENIUM)
 
 # testrace runs the race checker
 testrace: generate
@@ -58,4 +68,7 @@ bootstrap:
 		go get $$tool; \
 	done
 
-.PHONY: bin default generate test vet bootstrap
+	$(GOPATH)/src/github.com/tebeka/selenium/selenium.sh download
+
+
+.PHONY: bin default generate test vet bootstrap selenium

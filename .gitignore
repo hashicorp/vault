@@ -54,3 +54,6 @@ tags
 # Editor backups
 *~
 *.sw[a-z]
+
+#running selenium brings this file into workspace
+selenium-server-standalone-2.51.0.jar

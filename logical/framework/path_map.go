@@ -117,7 +117,7 @@ func (p *PathMap) Paths() []*Path {
 		},
 
 		&Path{
-			Pattern: fmt.Sprintf(`%s/%s/(?P<key>[-\w]+)`, p.Prefix, p.Name),
+			Pattern: fmt.Sprintf(`%s/%s/(?P<key>([-\w]|\.|\+)+)`, p.Prefix, p.Name),
 
 			Fields: schema,
 
