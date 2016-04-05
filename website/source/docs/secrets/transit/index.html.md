@@ -117,7 +117,7 @@ $ vault write transit/decrypt/foo ciphertext=vault:v1:czEwyKqGZY/limnuzDCUUe5AK0
 Key      	Value
 plaintext	dGhlIHF1aWNrIGJyb3duIGZveAo=
 
-$ echo "dGhlIHF1aWNrIGJyb3duIGZveAo=" | base64 -D
+$ echo "dGhlIHF1aWNrIGJyb3duIGZveAo=" | base64 -d
 the quick brown fox
 ```
 
