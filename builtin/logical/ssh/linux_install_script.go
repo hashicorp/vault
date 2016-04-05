@@ -55,8 +55,10 @@ sudo mkdir -p "$SSH_DIR"
 sudo touch "$AUTH_KEYS_FILE"
 
 # Remove the key from authorized_keys file if it is already present.
-# This step is common for both install and uninstall.
-grep -vFf "$PUBLIC_KEY_FILE" "$AUTH_KEYS_FILE" > temp_$PUBLIC_KEY_FILE || true
+# This step is common for both install and uninstall.  Note that grep's
+# return code is ignored, thus if grep fails all keys will be removed
+# rather than none and it fails secure
+sudo grep -vFf "$PUBLIC_KEY_FILE" "$AUTH_KEYS_FILE" > temp_$PUBLIC_KEY_FILE || true
 cat temp_$PUBLIC_KEY_FILE | sudo tee "$AUTH_KEYS_FILE"
 
 # Append the new public key to authorized_keys file
