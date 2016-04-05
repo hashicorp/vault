@@ -124,8 +124,9 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// If mlockall(2) isn't supported, show a warning (even in dev mode).
-	if !mlock.Supported() {
+	// If mlockall(2) isn't supported, show a warning.  We disable this
+	// in dev because it is quite scary to see when first using Vault.
+	if !dev && !mlock.Supported() {
 		c.Ui.Output("==> WARNING: mlock not supported on this system!\n")
 		c.Ui.Output("  An `mlockall(2)`-like syscall to prevent memory from being")
 		c.Ui.Output("  swapped to disk is not supported on this system. Running")
