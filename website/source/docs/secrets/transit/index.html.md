@@ -86,10 +86,14 @@ the settings of the "foo" key by reading it:
 
 ```
 $ vault read transit/keys/foo
-Key        	Value
-name        foo
-cipher_mode aes-gcm
-derived     false
+Key                     Value
+cipher_mode             aes-gcm
+deletion_allowed        false
+derived                 false
+keys                    map[1:1.459861712e+09]
+latest_version          1
+min_decryption_version  1
+name                    foo
 ````
 
 Now, if we wanted to encrypt a piece of plain text, we use the encrypt
