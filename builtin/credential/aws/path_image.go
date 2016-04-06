@@ -37,10 +37,10 @@ func pathImage(b *backend) *framework.Path {
 				Description: "Policies to be associated with the AMI.",
 			},
 
-			"allow_instance_reboot": &framework.FieldSchema{
+			"allow_instance_migration": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, allows rebooting of the OS where the client resides. Essentially, this disables the client nonce check. Use with caution.",
+				Description: "If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution.",
 			},
 		},
 
@@ -133,10 +133,10 @@ func (b *backend) pathImageRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"role_tag":              imageEntry.RoleTag,
-			"policies":              imageEntry.Policies,
-			"max_ttl":               imageEntry.MaxTTL / time.Second,
-			"allow_instance_reboot": imageEntry.AllowInstanceReboot,
+			"role_tag":                 imageEntry.RoleTag,
+			"policies":                 imageEntry.Policies,
+			"max_ttl":                  imageEntry.MaxTTL / time.Second,
+			"allow_instance_migration": imageEntry.AllowInstanceMigration,
 		},
 	}, nil
 }
@@ -165,11 +165,11 @@ func (b *backend) pathImageCreateUpdate(
 		imageEntry.Policies = []string{"default"}
 	}
 
-	allowInstanceRebootBool, ok := data.GetOk("allow_instance_reboot")
+	allowInstanceMigrationBool, ok := data.GetOk("allow_instance_migration")
 	if ok {
-		imageEntry.AllowInstanceReboot = allowInstanceRebootBool.(bool)
+		imageEntry.AllowInstanceMigration = allowInstanceMigrationBool.(bool)
 	} else if req.Operation == logical.CreateOperation {
-		imageEntry.AllowInstanceReboot = data.Get("allow_instance_reboot").(bool)
+		imageEntry.AllowInstanceMigration = data.Get("allow_instance_migration").(bool)
 	}
 
 	maxTTLInt, ok := data.GetOk("max_ttl")
@@ -211,10 +211,10 @@ func (b *backend) pathImageCreateUpdate(
 
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsImageEntry struct {
-	RoleTag             string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceReboot bool          `json:"allow_instance_reboot" structs:"allow_instance_reboot" mapstructure:"allow_instance_reboot"`
-	MaxTTL              time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Policies            []string      `json:"policies" structs:"policies" mapstructure:"policies"`
+	RoleTag                string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
+	AllowInstanceMigration bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	MaxTTL                 time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	Policies               []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 }
 
 const pathImageSyn = `

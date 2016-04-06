@@ -74,20 +74,27 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 		return err
 	}
 
-	// When the presented client nonce does not match the cached entry, it is either that a
-	// rogue client is trying to login or that a valid client suffered an OS reboot and
-	// lost its client nonce.
+	// When the presented client nonce does not match the cached entry, it is
+	// either that a rogue client is trying to login or that a valid client
+	// suffered a migration. The migration is detected via pendingTime in the
+	// instance metadata, which sadly is only updated when an instance is
+	// stopped and started but *not* when the instance is rebooted. If reboot
+	// survivability is needed, either instrumentation to delete the instance
+	// ID is necessary, or the client must durably store the nonce.
 	//
-	// If `allow_instance_reboot` property of the registered AMI, is enabled, then the
-	// client nonce mismatch is ignored, as long as the pending time in the presented
-	// instance identity document is newer than the cached pending time.
+	// If the `allow_instance_migration` property of the registered AMI is
+	// enabled, then the client nonce mismatch is ignored, as long as the
+	// pending time in the presented instance identity document is newer than
+	// the cached pending time. The new pendingTime is stored and used for
+	// future checks.
 	//
-	// This is a weak creterion and hence the `allow_instance_reboot` option should be used with caution.
+	// This is a weak criterion and hence the `allow_instance_migration` option
+	// should be used with caution.
 	if clientNonce != storedIdentity.ClientNonce {
-		if !imageEntry.AllowInstanceReboot {
+		if !imageEntry.AllowInstanceMigration {
 			return fmt.Errorf("client nonce mismatch")
 		}
-		if imageEntry.AllowInstanceReboot && !givenPendingTime.After(storedPendingTime) {
+		if imageEntry.AllowInstanceMigration && !givenPendingTime.After(storedPendingTime) {
 			return fmt.Errorf("client nonce mismatch and instance meta-data incorrect")
 		}
 	}
