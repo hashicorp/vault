@@ -103,6 +103,9 @@ func (b *backend) pathConfigClientCreateUpdate(
 			return nil, fmt.Errorf("missing access_key")
 		}
 	}
+	if configEntry.AccessKey == "" {
+		return nil, fmt.Errorf("invalid access_key")
+	}
 
 	secretKeyStr, ok := data.GetOk("secret_key")
 	if ok {
@@ -111,6 +114,9 @@ func (b *backend) pathConfigClientCreateUpdate(
 		if configEntry.SecretKey = data.Get("secret_key").(string); configEntry.SecretKey == "" {
 			return nil, fmt.Errorf("missing secret_key")
 		}
+	}
+	if configEntry.SecretKey == "" {
+		return nil, fmt.Errorf("invalid secret_key")
 	}
 
 	entry, err := logical.StorageEntryJSON("config/client", configEntry)
