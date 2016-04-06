@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"encoding/base64"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -9,7 +10,7 @@ import (
 
 func pathBlacklistRoleTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "blacklist/roletag$",
+		Pattern: "blacklist/roletag/" + "(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -127,9 +128,22 @@ func (b *backend) pathBlacklistRoleTagRead(
 func (b *backend) pathBlacklistRoleTagUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	tag := data.Get("role_tag").(string)
-	if tag == "" {
+	// The role_tag value provided, optionally can be base64 encoded.
+	tagInput := data.Get("role_tag").(string)
+	if tagInput == "" {
 		return logical.ErrorResponse("missing role_tag"), nil
+	}
+
+	tag := ""
+
+	// Try to base64 decode the value.
+	tagBytes, err := base64.StdEncoding.DecodeString(tagInput)
+	if err != nil {
+		// If the decoding failed, use the value as-is.
+		tag = tagInput
+	} else {
+		// If the decoding succeeded, use the decoded value.
+		tag = string(tagBytes)
 	}
 
 	// Parse the role tag from string form to a struct form.
