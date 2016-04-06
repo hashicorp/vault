@@ -62,21 +62,6 @@ func (b *backend) pathBlacklistRoleTagExistenceCheck(req *logical.Request, data 
 	return true, nil
 }
 
-// Fetch an un-expired entry from the role tag blacklist for a given tag.
-func blacklistRoleTagValidEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
-	entry, err := blacklistRoleTagEntry(s, tag)
-	if err != nil {
-		return nil, err
-	}
-
-	// Exclude the item if it is expired.
-	if entry == nil || time.Now().After(entry.ExpirationTime) {
-		return nil, nil
-	}
-
-	return entry, nil
-}
-
 // Fetch an entry from the role tag blacklist for a given tag.
 func blacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
 	entry, err := s.Get("blacklist/roletag/" + tag)

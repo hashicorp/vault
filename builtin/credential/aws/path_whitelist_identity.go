@@ -51,21 +51,6 @@ func (b *backend) pathWhitelistIdentitiesList(
 	return logical.ListResponse(identities), nil
 }
 
-// Fetch an un-expired item from the whitelist given an instance ID.
-func whitelistIdentityValidEntry(s logical.Storage, instanceID string) (*whitelistIdentity, error) {
-	identity, err := whitelistIdentityEntry(s, instanceID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Don't return an expired item.
-	if identity == nil || time.Now().After(identity.ExpirationTime) {
-		return nil, nil
-	}
-
-	return identity, nil
-}
-
 // Fetch an item from the whitelist given an instance ID.
 func whitelistIdentityEntry(s logical.Storage, instanceID string) (*whitelistIdentity, error) {
 	entry, err := s.Get("whitelist/identity/" + instanceID)

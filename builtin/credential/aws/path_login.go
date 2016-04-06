@@ -204,7 +204,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Get the entry from the identity whitelist, if there is one.
-	storedIdentity, err := whitelistIdentityValidEntry(req.Storage, identityDoc.InstanceID)
+	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDoc.InstanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +331,7 @@ func handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageE
 	}
 
 	// Check if the role tag is blacklisted.
-	blacklistEntry, err := blacklistRoleTagValidEntry(s, rTagValue)
+	blacklistEntry, err := blacklistRoleTagEntry(s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageE
 func (b *backend) pathLoginRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	storedIdentity, err := whitelistIdentityValidEntry(req.Storage, req.Auth.Metadata["instance_id"])
+	storedIdentity, err := whitelistIdentityEntry(req.Storage, req.Auth.Metadata["instance_id"])
 	if err != nil {
 		return nil, err
 	}
