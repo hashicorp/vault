@@ -114,7 +114,7 @@ func Test(t TestT, c TestCase) {
 	}
 
 	// We require verbose mode so that the user knows what is going on.
-	if !testTesting && !testing.Verbose() {
+	if c.AcceptanceTest && !testTesting && !testing.Verbose() {
 		t.Fatal("Acceptance tests must be run with the -v flag on tests")
 		return
 	}
@@ -233,24 +233,39 @@ func Test(t TestT, c TestCase) {
 				Path:      "sys/revoke/" + resp.Secret.LeaseID,
 			})
 		}
-		// If it's an error, but an error is expected, and one is also
-		// returned as a logical.ErrorResponse, let it go to the check
+
+		// Test step returned an error.
 		if err != nil {
-			if !resp.IsError() || (resp.IsError() && !s.ErrorOk) {
+			// But if an error is expected, do not fail the test step,
+			// regardless of whether the error is a 'logical.ErrorResponse'
+			// or not. Set the err to nil. If the error is a logical.ErrorResponse,
+			// it will be handled later.
+			if s.ErrorOk {
+				err = nil
+			} else {
+				// If the error is not expected, fail right away.
 				t.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
 				break
 			}
-			// Set it to nil here as we're catching on the
-			// logical.ErrorResponse instead
-			err = nil
 		}
+
+		// If the error is a 'logical.ErrorResponse' and if error was not expected,
+		// set the error so that this can be caught below.
 		if resp.IsError() && !s.ErrorOk {
 			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
 		}
+
+		// Either the 'err' was nil or if an error was expected, it was set to nil.
+		// Call the 'Check' function if there is one.
+		//
+		// TODO: This works perfectly for now, but it would be better if 'Check'
+		// function takes in both the response object and the error, and decide on
+		// the action on its own.
 		if err == nil && s.Check != nil {
 			// Call the test method
 			err = s.Check(resp)
 		}
+
 		if err != nil {
 			t.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
 			break
