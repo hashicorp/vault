@@ -69,11 +69,17 @@ sending a SIGHUP to the server process. These are denoted below.
   lease duration for tokens and secrets. This is a string value using a suffix,
   e.g. "720h". Default value is 30 days.
 
-In production, you should only consider setting the `disable_mlock` option
-on Linux systems that only use encrypted swap or do not use swap at all.
-Vault does not currently support memory locking on Mac OS X and Windows
-and so the feature is automatically disabled on those platforms.  To give
-the Vault executable access to the `mlock` syscall on Linux systems:
+In production it is a risk to run Vault on systems where `mlock` is
+unavailable or the setting has been disabled via the `disable_mlock`.
+Disabling `mlock` is not recommended unless the systems running Vault only
+use encrypted swap or do not use swap at all.  Vault only supports memory
+locking on UNIX-like systems (Linux, FreeBSD, Darwin, etc).  Non-UNIX like
+systems (e.g. Windows, NaCL, Android) lack the primitives to keep a process's
+entire memory address space from spilling disk and is therefore automatically
+disabled on unsupported platforms.
+
+On Linux, to give the Vault executable the ability to use the `mlock` syscall
+without running the process as root, run:
 
 ```shell
 sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
