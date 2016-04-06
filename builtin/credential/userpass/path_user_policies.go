@@ -2,8 +2,8 @@ package userpass
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -52,21 +52,9 @@ func (b *backend) pathUserPoliciesUpdate(
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	err = b.updateUserPolicies(req, d, userEntry)
-	if err != nil {
-		return nil, err
-	}
+	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies").(string))
 
 	return nil, b.setUser(req.Storage, username, userEntry)
-}
-
-func (b *backend) updateUserPolicies(req *logical.Request, d *framework.FieldData, userEntry *UserEntry) error {
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
-	userEntry.Policies = policies
-	return nil
 }
 
 const pathUserPoliciesHelpSyn = `

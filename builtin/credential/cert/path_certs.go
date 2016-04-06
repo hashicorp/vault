@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -137,19 +138,13 @@ func (b *backend) pathCertWrite(
 	name := strings.ToLower(d.Get("name").(string))
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
+	policies := policyutil.ParsePolicies(d.Get("policies").(string))
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
 		displayName = name
 	}
 
-	if len(policies) == 0 {
-		return logical.ErrorResponse("policies required"), nil
-	}
 	parsed := parsePEM([]byte(certificate))
 	if len(parsed) == 0 {
 		return logical.ErrorResponse("failed to parse certificate"), nil

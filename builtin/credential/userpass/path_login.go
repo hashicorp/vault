@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policies"
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/crypto/bcrypt"
@@ -93,7 +93,7 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	if !policies.EquivalentPolicies(user.Policies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 

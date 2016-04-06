@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -889,7 +890,7 @@ func (ts *TokenStore) handleCreateCommon(
 		if len(data.Policies) == 0 {
 			data.Policies = role.AllowedPolicies
 		} else {
-			if !strListSubset(role.AllowedPolicies, data.Policies) {
+			if !strutil.StrListSubset(role.AllowedPolicies, data.Policies) {
 				return logical.ErrorResponse("token policies must be subset of the role's allowed policies"), logical.ErrInvalidRequest
 			}
 		}
@@ -899,7 +900,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// When a role is not in use, only permit policies to be a subset unless
 	// the client has root or sudo privileges
-	case !isSudo && !strListSubset(parent.Policies, data.Policies):
+	case !isSudo && !strutil.StrListSubset(parent.Policies, data.Policies):
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
 
@@ -972,7 +973,7 @@ func (ts *TokenStore) handleCreateCommon(
 		sysView := ts.System()
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if te.TTL == 0 && !strListContains(te.Policies, "root") {
+		if te.TTL == 0 && !strutil.StrListContains(te.Policies, "root") {
 			te.TTL = sysView.DefaultLeaseTTL()
 		}
 

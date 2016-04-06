@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -595,7 +596,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
+		if auth.TTL == 0 && !strutil.StrListContains(auth.Policies, "root") {
 			auth.TTL = sysView.DefaultLeaseTTL()
 		}
 
@@ -614,7 +615,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
-		if strListSubset(te.Policies, []string{"root"}) {
+		if strutil.StrListSubset(te.Policies, []string{"root"}) {
 			te.Policies = []string{"root"}
 		} else {
 			// Use a map to filter out/prevent duplicates
