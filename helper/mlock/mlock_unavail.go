@@ -1,4 +1,4 @@
-// +build !darwin !dragonfly !freebsd !linux !netbsd !openbsd !solaris
+// +build android nacl plan9 windows
 
 package mlock
 
