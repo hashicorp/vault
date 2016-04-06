@@ -4,6 +4,7 @@
 	"Packages": [
 		"./..."
 	],
+
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -104,6 +105,16 @@
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
 		},
 		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/json/jsonutil",
+			"Comment": "v0.10.4-18-gce51895",
+			"Rev": "ce51895e994693d65ab997ae48032bf13a9290b7"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/jsonrpc",
+			"Comment": "v0.10.4-18-gce51895",
+			"Rev": "ce51895e994693d65ab997ae48032bf13a9290b7"
+		},
+		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/query",
 			"Comment": "v1.1.10",
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
@@ -157,6 +168,11 @@
 			"ImportPath": "github.com/aws/aws-sdk-go/service/iam",
 			"Comment": "v1.1.10",
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/kms",
+			"Comment": "v0.10.4-18-gce51895",
+			"Rev": "ce51895e994693d65ab997ae48032bf13a9290b7"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/s3",
