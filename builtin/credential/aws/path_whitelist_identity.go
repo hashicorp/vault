@@ -9,7 +9,7 @@ import (
 
 func pathWhitelistIdentity(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/identity$",
+		Pattern: "whitelist/identity/" + framework.GenericNameRegex("instance_id"),
 		Fields: map[string]*framework.FieldSchema{
 			"instance_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -117,7 +117,7 @@ func (b *backend) pathWhitelistIdentityRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"imate_id":        entry.ImageID,
+			"image_id":        entry.ImageID,
 			"creation_time":   entry.CreationTime.String(),
 			"expiration_time": entry.ExpirationTime.String(),
 			"client_nonce":    entry.ClientNonce,
