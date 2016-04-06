@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/google/go-github/github"
-	"github.com/hashicorp/vault/helper/policies"
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -82,7 +82,7 @@ func (b *backend) pathLoginRenew(
 	} else {
 		verifyResp = verifyResponse
 	}
-	if !policies.EquivalentPolicies(verifyResp.Policies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies do not match"), nil
 	}
 

@@ -247,7 +247,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       </li>
       <li>
         <span class="param">policies</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">optional</span>
         A comma-separated list of policies to set on tokens issued when
         authenticating against this CA certificate.
       </li>

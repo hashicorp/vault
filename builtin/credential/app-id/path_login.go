@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policies"
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -123,7 +123,7 @@ func (b *backend) pathLoginRenew(
 	if err != nil {
 		return nil, err
 	}
-	if !policies.EquivalentPolicies(mapPolicies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(mapPolicies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies do not match"), nil
 	}
 

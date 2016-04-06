@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -137,11 +138,8 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		}
 	}
 
-	if _, ok := d.GetOk("policies"); ok {
-		err = b.updateUserPolicies(req, d, userEntry)
-		if err != nil {
-			return nil, err
-		}
+	if policiesRaw, ok := d.GetOk("policies"); ok {
+		userEntry.Policies = policyutil.ParsePolicies(policiesRaw.(string))
 	}
 
 	ttlStr := userEntry.TTL.String()

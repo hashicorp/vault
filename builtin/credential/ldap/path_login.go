@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policies"
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -82,7 +82,7 @@ func (b *backend) pathLoginRenew(
 		return resp, err
 	}
 
-	if !policies.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
 		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
