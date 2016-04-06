@@ -1,16 +1,18 @@
 package aws
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
 func TestBackend_ConfigClient(t *testing.T) {
 	config := logical.TestBackendConfig()
-	storageView := &logical.InmemStorage{}
-	config.StorageView = storageView
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
 
 	b, err := Factory(config)
 	if err != nil {
@@ -83,14 +85,14 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config/client",
 		Data:      data,
-		Storage:   storageView,
+		Storage:   storage,
 	}
 	_, err = b.HandleRequest(configClientCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	clientConfig, err := clientConfigEntry(storageView)
+	clientConfig, err := clientConfigEntry(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,6 +100,86 @@ func TestBackend_ConfigClient(t *testing.T) {
 		clientConfig.SecretKey != data["secret_key"] ||
 		clientConfig.Region != data["region"] {
 		t.Fatalf("bad: expected: %#v\ngot: %#v\n", data, clientConfig)
+	}
+}
+
+func TestBackend_PathImage(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"policies": "p,q,r,s",
+		"max_ttl":  "2h",
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "image/ami-abcd123",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "image/ami-abcd123",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !policyutil.EquivalentPolicies(strings.Split(data["policies"].(string), ","), resp.Data["policies"].([]string)) {
+		t.Fatalf("bad: policies: expected: %#v\ngot: %#v\n", data, resp.Data)
+	}
+
+	data["allow_instance_migration"] = true
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/ami-abcd123",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "image/ami-abcd123",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Data["allow_instance_migration"].(bool) {
+		t.Fatal("bad: allow_instance_migration: expected:true got:false\n")
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "image/ami-abcd123",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "image/ami-abcd123",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: response: expected:nil actual:%#v\n", resp)
 	}
 }
 
