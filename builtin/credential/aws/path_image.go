@@ -133,9 +133,10 @@ func (b *backend) pathImageRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"role_tag": imageEntry.RoleTag,
-			"policies": strings.Join(imageEntry.Policies, ","),
-			"max_ttl":  imageEntry.MaxTTL / time.Second,
+			"role_tag":              imageEntry.RoleTag,
+			"policies":              imageEntry.Policies,
+			"max_ttl":               imageEntry.MaxTTL / time.Second,
+			"allow_instance_reboot": imageEntry.AllowInstanceReboot,
 		},
 	}, nil
 }
