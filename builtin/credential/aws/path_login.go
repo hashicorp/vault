@@ -196,13 +196,6 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("image entry not found"), nil
 	}
 
-	// Ensure that the TTL is less than the backend mount's max_ttl.
-	// If RoleTag is enabled, max_ttl on the RoleTag will be checked to be smaller than this, before being set.
-	maxTTL := imageEntry.MaxTTL
-	if maxTTL > b.System().MaxLeaseTTL() {
-		maxTTL = b.System().MaxLeaseTTL()
-	}
-
 	// Get the entry from the identity whitelist, if there is one.
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDoc.InstanceID)
 	if err != nil {
@@ -220,10 +213,14 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
-	// Initially, set the policies that are applicable to the image.
-	// This may get updated if the image has RoleTag enabled.
-	policies := imageEntry.Policies
+	// Load the current values for max TTL and policies from the image entry,
+	// before checking for overriding by the RoleTag
+	maxTTL := b.System().MaxLeaseTTL()
+	if imageEntry.MaxTTL > time.Duration(0) && imageEntry.MaxTTL < maxTTL {
+		maxTTL = imageEntry.MaxTTL
+	}
 
+	policies := imageEntry.Policies
 	rTagMaxTTL := time.Duration(0)
 
 	// Role tag is enabled for the AMI.
@@ -236,9 +233,8 @@ func (b *backend) pathLoginUpdate(
 		policies = resp.Policies
 		rTagMaxTTL = resp.MaxTTL
 
-		// maxTTL should be set to least among these: image max_ttl, role-tag max_ttl, backend mount's max_ttl.
-		if maxTTL > rTagMaxTTL {
-			maxTTL = rTagMaxTTL
+		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < maxTTL {
+			maxTTL = resp.MaxTTL
 		}
 	}
 
@@ -263,7 +259,7 @@ func (b *backend) pathLoginUpdate(
 		return nil, err
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Auth: &logical.Auth{
 			Policies: policies,
 			Metadata: map[string]string{
@@ -272,11 +268,17 @@ func (b *backend) pathLoginUpdate(
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				// There is no TTL on the image/role-tag. Set it to mount's default TTL.
-				TTL: b.System().DefaultLeaseTTL(),
+				TTL:       b.System().DefaultLeaseTTL(),
 			},
 		},
-	}, nil
+	}
+
+	// Enforce our image/role tag maximum TTL
+	if maxTTL < resp.Auth.TTL {
+		resp.Auth.TTL = maxTTL
+	}
+
+	return resp, nil
 
 }
 
@@ -389,9 +391,9 @@ func (b *backend) pathLoginRenew(
 		return logical.ErrorResponse("image entry not found"), nil
 	}
 
-	maxTTL := imageEntry.MaxTTL
-	if maxTTL > b.System().MaxLeaseTTL() {
-		maxTTL = b.System().MaxLeaseTTL()
+	maxTTL := b.System().MaxLeaseTTL()
+	if imageEntry.MaxTTL > time.Duration(0) && imageEntry.MaxTTL < maxTTL {
+		maxTTL = imageEntry.MaxTTL
 	}
 	if rTagMaxTTL > time.Duration(0) && maxTTL > rTagMaxTTL {
 		maxTTL = rTagMaxTTL
