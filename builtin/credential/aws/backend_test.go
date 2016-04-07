@@ -81,6 +81,21 @@ func TestBackend_ConfigClient(t *testing.T) {
 		},
 	})
 
+	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "config/client",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !checkFound {
+		t.Fatal("existence check not found for path 'config/client'")
+	}
+	if exists {
+		t.Fatal("existence check should have return 'false' for 'config/client'")
+	}
+
 	configClientCreateRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/client",
@@ -92,6 +107,21 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	checkFound, exists, err = b.HandleExistenceCheck(&logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "config/client",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !checkFound {
+		t.Fatal("existence check not found for path 'config/client'")
+	}
+	if !exists {
+		t.Fatal("existence check should have return 'true' for 'config/client'")
+	}
+
 	clientConfig, err := clientConfigEntry(storage)
 	if err != nil {
 		t.Fatal(err)
@@ -101,6 +131,9 @@ func TestBackend_ConfigClient(t *testing.T) {
 		clientConfig.Region != data["region"] {
 		t.Fatalf("bad: expected: %#v\ngot: %#v\n", data, clientConfig)
 	}
+}
+
+func TestBackend_PathConfigCertificate(t *testing.T) {
 }
 
 func TestBackend_PathImage(t *testing.T) {
