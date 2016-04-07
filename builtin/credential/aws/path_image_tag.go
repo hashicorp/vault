@@ -150,9 +150,6 @@ func verifyRoleTagValue(s logical.Storage, rTag *roleTag) (bool, error) {
 		return false, err
 	}
 
-	// TODO: for testing purposes. Remove this.
-	key = "ab1728ba-5fd5-7298-d344-e9df1b09f5ea"
-
 	// Compute the HMAC of the plaintext
 	hmacB64, err := createRoleTagHMACBase64(key, rTagPlainText)
 	if err != nil {

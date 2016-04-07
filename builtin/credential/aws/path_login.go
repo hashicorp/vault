@@ -184,8 +184,8 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Allowing the lengh of UUID for a client nonce.
-	if len(clientNonce) > 36 {
-		return logical.ErrorResponse("client nonce exceeding the limit of 36 characters"), nil
+	if len(clientNonce) > 128 {
+		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
 
 	// Validate the instance ID.
