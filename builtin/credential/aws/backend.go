@@ -1,6 +1,9 @@
 package aws
 
 import (
+	"sync"
+
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -57,6 +60,10 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 type backend struct {
 	*framework.Backend
 	Salt *salt.Salt
+
+	configMutex sync.RWMutex
+
+	ec2Client *ec2.EC2
 }
 
 const backendHelp = `

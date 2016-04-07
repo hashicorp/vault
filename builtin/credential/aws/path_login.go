@@ -41,9 +41,9 @@ func pathLogin(b *backend) *framework.Path {
 
 // validateInstanceID queries the status of the EC2 instance using AWS EC2 API and
 // checks if the instance is running and is healthy.
-func validateInstanceID(s logical.Storage, instanceID string) error {
+func (b *backend) validateInstanceID(s logical.Storage, instanceID string) error {
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := clientEC2(s)
+	ec2Client, err := b.clientEC2(s, false)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,6 @@ func validateInstanceID(s logical.Storage, instanceID string) error {
 // validateMetadata matches the given client nonce and pending time with the one cached
 // in the identity whitelist during the previous login.
 func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, imageEntry *awsImageEntry) error {
-
 	givenPendingTime, err := time.Parse(time.RFC3339, pendingTime)
 	if err != nil {
 		return err
@@ -190,7 +189,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Validate the instance ID.
-	if err := validateInstanceID(req.Storage, identityDoc.InstanceID); err != nil {
+	if err := b.validateInstanceID(req.Storage, identityDoc.InstanceID); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
 	}
 
@@ -233,7 +232,7 @@ func (b *backend) pathLoginUpdate(
 	// Role tag is enabled for the AMI.
 	if imageEntry.RoleTag != "" {
 		// Overwrite the policies with the ones returned from processing the role tag.
-		resp, err := handleRoleTagLogin(req.Storage, identityDoc, imageEntry)
+		resp, err := b.handleRoleTagLogin(req.Storage, identityDoc, imageEntry)
 		if err != nil {
 			return nil, err
 		}
@@ -291,8 +290,8 @@ func (b *backend) pathLoginUpdate(
 
 // fetchRoleTagValue creates an AWS EC2 client and queries the tags
 // attached to the instance identified by the given instanceID.
-func fetchRoleTagValue(s logical.Storage, tagKey string) (string, error) {
-	ec2Client, err := clientEC2(s)
+func (b *backend) fetchRoleTagValue(s logical.Storage, tagKey string) (string, error) {
+	ec2Client, err := b.clientEC2(s, false)
 	if err != nil {
 		return "", err
 	}
@@ -324,13 +323,13 @@ func fetchRoleTagValue(s logical.Storage, tagKey string) (string, error) {
 
 // handleRoleTagLogin is used to fetch the role tag if the instance and verifies it to be correct.
 // Then the policies for the login request will be set off of the role tag, if certain creteria satisfies.
-func handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageEntry *awsImageEntry) (*roleTagLoginResponse, error) {
+func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageEntry *awsImageEntry) (*roleTagLoginResponse, error) {
 
 	// Make a secondary call to the AWS instance to see if the desired tag is set.
 	// NOTE: If AWS adds the instance tags as meta-data in the instance identity
 	// document, then it is better to look this information there instead of making
 	// another API call. Currently, we don't have an option but make this call.
-	rTagValue, err := fetchRoleTagValue(s, imageEntry.RoleTag)
+	rTagValue, err := b.fetchRoleTagValue(s, imageEntry.RoleTag)
 	if err != nil {
 		return nil, err
 	}

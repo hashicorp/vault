@@ -3,6 +3,7 @@ package aws
 import (
 	"fmt"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -23,8 +24,7 @@ func pathConfigClient(b *backend) *framework.Path {
 
 			"region": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Default:     "us-east-1",
-				Description: "Region for API calls.",
+				Description: "Region for API calls. Defaults to the value of the AWS_REGION env var. Required.",
 			},
 		},
 
@@ -32,6 +32,8 @@ func pathConfigClient(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.CreateOperation: b.pathConfigClientCreateUpdate,
+			logical.DeleteOperation: b.pathConfigClientDelete,
+			logical.ReadOperation:   b.pathConfigClientRead,
 			logical.UpdateOperation: b.pathConfigClientCreateUpdate,
 		},
 
@@ -44,6 +46,9 @@ func pathConfigClient(b *backend) *framework.Path {
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigClientExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
 	entry, err := clientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
@@ -68,10 +73,51 @@ func clientConfigEntry(s logical.Storage) (*clientConfig, error) {
 	return &result, nil
 }
 
+func (b *backend) pathConfigClientRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
+	clientConfig, err := clientConfigEntry(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if clientConfig == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: structs.New(clientConfig).Map(),
+	}, nil
+}
+
+func (b *backend) pathConfigClientDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+
+	err := req.Storage.Delete("config/client")
+	if err != nil {
+		b.configMutex.Unlock()
+		return nil, err
+	}
+
+	b.configMutex.Unlock()
+
+	_, err = b.clientEC2(req.Storage, true)
+	if err != nil {
+		return nil, fmt.Errorf("error creating client with updated credentials: %s", err)
+	}
+
+	return nil, nil
+}
+
 // pathConfigClientCreateUpdate is used to register the 'aws_secret_key' and 'aws_access_key'
 // that can be used to interact with AWS EC2 API.
 func (b *backend) pathConfigClientCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 
 	configEntry, err := clientConfigEntry(req.Storage)
 	if err != nil {
@@ -88,35 +134,27 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry.Region = data.Get("region").(string)
 	}
 
-	// Either a valid region needs to be provided or it should be left empty
-	// so a default value could take over.
-	if configEntry.Region == "" {
-		return nil, fmt.Errorf("invalid region")
-
-	}
+	changedCreds := false
 
 	accessKeyStr, ok := data.GetOk("access_key")
 	if ok {
+		if configEntry.AccessKey != accessKeyStr.(string) {
+			changedCreds = true
+		}
 		configEntry.AccessKey = accessKeyStr.(string)
 	} else if req.Operation == logical.CreateOperation {
-		if configEntry.AccessKey = data.Get("access_key").(string); configEntry.AccessKey == "" {
-			return nil, fmt.Errorf("missing access_key")
-		}
-	}
-	if configEntry.AccessKey == "" {
-		return nil, fmt.Errorf("invalid access_key")
+		// Use the default
+		configEntry.AccessKey = data.Get("access_key").(string)
 	}
 
 	secretKeyStr, ok := data.GetOk("secret_key")
 	if ok {
+		if configEntry.SecretKey != secretKeyStr.(string) {
+			changedCreds = true
+		}
 		configEntry.SecretKey = secretKeyStr.(string)
 	} else if req.Operation == logical.CreateOperation {
-		if configEntry.SecretKey = data.Get("secret_key").(string); configEntry.SecretKey == "" {
-			return nil, fmt.Errorf("missing secret_key")
-		}
-	}
-	if configEntry.SecretKey == "" {
-		return nil, fmt.Errorf("invalid secret_key")
+		configEntry.SecretKey = data.Get("secret_key").(string)
 	}
 
 	entry, err := logical.StorageEntryJSON("config/client", configEntry)
@@ -126,6 +164,19 @@ func (b *backend) pathConfigClientCreateUpdate(
 
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
+	}
+
+	if changedCreds {
+		// We have to be careful here to re-lock as we have a deferred unlock
+		// queued up and unlocking an unlocked mutex leads to a panic
+		b.configMutex.Unlock()
+		_, err = b.clientEC2(req.Storage, true)
+		b.configMutex.Lock()
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"error creating client with updated credentials: %s", err),
+			), nil
+		}
 	}
 
 	return nil, nil
