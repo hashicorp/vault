@@ -70,9 +70,9 @@ func (c *ReadCommand) Run(args []string) int {
 			// directly print the message. If mitchellh/cli exposes method
 			// to print without CR, this check needs to be removed.
 			if reflect.TypeOf(c.Ui).String() == "*cli.BasicUi" {
-				fmt.Fprintf(os.Stdout, val.(string))
+				fmt.Fprintf(os.Stdout, fmt.Sprintf("%v", val))
 			} else {
-				c.Ui.Output(val.(string))
+				c.Ui.Output(fmt.Sprintf("%v", val))
 			}
 			return 0
 		} else {
