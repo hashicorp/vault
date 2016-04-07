@@ -1,10 +1,7 @@
 package aws
 
 import (
-	"crypto"
-	"crypto/dsa"
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -187,28 +184,6 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	}
 	if publicCert == nil {
 		return logical.ErrorResponse("invalid certificate; failed to decode and parse certificate"), nil
-	}
-
-	// Before trusting the signature provided, validate its signature.
-
-	// Extract the signature of the certificate.
-	dsaSig := &dsaSignature{}
-	dsaSigRest, err := asn1.Unmarshal(publicCert.Signature, dsaSig)
-	if err != nil {
-		return nil, err
-	}
-	if len(dsaSigRest) != 0 {
-		return nil, fmt.Errorf("failed to unmarshal certificate's signature")
-	}
-
-	certHashFunc := crypto.SHA1.New()
-
-	// RawTBSCertificate will contain the information in the certificate that is signed.
-	certHashFunc.Write(publicCert.RawTBSCertificate)
-
-	// Verify the signature using the public key present in the certificate.
-	if !dsa.Verify(publicCert.PublicKey.(*dsa.PublicKey), certHashFunc.Sum(nil), dsaSig.R, dsaSig.S) {
-		return logical.ErrorResponse("invalid certificate; failed to verify certificate's signature"), nil
 	}
 
 	// If none of the checks fail, save the provided certificate.
