@@ -978,7 +978,7 @@ func (ts *TokenStore) handleCreateCommon(
 		}
 
 		// Limit the lease duration
-		if te.TTL > sysView.MaxLeaseTTL() {
+		if te.TTL > sysView.MaxLeaseTTL() && sysView.MaxLeaseTTL() != time.Duration(0) {
 			te.TTL = sysView.MaxLeaseTTL()
 		}
 	}
