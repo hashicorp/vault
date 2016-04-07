@@ -844,8 +844,13 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Setup the token entry
 	te := TokenEntry{
-		Parent:       req.ClientToken,
-		Path:         "auth/token/create",
+		Parent: req.ClientToken,
+
+		// The mount point is always the same since we have only one token
+		// store; using req.MountPoint causes trouble in tests since they don't
+		// have an official mount
+		Path: fmt.Sprintf("auth/token/%s", req.Path),
+
 		Meta:         data.Metadata,
 		DisplayName:  "token",
 		NumUses:      data.NumUses,
@@ -860,7 +865,6 @@ func (ts *TokenStore) handleCreateCommon(
 	if role != nil {
 		te.Role = role.Name
 
-		te.Path = fmt.Sprintf("%s/%s", te.Path, role.Name)
 		if role.PathSuffix != "" {
 			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
 		}
