@@ -321,7 +321,7 @@ func (b *backend) fetchRoleTagValue(s logical.Storage, tagKey string) (string, e
 	return *tagsOutput.Tags[0].Value, nil
 }
 
-// handleRoleTagLogin is used to fetch the role tag if the instance and verifies it to be correct.
+// handleRoleTagLogin is used to fetch the role tag of the instance and verifies it to be correct.
 // Then the policies for the login request will be set off of the role tag, if certain creteria satisfies.
 func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageEntry *awsImageEntry) (*roleTagLoginResponse, error) {
 
