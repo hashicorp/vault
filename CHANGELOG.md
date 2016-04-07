@@ -43,6 +43,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * command/read: Fix panic when using `-field` with a non-string value [GH-1308]
  * command/token-lookup: Fix TTL showing as 0 depending on how a token was
    created. This only affected the value shown at lookup, not the token
    behavior itself. [GH-1306]
