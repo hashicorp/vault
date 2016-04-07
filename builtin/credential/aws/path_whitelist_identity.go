@@ -128,12 +128,13 @@ func (b *backend) pathWhitelistIdentityRead(
 
 // Struct to represent each item in the identity whitelist.
 type whitelistIdentity struct {
-	ImageID         string    `json:"image_id" structs:"image_id" mapstructure:"image_id"`
-	PendingTime     string    `json:"pending_time" structs:"pending_time" mapstructure:"pending_time"`
-	ClientNonce     string    `json:"client_nonce" structs:"client_nonce" mapstructure:"client_nonce"`
-	CreationTime    time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
-	LastUpdatedTime time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
-	ExpirationTime  time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
+	ImageID                  string    `json:"image_id" structs:"image_id" mapstructure:"image_id"`
+	DisallowReauthentication bool      `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	PendingTime              string    `json:"pending_time" structs:"pending_time" mapstructure:"pending_time"`
+	ClientNonce              string    `json:"client_nonce" structs:"client_nonce" mapstructure:"client_nonce"`
+	CreationTime             time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	LastUpdatedTime          time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
+	ExpirationTime           time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
 }
 
 const pathWhitelistIdentitySyn = `

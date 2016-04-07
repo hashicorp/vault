@@ -61,8 +61,16 @@ func (b *backend) validateInstanceID(s logical.Storage, instanceID string) error
 }
 
 // validateMetadata matches the given client nonce and pending time with the one cached
-// in the identity whitelist during the previous login.
+// in the identity whitelist during the previous login. But, if reauthentication is
+// disabled, login attempt is failed immediately.
 func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, imageEntry *awsImageEntry) error {
+
+	// If reauthentication is disabled, doesn't matter what other metadata is provided,
+	// authentication will not succeed.
+	if storedIdentity.DisallowReauthentication {
+		return fmt.Errorf("reauthentication is disabled")
+	}
+
 	givenPendingTime, err := time.Parse(time.RFC3339, pendingTime)
 	if err != nil {
 		return err
@@ -178,16 +186,6 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("failed to extract instance identity document from PKCS#7 signature"), nil
 	}
 
-	clientNonce := data.Get("nonce").(string)
-	if clientNonce == "" {
-		return logical.ErrorResponse("missing nonce"), nil
-	}
-
-	// Allowing the lengh of UUID for a client nonce.
-	if len(clientNonce) > 128 {
-		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
-	}
-
 	// Validate the instance ID.
 	if err := b.validateInstanceID(req.Storage, identityDoc.InstanceID); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
@@ -208,13 +206,22 @@ func (b *backend) pathLoginUpdate(
 		return nil, err
 	}
 
+	clientNonce := data.Get("nonce").(string)
+	if clientNonce == "" && !storedIdentity.DisallowReauthentication {
+		return logical.ErrorResponse("missing nonce"), nil
+	}
+
+	// Allowing the lengh of UUID for a client nonce.
+	if len(clientNonce) > 128 {
+		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
+	}
+
 	// This is NOT a first login attempt from the client.
 	if storedIdentity != nil {
 		// Check if the client nonce match the cached nonce and if the pending time
 		// of the identity document is not before the pending time of the document
 		// with which previous login was made.
-		err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, imageEntry)
-		if err != nil {
+		if err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, imageEntry); err != nil {
 			return nil, err
 		}
 	}
@@ -228,6 +235,7 @@ func (b *backend) pathLoginUpdate(
 
 	policies := imageEntry.Policies
 	rTagMaxTTL := time.Duration(0)
+	disallowReauthentication := imageEntry.DisallowReauthentication
 
 	// Role tag is enabled for the AMI.
 	if imageEntry.RoleTag != "" {
@@ -238,6 +246,13 @@ func (b *backend) pathLoginUpdate(
 		}
 		policies = resp.Policies
 		rTagMaxTTL = resp.MaxTTL
+
+		// If imageEntry had disallowReauthentication set to 'true', do not reset it
+		// to 'false' based on role tag having it not set. But, if role tag had it set,
+		// be sure to override the value.
+		if !disallowReauthentication {
+			disallowReauthentication = resp.DisallowReauthentication
+		}
 
 		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < maxTTL {
 			maxTTL = resp.MaxTTL
@@ -256,10 +271,11 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
-	// PendingTime, LastUpdatedTime and ExpirationTime may change.
+	// DisallowReauthentication, PendingTime, LastUpdatedTime and ExpirationTime may change.
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(maxTTL)
 	storedIdentity.PendingTime = identityDoc.PendingTime
+	storedIdentity.DisallowReauthentication = disallowReauthentication
 
 	if err = setWhitelistIdentityEntry(req.Storage, identityDoc.InstanceID, storedIdentity); err != nil {
 		return nil, err
@@ -368,6 +384,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	return &roleTagLoginResponse{
 		Policies: rTag.Policies,
 		MaxTTL:   rTag.MaxTTL,
+		DisallowReauthentication: rTag.DisallowReauthentication,
 	}, nil
 }
 
@@ -468,8 +485,9 @@ type identityDocument struct {
 }
 
 type roleTagLoginResponse struct {
-	Policies []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	MaxTTL   time.Duration `json:"max_ttl", structs:"max_ttl" mapstructure:"max_ttl"`
+	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
+	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 }
 
 const pathLoginSyn = `

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +36,12 @@ func pathImageTag(b *backend) *framework.Path {
 				Default:     0,
 				Description: "The maximum allowed lease duration",
 			},
+
+			"disallow_reauthentication": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set, allows the instance using this tag to login only once.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -59,6 +66,8 @@ func (b *backend) pathImageTagUpdate(
 	// Parse the given policies into a slice and add 'default' if not provided.
 	// Remove all other policies if 'root' is present.
 	policies := policyutil.ParsePolicies(data.Get("policies").(string))
+
+	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
 
 	// Fetch the image entry corresponding to the AMI name
 	imageEntry, err := awsImage(req.Storage, imageID)
@@ -103,6 +112,7 @@ func (b *backend) pathImageTagUpdate(
 		Nonce:    nonce,
 		Policies: policies,
 		MaxTTL:   maxTTL,
+		DisallowReauthentication: disallowReauthentication,
 	})
 	if err != nil {
 		return nil, err
@@ -181,6 +191,9 @@ func prepareRoleTagPlainValue(rTag *roleTag) (string, error) {
 	// attach policies to value
 	value = fmt.Sprintf("%s:p=%s", value, strings.Join(rTag.Policies, ","))
 
+	// attach disallow_reauthentication field
+	value = fmt.Sprintf("%s:d=%s", value, strconv.FormatBool(rTag.DisallowReauthentication))
+
 	// attach max_ttl if it is provided
 	if rTag.MaxTTL > time.Duration(0) {
 		value = fmt.Sprintf("%s:t=%s", value, rTag.MaxTTL)
@@ -218,13 +231,18 @@ func parseRoleTagValue(tag string) (*roleTag, error) {
 		// Delete the version and nonce from the list.
 		tagItems = tagItems[2:]
 		for _, tagItem := range tagItems {
+			var err error
 			switch {
 			case strings.Contains(tagItem, "a="):
 				rTag.ImageID = strings.TrimPrefix(tagItem, "a=")
 			case strings.Contains(tagItem, "p="):
 				rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
+			case strings.Contains(tagItem, "d="):
+				rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
+				if err != nil {
+					return nil, err
+				}
 			case strings.Contains(tagItem, "t="):
-				var err error
 				rTag.MaxTTL, err = time.ParseDuration(strings.TrimPrefix(tagItem, "t="))
 				if err != nil {
 					return nil, err
@@ -261,12 +279,13 @@ func createRoleTagNonce() (string, error) {
 
 // Struct roleTag represents a role tag in a struc form.
 type roleTag struct {
-	Version  string        `json:"version" structs:"version" mapstructure:"version"`
-	Nonce    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
-	Policies []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	MaxTTL   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	ImageID  string        `json:"image_id" structs:"image_id" mapstructure:"image_id"`
-	HMAC     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
+	Version                  string        `json:"version" structs:"version" mapstructure:"version"`
+	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
+	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
+	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	ImageID                  string        `json:"image_id" structs:"image_id" mapstructure:"image_id"`
+	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
+	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 }
 
 func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
@@ -275,7 +294,8 @@ func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
 		policyutil.EquivalentPolicies(rTag1.Policies, rTag2.Policies) &&
 		rTag1.MaxTTL == rTag2.MaxTTL &&
 		rTag1.ImageID == rTag2.ImageID &&
-		rTag1.HMAC == rTag2.HMAC
+		rTag1.HMAC == rTag2.HMAC &&
+		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication
 }
 
 const pathImageTagSyn = `

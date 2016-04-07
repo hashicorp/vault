@@ -42,6 +42,12 @@ func pathImage(b *backend) *framework.Path {
 				Default:     false,
 				Description: "If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution.",
 			},
+
+			"disallow_reauthentication": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set, allows a client to login only once.",
+			},
 		},
 
 		ExistenceCheck: b.pathImageExistenceCheck,
@@ -133,10 +139,11 @@ func (b *backend) pathImageRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"role_tag":                 imageEntry.RoleTag,
-			"policies":                 imageEntry.Policies,
-			"max_ttl":                  imageEntry.MaxTTL / time.Second,
-			"allow_instance_migration": imageEntry.AllowInstanceMigration,
+			"role_tag":                  imageEntry.RoleTag,
+			"policies":                  imageEntry.Policies,
+			"max_ttl":                   imageEntry.MaxTTL / time.Second,
+			"allow_instance_migration":  imageEntry.AllowInstanceMigration,
+			"disallow_reauthentication": imageEntry.DisallowReauthentication,
 		},
 	}, nil
 }
@@ -163,6 +170,13 @@ func (b *backend) pathImageCreateUpdate(
 		imageEntry.Policies = policyutil.ParsePolicies(policiesStr.(string))
 	} else if req.Operation == logical.CreateOperation {
 		imageEntry.Policies = []string{"default"}
+	}
+
+	disallowReauthenticationBool, ok := data.GetOk("disallow_reauthentication")
+	if ok {
+		imageEntry.DisallowReauthentication = disallowReauthenticationBool.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		imageEntry.DisallowReauthentication = data.Get("disallow_reauthentication").(bool)
 	}
 
 	allowInstanceMigrationBool, ok := data.GetOk("allow_instance_migration")
@@ -211,10 +225,11 @@ func (b *backend) pathImageCreateUpdate(
 
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsImageEntry struct {
-	RoleTag                string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceMigration bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
-	MaxTTL                 time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Policies               []string      `json:"policies" structs:"policies" mapstructure:"policies"`
+	RoleTag                  string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
+	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
+	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 }
 
 const pathImageSyn = `
