@@ -24,8 +24,7 @@ type dsaSignature struct {
 // US West (Oregon), US West (N. California), EU (Ireland), EU (Frankfurt),
 // Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
 // Asia Pacific (Sydney), and South America (Sao Paulo)
-const defaultAWSPublicCert = `
------BEGIN CERTIFICATE-----
+const defaultAWSPublicCert = `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
 VQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z
