@@ -518,7 +518,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad:\ngot:\n%#v\nexpected:\n%#v\n", out, expected)
 	}
 }
 
