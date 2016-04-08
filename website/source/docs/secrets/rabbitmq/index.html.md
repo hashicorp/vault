@@ -123,7 +123,7 @@ subpath for interactive help output.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/RabbitMQ/config/connection`</dd>
+  <dd>`/rabbitmq/config/connection`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -152,7 +152,7 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-### /postgresql/config/lease
+### /rabbitmq/config/lease
 #### POST
 
 <dl class="api">
