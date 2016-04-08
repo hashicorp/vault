@@ -12,7 +12,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"uri": &framework.FieldSchema{
+			"connection_uri": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "RabbitMQ Management URI",
 			},
@@ -36,13 +36,13 @@ func pathConfigConnection(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	uri := data.Get("uri").(string)
+	uri := data.Get("connection_uri").(string)
 	username := data.Get("username").(string)
 	password := data.Get("password").(string)
 
 	if uri == "" {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"'uri' is a required parameter.")), nil
+			"'connection_uri' is a required parameter.")), nil
 	}
 
 	if username == "" {
@@ -88,22 +88,22 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 }
 
 type connectionConfig struct {
-	URI      string `json:"uri"`
+	URI      string `json:"connection_uri"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
 const pathConfigConnectionHelpSyn = `
-Configure the URI, username, and password to talk to RabbitMQ management HTTP API.
+Configure the connection URI, username, and password to talk to RabbitMQ management HTTP API.
 `
 
 const pathConfigConnectionHelpDesc = `
 This path configures the connection properties used to connect to RabbitMQ management HTTP API.
-The "uri" parameter is a string that is be used to connect to the API. The "username"
+The "connection_uri" parameter is a string that is be used to connect to the API. The "username"
 and "password" parameters are strings and used as credentials to the API.
 
 The URI looks like:
 "http://localhost:15672"
 
-When configuring the URI, username, and password, the backend will verify their validity.
+When configuring the connection URI, username, and password, the backend will verify their validity.
 `
