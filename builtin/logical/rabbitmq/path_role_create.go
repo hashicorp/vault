@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/michaelklishin/rabbit-hole"
@@ -51,18 +51,16 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	userUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
+	displayName := req.DisplayName
+	if len(displayName) > 26 {
+		displayName = displayName[:26]
 	}
+	userUUID := uuid.GenerateUUID()
 	username := fmt.Sprintf("%s-%s", displayName, userUUID)
 	if len(username) > 63 {
 		username = username[:63]
 	}
-	password, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
-	}
+	password := uuid.GenerateUUID()
 
 	// Get our connection
 	client, err := b.Client(req.Storage)
