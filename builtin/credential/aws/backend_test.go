@@ -315,44 +315,66 @@ func TestBackend_PathImage(t *testing.T) {
 }
 
 func TestBackend_parseRoleTagValue(t *testing.T) {
-	tag := "v1:XwuKhyyBNJc=:a=ami-fce3c696:p=root:t=3h0m0s:lhvKJAZn8kxNwmPFnyXzmphQTtbXqQe6WG6sLiIf3dQ="
-	expected := roleTag{
-		Version:  "v1",
-		Nonce:    "XwuKhyyBNJc=",
-		Policies: []string{"root"},
-		MaxTTL:   10800000000000,
-		ImageID:  "ami-fce3c696",
-		HMAC:     "lhvKJAZn8kxNwmPFnyXzmphQTtbXqQe6WG6sLiIf3dQ=",
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
 	}
-	actual, err := parseRoleTagValue(tag)
+
+	data := map[string]interface{}{
+		"policies": "p,q,r,s",
+		"max_ttl":  "120s",
+		"role_tag": "VaultRole",
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "image/abcd-123",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "image/abcd-123",
+		Storage:   storage,
+	})
+	if resp == nil {
+		t.Fatalf("expected an image entry for abcd-123")
+	}
+
+	data2 := map[string]interface{}{
+		"policies": "p,q,r,s",
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/abcd-123/tag",
+		Storage:   storage,
+		Data:      data2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Data["tag_key"].(string) == "" ||
+		resp.Data["tag_value"].(string) == "" {
+		t.Fatalf("invalid tag response: %#v\n", resp)
+	}
+	tagValue := resp.Data["tag_value"].(string)
+
+	rTag, err := parseRoleTagValue(storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if !actual.Equal(&expected) {
-		t.Fatalf("err: expected:%#v \ngot: %#v\n", expected, actual)
+	if rTag == nil {
+		t.Fatalf("failed to parse role tag")
 	}
-
-	tag = "v2:XwuKhyyBNJc=:a=ami-fce3c696:p=root:t=3h0m0s:lhvKJAZn8kxNwmPFnyXzmphQTtbXqQe6WG6sLiIf3dQ="
-	actual, err = parseRoleTagValue(tag)
-	if err == nil {
-		t.Fatalf("err: expected error due to invalid role tag version", err)
-	}
-
-	tag = "v1:XwuKhyyBNJc=:a=ami-fce3c696:lhvKJAZn8kxNwmPFnyXzmphQTtbXqQe6WG6sLiIf3dQ="
-	expected = roleTag{
-		Version: "v1",
-		Nonce:   "XwuKhyyBNJc=",
-		ImageID: "ami-fce3c696",
-		HMAC:    "lhvKJAZn8kxNwmPFnyXzmphQTtbXqQe6WG6sLiIf3dQ=",
-	}
-	actual, err = parseRoleTagValue(tag)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	tag = "v1:XwuKhyyBNJc=:p=ami-fce3c696:lhvKJAZn8kxNwmPFnyXzmphQTtbXqQe6WG6sLiIf3dQ="
-	actual, err = parseRoleTagValue(tag)
-	if err == nil {
-		t.Fatalf("err: expected error due to missing image ID", err)
+	if rTag.Version != "v1" ||
+		!policyutil.EquivalentPolicies(rTag.Policies, []string{"p", "q", "r", "s"}) ||
+		rTag.ImageID != "abcd-123" {
+		t.Fatalf("bad: parsed role tag contains incorrect values. Got: %#v\n", rTag)
 	}
 }
