@@ -9,10 +9,16 @@ body.page-sub{
 }
 
 #footer{
+  flex-shrink:0;
   padding: 64px 0;
 
   .hashicorp-project{
     margin-top: 24px;
+    @include project-by-hashicorp-style();
+
+    &:hover{
+      color: $black;
+    }
   }
 
   .pull-right{
@@ -23,7 +29,8 @@ body.page-sub{
 .edit-page-link{
   position: absolute;
   top: -50px;
-  right: 15px;;
+  right: 15px;
+  z-index: 10;
 
   a{
     text-transform: uppercase;

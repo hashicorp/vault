@@ -1,19 +1,21 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t *testing.T) *ExpirationManager {
-	_, ts, _ := mockTokenStore(t)
+	_, ts, _, _ := TestCoreWithTokenStore(t)
 	return ts.expiration
 }
 
@@ -22,7 +24,11 @@ func TestExpiration_Restore(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -52,7 +58,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Stop everything
-	err := exp.Stop()
+	err = exp.Stop()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -152,7 +158,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	}
 
 	// Should not be able to renew, no expiration
-	_, err = exp.RenewToken("auth/github/login", root.ID, 0)
+	_, err = exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
 	if err.Error() != "lease not found or lease is not renewable" {
 		t.Fatalf("err: %v", err)
 	}
@@ -175,7 +181,11 @@ func TestExpiration_Revoke(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -213,7 +223,11 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -231,7 +245,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	_, err := exp.Register(req, resp)
+	_, err = exp.Register(req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -262,7 +276,11 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -322,7 +340,11 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	paths := []string{
 		"prod/aws/foo",
@@ -353,7 +375,10 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	if err := exp.RevokeByToken("foobarbaz"); err != nil {
+	te := &TokenEntry{
+		ID: "foobarbaz",
+	}
+	if err := exp.RevokeByToken(te); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -399,12 +424,12 @@ func TestExpiration_RenewToken(t *testing.T) {
 	}
 
 	// Renew the token
-	out, err := exp.RenewToken("auth/token/login", root.ID, 0)
+	out, err := exp.RenewToken(&logical.Request{}, "auth/token/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	if auth.ClientToken != out.ClientToken {
+	if auth.ClientToken != out.Auth.ClientToken {
 		t.Fatalf("Bad: %#v", out)
 	}
 }
@@ -430,7 +455,7 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	}
 
 	// Attempt to renew the token
-	_, err = exp.RenewToken("auth/github/login", root.ID, 0)
+	_, err = exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
 	if err.Error() != "lease is not renewable" {
 		t.Fatalf("err: %v", err)
 	}
@@ -441,7 +466,11 @@ func TestExpiration_Renew(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -503,7 +532,11 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -545,7 +578,11 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
@@ -613,7 +650,11 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "", &MountEntry{UUID: meUUID}, view)
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -630,7 +671,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 		ExpireTime: time.Now(),
 	}
 
-	err := exp.revokeEntry(le)
+	err = exp.revokeEntry(le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -727,7 +768,11 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
-	exp.router.Mount(noop, "", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "", &MountEntry{UUID: meUUID}, view)
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -789,7 +834,11 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "auth/foo/")
-	exp.router.Mount(noop, "auth/foo/", &MountEntry{UUID: uuid.GenerateUUID()}, view)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "auth/foo/", &MountEntry{UUID: meUUID}, view)
 
 	le := &leaseEntry{
 		LeaseID: "auth/foo/1234",
@@ -807,7 +856,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		ExpireTime: time.Now().Add(time.Minute),
 	}
 
-	resp, err := exp.renewAuthEntry(le, time.Second)
+	resp, err := exp.renewAuthEntry(&logical.Request{}, le, time.Second)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -850,8 +899,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		IssueTime:  time.Now().UTC(),
-		ExpireTime: time.Now().UTC(),
+		IssueTime:       time.Now().UTC(),
+		ExpireTime:      time.Now().UTC(),
+		LastRenewalTime: time.Time{}.UTC(),
 	}
 	if err := exp.persistEntry(le); err != nil {
 		t.Fatalf("err: %v", err)
@@ -862,7 +912,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if !reflect.DeepEqual(out, le) {
-		t.Fatalf("out: %#v expect: %#v", out, le)
+		t.Fatalf("\nout: %#v\nexpect: %#v\n", out, le)
 	}
 
 	err = exp.deleteEntry("foo/bar/1234")
@@ -908,4 +958,84 @@ func TestLeaseEntry(t *testing.T) {
 	if !reflect.DeepEqual(out.Data, le.Data) {
 		t.Fatalf("got: %#v, expect %#v", out, le)
 	}
+}
+
+func TestExpiration_RevokeForce(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.logicalBackends["badrenew"] = badRenewFactory
+	me := &MountEntry{
+		Path: "badrenew/",
+		Type: "badrenew",
+	}
+
+	err := core.mount(me)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "badrenew/creds",
+		ClientToken: root,
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("response was nil")
+	}
+	if resp.Secret == nil {
+		t.Fatalf("response secret was nil, response was %#v", *resp)
+	}
+
+	req.Operation = logical.UpdateOperation
+	req.Path = "sys/revoke-prefix/badrenew/creds"
+
+	resp, err = core.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	req.Path = "sys/revoke-force/badrenew/creds"
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("got error: %s", err)
+	}
+}
+
+func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+	be := &framework.Backend{
+		Paths: []*framework.Path{
+			&framework.Path{
+				Pattern: "creds",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+						resp := &logical.Response{
+							Secret: &logical.Secret{
+								InternalData: map[string]interface{}{
+									"secret_type": "badRenewBackend",
+								},
+							},
+						}
+						resp.Secret.TTL = time.Second * 30
+						return resp, nil
+					},
+				},
+			},
+		},
+
+		Secrets: []*framework.Secret{
+			&framework.Secret{
+				Type: "badRenewBackend",
+				Revoke: func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+					return nil, fmt.Errorf("always errors")
+				},
+			},
+		},
+	}
+
+	return be.Setup(conf)
 }

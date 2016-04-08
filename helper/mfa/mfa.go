@@ -56,8 +56,8 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 		Description: "Multi-factor auth method to use (optional)",
 	}
 	// wrap write callback to do MFA after auth
-	loginHandler := loginPath.Callbacks[logical.WriteOperation]
-	loginPath.Callbacks[logical.WriteOperation] = b.wrapLoginHandler(loginHandler)
+	loginHandler := loginPath.Callbacks[logical.UpdateOperation]
+	loginPath.Callbacks[logical.UpdateOperation] = b.wrapLoginHandler(loginHandler)
 	return loginPath
 }
 

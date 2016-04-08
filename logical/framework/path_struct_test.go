@@ -21,7 +21,7 @@ func TestPathStruct(t *testing.T) {
 
 	// Write via HTTP
 	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "bar",
 		Data: map[string]interface{}{
 			"value": "baz",

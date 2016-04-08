@@ -8,66 +8,80 @@ import (
 )
 
 func TestLeaseExtend(t *testing.T) {
+
+	testSysView := logical.StaticSystemView{
+		DefaultLeaseTTLVal: 5 * time.Hour,
+		MaxLeaseTTLVal:     30 * time.Hour,
+	}
+
 	now := time.Now().UTC().Round(time.Hour)
 
 	cases := map[string]struct {
-		Max          time.Duration
-		MaxSession   time.Duration
-		Request      time.Duration
-		Result       time.Duration
-		MaxFromLease bool
-		Error        bool
+		BackendDefault time.Duration
+		BackendMax     time.Duration
+		Increment      time.Duration
+		Result         time.Duration
+		Error          bool
 	}{
-		"valid request, good bounds": {
-			Max:     30 * time.Hour,
-			Request: 1 * time.Hour,
-			Result:  1 * time.Hour,
+		"valid request, good bounds, increment is preferred": {
+			BackendDefault: 30 * time.Hour,
+			Increment:      1 * time.Hour,
+			Result:         1 * time.Hour,
 		},
 
-		"valid request, zero max": {
-			Max:     0,
-			Request: 1 * time.Hour,
-			Result:  1 * time.Hour,
+		"valid request, zero backend default, uses increment": {
+			BackendDefault: 0,
+			Increment:      1 * time.Hour,
+			Result:         1 * time.Hour,
 		},
 
-		"request is zero": {
-			Max:     30 * time.Hour,
-			Request: 0,
-			Result:  30 * time.Hour,
+		"lease increment is zero, uses backend default": {
+			BackendDefault: 30 * time.Hour,
+			Increment:      0,
+			Result:         30 * time.Hour,
 		},
 
-		"request is too long": {
-			Max:     3 * time.Hour,
-			Request: 7 * time.Hour,
-			Result:  3 * time.Hour,
+		"lease increment and default are zero, uses systemview": {
+			BackendDefault: 0,
+			Increment:      0,
+			Result:         5 * time.Hour,
 		},
 
-		"request would go past max session": {
-			Max:        9 * time.Hour,
-			MaxSession: 5 * time.Hour,
-			Request:    7 * time.Hour,
-			Result:     5 * time.Hour,
+		"backend max and associated request are too long": {
+			BackendDefault: 40 * time.Hour,
+			BackendMax:     45 * time.Hour,
+			Result:         30 * time.Hour,
 		},
 
-		"request within max session": {
-			Max:        9 * time.Hour,
-			MaxSession: 5 * time.Hour,
-			Request:    4 * time.Hour,
-			Result:     4 * time.Hour,
+		"all request values are larger than the system view, so the system view limits": {
+			BackendDefault: 40 * time.Hour,
+			BackendMax:     50 * time.Hour,
+			Increment:      40 * time.Hour,
+			Result:         30 * time.Hour,
 		},
 
-		// Don't think core will allow this, but let's protect against
-		// it at multiple layers anyways.
-		"request is negative": {
-			Max:     3 * time.Hour,
-			Request: -7 * time.Hour,
-			Error:   true,
+		"request within backend max": {
+			BackendDefault: 9 * time.Hour,
+			BackendMax:     5 * time.Hour,
+			Increment:      4 * time.Hour,
+			Result:         4 * time.Hour,
 		},
 
-		"max form lease, request too large": {
-			Request:      10 * time.Hour,
-			MaxFromLease: true,
-			Result:       time.Hour,
+		"request outside backend max": {
+			BackendDefault: 9 * time.Hour,
+			BackendMax:     4 * time.Hour,
+			Increment:      5 * time.Hour,
+			Result:         4 * time.Hour,
+		},
+
+		"request is negative, no backend default, use sysview": {
+			Increment: -7 * time.Hour,
+			Result:    5 * time.Hour,
+		},
+
+		"lease increment too large": {
+			Increment: 40 * time.Hour,
+			Result:    30 * time.Hour,
 		},
 	}
 
@@ -77,12 +91,12 @@ func TestLeaseExtend(t *testing.T) {
 				LeaseOptions: logical.LeaseOptions{
 					TTL:       1 * time.Hour,
 					IssueTime: now,
-					Increment: tc.Request,
+					Increment: tc.Increment,
 				},
 			},
 		}
 
-		callback := LeaseExtend(tc.Max, tc.MaxSession, tc.MaxFromLease)
+		callback := LeaseExtend(tc.BackendDefault, tc.BackendMax, testSysView)
 		resp, err := callback(req, nil)
 		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)

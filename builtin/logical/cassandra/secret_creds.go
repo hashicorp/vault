@@ -2,7 +2,6 @@ package cassandra
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -26,9 +25,6 @@ func secretCreds(b *backend) *framework.Secret {
 			},
 		},
 
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
-
 		Renew:  b.secretCredsRenew,
 		Revoke: b.secretCredsRevoke,
 	}
@@ -51,7 +47,7 @@ func (b *backend) secretCredsRenew(
 		return nil, fmt.Errorf("Unable to load role: %s", err)
 	}
 
-	return framework.LeaseExtend(role.Lease, 0, false)(req, d)
+	return framework.LeaseExtend(role.Lease, 0, b.System())(req, d)
 }
 
 func (b *backend) secretCredsRevoke(

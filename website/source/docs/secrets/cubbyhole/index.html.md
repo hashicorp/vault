@@ -15,15 +15,16 @@ the configured physical storage for Vault. It is mounted at the `cubbyhole/`
 prefix by default and cannot be mounted elsewhere or removed.
 
 This backend differs from the `generic` backend in that the `generic` backend's
-values are accessible to any token with read privileges on that path. In this
-backend, paths are scoped per token; no token can read secrets placed in
-another token's cubbyhole. When the token expires, its cubbyhole is destroyed.
+values are accessible to any token with read privileges on that path. In
+`cubbyhole`, paths are scoped per token; no token can access another token's
+cubbyhole, whether to read, write, list, or for any other operation. When the
+token expires, its cubbyhole is destroyed.
 
 Also unlike the `generic` backend, because the cubbyhole's lifetime is linked
-to an authentication token, there is no concept of a lease or lease TTL for
-values contained in the token's cubbyhole.
+to that of an authentication token, there is no concept of a TTL for values
+contained in the token's cubbyhole.
 
-Writing to a key in the `cubbyhole/` backend will replace the old value,
+Writing to a key in the `cubbyhole` backend will replace the old value;
 the sub-fields are not merged together.
 
 ## Quick Start
@@ -52,7 +53,6 @@ As expected, the value previously set is returned to us.
 
 ## API
 
-### /cubbyhole
 #### GET
 
 <dl class="api">
@@ -90,6 +90,48 @@ As expected, the value previously set is returned to us.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of secret entries at the specified location. Folders are
+    suffixed with `/`. The input must be a folder; list on a file will not
+    return a value. The values themselves are not accessible via this command.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/cubbyhole/<path>?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  The example below shows output for a query path of `cubbyhole/` when there
+  are secrets at `cubbyhole/foo` and `cubbyhole/foo/bar`; note the difference
+  in the two entries.
+
+  ```javascript
+  {
+    "auth": null,
+    "data": {
+      "keys": ["foo", "foo/"]
+    },
+    "lease_duration": 2592000,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
+
 #### POST/PUT
 
 <dl class="api">
@@ -115,6 +157,31 @@ As expected, the value previously set is returned to us.
         and all will be returned on a read operation.
       </li>
     </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  A `204` response code.
+  </dd>
+</dl>
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the secret at the specified location.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/cubbyhole/<path>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
   </dd>
 
   <dt>Returns</dt>

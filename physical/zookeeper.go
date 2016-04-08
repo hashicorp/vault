@@ -26,6 +26,7 @@ const (
 type ZookeeperBackend struct {
 	path   string
 	client *zk.Conn
+	acl    []zk.ACL
 }
 
 // newZookeeperBackend constructs a Zookeeper backend using the given API client
@@ -52,16 +53,73 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		machines = "localhost:2181"
 	}
 
-	// Attempt to create the ZK client
+	// zNode owner and schema.
+	var owner string
+	var schema string
+	var schemaAndOwner string
+	schemaAndOwner, ok = conf["znode_owner"]
+	if !ok {
+		owner = "anyone"
+		schema = "world"
+	} else {
+		parsedSchemaAndOwner := strings.SplitN(schemaAndOwner, ":", 2)
+		if len(parsedSchemaAndOwner) != 2 {
+			return nil, fmt.Errorf("znode_owner expected format is 'schema:owner'")
+		} else {
+			schema = parsedSchemaAndOwner[0]
+			owner = parsedSchemaAndOwner[1]
+
+			// znode_owner is in config and structured correctly - but does it make any sense?
+			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
+			// (e.g. ':MyUser' which omit the schema, or ':' omitting both)
+			if owner == "" || schema == "" {
+				return nil, fmt.Errorf("znode_owner expected format is 'schema:auth'")
+			}
+		}
+	}
+
+	acl := []zk.ACL{{zk.PermAll, schema, owner}}
+
+	// Authnetication info
+	var schemaAndUser string
+	var useAddAuth bool
+	schemaAndUser, useAddAuth = conf["auth_info"]
+	if useAddAuth {
+		parsedSchemaAndUser := strings.SplitN(schemaAndUser, ":", 2)
+		if len(parsedSchemaAndUser) != 2 {
+			return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+		} else {
+			schema = parsedSchemaAndUser[0]
+			owner = parsedSchemaAndUser[1]
+
+			// auth_info is in config and structured correctly - but does it make any sense?
+			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
+			// (e.g. ':MyUser' which omit the schema, or ':' omitting both)
+			if owner == "" || schema == "" {
+				return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+			}
+		}
+	}
+
+	// We have all of the configuration in hand - let's try and connect to ZK
 	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("client setup failed: %v", err)
+	}
+
+	// ZK AddAuth API if the user asked for it
+	if useAddAuth {
+		err = client.AddAuth(schema, []byte(owner))
+		if err != nil {
+			return nil, fmt.Errorf("Zookeeper rejected authentication information provided at auth_info: %v", err)
+		}
 	}
 
 	// Setup the backend
 	c := &ZookeeperBackend{
 		path:   path,
 		client: client,
+		acl:    acl,
 	}
 	return c, nil
 }
@@ -71,7 +129,6 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 // an error during an operation
 func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 	nodes := strings.Split(path, "/")
-	acl := zk.WorldACL(zk.PermAll)
 	fullPath := ""
 	for index, node := range nodes {
 		if strings.TrimSpace(node) != "" {
@@ -81,11 +138,11 @@ func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 			// set parent nodes to nil, leaf to value
 			// this block reduces round trips by being smart on the leaf create/set
 			if exists, _, _ := c.client.Exists(fullPath); !isLastNode && !exists {
-				if _, err := c.client.Create(fullPath, nil, int32(0), acl); err != nil {
+				if _, err := c.client.Create(fullPath, nil, int32(0), c.acl); err != nil {
 					return err
 				}
 			} else if isLastNode && !exists {
-				if _, err := c.client.Create(fullPath, value, int32(0), acl); err != nil {
+				if _, err := c.client.Create(fullPath, value, int32(0), c.acl); err != nil {
 					return err
 				}
 			} else if isLastNode && exists {
@@ -256,8 +313,7 @@ func (i *ZookeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 
 func (i *ZookeeperHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	// Wait to acquire the lock in ZK
-	acl := zk.WorldACL(zk.PermAll)
-	lock := zk.NewLock(i.in.client, lockpath, acl)
+	lock := zk.NewLock(i.in.client, lockpath, i.in.acl)
 	err := lock.Lock()
 	if err != nil {
 		failLock <- err

@@ -10,9 +10,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	tokenDisk "github.com/hashicorp/vault/builtin/token/disk"
-	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -26,9 +25,10 @@ func TestAuth_methods(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
+			TokenHelper: DefaultTokenHelper,
 		},
 	}
 
@@ -55,8 +55,9 @@ func TestAuth_token(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
-			Ui: ui,
+		Meta: meta.Meta{
+			Ui:          ui,
+			TokenHelper: DefaultTokenHelper,
 		},
 	}
 
@@ -93,8 +94,9 @@ func TestAuth_stdin(t *testing.T) {
 	stdinR, stdinW := io.Pipe()
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
-			Ui: ui,
+		Meta: meta.Meta{
+			Ui:          ui,
+			TokenHelper: DefaultTokenHelper,
 		},
 		testStdin: stdinR,
 	}
@@ -122,8 +124,9 @@ func TestAuth_badToken(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &AuthCommand{
-		Meta: Meta{
-			Ui: ui,
+		Meta: meta.Meta{
+			Ui:          ui,
+			TokenHelper: DefaultTokenHelper,
 		},
 	}
 
@@ -148,8 +151,9 @@ func TestAuth_method(t *testing.T) {
 		Handlers: map[string]AuthHandler{
 			"test": &testAuthHandler{},
 		},
-		Meta: Meta{
-			Ui: ui,
+		Meta: meta.Meta{
+			Ui:          ui,
+			TokenHelper: DefaultTokenHelper,
 		},
 	}
 
@@ -188,12 +192,8 @@ func testAuthInit(t *testing.T) {
 
 	// Write a .vault config to use our custom token helper
 	config := fmt.Sprintf(
-		"token_helper = \"%s\"\n", token.TestProcessPath(t))
+		"token_helper = \"\"\n")
 	ioutil.WriteFile(filepath.Join(td, ".vault"), []byte(config), 0644)
-}
-
-func TestHelperProcess(t *testing.T) {
-	token.TestHelperProcessCLI(t, &tokenDisk.Command{})
 }
 
 type testAuthHandler struct{}

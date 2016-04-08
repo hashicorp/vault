@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -81,6 +82,25 @@ func TestCopy_response(t *testing.T) {
 	}
 }
 
+func TestHashString(t *testing.T) {
+	inmemStorage := &logical.InmemStorage{}
+	inmemStorage.Put(&logical.StorageEntry{
+		Key:   "salt",
+		Value: []byte("foo"),
+	})
+	localSalt, err := salt.NewSalt(inmemStorage, &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+	})
+	if err != nil {
+		t.Fatalf("Error instantiating salt: %s", err)
+	}
+	out := HashString(localSalt, "foo")
+	if out != "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a" {
+		t.Fatalf("err: HashString output did not match expected")
+	}
+}
+
 func TestHash(t *testing.T) {
 	now := time.Now().UTC()
 
@@ -95,12 +115,14 @@ func TestHash(t *testing.T) {
 		{
 			&logical.Request{
 				Data: map[string]interface{}{
-					"foo": "bar",
+					"foo":              "bar",
+					"private_key_type": certutil.PrivateKeyType("rsa"),
 				},
 			},
 			&logical.Request{
 				Data: map[string]interface{}{
-					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 				},
 			},
 		},
@@ -158,7 +180,7 @@ func TestHash(t *testing.T) {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
 		if !reflect.DeepEqual(tc.Input, tc.Output) {
-			t.Fatalf("bad:\n\n%s\n\n%#v\n\n%#v", input, tc.Input, tc.Output)
+			t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output\n%#v", input, tc.Input, tc.Output)
 		}
 	}
 }

@@ -30,6 +30,19 @@ type sshRole struct {
 	KeyOptionSpecs  string `mapstructure:"key_option_specs" json:"key_option_specs"`
 }
 
+func pathListRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "roles/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+
+		HelpSynopsis:    pathRoleHelpSyn,
+		HelpDescription: pathRoleHelpDesc,
+	}
+}
+
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("role"),
@@ -70,7 +83,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Optional for both types]
 				Comma separated list of CIDR blocks for which the role is applicable for.
-				CIDR blocks can belong to more than one role. Defaults to zero-address (0.0.0.0/0)`,
+				CIDR blocks can belong to more than one role.`,
 			},
 			"exclude_cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -134,7 +147,7 @@ func pathRoles(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.WriteOperation:  b.pathRoleWrite,
+			logical.UpdateOperation: b.pathRoleWrite,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -290,6 +303,15 @@ func (b *backend) getRole(s logical.Storage, n string) (*sshRole, error) {
 	}
 
 	return &result, nil
+}
+
+func (b *backend) pathRoleList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("roles/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
 }
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

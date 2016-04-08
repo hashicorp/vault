@@ -25,7 +25,7 @@ mechanisms (covered later), the dynamic secret can be revoked right after
 use, minimizing the amount of time the secret existed.
 
 -> **Note:** Before starting this page, please register for an
-[AWS account](http://aws.amazon.com). We won't be using any features that
+[AWS account](https://aws.amazon.com). We won't be using any features that
 cost money, so you shouldn't be charged for anything. However, we're not
 responsible for any charges you may incur.
 

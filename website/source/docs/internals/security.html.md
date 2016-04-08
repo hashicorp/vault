@@ -11,7 +11,7 @@ description: |-
 Due to the nature of Vault and the confidentiality of data it is managing,
 the Vault security model is very critical. The overall goal of Vault's security
 model is to provide [confidentiality, integrity, availability, accountability,
-authentication](http://en.wikipedia.org/wiki/Information_security).
+authentication](https://en.wikipedia.org/wiki/Information_security).
 
 This means that data at rest and in transit must be secure from eavesdropping
 or tampering. Clients must be appropriately authenticated and authorized
@@ -70,15 +70,15 @@ or the server more accurately, which is providing an API and serving requests. L
 there is the storage backend, which the server is utilizing to read and write data.
 
 There is no mutual trust between the Vault client and server. Clients use
-[TLS](http://en.wikipedia.org/wiki/Transport_Layer_Security) to verify the identity
+[TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) to verify the identity
 of the server and to establish a secure communication channel. Servers require that
 a client provides a client token for every request which is used to identify the client.
 A client that does not provide their token is only permitted to make login requests.
 
 The storage backends used by Vault are also untrusted by design. Vault uses a security
 barrier for all requests made to the backend. The security barrier automatically encrypts
-all data leaving Vault using the [Advanced Encryption Standard (AES)](http://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
-cipher in the [Galois Counter Mode (GCM)](http://en.wikipedia.org/wiki/Galois/Counter_Mode).
+all data leaving Vault using the [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
+cipher in the [Galois Counter Mode (GCM)](https://en.wikipedia.org/wiki/Galois/Counter_Mode).
 The nonce is randomly generated for every encrypted object. When data is read from the
 security barrier the GCM authentication tag is verified prior to decryption to detect
 any tampering.
@@ -108,7 +108,7 @@ policies. Vault uses a strict default deny or whitelist enforcement. This means 
 an associated policy allows for a given action, it will be denied. Each policy specifies
 a level of access granted to a path in Vault. When the policies are merged (if multiple
 policies are associated with a client), the highest access level permitted is used.
-For example, if the "engineering" policy permits read/write access to the "eng/" path,
+For example, if the "engineering" policy permits read/update access to the "eng/" path,
 and the "ops" policy permits read access to the "ops/" path, then the user gets the
 union of those. Policy is matched using the most specific defined policy, which may be
 an exact match or the longest-prefix match glob pattern.
@@ -121,8 +121,8 @@ As part of a policy, users may be granted "sudo" privileges to certain paths, so
 they can still perform security sensitive operations without being granted global
 root access to Vault.
 
-Lastly, Vault supports using a [Two-man rule](http://en.wikipedia.org/wiki/Two-man_rule) for
-unsealing using [Shamir's Secret Sharing technique](http://en.wikipedia.org/wiki/Shamir's_Secret_Sharing).
+Lastly, Vault supports using a [Two-man rule](https://en.wikipedia.org/wiki/Two-man_rule) for
+unsealing using [Shamir's Secret Sharing technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing).
 When Vault is started, it starts in an _sealed_ state. This means that the encryption key
 needed to read and write from the storage backend is not yet known. The process of unsealing
 requires providing the master key so that the encryption key can be retrieved. The risk of distributing

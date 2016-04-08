@@ -5,26 +5,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-var (
-	// Policy lists are used to restrict what is eligible for an operation
-	anyPolicy     = []string{PathPolicyDeny}
-	readWriteSudo = []string{PathPolicyRead, PathPolicyWrite, PathPolicySudo}
-	writeSudo     = []string{PathPolicyWrite, PathPolicySudo}
-
-	// permittedPolicyLevel is used to map each logical operation
-	// into the set of policies that allow the operation.
-	permittedPolicyLevels = map[logical.Operation][]string{
-		logical.ReadOperation:     readWriteSudo,
-		logical.WriteOperation:    writeSudo,
-		logical.DeleteOperation:   writeSudo,
-		logical.ListOperation:     readWriteSudo,
-		logical.HelpOperation:     anyPolicy,
-		logical.RevokeOperation:   writeSudo,
-		logical.RenewOperation:    writeSudo,
-		logical.RollbackOperation: writeSudo,
-	}
-)
-
 // ACL is used to wrap a set of policies to provide
 // an efficient interface for access control.
 type ACL struct {
@@ -57,95 +37,143 @@ func NewACL(policies []*Policy) (*ACL, error) {
 		if policy.Name == "root" {
 			a.root = true
 		}
-		for _, pp := range policy.Paths {
+		for _, pc := range policy.Paths {
 			// Check which tree to use
 			tree := a.exactRules
-			if pp.Glob {
+			if pc.Glob {
 				tree = a.globRules
 			}
 
 			// Check for an existing policy
-			raw, ok := tree.Get(pp.Prefix)
+			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pp.Prefix, pp)
+				tree.Insert(pc.Prefix, pc.CapabilitiesBitmap)
 				continue
 			}
-			existing := raw.(*PathPolicy)
+			existing := raw.(uint32)
 
-			// Check if this policy is takes precedence
-			if pp.TakesPrecedence(existing) {
-				tree.Insert(pp.Prefix, pp)
+			switch {
+			case existing&DenyCapabilityInt > 0:
+				// If we are explicitly denied in the existing capability set,
+				// don't save anything else
+
+			case pc.CapabilitiesBitmap&DenyCapabilityInt > 0:
+				// If this new policy explicitly denies, only save the deny value
+				tree.Insert(pc.Prefix, DenyCapabilityInt)
+
+			default:
+				// Insert the capabilities in this new policy into the existing
+				// value
+				tree.Insert(pc.Prefix, existing|pc.CapabilitiesBitmap)
 			}
 		}
 	}
 	return a, nil
 }
 
-// AllowOperation is used to check if the given operation is permitted
-func (a *ACL) AllowOperation(op logical.Operation, path string) bool {
+func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	// Fast-path root
 	if a.root {
-		return true
-	}
-
-	// Check if any policy level allows this operation
-	permitted := permittedPolicyLevels[op]
-	if permitted[0] == PathPolicyDeny {
-		return true
+		return []string{RootCapability}
 	}
 
 	// Find an exact matching rule, look for glob if no match
-	var policy *PathPolicy
+	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		policy = raw.(*PathPolicy)
+		capabilities = raw.(uint32)
 		goto CHECK
 	}
 
 	// Find a glob rule, default deny if no match
 	_, raw, ok = a.globRules.LongestPrefix(path)
 	if !ok {
-		return false
+		return []string{DenyCapability}
 	} else {
-		policy = raw.(*PathPolicy)
+		capabilities = raw.(uint32)
+	}
+
+CHECK:
+	if capabilities&SudoCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, SudoCapability)
+	}
+	if capabilities&ReadCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, ReadCapability)
+	}
+	if capabilities&ListCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, ListCapability)
+	}
+	if capabilities&UpdateCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, UpdateCapability)
+	}
+	if capabilities&DeleteCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, DeleteCapability)
+	}
+	if capabilities&CreateCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, CreateCapability)
+	}
+
+	// If "deny" is explicitly set or if the path has no capabilities at all,
+	// set the path capabilities to "deny"
+	if capabilities&DenyCapabilityInt > 0 || len(pathCapabilities) == 0 {
+		pathCapabilities = []string{DenyCapability}
+	}
+	return
+}
+
+// AllowOperation is used to check if the given operation is permitted. The
+// first bool indicates if an op is allowed, the second whether sudo priviliges
+// exist for that op and path.
+func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
+	// Fast-path root
+	if a.root {
+		return true, true
+	}
+
+	// Help is always allowed
+	if op == logical.HelpOperation {
+		return true, false
+	}
+
+	// Find an exact matching rule, look for glob if no match
+	var capabilities uint32
+	raw, ok := a.exactRules.Get(path)
+	if ok {
+		capabilities = raw.(uint32)
+		goto CHECK
+	}
+
+	// Find a glob rule, default deny if no match
+	_, raw, ok = a.globRules.LongestPrefix(path)
+	if !ok {
+		return false, false
+	} else {
+		capabilities = raw.(uint32)
 	}
 
 CHECK:
 	// Check if the minimum permissions are met
-	for _, allowed := range permitted {
-		if allowed == policy.Policy {
-			return true
-		}
-	}
-	return false
-}
+	// If "deny" has been explicitly set, only deny will be in the map, so we
+	// only need to check for the existence of other values
+	sudo = capabilities&SudoCapabilityInt > 0
+	switch op {
+	case logical.ReadOperation:
+		allowed = capabilities&ReadCapabilityInt > 0
+	case logical.ListOperation:
+		allowed = capabilities&ListCapabilityInt > 0
+	case logical.UpdateOperation:
+		allowed = capabilities&UpdateCapabilityInt > 0
+	case logical.DeleteOperation:
+		allowed = capabilities&DeleteCapabilityInt > 0
+	case logical.CreateOperation:
+		allowed = capabilities&CreateCapabilityInt > 0
 
-// RootPrivilege checks if the user has root level permission
-// to given path. This requires that the user be root, or that
-// sudo privilege is available on that path.
-func (a *ACL) RootPrivilege(path string) bool {
-	// Fast-path root
-	if a.root {
-		return true
-	}
+	// These three re-use UpdateCapabilityInt since that's the most appropraite capability/operation mapping
+	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
+		allowed = capabilities&UpdateCapabilityInt > 0
 
-	// Find an exact matching rule, look for glob if no match
-	var policy *PathPolicy
-	raw, ok := a.exactRules.Get(path)
-	if ok {
-		policy = raw.(*PathPolicy)
-		goto CHECK
+	default:
+		return false, false
 	}
-
-	// Check the rules for a match, default deny if no match
-	_, raw, ok = a.globRules.LongestPrefix(path)
-	if !ok {
-		return false
-	} else {
-		policy = raw.(*PathPolicy)
-	}
-
-CHECK:
-	// Check the policy level
-	return policy.Policy == PathPolicySudo
+	return
 }

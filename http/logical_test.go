@@ -69,9 +69,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	defer ln2.Close()
 
 	// Create an HA Vault
-	inm := physical.NewInmemHA()
+	inmha := physical.NewInmemHA()
 	conf := &vault.CoreConfig{
-		Physical:      inm,
+		Physical:      inmha,
+		HAPhysical:    inmha,
 		AdvertiseAddr: addr1,
 		DisableMlock:  true,
 	}
@@ -84,9 +85,14 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 		t.Fatalf("unseal err: %s", err)
 	}
 
+	// Attempt to fix raciness in this test by giving the first core a chance
+	// to grab the lock
+	time.Sleep(time.Second)
+
 	// Create a second HA Vault
 	conf2 := &vault.CoreConfig{
-		Physical:      inm,
+		Physical:      inmha,
+		HAPhysical:    inmha,
 		AdvertiseAddr: addr2,
 		DisableMlock:  true,
 	}
@@ -124,6 +130,8 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"orphan":       true,
 			"id":           root,
 			"ttl":          float64(0),
+			"creation_ttl": float64(0),
+			"role":         "",
 		},
 		"warnings": nilWarnings,
 		"auth":     nil,
@@ -133,6 +141,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	actualDataMap := actual["data"].(map[string]interface{})
 	delete(actualDataMap, "creation_time")
+	delete(actualDataMap, "accessor")
 	actual["data"] = actualDataMap
 	delete(actual, "lease_id")
 	if !reflect.DeepEqual(actual, expected) {
@@ -166,13 +175,14 @@ func TestLogical_CreateToken(t *testing.T) {
 			"policies":       []interface{}{"root"},
 			"metadata":       nil,
 			"lease_duration": float64(0),
-			"renewable":      false,
+			"renewable":      true,
 		},
 		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
+	delete(actual["auth"].(map[string]interface{}), "accessor")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
 	}

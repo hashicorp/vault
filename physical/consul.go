@@ -3,8 +3,6 @@ package physical
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 // ConsulBackend is a physical backend that stores data at specific
@@ -53,9 +52,6 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
 	}
-	if dc, ok := conf["datacenter"]; ok {
-		consulConf.Datacenter = dc
-	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
 	}
@@ -66,9 +62,10 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 			return nil, err
 		}
 
-		consulConf.HttpClient.Transport = &http.Transport{
-			TLSClientConfig: tlsClientConfig,
-		}
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.MaxIdleConnsPerHost = 4
+		transport.TLSClientConfig = tlsClientConfig
+		consulConf.HttpClient.Transport = transport
 	}
 
 	client, err := api.NewClient(consulConf)
@@ -191,6 +188,13 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"consul", "list"}, time.Now())
 	scan := c.path + prefix
 
+	// The TrimPrefix call below will not work correctly if we have "//" at the
+	// end. This can happen in cases where you are e.g. listing the root of a
+	// prefix in a logical backend via "/" instead of ""
+	if strings.HasSuffix(scan, "//") {
+		scan = scan[:len(scan)-1]
+	}
+
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
@@ -198,7 +202,7 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 	for idx, val := range out {
 		out[idx] = strings.TrimPrefix(val, scan)
 	}
-	sort.Strings(out)
+
 	return out, err
 }
 
@@ -206,9 +210,10 @@ func (c *ConsulBackend) List(prefix string) ([]string, error) {
 func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	// Create the lock
 	opts := &api.LockOptions{
-		Key:         c.path + key,
-		Value:       []byte(value),
-		SessionName: "Vault Lock",
+		Key:            c.path + key,
+		Value:          []byte(value),
+		SessionName:    "Vault Lock",
+		MonitorRetries: 5,
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {

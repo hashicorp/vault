@@ -19,13 +19,18 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		return
+	}
+
 	config, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
@@ -35,13 +40,18 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_management(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		return
+	}
+
 	config, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
 			testAccStepWriteManagementPolicy(t, "test", ""),
@@ -51,29 +61,39 @@ func TestBackend_management(t *testing.T) {
 }
 
 func TestBackend_crud(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		return
+	}
+
 	_, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
-			testAccStepReadPolicy(t, "test", testPolicy, DefaultLeaseDuration),
+			testAccStepReadPolicy(t, "test", testPolicy, 0),
 			testAccStepDeletePolicy(t, "test"),
 		},
 	})
 }
 
 func TestBackend_role_lease(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		return
+	}
+
 	_, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, "6h"),
 			testAccStepReadPolicy(t, "test", testPolicy, 6*time.Hour),
@@ -84,7 +104,7 @@ func TestBackend_role_lease(t *testing.T) {
 
 func testStartConsulServer(t *testing.T) (map[string]interface{}, *os.Process) {
 	if _, err := exec.LookPath("consul"); err != nil {
-		t.Skipf("consul not found: %s", err)
+		t.Errorf("consul not found: %s", err)
 	}
 
 	td, err := ioutil.TempDir("", "vault")
@@ -153,7 +173,7 @@ func testAccPreCheck(t *testing.T) {
 func testAccStepConfig(
 	t *testing.T, config map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/access",
 		Data:      config,
 	}
@@ -235,7 +255,7 @@ func testAccStepReadManagementToken(
 
 func testAccStepWritePolicy(t *testing.T, name string, policy string, lease string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"policy": base64.StdEncoding.EncodeToString([]byte(policy)),
@@ -246,7 +266,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string, lease stri
 
 func testAccStepWriteManagementPolicy(t *testing.T, name string, lease string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
 			"token_type": "management",

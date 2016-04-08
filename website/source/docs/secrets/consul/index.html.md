@@ -11,7 +11,7 @@ description: |-
 Name: `consul`
 
 The Consul secret backend for Vault generates
-[Consul](http://consul.io)
+[Consul](https://www.consul.io)
 API tokens dynamically based on Consul ACL policies.
 
 This page will show a quick start for this backend. For detailed documentation
@@ -27,13 +27,31 @@ $ vault mount consul
 Successfully mounted 'consul' at 'consul'!
 ```
 
+[Acquire a management token from
+Consul](https://www.consul.io/docs/agent/http/acl.html#acl_create), using the
+`acl_master_token` from your Consul configuration file or any other management
+token:
+
+```shell
+$ curl \
+    -H "X-Consul-Token: secret" \
+    -X PUT \
+    -d '{"Name": "sample", "Type": "management"}' \
+    http://127.0.0.1:8500/v1/acl/create
+```
+```javascript
+{
+  "ID": "adf4238a-882b-9ddc-4a9d-5b6758e4159e"
+}
+```
+
 Next, we must configure Vault to know how to contact Consul.
 This is done by writing the access information:
 
 ```
 $ vault write consul/config/access \
     address=127.0.0.1:8500 \
-    token=root
+    token=adf4238a-882b-9ddc-4a9d-5b6758e4159e
 Success! Data written to: consul/config/access
 ```
 
@@ -43,7 +61,7 @@ an ACL token to use with the `token` parameter. Vault must have a management
 type token so that it can create and revoke ACL tokens.
 
 The next step is to configure a role. A role is a logical name that maps
-to a role used to generated those credentials. For example, lets create
+to a role used to generate those credentials. For example, lets create
 a "readonly" role:
 
 ```
@@ -52,9 +70,10 @@ $ echo $POLICY | base64 | vault write consul/roles/readonly policy=-
 Success! Data written to: consul/roles/readonly
 ```
 
-The backend expects the policy to be base64 encoded, so we need to encode
-it properly before writing. The policy language is
-[documented by Consul](https://consul.io/docs/internals/acl.html), but we've defined a read-only policy.
+The backend expects the policy to be base64 encoded, so we need to encode it
+properly before writing. The policy language is [documented by
+Consul](https://www.consul.io/docs/internals/acl.html), but we've defined a
+read-only policy.
 
 To generate a new set Consul ACL token, we simply read from that role:
 
@@ -143,12 +162,21 @@ Permission denied
       <li>
         <span class="param">policy</span>
         <span class="param-flags">required</span>
-        The base64 encoded Consul ACL policy. This is documented in [more detail here](https://consul.io/docs/internals/acl.html).
+        The base64 encoded Consul ACL policy. This is documented in [more
+        detail here](https://www.consul.io/docs/internals/acl.html). Required
+        unless the `token_type` is `management`.
+      </li>
+      <li>
+        <span class="param">token_type</span>
+        <span class="param-flags">optional</span>
+        The type of token to create using this role: `client` or `management`.
+        If `management`, the `policy` parameter is not required.
       </li>
       <li>
         <span class="param">lease</span>
         <span class="param-flags">optional</span>
-        The lease value provided as a string duration with time suffix. Hour is the largest suffix.
+        The lease value provided as a string duration with time suffix. Hour is
+        the largest suffix.
       </li>
     </ul>
   </dd>
@@ -184,7 +212,9 @@ Permission denied
     ```javascript
     {
       "data": {
-        "policy": "abcdef="
+        "policy": "abcdef=",
+        "lease": "1h0m0s",
+        "token_type": "client"
       }
     }
     ```

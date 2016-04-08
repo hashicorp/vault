@@ -3,8 +3,8 @@ package ldap
 import (
 	"sort"
 	"strings"
-	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -25,7 +25,7 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathLogin,
+			logical.UpdateOperation: b.pathLogin,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -39,25 +39,36 @@ func (b *backend) pathLogin(
 	password := d.Get("password").(string)
 
 	policies, resp, err := b.Login(req, username, password)
-	if len(policies) == 0 {
-		return resp, err
+	// Handle an internal error
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		// Handle a logical error
+		if resp.IsError() {
+			return resp, nil
+		}
+	} else {
+		resp = &logical.Response{}
 	}
 
 	sort.Strings(policies)
 
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Policies: policies,
-			Metadata: map[string]string{
-				"username": username,
-				"policies": strings.Join(policies, ","),
-			},
-			InternalData: map[string]interface{}{
-				"password": password,
-			},
-			DisplayName: username,
+	resp.Auth = &logical.Auth{
+		Policies: policies,
+		Metadata: map[string]string{
+			"username": username,
+			"policies": strings.Join(policies, ","),
 		},
-	}, nil
+		InternalData: map[string]interface{}{
+			"password": password,
+		},
+		DisplayName: username,
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(
@@ -65,19 +76,17 @@ func (b *backend) pathLoginRenew(
 
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
-	prevpolicies := req.Auth.Metadata["policies"]
 
-	policies, resp, err := b.Login(req, username, password)
-	if len(policies) == 0 {
+	loginPolicies, resp, err := b.Login(req, username, password)
+	if len(loginPolicies) == 0 {
 		return resp, err
 	}
 
-	sort.Strings(policies)
-	if strings.Join(policies, ",") != prevpolicies {
-		return logical.ErrorResponse("policies have changed, revoking login"), nil
+	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
+		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
-	return framework.LeaseExtend(1*time.Hour, 0, false)(req, d)
+	return framework.LeaseExtend(0, 0, b.System())(req, d)
 }
 
 const pathLoginSyn = `
@@ -85,5 +94,6 @@ Log in with a username and password.
 `
 
 const pathLoginDesc = `
-This endpoint authenticates using a username and password.
+This endpoint authenticates using a username and password. Please be sure to
+read the note on escaping from the path-help for the 'config' endpoint.
 `

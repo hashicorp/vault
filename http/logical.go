@@ -4,13 +4,16 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
+type PrepareRequestFunc func(req *logical.Request) error
+
+func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
@@ -30,21 +33,33 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 			op = logical.DeleteOperation
 		case "GET":
 			op = logical.ReadOperation
-		case "POST":
-			fallthrough
-		case "PUT":
-			op = logical.WriteOperation
+			// Need to call ParseForm to get query params loaded
+			queryVals := r.URL.Query()
+			listStr := queryVals.Get("list")
+			if listStr != "" {
+				list, err := strconv.ParseBool(listStr)
+				if err != nil {
+					respondError(w, http.StatusBadRequest, nil)
+				}
+				if list {
+					op = logical.ListOperation
+				}
+			}
+		case "POST", "PUT":
+			op = logical.UpdateOperation
+		case "LIST":
+			op = logical.ListOperation
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
 
 		// Parse the request if we can
-		var req map[string]interface{}
-		if op == logical.WriteOperation {
-			err := parseRequest(r, &req)
+		var data map[string]interface{}
+		if op == logical.UpdateOperation {
+			err := parseRequest(r, &data)
 			if err == io.EOF {
-				req = nil
+				data = nil
 				err = nil
 			}
 			if err != nil {
@@ -53,19 +68,31 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 			}
 		}
 
+		req := requestAuth(r, &logical.Request{
+			Operation:  op,
+			Path:       path,
+			Data:       data,
+			Connection: getConnection(r),
+		})
+
+		// Certain endpoints may require changes to the request object.
+		// They will have a callback registered to do the needful.
+		// Invoking it before proceeding.
+		if prepareRequestCallback != nil {
+			if err := prepareRequestCallback(req); err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
-		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation:  op,
-			Path:       path,
-			Data:       req,
-			Connection: getConnection(r),
-		}))
+		resp, ok := request(core, w, r, req)
 		if !ok {
 			return
 		}
-		if op == logical.ReadOperation && resp == nil {
+		if (op == logical.ReadOperation || op == logical.ListOperation) && resp == nil {
 			respondError(w, http.StatusNotFound, nil)
 			return
 		}
@@ -111,6 +138,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 		if resp.Auth != nil {
 			logicalResp.Auth = &Auth{
 				ClientToken:   resp.Auth.ClientToken,
+				Accessor:      resp.Auth.Accessor,
 				Policies:      resp.Auth.Policies,
 				Metadata:      resp.Auth.Metadata,
 				LeaseDuration: int(resp.Auth.TTL.Seconds()),
@@ -205,6 +233,7 @@ type LogicalResponse struct {
 
 type Auth struct {
 	ClientToken   string            `json:"client_token"`
+	Accessor      string            `json:"accessor"`
 	Policies      []string          `json:"policies"`
 	Metadata      map[string]string `json:"metadata"`
 	LeaseDuration int               `json:"lease_duration"`

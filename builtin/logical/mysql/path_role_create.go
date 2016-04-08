@@ -2,9 +2,8 @@ package mysql
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -48,7 +47,7 @@ func (b *backend) pathRoleCreateRead(
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
 	// Generate our username and password. MySQL limits user to 16 characters
@@ -56,11 +55,18 @@ func (b *backend) pathRoleCreateRead(
 	if len(displayName) > 10 {
 		displayName = displayName[:10]
 	}
-	username := fmt.Sprintf("%s-%s", displayName, uuid.GenerateUUID())
+	userUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	username := fmt.Sprintf("%s-%s", displayName, userUUID)
 	if len(username) > 16 {
 		username = username[:16]
 	}
-	password := uuid.GenerateUUID()
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get our connection
 	db, err := b.DB(req.Storage)

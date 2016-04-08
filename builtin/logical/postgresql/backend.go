@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/lib/pq"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -29,6 +28,7 @@ func Backend() *framework.Backend {
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
 			pathConfigLease(&b),
+			pathListRoles(&b),
 			pathRoles(&b),
 			pathRoleCreate(&b),
 		},
@@ -75,20 +75,21 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 		return nil, err
 	}
 
-	conn := connConfig.ConnectionString
+	conn := connConfig.ConnectionURL
 	if len(conn) == 0 {
-		conn = connConfig.ConnectionURL
+		conn = connConfig.ConnectionString
 	}
 
 	// Ensure timezone is set to UTC for all the conenctions
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
-		var err error
-		conn, err = pq.ParseURL(conn)
-		if err != nil {
-			return nil, err
+		if strings.Contains(conn, "?") {
+			conn += "&timezone=utc"
+		} else {
+			conn += "?timezone=utc"
 		}
+	} else {
+		conn += " timezone=utc"
 	}
-	conn += " timezone=utc"
 
 	b.db, err = sql.Open("postgres", conn)
 	if err != nil {
@@ -98,6 +99,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	// Set some connection pool settings. We don't need much of this,
 	// since the request rate shouldn't be high.
 	b.db.SetMaxOpenConns(connConfig.MaxOpenConnections)
+	b.db.SetMaxIdleConns(connConfig.MaxIdleConnections)
 
 	return b.db, nil
 }

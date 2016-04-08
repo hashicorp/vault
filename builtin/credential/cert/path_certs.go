@@ -1,13 +1,28 @@
 package cert
 
 import (
+	"crypto/x509"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+func pathListCerts(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/?",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathCertList,
+		},
+
+		HelpSynopsis:    pathCertHelpSyn,
+		HelpDescription: pathCertHelpDesc,
+	}
+}
 
 func pathCerts(b *backend) *framework.Path {
 	return &framework.Path{
@@ -51,7 +66,7 @@ Defaults to system/backend default TTL time.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathCertDelete,
 			logical.ReadOperation:   b.pathCertRead,
-			logical.WriteOperation:  b.pathCertWrite,
+			logical.UpdateOperation: b.pathCertWrite,
 		},
 
 		HelpSynopsis:    pathCertHelpSyn,
@@ -84,6 +99,15 @@ func (b *backend) pathCertDelete(
 	return nil, nil
 }
 
+func (b *backend) pathCertList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	certs, err := req.Storage.List("cert/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(certs), nil
+}
+
 func (b *backend) pathCertRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	cert, err := b.Cert(req.Storage, strings.ToLower(d.Get("name").(string)))
@@ -114,22 +138,30 @@ func (b *backend) pathCertWrite(
 	name := strings.ToLower(d.Get("name").(string))
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
+	policies := policyutil.ParsePolicies(d.Get("policies").(string))
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
 		displayName = name
 	}
 
-	if len(policies) == 0 {
-		return logical.ErrorResponse("policies required"), nil
-	}
 	parsed := parsePEM([]byte(certificate))
 	if len(parsed) == 0 {
 		return logical.ErrorResponse("failed to parse certificate"), nil
+	}
+
+	// If the certificate is not a CA cert, then ensure that x509.ExtKeyUsageClientAuth is set
+	if !parsed[0].IsCA && parsed[0].ExtKeyUsage != nil {
+		var clientAuth bool
+		for _, usage := range parsed[0].ExtKeyUsage {
+			if usage == x509.ExtKeyUsageClientAuth || usage == x509.ExtKeyUsageAny {
+				clientAuth = true
+				break
+			}
+		}
+		if !clientAuth {
+			return logical.ErrorResponse("non-CA certificates should have TLS client authentication set as an extended key usage"), nil
+		}
 	}
 
 	certEntry := &CertEntry{
@@ -140,7 +172,6 @@ func (b *backend) pathCertWrite(
 	}
 
 	// Parse the lease duration or default to backend/system default
-	var err error
 	maxTTL := b.System().MaxLeaseTTL()
 	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
 	if ttl == time.Duration(0) {

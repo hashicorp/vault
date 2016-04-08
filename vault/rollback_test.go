@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 )
 
 // mockRollback returns a mock rollback manager
@@ -21,7 +21,11 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 			Path: "foo",
 		},
 	}
-	if err := router.Mount(backend, "foo", &MountEntry{UUID: uuid.GenerateUUID()}, nil); err != nil {
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID}, nil); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 

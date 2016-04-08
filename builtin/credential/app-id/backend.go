@@ -68,15 +68,19 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+				"login/*",
 			},
 		},
 
 		Paths: framework.PathAppend([]*framework.Path{
 			pathLogin(&b),
+			pathLoginWithAppIDPath(&b),
 		},
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
 		),
+
+		AuthRenew: b.pathLoginRenew,
 	}
 
 	// Since the salt is new in 0.2, we need to handle this by migrating
@@ -210,7 +214,11 @@ The user ID can be any value (just like the app ID), however it is
 generally a value unique to a machine, such as a MAC address or instance ID,
 or a value hashed from these unique values.
 
-(Note that it is also possible to authorize multiple app IDs with each
+It is possible to authorize multiple app IDs with each
 user ID by writing them as comma-separated values to the map/user-id/<user-id>
-path.)
+path.
+
+It is also possible to renew the auth tokens with 'vault token-renew <token>' command.
+Before the token is renewed, the validity of app ID, user ID and the associated
+policies are checked again.
 `

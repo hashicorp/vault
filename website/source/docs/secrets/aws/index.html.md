@@ -46,8 +46,12 @@ The following parameters are required:
 - `region` the AWS region for API calls.
 
 The next step is to configure a role. A role is a logical name that maps
-to a policy used to generated those credentials. For example, lets create
-a "deploy" role:
+to a policy used to generated those credentials. 
+You can either supply a user inline policy (via the policy argument), or
+provide a reference to an existing AWS policy by supplying the full ARN
+reference (via the arn argument).
+
+For example, lets first create a "deploy" role using an user inline policy as an example:
 
 ```text
 $ vault write aws/roles/deploy \
@@ -72,8 +76,19 @@ is an example IAM policy to get started:
 }
 ```
 
+As a second example, lets create a "readonly" role using an existing AWS policy as an example:
+
+```text
+$ vault write aws/roles/readonly arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+```
+
+This path will create a named role pointing to an existing IAM policy used
+to restrict permissions for it. This is used to dynamically create
+a new pair of IAM credentials when needed.
+
 For more information on IAM policies, please see the
-[AWS IAM policy documentation](http://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
+[AWS IAM policy documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
+
 
 To generate a new set of IAM credentials, we simply read from that role:
 
@@ -84,6 +99,7 @@ lease_id        aws/creds/deploy/7cb8df71-782f-3de1-79dd-251778e49f58
 lease_duration  3600
 access_key      AKIAIOMYUTSLGJOGLHTQ
 secret_key      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
+security_token  <nil>
 ```
 
 If you run the command again, you will get a new set of credentials:
@@ -95,7 +111,24 @@ lease_id        aws/creds/deploy/82d89562-ff19-382e-6be9-cb45c8f6a42d
 lease_duration  3600
 access_key      AKIAJZ5YRPHFH3QHRRRQ
 secret_key      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
+security_token  <nil>
 ```
+
+If you want keys with an STS token use the 'sts' endpoint instead of 'creds.'
+The aws/sts endpoint will always fetch STS credentials with a 1hr ttl. Note that STS credentials can only be generated
+for user inline policies.
+
+```text
+$vault read aws/sts/deploy
+Key            	Value
+lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
+lease_duration 	3600
+lease_renewable	true
+access_key     	ASIAJYYYY2AA5K4WIXXX
+secret_key     	HSs0DYYYYYY9W81DXtI0K7X84H+OVZXK5BXXXX
+security_token 	AQoDYXdzEEwasAKwQyZUtZaCjVNDiXXXXXXXXgUgBBVUUbSyujLjsw6jYzboOQ89vUVIehUw/9MreAifXFmfdbjTr3g6zc0me9M+dB95DyhetFItX5QThw0lEsVQWSiIeIotGmg7mjT1//e7CJc4LpxbW707loFX1TYD1ilNnblEsIBKGlRNXZ+QJdguY4VkzXxv2urxIH0Sl14xtqsRPboV7eYruSEZlAuP3FLmqFbmA0AFPCT37cLf/vUHinSbvw49C4c9WQLH7CeFPhDub7/rub/QU/lCjjJ43IqIRo9jYgcEvvdRkQSt70zO8moGCc7pFvmL7XGhISegQpEzudErTE/PdhjlGpAKGR3d5qKrHpPYK/k480wk1Ai/t1dTa/8/3jUYTUeIkaJpNBnupQt7qoaXXXXXXXXXX
+```
+
 
 If you get an error message similar to either of the following, the root credentials that you wrote to `aws/config/root` have insufficient privilege:
 
@@ -121,16 +154,19 @@ The root credentials need permission to perform various IAM actions. These are t
     {
       "Effect": "Allow",
       "Action": [
+        "iam:AttachUserPolicy",
         "iam:CreateAccessKey",
         "iam:CreateUser",
-        "iam:PutUserPolicy",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUser",
+        "iam:DeleteUserPolicy",
+        "iam:DetachUserPolicy",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
         "iam:ListGroupsForUser",
         "iam:ListUserPolicies",
-        "iam:ListAccessKeys",
-        "iam:DeleteAccessKey",
-        "iam:DeleteUserPolicy",
-        "iam:RemoveUserFromGroup",
-        "iam:DeleteUser"
+        "iam:PutUserPolicy",
+        "iam:RemoveUserFromGroup"
       ],
       "Resource": [
         "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
@@ -144,6 +180,34 @@ Note that this policy example is unrelated to the policy you wrote to `aws/roles
 
 If you get stuck at any time, simply run `vault path-help aws` or with a subpath for
 interactive help output.
+
+## A Note on STS Permissions
+
+Vault generates STS tokens using the IAM credentials passed to aws/config.
+
+Those credentials must have two properties:
+
+- They must have permissions to call `sts:GetFederationToken`.
+- The capabilities of those credentials have to be at least as permissive as those requested
+by policies attached to the STS creds.
+
+If either of those conditions are not met, a "403 not-authorized" error will be returned.
+
+See http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html for more details.
+
+Vault 0.5.1 or later is recommended when using STS tokens to avoid validation errors for exceeding
+the AWS limit of 32 characters on STS token names.
+
+## A Note on Consistency
+
+Unfortunately, IAM credentials are eventually consistent with respect to other
+Amazon services. If you are planning on using these credential in a pipeline,
+you may need to add a delay of 5-10 seconds (or more) after fetching
+credentials before they can be used successfully.
+
+If you want to be able to use credentials without the wait, consider using the STS
+method of fetching keys. IAM credentials supported by an STS token are available for use
+as soon as they are generated.
 
 ## API
 
@@ -250,8 +314,13 @@ interactive help output.
     <ul>
       <li>
         <span class="param">policy</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">required (unless arn specified)</span>
         The IAM policy in JSON format.
+      </li>
+      <li>
+        <span class="param">arn</span>
+        <span class="param-flags">required (unless policy specified)</span>
+        The full ARN reference to the desired existing policy
       </li>
     </ul>
   </dd>
@@ -287,11 +356,17 @@ interactive help output.
     ```javascript
     {
       "data": {
-        "policy": "..."
+        "policy": "..."       
       }
     }
     ```
-
+    ```javascript
+    {
+      "data": {
+        "arn": "..."       
+      }
+    }
+    ```
   </dd>
 </dl>
 
@@ -348,10 +423,47 @@ interactive help output.
     {
       "data": {
         "access_key": "...",
-        "secret_key": "..."
+        "secret_key": "...",
+        "secret_token": null
       }
     }
     ```
 
   </dd>
+</dl>
+
+
+### /aws/sts/
+#### GET
+
+<dl class="api">
+    <dt>Description</dt>
+    <dd>
+        Generates a dynamic IAM credential with an STS token based on the named role.
+    </dd>
+
+    <dt>Method</dt>
+    <dd>GET</dd>
+
+    <dt>URL</dt>
+    <dd>`/aws/sts/<name>`</dd>
+
+    <dt>Parameters</dt>
+    <dd>
+        None
+    </dd>
+
+    <dt>Returns</dt>
+    <dd>
+
+    ```javascript
+    {
+        "data": {
+            "access_key": "...",
+            "secret_key": "...",
+            "secret_token": "..."
+        }
+    }
+    ```
+    </dd>
 </dl>

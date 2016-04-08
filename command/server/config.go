@@ -4,19 +4,25 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
-	hclobj "github.com/hashicorp/hcl/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
 )
+
+// ReloadFunc are functions that are called when a reload is requested.
+type ReloadFunc func(map[string]string) error
 
 // Config is the configuration for the vault server.
 type Config struct {
 	Listeners []*Listener `hcl:"-"`
 	Backend   *Backend    `hcl:"-"`
+	HABackend *Backend    `hcl:"-"`
 
 	DisableCache bool `hcl:"disable_cache"`
 	DisableMlock bool `hcl:"disable_mlock"`
@@ -43,6 +49,7 @@ func DevConfig() *Config {
 			&Listener{
 				Type: "tcp",
 				Config: map[string]string{
+					"address":     "127.0.0.1:8200",
 					"tls_disable": "1",
 				},
 			},
@@ -103,6 +110,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Backend = c2.Backend
 	}
 
+	result.HABackend = c.HABackend
+	if c2.HABackend != nil {
+		result.HABackend = c2.HABackend
+	}
+
 	result.Telemetry = c.Telemetry
 	if c2.Telemetry != nil {
 		result.Telemetry = c2.Telemetry
@@ -155,9 +167,12 @@ func LoadConfigFile(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ParseConfig(string(d))
+}
 
+func ParseConfig(d string) (*Config, error) {
 	// Parse!
-	obj, err := hcl.Parse(string(d))
+	obj, err := hcl.Parse(d)
 	if err != nil {
 		return nil, err
 	}
@@ -179,41 +194,80 @@ func LoadConfigFile(path string) (*Config, error) {
 		}
 	}
 
-	if objs := obj.Get("listener", false); objs != nil {
-		result.Listeners, err = loadListeners(objs)
-		if err != nil {
+	list, ok := obj.Node.(*ast.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+	}
+
+	valid := []string{
+		"backend",
+		"ha_backend",
+		"listener",
+		"disable_cache",
+		"disable_mlock",
+		"telemetry",
+		"default_lease_ttl",
+		"max_lease_ttl",
+
+		// TODO: Remove in 0.6.0
+		// Deprecated keys
+		"statsd_addr",
+		"statsite_addr",
+	}
+	if err := checkHCLKeys(list, valid); err != nil {
+		return nil, err
+	}
+
+	// TODO: Remove in 0.6.0
+	// Preflight checks for deprecated keys
+	sda := list.Filter("statsd_addr")
+	ssa := list.Filter("statsite_addr")
+	if len(sda.Items) > 0 || len(ssa.Items) > 0 {
+		log.Println("[WARN] The top-level keys 'statsd_addr' and 'statsite_addr' " +
+			"have been moved into a 'telemetry' block instead. Please update your " +
+			"Vault configuration as this deprecation will be removed in the next " +
+			"major release. Values specified in a 'telemetry' block will take " +
+			"precendence.")
+
+		t := struct {
+			StatsdAddr   string `hcl:"statsd_addr"`
+			StatsiteAddr string `hcl:"statsite_addr"`
+		}{}
+		if err := hcl.DecodeObject(&t, list); err != nil {
 			return nil, err
 		}
-	}
-	if objs := obj.Get("backend", false); objs != nil {
-		result.Backend, err = loadBackend(objs)
-		if err != nil {
-			return nil, err
+
+		result.Telemetry = &Telemetry{
+			StatsdAddr:   t.StatsdAddr,
+			StatsiteAddr: t.StatsiteAddr,
 		}
 	}
 
-	// A little hacky but upgrades the old stats config directives to the new way
-	if result.Telemetry == nil {
-		statsdAddr := obj.Get("statsd_addr", false)
-		statsiteAddr := obj.Get("statsite_addr", false)
+	if o := list.Filter("backend"); len(o.Items) > 0 {
+		if err := parseBackends(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'backend': %s", err)
+		}
+	}
 
-		if statsdAddr != nil || statsiteAddr != nil {
-			result.Telemetry = &Telemetry{
-				StatsdAddr:   getString(statsdAddr),
-				StatsiteAddr: getString(statsiteAddr),
-			}
+	if o := list.Filter("ha_backend"); len(o.Items) > 0 {
+		if err := parseHABackends(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'ha_backend': %s", err)
+		}
+	}
+
+	if o := list.Filter("listener"); len(o.Items) > 0 {
+		if err := parseListeners(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'listener': %s", err)
+		}
+	}
+
+	if o := list.Filter("telemetry"); len(o.Items) > 0 {
+		if err := parseTelemetry(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'telemetry': %s", err)
 		}
 	}
 
 	return &result, nil
-}
-
-func getString(o *hclobj.Object) string {
-	if o == nil || o.Type != hclobj.ValueTypeString {
-		return ""
-	}
-
-	return o.Value.(string)
 }
 
 // LoadConfigDir loads all the configurations in the given directory
@@ -293,106 +347,163 @@ func isTemporaryFile(name string) bool {
 		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
 }
 
-func loadListeners(os *hclobj.Object) ([]*Listener, error) {
-	var allNames []*hclobj.Object
-
-	// Really confusing iteration. The key is the false/true parameter
-	// of whether we're expanding or not. We first iterate over all
-	// the "listeners"
-	for _, o1 := range os.Elem(false) {
-		// Iterate expand to get the list of types
-		for _, o2 := range o1.Elem(true) {
-			switch o2.Type {
-			case hclobj.ValueTypeList:
-				// This switch is for JSON, to allow them to do this:
-				//
-				// "tcp": [{ ... }, { ... }]
-				//
-				// To configure multiple listeners of the same type.
-				for _, o3 := range o2.Elem(true) {
-					o3.Key = o2.Key
-					allNames = append(allNames, o3)
-				}
-			case hclobj.ValueTypeObject:
-				// This is for the standard `listener "tcp" { ... }` syntax
-				allNames = append(allNames, o2)
-			}
-		}
+func parseBackends(result *Config, list *ast.ObjectList) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one 'backend' block is permitted")
 	}
 
-	if len(allNames) == 0 {
-		return nil, nil
+	// Get our item
+	item := list.Items[0]
+
+	key := "backend"
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
 	}
 
-	// Now go over all the types and their children in order to get
-	// all of the actual resources.
-	result := make([]*Listener, 0, len(allNames))
-	for _, obj := range allNames {
-		k := obj.Key
+	var m map[string]string
+	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+	}
 
-		var config map[string]string
-		if err := hcl.DecodeObject(&config, obj); err != nil {
-			return nil, fmt.Errorf(
-				"Error reading config for %s: %s",
-				k,
-				err)
+	// Pull out the advertise address since it's commong to all backends
+	var advertiseAddr string
+	if v, ok := m["advertise_addr"]; ok {
+		advertiseAddr = v
+		delete(m, "advertise_addr")
+	}
+
+	result.Backend = &Backend{
+		AdvertiseAddr: advertiseAddr,
+		Type:          strings.ToLower(key),
+		Config:        m,
+	}
+	return nil
+}
+
+func parseHABackends(result *Config, list *ast.ObjectList) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one 'ha_backend' block is permitted")
+	}
+
+	// Get our item
+	item := list.Items[0]
+
+	key := "backend"
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
+	}
+
+	var m map[string]string
+	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("ha_backend.%s:", key))
+	}
+
+	// Pull out the advertise address since it's commong to all backends
+	var advertiseAddr string
+	if v, ok := m["advertise_addr"]; ok {
+		advertiseAddr = v
+		delete(m, "advertise_addr")
+	}
+
+	result.HABackend = &Backend{
+		AdvertiseAddr: advertiseAddr,
+		Type:          strings.ToLower(key),
+		Config:        m,
+	}
+	return nil
+}
+
+func parseListeners(result *Config, list *ast.ObjectList) error {
+	listeners := make([]*Listener, 0, len(list.Items))
+	for _, item := range list.Items {
+		key := "listener"
+		if len(item.Keys) > 0 {
+			key = item.Keys[0].Token.Value().(string)
 		}
 
-		result = append(result, &Listener{
-			Type:   k,
-			Config: config,
+		valid := []string{
+			"address",
+			"tls_disable",
+			"tls_cert_file",
+			"tls_key_file",
+			"tls_min_version",
+		}
+		if err := checkHCLKeys(item.Val, valid); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
+		}
+
+		var m map[string]string
+		if err := hcl.DecodeObject(&m, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
+		}
+
+		listeners = append(listeners, &Listener{
+			Type:   strings.ToLower(key),
+			Config: m,
 		})
 	}
 
-	return result, nil
+	result.Listeners = listeners
+	return nil
 }
 
-func loadBackend(os *hclobj.Object) (*Backend, error) {
-	var allNames []*hclobj.Object
+func parseTelemetry(result *Config, list *ast.ObjectList) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one 'telemetry' block is permitted")
+	}
 
-	// See loadListeners
-	for _, o1 := range os.Elem(false) {
-		// Iterate expand to get the list of types
-		for _, o2 := range o1.Elem(true) {
-			// Iterate non-expand to get the full list of types
-			for _, o3 := range o2.Elem(false) {
-				allNames = append(allNames, o3)
-			}
+	// Get our one item
+	item := list.Items[0]
+
+	// Check for invalid keys
+	valid := []string{
+		"statsite_address",
+		"statsd_address",
+		"disable_hostname",
+	}
+	if err := checkHCLKeys(item.Val, valid); err != nil {
+		return multierror.Prefix(err, "telemetry:")
+	}
+
+	var t Telemetry
+	if err := hcl.DecodeObject(&t, item.Val); err != nil {
+		return multierror.Prefix(err, "telemetry:")
+	}
+
+	if result.Telemetry == nil {
+		result.Telemetry = &Telemetry{}
+	}
+
+	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
+		return multierror.Prefix(err, "telemetry:")
+	}
+	return nil
+}
+
+func checkHCLKeys(node ast.Node, valid []string) error {
+	var list *ast.ObjectList
+	switch n := node.(type) {
+	case *ast.ObjectList:
+		list = n
+	case *ast.ObjectType:
+		list = n.List
+	default:
+		return fmt.Errorf("cannot check HCL keys of type %T", n)
+	}
+
+	validMap := make(map[string]struct{}, len(valid))
+	for _, v := range valid {
+		validMap[v] = struct{}{}
+	}
+
+	var result error
+	for _, item := range list.Items {
+		key := item.Keys[0].Token.Value().(string)
+		if _, ok := validMap[key]; !ok {
+			result = multierror.Append(result, fmt.Errorf(
+				"invalid key '%s' on line %d", key, item.Assign.Line))
 		}
 	}
 
-	if len(allNames) == 0 {
-		return nil, nil
-	}
-	if len(allNames) > 1 {
-		keys := make([]string, 0, len(allNames))
-		for _, o := range allNames {
-			keys = append(keys, o.Key)
-		}
-
-		return nil, fmt.Errorf(
-			"Multiple backends declared. Only one is allowed: %v", keys)
-	}
-
-	// Now go over all the types and their children in order to get
-	// all of the actual resources.
-	var result Backend
-	obj := allNames[0]
-	result.Type = obj.Key
-
-	var config map[string]string
-	if err := hcl.DecodeObject(&config, obj); err != nil {
-		return nil, fmt.Errorf(
-			"Error reading config for backend %s: %s",
-			result.Type,
-			err)
-	}
-
-	if v, ok := config["advertise_addr"]; ok {
-		result.AdvertiseAddr = v
-		delete(config, "advertise_addr")
-	}
-
-	result.Config = config
-	return &result, nil
+	return result
 }

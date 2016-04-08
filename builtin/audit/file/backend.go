@@ -15,12 +15,25 @@ import (
 
 func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.Salt == nil {
-		return nil, fmt.Errorf("Nil salt passed in")
+		return nil, fmt.Errorf("nil salt")
 	}
 
-	path, ok := conf.Config["path"]
+	path, ok := conf.Config["file_path"]
 	if !ok {
-		return nil, fmt.Errorf("path is required")
+		path, ok = conf.Config["path"]
+		if !ok {
+			return nil, fmt.Errorf("file_path is required")
+		}
+	}
+
+	// Check if hashing of accessor is disabled
+	hmacAccessor := true
+	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
+		value, err := strconv.ParseBool(hmacAccessorRaw)
+		if err != nil {
+			return nil, err
+		}
+		hmacAccessor = value
 	}
 
 	// Check if raw logging is enabled
@@ -34,9 +47,10 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	b := &Backend{
-		path:   path,
-		logRaw: logRaw,
-		salt:   conf.Salt,
+		path:         path,
+		logRaw:       logRaw,
+		hmacAccessor: hmacAccessor,
+		salt:         conf.Salt,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -55,12 +69,17 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 // It doesn't do anything more at the moment to assist with rotation
 // or reset the write cursor, this should be done in the future.
 type Backend struct {
-	path   string
-	logRaw bool
-	salt   *salt.Salt
+	path         string
+	logRaw       bool
+	hmacAccessor bool
+	salt         *salt.Salt
 
 	once sync.Once
 	f    *os.File
+}
+
+func (b *Backend) GetHash(data string) string {
+	return audit.HashString(b.salt, data)
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
@@ -99,6 +118,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
+
 	}
 
 	var format audit.FormatJSON
@@ -145,14 +165,33 @@ func (b *Backend) LogResponse(
 		resp = cp.(*logical.Response)
 
 		// Hash any sensitive information
+
+		// Cache and restore accessor in the auth
+		var accessor string
+		if !b.hmacAccessor && auth != nil && auth.Accessor != "" {
+			accessor = auth.Accessor
+		}
 		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
+		if accessor != "" {
+			auth.Accessor = accessor
+		}
+
 		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
+
+		// Cache and restore accessor in the response
+		accessor = ""
+		if !b.hmacAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+			accessor = resp.Auth.Accessor
+		}
 		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
+		}
+		if accessor != "" {
+			resp.Auth.Accessor = accessor
 		}
 	}
 

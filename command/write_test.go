@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -19,7 +20,7 @@ func TestWrite(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -57,7 +58,7 @@ func TestWrite_arbitrary(t *testing.T) {
 	stdinR, stdinW := io.Pipe()
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -101,7 +102,7 @@ func TestWrite_escaped(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -146,7 +147,7 @@ func TestWrite_file(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -191,7 +192,7 @@ func TestWrite_fileValue(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -228,7 +229,7 @@ func TestWrite_Output(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -254,7 +255,7 @@ func TestWrite_force(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &WriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

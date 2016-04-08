@@ -11,13 +11,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/ssh"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
 )
 
 // SSHCommand is a Command that establishes a SSH connection
 // with target by generating a dynamic key
 type SSHCommand struct {
-	Meta
+	meta.Meta
 }
 
 // Structure to hold the fields returned when asked for a credential from SSHh backend.
@@ -34,7 +35,7 @@ func (c *SSHCommand) Run(args []string) int {
 	var noExec bool
 	var sshCmdArgs []string
 	var sshDynamicKeyFileName string
-	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
+	flags := c.Meta.FlagSet("ssh", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&role, "role", "", "")
 	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
@@ -69,6 +70,7 @@ func (c *SSHCommand) Run(args []string) int {
 		u, err := user.Current()
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error fetching username: %s", err))
+			return 1
 		}
 		username = u.Username
 		ipAddr = input[0]
@@ -146,8 +148,7 @@ func (c *SSHCommand) Run(args []string) int {
 		// Feel free to try and remove this dependency.
 		sshpassPath, err := exec.LookPath("sshpass")
 		if err == nil {
-			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-p", port}...)
-			sshCmdArgs = append(sshCmdArgs, args...)
+			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-p", port, username + "@" + ip.String()}...)
 			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
 			sshCmd.Stdin = os.Stdin
 			sshCmd.Stdout = os.Stdout
@@ -160,8 +161,7 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Output("OTP for the session is " + resp.Key)
 		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
 	}
-	sshCmdArgs = append(sshCmdArgs, []string{"-p", port}...)
-	sshCmdArgs = append(sshCmdArgs, args...)
+	sshCmdArgs = append(sshCmdArgs, []string{"-p", port, username + "@" + ip.String()}...)
 
 	sshCmd := exec.Command("ssh", sshCmdArgs...)
 	sshCmd.Stdin = os.Stdin
@@ -256,29 +256,27 @@ Usage: vault ssh [options] username@ip
   See [https://github.com/hashicorp/vault-ssh-agent]
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 SSH Options:
 
-  -role                 Role to be used to create the key.
-  			Each IP is associated with a role. To see the associated
-			roles with IP, use "lookup" endpoint. If you are certain that
-			there is only one role associated with the IP, you can
-			skip mentioning the role. It will be chosen by default.
-			If there are no roles associated with the IP, register
-			the CIDR block of that IP using the "roles/" endpoint.
+  -role             Role to be used to create the key.
+                    Each IP is associated with a role. To see the associated
+                    roles with IP, use "lookup" endpoint. If you are certain
+                    that there is only one role associated with the IP, you can
+                    skip mentioning the role. It will be chosen by default.  If
+                    there are no roles associated with the IP, register the
+                    CIDR block of that IP using the "roles/" endpoint.
 
-  -no-exec		Shows the credentials but does not establish connection.
+  -no-exec          Shows the credentials but does not establish connection.
 
-  -mount-point		Mount point of SSH backend. If the backend is mounted at
-  			'ssh', which is the default as well, this parameter can
-			be skipped.
+  -mount-point      Mount point of SSH backend. If the backend is mounted at
+                    'ssh', which is the default as well, this parameter can be
+                    skipped.
 
-  -format		If no-exec option is enabled, then the credentials will be
-  			printed out and SSH connection will not be established. The
-			format of the output can be 'json' or 'table'. JSON output
-			is useful when writing scripts. Default is 'table'.
+  -format           If no-exec option is enabled, then the credentials will be
+                    printed out and SSH connection will not be established. The
+                    format of the output can be 'json' or 'table'. JSON output
+                    is useful when writing scripts. Default is 'table'.
 `
 	return strings.TrimSpace(helpText)
 }

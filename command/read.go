@@ -1,21 +1,28 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // ReadCommand is a Command that reads data from the Vault.
 type ReadCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *ReadCommand) Run(args []string) int {
 	var format string
 	var field string
-	flags := c.Meta.FlagSet("read", FlagSetDefault)
+	var err error
+	var secret *api.Secret
+	var flags *flag.FlagSet
+	flags = c.Meta.FlagSet("read", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&field, "field", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -24,7 +31,7 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) != 1 {
+	if len(args) != 1 || len(args[0]) == 0 {
 		c.Ui.Error("read expects one argument")
 		flags.Usage()
 		return 1
@@ -42,7 +49,7 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Read(path)
+	secret, err = client.Logical().Read(path)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error reading %s: %s", path, err))
@@ -63,9 +70,9 @@ func (c *ReadCommand) Run(args []string) int {
 			// directly print the message. If mitchellh/cli exposes method
 			// to print without CR, this check needs to be removed.
 			if reflect.TypeOf(c.Ui).String() == "*cli.BasicUi" {
-				fmt.Fprintf(os.Stdout, val.(string))
+				fmt.Fprintf(os.Stdout, fmt.Sprintf("%v", val))
 			} else {
-				c.Ui.Output(val.(string))
+				c.Ui.Output(fmt.Sprintf("%v", val))
 			}
 			return 0
 		} else {
@@ -88,22 +95,20 @@ Usage: vault read [options] path
 
   Read data from Vault.
 
-  Read reads data at the given path from Vault. This can be used to
-  read secrets and configuration as well as generate dynamic values from
+  Reads data at the given path from Vault. This can be used to read
+  secrets and configuration as well as generate dynamic values from
   materialized backends. Please reference the documentation for the
   backends in use to determine key structure.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Read Options:
 
   -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json.
+                          delimited table. This can also be json or yaml.
 
   -field=field            If included, the raw value of the specified field
-  						  will be output raw to stdout.
+                          will be output raw to stdout.
 
 `
 	return strings.TrimSpace(helpText)

@@ -7,10 +7,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"strconv"
+	"sync"
 )
 
 // ListenerFactory is the factory function to create a listener.
-type ListenerFactory func(map[string]string) (net.Listener, map[string]string, error)
+type ListenerFactory func(map[string]string) (net.Listener, map[string]string, ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
@@ -26,10 +28,10 @@ var tlsLookup = map[string]uint16{
 
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
-func NewListener(t string, config map[string]string) (net.Listener, map[string]string, error) {
+func NewListener(t string, config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
 	f, ok := BuiltinListeners[t]
 	if !ok {
-		return nil, nil, fmt.Errorf("unknown listener type: %s", t)
+		return nil, nil, nil, fmt.Errorf("unknown listener type: %s", t)
 	}
 
 	return f(config)
@@ -38,26 +40,35 @@ func NewListener(t string, config map[string]string) (net.Listener, map[string]s
 func listenerWrapTLS(
 	ln net.Listener,
 	props map[string]string,
-	config map[string]string) (net.Listener, map[string]string, error) {
+	config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
 	props["tls"] = "disabled"
 
-	if v, ok := config["tls_disable"]; ok && v != "" {
-		return ln, props, nil
+	if v, ok := config["tls_disable"]; ok {
+		disabled, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_disable': %v", err)
+		}
+		if disabled {
+			return ln, props, nil, nil
+		}
 	}
 
-	certFile, ok := config["tls_cert_file"]
+	_, ok := config["tls_cert_file"]
 	if !ok {
-		return nil, nil, fmt.Errorf("'tls_cert_file' must be set")
+		return nil, nil, nil, fmt.Errorf("'tls_cert_file' must be set")
 	}
 
-	keyFile, ok := config["tls_key_file"]
+	_, ok = config["tls_key_file"]
 	if !ok {
-		return nil, nil, fmt.Errorf("'tls_key_file' must be set")
+		return nil, nil, nil, fmt.Errorf("'tls_key_file' must be set")
 	}
 
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
+	cg := &certificateGetter{
+		id: config["address"],
+	}
+
+	if err := cg.reload(config); err != nil {
+		return nil, nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
 	}
 
 	tlsvers, ok := config["tls_min_version"]
@@ -66,15 +77,52 @@ func listenerWrapTLS(
 	}
 
 	tlsConf := &tls.Config{}
-	tlsConf.Certificates = []tls.Certificate{cert}
+	tlsConf.GetCertificate = cg.getCertificate
 	tlsConf.NextProtos = []string{"http/1.1"}
 	tlsConf.MinVersion, ok = tlsLookup[tlsvers]
 	if !ok {
-		return nil, nil, fmt.Errorf("'tls_min_version' value %s not supported, please specify one of [tls10,tls11,tls12]", tlsvers)
+		return nil, nil, nil, fmt.Errorf("'tls_min_version' value %s not supported, please specify one of [tls10,tls11,tls12]", tlsvers)
 	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
-	return ln, props, nil
+	return ln, props, cg.reload, nil
+}
+
+type certificateGetter struct {
+	sync.RWMutex
+
+	cert *tls.Certificate
+
+	id string
+}
+
+func (cg *certificateGetter) reload(config map[string]string) error {
+	if config["address"] != cg.id {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(config["tls_cert_file"], config["tls_key_file"])
+	if err != nil {
+		return err
+	}
+
+	cg.Lock()
+	defer cg.Unlock()
+
+	cg.cert = &cert
+
+	return nil
+}
+
+func (cg *certificateGetter) getCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	cg.RLock()
+	defer cg.RUnlock()
+
+	if cg.cert == nil {
+		return nil, fmt.Errorf("nil certificate")
+	}
+
+	return cg.cert, nil
 }

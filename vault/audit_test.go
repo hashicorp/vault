@@ -43,6 +43,10 @@ func (n *NoopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical
 	return n.RespErr
 }
 
+func (n *NoopAudit) GetHash(data string) string {
+	return n.Config.Salt.GetIdentifiedHMAC(data)
+}
+
 func TestCore_EnableAudit(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {

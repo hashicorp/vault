@@ -67,13 +67,19 @@
         margin-right: 10px;
       }
 
+      &.github{
+        a{
+          margin-right: 0;  
+        }
+      }
+
       > a {
         padding-left: 12px !important;
         svg{
           position: absolute;
-          left: -12px;
+          left: -8px;
           top: 50%;
-          margin-top: -7px;
+          margin-top: -8px;
           width: 14px;
           height: 14px;
         }
@@ -82,7 +88,7 @@
   }
 
   .main-links{
-    margin-right: $nav-margin-right * 2;
+    margin-right: $nav-margin-right;
   }
 
   .main-links,
@@ -159,9 +165,6 @@
       polygon{
         fill: white;
       }
-      line{
-        stroke: white;
-      }
     }
 
     &:focus,
@@ -205,8 +208,7 @@
         @include transition(all 300ms ease-in);
       }
     }
-    line{
-      stroke: black;
+    .svg-bg-line{
       @include transition(all 300ms ease-in);
 
       &:hover{
@@ -282,6 +284,13 @@
     path,
     line{
       fill: $black;
+      @include transition(all 300ms ease-in);
+
+      &:hover{
+        @include transition(all 300ms ease-in);
+      }
+    }
+    .svg-bg-line{
       @include transition(all 300ms ease-in);
 
       &:hover{

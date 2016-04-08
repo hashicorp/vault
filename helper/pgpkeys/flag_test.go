@@ -1,7 +1,9 @@
 package pgpkeys
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +11,9 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
 )
 
 func TestPubKeyFilesFlag_implements(t *testing.T) {
@@ -84,7 +89,7 @@ func TestPubKeyFilesFlagSetB64(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
-    err = ioutil.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
 	}
@@ -102,10 +107,55 @@ func TestPubKeyFilesFlagSetB64(t *testing.T) {
 
 	expected := []string{pubKey1, pubKey2}
 	if !reflect.DeepEqual(pkf.String(), fmt.Sprint(expected)) {
-        t.Fatalf("bad: got %s, expected %s", pkf.String(), fmt.Sprint(expected))
+		t.Fatalf("bad: got %s, expected %s", pkf.String(), fmt.Sprint(expected))
 	}
 }
 
+func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "vault-test")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %s", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0755)
+	if err != nil {
+		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
+	}
+
+	pkf := new(PubKeyFilesFlag)
+	err = pkf.Set("keybase:jefferai,@" + tempDir + "/pubkey2" + ",keybase:hashicorp")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	fingerprints := []string{}
+	for _, pubkey := range []string(*pkf) {
+		keyBytes, err := base64.StdEncoding.DecodeString(pubkey)
+		if err != nil {
+			t.Fatalf("bad: %v", err)
+		}
+		pubKeyBuf := bytes.NewBuffer(keyBytes)
+		reader := packet.NewReader(pubKeyBuf)
+		entity, err := openpgp.ReadEntity(reader)
+		if err != nil {
+			t.Fatalf("bad: %v", err)
+		}
+		if entity == nil {
+			t.Fatalf("nil entity encountered")
+		}
+		fingerprints = append(fingerprints, hex.EncodeToString(entity.PrimaryKey.Fingerprint[:]))
+	}
+
+	exp := []string{
+		"0f801f518ec853daff611e836528efcac6caa3db",
+		"cf3d4694c9f57b28cb4092c2eb832c67eb5e8957",
+		"91a6e7f85d05c65630bef18951852d87348ffc4c",
+	}
+
+	if !reflect.DeepEqual(fingerprints, exp) {
+		t.Fatalf("bad: got \n%#v\nexpected\n%#v\n", fingerprints, exp)
+	}
+}
 
 const pubKey1 = `mQENBFXbjPUBCADjNjCUQwfxKL+RR2GA6pv/1K+zJZ8UWIF9S0lk7cVIEfJiprzzwiMwBS5cD0da
 rGin1FHvIWOZxujA7oW0O2TUuatqI3aAYDTfRYurh6iKLC+VS+F7H+/mhfFvKmgr0Y5kDCF1j0T/

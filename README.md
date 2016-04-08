@@ -57,11 +57,11 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems,
 you'll first need [Go](https://www.golang.org) installed on your
-machine (version 1.4+ is *required*).
+machine (version 1.6+ is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go, you can
-download the required build tools such as vet, cover, godep etc by bootstrapping
+download the required build tools such as vet, cover, etc by bootstrapping
 your environment. 
 
 ```sh

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathEncrypt() *framework.Path {
+func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -30,26 +30,34 @@ func pathEncrypt() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathEncryptWrite,
+			logical.CreateOperation: b.pathEncryptWrite,
+			logical.UpdateOperation: b.pathEncryptWrite,
 		},
+
+		ExistenceCheck: b.pathEncryptExistenceCheck,
 
 		HelpSynopsis:    pathEncryptHelpSyn,
 		HelpDescription: pathEncryptHelpDesc,
 	}
 }
 
-func pathEncryptWrite(
+func (b *backend) pathEncryptExistenceCheck(
+	req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+	lp, err := b.policies.getPolicy(req, name)
+	if err != nil {
+		return false, err
+	}
+
+	return lp != nil, nil
+}
+
+func (b *backend) pathEncryptWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	value := d.Get("plaintext").(string)
 	if len(value) == 0 {
 		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
-	}
-
-	// Get the policy
-	p, err := getPolicy(req, name)
-	if err != nil {
-		return nil, err
 	}
 
 	// Decode the context if any
@@ -63,16 +71,38 @@ func pathEncryptWrite(
 		}
 	}
 
+	// Get the policy
+	lp, err := b.policies.getPolicy(req, name)
+	if err != nil {
+		return nil, err
+	}
+
 	// Error if invalid policy
-	if p == nil {
+	if lp == nil {
+		if req.Operation != logical.CreateOperation {
+			return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		}
+
 		isDerived := len(context) != 0
-		p, err = generatePolicy(req.Storage, name, isDerived)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to upsert policy: %v", err)), logical.ErrInvalidRequest
+
+		lp, err = b.policies.generatePolicy(req.Storage, name, isDerived)
+		// If the error is that the policy has been created in the interim we
+		// will get the policy back, so only consider it an error if err is not
+		// nil and we do not get a policy back
+		if err != nil && lp != nil {
+			return nil, err
 		}
 	}
 
-	ciphertext, err := p.Encrypt(context, value)
+	lp.RLock()
+	defer lp.RUnlock()
+
+	// Verify if wasn't deleted before we grabbed the lock
+	if lp.policy == nil {
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
+	}
+
+	ciphertext, err := lp.policy.Encrypt(context, value)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

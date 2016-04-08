@@ -16,11 +16,22 @@ import (
 func TestBackend_basic(t *testing.T) {
 	b, _ := Factory(logical.TestBackendConfig())
 
+	d1 := map[string]interface{}{
+		"connection_url": os.Getenv("PG_URL"),
+	}
+	d2 := map[string]interface{}{
+		"value": os.Getenv("PG_URL"),
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, d1, false),
+			testAccStepRole(t),
+			testAccStepReadCreds(t, b, "web"),
+			testAccStepConfig(t, d2, false),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, b, "web"),
 		},
@@ -30,16 +41,47 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_roleCrud(t *testing.T) {
 	b, _ := Factory(logical.TestBackendConfig())
+	d := map[string]interface{}{
+		"connection_url": os.Getenv("PG_URL"),
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, d, false),
 			testAccStepRole(t),
 			testAccStepReadRole(t, "web", testRole),
 			testAccStepDeleteRole(t, "web"),
 			testAccStepReadRole(t, "web", ""),
+		},
+	})
+}
+
+func TestBackend_configConnection(t *testing.T) {
+	b := Backend()
+	d1 := map[string]interface{}{
+		"value": os.Getenv("PG_URL"),
+	}
+	d2 := map[string]interface{}{
+		"connection_url": os.Getenv("PG_URL"),
+	}
+	d3 := map[string]interface{}{
+		"value":          os.Getenv("PG_URL"),
+		"connection_url": os.Getenv("PG_URL"),
+	}
+	d4 := map[string]interface{}{}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, d1, false),
+			testAccStepConfig(t, d2, false),
+			testAccStepConfig(t, d3, false),
+			testAccStepConfig(t, d4, true),
 		},
 	})
 }
@@ -50,19 +92,38 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testAccStepConfig(t *testing.T) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
-		Data: map[string]interface{}{
-			"value": os.Getenv("PG_URL"),
+		Data:      d,
+		ErrorOk:   true,
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				if resp.Data == nil {
+					return fmt.Errorf("data is nil")
+				}
+				var e struct {
+					Error string `mapstructure:"error"`
+				}
+				if err := mapstructure.Decode(resp.Data, &e); err != nil {
+					return err
+				}
+				if len(e.Error) == 0 {
+					return fmt.Errorf("expected error, but write succeeded.")
+				}
+				return nil
+			} else if resp != nil {
+				return fmt.Errorf("response should be nil")
+			}
+			return nil
 		},
 	}
 }
 
 func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
 		Data: map[string]interface{}{
 			"sql": testRole,
@@ -105,7 +166,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 
 			returnedRows := func() int {
 				stmt, err := db.Prepare(fmt.Sprintf(
-					"SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee='%s';",
+					"SELECT DISTINCT schemaname FROM pg_tables WHERE has_table_privilege('%s', 'information_schema.role_column_grants', 'select');",
 					d.Username))
 				if err != nil {
 					return -1
@@ -126,7 +187,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			}
 
 			userRows := returnedRows()
-			if userRows != 1 {
+			if userRows != 2 {
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 
@@ -149,7 +210,8 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			}
 
 			userRows = returnedRows()
-			if userRows != 0 {
+			// User shouldn't exist so returnedRows() should encounter an error and exit with -1
+			if userRows != -1 {
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 

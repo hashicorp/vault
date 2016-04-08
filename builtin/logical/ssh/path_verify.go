@@ -16,7 +16,7 @@ func pathVerify(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathVerifyWrite,
+			logical.UpdateOperation: b.pathVerifyWrite,
 		},
 		HelpSynopsis:    pathVerifyHelpSyn,
 		HelpDescription: pathVerifyHelpDesc,
@@ -65,7 +65,7 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 		return nil, err
 	}
 	if otpEntry == nil {
-		return nil, nil
+		return logical.ErrorResponse("OTP not found"), nil
 	}
 
 	// Delete the OTP if found. This is what makes the key an OTP.

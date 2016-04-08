@@ -13,7 +13,7 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Lists all the available policies.
+    List the mounted audit backends.
   </dd>
 
   <dt>Method</dt>
@@ -54,7 +54,7 @@ description: |-
   <dd>PUT</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/audit/<name>`</dd>
+  <dd>`/sys/audit/<path>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -96,7 +96,7 @@ description: |-
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/audit/<name>`</dd>
+  <dd>`/sys/audit/<path>`</dd>
 
   <dt>Parameters</dt>
   <dd>None

@@ -1,19 +1,29 @@
 {
-    "listener": {
-        "tcp": [{
-            "address": "127.0.0.1:443"
-        }]
+  "listener":[
+    {
+      "tcp":{
+        "address":"127.0.0.1:443"
+      }
     },
-
-    "backend": {
-        "consul": {
-            "foo": "bar"
-        }
-    },
-
-    "telemetry": {
-        "statsd_address": "bar",
-        "statsite_address": "foo",
-        "disable_hostname": true
+    {
+      "tcp":{
+        "address":"127.0.0.1:444"
+      }
     }
+  ],
+  "backend":{
+    "consul":{
+      "foo":"bar"
+    }
+  },
+  "ha_backend":{
+    "consul":{
+      "bar":"baz"
+    }
+  },
+  "telemetry":{
+    "statsd_address":"bar",
+    "statsite_address":"foo",
+    "disable_hostname":true
+  }
 }

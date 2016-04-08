@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // KeyStatusCommand is a Command that provides information about the key status
 type KeyStatusCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *KeyStatusCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("key-status", FlagSetDefault)
+	flags := c.Meta.FlagSet("key-status", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -48,7 +50,6 @@ Usage: vault key-status [options]
   the current key term and the key installation time.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

@@ -2,39 +2,29 @@ package vault
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/packet"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
 )
 
 const (
-	// coreSealConfigPath is the path used to store our seal configuration.
-	// This value is stored in plaintext, since we must be able to read
-	// it even with the Vault sealed. This is required so that we know
-	// how many secret parts must be used to reconstruct the master key.
-	coreSealConfigPath = "core/seal-config"
-
 	// coreLockPath is the path used to acquire a coordinating lock
 	// for a highly-available deploy.
 	coreLockPath = "core/lock"
@@ -58,6 +48,10 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
+
+	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
+	// step down of the active node, to prevent instantly regrabbing the lock
+	manualStepDownSleepPeriod = 10 * time.Second
 )
 
 var (
@@ -86,72 +80,18 @@ var (
 	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
 )
 
-// SealConfig is used to describe the seal configuration
-type SealConfig struct {
-	// SecretShares is the number of shares the secret is
-	// split into. This is the N value of Shamir.
-	SecretShares int `json:"secret_shares"`
-
-	// PGPKeys is the array of public PGP keys used,
-	// if requested, to encrypt the output unseal tokens. If
-	// provided, it sets the value of SecretShares. Ordering
-	// is important.
-	PGPKeys []string `json:"-"`
-
-	// SecretThreshold is the number of parts required
-	// to open the vault. This is the T value of Shamir
-	SecretThreshold int `json:"secret_threshold"`
+// NonFatalError is an error that can be returned during NewCore that should be
+// displayed but not cause a program exit
+type NonFatalError struct {
+	Err error
 }
 
-// Validate is used to sanity check the seal configuration
-func (s *SealConfig) Validate() error {
-	if s.SecretShares < 1 {
-		return fmt.Errorf("secret shares must be at least one")
-	}
-	if s.SecretThreshold < 1 {
-		return fmt.Errorf("secret threshold must be at least one")
-	}
-	if s.SecretShares > 1 && s.SecretThreshold == 1 {
-		return fmt.Errorf("secret threshold must be greater than one for multiple shares")
-	}
-	if s.SecretShares > 255 {
-		return fmt.Errorf("secret shares must be less than 256")
-	}
-	if s.SecretThreshold > 255 {
-		return fmt.Errorf("secret threshold must be less than 256")
-	}
-	if s.SecretThreshold > s.SecretShares {
-		return fmt.Errorf("secret threshold cannot be larger than secret shares")
-	}
-	if len(s.PGPKeys) > 0 && len(s.PGPKeys) != s.SecretShares {
-		return fmt.Errorf("count mismatch between number of provided PGP keys and number of shares")
-	}
-	if len(s.PGPKeys) > 0 {
-		for _, keystring := range s.PGPKeys {
-			data, err := base64.StdEncoding.DecodeString(keystring)
-			if err != nil {
-				return fmt.Errorf("Error decoding given PGP key: %s", err)
-			}
-			_, err = openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
-			if err != nil {
-				return fmt.Errorf("Error parsing given PGP key: %s", err)
-			}
-		}
-	}
-	return nil
+func (e *NonFatalError) WrappedErrors() []error {
+	return []error{e.Err}
 }
 
-// InitResult is used to provide the key parts back after
-// they are generated as part of the initialization.
-type InitResult struct {
-	SecretShares [][]byte
-	RootToken    string
-}
-
-// RekeyResult is used to provide the key parts back after
-// they are generated as part of the rekey.
-type RekeyResult struct {
-	SecretShares [][]byte
+func (e *NonFatalError) Error() string {
+	return e.Err.Error()
 }
 
 // ErrInvalidKey is returned if there is an error with a
@@ -177,6 +117,9 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
+	// Our Seal, for seal configuration information
+	seal Seal
+
 	// barrier is the security barrier wrapping the physical backend
 	barrier SecurityBarrier
 
@@ -196,19 +139,29 @@ type Core struct {
 	stateLock sync.RWMutex
 	sealed    bool
 
-	standby       bool
-	standbyDoneCh chan struct{}
-	standbyStopCh chan struct{}
+	standby          bool
+	standbyDoneCh    chan struct{}
+	standbyStopCh    chan struct{}
+	manualStepDownCh chan struct{}
 
 	// unlockParts has the keys provided to Unseal until
 	// the threshold number of parts is available.
 	unlockParts [][]byte
 
-	// rekeyProgress holds the shares we have until we reach enough
-	// to verify the master key.
-	rekeyConfig   *SealConfig
-	rekeyProgress [][]byte
-	rekeyLock     sync.Mutex
+	// generateRootProgress holds the shares until we reach enough
+	// to verify the master key
+	generateRootConfig   *GenerateRootConfig
+	generateRootProgress [][]byte
+	generateRootLock     sync.Mutex
+
+	// These variables holds the config and shares we have until we reach
+	// enough to verify the appropriate master key. Note that the same lock is
+	// used; this isn't time-critical so this shouldn't be a problem.
+	barrierRekeyConfig    *SealConfig
+	barrierRekeyProgress  [][]byte
+	recoveryRekeyConfig   *SealConfig
+	recoveryRekeyProgress [][]byte
+	rekeyLock             sync.RWMutex
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
@@ -273,6 +226,8 @@ type CoreConfig struct {
 	CredentialBackends map[string]logical.Factory
 	AuditBackends      map[string]audit.Factory
 	Physical           physical.Backend
+	HAPhysical         physical.HABackend // May be nil, which disables HA operations
+	Seal               Seal
 	Logger             *log.Logger
 	DisableCache       bool   // Disables the LRU cache on the physical backend
 	DisableMlock       bool   // Disables mlock syscall
@@ -284,12 +239,7 @@ type CoreConfig struct {
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	// Check if this backend supports an HA configuraiton
-	var haBackend physical.HABackend
-	if ha, ok := conf.Physical.(physical.HABackend); ok {
-		haBackend = ha
-	}
-	if haBackend != nil && conf.AdvertiseAddr == "" {
+	if conf.HAPhysical != nil && conf.AdvertiseAddr == "" {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
@@ -299,7 +249,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.MaxLeaseTTL == 0 {
 		conf.MaxLeaseTTL = maxLeaseTTL
 	}
-
 	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
 	}
@@ -355,9 +304,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:              haBackend,
+		ha:              conf.HAPhysical,
 		advertiseAddr:   conf.AdvertiseAddr,
 		physical:        conf.Physical,
+		seal:            conf.Seal,
 		barrier:         barrier,
 		router:          NewRouter(),
 		sealed:          true,
@@ -396,7 +346,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		auditBackends[k] = f
 	}
 	c.auditBackends = auditBackends
-	return c, nil
+
+	if c.seal == nil {
+		c.seal = &DefaultSeal{}
+	}
+	c.seal.SetCore(c)
+
+	// Attempt unsealing with stored keys; if there are no stored keys this
+	// returns nil, otherwise returns nil or an error
+	storedKeyErr := c.unsealWithStoredKeys()
+
+	return c, storedKeyErr
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -423,6 +383,18 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 	if c.standby {
 		return nil, ErrStandby
+	}
+
+	// Allowing writing to a path ending in / makes it extremely difficult to
+	// understand user intent for the filesystem-like backends (generic,
+	// cubbyhole) -- did they want a key named foo/ or did they want to write
+	// to a directory foo/ with no (or forgotten) key, or...? It also affects
+	// lookup, because paths ending in / are considered prefixes by some
+	// backends. Basically, it's all just terrible, so don't allow it.
+	if strings.HasSuffix(req.Path, "/") &&
+		(req.Operation == logical.UpdateOperation ||
+			req.Operation == logical.CreateOperation) {
+		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
 	var auth *logical.Auth
@@ -456,7 +428,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, err := c.checkToken(req.Operation, req.Path, req.ClientToken)
+	auth, te, err := c.checkToken(req)
 	if te != nil {
 		defer func() {
 			// Attempt to use the token (decrement num_uses)
@@ -561,29 +533,12 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error. We exclude renewal of a token,
 	// since it does not need to be re-registered
-	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew/") {
+	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew") {
 		if !strings.HasPrefix(req.Path, "auth/token/") {
 			c.logger.Printf(
 				"[ERR] core: unexpected Auth response for non-token backend "+
 					"(request path: %s)", req.Path)
 			return nil, auth, ErrInternalError
-		}
-
-		sysView := c.router.MatchingSystemView(req.Path)
-		if sysView == nil {
-			c.logger.Println("[ERR] core: unable to retrieve system view from router")
-			return nil, auth, ErrInternalError
-		}
-
-		// Apply the default lease if none given
-		if resp.Auth.TTL == 0 && !strListContains(resp.Auth.Policies, "root") {
-			resp.Auth.TTL = sysView.DefaultLeaseTTL()
-		}
-
-		// Limit the lease duration
-		maxTTL := sysView.MaxLeaseTTL()
-		if resp.Auth.TTL > maxTTL {
-			resp.Auth.TTL = maxTTL
 		}
 
 		// Register with the expiration manager
@@ -641,7 +596,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		// Set the default lease if non-provided, root tokens are exempt
-		if auth.TTL == 0 && !strListContains(auth.Policies, "root") {
+		if auth.TTL == 0 && !strutil.StrListContains(auth.Policies, "root") {
 			auth.TTL = sysView.DefaultLeaseTTL()
 		}
 
@@ -660,8 +615,29 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
-		if !strListSubset(te.Policies, []string{"root"}) {
-			te.Policies = append(te.Policies, "default")
+		if strutil.StrListSubset(te.Policies, []string{"root"}) {
+			te.Policies = []string{"root"}
+		} else {
+			// Use a map to filter out/prevent duplicates
+			policyMap := map[string]bool{}
+			for _, policy := range te.Policies {
+				if policy == "" {
+					// Don't allow a policy with no name, even though it is a valid
+					// slice member
+					continue
+				}
+				policyMap[policy] = true
+			}
+
+			// Add the default policy
+			policyMap["default"] = true
+
+			te.Policies = []string{}
+			for k, _ := range policyMap {
+				te.Policies = append(te.Policies, k)
+			}
+
+			sort.Strings(te.Policies)
 		}
 
 		if err := c.tokenStore.create(&te); err != nil {
@@ -669,8 +645,10 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			return nil, auth, ErrInternalError
 		}
 
-		// Populate the client token
+		// Populate the client token and accessor
 		auth.ClientToken = te.ID
+		auth.Accessor = te.Accessor
+		auth.Policies = te.Policies
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
@@ -686,12 +664,11 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	return resp, auth, err
 }
 
-func (c *Core) checkToken(
-	op logical.Operation, path string, token string) (*logical.Auth, *TokenEntry, error) {
-	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
+func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
-	if token == "" {
+	if req.ClientToken == "" {
 		return nil, nil, fmt.Errorf("missing client token")
 	}
 
@@ -701,7 +678,7 @@ func (c *Core) checkToken(
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(token)
+	te, err := c.tokenStore.Lookup(req.ClientToken)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
 		return nil, nil, ErrInternalError
@@ -719,162 +696,70 @@ func (c *Core) checkToken(
 		return nil, nil, ErrInternalError
 	}
 
+	return acl, te, nil
+}
+
+func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
+
+	acl, te, err := c.fetchACLandTokenEntry(req)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Check if this is a root protected path
-	if c.router.RootPath(path) && !acl.RootPrivilege(path) {
-		return nil, nil, logical.ErrPermissionDenied
+	rootPath := c.router.RootPath(req.Path)
+
+	// When we receive a write of either type, rather than require clients to
+	// PUT/POST and trust the operation, we ask the backend to give us the real
+	// skinny -- if the backend implements an existence check, it can tell us
+	// whether a particular resource exists. Then we can mark it as an update
+	// or creation as appropriate.
+	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
+		checkExists, resourceExists, err := c.router.RouteExistenceCheck(req)
+		switch err {
+		case logical.ErrUnsupportedPath:
+			// fail later via bad path to avoid confusing items in the log
+			checkExists = false
+		case nil:
+			// Continue on
+		default:
+			c.logger.Printf("[ERR] core: failed to run existence check: %v", err)
+			return nil, nil, ErrInternalError
+		}
+
+		switch {
+		case checkExists == false:
+			// No existence check, so always treate it as an update operation, which is how it is pre 0.5
+			req.Operation = logical.UpdateOperation
+		case resourceExists == true:
+			// It exists, so force an update operation
+			req.Operation = logical.UpdateOperation
+		case resourceExists == false:
+			// It doesn't exist, force a create operation
+			req.Operation = logical.CreateOperation
+		default:
+			panic("unreachable code")
+		}
 	}
 
 	// Check the standard non-root ACLs
-	if !acl.AllowOperation(op, path) {
+	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	if !allowed {
+		return nil, nil, logical.ErrPermissionDenied
+	}
+	if rootPath && !rootPrivs {
 		return nil, nil, logical.ErrPermissionDenied
 	}
 
 	// Create the auth response
 	auth := &logical.Auth{
-		ClientToken: token,
+		ClientToken: req.ClientToken,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
 	}
 	return auth, te, nil
-}
-
-// Initialized checks if the Vault is already initialized
-func (c *Core) Initialized() (bool, error) {
-	// Check the barrier first
-	init, err := c.barrier.Initialized()
-	if err != nil {
-		c.logger.Printf("[ERR] core: barrier init check failed: %v", err)
-		return false, err
-	}
-	if !init {
-		return false, nil
-	}
-	if !init {
-		c.logger.Printf("[INFO] core: security barrier not initialized")
-		return false, nil
-	}
-
-	// Verify the seal configuration
-	sealConf, err := c.SealConfig()
-	if err != nil {
-		return false, err
-	}
-	if sealConf == nil {
-		return false, nil
-	}
-	return true, nil
-}
-
-// Initialize is used to initialize the Vault with the given
-// configurations.
-func (c *Core) Initialize(config *SealConfig) (*InitResult, error) {
-	// Check if the seal configuraiton is valid
-	if err := config.Validate(); err != nil {
-		c.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
-		return nil, fmt.Errorf("invalid seal configuration: %v", err)
-	}
-
-	// Avoid an initialization race
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
-
-	// Check if we are initialized
-	init, err := c.Initialized()
-	if err != nil {
-		return nil, err
-	}
-	if init {
-		return nil, ErrAlreadyInit
-	}
-
-	// Encode the seal configuration
-	buf, err := json.Marshal(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode seal configuration: %v", err)
-	}
-
-	// Store the seal configuration
-	pe := &physical.Entry{
-		Key:   coreSealConfigPath,
-		Value: buf,
-	}
-	if err := c.physical.Put(pe); err != nil {
-		c.logger.Printf("[ERR] core: failed to write seal configuration: %v", err)
-		return nil, fmt.Errorf("failed to write seal configuration: %v", err)
-	}
-
-	// Generate a master key
-	masterKey, err := c.barrier.GenerateKey()
-	if err != nil {
-		c.logger.Printf("[ERR] core: failed to generate master key: %v", err)
-		return nil, fmt.Errorf("master key generation failed: %v", err)
-	}
-
-	// Return the master key if only a single key part is used
-	results := new(InitResult)
-	if config.SecretShares == 1 {
-		results.SecretShares = append(results.SecretShares, masterKey)
-	} else {
-		// Split the master key using the Shamir algorithm
-		shares, err := shamir.Split(masterKey, config.SecretShares, config.SecretThreshold)
-		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
-			return nil, fmt.Errorf("failed to generate shares: %v", err)
-		}
-		results.SecretShares = shares
-	}
-
-	if len(config.PGPKeys) > 0 {
-		encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, config.PGPKeys)
-		if err != nil {
-			return nil, err
-		}
-		results.SecretShares = encryptedShares
-	}
-
-	// Initialize the barrier
-	if err := c.barrier.Initialize(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: failed to initialize barrier: %v", err)
-		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
-	}
-	c.logger.Printf("[INFO] core: security barrier initialized (shares: %d, threshold %d)",
-		config.SecretShares, config.SecretThreshold)
-
-	// Unseal the barrier
-	if err := c.barrier.Unseal(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: failed to unseal barrier: %v", err)
-		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
-	}
-
-	// Ensure the barrier is re-sealed
-	defer func() {
-		if err := c.barrier.Seal(); err != nil {
-			c.logger.Printf("[ERR] core: failed to seal barrier: %v", err)
-		}
-	}()
-
-	// Perform initial setup
-	if err := c.postUnseal(); err != nil {
-		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
-		return nil, err
-	}
-
-	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken()
-	if err != nil {
-		c.logger.Printf("[ERR] core: root token generation failed: %v", err)
-		return nil, err
-	}
-	results.RootToken = rootToken.ID
-	c.logger.Printf("[INFO] core: root token generated")
-
-	// Prepare to re-seal
-	if err := c.preSeal(); err != nil {
-		c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
-		return nil, err
-	}
-	return results, nil
 }
 
 // Sealed checks if the Vault is current sealed
@@ -939,39 +824,6 @@ func (c *Core) Leader() (bool, string, error) {
 	return false, string(entry.Value), nil
 }
 
-// SealConfiguration is used to return information
-// about the configuration of the Vault and it's current
-// status.
-func (c *Core) SealConfig() (*SealConfig, error) {
-	// Fetch the core configuration
-	pe, err := c.physical.Get(coreSealConfigPath)
-	if err != nil {
-		c.logger.Printf("[ERR] core: failed to read seal configuration: %v", err)
-		return nil, fmt.Errorf("failed to check seal configuration: %v", err)
-	}
-
-	// If the seal configuration is missing, we are not initialized
-	if pe == nil {
-		c.logger.Printf("[INFO] core: seal configuration missing, not initialized")
-		return nil, nil
-	}
-
-	// Decode the barrier entry
-	var conf SealConfig
-	if err := json.Unmarshal(pe.Value, &conf); err != nil {
-		c.logger.Printf("[ERR] core: failed to decode seal configuration: %v", err)
-		return nil, fmt.Errorf("failed to decode seal configuration: %v", err)
-	}
-
-	// Check for a valid seal configuration
-	if err := conf.Validate(); err != nil {
-		c.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
-		return nil, fmt.Errorf("seal validation failed: %v", err)
-	}
-
-	return &conf, nil
-}
-
 // SecretProgress returns the number of keys provided so far
 func (c *Core) SecretProgress() int {
 	c.stateLock.RLock()
@@ -1009,7 +861,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 
 	// Get the seal configuration
-	config, err := c.SealConfig()
+	config, err := c.seal.BarrierConfig()
 	if err != nil {
 		return false, err
 	}
@@ -1066,18 +918,19 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
-		c.standby = false
 		if err := c.postUnseal(); err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			c.barrier.Seal()
 			c.logger.Printf("[WARN] core: vault is sealed")
 			return false, err
 		}
+		c.standby = false
 	} else {
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.standbyStopCh = make(chan struct{})
-		go c.runStandby(c.standbyDoneCh, c.standbyStopCh)
+		c.manualStepDownCh = make(chan struct{})
+		go c.runStandby(c.standbyDoneCh, c.standbyStopCh, c.manualStepDownCh)
 	}
 
 	// Success!
@@ -1089,6 +942,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 // be unsealed again to perform any further operations.
 func (c *Core) Seal(token string) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
+
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 	if c.sealed {
@@ -1096,19 +950,47 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Validate the token is a root token
-	_, te, err := c.checkToken(logical.WriteOperation, "sys/seal", token)
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/seal",
+		ClientToken: token,
+	}
+
+	acl, te, err := c.fetchACLandTokenEntry(req)
+	if err != nil {
+		// Since there is no token store in standby nodes, sealing cannot
+		// be done. Ideally, the request has to be forwarded to leader node
+		// for validation and the operation should be performed. But for now,
+		// just returning with an error and recommending a vault restart, which
+		// essentially does the same thing.
+		if c.standby {
+			c.logger.Printf("[ERR] core: vault cannot seal when in standby mode; please restart instead")
+			return errors.New("vault cannot seal when in standby mode; please restart instead")
+		}
+		return err
+	}
+	// Attempt to use the token (decrement num_uses)
+	// If we can't, we still continue attempting the seal, so long as the token
+	// has appropriate permissions
 	if te != nil {
-		// Attempt to use the token (decrement num_uses)
 		if err := c.tokenStore.UseToken(te); err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
 			retErr = ErrInternalError
 		}
 	}
-	if err != nil {
-		return err
+
+	// Verify that this operation is allowed
+	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	if !allowed {
+		return logical.ErrPermissionDenied
 	}
 
-	// Seal the Vault
+	// We always require root privileges for this operation
+	if !rootPrivs {
+		return logical.ErrPermissionDenied
+	}
+
+	//Seal the Vault
 	err = c.sealInternal()
 	if err == nil && retErr == ErrInternalError {
 		c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
@@ -1119,9 +1001,60 @@ func (c *Core) Seal(token string) (retErr error) {
 	return
 }
 
-// sealInternal is an internal method used to seal the vault.
-// It does not do any authorization checking. The stateLock must
-// be held prior to calling.
+// StepDown is used to step down from leadership
+func (c *Core) StepDown(token string) error {
+	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	if c.sealed {
+		return nil
+	}
+	if c.ha == nil || c.standby {
+		return nil
+	}
+
+	// Validate the token is a root token
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: token,
+	}
+
+	acl, te, err := c.fetchACLandTokenEntry(req)
+	if err != nil {
+		return err
+	}
+	// Attempt to use the token (decrement num_uses)
+	if te != nil {
+		if err := c.tokenStore.UseToken(te); err != nil {
+			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			return err
+		}
+	}
+
+	// Verify that this operation is allowed
+	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	if !allowed {
+		return logical.ErrPermissionDenied
+	}
+
+	// We always require root privileges for this operation
+	if !rootPrivs {
+		return logical.ErrPermissionDenied
+	}
+
+	select {
+	case c.manualStepDownCh <- struct{}{}:
+	default:
+		c.logger.Printf("[WARN] core: manual step-down operation already queued")
+	}
+
+	return nil
+}
+
+// sealInternal is an internal method used to seal the vault.  It does not do
+// any authorization checking. The stateLock must be held prior to calling.
 func (c *Core) sealInternal() error {
 	// Enable that we are sealed to prevent furthur transactions
 	c.sealed = true
@@ -1146,228 +1079,7 @@ func (c *Core) sealInternal() error {
 		return err
 	}
 	c.logger.Printf("[INFO] core: vault is sealed")
-	return nil
-}
 
-// RekeyProgress is used to return the rekey progress (num shares)
-func (c *Core) RekeyProgress() (int, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return 0, ErrSealed
-	}
-	if c.standby {
-		return 0, ErrStandby
-	}
-
-	c.rekeyLock.Lock()
-	defer c.rekeyLock.Unlock()
-	return len(c.rekeyProgress), nil
-}
-
-// RekeyConfig is used to read the rekey configuration
-func (c *Core) RekeyConfig() (*SealConfig, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return nil, ErrSealed
-	}
-	if c.standby {
-		return nil, ErrStandby
-	}
-
-	c.rekeyLock.Lock()
-	defer c.rekeyLock.Unlock()
-
-	// Copy the seal config if any
-	var conf *SealConfig
-	if c.rekeyConfig != nil {
-		conf = new(SealConfig)
-		*conf = *c.rekeyConfig
-	}
-	return conf, nil
-}
-
-// RekeyInit is used to initialize the rekey settings
-func (c *Core) RekeyInit(config *SealConfig) error {
-	// Check if the seal configuraiton is valid
-	if err := config.Validate(); err != nil {
-		c.logger.Printf("[ERR] core: invalid rekey seal configuration: %v", err)
-		return fmt.Errorf("invalid rekey seal configuration: %v", err)
-	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return ErrSealed
-	}
-	if c.standby {
-		return ErrStandby
-	}
-
-	// Prevent multiple concurrent re-keys
-	if c.rekeyConfig != nil {
-		return fmt.Errorf("rekey already in progress")
-	}
-
-	// Copy the configuration
-	c.rekeyConfig = new(SealConfig)
-	*c.rekeyConfig = *config
-	c.logger.Printf("[INFO] core: rekey initialized (shares: %d, threshold: %d)",
-		c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
-	return nil
-}
-
-// RekeyUpdate is used to provide a new key part
-func (c *Core) RekeyUpdate(key []byte) (*RekeyResult, error) {
-	// Verify the key length
-	min, max := c.barrier.KeyLength()
-	max += shamir.ShareOverhead
-	if len(key) < min {
-		return nil, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
-	}
-	if len(key) > max {
-		return nil, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
-	}
-
-	// Get the seal configuration
-	config, err := c.SealConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure the barrier is initialized
-	if config == nil {
-		return nil, ErrNotInit
-	}
-
-	// Ensure we are already unsealed
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return nil, ErrSealed
-	}
-	if c.standby {
-		return nil, ErrStandby
-	}
-
-	c.rekeyLock.Lock()
-	defer c.rekeyLock.Unlock()
-
-	// Ensure a rekey is in progress
-	if c.rekeyConfig == nil {
-		return nil, fmt.Errorf("no rekey in progress")
-	}
-
-	// Check if we already have this piece
-	for _, existing := range c.rekeyProgress {
-		if bytes.Equal(existing, key) {
-			return nil, nil
-		}
-	}
-
-	// Store this key
-	c.rekeyProgress = append(c.rekeyProgress, key)
-
-	// Check if we don't have enough keys to unlock
-	if len(c.rekeyProgress) < config.SecretThreshold {
-		c.logger.Printf("[DEBUG] core: cannot rekey, have %d of %d keys",
-			len(c.rekeyProgress), config.SecretThreshold)
-		return nil, nil
-	}
-
-	// Recover the master key
-	var masterKey []byte
-	if config.SecretThreshold == 1 {
-		masterKey = c.rekeyProgress[0]
-		c.rekeyProgress = nil
-	} else {
-		masterKey, err = shamir.Combine(c.rekeyProgress)
-		c.rekeyProgress = nil
-		if err != nil {
-			return nil, fmt.Errorf("failed to compute master key: %v", err)
-		}
-	}
-
-	// Verify the master key
-	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: rekey aborted, master key verification failed: %v", err)
-		return nil, err
-	}
-
-	// Generate a new master key
-	newMasterKey, err := c.barrier.GenerateKey()
-	if err != nil {
-		c.logger.Printf("[ERR] core: failed to generate master key: %v", err)
-		return nil, fmt.Errorf("master key generation failed: %v", err)
-	}
-
-	// Return the master key if only a single key part is used
-	results := new(RekeyResult)
-	if c.rekeyConfig.SecretShares == 1 {
-		results.SecretShares = append(results.SecretShares, newMasterKey)
-	} else {
-		// Split the master key using the Shamir algorithm
-		shares, err := shamir.Split(newMasterKey, c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
-		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
-			return nil, fmt.Errorf("failed to generate shares: %v", err)
-		}
-		results.SecretShares = shares
-	}
-
-	if len(c.rekeyConfig.PGPKeys) > 0 {
-		encryptedShares, err := pgpkeys.EncryptShares(results.SecretShares, c.rekeyConfig.PGPKeys)
-		if err != nil {
-			return nil, err
-		}
-		results.SecretShares = encryptedShares
-	}
-
-	// Encode the seal configuration
-	buf, err := json.Marshal(c.rekeyConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode seal configuration: %v", err)
-	}
-
-	// Rekey the barrier
-	if err := c.barrier.Rekey(newMasterKey); err != nil {
-		c.logger.Printf("[ERR] core: failed to rekey barrier: %v", err)
-		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
-	}
-	c.logger.Printf("[INFO] core: security barrier rekeyed (shares: %d, threshold: %d)",
-		c.rekeyConfig.SecretShares, c.rekeyConfig.SecretThreshold)
-
-	// Store the seal configuration
-	pe := &physical.Entry{
-		Key:   coreSealConfigPath,
-		Value: buf,
-	}
-	if err := c.physical.Put(pe); err != nil {
-		c.logger.Printf("[ERR] core: failed to update seal configuration: %v", err)
-		return nil, fmt.Errorf("failed to update seal configuration: %v", err)
-	}
-
-	// Done!
-	c.rekeyProgress = nil
-	c.rekeyConfig = nil
-	return results, nil
-}
-
-// RekeyCancel is used to cancel an inprogress rekey
-func (c *Core) RekeyCancel() error {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return ErrSealed
-	}
-	if c.standby {
-		return ErrStandby
-	}
-
-	// Clear any progress or config
-	c.rekeyConfig = nil
-	c.rekeyProgress = nil
 	return nil
 }
 
@@ -1441,8 +1153,10 @@ func (c *Core) preSeal() error {
 	c.logger.Printf("[INFO] core: pre-seal teardown starting")
 
 	// Clear any rekey progress
-	c.rekeyConfig = nil
-	c.rekeyProgress = nil
+	c.barrierRekeyConfig = nil
+	c.barrierRekeyProgress = nil
+	c.recoveryRekeyConfig = nil
+	c.recoveryRekeyProgress = nil
 
 	if c.metricsCh != nil {
 		close(c.metricsCh)
@@ -1477,8 +1191,9 @@ func (c *Core) preSeal() error {
 // runStandby is a long running routine that is used when an HA backend
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
-func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
+func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	defer close(doneCh)
+	defer close(manualStepDownCh)
 	c.logger.Printf("[INFO] core: entering standby mode")
 
 	// Monitor for key rotation
@@ -1499,7 +1214,11 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		}
 
 		// Create a lock
-		uuid := uuid.GenerateUUID()
+		uuid, err := uuid.GenerateUUID()
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to generate uuid: %v", err)
+			return
+		}
 		lock, err := c.ha.LockWith(coreLockPath, uuid)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to create lock: %v", err)
@@ -1538,11 +1257,15 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		}
 
 		// Monitor a loss of leadership
+		var manualStepDown bool
 		select {
 		case <-leaderLostCh:
 			c.logger.Printf("[WARN] core: leadership lost, stopping active operation")
 		case <-stopCh:
 			c.logger.Printf("[WARN] core: stopping active operation")
+		case <-manualStepDownCh:
+			c.logger.Printf("[WARN] core: stepping down from active operation to standby")
+			manualStepDown = true
 		}
 
 		// Clear ourself as leader
@@ -1562,6 +1285,12 @@ func (c *Core) runStandby(doneCh, stopCh chan struct{}) {
 		// Check for a failure to prepare to seal
 		if preSealErr != nil {
 			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+		}
+
+		// If we've merely stepped down, we could instantly grab the lock
+		// again. Give the other nodes a chance.
+		if manualStepDown {
+			time.Sleep(manualStepDownSleepPeriod)
 		}
 	}
 }
@@ -1702,4 +1431,10 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			return
 		}
 	}
+}
+
+func (c *Core) SealAccess() *SealAccess {
+	sa := &SealAccess{}
+	sa.SetSeal(c.seal)
+	return sa
 }

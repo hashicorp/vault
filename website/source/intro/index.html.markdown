@@ -40,7 +40,7 @@ The key features of Vault are:
 * **Secure Secret Storage**: Arbitrary key/value secrets can be stored
   in Vault. Vault encrypts these secrets prior to writing them to persistent
   storage, so gaining access to the raw storage isn't enough to access
-  your secrets. Vault can write to disk, [Consul](http://www.consul.io),
+  your secrets. Vault can write to disk, [Consul](https://www.consul.io),
   and more.
 
 * **Dynamic Secrets**: Vault can generate secrets on-demand for some

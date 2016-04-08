@@ -49,7 +49,7 @@ func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32
 		// Update the counter in the input string
 		binary.BigEndian.PutUint32(input[:4], i)
 
-		// Compute a more key material
+		// Compute more key material
 		part, err := prf(key, input)
 		if err != nil {
 			return nil, err

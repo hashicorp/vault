@@ -26,6 +26,23 @@ func (c *Logical) Read(path string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *Logical) List(path string) (*Secret, error) {
+	r := c.c.NewRequest("GET", "/v1/"+path)
+	r.Params.Set("list", "true")
+	resp, err := c.c.RawRequest(r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {

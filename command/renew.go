@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // RenewCommand is a Command that mounts a new mount.
 type RenewCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *RenewCommand) Run(args []string) int {
 	var format string
-	flags := c.Meta.FlagSet("renew", FlagSetDefault)
+	flags := c.Meta.FlagSet("renew", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -78,13 +80,11 @@ Usage: vault renew [options] id [increment]
   is not required to honor this request.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Renew Options:
 
   -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json.
+                          delimited table. This can also be json or yaml.
 `
 	return strings.TrimSpace(helpText)
 }

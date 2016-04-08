@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -187,4 +188,129 @@ func TestSysUnseal_Reset(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 	}
+
+}
+
+// Test Seal's permissions logic, which is slightly different than normal code
+// paths in that it queries the ACL rather than having checkToken do it. This
+// is because it was abusing RootPaths in logical_system, but that caused some
+// haywire with code paths that expected there to be an actual corresponding
+// logical.Path for it. This way is less hacky, but this test ensures that we
+// have not opened up a permissions hole.
+func TestSysSeal_Permissions(t *testing.T) {
+	core, _, root := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, root)
+
+	// Set the 'test' policy object to permit write access to sys/seal
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sys/policy/test",
+		Data: map[string]interface{}{
+			"rules": `path "sys/seal" { capabilities = ["read"] }`,
+		},
+		ClientToken: root,
+	}
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Create a non-root token with access to that policy
+	req.Path = "auth/token/create"
+	req.Data = map[string]interface{}{
+		"id":       "child",
+		"policies": []string{"test"},
+	}
+
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken != "child" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// We must go through the HTTP interface since seal doesn't go through HandleRequest
+
+	// We expect this to fail since it needs update and sudo
+	httpResp := testHttpPut(t, "child", addr+"/v1/sys/seal", nil)
+	testResponseStatus(t, httpResp, 500)
+
+	// Now modify to add update capability
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sys/policy/test",
+		Data: map[string]interface{}{
+			"rules": `path "sys/seal" { capabilities = ["update"] }`,
+		},
+		ClientToken: root,
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// We expect this to fail since it needs sudo
+	httpResp = testHttpPut(t, "child", addr+"/v1/sys/seal", nil)
+	testResponseStatus(t, httpResp, 500)
+
+	// Now modify to just sudo capability
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sys/policy/test",
+		Data: map[string]interface{}{
+			"rules": `path "sys/seal" { capabilities = ["sudo"] }`,
+		},
+		ClientToken: root,
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// We expect this to fail since it needs update
+	httpResp = testHttpPut(t, "child", addr+"/v1/sys/seal", nil)
+	testResponseStatus(t, httpResp, 500)
+
+	// Now modify to add all needed capabilities
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sys/policy/test",
+		Data: map[string]interface{}{
+			"rules": `path "sys/seal" { capabilities = ["update", "sudo"] }`,
+		},
+		ClientToken: root,
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// We expect this to work
+	httpResp = testHttpPut(t, "child", addr+"/v1/sys/seal", nil)
+	testResponseStatus(t, httpResp, 204)
+}
+
+func TestSysStepDown(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/step-down", nil)
+	testResponseStatus(t, resp, 204)
 }

@@ -8,7 +8,7 @@ description: |-
 
 # Vault vs. Consul
 
-[Consul](https://consul.io) is system for service discovery, monitoring,
+[Consul](https://www.consul.io) is a system for service discovery, monitoring,
 and configuration that is distributed and highly available. Consul also
 supports an ACL system to restrict access to keys and service information.
 

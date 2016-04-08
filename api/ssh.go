@@ -10,7 +10,7 @@ type SSH struct {
 
 // SSH returns the client for logical-backend API calls.
 func (c *Client) SSH() *SSH {
-	return c.SSHWithMountPoint(SSHAgentDefaultMountPoint)
+	return c.SSHWithMountPoint(SSHHelperDefaultMountPoint)
 }
 
 // SSHWithMountPoint returns the client with specific SSH mount point.

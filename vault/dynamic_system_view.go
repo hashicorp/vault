@@ -1,6 +1,10 @@
 package vault
 
-import "time"
+import (
+	"time"
+
+	"github.com/hashicorp/vault/logical"
+)
 
 type dynamicSystemView struct {
 	core       *Core
@@ -38,7 +42,11 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 		return false
 	}
 
-	return acl.RootPrivilege(path)
+	// The operation type isn't important here as this is run from a path the
+	// user has already been given access to; we only care about whether they
+	// have sudo
+	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, path)
+	return rootPrivs
 }
 
 // TTLsByPath returns the default and max TTLs corresponding to a particular
@@ -55,4 +63,9 @@ func (d dynamicSystemView) fetchTTLs() (def, max time.Duration) {
 	}
 
 	return
+}
+
+// Tainted indicates that the mount is in the process of being removed
+func (d dynamicSystemView) Tainted() bool {
+	return d.mountEntry.Tainted
 }

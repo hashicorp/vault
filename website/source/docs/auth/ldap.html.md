@@ -18,6 +18,27 @@ in multiple places.
 The mapping of groups in LDAP to Vault policies is managed by using the
 `users/` and `groups/` paths.
 
+## A Note on Escaping
+
+**It is up to the administrator** to provide properly escaped DNs. This
+includes the user DN, bind DN for search, and so on.
+
+The only DN escaping performed by this backend is on usernames given at login
+time when they are inserted into the final bind DN, and uses escaping rules
+defined in RFC 4514.
+
+Additionally, Active Directory has escaping rules that differ slightly from the
+RFC; in particular it requires escaping of '#' regardless of position in the DN
+(the RFC only requires it to be escaped when it is the first character), and
+'=', which the RFC indicates can be escaped with a backslash, but does not
+contain in its set of required escapes. If you are using Active Directory and
+these appear in your usernames, please ensure that they are escaped, in
+addition to being properly escaped in your configured DNs.
+
+For reference, see [RFC 4514](https://www.ietf.org/rfc/rfc4514.txt) and this
+[TechNet post on characters to escape in Active
+Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx).
+
 ## Authentication
 
 #### Via the CLI
@@ -99,6 +120,31 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
 
 The above configures the target LDAP server, along with the parameters
 specifying how users and groups should be queried from the LDAP server.
+
+If your users are not located directly below the "userdn", e.g. in several
+OUs like
+```
+    ou=users,dc=example,dc=com
+ou=people    ou=external     ou=robots
+```
+you can also specify a `binddn` and `bindpass` for vault to search for the DN
+of a user. This also works for the AD where a typical setup is to have user
+DNs in the form `cn=Firstname Lastname,ou=Users,dc=example,dc=com` but you
+want to login users using the `sAMAccountName` attribute. For that specify
+```
+$ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
+    userattr=sAMAccountName \
+    userdn="ou=users,dc=example,dc=com" \
+    groupdn="dc=example,dc=com" \
+    binddn="cn=vault,ou=users,dc=example,dc=com" \
+    bindpass='My$ecrt3tP4ss' \
+    certificate=@ldap_ca_cert.pem \
+    insecure_tls=false \
+    starttls=true
+...
+```
+To discover the bind dn for a user with an anonymous bind, use the `discoverdn=true`
+parameter and leave the `binddn` / `bindpass` empty.
 
 Next we want to create a mapping from an LDAP group to a Vault policy:
 

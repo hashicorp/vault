@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -18,7 +19,7 @@ func TestUnseal(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &UnsealCommand{
 		Key: hex.EncodeToString(key),
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -45,7 +46,7 @@ func TestUnseal_arg(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &UnsealCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}

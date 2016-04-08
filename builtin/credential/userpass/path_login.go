@@ -2,8 +2,10 @@ package userpass
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/crypto/bcrypt"
@@ -11,9 +13,9 @@ import (
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "login/" + framework.GenericNameRegex("name"),
+		Pattern: "login/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Username of the user.",
 			},
@@ -25,7 +27,7 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathLogin,
+			logical.UpdateOperation: b.pathLogin,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -35,16 +37,20 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLogin(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("name").(string))
+	username := strings.ToLower(d.Get("username").(string))
+
 	password := d.Get("password").(string)
+	if password == "" {
+		return nil, fmt.Errorf("missing password")
+	}
 
 	// Get the user and validate auth
-	user, err := b.User(req.Storage, username)
+	user, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
-		return logical.ErrorResponse("unknown username or password"), nil
+		return logical.ErrorResponse("invalid username or password"), nil
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
@@ -52,11 +58,11 @@ func (b *backend) pathLogin(
 	passwordBytes := []byte(password)
 	if user.PasswordHash != nil {
 		if err := bcrypt.CompareHashAndPassword(user.PasswordHash, passwordBytes); err != nil {
-			return logical.ErrorResponse("unknown username or password"), nil
+			return logical.ErrorResponse("invalid username or password"), nil
 		}
 	} else {
 		if subtle.ConstantTimeCompare([]byte(user.Password), passwordBytes) != 1 {
-			return logical.ErrorResponse("unknown username or password"), nil
+			return logical.ErrorResponse("invalid username or password"), nil
 		}
 	}
 
@@ -68,9 +74,8 @@ func (b *backend) pathLogin(
 			},
 			DisplayName: username,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         user.TTL,
-				GracePeriod: user.TTL / 10,
-				Renewable:   user.TTL > 0,
+				TTL:       user.TTL,
+				Renewable: true,
 			},
 		},
 	}, nil
@@ -78,8 +83,8 @@ func (b *backend) pathLogin(
 
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Get the user and validate auth
-	user, err := b.User(req.Storage, req.Auth.Metadata["username"])
+	// Get the user
+	user, err := b.user(req.Storage, req.Auth.Metadata["username"])
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +93,11 @@ func (b *backend) pathLoginRenew(
 		return nil, nil
 	}
 
-	return framework.LeaseExtend(user.MaxTTL, 0, false)(req, d)
+	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.Policies) {
+		return logical.ErrorResponse("policies have changed, not renewing"), nil
+	}
+
+	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(req, d)
 }
 
 const pathLoginSyn = `

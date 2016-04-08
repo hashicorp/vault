@@ -29,6 +29,16 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		tag = "vault"
 	}
 
+	// Check if hashing of accessor is disabled
+	hmacAccessor := true
+	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
+		value, err := strconv.ParseBool(hmacAccessorRaw)
+		if err != nil {
+			return nil, err
+		}
+		hmacAccessor = value
+	}
+
 	// Check if raw logging is enabled
 	logRaw := false
 	if raw, ok := conf.Config["log_raw"]; ok {
@@ -46,18 +56,24 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	b := &Backend{
-		logger: logger,
-		logRaw: logRaw,
-		salt:   conf.Salt,
+		logger:       logger,
+		logRaw:       logRaw,
+		hmacAccessor: hmacAccessor,
+		salt:         conf.Salt,
 	}
 	return b, nil
 }
 
 // Backend is the audit backend for the syslog-based audit store.
 type Backend struct {
-	logger gsyslog.Syslogger
-	logRaw bool
-	salt   *salt.Salt
+	logger       gsyslog.Syslogger
+	logRaw       bool
+	hmacAccessor bool
+	salt         *salt.Salt
+}
+
+func (b *Backend) GetHash(data string) string {
+	return audit.HashString(b.salt, data)
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
@@ -141,14 +157,33 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 		resp = cp.(*logical.Response)
 
 		// Hash any sensitive information
+
+		// Cache and restore accessor in the auth
+		var accessor string
+		if !b.hmacAccessor && auth != nil && auth.Accessor != "" {
+			accessor = auth.Accessor
+		}
 		if err := audit.Hash(b.salt, auth); err != nil {
 			return err
 		}
+		if accessor != "" {
+			auth.Accessor = accessor
+		}
+
 		if err := audit.Hash(b.salt, req); err != nil {
 			return err
 		}
+
+		// Cache and restore accessor in the response
+		accessor = ""
+		if !b.hmacAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+			accessor = resp.Auth.Accessor
+		}
 		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
+		}
+		if accessor != "" {
+			resp.Auth.Accessor = accessor
 		}
 	}
 

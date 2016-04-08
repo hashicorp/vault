@@ -21,7 +21,9 @@ func TestTest_noEnv(t *testing.T) {
 	defer os.Setenv(TestEnvVar, "1")
 
 	mt := new(mockT)
-	Test(mt, TestCase{})
+	Test(mt, TestCase{
+		AcceptanceTest: true,
+	})
 
 	if !mt.SkipCalled {
 		t.Fatal("skip not called")

@@ -27,7 +27,7 @@ func pathKeys(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation:  b.pathKeysWrite,
+			logical.UpdateOperation:  b.pathKeysWrite,
 			logical.DeleteOperation: b.pathKeysDelete,
 		},
 		HelpSynopsis:    pathKeysSyn,

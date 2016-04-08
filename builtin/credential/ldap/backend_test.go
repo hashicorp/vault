@@ -30,7 +30,8 @@ func TestBackend_basic(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			testAccStepGroup(t, "scientists", "foo"),
@@ -41,11 +42,60 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_basic_authbind(t *testing.T) {
+	b := factory(t)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithAuthBind(t),
+			testAccStepGroup(t, "scientists", "foo"),
+			testAccStepGroup(t, "engineers", "bar"),
+			testAccStepUser(t, "tesla", "engineers"),
+			testAccStepLogin(t, "tesla", "password"),
+		},
+	})
+}
+
+func TestBackend_basic_discover(t *testing.T) {
+	b := factory(t)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlWithDiscover(t),
+			testAccStepGroup(t, "scientists", "foo"),
+			testAccStepGroup(t, "engineers", "bar"),
+			testAccStepUser(t, "tesla", "engineers"),
+			testAccStepLogin(t, "tesla", "password"),
+		},
+	})
+}
+
+func TestBackend_basic_nogroupdn(t *testing.T) {
+	b := factory(t)
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrlNoGroupDN(t),
+			testAccStepGroup(t, "scientists", "foo"),
+			testAccStepGroup(t, "engineers", "bar"),
+			testAccStepUser(t, "tesla", "engineers"),
+			testAccStepLoginNoGroupDN(t, "tesla", "password"),
+		},
+	})
+}
+
 func TestBackend_groupCrud(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepGroup(t, "g1", "foo"),
 			testAccStepReadGroup(t, "g1", "foo"),
@@ -57,7 +107,7 @@ func TestBackend_groupCrud(t *testing.T) {
 
 func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
 			// Online LDAP test server
@@ -70,9 +120,57 @@ func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 	}
 }
 
+func testAccStepConfigUrlWithAuthBind(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			// Online LDAP test server
+			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
+			"url":      "ldap://ldap.forumsys.com",
+			"userattr": "uid",
+			"userdn":   "dc=example,dc=com",
+			"groupdn":  "dc=example,dc=com",
+			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+			"bindpass": "password",
+		},
+	}
+}
+
+func testAccStepConfigUrlWithDiscover(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			// Online LDAP test server
+			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
+			"url":        "ldap://ldap.forumsys.com",
+			"userattr":   "uid",
+			"userdn":     "dc=example,dc=com",
+			"groupdn":    "dc=example,dc=com",
+			"discoverdn": true,
+		},
+	}
+}
+
+func testAccStepConfigUrlNoGroupDN(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			// Online LDAP test server
+			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
+			"url":        "ldap://ldap.forumsys.com",
+			"userattr":   "uid",
+			"userdn":     "dc=example,dc=com",
+			"discoverdn": true,
+		},
+	}
+}
+
 func testAccStepGroup(t *testing.T, group string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "groups/" + group,
 		Data: map[string]interface{}{
 			"policies": policies,
@@ -119,7 +217,8 @@ func TestBackend_userCrud(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "g1", "bar"),
 			testAccStepReadUser(t, "g1", "bar"),
@@ -131,7 +230,7 @@ func TestBackend_userCrud(t *testing.T) {
 
 func testAccStepUser(t *testing.T, user string, groups string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "users/" + user,
 		Data: map[string]interface{}{
 			"groups": groups,
@@ -176,14 +275,33 @@ func testAccStepDeleteUser(t *testing.T, user string) logicaltest.TestStep {
 
 func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
 		Data: map[string]interface{}{
 			"password": pass,
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"foo", "bar"}),
+		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
+	}
+}
+
+func testAccStepLoginNoGroupDN(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		Check: func(resp *logical.Response) error {
+			if len(resp.Warnings()) != 1 {
+				return fmt.Errorf("expected a warning due to no group dn, got: %#v", resp.Warnings())
+			}
+
+			return logicaltest.TestCheckAuth([]string{"bar", "default"})(resp)
+		},
 	}
 }
 

@@ -23,11 +23,13 @@ but also a second copy in case the first is tampered with.
 The audit logs contain the full request and response objects for every
 interaction with Vault. The data in the request and the data in the
 response (including secrets and authentication tokens) will be hashed
-without a salt using SHA1.
+with a salt using HMAC-SHA256.
 
-The purpose of the hash is so that secrets aren't in plaintext within
-your audit logs. However, you're still able to check the value of
-secrets by SHA-ing it yourself.
+The purpose of the hash is so that secrets aren't in plaintext within your
+audit logs. However, you're still able to check the value of secrets by
+generating HMACs yourself; this can be done with the audit backend's hash
+function and salt by using the `/sys/audit-hash` API endpoint (see the
+documentation for more details).
 
 ## Enabling/Disabling Audit Backends
 
@@ -65,3 +67,40 @@ Vault will not respond to requests if audit backends are blocked because
 audit logs are critically important and ignoring blocked requests opens
 an avenue for attack. Be absolutely certain that your audit backends cannot
 block.
+
+## API
+
+### /sys/audit/[path]
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Enables audit backend at the specified path.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dd>
+    <ul>
+      <li>
+       <span class="param">type</span>
+        <span class="param-flags">required</span>
+            The path to where the audit log will be written. If this
+            path exists, the audit backend will append to it.
+      </li>
+      <li>
+        <span class="param">description</span>
+        <span class="param-flags">optional</span>
+            A description.
+      </li>
+      <li>
+        <span class="param">options</span>
+        <span class="param-flags">optional</span>
+           Configuration options of the backend in JSON format.
+           Refer to `syslog` and `file` audit backend options.
+      </li>
+    </ul>
+  </dd>
+</dl>

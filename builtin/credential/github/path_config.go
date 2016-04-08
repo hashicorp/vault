@@ -35,7 +35,7 @@ API-compatible authentication server.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathConfigWrite,
+			logical.UpdateOperation: b.pathConfigWrite,
 		},
 	}
 }

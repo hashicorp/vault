@@ -2,9 +2,7 @@ package ssh
 
 import (
 	"fmt"
-	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,7 +15,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Before the following tests are run, a username going by the name 'vaultssh' has
+// to be created and its ~/.ssh/authorized_keys file should contain the below key.
+//
+// ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT
+
 const (
+	testIP               = "127.0.0.1"
+	testUserName         = "vaultssh"
+	testAdminUser        = "vaultssh"
 	testOTPKeyType       = "otp"
 	testDynamicKeyType   = "dynamic"
 	testCIDRList         = "127.0.0.1/32"
@@ -56,7 +62,10 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	initTest()
+	_, err := vault.StartSSHHostTestServer()
+	if err != nil {
+		panic(fmt.Sprintf("error starting mock server:%s", err))
+	}
 	defaultLeaseTTLVal := 2 * time.Minute
 	maxLeaseTTLVal := 10 * time.Minute
 	return Factory(&logical.BackendConfig{
@@ -69,44 +78,19 @@ func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	})
 }
 
-var testIP string
-
-var testUserName string
-var testAdminUser string
-var testOTPRoleData map[string]interface{}
-var testDynamicRoleData map[string]interface{}
-
-// Starts the server and initializes the servers IP address,
-// port and usernames to be used by the test cases.
-func initTest() {
-	addr, err := vault.StartSSHHostTestServer()
-	if err != nil {
-		panic(fmt.Sprintf("error starting mock server:%s", err))
-	}
-	input := strings.Split(addr, ":")
-	testIP = input[0]
-
-	testUserName := os.Getenv("VAULT_SSHTEST_USER")
-	if len(testUserName) == 0 {
-		panic("VAULT_SSHTEST_USER must be set to the desired user")
-	}
-	testAdminUser = testUserName
-
-	testOTPRoleData = map[string]interface{}{
+func TestSSHBackend_Lookup(t *testing.T) {
+	testOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	testDynamicRoleData = map[string]interface{}{
+	testDynamicRoleData := map[string]interface{}{
 		"key_type":     testDynamicKeyType,
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
 		"cidr_list":    testCIDRList,
 	}
-}
-
-func TestSSHBackend_Lookup(t *testing.T) {
 	data := map[string]interface{}{
 		"ip": testIP,
 	}
@@ -115,7 +99,8 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp3 := []string{testDynamicRoleName, testOTPRoleName}
 	resp4 := []string{testDynamicRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -132,12 +117,20 @@ func TestSSHBackend_Lookup(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
+	testDynamicRoleData := map[string]interface{}{
+		"key_type":     testDynamicKeyType,
+		"key":          testKeyName,
+		"admin_user":   testAdminUser,
+		"default_user": testAdminUser,
+		"cidr_list":    testCIDRList,
+	}
 	data := map[string]interface{}{
 		"username": testUserName,
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -147,6 +140,11 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 }
 
 func TestSSHBackend_OTPRoleCrud(t *testing.T) {
+	testOTPRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+		"cidr_list":    testCIDRList,
+	}
 	respOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"port":         22,
@@ -154,7 +152,8 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 		"cidr_list":    testCIDRList,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
@@ -165,6 +164,13 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 }
 
 func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
+	testDynamicRoleData := map[string]interface{}{
+		"key_type":     testDynamicKeyType,
+		"key":          testKeyName,
+		"admin_user":   testAdminUser,
+		"default_user": testAdminUser,
+		"cidr_list":    testCIDRList,
+	}
 	respDynamicRoleData := map[string]interface{}{
 		"cidr_list":      testCIDRList,
 		"port":           22,
@@ -176,7 +182,8 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -189,7 +196,8 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 
 func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testNamedKeysDelete(t),
@@ -198,12 +206,18 @@ func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 }
 
 func TestSSHBackend_OTPCreate(t *testing.T) {
+	testOTPRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+		"cidr_list":    testCIDRList,
+	}
 	data := map[string]interface{}{
 		"username": testUserName,
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName, data, false),
@@ -219,7 +233,8 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 		"message": api.VerifyEchoResponse,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -227,6 +242,18 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 }
 
 func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
+	testOTPRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+		"cidr_list":    testCIDRList,
+	}
+	testDynamicRoleData := map[string]interface{}{
+		"key_type":     testDynamicKeyType,
+		"key":          testKeyName,
+		"admin_user":   testAdminUser,
+		"default_user": testAdminUser,
+		"cidr_list":    testCIDRList,
+	}
 	req1 := map[string]interface{}{
 		"roles": testOTPRoleName,
 	}
@@ -244,7 +271,8 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
@@ -284,7 +312,8 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
 			testCredsWrite(t, testOTPRoleName, data, true),
@@ -311,7 +340,7 @@ func testConfigZeroAddressDelete(t *testing.T) logicaltest.TestStep {
 
 func testConfigZeroAddressWrite(t *testing.T, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/zeroaddress",
 		Data:      data,
 	}
@@ -343,7 +372,7 @@ func testConfigZeroAddressRead(t *testing.T, expected map[string]interface{}) lo
 
 func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("verify"),
 		Data:      data,
 		Check: func(resp *logical.Response) error {
@@ -366,7 +395,7 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 
 func testNamedKeysWrite(t *testing.T, name, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("keys/%s", name),
 		Data: map[string]interface{}{
 			"key": key,
@@ -383,7 +412,7 @@ func testNamedKeysDelete(t *testing.T) logicaltest.TestStep {
 
 func testLookupRead(t *testing.T, data map[string]interface{}, expected []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "lookup",
 		Data:      data,
 		Check: func(resp *logical.Response) error {
@@ -400,7 +429,7 @@ func testLookupRead(t *testing.T, data map[string]interface{}, expected []string
 
 func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
 	}
@@ -444,7 +473,7 @@ func testRoleDelete(t *testing.T, name string) logicaltest.TestStep {
 
 func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      fmt.Sprintf("creds/%s", roleName),
 		Data:      data,
 		ErrorOk:   true,

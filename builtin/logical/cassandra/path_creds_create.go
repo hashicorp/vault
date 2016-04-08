@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -43,8 +43,16 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	displayName := req.DisplayName
-	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, strings.Replace(uuid.GenerateUUID(), "-", "_", -1), time.Now().Unix())
-	password := uuid.GenerateUUID()
+	userUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, userUUID, time.Now().Unix())
+	username = strings.Replace(username, "-", "_", -1)
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get our connection
 	session, err := b.DB(req.Storage)
@@ -78,7 +86,6 @@ func (b *backend) pathCredsCreateRead(
 		"role":     name,
 	})
 	resp.Secret.TTL = role.Lease
-	resp.Secret.GracePeriod = role.LeaseGracePeriod
 
 	return resp, nil
 }

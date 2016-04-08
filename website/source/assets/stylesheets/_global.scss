@@ -6,8 +6,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }*/
+html{
+  min-height: 100%;
+}
 
 body {
+    min-height: 100%;
     -webkit-font-smoothing: antialiased;
     color: $black;
     background-color: $white;
@@ -87,4 +91,16 @@ pre {
 
 .center {
     text-align: center;
+}
+
+.hcaret{
+  display: inline-block;
+  -moz-transform: translate(0, -1px) rotate(135deg);
+  -webkit-transform: translate(0, -1px) rotate(135deg);
+  transform: translate(0, -1px) rotate(135deg);
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid $blue;
+  border-left: 1px solid $blue;
+  @include transition(all .1s ease-in);
 }

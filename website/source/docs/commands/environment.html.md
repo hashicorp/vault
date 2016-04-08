@@ -28,6 +28,9 @@ The following table describes them:
     <td>The address of the Vault server.</td>
   </tr>
   <tr>
+    <td><tt>VAULT_ADVERTISE_ADDR</tt></td>
+    <td>The advertised address of the server to use for client request forwarding when running in High Availability mode.</td>
+  <tr>
     <td><tt>VAULT_CACERT</tt></td>
     <td>Path to a PEM-encoded CA cert file to use to verify the Vault server SSL certificate.</td>
   </tr>
@@ -46,5 +49,9 @@ The following table describes them:
   <tr>
     <td><tt>VAULT_SKIP_VERIFY</tt></td>
     <td>If set, do not verify Vault's presented certificate before communicating with it.  Setting this variable is not recommended except during testing.</td>
+  </tr>
+  <tr>
+    <td><tt>VAULT_TLS_SERVER_NAME</tt></td>
+    <td>If set, use the given name as the SNI host when connecting via TLS.</td>
   </tr>
 </table>

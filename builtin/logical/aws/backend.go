@@ -28,6 +28,7 @@ func Backend() *framework.Backend {
 			pathConfigLease(&b),
 			pathRoles(),
 			pathUser(&b),
+			pathSTS(&b),
 		},
 
 		Secrets: []*framework.Secret{

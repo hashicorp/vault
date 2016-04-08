@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -11,7 +12,7 @@ import (
 func TestStatus(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &StatusCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -22,7 +23,7 @@ func TestStatus(t *testing.T) {
 	defer ln.Close()
 
 	args := []string{"-address", addr}
-	if code := c.Run(args); code != 1 {
+	if code := c.Run(args); code != 2 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 

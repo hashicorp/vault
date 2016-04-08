@@ -23,7 +23,7 @@ due to the importance of Vault in an environment.
 
 # Design Overview
 
-The primary design goal in making Vault highly availability (HA) was to
+The primary design goal in making Vault highly available (HA) was to
 minimize downtime and not horizontal scalability. Vault is typically
 bound by the IO limits of the storage backend rather than the compute
 requirements. This simplifies the HA approach and allows more complex

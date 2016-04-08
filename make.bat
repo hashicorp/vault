@@ -28,13 +28,13 @@ REM into ./bin/ as well as %GOPATH%/bin
 REM generate runs `go generate` to build the dynamically generated
 REM source files.
 :generate
-	go generate ./...
+	go list ./... | findstr /v vendor | go generate
 	goto :eof
 
 REM test runs the unit tests and vets the code.
 :test
 	call :testsetup
-	godep go test %_TEST% %TESTARGS% -timeout=30s -parallel=4
+	go test %_TEST% %TESTARGS% -timeout=30s -parallel=4
 	call :setMaxExitCode %ERRORLEVEL%
 	echo.
 	goto vet
@@ -44,8 +44,8 @@ REM testacc runs acceptance tests.
 	call :testsetup
 	if x%_TEST% == x./... goto testacc_fail
 	if x%_TEST% == x.\... goto testacc_fail
-	set TF_ACC=1
-	godep go test %_TEST% -v %TESTARGS% -timeout 45m
+	set VAULT_ACC=1
+	go test %_TEST% -v %TESTARGS% -timeout 45m
 	exit /b %ERRORLEVEL%
 :testacc_fail
 	echo ERROR: Set %%TEST%% to a specific package.
@@ -54,16 +54,16 @@ REM testacc runs acceptance tests.
 REM testrace runs the race checker.
 :testrace
 	call :testsetup
-	godep go test -race %_TEST% %TESTARGS%
+	go test -race %_TEST% %TESTARGS%
 	exit /b %ERRORLEVEL%
 
-REM testsetup calls `go generate` and defines the variables TF_ACC
-REM and _TEST. TF_ACC is always cleared. _TEST defaults to the value
+REM testsetup calls `go generate` and defines the variables VAULT_ACC
+REM and _TEST. VAULT_ACC is always cleared. _TEST defaults to the value
 REM of the TEST environment variable, provided that TEST is defined,
 REM otherwise _TEST it is set to "./...".
 :testsetup
 	call :generate
-	set TF_ACC=
+	set VAULT_ACC=
 	set _TEST=./...
 	if defined TEST set _TEST=%TEST%
 	goto :eof
@@ -80,7 +80,7 @@ REM any common errors.
 	set _vetExitCode=0
 	set _VAULT_PKG_DIRS=%TEMP%\vault-pkg-dirs.txt
 
-	go list -f {{.Dir}} ./... >"%_VAULT_PKG_DIRS%"
+	go list -f {{.Dir}} ./... | findstr /v vendor >"%_VAULT_PKG_DIRS%"
 	REM Skip the first row, which is the main vault package (.*github.com/hashicorp/vault$)
 	for /f "delims= skip=1" %%d in ("%_VAULT_PKG_DIRS%") do (
 		go tool vet %_VETARGS% "%%d"

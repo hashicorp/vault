@@ -5,16 +5,17 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/meta"
 	"github.com/ryanuber/columnize"
 )
 
 // AuditListCommand is a Command that lists the enabled audits.
 type AuditListCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *AuditListCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("audit-list", FlagSetDefault)
+	flags := c.Meta.FlagSet("audit-list", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -47,7 +48,7 @@ func (c *AuditListCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Type | Description | Options"}
+	columns := []string{"Path | Type | Description | Options"}
 	for _, path := range paths {
 		audit := audits[path]
 		opts := make([]string, 0, len(audit.Options))
@@ -56,7 +57,7 @@ func (c *AuditListCommand) Run(args []string) int {
 		}
 
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s", audit.Type, audit.Description, strings.Join(opts, " ")))
+			"%s | %s | %s | %s", audit.Path, audit.Type, audit.Description, strings.Join(opts, " ")))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))
@@ -78,7 +79,6 @@ Usage: vault audit-list [options]
   only a root Vault user can view this.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

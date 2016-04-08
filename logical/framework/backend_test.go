@@ -94,14 +94,14 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 					"value": &FieldSchema{Type: TypeBool},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
-					logical.WriteOperation: callback,
+					logical.UpdateOperation: callback,
 				},
 			},
 		},
 	}
 
 	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
@@ -248,9 +248,14 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 }
 
 func TestBackendHandleRequest_renewExtend(t *testing.T) {
+	sysView := logical.StaticSystemView{
+		DefaultLeaseTTLVal: 5 * time.Minute,
+		MaxLeaseTTLVal:     30 * time.Hour,
+	}
+
 	secret := &Secret{
 		Type:            "foo",
-		Renew:           LeaseExtend(0, 0, false),
+		Renew:           LeaseExtend(0, 0, sysView),
 		DefaultDuration: 5 * time.Minute,
 	}
 	b := &Backend{
@@ -268,7 +273,7 @@ func TestBackendHandleRequest_renewExtend(t *testing.T) {
 		t.Fatal("should have secret")
 	}
 
-	if resp.Secret.TTL < 60*time.Minute || resp.Secret.TTL > 70*time.Minute {
+	if resp.Secret.TTL < 59*time.Minute || resp.Secret.TTL > 61*time.Minute {
 		t.Fatalf("bad: %s", resp.Secret.TTL)
 	}
 }
@@ -390,7 +395,7 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 	}
 
 	_, err := b.HandleRequest(&logical.Request{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "84"},
 	})

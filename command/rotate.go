@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // RotateCommand is a Command that rotates the encryption key being used
 type RotateCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *RotateCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("rotate", FlagSetDefault)
+	flags := c.Meta.FlagSet("rotate", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -60,7 +62,6 @@ Usage: vault rotate [options]
   disruptive.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

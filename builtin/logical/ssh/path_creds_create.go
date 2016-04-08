@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -34,7 +33,7 @@ func pathCredsCreate(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathCredsCreateWrite,
+			logical.UpdateOperation: b.pathCredsCreateWrite,
 		},
 		HelpSynopsis:    pathCredsCreateHelpSyn,
 		HelpDescription: pathCredsCreateHelpDesc,
@@ -157,9 +156,6 @@ func (b *backend) pathCredsCreateWrite(
 		return nil, fmt.Errorf("key type unknown")
 	}
 
-	result.Secret.TTL = b.System().DefaultLeaseTTL()
-	result.Secret.GracePeriod = 2 * time.Minute
-
 	return result, nil
 }
 
@@ -199,14 +195,20 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 }
 
 // Generates a UUID OTP and its salted value based on the salt of the backend.
-func (b *backend) GenerateSaltedOTP() (string, string) {
-	str := uuid.GenerateUUID()
-	return str, b.salt.SaltID(str)
+func (b *backend) GenerateSaltedOTP() (string, string, error) {
+	str, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", "", err
+	}
+	return str, b.salt.SaltID(str), nil
 }
 
 // Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.
 func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
-	otp, otpSalted := b.GenerateSaltedOTP()
+	otp, otpSalted, err := b.GenerateSaltedOTP()
+	if err != nil {
+		return "", err
+	}
 
 	// Check if there is an entry already created for the newly generated OTP.
 	entry, err := b.getOTP(req.Storage, otpSalted)
@@ -216,7 +218,10 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 	// OTP is generated. It is very unlikely that this is the case and this
 	// code is just for safety.
 	for err == nil && entry != nil {
-		otp, otpSalted = b.GenerateSaltedOTP()
+		otp, otpSalted, err = b.GenerateSaltedOTP()
+		if err != nil {
+			return "", err
+		}
 		entry, err = b.getOTP(req.Storage, otpSalted)
 		if err != nil {
 			return "", err

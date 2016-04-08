@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/uuid"
+	"github.com/fatih/structs"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -20,6 +23,10 @@ const (
 	// primary ID based index
 	lookupPrefix = "id/"
 
+	// accessorPrefix is the prefix used to store the index from
+	// Accessor to Token ID
+	accessorPrefix = "accessor/"
+
 	// parentPrefix is the prefix used to store tokens for their
 	// secondar parent based index
 	parentPrefix = "parent/"
@@ -27,11 +34,17 @@ const (
 	// tokenSubPath is the sub-path used for the token store
 	// view. This is nested under the system view.
 	tokenSubPath = "token/"
+
+	// rolesPrefix is the prefix used to store role information
+	rolesPrefix = "roles/"
 )
 
 var (
 	// displayNameSanitize is used to sanitize a display name given to a token.
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
+
+	// pathSuffixSanitize is used to ensure a path suffix in a role is valid.
+	pathSuffixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -76,24 +89,77 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
-		// Allow a token lease to be extended indefinitely, but each time for only
-		// as much as the original lease allowed for. If the lease has a 1 hour expiration,
-		// it can only be extended up to another hour each time this means.
-		AuthRenew: framework.LeaseExtend(0, 0, true),
+		AuthRenew: t.authRenew,
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
-				"revoke-prefix/*",
 				"revoke-orphan/*",
 			},
 		},
 
 		Paths: []*framework.Path{
 			&framework.Path{
+				Pattern: "roles/?$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: t.tokenStoreRoleList,
+				},
+
+				HelpSynopsis:    tokenListRolesHelp,
+				HelpDescription: tokenListRolesHelp,
+			},
+
+			&framework.Path{
+				Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+				Fields: map[string]*framework.FieldSchema{
+					"role_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Name of the role",
+					},
+
+					"allowed_policies": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "",
+						Description: tokenAllowedPoliciesHelp,
+					},
+
+					"orphan": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: tokenOrphanHelp,
+					},
+
+					"period": &framework.FieldSchema{
+						Type:        framework.TypeDurationSecond,
+						Default:     0,
+						Description: tokenPeriodHelp,
+					},
+
+					"path_suffix": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "",
+						Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   t.tokenStoreRoleRead,
+					logical.CreateOperation: t.tokenStoreRoleCreateUpdate,
+					logical.UpdateOperation: t.tokenStoreRoleCreateUpdate,
+					logical.DeleteOperation: t.tokenStoreRoleDelete,
+				},
+
+				ExistenceCheck: t.tokenStoreRoleExistenceCheck,
+
+				HelpSynopsis:    tokenPathRolesHelp,
+				HelpDescription: tokenPathRolesHelp,
+			},
+
+			&framework.Path{
 				Pattern: "create-orphan$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleCreateOrphan,
+					logical.UpdateOperation: t.handleCreateOrphan,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateOrphanHelp),
@@ -101,10 +167,28 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
+				Pattern: "create/" + framework.GenericNameRegex("role_name"),
+
+				Fields: map[string]*framework.FieldSchema{
+					"role_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Name of the role",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleCreateAgainstRole,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenCreateRoleHelp),
+				HelpDescription: strings.TrimSpace(tokenCreateRoleHelp),
+			},
+
+			&framework.Path{
 				Pattern: "create$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleCreate,
+					logical.UpdateOperation: t.handleCreate,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenCreateHelp),
@@ -112,7 +196,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup/(?P<token>.+)",
+				Pattern: "lookup" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -122,11 +206,30 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: t.handleLookup,
+					logical.ReadOperation:   t.handleLookup,
+					logical.UpdateOperation: t.handleLookup,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
 				HelpDescription: strings.TrimSpace(tokenLookupHelp),
+			},
+
+			&framework.Path{
+				Pattern: "lookup-accessor" + framework.OptionalParamRegex("accessor"),
+
+				Fields: map[string]*framework.FieldSchema{
+					"accessor": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Accessor of the token to lookup",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleUpdateLookupAccessor,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenLookupAccessorHelp),
+				HelpDescription: strings.TrimSpace(tokenLookupAccessorHelp),
 			},
 
 			&framework.Path{
@@ -148,10 +251,28 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
+				Pattern: "revoke-accessor" + framework.OptionalParamRegex("accessor"),
+
+				Fields: map[string]*framework.FieldSchema{
+					"accessor": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Accessor of the token",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleUpdateRevokeAccessor,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenRevokeAccessorHelp),
+				HelpDescription: strings.TrimSpace(tokenRevokeAccessorHelp),
+			},
+
+			&framework.Path{
 				Pattern: "revoke-self$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeSelf,
+					logical.UpdateOperation: t.handleRevokeSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeSelfHelp),
@@ -159,7 +280,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke/(?P<token>.+)",
+				Pattern: "revoke" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -169,7 +290,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeTree,
+					logical.UpdateOperation: t.handleRevokeTree,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeHelp),
@@ -177,7 +298,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-orphan/(?P<token>.+)",
+				Pattern: "revoke-orphan" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -187,29 +308,11 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokeOrphan,
+					logical.UpdateOperation: t.handleRevokeOrphan,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRevokeOrphanHelp),
 				HelpDescription: strings.TrimSpace(tokenRevokeOrphanHelp),
-			},
-
-			&framework.Path{
-				Pattern: "revoke-prefix/(?P<prefix>.+)",
-
-				Fields: map[string]*framework.FieldSchema{
-					"prefix": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token source prefix to revoke",
-					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRevokePrefix,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(tokenRevokePrefixHelp),
-				HelpDescription: strings.TrimSpace(tokenRevokePrefixHelp),
 			},
 
 			&framework.Path{
@@ -222,12 +325,13 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
+						Default:     0,
 						Description: "The desired increment in seconds to the token expiration",
 					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRenewSelf,
+					logical.UpdateOperation: t.handleRenewSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewSelfHelp),
@@ -235,7 +339,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "renew/(?P<token>.+)",
+				Pattern: "renew" + framework.OptionalParamRegex("token"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
@@ -244,12 +348,13 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
+						Default:     0,
 						Description: "The desired increment in seconds to the token expiration",
 					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.WriteOperation: t.handleRenew,
+					logical.UpdateOperation: t.handleRenew,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
@@ -266,6 +371,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
 	ID           string            // ID of this entry, generally a random UUID
+	Accessor     string            // Accessor for this token, a random UUID
 	Parent       string            // Parent token, used for revocation trees
 	Policies     []string          // Which named policies should be used
 	Path         string            // Used for audit trails, this is something like "auth/user/login"
@@ -274,6 +380,28 @@ type TokenEntry struct {
 	NumUses      int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
 	CreationTime int64             // Time of token creation
 	TTL          time.Duration     // Duration set when token was created
+	Role         string            // If set, the role that was used for parameters at creation time
+}
+
+// tsRoleEntry contains token store role information
+type tsRoleEntry struct {
+	// The name of the role. Embedded so it can be used for pathing
+	Name string `json:"name" mapstructure:"name" structs:"name"`
+
+	// The policies that creation functions using this role can assign to a token,
+	// escaping or further locking down normal subset checking
+	AllowedPolicies []string `json:"allowed_policies" mapstructure:"allowed_policies" structs:"allowed_policies"`
+
+	// If true, tokens created using this role will be orphans
+	Orphan bool `json:"orphan" mapstructure:"orphan" structs:"orphan"`
+
+	// If non-zero, tokens created using this role will be able to be renewed
+	// forever, but will have a fixed renewal period of this value
+	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
+
+	// If set, a suffix will be set on the token path, making it easier to
+	// revoke using 'revoke-prefix'.
+	PathSuffix string `json:"path_suffix" mapstructure:"path_suffix" structs:"path_suffix"`
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -302,14 +430,58 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	return te, nil
 }
 
+// createAccessor is used to create an identifier for the token ID.
+// A storage index, mapping the accessor to the token ID is also created.
+func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
+
+	// Create a random accessor
+	accessorUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
+	entry.Accessor = accessorUUID
+
+	// Create index entry, mapping the accessor to the token ID
+	path := accessorPrefix + ts.SaltID(entry.Accessor)
+	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
+	if err := ts.view.Put(le); err != nil {
+		return fmt.Errorf("failed to persist accessor index entry: %v", err)
+	}
+	return nil
+}
+
 // Create is used to create a new token entry. The entry is assigned
 // a newly generated ID if not provided.
 func (ts *TokenStore) create(entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
-		entry.ID = uuid.GenerateUUID()
+		entryUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.ID = entryUUID
 	}
+
+	err := ts.createAccessor(entry)
+	if err != nil {
+		return err
+	}
+
+	return ts.storeCommon(entry, true)
+}
+
+// Store is used to store an updated token entry without writing the
+// secondary index.
+func (ts *TokenStore) store(entry *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"token", "store"}, time.Now())
+	return ts.storeCommon(entry, false)
+}
+
+// storeCommon handles the actual storage of an entry, possibly generating
+// secondary indexes
+func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error {
 	saltedId := ts.SaltID(entry.ID)
 
 	// Marshal the entry
@@ -318,25 +490,27 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		return fmt.Errorf("failed to encode entry: %v", err)
 	}
 
-	// Write the secondary index if necessary. This is done before the
-	// primary index because we'd rather have a dangling pointer with
-	// a missing primary instead of missing the parent index and potentially
-	// escaping the revocation chain.
-	if entry.Parent != "" {
-		// Ensure the parent exists
-		parent, err := ts.Lookup(entry.Parent)
-		if err != nil {
-			return fmt.Errorf("failed to lookup parent: %v", err)
-		}
-		if parent == nil {
-			return fmt.Errorf("parent token not found")
-		}
+	if writeSecondary {
+		// Write the secondary index if necessary. This is done before the
+		// primary index because we'd rather have a dangling pointer with
+		// a missing primary instead of missing the parent index and potentially
+		// escaping the revocation chain.
+		if entry.Parent != "" {
+			// Ensure the parent exists
+			parent, err := ts.Lookup(entry.Parent)
+			if err != nil {
+				return fmt.Errorf("failed to lookup parent: %v", err)
+			}
+			if parent == nil {
+				return fmt.Errorf("parent token not found")
+			}
 
-		// Create the index entry
-		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		le := &logical.StorageEntry{Key: path}
-		if err := ts.view.Put(le); err != nil {
-			return fmt.Errorf("failed to persist entry: %v", err)
+			// Create the index entry
+			path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+			le := &logical.StorageEntry{Key: path}
+			if err := ts.view.Put(le); err != nil {
+				return fmt.Errorf("failed to persist entry: %v", err)
+			}
 		}
 	}
 
@@ -451,9 +625,17 @@ func (ts *TokenStore) revokeSalted(saltedId string) error {
 		}
 	}
 
+	// Clear the accessor index if any
+	if entry != nil && entry.Accessor != "" {
+		path := accessorPrefix + ts.SaltID(entry.Accessor)
+		if ts.view.Delete(path); err != nil {
+			return fmt.Errorf("failed to delete entry: %v", err)
+		}
+	}
+
 	// Revoke all secrets under this token
 	if entry != nil {
-		if err := ts.expiration.RevokeByToken(entry.ID); err != nil {
+		if err := ts.expiration.RevokeByToken(entry); err != nil {
 			return err
 		}
 	}
@@ -512,23 +694,115 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	return nil
 }
 
+// handleCreateAgainstRole handles the auth/token/create path for a role
+func (ts *TokenStore) handleCreateAgainstRole(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("role_name").(string)
+	roleEntry, err := ts.tokenStoreRole(name)
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("unknown role %s", name)), nil
+	}
+
+	return ts.handleCreateCommon(req, d, false, roleEntry)
+}
+
+func (ts *TokenStore) lookupByAccessor(accessor string) (string, error) {
+	entry, err := ts.view.Get(accessorPrefix + ts.SaltID(accessor))
+	if err != nil {
+		return "", fmt.Errorf("failed to read index using accessor: %s", err)
+	}
+	if entry == nil {
+		return "", &StatusBadRequest{Err: "invalid accessor"}
+	}
+
+	return string(entry.Value), nil
+}
+
+// handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
+// the properties of the token associated with the accessor
+func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &StatusBadRequest{Err: "missing accessor"}
+	}
+
+	tokenID, err := ts.lookupByAccessor(accessor)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the field data required for a lookup call
+	d := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"token": tokenID,
+		},
+		Schema: map[string]*framework.FieldSchema{
+			"token": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Token to lookup",
+			},
+		},
+	}
+	resp, err := ts.handleLookup(req, d)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("failed to lookup the token")
+	}
+	if resp.IsError() {
+		return resp, nil
+
+	}
+
+	// Remove the token ID from the response
+	if resp.Data != nil {
+		resp.Data["id"] = ""
+	}
+
+	return resp, nil
+}
+
+// handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
+// the token associated with the accessor
+func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	accessor := data.Get("accessor").(string)
+	if accessor == "" {
+		return nil, &StatusBadRequest{Err: "missing accessor"}
+	}
+
+	tokenID, err := ts.lookupByAccessor(accessor)
+	if err != nil {
+		return nil, err
+	}
+
+	// Revoke the token and its children
+	if err := ts.RevokeTree(tokenID); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
+}
+
 // handleCreate handles the auth/token/create path for creation of new orphan
 // tokens
 func (ts *TokenStore) handleCreateOrphan(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return ts.handleCreateCommon(req, d, true)
+	return ts.handleCreateCommon(req, d, true, nil)
 }
 
 // handleCreate handles the auth/token/create path for creation of new non-orphan
 // tokens
 func (ts *TokenStore) handleCreate(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return ts.handleCreateCommon(req, d, false)
+	return ts.handleCreateCommon(req, d, false, nil)
 }
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(
-	req *logical.Request, d *framework.FieldData, orphan bool) (*logical.Response, error) {
+	req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(req.ClientToken)
 	if err != nil || parent == nil {
@@ -570,12 +844,30 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Setup the token entry
 	te := TokenEntry{
-		Parent:       req.ClientToken,
-		Path:         "auth/token/create",
+		Parent: req.ClientToken,
+
+		// The mount point is always the same since we have only one token
+		// store; using req.MountPoint causes trouble in tests since they don't
+		// have an official mount
+		Path: fmt.Sprintf("auth/token/%s", req.Path),
+
 		Meta:         data.Metadata,
 		DisplayName:  "token",
 		NumUses:      data.NumUses,
 		CreationTime: time.Now().Unix(),
+	}
+
+	// If the role is not nil, we add the role name as part of the token's
+	// path. This makes it much easier to later revoke tokens that were issued
+	// by a role (using revoke-prefix). Users can further specify a PathSuffix
+	// in the role; that way they can use something like "v1", "v2" to indicate
+	// role revisions, and revoke only tokens issued with a previous revision.
+	if role != nil {
+		te.Role = role.Name
+
+		if role.PathSuffix != "" {
+			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
+		}
 	}
 
 	// Attach the given display name if any
@@ -595,64 +887,104 @@ func (ts *TokenStore) handleCreateCommon(
 		te.ID = data.ID
 	}
 
-	// Only permit policies to be a subset unless the client has root or sudo privileges
-	if len(data.Policies) == 0 {
+	switch {
+	// If we have a role, and the role defines policies, we don't even consider
+	// parent policies; the role allowed policies trumps all
+	case role != nil && len(role.AllowedPolicies) > 0:
+		if len(data.Policies) == 0 {
+			data.Policies = role.AllowedPolicies
+		} else {
+			if !strutil.StrListSubset(role.AllowedPolicies, data.Policies) {
+				return logical.ErrorResponse("token policies must be subset of the role's allowed policies"), logical.ErrInvalidRequest
+			}
+		}
+
+	case len(data.Policies) == 0:
 		data.Policies = parent.Policies
-	}
-	if !isSudo && !strListSubset(parent.Policies, data.Policies) {
+
+	// When a role is not in use, only permit policies to be a subset unless
+	// the client has root or sudo privileges
+	case !isSudo && !strutil.StrListSubset(parent.Policies, data.Policies):
 		return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 	}
-	te.Policies = data.Policies
-	if !strListSubset(te.Policies, []string{"root"}) && !data.NoDefaultPolicy {
-		te.Policies = append(te.Policies, "default")
+
+	// Use a map to filter out/prevent duplicates
+	policyMap := map[string]bool{}
+	for _, policy := range data.Policies {
+		if policy == "" {
+			// Don't allow a policy with no name, even though it is a valid
+			// slice member
+			continue
+		}
+		policyMap[policy] = true
+	}
+	if !policyMap["root"] &&
+		!data.NoDefaultPolicy {
+		policyMap["default"] = true
 	}
 
-	// Only allow an orphan token if the client has sudo policy
-	if data.NoParent {
+	for k, _ := range policyMap {
+		te.Policies = append(te.Policies, k)
+	}
+	sort.Strings(te.Policies)
+
+	switch {
+	case role != nil:
+		if role.Orphan {
+			te.Parent = ""
+		}
+
+	case data.NoParent:
+		// Only allow an orphan token if the client has sudo policy
 		if !isSudo {
 			return logical.ErrorResponse("root or sudo privileges required to create orphan token"),
 				logical.ErrInvalidRequest
 		}
 
 		te.Parent = ""
-	} else {
+
+	default:
 		// This comes from create-orphan, which can be properly ACLd
 		if orphan {
 			te.Parent = ""
 		}
 	}
 
-	// Parse the TTL/lease if any
-	if data.TTL != "" {
-		dur, err := time.ParseDuration(data.TTL)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	if role != nil && role.Period > 0 {
+		te.TTL = role.Period
+	} else {
+		// Parse the TTL/lease if any
+		if data.TTL != "" {
+			dur, err := time.ParseDuration(data.TTL)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			}
+			if dur < 0 {
+				return logical.ErrorResponse("ttl must be positive"), logical.ErrInvalidRequest
+			}
+			te.TTL = dur
+		} else if data.Lease != "" {
+			dur, err := time.ParseDuration(data.Lease)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			}
+			if dur < 0 {
+				return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
+			}
+			te.TTL = dur
 		}
-		if dur < 0 {
-			return logical.ErrorResponse("ttl must be positive"), logical.ErrInvalidRequest
-		}
-		te.TTL = dur
-	} else if data.Lease != "" {
-		dur, err := time.ParseDuration(data.Lease)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		}
-		if dur < 0 {
-			return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
-		}
-		te.TTL = dur
-	}
 
-	sysView := ts.System()
+		sysView := ts.System()
 
-	// Set the default lease if non-provided, root tokens are exempt
-	if te.TTL == 0 && !strListContains(te.Policies, "root") {
-		te.TTL = sysView.DefaultLeaseTTL()
-	}
+		// Set the default lease if non-provided, root tokens are exempt
+		if te.TTL == 0 && !strutil.StrListContains(te.Policies, "root") {
+			te.TTL = sysView.DefaultLeaseTTL()
+		}
 
-	// Limit the lease duration
-	if te.TTL > sysView.MaxLeaseTTL() {
-		te.TTL = sysView.MaxLeaseTTL()
+		// Limit the lease duration
+		if te.TTL > sysView.MaxLeaseTTL() && sysView.MaxLeaseTTL() != time.Duration(0) {
+			te.TTL = sysView.MaxLeaseTTL()
+		}
 	}
 
 	// Create the token
@@ -667,12 +999,11 @@ func (ts *TokenStore) handleCreateCommon(
 			Policies:    te.Policies,
 			Metadata:    te.Meta,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:         te.TTL,
-				GracePeriod: te.TTL / 10,
-				// Tokens are renewable only if user provides lease duration
-				Renewable: te.TTL > 0,
+				TTL:       te.TTL,
+				Renewable: true,
 			},
 			ClientToken: te.ID,
+			Accessor:    te.Accessor,
 		},
 	}
 
@@ -754,23 +1085,6 @@ func (ts *TokenStore) handleRevokeOrphan(
 	return nil, nil
 }
 
-// handleRevokePrefix handles the auth/token/revoke-prefix/path for revocation of tokens
-// generated by a given path.
-func (ts *TokenStore) handleRevokePrefix(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Parse the prefix
-	prefix := data.Get("prefix").(string)
-	if prefix == "" {
-		return logical.ErrorResponse("missing source prefix"), logical.ErrInvalidRequest
-	}
-
-	// Revoke using the prefix
-	if err := ts.expiration.RevokePrefix(prefix); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-	return nil, nil
-}
-
 // handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookup(
@@ -799,19 +1113,36 @@ func (ts *TokenStore) handleLookup(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"id":            out.ID,
+			"accessor":      out.Accessor,
 			"policies":      out.Policies,
 			"path":          out.Path,
 			"meta":          out.Meta,
 			"display_name":  out.DisplayName,
 			"num_uses":      out.NumUses,
 			"orphan":        false,
-			"creation_time": int(out.CreationTime),
-			"ttl":           int(out.TTL.Seconds()),
+			"creation_time": int64(out.CreationTime),
+			"creation_ttl":  int64(out.TTL.Seconds()),
+			"ttl":           int64(0),
+			"role":          out.Role,
 		},
 	}
 
 	if out.Parent == "" {
 		resp.Data["orphan"] = true
+	}
+
+	// Fetch the last renewal time
+	leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(out.Path, out.ID)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	if leaseTimes != nil {
+		if !leaseTimes.LastRenewalTime.IsZero() {
+			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+		}
+		if !leaseTimes.ExpireTime.IsZero() {
+			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+		}
 	}
 
 	return resp, nil
@@ -837,27 +1168,18 @@ func (ts *TokenStore) handleRenew(
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	te, err := ts.Lookup(id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Verify the token exists
-	if out == nil {
+	if te == nil {
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
 	// Renew the token and its children
-	auth, err := ts.expiration.RenewToken(out.Path, out.ID, increment)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Auth: auth,
-	}
-	return resp, nil
+	return ts.expiration.RenewToken(req, te.Path, te.ID, increment)
 }
 
 func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
@@ -868,18 +1190,228 @@ func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
 	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 }
 
+func (ts *TokenStore) authRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if req.Auth == nil {
+		return nil, fmt.Errorf("request auth is nil")
+	}
+
+	f := framework.LeaseExtend(req.Auth.Increment, 0, ts.System())
+
+	te, err := ts.Lookup(req.Auth.ClientToken)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up token: %s", err)
+	}
+	if te == nil {
+		return nil, fmt.Errorf("no token entry found during lookup")
+	}
+
+	// No role? Use normal LeaseExtend semantics
+	if te.Role == "" {
+		return f(req, d)
+	}
+
+	role, err := ts.tokenStoreRole(te.Role)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
+	}
+
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("original token role (%s) could not be found, not renewing", te.Role)), nil
+	}
+
+	// If role.Period is not zero, this is a periodic token. The TTL for a
+	// periodic token is always the same (the role's period value). It is not
+	// subject to normal maximum TTL checks that would come from calling
+	// LeaseExtend, so we fast path it.
+	if role.Period != 0 {
+		req.Auth.TTL = role.Period
+		return &logical.Response{Auth: req.Auth}, nil
+	}
+
+	return f(req, d)
+}
+
+func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
+	entry, err := ts.view.Get(fmt.Sprintf("%s%s", rolesPrefix, name))
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result tsRoleEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := ts.view.List(rolesPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]string, len(entries))
+	for i, entry := range entries {
+		ret[i] = strings.TrimPrefix(entry, rolesPrefix)
+	}
+
+	return logical.ListResponse(ret), nil
+}
+
+func (ts *TokenStore) tokenStoreRoleDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := ts.view.Delete(fmt.Sprintf("%s%s", rolesPrefix, data.Get("role_name").(string)))
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	role, err := ts.tokenStoreRole(data.Get("role_name").(string))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	resp := &logical.Response{
+		Data: structs.New(role).Map(),
+	}
+
+	return resp, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	name := data.Get("role_name").(string)
+	if name == "" {
+		return false, fmt.Errorf("role name cannot be empty")
+	}
+	role, err := ts.tokenStoreRole(name)
+	if err != nil {
+		return false, err
+	}
+
+	return role != nil, nil
+}
+
+func (ts *TokenStore) tokenStoreRoleCreateUpdate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("role_name").(string)
+	if name == "" {
+		return logical.ErrorResponse("role name cannot be empty"), nil
+	}
+	entry, err := ts.tokenStoreRole(name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Due to the existence check, entry will only be nil if it's a create
+	// operation, so just create a new one
+	if entry == nil {
+		entry = &tsRoleEntry{
+			Name: name,
+		}
+	}
+
+	// In this series of blocks, if we do not find a user-provided value and
+	// it's a creation operation, we call data.Get to get the appropriate
+	// default
+
+	orphanInt, ok := data.GetOk("orphan")
+	if ok {
+		entry.Orphan = orphanInt.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		entry.Orphan = data.Get("orphan").(bool)
+	}
+
+	periodInt, ok := data.GetOk("period")
+	if ok {
+		entry.Period = time.Second * time.Duration(periodInt.(int))
+	} else if req.Operation == logical.CreateOperation {
+		entry.Period = time.Second * time.Duration(data.Get("period").(int))
+	}
+
+	pathSuffixInt, ok := data.GetOk("path_suffix")
+	if ok {
+		pathSuffix := pathSuffixInt.(string)
+		if pathSuffix != "" {
+			matched := pathSuffixSanitize.MatchString(pathSuffix)
+			if !matched {
+				return logical.ErrorResponse(fmt.Sprintf("given role path suffix contains invalid characters; must match %s", pathSuffixSanitize.String())), nil
+			}
+			entry.PathSuffix = pathSuffix
+		}
+	} else if req.Operation == logical.CreateOperation {
+		entry.PathSuffix = data.Get("path_suffix").(string)
+	}
+
+	allowedPoliciesInt, ok := data.GetOk("allowed_policies")
+	if ok {
+		allowedPolicies := allowedPoliciesInt.(string)
+		if allowedPolicies != "" {
+			entry.AllowedPolicies = strings.Split(allowedPolicies, ",")
+		}
+	} else if req.Operation == logical.CreateOperation {
+		entry.AllowedPolicies = strings.Split(data.Get("allowed_policies").(string), ",")
+	}
+
+	// Store it
+	jsonEntry, err := logical.StorageEntryJSON(fmt.Sprintf("%s%s", rolesPrefix, name), entry)
+	if err != nil {
+		return nil, err
+	}
+	if err := ts.view.Put(jsonEntry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 const (
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
 as revocation of tokens. The tokens are renewable if associated with a lease.`
-	tokenCreateHelp       = `The token create path is used to create new tokens.`
-	tokenCreateOrphanHelp = `The token create path is used to create new orphan tokens.`
-	tokenLookupHelp       = `This endpoint will lookup a token and its properties.`
-	tokenRevokeHelp       = `This endpoint will delete the given token and all of its child tokens.`
-	tokenRevokeSelfHelp   = `This endpoint will delete the token used to call it and all of its child tokens.`
-	tokenRevokeOrphanHelp = `This endpoint will delete the token and orphan its child tokens.`
-	tokenRevokePrefixHelp = `This endpoint will delete all tokens generated under a prefix with their child tokens.`
-	tokenRenewHelp        = `This endpoint will renew the given token and prevent expiration.`
-	tokenRenewSelfHelp    = `This endpoint will renew the token used to call it and prevent expiration.`
+	tokenCreateHelp          = `The token create path is used to create new tokens.`
+	tokenCreateOrphanHelp    = `The token create path is used to create new orphan tokens.`
+	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
+	tokenListRolesHelp       = `This endpoint lists configured roles.`
+	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
+	tokenLookupHelp          = `This endpoint will lookup a token and its properties.`
+	tokenPathRolesHelp       = `This endpoint allows creating, reading, and deleting roles.`
+	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
+	tokenRevokeHelp          = `This endpoint will delete the given token and all of its child tokens.`
+	tokenRevokeSelfHelp      = `This endpoint will delete the token used to call it and all of its child tokens.`
+	tokenRevokeOrphanHelp    = `This endpoint will delete the token and orphan its child tokens.`
+	tokenRenewHelp           = `This endpoint will renew the given token and prevent expiration.`
+	tokenRenewSelfHelp       = `This endpoint will renew the token used to call it and prevent expiration.`
+	tokenAllowedPoliciesHelp = `If set, tokens created via this role
+can be created with any subset of this list,
+rather than the normal semantics of a subset
+of the client token's policies. This
+parameter should be sent as a comma-delimited
+string.`
+	tokenOrphanHelp = `If true, tokens created via this role
+will be orphan tokens (have no parent)`
+	tokenPeriodHelp = `If set, tokens created via this role
+will have no max lifetime; instead, their
+renewal period will be fixed to this value.
+This takes an integer number of seconds,
+or a string duration (e.g. "24h").`
+	tokenPathSuffixHelp = `If set, tokens created via this role
+will contain the given suffix as a part of
+their path. This can be used to assist use
+of the 'revoke-prefix' endpoint later on.
+The given suffix must match the regular
+expression `
 )

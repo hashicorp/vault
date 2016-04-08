@@ -75,6 +75,53 @@ type RollbackFunc func(*logical.Request, string, interface{}) error
 // CleanupFunc is the callback for backend unload.
 type CleanupFunc func()
 
+func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, exists bool, err error) {
+	b.once.Do(b.init)
+
+	// Ensure we are only doing this when one of the correct operations is in play
+	switch req.Operation {
+	case logical.CreateOperation:
+	case logical.UpdateOperation:
+	default:
+		return false, false, fmt.Errorf("incorrect operation type %v for an existence check", req.Operation)
+	}
+
+	// Find the matching route
+	path, captures := b.route(req.Path)
+	if path == nil {
+		return false, false, logical.ErrUnsupportedPath
+	}
+
+	if path.ExistenceCheck == nil {
+		return false, false, nil
+	}
+
+	checkFound = true
+
+	// Build up the data for the route, with the URL taking priority
+	// for the fields over the PUT data.
+	raw := make(map[string]interface{}, len(path.Fields))
+	for k, v := range req.Data {
+		raw[k] = v
+	}
+	for k, v := range captures {
+		raw[k] = v
+	}
+
+	fd := FieldData{
+		Raw:    raw,
+		Schema: path.Fields}
+
+	err = fd.Validate()
+	if err != nil {
+		return false, false, err
+	}
+
+	// Call the callback with the request and the data
+	exists, err = path.ExistenceCheck(req, &fd)
+	return
+}
+
 // logical.Backend impl.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	b.once.Do(b.init)
@@ -174,13 +221,14 @@ func (b *Backend) System() logical.SystemView {
 	return b.system
 }
 
-// This method takes in the TTL and MaxTTL values provided by the user, compares
-// those with the SystemView values. If they are empty default values are set.
-// If they are set, their boundaries are validated.
+// This method takes in the TTL and MaxTTL values provided by the user,
+// compares those with the SystemView values. If they are empty a value of 0 is
+// set, which will cause initial secret or LeaseExtend operations to use the
+// mount/system defaults.  If they are set, their boundaries are validated.
 func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
 	sysMaxTTL := b.System().MaxLeaseTTL()
-	if len(ttlStr) == 0 {
-		ttl = b.System().DefaultLeaseTTL()
+	if len(ttlStr) == 0 || ttlStr == "0" {
+		ttl = 0
 	} else {
 		ttl, err = time.ParseDuration(ttlStr)
 		if err != nil {
@@ -190,8 +238,8 @@ func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Durati
 			return 0, 0, fmt.Errorf("\"ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
 		}
 	}
-	if len(maxTTLStr) == 0 {
-		maxTTL = sysMaxTTL
+	if len(maxTTLStr) == 0 || maxTTLStr == "0" {
+		maxTTL = 0
 	} else {
 		maxTTL, err = time.ParseDuration(maxTTLStr)
 		if err != nil {
@@ -201,7 +249,7 @@ func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Durati
 			return 0, 0, fmt.Errorf("\"max_ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
 		}
 	}
-	if ttl > maxTTL {
+	if ttl > maxTTL && maxTTL != 0 {
 		ttl = maxTTL
 	}
 	return

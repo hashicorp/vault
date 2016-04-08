@@ -5,30 +5,32 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"net/http"
 	"os"
-	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/mapstructure"
 )
 
 const (
-	// Default path at which SSH backend will be mounted in Vault server
-	SSHAgentDefaultMountPoint = "ssh"
+	// SSHHelperDefaultMountPoint is the default path at which SSH backend will be
+	// mounted in the Vault server.
+	SSHHelperDefaultMountPoint = "ssh"
 
-	// Echo request message sent as OTP by the agent
+	// VerifyEchoRequest is the echo request message sent as OTP by the helper.
 	VerifyEchoRequest = "verify-echo-request"
 
-	// Echo response message sent as a response to OTP matching echo request
+	// VerifyEchoResponse is the echo response message sent as a response to OTP
+	// matching echo request.
 	VerifyEchoResponse = "verify-echo-response"
 )
 
-// SSHAgent is a structure representing an SSH agent which can talk to vault server
+// SSHHelper is a structure representing a vault-ssh-helper which can talk to vault server
 // in order to verify the OTP entered by the user. It contains the path at which
 // SSH backend is mounted at the server.
-type SSHAgent struct {
+type SSHHelper struct {
 	c          *Client
 	MountPoint string
 }
@@ -47,41 +49,34 @@ type SSHVerifyResponse struct {
 	IP string `mapstructure:"ip"`
 }
 
-// SSHAgentConfig is a structure which represents the entries from the agent's configuration file.
-type SSHAgentConfig struct {
+// SSHHelperConfig is a structure which represents the entries from the vault-ssh-helper's configuration file.
+type SSHHelperConfig struct {
 	VaultAddr       string `hcl:"vault_addr"`
 	SSHMountPoint   string `hcl:"ssh_mount_point"`
 	CACert          string `hcl:"ca_cert"`
 	CAPath          string `hcl:"ca_path"`
-	TLSSkipVerify   bool   `hcl:"tls_skip_verify"`
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
+	TLSSkipVerify   bool   `hcl:"tls_skip_verify"`
 }
 
-// TLSClient returns a HTTP client that uses TLS verification (TLS 1.2) for a given
-// certificate pool.
-func (c *SSHAgentConfig) SetTLSParameters(clientConfig *Config, certPool *x509.CertPool) {
+// SetTLSParameters sets the TLS parameters for this SSH agent.
+func (c *SSHHelperConfig) SetTLSParameters(clientConfig *Config, certPool *x509.CertPool) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.TLSSkipVerify,
 		MinVersion:         tls.VersionTLS12,
 		RootCAs:            certPool,
 	}
 
-	clientConfig.HttpClient.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSClientConfig:     tlsConfig,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
+	transport := cleanhttp.DefaultTransport()
+	transport.TLSClientConfig = tlsConfig
+	clientConfig.HttpClient.Transport = transport
 }
 
 // NewClient returns a new client for the configuration. This client will be used by the
-// SSH agent to communicate with Vault server and verify the OTP entered by user.
+// vault-ssh-helper to communicate with Vault server and verify the OTP entered by user.
 // If the configuration supplies Vault SSL certificates, then the client will
 // have TLS configured in its transport.
-func (c *SSHAgentConfig) NewClient() (*Client, error) {
+func (c *SSHHelperConfig) NewClient() (*Client, error) {
 	// Creating a default client configuration for communicating with vault server.
 	clientConfig := DefaultConfig()
 
@@ -114,47 +109,66 @@ func (c *SSHAgentConfig) NewClient() (*Client, error) {
 	return client, nil
 }
 
-// LoadSSHAgentConfig loads agent's configuration from the file and populates the corresponding
+// LoadSSHHelperConfig loads ssh-helper's configuration from the file and populates the corresponding
 // in-memory structure.
 //
 // Vault address is a required parameter.
 // Mount point defaults to "ssh".
-func LoadSSHAgentConfig(path string) (*SSHAgentConfig, error) {
-	var config SSHAgentConfig
+func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
 	contents, err := ioutil.ReadFile(path)
-	if !os.IsNotExist(err) {
-		obj, err := hcl.Parse(string(contents))
-		if err != nil {
-			return nil, err
-		}
-
-		if err := hcl.DecodeObject(&config, obj); err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, err
+	if err != nil && !os.IsNotExist(err) {
+		return nil, multierror.Prefix(err, "ssh_helper:")
 	}
-
-	if config.VaultAddr == "" {
-		return nil, fmt.Errorf("config missing vault_addr")
-	}
-	if config.SSHMountPoint == "" {
-		config.SSHMountPoint = SSHAgentDefaultMountPoint
-	}
-
-	return &config, nil
+	return ParseSSHHelperConfig(string(contents))
 }
 
-// SSHAgent creates an SSHAgent object which can talk to Vault server with SSH backend
+// ParseSSHHelperConfig parses the given contents as a string for the SSHHelper
+// configuration.
+func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
+	root, err := hcl.Parse(string(contents))
+	if err != nil {
+		return nil, fmt.Errorf("ssh_helper: error parsing config: %s", err)
+	}
+
+	list, ok := root.Node.(*ast.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("ssh_helper: error parsing config: file doesn't contain a root object")
+	}
+
+	valid := []string{
+		"vault_addr",
+		"ssh_mount_point",
+		"ca_cert",
+		"ca_path",
+		"allowed_cidr_list",
+		"tls_skip_verify",
+	}
+	if err := checkHCLKeys(list, valid); err != nil {
+		return nil, multierror.Prefix(err, "ssh_helper:")
+	}
+
+	var c SSHHelperConfig
+	c.SSHMountPoint = SSHHelperDefaultMountPoint
+	if err := hcl.DecodeObject(&c, list); err != nil {
+		return nil, multierror.Prefix(err, "ssh_helper:")
+	}
+
+	if c.VaultAddr == "" {
+		return nil, fmt.Errorf("ssh_helper: missing config 'vault_addr'")
+	}
+	return &c, nil
+}
+
+// SSHHelper creates an SSHHelper object which can talk to Vault server with SSH backend
 // mounted at default path ("ssh").
-func (c *Client) SSHAgent() *SSHAgent {
-	return c.SSHAgentWithMountPoint(SSHAgentDefaultMountPoint)
+func (c *Client) SSHHelper() *SSHHelper {
+	return c.SSHHelperWithMountPoint(SSHHelperDefaultMountPoint)
 }
 
-// SSHAgentWithMountPoint creates an SSHAgent object which can talk to Vault server with SSH backend
+// SSHHelperWithMountPoint creates an SSHHelper object which can talk to Vault server with SSH backend
 // mounted at a specific mount point.
-func (c *Client) SSHAgentWithMountPoint(mountPoint string) *SSHAgent {
-	return &SSHAgent{
+func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
+	return &SSHHelper{
 		c:          c,
 		MountPoint: mountPoint,
 	}
@@ -163,9 +177,9 @@ func (c *Client) SSHAgentWithMountPoint(mountPoint string) *SSHAgent {
 // Verify verifies if the key provided by user is present in Vault server. The response
 // will contain the IP address and username associated with the OTP. In case the
 // OTP matches the echo request message, instead of searching an entry for the OTP,
-// an echo response message is returned. This feature is used by agent to verify if
+// an echo response message is returned. This feature is used by ssh-helper to verify if
 // its configured correctly.
-func (c *SSHAgent) Verify(otp string) (*SSHVerifyResponse, error) {
+func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
 	data := map[string]interface{}{
 		"otp": otp,
 	}
@@ -196,4 +210,32 @@ func (c *SSHAgent) Verify(otp string) (*SSHVerifyResponse, error) {
 		return nil, err
 	}
 	return &verifyResp, nil
+}
+
+func checkHCLKeys(node ast.Node, valid []string) error {
+	var list *ast.ObjectList
+	switch n := node.(type) {
+	case *ast.ObjectList:
+		list = n
+	case *ast.ObjectType:
+		list = n.List
+	default:
+		return fmt.Errorf("cannot check HCL keys of type %T", n)
+	}
+
+	validMap := make(map[string]struct{}, len(valid))
+	for _, v := range valid {
+		validMap[v] = struct{}{}
+	}
+
+	var result error
+	for _, item := range list.Items {
+		key := item.Keys[0].Token.Value().(string)
+		if _, ok := validMap[key]; !ok {
+			result = multierror.Append(result, fmt.Errorf(
+				"invalid key '%s' on line %d", key, item.Assign.Line))
+		}
+	}
+
+	return result
 }

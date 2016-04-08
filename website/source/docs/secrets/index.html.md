@@ -63,7 +63,7 @@ system to determine the paths it responds to.
 
 An important concept around secret backends is that they receive a
 _barrier view_ to the configured Vault physical storage. This is a lot
-like a [chroot](http://en.wikipedia.org/wiki/Chroot).
+like a [chroot](https://en.wikipedia.org/wiki/Chroot).
 
 Whenever a secret backend is mounted, a random UUID is generated. This
 becomes the data root for that backend. Whenever that backend writes to

@@ -25,9 +25,9 @@ named `vault`. Any other files in the package can be safely removed and
 Vault will still function.
 
 The final step is to make sure that `vault` is available on the PATH.
-See [this page](http://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux)
+See [this page](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux)
 for instructions on setting the PATH on Linux and Mac.
-[This page](http://stackoverflow.com/questions/1618280/where-can-i-set-path-to-make-exe-on-windows)
+[This page](https://stackoverflow.com/questions/1618280/where-can-i-set-path-to-make-exe-on-windows)
 contains instructions for setting the PATH on Windows.
 
 ## Verifying the Installation

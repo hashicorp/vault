@@ -63,7 +63,7 @@ default, the `{{username}}` and `{{password}}` fields will be populated by
 Vault with dynamically generated values. This CQL statement is creating
 the named user, and then granting it `SELECT` or read-only privileges
 to keyspaces. More complex `GRANT` queries can be used to
-customize the privileges of the role. See the [CQL Reference Manual](http://docs.datastax.com/en/cql/3.1/cql/cql_reference/grant_r.html)
+customize the privileges of the role. See the [CQL Reference Manual](https://docs.datastax.com/en/cql/3.1/cql/cql_reference/grant_r.html)
 for more information.
 
 To generate a new set of credentials, we simply read from that role:
@@ -104,20 +104,28 @@ subpath for interactive help output.
     TLS works as follows:<br /><br />
     <ul>
       <li>
-        • If `tls` is set to true, the connection will use TLS; this happens automatically if `pem_bundle`, `pem_json`, or `insecure_tls` is set
+        • If `tls` is set to true, the connection will use TLS; this happens
+        automatically if `pem_bundle`, `pem_json`, or `insecure_tls` is set
       </li>
       <li>
-        • If `insecure_tls` is set to true, the connection will not perform verification of the server certificate; this also sets `tls` to true
+        • If `insecure_tls` is set to true, the connection will not perform
+        verification of the server certificate; this also sets `tls` to true
       </li>
       <li>
-        • If only `issuing_ca` is set in `pem_json`, or the only certificate in `pem_bundle` is a CA certificate, the given CA certificate will be used for server certificate verification; otherwise the system CA certificates will be used
+        • If only `issuing_ca` is set in `pem_json`, or the only certificate in
+        `pem_bundle` is a CA certificate, the given CA certificate will be used
+        for server certificate verification; otherwise the system CA
+        certificates will be used
       </li>
       <li>
-        • If `certificate` and `private_key` are set in `pem_bundle` or `pem_json`, client auth will be turned on for the connection
+        • If `certificate` and `private_key` are set in `pem_bundle` or
+        `pem_json`, client auth will be turned on for the connection
       </li>
     </ul>
-    `pem_bundle` should be a PEM-concatenated bundle of a private key + client certificate, an issuing CA certificate, or both. `pem_json` should contain the same information; for convenience, the JSON format is the same as that output by the issue command from the PKI backend.<br /><br />
-    This is a root protected endpoint.
+    `pem_bundle` should be a PEM-concatenated bundle of a private key + client
+    certificate, an issuing CA certificate, or both. `pem_json` should contain
+    the same information; for convenience, the JSON format is the same as that
+    output by the issue command from the PKI backend.
   </dd>
 
   <dt>Method</dt>
@@ -167,7 +175,12 @@ subpath for interactive help output.
         JSON containing a certificate and private key;
         a certificate, private key, and issuing CA certificate; or just a CA
         certificate. For convenience format is the same as the output of the
-        `issue` command from the `pki` backend; see [the pki documentation](https://vaultproject.io/docs/secrets/pki/index.html).
+        `issue` command from the `pki` backend; see [the pki documentation](https://www.vaultproject.io/docs/secrets/pki/index.html).
+      </li>
+      <li>
+        <span class="param">protocol_version</span>
+        <span class="param-flags">optional</span>
+        The CQL protocol version to use. Defaults to 2.
       </li>
     </ul>
   </dd>
@@ -220,13 +233,6 @@ subpath for interactive help output.
         The lease value provided as a string duration
         with time suffix. Hour is the largest suffix.
       </li>
-      <li>
-        <span class="param">lease_grace_period</span>
-        <span class="param-flags">optional</span>
-        The lease grace period (time before revocation after the lease has
-        expired) provided as a string duration with time suffix. Hour is the
-        largest suffix.
-      </li>
     </ul>
   </dd>
 
@@ -262,9 +268,8 @@ subpath for interactive help output.
     {
       "data": {
         "creation_cql": "CREATE USER...",
-        "revocation_cql": "DROP USER...",
+        "rollback_cql": "DROP USER...",
         "lease": "12h",
-        "lease_grace_period": "1h"
       }
     }
     ```

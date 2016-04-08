@@ -7,11 +7,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 )
 
-func clientIAM(s logical.Storage) (*iam.IAM, error) {
+func getRootConfig(s logical.Storage) (*aws.Config, error) {
 	entry, err := s.Get("config/root")
 	if err != nil {
 		return nil, err
@@ -28,11 +29,19 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 	}
 
 	creds := credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, "")
-	awsConfig := &aws.Config{
+	return &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(config.Region),
 		HTTPClient:  cleanhttp.DefaultClient(),
-	}
+	}, nil
+}
 
+func clientIAM(s logical.Storage) (*iam.IAM, error) {
+	awsConfig, _ := getRootConfig(s)
 	return iam.New(session.New(awsConfig)), nil
+}
+
+func clientSTS(s logical.Storage) (*sts.STS, error) {
+	awsConfig, _ := getRootConfig(s)
+	return sts.New(session.New(awsConfig)), nil
 }

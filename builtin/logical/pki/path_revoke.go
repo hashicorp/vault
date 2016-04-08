@@ -2,6 +2,7 @@ package pki
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -20,7 +21,7 @@ hyphen-separated octal`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathRevokeWrite,
+			logical.UpdateOperation: b.pathRevokeWrite,
 		},
 
 		HelpSynopsis:    pathRevokeHelpSyn,
@@ -47,6 +48,10 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 		return logical.ErrorResponse("The serial number must be provided"), nil
 	}
 
+	// We store and identify by lowercase colon-separated hex, but other
+	// utilities use dashes and/or uppercase, so normalize
+	serial = strings.Replace(strings.ToLower(serial), "-", ":", -1)
+
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
@@ -54,8 +59,8 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 }
 
 func (b *backend) pathRotateCRLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	b.revokeStorageLock.RLock()
+	defer b.revokeStorageLock.RUnlock()
 
 	crlErr := buildCRL(b, req)
 	switch crlErr.(type) {

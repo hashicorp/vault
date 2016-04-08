@@ -10,9 +10,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+const (
+	testSysTTL    = time.Hour * 10
+	testSysMaxTTL = time.Hour * 20
+)
+
 func TestBackend_TTLDurations(t *testing.T) {
-	sysTTL := time.Hour * 10
-	sysMaxTTL := time.Hour * 20
 	data1 := map[string]interface{}{
 		"password": "password",
 		"policies": "root",
@@ -43,15 +46,16 @@ func TestBackend_TTLDurations(t *testing.T) {
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: sysTTL,
-			MaxLeaseTTLVal:     sysMaxTTL,
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
 		},
 	})
 	if err != nil {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testUsersWrite(t, "test", data1, true),
 			testUsersWrite(t, "test", data2, true),
@@ -64,22 +68,41 @@ func TestBackend_TTLDurations(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
-
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepLogin(t, "web", "password"),
+			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 		},
 	})
 }
 
 func TestBackend_userCrud(t *testing.T) {
-	b := Backend()
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),
@@ -89,9 +112,104 @@ func TestBackend_userCrud(t *testing.T) {
 	})
 }
 
+func TestBackend_userCreateOperation(t *testing.T) {
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testUserCreateOperation(t, "web", "password", "foo"),
+			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
+		},
+	})
+}
+
+func TestBackend_passwordUpdate(t *testing.T) {
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepUser(t, "web", "password", "foo"),
+			testAccStepReadUser(t, "web", "foo"),
+			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
+			testUpdatePassword(t, "web", "newpassword"),
+			testAccStepLogin(t, "web", "newpassword", []string{"default", "foo"}),
+		},
+	})
+
+}
+
+func TestBackend_policiesUpdate(t *testing.T) {
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepUser(t, "web", "password", "foo"),
+			testAccStepReadUser(t, "web", "foo"),
+			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
+			testUpdatePolicies(t, "web", "foo,bar"),
+			testAccStepReadUser(t, "web", "foo,bar"),
+			testAccStepLogin(t, "web", "password", []string{"bar", "default", "foo"}),
+		},
+	})
+
+}
+
+func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "users/" + user + "/password",
+		Data: map[string]interface{}{
+			"password": password,
+		},
+	}
+}
+
+func testUpdatePolicies(t *testing.T, user, policies string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "users/" + user + "/policies",
+		Data: map[string]interface{}{
+			"policies": policies,
+		},
+	}
+}
+
 func testUsersWrite(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "users/" + user,
 		Data:      data,
 		ErrorOk:   true,
@@ -106,7 +224,7 @@ func testUsersWrite(t *testing.T, user string, data map[string]interface{}, expe
 
 func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
 		Data:      data,
 		ErrorOk:   true,
@@ -119,23 +237,35 @@ func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expe
 	}
 }
 
-func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestStep {
+func testAccStepLogin(t *testing.T, user string, pass string, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "login/" + user,
 		Data: map[string]interface{}{
 			"password": pass,
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"foo"}),
+		Check: logicaltest.TestCheckAuth(policies),
+	}
+}
+
+func testUserCreateOperation(
+	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.CreateOperation,
+		Path:      "users/" + name,
+		Data: map[string]interface{}{
+			"password": password,
+			"policies": policies,
+		},
 	}
 }
 
 func testAccStepUser(
 	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
 		Data: map[string]interface{}{
 			"password": password,

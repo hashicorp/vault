@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathRotate() *framework.Path {
+func (b *backend) pathRotate() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/rotate",
 		Fields: map[string]*framework.FieldSchema{
@@ -18,7 +18,7 @@ func pathRotate() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: pathRotateWrite,
+			logical.UpdateOperation: b.pathRotateWrite,
 		},
 
 		HelpSynopsis:    pathRotateHelpSyn,
@@ -26,23 +26,31 @@ func pathRotate() *framework.Path {
 	}
 }
 
-func pathRotateWrite(
+func (b *backend) pathRotateWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	// Check if the policy already exists
-	policy, err := getPolicy(req, name)
+	// Get the policy
+	lp, err := b.policies.getPolicy(req, name)
 	if err != nil {
 		return nil, err
 	}
-	if policy == nil {
-		return logical.ErrorResponse(
-				fmt.Sprintf("no existing role named %s could be found", name)),
-			logical.ErrInvalidRequest
+
+	// Error if invalid policy
+	if lp == nil {
+		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
+	lp.Lock()
+	defer lp.Unlock()
+
+	// Verify if wasn't deleted before we grabbed the lock
+	if lp.policy == nil {
+		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
 	// Generate the policy
-	err = policy.rotate(req.Storage)
+	err = lp.policy.rotate(req.Storage)
 
 	return nil, err
 }

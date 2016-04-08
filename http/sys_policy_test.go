@@ -18,11 +18,12 @@ func TestSysPolicies(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"policies": []interface{}{"default", "root"},
+		"keys":     []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 }
 
@@ -42,7 +43,7 @@ func TestSysReadPolicy(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 }
 
@@ -62,11 +63,12 @@ func TestSysWritePolicy(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"policies": []interface{}{"default", "foo", "root"},
+		"keys":     []interface{}{"default", "foo", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 }
 
@@ -89,10 +91,11 @@ func TestSysDeletePolicy(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"policies": []interface{}{"default", "root"},
+		"keys":     []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 }

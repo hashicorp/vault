@@ -21,30 +21,52 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "ldap URL to connect to (default: ldap://127.0.0.1)",
 			},
+
 			"userdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
 			},
+
+			"binddn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP DN for searching for the user DN (optional)",
+			},
+
+			"bindpass": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "LDAP password for searching for the user DN (optional)",
+			},
+
 			"groupdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "LDAP domain to use for groups (eg: ou=Groups,dc=example,dc=org)",
 			},
+
 			"upndomain": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
 			},
+
 			"userattr": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Attribute used for users (default: cn)",
 			},
+
 			"certificate": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
 			},
+
+			"discoverdn": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Use anonymous bind to discover the bind DN of a user (optional)",
+			},
+
 			"insecure_tls": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
 			},
+
 			"starttls": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
@@ -52,8 +74,8 @@ func pathConfig(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:  b.pathConfigRead,
-			logical.WriteOperation: b.pathConfigWrite,
+			logical.ReadOperation:   b.pathConfigRead,
+			logical.UpdateOperation: b.pathConfigWrite,
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,
@@ -98,6 +120,9 @@ func (b *backend) pathConfigRead(
 			"certificate":  cfg.Certificate,
 			"insecure_tls": cfg.InsecureTLS,
 			"starttls":     cfg.StartTLS,
+			"binddn":       cfg.BindDN,
+			"bindpass":     cfg.BindPassword,
+			"discoverdn":   cfg.DiscoverDN,
 		},
 	}, nil
 }
@@ -138,6 +163,18 @@ func (b *backend) pathConfigWrite(
 	if startTLS {
 		cfg.StartTLS = startTLS
 	}
+	bindDN := d.Get("binddn").(string)
+	if bindDN != "" {
+		cfg.BindDN = bindDN
+	}
+	bindPass := d.Get("bindpass").(string)
+	if bindPass != "" {
+		cfg.BindPassword = bindPass
+	}
+	discoverDN := d.Get("discoverdn").(bool)
+	if discoverDN {
+		cfg.DiscoverDN = discoverDN
+	}
 
 	// Try to connect to the LDAP server, to validate the URL configuration
 	// We can also check the URL at this stage, as anything else would probably
@@ -145,6 +182,9 @@ func (b *backend) pathConfigWrite(
 	conn, cerr := cfg.DialLDAP()
 	if cerr != nil {
 		return logical.ErrorResponse(cerr.Error()), nil
+	}
+	if conn == nil {
+		return logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
 	}
 	conn.Close()
 
@@ -160,14 +200,17 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url         string
-	UserDN      string
-	GroupDN     string
-	UPNDomain   string
-	UserAttr    string
-	Certificate string
-	InsecureTLS bool
-	StartTLS    bool
+	Url          string
+	UserDN       string
+	GroupDN      string
+	UPNDomain    string
+	UserAttr     string
+	Certificate  string
+	InsecureTLS  bool
+	StartTLS     bool
+	BindDN       string
+	BindPassword string
+	DiscoverDN   bool
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
@@ -200,6 +243,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 	}
 
 	var conn *ldap.Conn
+	var tlsConfig *tls.Config
 	switch u.Scheme {
 	case "ldap":
 		if port == "" {
@@ -207,7 +251,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		}
 		conn, err = ldap.Dial("tcp", host+":"+port)
 		if c.StartTLS {
-			tlsConfig, err := c.GetTLSConfig(host)
+			tlsConfig, err = c.GetTLSConfig(host)
 			if err != nil {
 				break
 			}
@@ -217,7 +261,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if port == "" {
 			port = "636"
 		}
-		tlsConfig, err := c.GetTLSConfig(host)
+		tlsConfig, err = c.GetTLSConfig(host)
 		if err != nil {
 			break
 		}
@@ -238,14 +282,35 @@ func (c *ConfigEntry) SetDefaults() {
 }
 
 const pathConfigHelpSyn = `
-Configure the LDAP server to connect to.
+Configure the LDAP server to connect to, along with its options.
 `
 
 const pathConfigHelpDesc = `
-This endpoint allows you to configure the LDAP server to connect to, and give
-basic information of the schema of that server.
+This endpoint allows you to configure the LDAP server to connect to and its
+configuration options.
 
 The LDAP URL can use either the "ldap://" or "ldaps://" schema. In the former
-case, an unencrypted connection will be done, with default port 389; in the latter
-case, a SSL connection will be done, with default port 636.
+case, an unencrypted connection will be made with a default port of 389, unless
+the "starttls" parameter is set to true, in which case TLS will be used. In the
+latter case, a SSL connection will be established with a default port of 636.
+
+## A NOTE ON ESCAPING
+
+It is up to the administrator to provide properly escaped DNs. This includes
+the user DN, bind DN for search, and so on.
+
+The only DN escaping performed by this backend is on usernames given at login
+time when they are inserted into the final bind DN, and uses escaping rules
+defined in RFC 4514.
+
+Additionally, Active Directory has escaping rules that differ slightly from the
+RFC; in particular it requires escaping of '#' regardless of position in the DN
+(the RFC only requires it to be escaped when it is the first character), and
+'=', which the RFC indicates can be escaped with a backslash, but does not
+contain in its set of required escapes. If you are using Active Directory and
+these appear in your usernames, please ensure that they are escaped, in
+addition to being properly escaped in your configured DNs.
+
+For reference, see https://www.ietf.org/rfc/rfc4514.txt and
+http://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx
 `

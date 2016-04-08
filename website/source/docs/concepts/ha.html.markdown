@@ -35,7 +35,7 @@ including Consul, ZooKeeper and etcd. These may change over time, and the
 [configuration page](/docs/config/index.html) should be referenced.
 
 The Consul backend is the recommended HA backend, as it is used in production
-by HashiCorp and it's customers with commercial support.
+by HashiCorp and its customers with commercial support.
 
 If you're interested in implementing another backend or adding HA support
 to another backend, we'd love your contributions. Adding HA support

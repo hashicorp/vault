@@ -5,14 +5,16 @@
 // --------------------------------------------------
 
 #header {
+  flex-shrink:0;
+
   .navbar-brand {
     .logo{
       width: $project-logo-width;
       padding-left: 50px;
       font-size: 0;
       text-transform: uppercase;
-      background: image-url('../images/logo-header.png') 0 0 no-repeat;
-      @include img-retina("../images/logo-header.png", "../images/logo-header@2x.png", $project-logo-width, $project-logo-height);
+      background: image-url('logo-header.png') 0 0 no-repeat;
+      @include img-retina("logo-header.png", "logo-header@2x.png", $project-logo-width, $project-logo-height);
       background-position: 0 46%;
     }
   }
@@ -31,7 +33,7 @@
     .navbar-brand {
       .logo{
         width: $project-logo-width * .8;
-        @include img-retina("../images/logo-header.png", "../images/logo-header@2x.png", $project-logo-width * .8, $project-logo-height * .8);
+        @include img-retina("logo-header.png", "logo-header@2x.png", $project-logo-width * .8, $project-logo-height * .8);
 
         img{
           //width: 72px;

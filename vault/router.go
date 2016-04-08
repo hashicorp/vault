@@ -105,7 +105,7 @@ func (r *Router) Remount(src, dst string) error {
 }
 
 // Taint is used to mark a path as tainted. This means only RollbackOperation
-// RenewOperation requests are allowed to proceed
+// RevokeOperation requests are allowed to proceed
 func (r *Router) Taint(path string) error {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -184,6 +184,17 @@ func (r *Router) MatchingSystemView(path string) logical.SystemView {
 
 // Route is used to route a given request
 func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
+	resp, _, _, err := r.routeCommon(req, false)
+	return resp, err
+}
+
+// Route is used to route a given existence check request
+func (r *Router) RouteExistenceCheck(req *logical.Request) (bool, bool, error) {
+	_, ok, exists, err := r.routeCommon(req, true)
+	return ok, exists, err
+}
+
+func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
@@ -195,7 +206,7 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	defer metrics.MeasureSince([]string{"route", string(req.Operation),
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
@@ -207,12 +218,9 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), logical.ErrUnsupportedPath
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
-
-	// Determine if this path is an unauthenticated path before we modify it
-	loginPath := r.LoginPath(req.Path)
 
 	// Adjust the path to exclude the routing prefix
 	original := req.Path
@@ -237,11 +245,8 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 		req.ClientToken = re.SaltID(req.ClientToken)
 	}
 
-	// If the request is not a login path, then clear the connection
+	// Cache the pointer to the original connection object
 	originalConn := req.Connection
-	if !loginPath {
-		req.Connection = nil
-	}
 
 	// Reset the request before returning
 	defer func() {
@@ -253,7 +258,13 @@ func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
 	}()
 
 	// Invoke the backend
-	return re.backend.HandleRequest(req)
+	if existenceCheck {
+		ok, exists, err := re.backend.HandleExistenceCheck(req)
+		return nil, ok, exists, err
+	} else {
+		resp, err := re.backend.HandleRequest(req)
+		return resp, false, false, err
+	}
 }
 
 // RootPath checks if the given path requires root privileges

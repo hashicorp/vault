@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -23,31 +24,37 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
+	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/mounts", proxySysRequest(core))
-	mux.Handle("/v1/sys/mounts/", proxySysRequest(core))
-	mux.Handle("/v1/sys/remount", proxySysRequest(core))
-	mux.Handle("/v1/sys/policy", handleSysListPolicies(core))
-	mux.Handle("/v1/sys/policy/", handleSysPolicy(core))
-	mux.Handle("/v1/sys/renew/", proxySysRequest(core))
-	mux.Handle("/v1/sys/revoke/", proxySysRequest(core))
-	mux.Handle("/v1/sys/revoke-prefix/", proxySysRequest(core))
-	mux.Handle("/v1/sys/auth", proxySysRequest(core))
-	mux.Handle("/v1/sys/auth/", proxySysRequest(core))
-	mux.Handle("/v1/sys/audit", handleSysListAudit(core))
-	mux.Handle("/v1/sys/audit/", handleSysAudit(core))
+	mux.Handle("/v1/sys/renew/", handleLogical(core, false, nil))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/rotate", proxySysRequest(core))
-	mux.Handle("/v1/sys/key-status", proxySysRequest(core))
-	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
-	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
-	mux.Handle("/v1/", handleLogical(core, false))
+	mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core))
+	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
+	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core, false))
+	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core, false))
+	mux.Handle("/v1/sys/rekey-recovery-key/init", handleSysRekeyInit(core, true))
+	mux.Handle("/v1/sys/rekey-recovery-key/update", handleSysRekeyUpdate(core, true))
+	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesSelfCallback))
+	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
+	mux.Handle("/v1/", handleLogical(core, false, nil))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
 
 	return handler
+}
+
+// ClientToken is required in the handler of sys/capabilities-self endpoint in
+// system backend. But the ClientToken gets obfuscated before the request gets
+// forwarded to any logical backend. So, setting the ClientToken in the data
+// field for this request.
+func sysCapabilitiesSelfCallback(req *logical.Request) error {
+	if req == nil || req.Data == nil {
+		return fmt.Errorf("invalid request")
+	}
+	req.Data["token"] = req.ClientToken
+	return nil
 }
 
 // stripPrefix is a helper to strip a prefix from the path. It will
@@ -86,7 +93,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		return resp, false
 	}
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondErrorStatus(w, err)
 		return resp, false
 	}
 
@@ -144,6 +151,18 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	}
 
 	return req
+}
+
+// Determines the type of the error being returned and sets the HTTP
+// status code appropriately
+func respondErrorStatus(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	switch {
+	// Keep adding more error types here to appropriate the status codes
+	case errwrap.ContainsType(err, new(vault.StatusBadRequest)):
+		status = http.StatusBadRequest
+	}
+	respondError(w, status, err)
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
@@ -208,10 +227,6 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
-}
-
-func proxySysRequest(core *vault.Core) http.Handler {
-	return handleLogical(core, true)
 }
 
 type ErrorResponse struct {

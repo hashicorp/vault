@@ -14,6 +14,12 @@ func GenericNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>\\w[\\w-.]+\\w)", name)
 }
 
+// Helper which returns a regex string for optionally accepting the a field
+// from the API URL
+func OptionalParamRegex(name string) string {
+	return fmt.Sprintf("(/(?P<%s>.+))?", name)
+}
+
 // PathAppend is a helper for appending lists of paths into a single
 // list.
 func PathAppend(paths ...[]*Path) []*Path {
@@ -52,6 +58,14 @@ type Path struct {
 	// field is set and there is a callback registered here, then the
 	// callback will be called.
 	Callbacks map[logical.Operation]OperationFunc
+
+	// ExistenceCheck, if implemented, is used to query whether a given
+	// resource exists or not. This is used for ACL purposes: if an Update
+	// action is specified, and the existence check returns false, the action
+	// is not allowed since the resource must first be created. The reverse is
+	// also true. If not specified, the Update action is forced and the user
+	// must have UpdateCapability on the path.
+	ExistenceCheck func(*logical.Request, *FieldData) (bool, error)
 
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically

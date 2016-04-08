@@ -53,6 +53,10 @@ mount of the backend. The workaround here is to mount multiple copies of the
 `cert` backend, configure each with one CA/CRL, and have clients connect to the
 appropriate mount.
 
+In addition, since the backend does not fetch the CRLs itself, the CRL's
+designated time to next update is not considered. If a CRL is no longer in use,
+it is up to the administrator to remove it from the backend.
+
 ## Authentication
 
 ### Via the CLI
@@ -97,7 +101,7 @@ $ vault write auth/cert/certs/web \
     display_name=web \
     policies=web,prod \
     certificate=@web-cert.pem \
-    ttl=1h
+    ttl=3600
 ...
 ```
 
@@ -120,7 +124,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the named role and CA cert from the backend mount. Requires `sudo` access.
+    Deletes the named role and CA cert from the backend mount.
   </dd>
 
   <dt>Method</dt>
@@ -145,7 +149,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Gets information associated with the named role. Requires `sudo` access.
+    Gets information associated with the named role.
   </dd>
 
   <dt>Method</dt>
@@ -181,12 +185,50 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists configured certificate names.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/certs`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "keys": ["cert1", "cert2"]
+      },
+      "warnings": null,
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
 #### POST
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Sets a CA cert and associated parameters in a role name. Requires `sudo` access.
+    Sets a CA cert and associated parameters in a role name.
   </dd>
 
   <dt>Method</dt>
@@ -205,7 +247,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       </li>
       <li>
         <span class="param">policies</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">optional</span>
         A comma-separated list of policies to set on tokens issued when
         authenticating against this CA certificate.
       </li>
@@ -219,9 +261,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">ttl</span>
         <span class="param-flags">optional</span>
-        The TTL period of the token, provided as "1h", where hour is
-        the largest suffix. If not provided, the token is valid for the
-        the mount or system default TTL time, in that order.
+        The TTL period of the token, provided as a number of seconds. If not
+        provided, the token is valid for the the mount or system default TTL
+        time, in that order.
       </li>
     </ul>
   </dd>
@@ -239,7 +281,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the named CRL from the backend mount. Requires `sudo` access.
+    Deletes the named CRL from the backend mount.
   </dd>
 
   <dt>Method</dt>
@@ -264,9 +306,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Gets information associated with the named CRL (currently, the serial numbers contained within).
-    As the serials can be integers up to an arbitrary size, these are returned as strings. Requires
-	`sudo` access.
+    Gets information associated with the named CRL (currently, the serial
+    numbers contained within).  As the serials can be integers up to an
+    arbitrary size, these are returned as strings.
   </dd>
 
   <dt>Method</dt>
@@ -307,7 +349,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Sets a named CRL. Requires `sudo` access.
+    Sets a named CRL.
   </dd>
 
   <dt>Method</dt>
@@ -369,5 +411,38 @@ of the header should be "X-Vault-Token" and the value should be the token.
     }
     ```
 
+  </dd>
+</dl>
+
+### /auth/cert/config
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configuration options for the backend.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/cert/config`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">disable_binding</span>
+        <span class="param-flags">optional</span>
+	  If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
   </dd>
 </dl>

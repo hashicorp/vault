@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -20,8 +20,11 @@ func TestCubbyholeBackend_RootPaths(t *testing.T) {
 
 func TestCubbyholeBackend_Write(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
-	clientToken := uuid.GenerateUUID()
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
+	clientToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
 	req.ClientToken = clientToken
 	storage := req.Storage
 	req.Data["raw"] = "test"
@@ -45,10 +48,13 @@ func TestCubbyholeBackend_Write(t *testing.T) {
 
 func TestCubbyholeBackend_Read(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	req.Data["raw"] = "test"
 	storage := req.Storage
-	clientToken := uuid.GenerateUUID()
+	clientToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
 	req.ClientToken = clientToken
 
 	if _, err := b.HandleRequest(req); err != nil {
@@ -77,10 +83,13 @@ func TestCubbyholeBackend_Read(t *testing.T) {
 
 func TestCubbyholeBackend_Delete(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	req.Data["raw"] = "test"
 	storage := req.Storage
-	clientToken := uuid.GenerateUUID()
+	clientToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
 	req.ClientToken = clientToken
 
 	if _, err := b.HandleRequest(req); err != nil {
@@ -112,8 +121,11 @@ func TestCubbyholeBackend_Delete(t *testing.T) {
 
 func TestCubbyholeBackend_List(t *testing.T) {
 	b := testCubbyholeBackend()
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
-	clientToken := uuid.GenerateUUID()
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
+	clientToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
 	req.Data["raw"] = "test"
 	req.ClientToken = clientToken
 	storage := req.Storage
@@ -122,7 +134,7 @@ func TestCubbyholeBackend_List(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req = logical.TestRequest(t, logical.WriteOperation, "bar")
+	req = logical.TestRequest(t, logical.UpdateOperation, "bar")
 	req.Data["raw"] = "baz"
 	req.ClientToken = clientToken
 	req.Storage = storage
@@ -151,13 +163,19 @@ func TestCubbyholeBackend_List(t *testing.T) {
 func TestCubbyholeIsolation(t *testing.T) {
 	b := testCubbyholeBackend()
 
-	clientTokenA := uuid.GenerateUUID()
-	clientTokenB := uuid.GenerateUUID()
+	clientTokenA, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientTokenB, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var storageA logical.Storage
 	var storageB logical.Storage
 
 	// Populate and test A entries
-	req := logical.TestRequest(t, logical.WriteOperation, "foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 	req.ClientToken = clientTokenA
 	storageA = req.Storage
 	req.Data["raw"] = "test"
@@ -189,7 +207,7 @@ func TestCubbyholeIsolation(t *testing.T) {
 	}
 
 	// Populate and test B entries
-	req = logical.TestRequest(t, logical.WriteOperation, "bar")
+	req = logical.TestRequest(t, logical.UpdateOperation, "bar")
 	req.ClientToken = clientTokenB
 	storageB = req.Storage
 	req.Data["raw"] = "baz"
