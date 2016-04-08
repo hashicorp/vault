@@ -185,7 +185,7 @@ All backends support the following options:
     nodes to when A is the active node and B and C are standby nodes. This may
     be the same address across nodes if using a load balancer or service
     discovery. Most HA backends will attempt to determine the advertise address
-    if not provided.  This can also be set via the `VAULT_ADVERTISE_ADDR`
+    if not provided.  This can also be overridden via the `VAULT_ADVERTISE_ADDR`
     environment variable.
 
 #### Backend Reference: Consul

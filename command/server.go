@@ -205,7 +205,7 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.AdvertiseAddr = envAA
 	}
 
-	// Attempt to detect the advertise address possible
+	// Attempt to detect the advertise address, if possible
 	var detect physical.AdvertiseDetect
 	if coreConfig.HAPhysical != nil {
 		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
