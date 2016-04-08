@@ -30,7 +30,7 @@ on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 
-The first step to using the PostgreSQL backend is to mount it.
+The first step to using the RabbitMQ backend is to mount it.
 Unlike the `generic` backend, the `rabbitmq` backend is not mounted by default.
 
 ```text
@@ -57,8 +57,8 @@ Optionally, we can configure the lease settings for credentials generated
 by Vault. This is done by writing to the `config/lease` key:
 
 ```
-$ vault write postgresql/config/lease lease=1h lease_max=24h
-Success! Data written to: postgresql/config/lease
+$ vault write rabbitmq/config/lease lease=1h lease_max=24h
+Success! Data written to: rabbitmq/config/lease
 ```
 
 This restricts each credential to being valid or leased for 1 hour
@@ -303,7 +303,7 @@ subpath for interactive help output.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/postgresql/creds/<name>`</dd>
+  <dd>`/rabbitmq/creds/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
