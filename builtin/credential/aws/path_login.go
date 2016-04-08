@@ -71,10 +71,6 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 		return fmt.Errorf("reauthentication is disabled")
 	}
 
-	if clientNonce == "" {
-		return fmt.Errorf("missing nonce")
-	}
-
 	givenPendingTime, err := time.Parse(time.RFC3339, pendingTime)
 	if err != nil {
 		return err
@@ -211,14 +207,6 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	clientNonce := data.Get("nonce").(string)
-	if clientNonce == "" && storedIdentity == nil {
-		return logical.ErrorResponse("missing nonce"), nil
-	}
-
-	// Allowing the lengh of UUID for a client nonce.
-	if len(clientNonce) > 128 {
-		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
-	}
 
 	// This is NOT a first login attempt from the client.
 	if storedIdentity != nil {
@@ -280,6 +268,17 @@ func (b *backend) pathLoginUpdate(
 	storedIdentity.ExpirationTime = currentTime.Add(maxTTL)
 	storedIdentity.PendingTime = identityDoc.PendingTime
 	storedIdentity.DisallowReauthentication = disallowReauthentication
+
+	// Performing the clientNonce empty check after determining the DisallowReauthentication
+	// option. This is to make clientNonce optional when DisallowReauthentication is set.
+	if clientNonce == "" && !storedIdentity.DisallowReauthentication {
+		return logical.ErrorResponse("missing nonce"), nil
+	}
+
+	// Limit the lengh to a reasonable length.
+	if len(clientNonce) > 128 && !storedIdentity.DisallowReauthentication {
+		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
+	}
 
 	if err = setWhitelistIdentityEntry(req.Storage, identityDoc.InstanceID, storedIdentity); err != nil {
 		return nil, err
