@@ -25,7 +25,7 @@ func pathConfigLease(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:  b.pathLeaseRead,
-			logical.WriteOperation: b.pathLeaseWrite,
+			logical.UpdateOperation: b.pathLeaseWrite,
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,

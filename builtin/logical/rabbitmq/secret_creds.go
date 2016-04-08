@@ -26,9 +26,6 @@ func secretCreds(b *backend) *framework.Secret {
 			},
 		},
 
-		DefaultDuration:    1 * time.Hour,
-		DefaultGracePeriod: 10 * time.Minute,
-
 		Renew:  b.secretCredsRenew,
 		Revoke: b.secretCredsRevoke,
 	}
@@ -45,7 +42,7 @@ func (b *backend) secretCredsRenew(
 		lease = &configLease{Lease: 1 * time.Hour}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, false)
+	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
 	resp, err := f(req, d)
 	if err != nil {
 		return nil, err

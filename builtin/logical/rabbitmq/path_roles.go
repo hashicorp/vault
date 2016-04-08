@@ -24,13 +24,13 @@ func pathRoles(b *backend) *framework.Path {
 
 			"vhosts": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "A map of virtualhosts to permissions.",
+				Description: "A map of virtual hosts to permissions.",
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.WriteOperation:  b.pathRoleCreate,
+			logical.UpdateOperation: b.pathRoleCreate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
