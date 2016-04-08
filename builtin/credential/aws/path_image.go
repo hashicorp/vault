@@ -12,11 +12,11 @@ import (
 
 func pathImage(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "image/" + framework.GenericNameRegex("name"),
+		Pattern: "image/" + framework.GenericNameRegex("ami_id"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"ami_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "AMI name to be mapped.",
+				Description: "AMI ID to be mapped.",
 			},
 
 			"role_tag": &framework.FieldSchema{
@@ -82,7 +82,7 @@ func pathListImages(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathImageExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := awsImage(req.Storage, strings.ToLower(data.Get("name").(string)))
+	entry, err := awsImage(req.Storage, strings.ToLower(data.Get("ami_id").(string)))
 	if err != nil {
 		return false, err
 	}
@@ -90,8 +90,8 @@ func (b *backend) pathImageExistenceCheck(req *logical.Request, data *framework.
 }
 
 // awsImage is used to get the information registered for the given AMI ID.
-func awsImage(s logical.Storage, name string) (*awsImageEntry, error) {
-	entry, err := s.Get("image/" + strings.ToLower(name))
+func awsImage(s logical.Storage, amiID string) (*awsImageEntry, error) {
+	entry, err := s.Get("image/" + strings.ToLower(amiID))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func awsImage(s logical.Storage, name string) (*awsImageEntry, error) {
 // pathImageDelete is used to delete the information registered for a given AMI ID.
 func (b *backend) pathImageDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("image/" + strings.ToLower(data.Get("name").(string)))
+	err := req.Storage.Delete("image/" + strings.ToLower(data.Get("ami_id").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (b *backend) pathImageList(
 // pathImageRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathImageRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	imageEntry, err := awsImage(req.Storage, strings.ToLower(data.Get("name").(string)))
+	imageEntry, err := awsImage(req.Storage, strings.ToLower(data.Get("ami_id").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +152,9 @@ func (b *backend) pathImageRead(
 func (b *backend) pathImageCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	imageID := strings.ToLower(data.Get("name").(string))
+	imageID := strings.ToLower(data.Get("ami_id").(string))
 	if imageID == "" {
-		return logical.ErrorResponse("missing AMI name"), nil
+		return logical.ErrorResponse("missing ami_id"), nil
 	}
 
 	imageEntry, err := awsImage(req.Storage, imageID)
@@ -243,7 +243,7 @@ authorization for the instance to access Vault's resources is determined
 by the policies that are associated to the AMI through this endpoint.
 
 In case the AMI is shared by many instances, then a role tag can be created
-through the endpoint 'image/<name>/tag'. This tag needs to be applied on the
+through the endpoint 'image/<ami_id>/tag'. This tag needs to be applied on the
 instance before it attempts to login to Vault. The policies on the tag should
 be a subset of policies that are associated to the AMI in this endpoint. In
 order to enable login using tags, RoleTag needs to be enabled in this endpoint.

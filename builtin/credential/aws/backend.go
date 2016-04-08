@@ -71,7 +71,7 @@ AWS auth backend takes in a AWS EC2 instance identity document, its PKCS#7 signa
 and a client created nonce to authenticates the instance with Vault.
 
 Authentication is backed by a preconfigured association of AMIs to Vault's policies
-through 'image/<name>' endpoint. For instances that share an AMI, an instance tag can
-be created through 'image/<name>/tag'. This tag should be attached to the EC2 instance
+through 'image/<ami_id>' endpoint. For instances that share an AMI, an instance tag can
+be created through 'image/<ami_id>/tag'. This tag should be attached to the EC2 instance
 before the instance attempts to login to Vault.
 `

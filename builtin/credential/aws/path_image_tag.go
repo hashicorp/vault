@@ -19,11 +19,11 @@ const roleTagVersion = "v1"
 
 func pathImageTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "image/" + framework.GenericNameRegex("name") + "/tag$",
+		Pattern: "image/" + framework.GenericNameRegex("ami_id") + "/tag$",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"ami_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "AMI name to create a tag for.",
+				Description: "AMI ID to create a tag for.",
 			},
 
 			"policies": &framework.FieldSchema{
@@ -58,9 +58,9 @@ func pathImageTag(b *backend) *framework.Path {
 func (b *backend) pathImageTagUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	imageID := strings.ToLower(data.Get("name").(string))
+	imageID := strings.ToLower(data.Get("ami_id").(string))
 	if imageID == "" {
-		return logical.ErrorResponse("missing image name"), nil
+		return logical.ErrorResponse("missing ami_id"), nil
 	}
 
 	// Parse the given policies into a slice and add 'default' if not provided.
@@ -69,7 +69,7 @@ func (b *backend) pathImageTagUpdate(
 
 	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
 
-	// Fetch the image entry corresponding to the AMI name
+	// Fetch the image entry corresponding to the AMI ID
 	imageEntry, err := awsImage(req.Storage, imageID)
 	if err != nil {
 		return nil, err
@@ -183,9 +183,9 @@ func prepareRoleTagPlainValue(rTag *roleTag) (string, error) {
 	value = fmt.Sprintf("%s:%s", value, rTag.Nonce)
 
 	if rTag.ImageID == "" {
-		return "", fmt.Errorf("missing ami_name")
+		return "", fmt.Errorf("missing ami_id")
 	}
-	// attach ami_name to the value
+	// attach ami_id to the value
 	value = fmt.Sprintf("%s:a=%s", value, rTag.ImageID)
 
 	// attach policies to value
@@ -315,7 +315,7 @@ When an AMI is used by more than one EC2 instance, policies to be associated
 during login are determined by a particular tag on the instance. This tag
 can be created using this endpoint.
 
-A RoleTag setting needs to be enabled in 'image/<name>' endpoint, to be able
+A RoleTag setting needs to be enabled in 'image/<ami_id>' endpoint, to be able
 to create a tag. Also, the policies to be associated with the tag should be
 a subset of the policies associated with the regisred AMI.
 
