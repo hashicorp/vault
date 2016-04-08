@@ -214,7 +214,7 @@ func (b *backend) pathLoginUpdate(
 		// of the identity document is not before the pending time of the document
 		// with which previous login was made.
 		if err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, imageEntry); err != nil {
-			return nil, err
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
