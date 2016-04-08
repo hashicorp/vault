@@ -24,6 +24,11 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Password of the provided RabbitMQ management user",
 			},
+			"verify_connection": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: `If set, connection_uri is verified by actually connecting to the RabbitMQ management API`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -55,17 +60,22 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 			"'password' is a required parameter.")), nil
 	}
 
-	// Verify the string
-	client, err := rabbithole.NewClient(uri, username, password)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error validating connection info: %s", err)), nil
-	}
+	// Don't check the connection_url if verification is disabled
+	verifyConnection := data.Get("verify_connection").(bool)
+	if verifyConnection {
+		// Create RabbitMQ management client
+		client, err := rabbithole.NewClient(uri, username, password)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error  info: %s", err)), nil
+		}
 
-	_, err = client.ListUsers()
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error validating connection info by listing users: %s", err)), nil
+		// Verify provided user is able to list users
+		_, err = client.ListUsers()
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error validating connection info by listing users: %s", err)), nil
+		}
 	}
 
 	// Store it
@@ -88,9 +98,10 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 }
 
 type connectionConfig struct {
-	URI      string `json:"connection_uri"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	URI       string `json:"connection_uri"`
+	VerifyURI string `json:"verify_connection"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
 }
 
 const pathConfigConnectionHelpSyn = `
@@ -100,10 +111,10 @@ Configure the connection URI, username, and password to talk to RabbitMQ managem
 const pathConfigConnectionHelpDesc = `
 This path configures the connection properties used to connect to RabbitMQ management HTTP API.
 The "connection_uri" parameter is a string that is used to connect to the API. The "username"
-and "password" parameters are strings that are used as credentials to the API.
+and "password" parameters are strings that are used as credentials to the API. The "verify_connection"
+parameter is a boolean that is used to verify whether the provided connection URI, username, and password
+are valid.
 
 The URI looks like:
 "http://localhost:15672"
-
-When configuring the connection URI, username, and password, the backend will verify their validity.
 `

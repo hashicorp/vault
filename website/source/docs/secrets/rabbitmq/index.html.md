@@ -20,7 +20,6 @@ the messaging queue with unique credentials, it makes auditing much easier when
 questionable data access is discovered: you can track it down to the specific
 instance of a service based on the RabbitMQ username.
 
-// TODO: Fix this
 Vault makes use both of its own internal revocation system as well as the
 deleting RabbitMQ users when creating RabbitMQ users to ensure that users
 become invalid within a reasonable time of the lease expiring.
@@ -129,10 +128,10 @@ subpath for interactive help output.
   <dd>
     <ul>
       <li>
-        <span class="param">uri</span>
+        <span class="param">connection_uri</span>
         <span class="param-flags">required</span>
         The RabbitMQ management connection URI. e.g. "http://localhost:15672"
-      </li
+      </li>
       <li>
         <span class="param">username</span>
         <span class="param-flags">required</span>
@@ -142,6 +141,11 @@ subpath for interactive help output.
         <span class="param">password</span>
         <span class="param-flags">required</span>
         The RabbitMQ management administrator password. e.g. "password"
+      </li>
+      <li>
+        <span class="param">verify_connection</span>
+        <span class="param-flags">optional</span>
+        Whether to verify connection URI, username, and password.
       </li>
     </ul>
   </dd>
