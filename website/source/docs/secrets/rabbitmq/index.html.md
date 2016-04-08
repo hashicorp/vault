@@ -130,17 +130,17 @@ subpath for interactive help output.
       <li>
         <span class="param">connection_uri</span>
         <span class="param-flags">required</span>
-        The RabbitMQ management connection URI. e.g. "http://localhost:15672"
+        The RabbitMQ management connection URI.
       </li>
       <li>
         <span class="param">username</span>
         <span class="param-flags">required</span>
-        The RabbitMQ management administrator username. e.g. "admin"
+        The RabbitMQ management administrator username.
       </li>
       <li>
         <span class="param">password</span>
         <span class="param-flags">required</span>
-        The RabbitMQ management administrator password. e.g. "password"
+        The RabbitMQ management administrator password.
       </li>
       <li>
         <span class="param">verify_connection</span>
