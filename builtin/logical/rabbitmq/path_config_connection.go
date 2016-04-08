@@ -100,7 +100,7 @@ Configure the connection URI, username, and password to talk to RabbitMQ managem
 const pathConfigConnectionHelpDesc = `
 This path configures the connection properties used to connect to RabbitMQ management HTTP API.
 The "connection_uri" parameter is a string that is used to connect to the API. The "username"
-and "password" parameters are strings and used as credentials to the API.
+and "password" parameters are strings that are used as credentials to the API.
 
 The URI looks like:
 "http://localhost:15672"
