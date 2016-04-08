@@ -71,6 +71,10 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 		return fmt.Errorf("reauthentication is disabled")
 	}
 
+	if clientNonce == "" {
+		return logical.ErrorResponse("missing nonce"), nil
+	}
+
 	givenPendingTime, err := time.Parse(time.RFC3339, pendingTime)
 	if err != nil {
 		return err
@@ -207,7 +211,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	clientNonce := data.Get("nonce").(string)
-	if clientNonce == "" && !storedIdentity.DisallowReauthentication {
+	if clientNonce == "" && storedIdentity == nil {
 		return logical.ErrorResponse("missing nonce"), nil
 	}
 

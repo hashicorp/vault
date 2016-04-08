@@ -46,7 +46,7 @@ func pathImage(b *backend) *framework.Path {
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, allows a client to login only once.",
+				Description: "If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/whitelist/identity endpoint.",
 			},
 		},
 
