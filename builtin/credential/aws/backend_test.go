@@ -378,3 +378,58 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 		t.Fatalf("bad: parsed role tag contains incorrect values. Got: %#v\n", rTag)
 	}
 }
+
+func TestBackend_PathImageTag(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"policies": "p,q,r,s",
+		"max_ttl":  "120s",
+		"role_tag": "VaultRole",
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "image/abcd-123",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "image/abcd-123",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to find an entry for ami_id: abcd-123")
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/abcd-123/tag",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("failed to create a tag on ami_id: abcd-123")
+	}
+	if resp.IsError() {
+		t.Fatalf("failed to create a tag on ami_id: abcd-123: %s\n", resp.Data["error"])
+	}
+	if resp.Data["tag_value"].(string) == "" {
+		t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
+	}
+}

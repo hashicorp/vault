@@ -275,7 +275,7 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("missing nonce"), nil
 	}
 
-	// Limit the lengh to a reasonable length.
+	// Limit the nonce to a reasonable length.
 	if len(clientNonce) > 128 && !storedIdentity.DisallowReauthentication {
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
