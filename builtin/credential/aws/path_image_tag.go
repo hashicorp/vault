@@ -203,7 +203,7 @@ func prepareRoleTagPlainValue(rTag *roleTag) (string, error) {
 }
 
 // Parses the tag from string form into a struct form.
-func parseRoleTagValue(tag string) (*roleTag, error) {
+func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
 	// Tag must contain version, nonce, policies and HMAC
 	if len(tagItems) < 4 {
@@ -256,6 +256,14 @@ func parseRoleTagValue(tag string) (*roleTag, error) {
 		return nil, fmt.Errorf("missing image ID")
 	}
 
+	// Create a HMAC of the plaintext value of role tag and compare it with the given value.
+	verified, err := verifyRoleTagValue(s, rTag)
+	if err != nil {
+		return nil, err
+	}
+	if !verified {
+		return nil, fmt.Errorf("role tag signature mismatch")
+	}
 	return rTag, nil
 }
 

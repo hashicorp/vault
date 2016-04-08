@@ -72,7 +72,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	}
 
 	if clientNonce == "" {
-		return logical.ErrorResponse("missing nonce"), nil
+		return fmt.Errorf("missing nonce")
 	}
 
 	givenPendingTime, err := time.Parse(time.RFC3339, pendingTime)
@@ -358,6 +358,12 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 		return nil, fmt.Errorf("missing tag with key %s on the instance", imageEntry.RoleTag)
 	}
 
+	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC.
+	rTag, err := parseRoleTagValue(s, rTagValue)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if the role tag is blacklisted.
 	blacklistEntry, err := blacklistRoleTagEntry(s, rTagValue)
 	if err != nil {
@@ -367,24 +373,11 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 		return nil, fmt.Errorf("role tag is blacklisted")
 	}
 
-	rTag, err := parseRoleTagValue(rTagValue)
-	if err != nil {
-		return nil, err
-	}
-
 	// Ensure that the policies on the RoleTag is a subset of policies on the image
 	if !strutil.StrListSubset(imageEntry.Policies, rTag.Policies) {
 		return nil, fmt.Errorf("policies on the role tag must be subset of policies on the image")
 	}
 
-	// Create a HMAC of the plaintext value of role tag and compare it with the given value.
-	verified, err := verifyRoleTagValue(s, rTag)
-	if err != nil {
-		return nil, err
-	}
-	if !verified {
-		return nil, fmt.Errorf("role tag signature mismatch")
-	}
 	return &roleTagLoginResponse{
 		Policies: rTag.Policies,
 		MaxTTL:   rTag.MaxTTL,

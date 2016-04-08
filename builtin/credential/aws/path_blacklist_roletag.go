@@ -147,19 +147,9 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 	}
 
 	// Parse the role tag from string form to a struct form.
-	rTag, err := parseRoleTagValue(tag)
+	rTag, err := parseRoleTagValue(req.Storage, tag)
 	if err != nil {
 		return nil, err
-	}
-
-	// Build the plaintext form of the role tag and verify the prepared
-	// value using the HMAC.
-	verified, err := verifyRoleTagValue(req.Storage, rTag)
-	if err != nil {
-		return nil, err
-	}
-	if !verified {
-		return logical.ErrorResponse("role tag invalid"), nil
 	}
 
 	// Get the entry for the AMI used by the instance.
