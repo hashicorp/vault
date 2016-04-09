@@ -36,6 +36,9 @@ IMPROVEMENTS:
    changed since the token was issued [GH-477]
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
+ * credential/userpass: Add list support for users [GH-911]
+ * credential/userpass: Remove user configuration paths from requiring sudo, in
+   favor of normal ACL mechanisms [GH-1312]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
