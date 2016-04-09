@@ -22,8 +22,6 @@ func pathUserPolicies(b *backend) *framework.Path {
 			},
 		},
 
-		ExistenceCheck: b.userPoliciesExistenceCheck,
-
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUserPoliciesUpdate,
 		},
@@ -31,12 +29,6 @@ func pathUserPolicies(b *backend) *framework.Path {
 		HelpSynopsis:    pathUserPoliciesHelpSyn,
 		HelpDescription: pathUserPoliciesHelpDesc,
 	}
-}
-
-// By always returning true, this endpoint will be enforced to be invoked only upon UpdateOperation.
-// The existence of user will be checked in the operation handler.
-func (b *backend) userPoliciesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	return true, nil
 }
 
 func (b *backend) pathUserPoliciesUpdate(

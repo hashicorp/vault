@@ -2,6 +2,7 @@ package userpass
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -83,6 +84,9 @@ func TestBackend_basic(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
+			testAccStepUser(t, "web2", "password", "foo"),
+			testAccStepUser(t, "web3", "password", "foo"),
+			testAccStepList(t, []string{"web", "web2", "web3"}),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 		},
 	})
@@ -105,7 +109,7 @@ func TestBackend_userCrud(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepReadUser(t, "web", "foo"),
+			testAccStepReadUser(t, "web", "default,foo"),
 			testAccStepDeleteUser(t, "web"),
 			testAccStepReadUser(t, "web", ""),
 		},
@@ -151,7 +155,7 @@ func TestBackend_passwordUpdate(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepReadUser(t, "web", "foo"),
+			testAccStepReadUser(t, "web", "default,foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 			testUpdatePassword(t, "web", "newpassword"),
 			testAccStepLogin(t, "web", "newpassword", []string{"default", "foo"}),
@@ -177,10 +181,10 @@ func TestBackend_policiesUpdate(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepReadUser(t, "web", "foo"),
+			testAccStepReadUser(t, "web", "default,foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 			testUpdatePolicies(t, "web", "foo,bar"),
-			testAccStepReadUser(t, "web", "foo,bar"),
+			testAccStepReadUser(t, "web", "bar,default,foo"),
 			testAccStepLogin(t, "web", "password", []string{"bar", "default", "foo"}),
 		},
 	})
@@ -231,6 +235,24 @@ func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expe
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("Expected error but received nil")
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepList(t *testing.T, users []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "users",
+		Check: func(resp *logical.Response) error {
+			if resp.IsError() {
+				return fmt.Errorf("Got error response: %#v", *resp)
+			}
+
+			exp := []string{"web", "web2", "web3"}
+			if !reflect.DeepEqual(exp, resp.Data["keys"].([]string)) {
+				return fmt.Errorf("expected:\n%#v\ngot:\n%#v\n", exp, resp.Data["keys"])
 			}
 			return nil
 		},

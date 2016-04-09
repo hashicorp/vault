@@ -24,8 +24,6 @@ func pathUserPassword(b *backend) *framework.Path {
 			},
 		},
 
-		ExistenceCheck: b.userPasswordExistenceCheck,
-
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUserPasswordUpdate,
 		},
@@ -33,12 +31,6 @@ func pathUserPassword(b *backend) *framework.Path {
 		HelpSynopsis:    pathUserPasswordHelpSyn,
 		HelpDescription: pathUserPasswordHelpDesc,
 	}
-}
-
-// By always returning true, this endpoint will be enforced to be invoked only upon UpdateOperation.
-// The existence of user will be checked in the operation handler.
-func (b *backend) userPasswordExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	return true, nil
 }
 
 func (b *backend) pathUserPasswordUpdate(
