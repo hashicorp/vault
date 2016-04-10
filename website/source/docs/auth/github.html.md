@@ -103,6 +103,8 @@ Success! Data written to: auth/github/config
 
 After configuring that, you must map the teams of that organization to
 policies within Vault. Use the `map/teams/<team>` endpoints to do that.
+Team names must be slugified, so if your team name is: `Some Amazing Team`, 
+you will need to include it as: `some-amazing-team`. 
 Example:
 
 ```
