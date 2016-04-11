@@ -39,6 +39,10 @@ These libraries are provided by the community.
 * [vault-java](https://github.com/jhaals/vault-java)
 * [vault-java-driver](https://github.com/BetterCloud/vault-java-driver)
 
+### Kotlin
+
+* [vault-kotlin](https://github.com/kunickiaj/vault-kotlin)
+
 ### Node.js
 
 * [node-vault](https://github.com/kr1sp1n/node-vault)
