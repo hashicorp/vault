@@ -1,6 +1,8 @@
 package aws
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -523,5 +525,142 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 	if tagEntry != nil {
 		t.Fatalf("role tag should not have been present: %s\n", tag)
+	}
+}
+
+// This is an acceptance test.
+func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	storage := &logical.InmemStorage{}
+	config := logical.TestBackendConfig()
+	config.StorageView = storage
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientConfig := map[string]interface{}{
+		"access_key": os.Getenv("AWS_AUTH_ACCESS_KEY"),
+		"secret_key": os.Getenv("AWS_AUTH_SECRET_KEY"),
+		"region":     os.Getenv("AWS_AUTH_REGION"),
+	}
+	if clientConfig["access_key"] == "" ||
+		clientConfig["secret_key"] == "" {
+		t.Fatalf("credentials not configured")
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "config/client",
+		Data:      clientConfig,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"policies": "root",
+		"max_ttl":  "120s",
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/ami-fce3c696",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loginInput := map[string]interface{}{"pkcs7": `MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewog
+ICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMu
+NjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAi
+MjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJv
+ZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJ
+ZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVu
+ZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4
+ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVn
+aW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkw
+FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6
+b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMx
+CwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEW
+BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
+0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA`,
+		"nonce": "vault-client-nonce",
+	}
+
+	loginRequest := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginInput,
+	}
+	resp, err := b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("login attempt failed")
+	}
+
+	// try to login again and see if it succeeds
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("login attempt failed")
+	}
+
+	//instanceID := resp.Auth.Metadata.(map[string]string)["instance_id"]
+	instanceID := resp.Auth.Metadata["instance_id"]
+	if instanceID == "" {
+		t.Fatalf("instance ID not present in the response object")
+	}
+
+	loginInput["nonce"] = "changed-vault-client-nonce"
+	// try to login again with changed nonce
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("login attempt should have failed due to client nonce mismatch")
+	}
+
+	wlRequest := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "whitelist/identity/" + instanceID,
+		Storage:   storage,
+	}
+	resp, err = b.HandleRequest(wlRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data == nil || resp.Data["image_id"] != "ami-fce3c696" {
+		t.Fatalf("failed to read whitelist identity")
+	}
+
+	wlRequest.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(wlRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatalf("failed to delete whitelist identity")
+	}
+
+	// try to login again and see if it succeeds
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("login attempt failed")
 	}
 }
