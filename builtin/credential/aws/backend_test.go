@@ -642,7 +642,7 @@ BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Data == nil || resp.Data["image_id"] != "ami-fce3c696" {
+	if resp == nil || resp.Data == nil || resp.Data["ami_id"] != "ami-fce3c696" {
 		t.Fatalf("failed to read whitelist identity")
 	}
 

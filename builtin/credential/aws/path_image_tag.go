@@ -19,7 +19,7 @@ const roleTagVersion = "v1"
 
 func pathImageTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "image/" + framework.GenericNameRegex("ami_id") + "/tag$",
+		Pattern: "image/" + framework.GenericNameRegex("ami_id") + "/roletag$",
 		Fields: map[string]*framework.FieldSchema{
 			"ami_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -34,13 +34,13 @@ func pathImageTag(b *backend) *framework.Path {
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
-				Description: "The maximum allowed lease duration",
+				Description: "The maximum allowed lease duration.",
 			},
 
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/whitelist/identity endpoint.",
+				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/whitelist/identity/<instance_id>' endpoint.",
 			},
 		},
 
@@ -58,8 +58,8 @@ func pathImageTag(b *backend) *framework.Path {
 func (b *backend) pathImageTagUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	imageID := strings.ToLower(data.Get("ami_id").(string))
-	if imageID == "" {
+	amiID := strings.ToLower(data.Get("ami_id").(string))
+	if amiID == "" {
 		return logical.ErrorResponse("missing ami_id"), nil
 	}
 
@@ -70,7 +70,7 @@ func (b *backend) pathImageTagUpdate(
 	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
 
 	// Fetch the image entry corresponding to the AMI ID
-	imageEntry, err := awsImage(req.Storage, imageID)
+	imageEntry, err := awsImage(req.Storage, amiID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (b *backend) pathImageTagUpdate(
 
 	// Attach version, nonce, policies and maxTTL to the role tag value.
 	rTagValue, err := prepareRoleTagPlainValue(&roleTag{Version: roleTagVersion,
-		ImageID:  imageID,
+		AmiID:    amiID,
 		Nonce:    nonce,
 		Policies: policies,
 		MaxTTL:   maxTTL,
@@ -182,11 +182,11 @@ func prepareRoleTagPlainValue(rTag *roleTag) (string, error) {
 	// attach nonce to the value
 	value = fmt.Sprintf("%s:%s", value, rTag.Nonce)
 
-	if rTag.ImageID == "" {
+	if rTag.AmiID == "" {
 		return "", fmt.Errorf("missing ami_id")
 	}
 	// attach ami_id to the value
-	value = fmt.Sprintf("%s:a=%s", value, rTag.ImageID)
+	value = fmt.Sprintf("%s:a=%s", value, rTag.AmiID)
 
 	// attach policies to value
 	value = fmt.Sprintf("%s:p=%s", value, strings.Join(rTag.Policies, ","))
@@ -234,7 +234,7 @@ func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 			var err error
 			switch {
 			case strings.Contains(tagItem, "a="):
-				rTag.ImageID = strings.TrimPrefix(tagItem, "a=")
+				rTag.AmiID = strings.TrimPrefix(tagItem, "a=")
 			case strings.Contains(tagItem, "p="):
 				rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
 			case strings.Contains(tagItem, "d="):
@@ -252,7 +252,7 @@ func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 			}
 		}
 	}
-	if rTag.ImageID == "" {
+	if rTag.AmiID == "" {
 		return nil, fmt.Errorf("missing image ID")
 	}
 
@@ -291,7 +291,7 @@ type roleTag struct {
 	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	ImageID                  string        `json:"image_id" structs:"image_id" mapstructure:"image_id"`
+	AmiID                    string        `json:"ami_id" structs:"ami_id" mapstructure:"ami_id"`
 	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 }
@@ -301,7 +301,7 @@ func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
 		rTag1.Nonce == rTag2.Nonce &&
 		policyutil.EquivalentPolicies(rTag1.Policies, rTag2.Policies) &&
 		rTag1.MaxTTL == rTag2.MaxTTL &&
-		rTag1.ImageID == rTag2.ImageID &&
+		rTag1.AmiID == rTag2.AmiID &&
 		rTag1.HMAC == rTag2.HMAC &&
 		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication
 }

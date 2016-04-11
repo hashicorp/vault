@@ -26,7 +26,7 @@ func pathLogin(b *backend) *framework.Path {
 
 			"nonce": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The nonce created by a client of this backend.",
+				Description: "The nonce created by a client of this backend. Nonce is used to avoid replay attacks. When the instances are configured to be allowed to login only once, nonce parameter is of no use and hence can be skipped.",
 			},
 		},
 
@@ -192,7 +192,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Get the entry for the AMI used by the instance.
-	imageEntry, err := awsImage(req.Storage, identityDoc.ImageID)
+	imageEntry, err := awsImage(req.Storage, identityDoc.AmiID)
 	if err != nil {
 		return nil, err
 	}
@@ -254,10 +254,10 @@ func (b *backend) pathLoginUpdate(
 	// Save the login attempt in the identity whitelist.
 	currentTime := time.Now()
 	if storedIdentity == nil {
-		// ImageID, ClientNonce and CreationTime of the identity entry,
+		// AmiID, ClientNonce and CreationTime of the identity entry,
 		// once set, should never change.
 		storedIdentity = &whitelistIdentity{
-			ImageID:      identityDoc.ImageID,
+			AmiID:        identityDoc.AmiID,
 			ClientNonce:  clientNonce,
 			CreationTime: currentTime,
 		}
@@ -363,6 +363,11 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 		return nil, err
 	}
 
+	// Check if the role tag belongs to the AMI ID of the instance.
+	if rTag.AmiID != identityDoc.AmiID {
+		return nil, fmt.Errorf("role tag does not belong to the instance's AMI ID.")
+	}
+
 	// Check if the role tag is blacklisted.
 	blacklistEntry, err := blacklistRoleTagEntry(s, rTagValue)
 	if err != nil {
@@ -402,7 +407,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	imageEntry, err := awsImage(req.Storage, storedIdentity.ImageID)
+	imageEntry, err := awsImage(req.Storage, storedIdentity.AmiID)
 	if err != nil {
 		return nil, err
 	}
@@ -475,7 +480,7 @@ func validateInstanceStatus(instanceStatus *ec2.DescribeInstanceStatusOutput) er
 type identityDocument struct {
 	Tags        map[string]interface{} `json:"tags,omitempty" structs:"tags" mapstructure:"tags"`
 	InstanceID  string                 `json:"instanceId,omitempty" structs:"instanceId" mapstructure:"instanceId"`
-	ImageID     string                 `json:"imageId,omitempty" structs:"imageId" mapstructure:"imageId"`
+	AmiID       string                 `json:"imageId,omitempty" structs:"imageId" mapstructure:"imageId"`
 	Region      string                 `json:"region,omitempty" structs:"region" mapstructure:"region"`
 	PendingTime string                 `json:"pendingTime,omitempty" structs:"pendingTime" mapstructure:"pendingTime"`
 }

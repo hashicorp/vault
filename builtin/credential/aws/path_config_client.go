@@ -14,12 +14,12 @@ func pathConfigClient(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Access key with permission to query instance metadata.",
+				Description: "AWS Access key with permissions to query EC2 instance metadata.",
 			},
 
 			"secret_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Secret key with permission to query instance metadata.",
+				Description: "AWS Secret key with permissions to query EC2 instance metadata.",
 			},
 
 			"region": &framework.FieldSchema{

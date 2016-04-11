@@ -10,11 +10,11 @@ import (
 
 func pathBlacklistRoleTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "blacklist/roletag/" + "(?P<role_tag>.*)",
+		Pattern: "blacklist/roletag/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Role tag that needs be blacklisted",
+				Description: "Role tag that needs be blacklisted. The tag can be supplied as-is, or can be base64 encoded.",
 			},
 		},
 
@@ -153,7 +153,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 	}
 
 	// Get the entry for the AMI used by the instance.
-	imageEntry, err := awsImage(req.Storage, rTag.ImageID)
+	imageEntry, err := awsImage(req.Storage, rTag.AmiID)
 	if err != nil {
 		return nil, err
 	}

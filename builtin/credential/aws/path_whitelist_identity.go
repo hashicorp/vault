@@ -13,7 +13,7 @@ func pathWhitelistIdentity(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"instance_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "EC2 instance ID.",
+				Description: "EC2 instance ID. A successful login operation from an EC2 instance gets cached in this whitelist, keyed off of instance ID.",
 			},
 		},
 
@@ -117,7 +117,7 @@ func (b *backend) pathWhitelistIdentityRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"image_id":        entry.ImageID,
+			"ami_id":          entry.AmiID,
 			"creation_time":   entry.CreationTime.String(),
 			"expiration_time": entry.ExpirationTime.String(),
 			"client_nonce":    entry.ClientNonce,
@@ -128,7 +128,7 @@ func (b *backend) pathWhitelistIdentityRead(
 
 // Struct to represent each item in the identity whitelist.
 type whitelistIdentity struct {
-	ImageID                  string    `json:"image_id" structs:"image_id" mapstructure:"image_id"`
+	AmiID                    string    `json:"ami_id" structs:"ami_id" mapstructure:"ami_id"`
 	DisallowReauthentication bool      `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 	PendingTime              string    `json:"pending_time" structs:"pending_time" mapstructure:"pending_time"`
 	ClientNonce              string    `json:"client_nonce" structs:"client_nonce" mapstructure:"client_nonce"`

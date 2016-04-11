@@ -28,7 +28,7 @@ func pathImage(b *backend) *framework.Path {
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
-				Description: "The maximum allowed lease duration",
+				Description: "The maximum allowed lease duration.",
 			},
 
 			"policies": &framework.FieldSchema{
@@ -46,7 +46,7 @@ func pathImage(b *backend) *framework.Path {
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/whitelist/identity endpoint.",
+				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/whitelist/identity/<instance_id>' endpoint.",
 			},
 		},
 

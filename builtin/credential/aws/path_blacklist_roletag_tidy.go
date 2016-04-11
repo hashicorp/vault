@@ -15,7 +15,7 @@ func pathBlacklistRoleTagTidy(b *backend) *framework.Path {
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
 				Default: 259200, // 72h
-				Description: `The amount of extra time that must have passed beyond the roletag's
+				Description: `The amount of extra time that must have passed beyond the roletag
 expiration, before it is removed from the backend storage.`,
 			},
 		},
