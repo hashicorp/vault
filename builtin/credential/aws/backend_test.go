@@ -433,3 +433,95 @@ func TestBackend_PathImageTag(t *testing.T) {
 		t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
 	}
 }
+
+func TestBackend_PathBlacklistRoleTag(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	config := logical.TestBackendConfig()
+	config.StorageView = storage
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"ami_id":   "abcd-123",
+		"policies": "p,q,r,s",
+		"role_tag": "VaultRole",
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "image/abcd-123",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data2 := map[string]interface{}{
+		"policies": "p,q,r,s",
+	}
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/abcd-123/tag",
+		Storage:   storage,
+		Data:      data2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("failed to create a tag on ami_id: abcd-123")
+	}
+	if resp.IsError() {
+		t.Fatalf("failed to create a tag on ami_id: abcd-123: %s\n", resp.Data["error"])
+	}
+	tag := resp.Data["tag_value"].(string)
+	if tag == "" {
+		t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "blacklist/roletag/" + tag,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatalf("failed to blacklist the roletag: %s\n", tag)
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "blacklist/roletag/" + tag,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("failed to read the blacklisted role tag: %s\n", tag)
+	}
+	if resp.IsError() {
+		t.Fatalf("failed to read the blacklisted role tag:%s. Err: %s\n", tag, resp.Data["error"])
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "blacklist/roletag/" + tag,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tagEntry, err := blacklistRoleTagEntry(storage, tag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tagEntry != nil {
+		t.Fatalf("role tag should not have been present: %s\n", tag)
+	}
+}
