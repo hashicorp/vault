@@ -61,8 +61,8 @@ description: |-
         This must be less than or equal to <code>secret_shares</code>.
       </li>
       <li>
-        <spam class="param">pgp_keys</span>
-        <span class="param-flags">optional</spam>
+        <span class="param">pgp_keys</span>
+        <span class="param-flags">optional</span>
         An array of PGP public keys used to encrypt the output unseal keys.
         Ordering is preserved. The keys must be base64-encoded from their
         original binary representation. The size of this array must be the
@@ -83,5 +83,11 @@ description: |-
     }
     ```
 
+  </dd>
+
+  <dt>See Also</dt>
+  <dd>
+    For more information on the GPG/keybase process please see the
+    [Vault GPG and Keybase integration documentation](/docs/concepts/pgp-gpg-keybase.html).
   </dd>
 </dl>

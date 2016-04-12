@@ -120,15 +120,7 @@ Key 5: b47fdeb7dda82dbe92d88d3c860f605005
 Initial Root Token: eaf5cc32-b48f-7785-5c94-90b5ce300e9b
 
 Vault initialized with 5 keys and a key threshold of 3!
-
-Please securely distribute the above keys. Whenever a Vault server
-is started, it must be unsealed with 3 (the threshold)
-of the keys above (any of the keys, as long as the total number equals
-the threshold).
-
-Vault does not store the original master key. If you lose the keys
-above such that you no longer have the minimum number (the
-threshold), then your Vault will not be able to be unsealed.
+...
 ```
 
 Initialization outputs two incredibly important pieces of information:
@@ -138,7 +130,11 @@ only time that the unseal keys should ever be so close together.
 
 For the purpose of this getting started guide, save all these keys
 somewhere, and continue. In a real deployment scenario, you would never
-save these keys together.
+save these keys together. Instead, you would likely use Vault's PGP and
+keybase support to encrypt each of these keys with the users' GPG keys.
+This prevents one single person from having all the unseal keys. Please
+see the documentation on [using PGP keys with Vault](/docs/concepts/pgp-gpg-keybase-integration.html)
+for more information.
 
 ## Seal/Unseal
 
