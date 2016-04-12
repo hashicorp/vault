@@ -111,6 +111,48 @@ func (b *backend) secretTokenCreate(s logical.Storage,
 	return resp, nil
 }
 
+func (b *backend) assumeRole(s logical.Storage,
+	displayName, policyName, policy string,
+	lifeTimeInSeconds *int64) (*logical.Response, error) {
+	STSClient, err := clientSTS(s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
+
+	tokenResp, err := STSClient.AssumeRole(
+		&sts.AssumeRoleInput{
+			RoleSessionName: aws.String(username),
+			RoleArn:         aws.String(policy),
+			DurationSeconds: lifeTimeInSeconds,
+		})
+
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Error assuming role: %s", err)), nil
+	}
+
+	resp := b.Secret(SecretAccessKeyType).Response(map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+	}, map[string]interface{}{
+		"username": username,
+		"policy":   policy,
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
+
+	if usernameWarning != "" {
+		resp.AddWarning(usernameWarning)
+	}
+
+	return resp, nil
+}
+
 func (b *backend) secretAccessKeysCreate(
 	s logical.Storage,
 	displayName, policyName string, policy string) (*logical.Response, error) {
