@@ -333,7 +333,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">token</span>
         <span class="param-flags">required</span>
-            Token to revoke. This can be part of the URL or the body.
+            Token to renew. This can be part of the URL or the body.
       </li>
     </ul>
   </dd>
