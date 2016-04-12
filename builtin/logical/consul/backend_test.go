@@ -19,7 +19,8 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -40,7 +41,8 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_management(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -61,7 +63,8 @@ func TestBackend_management(t *testing.T) {
 }
 
 func TestBackend_crud(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -82,7 +85,8 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
