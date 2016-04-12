@@ -126,11 +126,12 @@ Key 3: ebfd78302325e2631bcc21e11cae00...
 ```
 
 ### Unsealing with Keybase
-As a user, you must have the keybase CLI tool installed. You can download it
-from [keybase.io](https://keybase.io). After you have downloaded and configured
-the keybase CLI, you are now tasked with entering your unseal key. To get the
-plain-text unseal key, you must decrypt the value given to you by the
-initializer. To get the plain-text value, run the following command:
+As a user, the easiest way to decrypt your unseal key is with the keybase CLI
+tool. You can download it from [keybase.io](https://keybase.io). After you have
+downloaded and configured the keybase CLI, you are now tasked with entering your
+unseal key. To get the plain-text unseal key, you must decrypt the value given
+to you by the initializer. To get the plain-text value, run the following
+command:
 
 ```
 $ echo "c1c0..." | xxd -r -p | keybase pgp decrypt
