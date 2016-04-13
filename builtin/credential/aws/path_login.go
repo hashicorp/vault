@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -133,17 +132,17 @@ func parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*identityDocumen
 	}
 
 	// Get the public certificate that is used to verify the signature.
-	publicCert, err := awsPublicCertificateParsed(s)
+	publicCerts, err := awsPublicCertificates(s)
 	if err != nil {
 		return nil, err
 	}
-	if publicCert == nil {
-		return nil, fmt.Errorf("certificate to verify the signature is not found")
+	if publicCerts == nil || len(publicCerts) == 0 {
+		return nil, fmt.Errorf("certificates to verify the signature are not found")
 	}
 
 	// Before calling Verify() on the PKCS#7 struct, set the certificate to be used
 	// to verify the contents in the signer information.
-	pkcs7Data.Certificates = []*x509.Certificate{publicCert}
+	pkcs7Data.Certificates = publicCerts
 
 	// Verify extracts the authenticated attributes in the PKCS#7 signature, and verifies
 	// the authenticity of the content using 'dsa.PublicKey' embedded in the public certificate.

@@ -43,6 +43,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathImageTag(&b),
 			pathConfigClient(&b),
 			pathConfigCertificate(&b),
+			pathListCertificates(&b),
 			pathBlacklistRoleTag(&b),
 			pathListBlacklistRoleTags(&b),
 			pathBlacklistRoleTagTidy(&b),

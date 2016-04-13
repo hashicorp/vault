@@ -12,7 +12,7 @@ The AWS EC2 auth backend provides a secure introduction mechanism for AWS EC2
 instances, allowing automated retrieval of a Vault token.  Unlike most Vault
 authentication backends, this backend does not require first deploying or
 provisioning security-sensitive credentials (tokens, username/password, client
-certificates, etc.) Instead, it treats AWS as a Trusted Third Party and uses
+certificates, etc). Instead, it treats AWS as a Trusted Third Party and uses
 the cryptographically signed dynamic metadata information that uniquely
 represents each EC2 instance.
 
@@ -59,7 +59,7 @@ has been found to be distributed outside of its intended set of machines.
 
 ## Client Nonce
 
-If an unintended party gains access to the PKCS#7 version of the identity
+If an unintended party gains access to the PKCS#7 signature of the identity
 document (which by default is available to every process and user that gains
 access to an EC2 instance), it can impersonate that instance and fetch a Vault
 token. The backend addresses this problem by using a Trust On First Use (TOFU)
@@ -143,8 +143,7 @@ client, etc.), subsequent login attempts will not succeed. If the client nonce
 is lost, normally the only option is to delete the entry corresponding to the
 instance ID from the identity `whitelist` in the backend. This can be done via
 the `auth/aws/whitelist/identity/<instance_id>` endpoint. This allows a new
-client nonce to be accepted by the backend during
-the next login request.
+client nonce to be accepted by the backend during the next login request.
 
 Under certain circumstances there is another useful setting. When the instance
 is placed onto a host upon creation, it is given a `pendingTime` value in the
@@ -154,7 +153,7 @@ is updated (this does not apply to reboots, however).
 
 The backend can take advantage of this via the `allow_instance_migration`
 option, which is set per-AMI. When this option is enabled, if the client nonce
-does not matched the saved nonce, the `pendingTime` value in the instance
+does not match the saved nonce, the `pendingTime` value in the instance
 identity document will be checked; if it is newer than the stored `pendingTime`
 value, the backend assumes that the client was stopped/started and allows the
 client to log in successfully, storing the new nonce as the valid nonce for
@@ -218,18 +217,16 @@ dictated by the safety buffer in order to actually remove the entry.
 ### Varying Public Certificates
 
 The AWS public certificate which contains the public key used to verify the
-PKCS#7 signature varies by region. The default public certificate provided with
-the backend is applicable for all regions except AWS GovCloud (US); however,
-users of GovCloud may need to install a different public certificate, which can
-be found at
-[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
+PKCS#7 signature varies for groups of regions. The default public certificate
+provided with the backend is applicable for all regions except AWS GovCloud (US);
+however, users of GovCloud may need to install a different public certificate, which can
+be found at [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
 via the `auth/aws/config/certificate` endpoint.
 
 If the instances that are using this backend require more than one certificate
 due to being spread across normal AWS and GovCloud, this backend needs to be
 mounted at as many paths as there are certificates. The clients should then use
-an appropriate mount of the backend which can verify its
-PKCS#7 signature.
+an appropriate mount of the backend which can verify its PKCS#7 signature.
 
 ## Authentication
 

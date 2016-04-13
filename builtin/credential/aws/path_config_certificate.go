@@ -21,7 +21,7 @@ type dsaSignature struct {
 // US West (Oregon), US West (N. California), EU (Ireland), EU (Frankfurt),
 // Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
 // Asia Pacific (Sydney), and South America (Sao Paulo)
-const defaultAWSPublicCert = `-----BEGIN CERTIFICATE-----
+const genericAWSPublicCertificate = `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
 VQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z
@@ -41,14 +41,51 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 -----END CERTIFICATE-----
 `
 
+const govCloudAWSPublicCertificate = `-----BEGIN CERTIFICATE-----
+MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
+FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
+VQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z
+ODAxMDUxMjU2MTJaMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9u
+IFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNl
+cnZpY2VzIExMQzCCAbcwggEsBgcqhkjOOAQBMIIBHwKBgQCjkvcS2bb1VQ4yt/5e
+ih5OO6kK/n1Lzllr7D8ZwtQP8fOEpp5E2ng+D6Ud1Z1gYipr58Kj3nssSNpI6bX3
+VyIQzK7wLclnd/YozqNNmgIyZecN7EglK9ITHJLP+x8FtUpt3QbyYXJdmVMegN6P
+hviYt5JH/nYl4hh3Pa1HJdskgQIVALVJ3ER11+Ko4tP6nwvHwh6+ERYRAoGBAI1j
+k+tkqMVHuAFcvAGKocTgsjJem6/5qomzJuKDmbJNu9Qxw3rAotXau8Qe+MBcJl/U
+hhy1KHVpCGl9fueQ2s6IL0CaO/buycU1CiYQk40KNHCcHfNiZbdlx1E9rpUp7bnF
+lRa2v1ntMX3caRVDdbtPEWmdxSCYsYFDk4mZrOLBA4GEAAKBgEbmeve5f8LIE/Gf
+MNmP9CM5eovQOGx5ho8WqD+aTebs+k2tn92BBPqeZqpWRa5P/+jrdKml1qx4llHW
+MXrs3IgIb6+hUIB+S8dz8/mmO0bpr76RoZVCXYab2CZedFut7qc3WUH9+EUAH5mw
+vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
+7HX32MxXYruse9ACFBNGmdX2ZBrVNGrN9N2f6ROk0k9K
+-----END CERTIFICATE-----`
+
+// pathListCertificates creates a path that enables listing of all
+// the AWS public certificates registered with Vault.
+func pathListCertificates(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "config/certificates/?",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathCertificatesList,
+		},
+
+		HelpSynopsis:    pathListCertificatesHelpSyn,
+		HelpDescription: pathListCertificatesHelpDesc,
+	}
+}
+
 func pathConfigCertificate(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config/certificate$",
+		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
 		Fields: map[string]*framework.FieldSchema{
+			"cert_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the certificate.",
+			},
 			"aws_public_cert": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Default:     defaultAWSPublicCert,
-				Description: "AWS Public key required to verify PKCS7 signature of the EC2 instance metadata.",
+				Description: "AWS Public cert required to verify PKCS7 signature of the EC2 instance metadata.",
 			},
 		},
 
@@ -58,6 +95,7 @@ func pathConfigCertificate(b *backend) *framework.Path {
 			logical.CreateOperation: b.pathConfigCertificateCreateUpdate,
 			logical.UpdateOperation: b.pathConfigCertificateCreateUpdate,
 			logical.ReadOperation:   b.pathConfigCertificateRead,
+			logical.DeleteOperation: b.pathConfigCertificateDelete,
 		},
 
 		HelpSynopsis:    pathConfigCertificateSyn,
@@ -68,11 +106,25 @@ func pathConfigCertificate(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := awsPublicCertificateEntry(req.Storage)
+	certName := data.Get("cert_name").(string)
+	if certName == "" {
+		return false, fmt.Errorf("missing cert_name")
+	}
+	entry, err := awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
+}
+
+// pathCertificatesList is used to list all the AWS public certificates registered with Vault.
+func (b *backend) pathCertificatesList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	certs, err := req.Storage.List("config/certificate/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(certs), nil
 }
 
 // Decodes the PEM encoded certiticate and parses it into a x509 cert.
@@ -94,23 +146,58 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 	return publicCert, nil
 }
 
-// awsPublicCertificateParsed will fetch the storage entry for the certificate,
-// decodes it and returns the parsed certificate.
-func awsPublicCertificateParsed(s logical.Storage) (*x509.Certificate, error) {
-	certEntry, err := awsPublicCertificateEntry(s)
+// awsPublicCertificates returns a slice of all the parsed AWS public
+// certificates, that were registered using `config/certificate/<cert_name>` endpoint.
+// This method will also append two default certificates to the slice.
+func awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
+
+	// Get the list `cert_name`s of all the registered certificates.
+	registeredCerts, err := s.List("config/certificate/")
 	if err != nil {
 		return nil, err
 	}
-	if certEntry == nil {
-		return decodePEMAndParseCertificate(defaultAWSPublicCert)
+
+	var certs []*x509.Certificate
+
+	// Iterate through each certificate, parse and append it to a slice.
+	for _, cert := range registeredCerts {
+		certEntry, err := awsPublicCertificateEntry(s, cert)
+		if err != nil {
+			return nil, err
+		}
+		if certEntry == nil {
+			return nil, fmt.Errorf("certificate storage has a nil entry under the name:%s\n", cert)
+		}
+		decodedCert, err := decodePEMAndParseCertificate(certEntry.AWSPublicCert)
+		if err != nil {
+			return nil, err
+		}
+		certs = append(certs, decodedCert)
 	}
-	return decodePEMAndParseCertificate(certEntry.AWSPublicCert)
+
+	// Append the two public certs provided in the AWS documentation.
+
+	// Append the generic certificate provided in the documentation.
+	decodedCert, err := decodePEMAndParseCertificate(genericAWSPublicCertificate)
+	if err != nil {
+		return nil, err
+	}
+	certs = append(certs, decodedCert)
+
+	// Append the govCloud certificate provided in the documentation.
+	decodedCert, err = decodePEMAndParseCertificate(govCloudAWSPublicCertificate)
+	if err != nil {
+		return nil, err
+	}
+	certs = append(certs, decodedCert)
+
+	return certs, nil
 }
 
 // awsPublicCertificate is used to get the configured AWS Public Key that is used
 // to verify the PKCS#7 signature of the instance identity document.
-func awsPublicCertificateEntry(s logical.Storage) (*awsPublicCert, error) {
-	entry, err := s.Get("config/certificate")
+func awsPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
+	entry, err := s.Get("config/certificate/" + certName)
 	if err != nil {
 		return nil, err
 	}
@@ -126,11 +213,31 @@ func awsPublicCertificateEntry(s logical.Storage) (*awsPublicCert, error) {
 	return &result, nil
 }
 
+// pathConfigCertificateDelete is used to delete the previously configured AWS Public Key
+// that is used to verify the PKCS#7 signature of the instance identity document.
+func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	certName := data.Get("cert_name").(string)
+	if certName == "" {
+		return logical.ErrorResponse("missing cert_name"), nil
+	}
+	err := req.Storage.Delete("config/certificate/" + certName)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 // pathConfigCertificateRead is used to view the configured AWS Public Key that is
 // used to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) pathConfigCertificateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	certificateEntry, err := awsPublicCertificateEntry(req.Storage)
+
+	certName := data.Get("cert_name").(string)
+	if certName == "" {
+		return logical.ErrorResponse("missing cert_name"), nil
+	}
+
+	certificateEntry, err := awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +257,13 @@ func (b *backend) pathConfigCertificateRead(
 func (b *backend) pathConfigCertificateCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
+	certName := data.Get("cert_name").(string)
+	if certName == "" {
+		return logical.ErrorResponse("missing cert_name"), nil
+	}
+
 	// Check if there is already a certificate entry registered.
-	certEntry, err := awsPublicCertificateEntry(req.Storage)
+	certEntry, err := awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -166,15 +278,16 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		if err != nil {
 			return nil, err
 		}
-
 		certEntry.AWSPublicCert = string(certBytes)
-	} else if req.Operation == logical.CreateOperation {
-		certEntry.AWSPublicCert = data.Get("aws_public_cert").(string)
+	} else {
+		// aws_public_cert should be supplied for both create and update operations.
+		// If it is not provided, throw an error.
+		return logical.ErrorResponse("missing aws_public_cert"), nil
 	}
 
 	// If explicitly set to empty string, error out.
 	if certEntry.AWSPublicCert == "" {
-		return logical.ErrorResponse("missing aws_public_cert"), nil
+		return logical.ErrorResponse("invalid aws_public_cert"), nil
 	}
 
 	// Verify the certificate by decoding it and parsing it.
@@ -187,7 +300,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	}
 
 	// If none of the checks fail, save the provided certificate.
-	entry, err := logical.StorageEntryJSON("config/certificate", certEntry)
+	entry, err := logical.StorageEntryJSON("config/certificate/"+certName, certEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -216,4 +329,10 @@ is used to verify the signature is the one that is applicable for following regi
 US East (N. Virginia), US West (Oregon), US West (N. California), EU (Ireland),
 EU (Frankfurt), Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
 Asia Pacific (Sydney), and South America (Sao Paulo).
+`
+const pathListCertificatesHelpSyn = `
+Lists all the AWS public certificates that are registered with Vault.
+`
+const pathListCertificatesHelpDesc = `
+Certificates will be listed by their respective names that were used during registration.
 `

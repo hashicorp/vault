@@ -64,7 +64,7 @@ func pathImage(b *backend) *framework.Path {
 	}
 }
 
-// pathListImages createa a path that enables listing of all the AMIs that are
+// pathListImages creates a path that enables listing of all the AMIs that are
 // registered with Vault.
 func pathListImages(b *backend) *framework.Path {
 	return &framework.Path{
