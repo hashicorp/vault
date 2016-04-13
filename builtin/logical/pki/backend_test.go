@@ -1762,7 +1762,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 
 			if keys[0] != "test" {
-				return fmt.Errorf("unexpected key value of %d", keys[0])
+				return fmt.Errorf("unexpected key value of %s", keys[0])
 			}
 
 			return nil
