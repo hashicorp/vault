@@ -227,7 +227,11 @@ func (c *AuthCommand) Run(args []string) int {
 		policies = append(policies, v.(string))
 	}
 
-	output := "Successfully authenticated!"
+	output := "Successfully authenticated! You are now logged in."
+	if method != "" {
+		output += "\nThe token below is already saved in the session. You do not"
+		output += "\nneed to \"vault auth\" again with the token."
+	}
 	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
 	output += fmt.Sprintf("\ntoken_duration: %d", int(secret.Data["ttl"].(float64)))
 	if len(policies) > 0 {
