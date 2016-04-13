@@ -739,7 +739,7 @@ func TestSystemBackend_auditHash(t *testing.T) {
 			HMACType: "hmac-sha256",
 		})
 		if err != nil {
-			t.Fatal("error getting new salt: %v", err)
+			t.Fatalf("error getting new salt: %v", err)
 		}
 		return &NoopAudit{
 			Config: config,

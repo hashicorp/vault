@@ -24,7 +24,7 @@ func testFactory(t *testing.T) logical.Backend {
 		StorageView: &logical.InmemStorage{},
 	})
 	if err != nil {
-		t.Fatal("error: %s", err)
+		t.Fatalf("error: %s", err)
 	}
 	return b
 }

@@ -295,6 +295,4 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 	default:
 		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
 	}
-
-	return false, fmt.Errorf("undefined error comparing public keys")
 }

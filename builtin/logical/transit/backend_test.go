@@ -528,7 +528,7 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 			}
 
 			if d.Plaintext != dataKeyInfo["plaintext"].(string) {
-				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string))
+				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
 			}
 			return nil
 		},

@@ -75,7 +75,7 @@ func TestCore(t *testing.T) *Core {
 				HMACType: "hmac-sha256",
 			})
 			if err != nil {
-				t.Fatal("error getting new salt: %v", err)
+				t.Fatalf("error getting new salt: %v", err)
 			}
 			return &noopAudit{
 				Config: config,

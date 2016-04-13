@@ -131,6 +131,6 @@ func TestClientEnvSettings(t *testing.T) {
 		t.Fatalf("bad: expected client tls config to have a client certificate")
 	}
 	if tlsConfig.InsecureSkipVerify != true {
-		t.Fatalf("bad: %s", tlsConfig.InsecureSkipVerify)
+		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
 	}
 }
