@@ -218,15 +218,11 @@ dictated by the safety buffer in order to actually remove the entry.
 
 The AWS public certificate which contains the public key used to verify the
 PKCS#7 signature varies for groups of regions. The default public certificate
-provided with the backend is applicable for all regions except AWS GovCloud (US);
-however, users of GovCloud may need to install a different public certificate, which can
-be found at [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
-via the `auth/aws/config/certificate` endpoint.
-
-If the instances that are using this backend require more than one certificate
-due to being spread across normal AWS and GovCloud, this backend needs to be
-mounted at as many paths as there are certificates. The clients should then use
-an appropriate mount of the backend which can verify its PKCS#7 signature.
+provided with the backend is applicable many regions. Users of instances whose
+signatures cannott be verified by the default public certificate, can register a
+different public certificate which can be found [here]
+(http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
+via the `auth/aws/config/certificate/<cert_name>` endpoint.
 
 ## Authentication
 
@@ -245,7 +241,7 @@ IAM role-provided credentials if available. In addition, the `AWS_REGION`
 environment variable will be honored if available.
 
 ```
-$ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA region=us-east-1
+$ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
 ```
 
 #### Configure the policies on the AMI.
@@ -272,7 +268,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '
 #### Configure the credentials required to make AWS API calls.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj", "region":"us-east-1"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
 ```
 
 #### Configure the policies on the AMI.
@@ -358,13 +354,6 @@ The response will be in JSON. For example:
         AWS Secret key with permissions to query EC2 instance metadata.
       </li>
     </ul>
-    <ul>
-      <li>
-        <span class="param">region</span>
-        <span class="param-flags">required</span>
-        Region for API calls. Defaults to the value of the AWS_REGION env var.
-      </li>
-    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -400,7 +389,6 @@ The response will be in JSON. For example:
   "warnings": null,
   "data": {
     "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
-    "region": "us-east-1",
     "access_key": "VKIAJBRHKH6EVTTNXDHA"
   },
   "lease_duration": 0,
@@ -437,7 +425,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/config/certificate
+### /auth/aws/config/certificate/<cert_name>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -450,13 +438,20 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/certificate`</dd>
+  <dd>`/auth/aws/config/certificate/<cert_name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
     <ul>
       <li>
-        <span class="param">aws_public_key</span>
+        <span class="param">cert_name</span>
+        <span class="param-flags">required</span>
+        Name of the certificate.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">aws_public_cert</span>
         <span class="param-flags">required</span>
         AWS Public key required to verify PKCS7 signature of the EC2 instance metadata.
       </li>
@@ -480,7 +475,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/certificate`</dd>
+  <dd>`/auth/aws/config/certificate/<cert_name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -496,6 +491,45 @@ The response will be in JSON. For example:
   "warnings": null,
   "data": {
     "aws_public_cert": "-----BEGIN CERTIFICATE-----\nMIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw\nFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD\nVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z\nODAxMDUxMjU2MTJaMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9u\nIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNl\ncnZpY2VzIExMQzCCAbcwggEsBgcqhkjOOAQBMIIBHwKBgQCjkvcS2bb1VQ4yt/5e\nih5OO6kK/n1Lzllr7D8ZwtQP8fOEpp5E2ng+D6Ud1Z1gYipr58Kj3nssSNpI6bX3\nVyIQzK7wLclnd/YozqNNmgIyZecN7EglK9ITHJLP+x8FtUpt3QbyYXJdmVMegN6P\nhviYt5JH/nYl4hh3Pa1HJdskgQIVALVJ3ER11+Ko4tP6nwvHwh6+ERYRAoGBAI1j\nk+tkqMVHuAFcvAGKocTgsjJem6/5qomzJuKDmbJNu9Qxw3rAotXau8Qe+MBcJl/U\nhhy1KHVpCGl9fueQ2s6IL0CaO/buycU1CiYQk40KNHCcHfNiZbdlx1E9rpUp7bnF\nlRa2v1ntMX3caRVDdbtPEWmdxSCYsYFDk4mZrOLBA4GEAAKBgEbmeve5f8LIE/Gf\nMNmP9CM5eovQOGx5ho8WqD+aTebs+k2tn92BBPqeZqpWRa5P/+jrdKml1qx4llHW\nMXrs3IgIb6+hUIB+S8dz8/mmO0bpr76RoZVCXYab2CZedFut7qc3WUH9+EUAH5mw\nvSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw\n7HX32MxXYruse9ACFBNGmdX2ZBrVNGrN9N2f6ROk0k9K\n-----END CERTIFICATE-----\n"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### LIST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists all the AWS public certificates that are registered with the backend.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/certificates?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "keys": [
+      "cert1"
+    ]
   },
   "lease_duration": 0,
   "renewable": false,
@@ -533,6 +567,13 @@ The response will be in JSON. For example:
         <span class="param">ami_id</span>
         <span class="param-flags">required</span>
         AMI ID to be mapped.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">instance_id</span>
+        <span class="param-flags">optional</span>
+        Instance ID for which this tag is intended for. If set, the created tag can only be used by the instance with the given ID.
       </li>
     </ul>
     <ul>
@@ -1020,7 +1061,25 @@ The response will be in JSON. For example:
   </dd>
 
   <dt>Returns</dt>
-  <dd>`204` response code.
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "pending_time": "2016-04-14T01:01:41Z",
+    "expiration_time": "2016-05-05 10:09:16.67077232 +0000 UTC",
+    "creation_time": "2016-04-14 14:09:16.67077232 +0000 UTC",
+    "client_nonce": "vault-client-nonce",
+    "ami_id": "ami-fce3c696"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
   </dd>
 </dl>
 
@@ -1045,6 +1104,22 @@ The response will be in JSON. For example:
 
   <dt>Returns</dt>
   <dd>`204` response code.
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "keys": [
+      "i-aab47d37"
+    ]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
   </dd>
 </dl>
 
