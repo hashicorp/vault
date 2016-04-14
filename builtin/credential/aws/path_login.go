@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/vishalnayak/pkcs7"
+	"github.com/fullsailor/pkcs7"
 )
 
 func pathLogin(b *backend) *framework.Path {

@@ -23,7 +23,6 @@ func TestBackend_ConfigClient(t *testing.T) {
 
 	data := map[string]interface{}{"access_key": "AKIAJBRHKV6EVTTNXDHA",
 		"secret_key": "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",
-		"region":     "us-east-1",
 	}
 
 	stepCreate := logicaltest.TestStep{
@@ -38,20 +37,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Data:      data,
 	}
 
-	data2 := map[string]interface{}{"access_key": "AKIAJBRHKV6EVTTNXDHA",
-		"secret_key": "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",
-		"region":     "",
-	}
-	stepEmptyRegion := logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "config/client",
-		Data:      data2,
-		ErrorOk:   true,
-	}
-
 	data3 := map[string]interface{}{"access_key": "",
 		"secret_key": "mCtSM8ZUEQ3mOFVZYPBQkf2sO6F/W7a5TVzrl3Oj",
-		"region":     "us-east-1",
 	}
 	stepInvalidAccessKey := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -62,7 +49,6 @@ func TestBackend_ConfigClient(t *testing.T) {
 
 	data4 := map[string]interface{}{"access_key": "accesskey",
 		"secret_key": "",
-		"region":     "us-east-1",
 	}
 	stepInvalidSecretKey := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -76,7 +62,6 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			stepCreate,
-			stepEmptyRegion,
 			stepInvalidAccessKey,
 			stepInvalidSecretKey,
 			stepUpdate,
@@ -129,8 +114,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	if clientConfig.AccessKey != data["access_key"] ||
-		clientConfig.SecretKey != data["secret_key"] ||
-		clientConfig.Region != data["region"] {
+		clientConfig.SecretKey != data["secret_key"] {
 		t.Fatalf("bad: expected: %#v\ngot: %#v\n", data, clientConfig)
 	}
 }
@@ -147,17 +131,17 @@ func TestBackend_PathConfigCertificate(t *testing.T) {
 
 	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/certificate",
+		Path:      "config/certificate/cert1",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'config/certificate'")
+		t.Fatal("existence check not found for path 'config/certificate/cert1'")
 	}
 	if exists {
-		t.Fatal("existence check should have returned 'false' for 'config/certificate'")
+		t.Fatal("existence check should have returned 'false' for 'config/certificate/cert1'")
 	}
 
 	data := map[string]interface{}{
@@ -184,7 +168,7 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 	}
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/certificate",
+		Path:      "config/certificate/cert1",
 		Storage:   storage,
 		Data:      data,
 	})
@@ -194,22 +178,22 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 
 	checkFound, exists, err = b.HandleExistenceCheck(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/certificate",
+		Path:      "config/certificate/cert1",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'config/certificate'")
+		t.Fatal("existence check not found for path 'config/certificate/cert1'")
 	}
 	if !exists {
-		t.Fatal("existence check should have returned 'true' for 'config/certificate'")
+		t.Fatal("existence check should have returned 'true' for 'config/certificate/cert1'")
 	}
 
 	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "config/certificate",
+		Path:      "config/certificate/cert1",
 		Storage:   storage,
 	})
 	expectedCert := `-----BEGIN CERTIFICATE-----
@@ -354,7 +338,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 	}
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123/tag",
+		Path:      "image/abcd-123/roletag",
 		Storage:   storage,
 		Data:      data2,
 	})
@@ -376,7 +360,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 	}
 	if rTag.Version != "v1" ||
 		!policyutil.EquivalentPolicies(rTag.Policies, []string{"p", "q", "r", "s"}) ||
-		rTag.ImageID != "abcd-123" {
+		rTag.AmiID != "abcd-123" {
 		t.Fatalf("bad: parsed role tag contains incorrect values. Got: %#v\n", rTag)
 	}
 }
@@ -419,7 +403,7 @@ func TestBackend_PathImageTag(t *testing.T) {
 
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123/tag",
+		Path:      "image/abcd-123/roletag",
 		Storage:   storage,
 	})
 	if err != nil {
@@ -465,7 +449,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123/tag",
+		Path:      "image/abcd-123/roletag",
 		Storage:   storage,
 		Data:      data2,
 	})
@@ -544,9 +528,8 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	}
 
 	clientConfig := map[string]interface{}{
-		"access_key": os.Getenv("AWS_AUTH_ACCESS_KEY"),
-		"secret_key": os.Getenv("AWS_AUTH_SECRET_KEY"),
-		"region":     os.Getenv("AWS_AUTH_REGION"),
+		"access_key": os.Getenv("AWS_ACCESS_KEY"),
+		"secret_key": os.Getenv("AWS_SECRET_KEY"),
 	}
 	if clientConfig["access_key"] == "" ||
 		clientConfig["secret_key"] == "" {
