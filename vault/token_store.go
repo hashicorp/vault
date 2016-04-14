@@ -1288,6 +1288,11 @@ func (ts *TokenStore) tokenStoreRoleRead(
 		Data: structs.New(role).Map(),
 	}
 
+	// Make the period nicer
+	if role.Period != 0 {
+		resp.Data["period"] = role.Period.Seconds()
+	}
+
 	return resp, nil
 }
 
