@@ -58,7 +58,7 @@ After a token is created, you can revoke it with `vault token-revoke`:
 
 ```
 $ vault token-revoke c2c2fbd5-2893-b385-6fa5-30050439f698
-Revocation successful.
+Token revoked if it existed
 ```
 
 In a previous section, we use the `vault revoke` command. This command

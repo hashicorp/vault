@@ -65,7 +65,7 @@ func (c *TokenRevokeCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.Ui.Output("Revocation successful.")
+	c.Ui.Output("Token revoked if it existed")
 	return 0
 }
 
