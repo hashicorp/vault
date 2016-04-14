@@ -541,8 +541,15 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			return nil, auth, ErrInternalError
 		}
 
-		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(req.Path, resp.Auth); err != nil {
+		// Register with the expiration manager. We use the token's actual path
+		// here because roles allow suffixes.
+		te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
+			return nil, nil, ErrInternalError
+		}
+
+		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
 				"(request path: %s): %v", req.Path, err)
 			return nil, auth, ErrInternalError
@@ -651,7 +658,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		auth.Policies = te.Policies
 
 		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(req.Path, auth); err != nil {
+		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
 			c.logger.Printf("[ERR] core: failed to register token lease "+
 				"(request path: %s): %v", req.Path, err)
 			return nil, auth, ErrInternalError

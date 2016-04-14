@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 func getBackendConfig(c *Core) *logical.BackendConfig {
@@ -1208,22 +1207,16 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("got a nil response")
 	}
 
-	var actual tsRoleEntry
-	err = mapstructure.WeakDecode(resp.Data, &actual)
-	if err != nil {
-		t.Fatalf("error decoding role json: %v", err)
+	expected := map[string]interface{}{
+		"name":             "test",
+		"orphan":           true,
+		"period":           float64(259200),
+		"allowed_policies": []string{"test1", "test2"},
+		"path_suffix":      "happenin",
 	}
 
-	expected := tsRoleEntry{
-		Name:            "test",
-		Orphan:          true,
-		Period:          72 * time.Hour,
-		AllowedPolicies: []string{"test1", "test2"},
-		PathSuffix:      "happenin",
-	}
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
 	}
 
 	// Now test updating; this should be set to an UpdateOperation
@@ -1254,21 +1247,16 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("got a nil response")
 	}
 
-	err = mapstructure.WeakDecode(resp.Data, &actual)
-	if err != nil {
-		t.Fatalf("error decoding role json: %v", err)
+	expected = map[string]interface{}{
+		"name":             "test",
+		"orphan":           true,
+		"period":           float64(284400),
+		"allowed_policies": []string{"test3"},
+		"path_suffix":      "happenin",
 	}
 
-	expected = tsRoleEntry{
-		Name:            "test",
-		Orphan:          true,
-		Period:          79 * time.Hour,
-		AllowedPolicies: []string{"test3"},
-		PathSuffix:      "happenin",
-	}
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
 	}
 
 	req.Operation = logical.ListOperation
