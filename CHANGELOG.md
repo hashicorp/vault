@@ -56,6 +56,8 @@ BUG FIXES:
  * credential/token: Fall back to normal parent-token semantics if
    `allowed_policies` is empty for a role. Using `allowed_policies` of
    `default` resulted in the same behavior anyways. [GH-1276]
+ * credential/token: Fix issues renewing tokens when using the "suffix"
+   capability of token roles [GH-1331]
  * credential/various: Fix renewal conditions when `default` policy is not
    contained in the backend config [GH-1256]
  * secret/pki: Don't check whether a certificate is destined to be a CA
