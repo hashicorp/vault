@@ -41,7 +41,7 @@ func (c *DeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Success! Deleted '%s'", path))
+	c.Ui.Output(fmt.Sprintf("Success! Deleted '%s' if it existed", path))
 	return 0
 }
 
