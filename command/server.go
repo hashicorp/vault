@@ -376,6 +376,11 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 		}
 	}
+
+	for _, listener := range lns {
+		listener.Close()
+	}
+
 	return 0
 }
 

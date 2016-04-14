@@ -35,8 +35,9 @@ func (c *Core) Initialized() (bool, error) {
 		return false, err
 	}
 	if sealConf == nil {
-		return false, nil
+		return false, fmt.Errorf("[ERR] core: barrier reports initialized but no seal configuration found")
 	}
+
 	return true, nil
 }
 
@@ -120,10 +121,6 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 		c.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
 		return nil, fmt.Errorf("invalid seal configuration: %v", err)
 	}
-
-	// We defer this now because the unseal operation locks the state lock, and
-	// defer operations are LIFO
-	defer c.unsealWithStoredKeys()
 
 	// Avoid an initialization race
 	c.stateLock.Lock()
@@ -244,8 +241,17 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 	return results, nil
 }
 
-func (c *Core) unsealWithStoredKeys() error {
+func (c *Core) UnsealWithStoredKeys() error {
 	if !c.seal.StoredKeysSupported() {
+		return nil
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		c.logger.Printf("[ERR] core: error checking sealed status in auto-unseal: %s", err)
+		return fmt.Errorf("error checking sealed status in auto-unseal: %s", err)
+	}
+	if !sealed {
 		return nil
 	}
 

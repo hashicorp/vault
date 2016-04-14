@@ -84,6 +84,8 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	core.UnsealWithStoredKeys()
+
 	respondOk(w, resp)
 }
 

@@ -354,7 +354,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Attempt unsealing with stored keys; if there are no stored keys this
 	// returns nil, otherwise returns nil or an error
-	storedKeyErr := c.unsealWithStoredKeys()
+	storedKeyErr := c.UnsealWithStoredKeys()
 
 	return c, storedKeyErr
 }
