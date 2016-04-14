@@ -186,9 +186,12 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Validate the instance ID.
-	if err := b.validateInstanceID(req.Storage, identityDoc.InstanceID); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
-	}
+	//TODO: uncomment this block, until the API invoking problem is resolved.
+	/*
+		if err := b.validateInstanceID(req.Storage, identityDoc.InstanceID); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
+		}
+	*/
 
 	// Get the entry for the AMI used by the instance.
 	imageEntry, err := awsImage(req.Storage, identityDoc.AmiID)
@@ -365,6 +368,11 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	// Check if the role tag belongs to the AMI ID of the instance.
 	if rTag.AmiID != identityDoc.AmiID {
 		return nil, fmt.Errorf("role tag does not belong to the instance's AMI ID.")
+	}
+
+	// If instance_id was set on the role tag, check if the same instance is attempting to login.
+	if rTag.InstanceID != "" && rTag.InstanceID != identityDoc.InstanceID {
+		return nil, fmt.Errorf("role tag is being used by an unauthorized instance.")
 	}
 
 	// Check if the role tag is blacklisted.

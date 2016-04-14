@@ -26,6 +26,12 @@ func pathImageTag(b *backend) *framework.Path {
 				Description: "AMI ID to create a tag for.",
 			},
 
+			"instance_id": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Instance ID for which this tag is intended for.
+This is an optional field, but if set, the created tag can only be used by the instance with the given ID.`,
+			},
+
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Policies to be associated with the tag.",
@@ -62,6 +68,9 @@ func (b *backend) pathImageTagUpdate(
 	if amiID == "" {
 		return logical.ErrorResponse("missing ami_id"), nil
 	}
+
+	// Instance ID is an optional field.
+	instanceID := strings.ToLower(data.Get("instance_id").(string))
 
 	// Parse the given policies into a slice and add 'default' if not provided.
 	// Remove all other policies if 'root' is present.
@@ -108,10 +117,11 @@ func (b *backend) pathImageTagUpdate(
 
 	// Attach version, nonce, policies and maxTTL to the role tag value.
 	rTagValue, err := prepareRoleTagPlainValue(&roleTag{Version: roleTagVersion,
-		AmiID:    amiID,
-		Nonce:    nonce,
-		Policies: policies,
-		MaxTTL:   maxTTL,
+		AmiID:                    amiID,
+		Nonce:                    nonce,
+		Policies:                 policies,
+		MaxTTL:                   maxTTL,
+		InstanceID:               instanceID,
 		DisallowReauthentication: disallowReauthentication,
 	})
 	if err != nil {
@@ -188,11 +198,16 @@ func prepareRoleTagPlainValue(rTag *roleTag) (string, error) {
 	// attach ami_id to the value
 	value = fmt.Sprintf("%s:a=%s", value, rTag.AmiID)
 
-	// attach policies to value
+	// attach policies to value. rTag.Policies will never be empty.
 	value = fmt.Sprintf("%s:p=%s", value, strings.Join(rTag.Policies, ","))
 
 	// attach disallow_reauthentication field
 	value = fmt.Sprintf("%s:d=%s", value, strconv.FormatBool(rTag.DisallowReauthentication))
+
+	// attach instance_id if set
+	if rTag.InstanceID != "" {
+		value = fmt.Sprintf("%s:i=%s", value, rTag.InstanceID)
+	}
 
 	// attach max_ttl if it is provided
 	if rTag.MaxTTL > time.Duration(0) {
@@ -233,6 +248,8 @@ func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 		for _, tagItem := range tagItems {
 			var err error
 			switch {
+			case strings.Contains(tagItem, "i="):
+				rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
 			case strings.Contains(tagItem, "a="):
 				rTag.AmiID = strings.TrimPrefix(tagItem, "a=")
 			case strings.Contains(tagItem, "p="):
@@ -288,6 +305,7 @@ func createRoleTagNonce() (string, error) {
 // Struct roleTag represents a role tag in a struc form.
 type roleTag struct {
 	Version                  string        `json:"version" structs:"version" mapstructure:"version"`
+	InstanceID               string        `json:"instance_id" structs:"instance_id" mapstructure:"instance_id"`
 	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
@@ -303,6 +321,7 @@ func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
 		rTag1.MaxTTL == rTag2.MaxTTL &&
 		rTag1.AmiID == rTag2.AmiID &&
 		rTag1.HMAC == rTag2.HMAC &&
+		rTag1.InstanceID == rTag2.InstanceID &&
 		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication
 }
 

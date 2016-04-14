@@ -6,7 +6,12 @@ import (
 )
 
 func ParsePolicies(policiesRaw string) []string {
-	policies := strings.Split(policiesRaw, ",")
+	var policies []string
+
+	if policiesRaw != "" {
+		policies = strings.Split(policiesRaw, ",")
+	}
+
 	defaultFound := false
 	for i, p := range policies {
 		policies[i] = strings.TrimSpace(p)
