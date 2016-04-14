@@ -381,6 +381,11 @@ func (c *ServerCommand) Run(args []string) int {
 		listener.Close()
 	}
 
+	err = seal.Finalize()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+	}
+
 	return 0
 }
 

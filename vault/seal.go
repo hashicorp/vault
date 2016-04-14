@@ -30,6 +30,7 @@ const (
 type Seal interface {
 	SetCore(*Core)
 	Init() error
+	Finalize() error
 
 	StoredKeysSupported() bool
 	SetStoredKeys([][]byte) error
@@ -62,6 +63,10 @@ func (d *DefaultSeal) SetCore(core *Core) {
 }
 
 func (d *DefaultSeal) Init() error {
+	return nil
+}
+
+func (d *DefaultSeal) Finalize() error {
 	return nil
 }
 
