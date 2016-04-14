@@ -2,7 +2,6 @@ package aws
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -21,7 +20,7 @@ import (
 // * Static credentials from 'config/client'
 // * Environment variables
 // * Instance metadata role
-func (b *backend) getClientConfig(s logical.Storage) (*aws.Config, error) {
+func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config, error) {
 	// Read the configured secret key and access key
 	config, err := clientConfigEntry(s)
 	if err != nil {
@@ -29,13 +28,8 @@ func (b *backend) getClientConfig(s logical.Storage) (*aws.Config, error) {
 	}
 
 	var providers []credentials.Provider
-	region := os.Getenv("AWS_REGION")
 
 	if config != nil {
-		if config.Region != "" {
-			region = config.Region
-		}
-
 		switch {
 		case config.AccessKey != "" && config.SecretKey != "":
 			providers = append(providers, &credentials.StaticProvider{
@@ -75,13 +69,23 @@ func (b *backend) getClientConfig(s logical.Storage) (*aws.Config, error) {
 	}, nil
 }
 
+// flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.
+func (b *backend) flushCachedEC2Clients() {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
+	for region, _ := range b.EC2ClientsMap {
+		delete(b.EC2ClientsMap, region)
+	}
+}
+
 // clientEC2 creates a client to interact with AWS EC2 API.
-func (b *backend) clientEC2(s logical.Storage, recreate bool) (*ec2.EC2, error) {
+func (b *backend) clientEC2(s logical.Storage, region string, recreate bool) (*ec2.EC2, error) {
 	if !recreate {
 		b.configMutex.RLock()
-		if b.ec2Client != nil {
+		if b.EC2ClientsMap[region] != nil {
 			defer b.configMutex.RUnlock()
-			return b.ec2Client, nil
+			return b.EC2ClientsMap[region], nil
 		}
 		b.configMutex.RUnlock()
 	}
@@ -89,11 +93,11 @@ func (b *backend) clientEC2(s logical.Storage, recreate bool) (*ec2.EC2, error) 
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	awsConfig, err := b.getClientConfig(s)
+	awsConfig, err := b.getClientConfig(s, region)
 	if err != nil {
 		return nil, err
 	}
 
-	b.ec2Client = ec2.New(session.New(awsConfig))
-	return b.ec2Client, nil
+	b.EC2ClientsMap[region] = ec2.New(session.New(awsConfig))
+	return b.EC2ClientsMap[region], nil
 }

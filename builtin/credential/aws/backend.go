@@ -55,6 +55,8 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		AuthRenew: b.pathLoginRenew,
 	}
 
+	b.EC2ClientsMap = make(map[string]*ec2.EC2)
+
 	return b.Backend, nil
 }
 
@@ -64,7 +66,7 @@ type backend struct {
 
 	configMutex sync.RWMutex
 
-	ec2Client *ec2.EC2
+	EC2ClientsMap map[string]*ec2.EC2
 }
 
 const backendHelp = `

@@ -1,8 +1,6 @@
 package aws
 
 import (
-	"fmt"
-
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -20,11 +18,6 @@ func pathConfigClient(b *backend) *framework.Path {
 			"secret_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "AWS Secret key with permissions to query EC2 instance metadata.",
-			},
-
-			"region": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Region for API calls. Defaults to the value of the AWS_REGION env var. Required.",
 			},
 		},
 
@@ -104,10 +97,8 @@ func (b *backend) pathConfigClientDelete(
 
 	b.configMutex.Unlock()
 
-	_, err = b.clientEC2(req.Storage, true)
-	if err != nil {
-		return nil, fmt.Errorf("error creating client with updated credentials: %s", err)
-	}
+	// Remove all the cached EC2 client objects in the backend.
+	b.flushCachedEC2Clients()
 
 	return nil, nil
 }
@@ -127,21 +118,14 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry = &clientConfig{}
 	}
 
-	regionStr, ok := data.GetOk("region")
-	if ok {
-		configEntry.Region = regionStr.(string)
-	} else if req.Operation == logical.CreateOperation {
-		configEntry.Region = data.Get("region").(string)
-	}
-
 	changedCreds := false
 
 	accessKeyStr, ok := data.GetOk("access_key")
 	if ok {
 		if configEntry.AccessKey != accessKeyStr.(string) {
 			changedCreds = true
+			configEntry.AccessKey = accessKeyStr.(string)
 		}
-		configEntry.AccessKey = accessKeyStr.(string)
 	} else if req.Operation == logical.CreateOperation {
 		// Use the default
 		configEntry.AccessKey = data.Get("access_key").(string)
@@ -151,8 +135,8 @@ func (b *backend) pathConfigClientCreateUpdate(
 	if ok {
 		if configEntry.SecretKey != secretKeyStr.(string) {
 			changedCreds = true
+			configEntry.SecretKey = secretKeyStr.(string)
 		}
-		configEntry.SecretKey = secretKeyStr.(string)
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.SecretKey = data.Get("secret_key").(string)
 	}
@@ -170,13 +154,8 @@ func (b *backend) pathConfigClientCreateUpdate(
 		// We have to be careful here to re-lock as we have a deferred unlock
 		// queued up and unlocking an unlocked mutex leads to a panic
 		b.configMutex.Unlock()
-		_, err = b.clientEC2(req.Storage, true)
+		b.flushCachedEC2Clients()
 		b.configMutex.Lock()
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"error creating client with updated credentials: %s", err),
-			), nil
-		}
 	}
 
 	return nil, nil
@@ -187,7 +166,6 @@ func (b *backend) pathConfigClientCreateUpdate(
 type clientConfig struct {
 	AccessKey string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
 	SecretKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
-	Region    string `json:"region" structs:"region" mapstructure:"region"`
 }
 
 const pathConfigClientHelpSyn = `

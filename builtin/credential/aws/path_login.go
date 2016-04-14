@@ -38,18 +38,18 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-// validateInstanceID queries the status of the EC2 instance using AWS EC2 API and
+// validateInstance queries the status of the EC2 instance using AWS EC2 API and
 // checks if the instance is running and is healthy.
-func (b *backend) validateInstanceID(s logical.Storage, instanceID string) error {
+func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocument) error {
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, false)
+	ec2Client, err := b.clientEC2(s, identityDoc.Region, false)
 	if err != nil {
 		return err
 	}
 
 	// Get the status of the instance
 	instanceStatus, err := ec2Client.DescribeInstanceStatus(&ec2.DescribeInstanceStatusInput{
-		InstanceIds: []*string{aws.String(instanceID)},
+		InstanceIds: []*string{aws.String(identityDoc.InstanceID)},
 	})
 	if err != nil {
 		return err
@@ -186,12 +186,9 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Validate the instance ID.
-	//TODO: uncomment this block, until the API invoking problem is resolved.
-	/*
-		if err := b.validateInstanceID(req.Storage, identityDoc.InstanceID); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
-		}
-	*/
+	if err := b.validateInstance(req.Storage, identityDoc); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
+	}
 
 	// Get the entry for the AMI used by the instance.
 	imageEntry, err := awsImage(req.Storage, identityDoc.AmiID)
@@ -311,8 +308,8 @@ func (b *backend) pathLoginUpdate(
 
 // fetchRoleTagValue creates an AWS EC2 client and queries the tags
 // attached to the instance identified by the given instanceID.
-func (b *backend) fetchRoleTagValue(s logical.Storage, tagKey string) (string, error) {
-	ec2Client, err := b.clientEC2(s, false)
+func (b *backend) fetchRoleTagValue(s logical.Storage, region string, tagKey string) (string, error) {
+	ec2Client, err := b.clientEC2(s, region, false)
 	if err != nil {
 		return "", err
 	}
@@ -350,7 +347,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	// NOTE: If AWS adds the instance tags as meta-data in the instance identity
 	// document, then it is better to look this information there instead of making
 	// another API call. Currently, we don't have an option but make this call.
-	rTagValue, err := b.fetchRoleTagValue(s, imageEntry.RoleTag)
+	rTagValue, err := b.fetchRoleTagValue(s, identityDoc.Region, imageEntry.RoleTag)
 	if err != nil {
 		return nil, err
 	}
