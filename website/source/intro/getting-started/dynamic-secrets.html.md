@@ -148,7 +148,7 @@ outputted from `vault read` when you ran it:
 
 ```
 $ vault revoke aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
-Key revoked with ID 'aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5'.
+Success! Revoked the secret with ID 'aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5', if it existed.
 ```
 
 Done! If you look at your AWS account, you'll notice that no IAM users

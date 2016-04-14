@@ -110,7 +110,7 @@ and delete it. We can do this with `vault delete`:
 
 ```
 $ vault delete secret/hello
-Success! Deleted 'secret/hello' if it existed
+Success! Deleted 'secret/hello' if it existed.
 ```
 
 ## Next

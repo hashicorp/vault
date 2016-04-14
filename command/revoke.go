@@ -56,7 +56,7 @@ func (c *RevokeCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf("Key revoked with ID '%s'.", leaseId))
+	c.Ui.Output(fmt.Sprintf("Success! Revoked the secret with ID '%s', if it existed.", leaseId))
 	return 0
 }
 
