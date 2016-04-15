@@ -171,31 +171,6 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 		SecretShares: barrierUnsealKeys,
 	}
 
-	// Save the configuration regardless, but only generate a key if it's not
-	// disabled
-	if c.seal.RecoveryKeySupported() {
-		err = c.seal.SetRecoveryConfig(recoveryConfig)
-		if err != nil {
-			c.logger.Printf("[ERR] core: failed to save recovery configuration: %v", err)
-			return nil, fmt.Errorf("recovery configuration saving failed: %v", err)
-		}
-
-		if recoveryConfig.SecretShares > 0 {
-			recoveryKey, recoveryUnsealKeys, err := c.generateShares(recoveryConfig)
-			if err != nil {
-				c.logger.Printf("[ERR] core: %v", err)
-				return nil, err
-			}
-
-			err = c.seal.SetRecoveryKey(recoveryKey)
-			if err != nil {
-				return nil, err
-			}
-
-			results.RecoveryShares = recoveryUnsealKeys
-		}
-	}
-
 	// Initialize the barrier
 	if err := c.barrier.Initialize(barrierKey); err != nil {
 		c.logger.Printf("[ERR] core: failed to initialize barrier: %v", err)
@@ -221,6 +196,32 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 	if err := c.postUnseal(); err != nil {
 		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 		return nil, err
+	}
+
+	// Save the configuration regardless, but only generate a key if it's not
+	// disabled. When using recovery keys they are stored in the barrier, so
+	// this must happen post-unseal.
+	if c.seal.RecoveryKeySupported() {
+		err = c.seal.SetRecoveryConfig(recoveryConfig)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to save recovery configuration: %v", err)
+			return nil, fmt.Errorf("recovery configuration saving failed: %v", err)
+		}
+
+		if recoveryConfig.SecretShares > 0 {
+			recoveryKey, recoveryUnsealKeys, err := c.generateShares(recoveryConfig)
+			if err != nil {
+				c.logger.Printf("[ERR] core: %v", err)
+				return nil, err
+			}
+
+			err = c.seal.SetRecoveryKey(recoveryKey)
+			if err != nil {
+				return nil, err
+			}
+
+			results.RecoveryShares = recoveryUnsealKeys
+		}
 	}
 
 	// Generate a new root token
