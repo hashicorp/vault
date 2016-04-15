@@ -666,15 +666,16 @@ General Options:
 
 // MakeShutdownCh returns a channel that can be used for shutdown
 // notifications for commands. This channel will send a message for every
-// interrupt or SIGTERM received.
+// SIGINT or SIGTERM received.
 func MakeShutdownCh() chan struct{} {
 	resultCh := make(chan struct{})
 
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	shutdownCh := make(chan os.Signal, 4)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGINT)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for {
-			<-signalCh
+			<-shutdownCh
 			resultCh <- struct{}{}
 		}
 	}()
