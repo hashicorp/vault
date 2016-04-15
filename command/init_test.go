@@ -51,6 +51,7 @@ func TestInit(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	expected := &vault.SealConfig{
+		Type:            "shamir",
 		SecretShares:    5,
 		SecretThreshold: 3,
 	}
@@ -140,6 +141,7 @@ func TestInit_custom(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	expected := &vault.SealConfig{
+		Type:            "shamir",
 		SecretShares:    7,
 		SecretThreshold: 3,
 	}
@@ -222,6 +224,7 @@ func TestInit_PGP(t *testing.T) {
 	}
 
 	expected := &vault.SealConfig{
+		Type:            "shamir",
 		SecretShares:    4,
 		SecretThreshold: 2,
 		PGPKeys:         pgpKeys,

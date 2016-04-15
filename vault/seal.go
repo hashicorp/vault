@@ -36,10 +36,12 @@ type Seal interface {
 	SetStoredKeys([][]byte) error
 	GetStoredKeys() ([][]byte, error)
 
+	BarrierType() string
 	BarrierConfig() (*SealConfig, error)
 	SetBarrierConfig(*SealConfig) error
 
 	RecoveryKeySupported() bool
+	RecoveryType() string
 	RecoveryConfig() (*SealConfig, error)
 	SetRecoveryConfig(*SealConfig) error
 	SetRecoveryKey([]byte) error
@@ -68,6 +70,10 @@ func (d *DefaultSeal) Init() error {
 
 func (d *DefaultSeal) Finalize() error {
 	return nil
+}
+
+func (d *DefaultSeal) BarrierType() string {
+	return "shamir"
 }
 
 func (d *DefaultSeal) StoredKeysSupported() bool {
@@ -116,6 +122,16 @@ func (d *DefaultSeal) BarrierConfig() (*SealConfig, error) {
 		return nil, fmt.Errorf("failed to decode seal configuration: %v", err)
 	}
 
+	switch conf.Type {
+	// This case should not be valid for other types as only this is the default
+	case "":
+		conf.Type = d.BarrierType()
+	case d.BarrierType():
+	default:
+		d.core.logger.Printf("[ERR] core: barrier seal type of %s does not match loaded type of %s", conf.Type, d.BarrierType())
+		return nil, fmt.Errorf("barrier seal type of %s does not match loaded type of %s", conf.Type, d.BarrierType())
+	}
+
 	// Check for a valid seal configuration
 	if err := conf.Validate(); err != nil {
 		d.core.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
@@ -130,6 +146,8 @@ func (d *DefaultSeal) SetBarrierConfig(config *SealConfig) error {
 	if err := d.checkCore(); err != nil {
 		return err
 	}
+
+	config.Type = d.BarrierType()
 
 	// Encode the seal configuration
 	buf, err := json.Marshal(config)
@@ -153,6 +171,10 @@ func (d *DefaultSeal) SetBarrierConfig(config *SealConfig) error {
 	return nil
 }
 
+func (d *DefaultSeal) RecoveryType() string {
+	return "unsupported"
+}
+
 func (d *DefaultSeal) RecoveryConfig() (*SealConfig, error) {
 	return nil, fmt.Errorf("recovery not supported")
 }
@@ -171,6 +193,9 @@ func (d *DefaultSeal) SetRecoveryKey(key []byte) error {
 
 // SealConfig is used to describe the seal configuration
 type SealConfig struct {
+	// The type, for sanity checking
+	Type string `json:"type"`
+
 	// SecretShares is the number of shares the secret is split into. This is
 	// the N value of Shamir.
 	SecretShares int `json:"secret_shares"`
@@ -241,6 +266,7 @@ func (s *SealConfig) Validate() error {
 
 func (s *SealConfig) Clone() *SealConfig {
 	ret := &SealConfig{
+		Type:            s.Type,
 		SecretShares:    s.SecretShares,
 		SecretThreshold: s.SecretThreshold,
 		Nonce:           s.Nonce,

@@ -110,6 +110,7 @@ func TestCore_Rekey_Update(t *testing.T) {
 
 	// Start a rekey
 	newConf := &SealConfig{
+		Type:            "shamir",
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
@@ -165,7 +166,7 @@ func TestCore_Rekey_Update(t *testing.T) {
 
 	newConf.Nonce = rkconf.Nonce
 	if !reflect.DeepEqual(sealConf, newConf) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v\n", sealConf, newConf)
+		t.Fatalf("\nexpected: %#v\nactual: %#v\n", newConf, sealConf)
 	}
 
 	// Attempt unseal
@@ -185,6 +186,7 @@ func TestCore_Rekey_Update(t *testing.T) {
 
 	// Start another rekey, this time we require a quorum!
 	newConf = &SealConfig{
+		Type:            "shamir",
 		SecretThreshold: 1,
 		SecretShares:    1,
 	}
