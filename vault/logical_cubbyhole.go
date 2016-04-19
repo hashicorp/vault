@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/hashicorp/vault/logical"
@@ -97,6 +98,22 @@ func (b *CubbyholeBackend) handleRead(
 	var rawData map[string]interface{}
 	if err := json.Unmarshal(out.Value, &rawData); err != nil {
 		return nil, fmt.Errorf("json decoding failed: %v", err)
+	}
+
+	if raw, ok := rawData["cidr_block"]; ok {
+		_, cidr, err := net.ParseCIDR(raw.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid restriction cidr: %s", err)
+		}
+
+		var addr string
+		if req.Connection != nil {
+			addr = req.Connection.RemoteAddr
+		}
+
+		if addr == "" || !cidr.Contains(net.ParseIP(addr)) {
+			return logical.ErrorResponse("unauthorized source address"), nil
+		}
 	}
 
 	// Generate the response
