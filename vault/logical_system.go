@@ -14,8 +14,7 @@ var (
 	// protectedPaths cannot be accessed via the raw APIs.
 	// This is both for security and to prevent disrupting Vault.
 	protectedPaths = []string{
-		barrierInitPath,
-		keyringPath,
+		"core",
 	}
 )
 
