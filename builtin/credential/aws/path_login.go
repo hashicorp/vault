@@ -8,10 +8,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/fullsailor/pkcs7"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -116,7 +116,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 // Verifies the correctness of the authenticated attributes present in the PKCS#7
 // signature. After verification, extracts the instance identity document from the
 // signature, parses it and returns it.
-func parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*identityDocument, error) {
+func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*identityDocument, error) {
 	pkcs7B64 = fmt.Sprintf("-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----", pkcs7B64)
 
 	// Decode the PEM encoded signature.
@@ -132,7 +132,7 @@ func parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*identityDocumen
 	}
 
 	// Get the public certificate that is used to verify the signature.
-	publicCerts, err := awsPublicCertificates(s)
+	publicCerts, err := b.awsPublicCertificates(s)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Verify the signature of the identity document.
-	identityDoc, err := parseIdentityDocument(req.Storage, pkcs7B64)
+	identityDoc, err := b.parseIdentityDocument(req.Storage, pkcs7B64)
 	if err != nil {
 		return nil, err
 	}

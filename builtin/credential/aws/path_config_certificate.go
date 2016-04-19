@@ -91,7 +91,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data
 	if certName == "" {
 		return false, fmt.Errorf("missing cert_name")
 	}
-	entry, err := awsPublicCertificateEntry(req.Storage, certName)
+	entry, err := b.awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return false, err
 	}
@@ -132,7 +132,7 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 // awsPublicCertificates returns a slice of all the parsed AWS public
 // certificates, that were registered using `config/certificate/<cert_name>` endpoint.
 // This method will also append two default certificates to the slice.
-func awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
+func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
 
 	// Get the list `cert_name`s of all the registered certificates.
 	registeredCerts, err := s.List("config/certificate/")
@@ -144,7 +144,7 @@ func awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
 
 	// Iterate through each certificate, parse and append it to a slice.
 	for _, cert := range registeredCerts {
-		certEntry, err := awsPublicCertificateEntry(s, cert)
+		certEntry, err := b.awsPublicCertificateEntry(s, cert)
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +170,7 @@ func awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
 
 // awsPublicCertificate is used to get the configured AWS Public Key that is used
 // to verify the PKCS#7 signature of the instance identity document.
-func awsPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
+func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 	entry, err := s.Get("config/certificate/" + certName)
@@ -213,7 +213,7 @@ func (b *backend) pathConfigCertificateRead(
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
 
-	certificateEntry, err := awsPublicCertificateEntry(req.Storage, certName)
+	certificateEntry, err := b.awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	}
 
 	// Check if there is already a certificate entry registered.
-	certEntry, err := awsPublicCertificateEntry(req.Storage, certName)
+	certEntry, err := b.awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package aws
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"strconv"
@@ -115,8 +116,9 @@ func (b *backend) pathImageTagUpdate(
 		return logical.ErrorResponse("max_ttl cannot be negative"), nil
 	}
 
-	// Attach version, nonce, policies and maxTTL to the role tag value.
-	rTagValue, err := prepareRoleTagPlainValue(&roleTag{Version: roleTagVersion,
+	// Create a role tag out of all the information provided.
+	rTagValue, err := createRoleTagValue(req.Storage, &roleTag{
+		Version:                  roleTagVersion,
 		AmiID:                    amiID,
 		Nonce:                    nonce,
 		Policies:                 policies,
@@ -128,24 +130,8 @@ func (b *backend) pathImageTagUpdate(
 		return nil, err
 	}
 
-	// Get the key used for creating the HMAC
-	key, err := hmacKey(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the HMAC of the value
-	hmacB64, err := createRoleTagHMACBase64(key, rTagValue)
-	if err != nil {
-		return nil, err
-	}
-
-	// attach the HMAC to the value
-	rTagValue = fmt.Sprintf("%s:%s", rTagValue, hmacB64)
-	if len(rTagValue) > 255 {
-		return nil, fmt.Errorf("role tag 'value' exceeding the limit of 255 characters")
-	}
-
+	// Return the key to be used for the tag and the value to be used for that tag key.
+	// This key value pair should be set on the EC2 instance.
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"tag_key":   imageEntry.RoleTag,
@@ -154,12 +140,48 @@ func (b *backend) pathImageTagUpdate(
 	}, nil
 }
 
+// createRoleTagValue prepares the plaintext version of the role tag,
+// and appends a HMAC of the plaintext value to it, before returning.
+func createRoleTagValue(s logical.Storage, rTag *roleTag) (string, error) {
+	// Attach version, nonce, policies and maxTTL to the role tag value.
+	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
+	if err != nil {
+		return "", err
+	}
+
+	return appendHMAC(s, rTagPlainText)
+}
+
+// Takes in the plaintext part of the role tag, creates a HMAC of it and returns
+// a role tag value containing both the plaintext part and the HMAC part.
+func appendHMAC(s logical.Storage, rTagPlainText string) (string, error) {
+	// Get the key used for creating the HMAC
+	key, err := hmacKey(s)
+	if err != nil {
+		return "", err
+	}
+
+	// Create the HMAC of the value
+	hmacB64, err := createRoleTagHMACBase64(key, rTagPlainText)
+	if err != nil {
+		return "", err
+	}
+
+	// attach the HMAC to the value
+	rTagValue := fmt.Sprintf("%s:%s", rTagPlainText, hmacB64)
+	if len(rTagValue) > 255 {
+		return "", fmt.Errorf("role tag 'value' exceeding the limit of 255 characters")
+	}
+
+	return rTagValue, nil
+}
+
 // verifyRoleTagValue rebuilds the role tag value without the HMAC,
 // computes the HMAC from it using the backend specific key and
 // compares it with the received HMAC.
 func verifyRoleTagValue(s logical.Storage, rTag *roleTag) (bool, error) {
 	// Fetch the plaintext part of role tag
-	rTagPlainText, err := prepareRoleTagPlainValue(rTag)
+	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		return false, err
 	}
@@ -175,41 +197,30 @@ func verifyRoleTagValue(s logical.Storage, rTag *roleTag) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return rTag.HMAC == hmacB64, nil
+	return subtle.ConstantTimeCompare([]byte(rTag.HMAC), []byte(hmacB64)) == 1, nil
 }
 
-// prepareRoleTagPlainValue builds the role tag value without the HMAC in it.
-func prepareRoleTagPlainValue(rTag *roleTag) (string, error) {
+// prepareRoleTagPlaintextValue builds the role tag value without the HMAC in it.
+func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	if rTag.Version == "" {
 		return "", fmt.Errorf("missing version")
 	}
-	// attach version to the value
-	value := rTag.Version
-
 	if rTag.Nonce == "" {
 		return "", fmt.Errorf("missing nonce")
 	}
-	// attach nonce to the value
-	value = fmt.Sprintf("%s:%s", value, rTag.Nonce)
-
 	if rTag.AmiID == "" {
 		return "", fmt.Errorf("missing ami_id")
 	}
-	// attach ami_id to the value
-	value = fmt.Sprintf("%s:a=%s", value, rTag.AmiID)
 
-	// attach policies to value. rTag.Policies will never be empty.
-	value = fmt.Sprintf("%s:p=%s", value, strings.Join(rTag.Policies, ","))
+	// Attach Version, Nonce, AMI ID, Policies, DisallowReauthentication fields.
+	value := fmt.Sprintf("%s:%s:a=%s:p=%s:d=%s", rTag.Version, rTag.Nonce, rTag.AmiID, strings.Join(rTag.Policies, ","), strconv.FormatBool(rTag.DisallowReauthentication))
 
-	// attach disallow_reauthentication field
-	value = fmt.Sprintf("%s:d=%s", value, strconv.FormatBool(rTag.DisallowReauthentication))
-
-	// attach instance_id if set
+	// Attach instance_id if set.
 	if rTag.InstanceID != "" {
 		value = fmt.Sprintf("%s:i=%s", value, rTag.InstanceID)
 	}
 
-	// attach max_ttl if it is provided
+	// Attach max_ttl if it is provided.
 	if rTag.MaxTTL > time.Duration(0) {
 		value = fmt.Sprintf("%s:t=%s", value, rTag.MaxTTL)
 	}
