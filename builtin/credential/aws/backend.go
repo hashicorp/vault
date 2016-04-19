@@ -2,6 +2,7 @@ package aws
 
 import (
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/vault/helper/salt"
@@ -25,41 +26,39 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		return nil, err
 	}
 
-	var b backend
-	b.Salt = salt
-	b.Backend = &framework.Backend{
-		Help: backendHelp,
+	b := &backend{
+		tidyCooldownPeriod: time.Hour,
+		Salt:               salt,
+		EC2ClientsMap:      make(map[string]*ec2.EC2),
+	}
 
+	b.Backend = &framework.Backend{
+		PeriodicFunc: b.periodicFunc,
+		AuthRenew:    b.pathLoginRenew,
+		Help:         backendHelp,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
 			},
 		},
-
 		Paths: append([]*framework.Path{
-			pathLogin(&b),
-			pathImage(&b),
-			pathListImages(&b),
-			pathImageTag(&b),
-			pathConfigClient(&b),
-			pathConfigCertificate(&b),
-			pathConfigTidyBlacklistRoleTag(&b),
-			pathConfigTidyWhitelistIdentity(&b),
-			pathListCertificates(&b),
-			pathBlacklistRoleTag(&b),
-			pathListBlacklistRoleTags(&b),
-			pathBlacklistRoleTagTidy(&b),
-			pathWhitelistIdentity(&b),
-			pathWhitelistIdentityTidy(&b),
-			pathListWhitelistIdentities(&b),
+			pathLogin(b),
+			pathImage(b),
+			pathListImages(b),
+			pathImageTag(b),
+			pathConfigClient(b),
+			pathConfigCertificate(b),
+			pathConfigTidyBlacklistRoleTag(b),
+			pathConfigTidyWhitelistIdentity(b),
+			pathListCertificates(b),
+			pathBlacklistRoleTag(b),
+			pathListBlacklistRoleTags(b),
+			pathBlacklistRoleTagTidy(b),
+			pathWhitelistIdentity(b),
+			pathWhitelistIdentityTidy(b),
+			pathListWhitelistIdentities(b),
 		}),
-
-		AuthRenew: b.pathLoginRenew,
-
-		TidyFunc: b.tidyFunc,
 	}
-
-	b.EC2ClientsMap = make(map[string]*ec2.EC2)
 
 	return b.Backend, nil
 }
@@ -68,46 +67,57 @@ type backend struct {
 	*framework.Backend
 	Salt *salt.Salt
 
-	configMutex sync.RWMutex
+	configMutex        sync.RWMutex
+	tidyCooldownPeriod time.Duration
+	nextTidyTime       time.Time
 
 	EC2ClientsMap map[string]*ec2.EC2
 }
 
-func (b *backend) tidyFunc(req *logical.Request) error {
+// periodicFunc performs the tasks that the backend wishes to do periodically.
+// Currently this will be triggered once in a minute by the RollbackManager.
+// The tasks being done are to cleanup the expired entries of both blacklist
+// and whitelist.
+func (b *backend) periodicFunc(req *logical.Request) error {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
-	// safety_buffer defaults to 72h
-	safety_buffer := 259200
-	tidyBlacklistConfigEntry, err := configTidyBlacklistRoleTag(req.Storage)
-	if err != nil {
-		return err
-	}
-	skipBlacklistTidy := false
-	if tidyBlacklistConfigEntry != nil {
-		if tidyBlacklistConfigEntry.DisablePeriodicTidy {
-			skipBlacklistTidy = true
+	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
+		// safety_buffer defaults to 72h
+		safety_buffer := 259200
+		tidyBlacklistConfigEntry, err := configTidyBlacklistRoleTag(req.Storage)
+		if err != nil {
+			return err
 		}
-		safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
-	}
-	if !skipBlacklistTidy {
-		tidyBlacklistRoleTag(req.Storage, safety_buffer)
-	}
+		skipBlacklistTidy := false
+		if tidyBlacklistConfigEntry != nil {
+			if tidyBlacklistConfigEntry.DisablePeriodicTidy {
+				skipBlacklistTidy = true
+			}
+			safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
+		}
+		if !skipBlacklistTidy {
+			tidyBlacklistRoleTag(req.Storage, safety_buffer)
+		}
 
-	// reset the safety_buffer to 72h
-	safety_buffer = 259200
-	tidyWhitelistConfigEntry, err := configTidyWhitelistIdentity(req.Storage)
-	if err != nil {
-		return err
-	}
-	skipWhitelistTidy := false
-	if tidyWhitelistConfigEntry != nil {
-		if tidyWhitelistConfigEntry.DisablePeriodicTidy {
-			skipWhitelistTidy = true
+		// reset the safety_buffer to 72h
+		safety_buffer = 259200
+		tidyWhitelistConfigEntry, err := configTidyWhitelistIdentity(req.Storage)
+		if err != nil {
+			return err
 		}
-		safety_buffer = tidyWhitelistConfigEntry.SafetyBuffer
-	}
-	if !skipWhitelistTidy {
-		tidyWhitelistIdentity(req.Storage, safety_buffer)
+		skipWhitelistTidy := false
+		if tidyWhitelistConfigEntry != nil {
+			if tidyWhitelistConfigEntry.DisablePeriodicTidy {
+				skipWhitelistTidy = true
+			}
+			safety_buffer = tidyWhitelistConfigEntry.SafetyBuffer
+		}
+		if !skipWhitelistTidy {
+			tidyWhitelistIdentity(req.Storage, safety_buffer)
+		}
+
+		// Update the lastTidyTime
+		b.nextTidyTime = time.Now().Add(b.tidyCooldownPeriod)
 	}
 	return nil
 }

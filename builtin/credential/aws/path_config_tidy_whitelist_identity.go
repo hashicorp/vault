@@ -19,7 +19,7 @@ expiration, before it is removed from the backend storage.`,
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>' entries and 'whitelist/identity' entries.",
+				Description: "If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>' entries and 'whitelist/identity/<instance_id>' entries.",
 			},
 		},
 

@@ -19,7 +19,7 @@ expiration, before it is removed from the backend storage.`,
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries and 'whitelist/identity' entries.",
+				Description: "If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries and 'whitelist/identity/<instance_id>' entries.",
 			},
 		},
 
@@ -28,6 +28,8 @@ expiration, before it is removed from the backend storage.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.CreateOperation: b.pathConfigTidyBlacklistRoleTagCreateUpdate,
 			logical.UpdateOperation: b.pathConfigTidyBlacklistRoleTagCreateUpdate,
+			logical.ReadOperation:   b.pathConfigTidyBlacklistRoleTagRead,
+			logical.DeleteOperation: b.pathConfigTidyBlacklistRoleTagDelete,
 		},
 
 		HelpSynopsis:    pathConfigTidyBlacklistRoleTagHelpSyn,

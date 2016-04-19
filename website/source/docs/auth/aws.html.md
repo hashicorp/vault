@@ -214,6 +214,12 @@ in these lists. These endpoints allow defining a safety buffer, such that an
 entry must not only be expired, but be past expiration by the amount of time
 dictated by the safety buffer in order to actually remove the entry.
 
+Additionally, the backend performs has a periodic function that does the tidying
+of both blacklist role tags and whitelist identities. This periodic tidying is
+activated by default and will have a safety buffer of 72 hours. This can be
+configured via `config/tidy/blacklist/roletag` and `config/tidy/whitelist/identity`
+endpoints.
+
 ### Varying Public Certificates
 
 The AWS public certificate which contains the public key used to verify the
@@ -280,7 +286,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/image/ami
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"pkcs7":"MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA","nonce":"ault-client-nonce"}'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"pkcs7":"MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA","nonce":"vault-client-nonce"}'
 ```
 
 
@@ -539,6 +545,210 @@ The response will be in JSON. For example:
 
   </dd>
 </dl>
+
+### /auth/aws/config/tidy/whitelist/identity
+##### POST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configures the periodic tidying operation of the whitelisted identity entries.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/tidy/whitelist/identity`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">safety_buffer</span>
+        <span class="param-flags">optional</span>
+        The amount of extra time that must have passed beyond the `roletag` expiration,
+        before it is removed from the backend storage. Defaults to 72h.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">disable_periodic_tidy</span>
+        <span class="param-flags">optional</span>
+        If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>'
+        entries and 'whitelist/identity/<instance_id>' entries.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+
+#### GET
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the previously configured periodic whitelist tidying settings.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/tidy/whitelist/identity`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "safety_buffer": 60,
+    "disable_periodic_tidy": false
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### DELETE
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the previously configured periodic whitelist tidying settings.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/tidy/whitelist/identity`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+
+
+### /auth/aws/config/tidy/blacklist/roletag
+##### POST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Configures the periodic tidying operation of the blacklisted role tag entries.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/tidy/blacklist/roletag`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+
+    <ul>
+      <li>
+        <span class="param">safety_buffer</span>
+        <span class="param-flags">optional</span>
+        The amount of extra time that must have passed beyond the `roletag` expiration, before it is removed from the backend storage. Defaults to 72h.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">disable_periodic_tidy</span>
+        <span class="param-flags">optional</span>
+        If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries and 'whitelist/identity/<instance_id>' entries.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+
+#### GET
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the previously configured periodic blacklist tidying settings.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/tidy/blacklist/roletag`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "safety_buffer": 60,
+    "disable_periodic_tidy": false
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### DELETE
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes the previously configured periodic blacklist tidying settings.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/tidy/blacklist/roletag`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
 
 
 ### /auth/aws/image/<ami_id>

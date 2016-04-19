@@ -42,15 +42,15 @@ type Backend struct {
 	// and ease specifying callbacks for revocation, renewal, etc.
 	Secrets []*Secret
 
-	// TidyFunc is the callback, which if set, will be invoked when the
+	// PeriodicFunc is the callback, which if set, will be invoked when the
 	// periodic timer of RollbackManager ticks. This can be used by
-	// backends to do any tidying tasks.
+	// backends to do anything it wishes to do periodically.
 	//
-	// TidyFunc is different from 'Clean' in the sense that, TidyFunc is
-	// invoked to, say to periodically delete expired/stale entries in backend's
-	// storage, while the backend is still being used. Whereas `Clean` is
-	// invoked just before the backend is unmounted.
-	TidyFunc tidyFunc
+	// PeriodicFunc can be invoked to, say to periodically delete stale
+	// entries in backend's storage, while the backend is still being used.
+	// (Note the different of this action from what `Clean` does, which is
+	// invoked just before the backend is unmounted).
+	PeriodicFunc periodicFunc
 
 	// WALRollback is called when a WAL entry (see wal.go) has to be rolled
 	// back. It is called with the data from the entry.
@@ -76,9 +76,9 @@ type Backend struct {
 	pathsRe []*regexp.Regexp
 }
 
-// tidyFunc is the callback called when the RollbackManager's timer ticks.
-// This can be utilized by the backends to do tidying tasks.
-type tidyFunc func(*logical.Request) error
+// periodicFunc is the callback called when the RollbackManager's timer ticks.
+// This can be utilized by the backends to do anything it wants.
+type periodicFunc func(*logical.Request) error
 
 // OperationFunc is the callback called for an operation on a path.
 type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
@@ -399,12 +399,12 @@ func (b *Backend) handleRevokeRenew(
 	}
 }
 
-// handleRollback invokes the TidyFunc set on the backend. It also does a WAL rollback operation.
+// handleRollback invokes the PeriodicFunc set on the backend. It also does a WAL rollback operation.
 func (b *Backend) handleRollback(
 	req *logical.Request) (*logical.Response, error) {
-	// Response is not expected from the tidy operation.
-	if b.TidyFunc != nil {
-		if err := b.TidyFunc(req); err != nil {
+	// Response is not expected from the periodic operation.
+	if b.PeriodicFunc != nil {
+		if err := b.PeriodicFunc(req); err != nil {
 			return nil, err
 		}
 	}
