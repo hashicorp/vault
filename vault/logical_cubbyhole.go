@@ -103,7 +103,7 @@ func (b *CubbyholeBackend) handleRead(
 	if raw, ok := rawData["cidr_block"]; ok {
 		_, cidr, err := net.ParseCIDR(raw.(string))
 		if err != nil {
-			return nil, fmt.Errorf("invalid restriction cidr: %s", err)
+			return nil, fmt.Errorf("unable to parse cidr_block on read: %s", err)
 		}
 
 		var addr string
@@ -112,7 +112,7 @@ func (b *CubbyholeBackend) handleRead(
 		}
 
 		if addr == "" || !cidr.Contains(net.ParseIP(addr)) {
-			return logical.ErrorResponse("unauthorized source address"), nil
+			return logical.ErrorResponse("your source address is not allowed to read this key"), nil
 		}
 	}
 
@@ -132,6 +132,15 @@ func (b *CubbyholeBackend) handleWrite(
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
+	}
+
+	if raw_cidr, ok := req.Data["cidr_block"]; ok {
+		_, cidr, err := net.ParseCIDR(raw_cidr.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid cidr_block specified: %s", err)
+		}
+
+		req.Data["cidr_block"] = cidr.String()
 	}
 
 	// JSON encode the data
