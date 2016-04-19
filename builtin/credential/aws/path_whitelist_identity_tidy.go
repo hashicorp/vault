@@ -29,46 +29,48 @@ expiration, before it is removed from the backend storage.`,
 	}
 }
 
-// pathWhitelistIdentityTidyUpdate is used to delete entries in the whitelist that are expired.
-func (b *backend) pathWhitelistIdentityTidyUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	safety_buffer := data.Get("safety_buffer").(int)
-
+// tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
+func tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
 	bufferDuration := time.Duration(safety_buffer) * time.Second
 
-	identities, err := req.Storage.List("whitelist/identity/")
+	identities, err := s.List("whitelist/identity/")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, instanceID := range identities {
-		identityEntry, err := req.Storage.Get("whitelist/identity/" + instanceID)
+		identityEntry, err := s.Get("whitelist/identity/" + instanceID)
 		if err != nil {
-			return nil, fmt.Errorf("error fetching identity of instanceID %s: %s", instanceID, err)
+			return fmt.Errorf("error fetching identity of instanceID %s: %s", instanceID, err)
 		}
 
 		if identityEntry == nil {
-			return nil, fmt.Errorf("identity entry for instanceID %s is nil", instanceID)
+			return fmt.Errorf("identity entry for instanceID %s is nil", instanceID)
 		}
 
 		if identityEntry.Value == nil || len(identityEntry.Value) == 0 {
-			return nil, fmt.Errorf("found identity entry for instanceID %s but actual identity is empty", instanceID)
+			return fmt.Errorf("found identity entry for instanceID %s but actual identity is empty", instanceID)
 		}
 
 		var result whitelistIdentity
 		if err := identityEntry.DecodeJSON(&result); err != nil {
-			return nil, err
+			return err
 		}
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := req.Storage.Delete("whitelist/identity" + instanceID); err != nil {
-				return nil, fmt.Errorf("error deleting identity of instanceID %s from storage: %s", instanceID, err)
+			if err := s.Delete("whitelist/identity" + instanceID); err != nil {
+				return fmt.Errorf("error deleting identity of instanceID %s from storage: %s", instanceID, err)
 			}
 		}
 	}
 
-	return nil, nil
+	return nil
+}
+
+// pathWhitelistIdentityTidyUpdate is used to delete entries in the whitelist that are expired.
+func (b *backend) pathWhitelistIdentityTidyUpdate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathWhitelistIdentityTidySyn = `

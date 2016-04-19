@@ -171,8 +171,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 
 	currentTime := time.Now()
 
-	var epoch time.Time
-	if blEntry.CreationTime.Equal(epoch) {
+	if blEntry.CreationTime.IsZero() {
 		// Set the creation time for the blacklist entry.
 		// This should not be updated after setting it once.
 		// If blacklist operation is invoked more than once, only update the expiration time.

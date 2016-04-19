@@ -30,10 +30,10 @@ const (
 type RollbackManager struct {
 	logger *log.Logger
 
-	// This gives the current mount table, plus a RWMutex that is
-	// locked for reading. It is up to the caller to RUnlock it
-	// when done with the mount table
-	mounts func() []*MountEntry
+	// This gives the current mount table of both logical and credential backends,
+	// plus a RWMutex that is locked for reading. It is up to the caller to RUnlock
+	// it when done with the mount table.
+	backends func() []*MountEntry
 
 	router *Router
 	period time.Duration
@@ -55,10 +55,10 @@ type rollbackState struct {
 }
 
 // NewRollbackManager is used to create a new rollback manager
-func NewRollbackManager(logger *log.Logger, mounts func() []*MountEntry, router *Router) *RollbackManager {
+func NewRollbackManager(logger *log.Logger, backendsFunc func() []*MountEntry, router *Router) *RollbackManager {
 	r := &RollbackManager{
 		logger:     logger,
-		mounts:     mounts,
+		backends:   backendsFunc,
 		router:     router,
 		period:     rollbackPeriod,
 		inflight:   make(map[string]*rollbackState),
@@ -109,9 +109,9 @@ func (m *RollbackManager) triggerRollbacks() {
 	m.inflightLock.Lock()
 	defer m.inflightLock.Unlock()
 
-	mounts := m.mounts()
+	backends := m.backends()
 
-	for _, e := range mounts {
+	for _, e := range backends {
 		if _, ok := m.inflight[e.Path]; !ok {
 			m.startRollback(e.Path)
 		}
@@ -184,16 +184,24 @@ func (m *RollbackManager) Rollback(path string) error {
 
 // startRollback is used to start the rollback manager after unsealing
 func (c *Core) startRollback() error {
-	mountsFunc := func() []*MountEntry {
+	backendsFunc := func() []*MountEntry {
 		ret := []*MountEntry{}
 		c.mountsLock.RLock()
 		defer c.mountsLock.RUnlock()
 		for _, entry := range c.mounts.Entries {
 			ret = append(ret, entry)
 		}
+		c.authLock.RLock()
+		defer c.authLock.RUnlock()
+		for _, entry := range c.auth.Entries {
+			if !strings.HasPrefix(entry.Path, "auth/") {
+				entry.Path = "auth/" + entry.Path
+			}
+			ret = append(ret, entry)
+		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.logger, mountsFunc, c.router)
+	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router)
 	c.rollback.Start()
 	return nil
 }

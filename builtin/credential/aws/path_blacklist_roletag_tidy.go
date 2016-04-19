@@ -29,46 +29,47 @@ expiration, before it is removed from the backend storage.`,
 	}
 }
 
-// pathBlacklistRoleTagTidyUpdate is used to clean-up the entries in the role tag blacklist.
-func (b *backend) pathBlacklistRoleTagTidyUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	// safety_buffer is an optional parameter.
-	safety_buffer := data.Get("safety_buffer").(int)
+// tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
+func tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
 	bufferDuration := time.Duration(safety_buffer) * time.Second
-
-	tags, err := req.Storage.List("blacklist/roletag/")
+	tags, err := s.List("blacklist/roletag/")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, tag := range tags {
-		tagEntry, err := req.Storage.Get("blacklist/roletag/" + tag)
+		tagEntry, err := s.Get("blacklist/roletag/" + tag)
 		if err != nil {
-			return nil, fmt.Errorf("error fetching tag %s: %s", tag, err)
+			return fmt.Errorf("error fetching tag %s: %s", tag, err)
 		}
 
 		if tagEntry == nil {
-			return nil, fmt.Errorf("tag entry for tag %s is nil", tag)
+			return fmt.Errorf("tag entry for tag %s is nil", tag)
 		}
 
 		if tagEntry.Value == nil || len(tagEntry.Value) == 0 {
-			return nil, fmt.Errorf("found entry for tag %s but actual tag is empty", tag)
+			return fmt.Errorf("found entry for tag %s but actual tag is empty", tag)
 		}
 
 		var result roleTagBlacklistEntry
 		if err := tagEntry.DecodeJSON(&result); err != nil {
-			return nil, err
+			return err
 		}
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := req.Storage.Delete("blacklist/roletag" + tag); err != nil {
-				return nil, fmt.Errorf("error deleting tag %s from storage: %s", tag, err)
+			if err := s.Delete("blacklist/roletag" + tag); err != nil {
+				return fmt.Errorf("error deleting tag %s from storage: %s", tag, err)
 			}
 		}
 	}
 
-	return nil, nil
+	return nil
+}
+
+// pathBlacklistRoleTagTidyUpdate is used to clean-up the entries in the role tag blacklist.
+func (b *backend) pathBlacklistRoleTagTidyUpdate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, tidyBlacklistRoleTag(req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathBlacklistRoleTagTidySyn = `

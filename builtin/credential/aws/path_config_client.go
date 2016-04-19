@@ -8,7 +8,7 @@ import (
 
 func pathConfigClient(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config/client",
+		Pattern: "config/client$",
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": &framework.FieldSchema{
 				Type:        framework.TypeString,

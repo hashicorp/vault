@@ -43,6 +43,8 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathImageTag(&b),
 			pathConfigClient(&b),
 			pathConfigCertificate(&b),
+			pathConfigTidyBlacklistRoleTag(&b),
+			pathConfigTidyWhitelistIdentity(&b),
 			pathListCertificates(&b),
 			pathBlacklistRoleTag(&b),
 			pathListBlacklistRoleTags(&b),
@@ -53,6 +55,8 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		}),
 
 		AuthRenew: b.pathLoginRenew,
+
+		TidyFunc: b.tidyFunc,
 	}
 
 	b.EC2ClientsMap = make(map[string]*ec2.EC2)
@@ -67,6 +71,45 @@ type backend struct {
 	configMutex sync.RWMutex
 
 	EC2ClientsMap map[string]*ec2.EC2
+}
+
+func (b *backend) tidyFunc(req *logical.Request) error {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+	// safety_buffer defaults to 72h
+	safety_buffer := 259200
+	tidyBlacklistConfigEntry, err := configTidyBlacklistRoleTag(req.Storage)
+	if err != nil {
+		return err
+	}
+	skipBlacklistTidy := false
+	if tidyBlacklistConfigEntry != nil {
+		if tidyBlacklistConfigEntry.DisablePeriodicTidy {
+			skipBlacklistTidy = true
+		}
+		safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
+	}
+	if !skipBlacklistTidy {
+		tidyBlacklistRoleTag(req.Storage, safety_buffer)
+	}
+
+	// reset the safety_buffer to 72h
+	safety_buffer = 259200
+	tidyWhitelistConfigEntry, err := configTidyWhitelistIdentity(req.Storage)
+	if err != nil {
+		return err
+	}
+	skipWhitelistTidy := false
+	if tidyWhitelistConfigEntry != nil {
+		if tidyWhitelistConfigEntry.DisablePeriodicTidy {
+			skipWhitelistTidy = true
+		}
+		safety_buffer = tidyWhitelistConfigEntry.SafetyBuffer
+	}
+	if !skipWhitelistTidy {
+		tidyWhitelistIdentity(req.Storage, safety_buffer)
+	}
+	return nil
 }
 
 const backendHelp = `

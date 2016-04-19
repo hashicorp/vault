@@ -7,12 +7,12 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-var rollbackMap = map[string]framework.RollbackFunc{
+var walRollbackMap = map[string]framework.WALRollbackFunc{
 	"user": pathUserRollback,
 }
 
-func rollback(req *logical.Request, kind string, data interface{}) error {
-	f, ok := rollbackMap[kind]
+func walRollback(req *logical.Request, kind string, data interface{}) error {
+	f, ok := walRollbackMap[kind]
 	if !ok {
 		return fmt.Errorf("unknown type to rollback")
 	}

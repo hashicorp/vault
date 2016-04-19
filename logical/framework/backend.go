@@ -42,14 +42,24 @@ type Backend struct {
 	// and ease specifying callbacks for revocation, renewal, etc.
 	Secrets []*Secret
 
-	// Rollback is called when a WAL entry (see wal.go) has to be rolled
+	// TidyFunc is the callback, which if set, will be invoked when the
+	// periodic timer of RollbackManager ticks. This can be used by
+	// backends to do any tidying tasks.
+	//
+	// TidyFunc is different from 'Clean' in the sense that, TidyFunc is
+	// invoked to, say to periodically delete expired/stale entries in backend's
+	// storage, while the backend is still being used. Whereas `Clean` is
+	// invoked just before the backend is unmounted.
+	TidyFunc tidyFunc
+
+	// WALRollback is called when a WAL entry (see wal.go) has to be rolled
 	// back. It is called with the data from the entry.
 	//
-	// RollbackMinAge is the minimum age of a WAL entry before it is attempted
+	// WALRollbackMinAge is the minimum age of a WAL entry before it is attempted
 	// to be rolled back. This should be longer than the maximum time it takes
 	// to successfully create a secret.
-	Rollback       RollbackFunc
-	RollbackMinAge time.Duration
+	WALRollback       WALRollbackFunc
+	WALRollbackMinAge time.Duration
 
 	// Clean is called on unload to clean up e.g any existing connections
 	// to the backend, if required.
@@ -66,11 +76,15 @@ type Backend struct {
 	pathsRe []*regexp.Regexp
 }
 
+// tidyFunc is the callback called when the RollbackManager's timer ticks.
+// This can be utilized by the backends to do tidying tasks.
+type tidyFunc func(*logical.Request) error
+
 // OperationFunc is the callback called for an operation on a path.
 type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
 
-// RollbackFunc is the callback for rollbacks.
-type RollbackFunc func(*logical.Request, string, interface{}) error
+// WALRollbackFunc is the callback for rollbacks.
+type WALRollbackFunc func(*logical.Request, string, interface{}) error
 
 // CleanupFunc is the callback for backend unload.
 type CleanupFunc func()
@@ -385,6 +399,19 @@ func (b *Backend) handleRevokeRenew(
 	}
 }
 
+// handleRollback invokes the TidyFunc set on the backend. It also does a WAL rollback operation.
+func (b *Backend) handleRollback(
+	req *logical.Request) (*logical.Response, error) {
+	// Response is not expected from the tidy operation.
+	if b.TidyFunc != nil {
+		if err := b.TidyFunc(req); err != nil {
+			return nil, err
+		}
+	}
+
+	return b.handleWALRollback(req)
+}
+
 func (b *Backend) handleAuthRenew(req *logical.Request) (*logical.Response, error) {
 	if b.AuthRenew == nil {
 		return logical.ErrorResponse("this auth type doesn't support renew"), nil
@@ -393,9 +420,9 @@ func (b *Backend) handleAuthRenew(req *logical.Request) (*logical.Response, erro
 	return b.AuthRenew(req, nil)
 }
 
-func (b *Backend) handleRollback(
+func (b *Backend) handleWALRollback(
 	req *logical.Request) (*logical.Response, error) {
-	if b.Rollback == nil {
+	if b.WALRollback == nil {
 		return nil, logical.ErrUnsupportedOperation
 	}
 
@@ -410,7 +437,7 @@ func (b *Backend) handleRollback(
 
 	// Calculate the minimum time that the WAL entries could be
 	// created in order to be rolled back.
-	age := b.RollbackMinAge
+	age := b.WALRollbackMinAge
 	if age == 0 {
 		age = 10 * time.Minute
 	}
@@ -434,8 +461,8 @@ func (b *Backend) handleRollback(
 			continue
 		}
 
-		// Attempt a rollback
-		err = b.Rollback(req, entry.Kind, entry.Data)
+		// Attempt a WAL rollback
+		err = b.WALRollback(req, entry.Kind, entry.Data)
 		if err != nil {
 			err = fmt.Errorf(
 				"Error rolling back '%s' entry: %s", entry.Kind, err)
