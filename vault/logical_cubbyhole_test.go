@@ -119,6 +119,82 @@ func TestCubbyholeBackend_Delete(t *testing.T) {
 	}
 }
 
+func TestCubbyholeBackend_CIDRWrite(t *testing.T) {
+	b := testCubbyholeBackend()
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
+	req.Data["value"] = "test"
+	req.Data["cidr_block"] = "192.168.1.0/24"
+	storage := req.Storage
+	clientToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.ClientToken = clientToken
+
+	if _, err := b.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "foo")
+	req.Connection = &logical.Connection{RemoteAddr: "192.168.1.0"}
+	req.Storage = storage
+	req.ClientToken = clientToken
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"value": "test",
+			"cidr_block": "192.168.1.0/24",
+		},
+	}
+
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
+	}
+
+	req.Connection = &logical.Connection{RemoteAddr: "192.168.2.0"}
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected = &logical.Response{
+		Data: map[string]interface{}{
+			"error":"your source address is not allowed to read this key",
+		},
+	}
+
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
+	}
+
+}
+
+func TestCubbyholeBackend_InvalidCIDRWrite(t *testing.T) {
+	b := testCubbyholeBackend()
+	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
+	req.Data["value"] = "test"
+	req.Data["cidr_block"] = "192.168.1:0/24"
+	clientToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req.ClientToken = clientToken
+
+	_, err = b.HandleRequest(req)
+
+	expected := "invalid cidr_block specified: invalid CIDR address: 192.168.1:0/24"
+	if err.Error() != expected {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, err)
+	}
+}
+
+
 func TestCubbyholeBackend_List(t *testing.T) {
 	b := testCubbyholeBackend()
 	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
