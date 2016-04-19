@@ -101,6 +101,8 @@ func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data
 // pathCertificatesList is used to list all the AWS public certificates registered with Vault.
 func (b *backend) pathCertificatesList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	certs, err := req.Storage.List("config/certificate/")
 	if err != nil {
 		return nil, err
@@ -169,6 +171,8 @@ func awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
 // awsPublicCertificate is used to get the configured AWS Public Key that is used
 // to verify the PKCS#7 signature of the instance identity document.
 func awsPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	entry, err := s.Get("config/certificate/" + certName)
 	if err != nil {
 		return nil, err
@@ -271,6 +275,8 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		return logical.ErrorResponse("invalid certificate; failed to decode and parse certificate"), nil
 	}
 
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 	// If none of the checks fail, save the provided certificate.
 	entry, err := logical.StorageEntryJSON("config/certificate/"+certName, certEntry)
 	if err != nil {
