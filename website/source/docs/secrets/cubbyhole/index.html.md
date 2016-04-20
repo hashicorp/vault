@@ -51,7 +51,7 @@ zip           	zap
 
 As expected, the value previously set is returned to us.
 
-## Restricting by IP
+## Restricting by client address
 
 Keys named `cidr_block` are treated specially. The value in the `cidr_block`
 key will restrict which client IP subnets are allowed to later read the value.
