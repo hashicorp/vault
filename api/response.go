@@ -18,6 +18,7 @@ type Response struct {
 // still be called.
 func (r *Response) DecodeJSON(out interface{}) error {
 	dec := json.NewDecoder(r.Body)
+	dec.UseNumber()
 	return dec.Decode(out)
 }
 
@@ -42,6 +43,7 @@ func (r *Response) Error() error {
 	// read pointer for the original buffer.
 	var resp ErrorResponse
 	dec := json.NewDecoder(bytes.NewReader(bodyBuf.Bytes()))
+	dec.UseNumber()
 	if err := dec.Decode(&resp); err != nil {
 		// Ignore the decoding error and just drop the raw response
 		return fmt.Errorf(

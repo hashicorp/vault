@@ -2,6 +2,7 @@ package command
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -229,7 +230,7 @@ func (c *AuthCommand) Run(args []string) int {
 
 	output := "Successfully authenticated!"
 	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
-	output += fmt.Sprintf("\ntoken_duration: %d", int(secret.Data["ttl"].(float64)))
+	output += fmt.Sprintf("\ntoken_duration: %s", secret.Data["ttl"].(json.Number).String())
 	if len(policies) > 0 {
 		output += fmt.Sprintf("\ntoken_policies: [%s]", strings.Join(policies, ", "))
 	}

@@ -41,6 +41,7 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	// First decode the JSON into a map[string]interface{}
 	var secret Secret
 	dec := json.NewDecoder(r)
+	dec.UseNumber()
 	if err := dec.Decode(&secret); err != nil {
 		return nil, err
 	}
