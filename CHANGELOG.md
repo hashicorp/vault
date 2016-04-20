@@ -50,6 +50,9 @@ BUG FIXES:
  * command/token-lookup: Fix TTL showing as 0 depending on how a token was
    created. This only affected the value shown at lookup, not the token
    behavior itself. [GH-1306]
+ * command/various: Tell the JSON decoder to not convert all numbers to floats;
+   fixes some various places where numbers were showing up in scientific
+   notation
  * credential/ldap: Fix problem where certain error conditions when configuring
    or opening LDAP connections would cause a panic instead of return a useful
    error message [GH-1262]
