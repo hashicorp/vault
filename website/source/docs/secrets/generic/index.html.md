@@ -107,11 +107,11 @@ seconds (one hour) as specified.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns a list of secret entries at the specified location. Folders are
+    Returns a list of key names at the specified location. Folders are
     suffixed with `/`. The input must be a folder; list on a file will not
-    return a value. Note that no policy-based filtering is performed on
-    returned keys; it is not recommended to put sensitive or secret values as
-    key names. The values themselves are not accessible via this command.
+    return a value. Note that no policy-based filtering is performed on keys;
+    do not encode sensitive information in key names. The values themselves
+    are not accessible via this command.
   </dd>
 
   <dt>Method</dt>
