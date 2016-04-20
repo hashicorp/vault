@@ -51,6 +51,22 @@ zip           	zap
 
 As expected, the value previously set is returned to us.
 
+## Restricting by IP
+
+Keys named `cidr_block` are treated specially. The value in the `cidr_block`
+key will restrict which client IP subnets are allowed to later read the value.
+
+```
+$ vault write cubbyhole/foo bar=baz cidr_block="192.168.1.0/24"
+```
+
+In the above example, a client within 192.168.1.0/24 would be allowed to read
+`cubbyhole/foo`, but reads from outside that subnet would be denied.
+
+WARNING: Vault has no way to verify the authenticity of client IPs connecting
+to it. For this feature to work for you, you MUST trust the network that your
+Vault servers are part of.
+
 ## API
 
 #### GET

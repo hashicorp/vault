@@ -126,6 +126,8 @@ func (b *CubbyholeBackend) handleRead(
 
 func (b *CubbyholeBackend) handleWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var resp *logical.Response = nil
+
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("[ERR] cubbyhole write: Client token empty")
 	}
@@ -141,6 +143,9 @@ func (b *CubbyholeBackend) handleWrite(
 		}
 
 		req.Data["cidr_block"] = cidr.String()
+
+		resp = &logical.Response{}
+		resp.AddWarning("cidr_block is specified, but may be unreliable. See warning in cubbyhole docs")
 	}
 
 	// JSON encode the data
@@ -158,7 +163,7 @@ func (b *CubbyholeBackend) handleWrite(
 		return nil, fmt.Errorf("failed to write: %v", err)
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *CubbyholeBackend) handleDelete(

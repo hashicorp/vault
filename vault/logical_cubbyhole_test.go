@@ -131,8 +131,16 @@ func TestCubbyholeBackend_CIDRWrite(t *testing.T) {
 	}
 	req.ClientToken = clientToken
 
-	if _, err := b.HandleRequest(req); err != nil {
+	resp, err := b.HandleRequest(req)
+
+	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	expected_warnings := []string{"cidr_block is specified, but may be unreliable. See warning in cubbyhole docs"}
+	warnings := resp.Warnings()
+	if !reflect.DeepEqual(expected_warnings, warnings) {
+		t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected_warnings, warnings)
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "foo")
@@ -140,7 +148,7 @@ func TestCubbyholeBackend_CIDRWrite(t *testing.T) {
 	req.Storage = storage
 	req.ClientToken = clientToken
 
-	resp, err := b.HandleRequest(req)
+	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
