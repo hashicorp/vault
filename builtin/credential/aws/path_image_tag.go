@@ -85,12 +85,18 @@ func (b *backend) pathImageTagUpdate(
 		return nil, err
 	}
 	if imageEntry == nil {
-		return logical.ErrorResponse("image entry not found"), nil
+		return logical.ErrorResponse(fmt.Sprintf("entry not found for AMI %s", amiID)), nil
 	}
 
 	// If RoleTag is empty, disallow creation of tag.
 	if imageEntry.RoleTag == "" {
 		return logical.ErrorResponse("tag creation is not enabled for this image"), nil
+	}
+
+	// There should be a HMAC key present in the image entry
+	if imageEntry.HMACKey == "" {
+		// Not able to find the HMACKey is an internal error
+		return nil, fmt.Errorf("failed to find the HMAC key")
 	}
 
 	// Create a random nonce
@@ -117,7 +123,7 @@ func (b *backend) pathImageTagUpdate(
 	}
 
 	// Create a role tag out of all the information provided.
-	rTagValue, err := createRoleTagValue(req.Storage, &roleTag{
+	rTagValue, err := createRoleTagValue(&roleTag{
 		Version:                  roleTagVersion,
 		AmiID:                    amiID,
 		Nonce:                    nonce,
@@ -125,7 +131,7 @@ func (b *backend) pathImageTagUpdate(
 		MaxTTL:                   maxTTL,
 		InstanceID:               instanceID,
 		DisallowReauthentication: disallowReauthentication,
-	})
+	}, imageEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -142,27 +148,21 @@ func (b *backend) pathImageTagUpdate(
 
 // createRoleTagValue prepares the plaintext version of the role tag,
 // and appends a HMAC of the plaintext value to it, before returning.
-func createRoleTagValue(s logical.Storage, rTag *roleTag) (string, error) {
+func createRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (string, error) {
 	// Attach version, nonce, policies and maxTTL to the role tag value.
 	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		return "", err
 	}
 
-	return appendHMAC(s, rTagPlainText)
+	return appendHMAC(rTagPlainText, imageEntry)
 }
 
 // Takes in the plaintext part of the role tag, creates a HMAC of it and returns
 // a role tag value containing both the plaintext part and the HMAC part.
-func appendHMAC(s logical.Storage, rTagPlainText string) (string, error) {
-	// Get the key used for creating the HMAC
-	key, err := hmacKey(s)
-	if err != nil {
-		return "", err
-	}
-
+func appendHMAC(rTagPlainText string, imageEntry *awsImageEntry) (string, error) {
 	// Create the HMAC of the value
-	hmacB64, err := createRoleTagHMACBase64(key, rTagPlainText)
+	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlainText)
 	if err != nil {
 		return "", err
 	}
@@ -179,21 +179,15 @@ func appendHMAC(s logical.Storage, rTagPlainText string) (string, error) {
 // verifyRoleTagValue rebuilds the role tag value without the HMAC,
 // computes the HMAC from it using the backend specific key and
 // compares it with the received HMAC.
-func verifyRoleTagValue(s logical.Storage, rTag *roleTag) (bool, error) {
+func verifyRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (bool, error) {
 	// Fetch the plaintext part of role tag
 	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		return false, err
 	}
 
-	// Get the key used for creating the HMAC
-	key, err := hmacKey(s)
-	if err != nil {
-		return false, err
-	}
-
 	// Compute the HMAC of the plaintext
-	hmacB64, err := createRoleTagHMACBase64(key, rTagPlainText)
+	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlainText)
 	if err != nil {
 		return false, err
 	}
@@ -284,8 +278,16 @@ func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 		return nil, fmt.Errorf("missing image ID")
 	}
 
+	imageEntry, err := awsImage(s, rTag.AmiID)
+	if err != nil {
+		return nil, err
+	}
+	if imageEntry == nil {
+		return nil, fmt.Errorf("entry not found for AMI %s", rTag.AmiID)
+	}
+
 	// Create a HMAC of the plaintext value of role tag and compare it with the given value.
-	verified, err := verifyRoleTagValue(s, rTag)
+	verified, err := verifyRoleTagValue(rTag, imageEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -297,6 +299,9 @@ func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 
 // Creates base64 encoded HMAC using a backend specific key.
 func createRoleTagHMACBase64(key, value string) (string, error) {
+	if key == "" {
+		return "", fmt.Errorf("invalid HMAC key")
+	}
 	hm := hmac.New(sha256.New, []byte(key))
 	hm.Write([]byte(value))
 

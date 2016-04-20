@@ -40,30 +40,51 @@ func pathLogin(b *backend) *framework.Path {
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API and
 // checks if the instance is running and is healthy.
-func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocument) error {
+func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocument) (*ec2.DescribeInstancesOutput, error) {
 	// Create an EC2 client to pull the instance information
 	ec2Client, err := b.clientEC2(s, identityDoc.Region, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Get the status of the instance
-	instanceStatus, err := ec2Client.DescribeInstanceStatus(&ec2.DescribeInstanceStatusInput{
-		InstanceIds: []*string{aws.String(identityDoc.InstanceID)},
+	status, err := ec2Client.DescribeInstances(&ec2.DescribeInstancesInput{
+		Filters: []*ec2.Filter{
+			&ec2.Filter{
+				Name: aws.String("instance-id"),
+				Values: []*string{
+					aws.String(identityDoc.InstanceID),
+				},
+			},
+		},
 	})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("error fetching description for instance ID %s: %s\n", identityDoc.InstanceID, err)
 	}
+	if len(status.Reservations) == 0 {
+		return nil, fmt.Errorf("no reservations found in instance description")
 
+	}
+	if len(status.Reservations[0].Instances) == 0 {
+		return nil, fmt.Errorf("no instance details found in reservations")
+	}
+	if *status.Reservations[0].Instances[0].InstanceId != identityDoc.InstanceID {
+		return nil, fmt.Errorf("expected instance ID does not match the instance ID in the instance description")
+	}
+	if status.Reservations[0].Instances[0].State == nil {
+		return nil, fmt.Errorf("instance state in instance description is nil")
+	}
+	if *status.Reservations[0].Instances[0].State.Code != 16 ||
+		*status.Reservations[0].Instances[0].State.Name != "running" {
+		return nil, fmt.Errorf("instance is not in 'running' state")
+	}
 	// Validate the instance through InstanceState, InstanceStatus and SystemStatus
-	return validateInstanceStatus(instanceStatus)
+	return status, nil
 }
 
 // validateMetadata matches the given client nonce and pending time with the one cached
 // in the identity whitelist during the previous login. But, if reauthentication is
 // disabled, login attempt is failed immediately.
 func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, imageEntry *awsImageEntry) error {
-
 	// If reauthentication is disabled, doesn't matter what other metadata is provided,
 	// authentication will not succeed.
 	if storedIdentity.DisallowReauthentication {
@@ -186,7 +207,8 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Validate the instance ID.
-	if err := b.validateInstance(req.Storage, identityDoc); err != nil {
+	instanceDesc, err := b.validateInstance(req.Storage, identityDoc)
+	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
 	}
 
@@ -231,7 +253,7 @@ func (b *backend) pathLoginUpdate(
 	// Role tag is enabled for the AMI.
 	if imageEntry.RoleTag != "" {
 		// Overwrite the policies with the ones returned from processing the role tag.
-		resp, err := b.handleRoleTagLogin(req.Storage, identityDoc, imageEntry)
+		resp, err := b.handleRoleTagLogin(req.Storage, identityDoc, imageEntry, instanceDesc)
 		if err != nil {
 			return nil, err
 		}
@@ -306,50 +328,21 @@ func (b *backend) pathLoginUpdate(
 
 }
 
-// fetchRoleTagValue creates an AWS EC2 client and queries the tags
-// attached to the instance identified by the given instanceID.
-func (b *backend) fetchRoleTagValue(s logical.Storage, region string, tagKey string) (string, error) {
-	ec2Client, err := b.clientEC2(s, region, false)
-	if err != nil {
-		return "", err
-	}
-
-	// Retrieve the instance tag with a "key" filter matching tagKey.
-	tagsOutput, err := ec2Client.DescribeTags(&ec2.DescribeTagsInput{
-		Filters: []*ec2.Filter{
-			&ec2.Filter{
-				Name: aws.String("key"),
-				Values: []*string{
-					aws.String(tagKey),
-				},
-			},
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-
-	if tagsOutput.Tags == nil ||
-		len(tagsOutput.Tags) != 1 ||
-		*tagsOutput.Tags[0].Key != tagKey ||
-		*tagsOutput.Tags[0].ResourceType != "instance" {
-		return "", nil
-	}
-
-	return *tagsOutput.Tags[0].Value, nil
-}
-
 // handleRoleTagLogin is used to fetch the role tag of the instance and verifies it to be correct.
 // Then the policies for the login request will be set off of the role tag, if certain creteria satisfies.
-func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageEntry *awsImageEntry) (*roleTagLoginResponse, error) {
+func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageEntry *awsImageEntry, instanceDesc *ec2.DescribeInstancesOutput) (*roleTagLoginResponse, error) {
 
-	// Make a secondary call to the AWS instance to see if the desired tag is set.
-	// NOTE: If AWS adds the instance tags as meta-data in the instance identity
-	// document, then it is better to look this information there instead of making
-	// another API call. Currently, we don't have an option but make this call.
-	rTagValue, err := b.fetchRoleTagValue(s, identityDoc.Region, imageEntry.RoleTag)
-	if err != nil {
-		return nil, err
+	tags := instanceDesc.Reservations[0].Instances[0].Tags
+	if tags == nil || len(tags) == 0 {
+		return nil, fmt.Errorf("missing tag with key %s on the instance", imageEntry.RoleTag)
+	}
+
+	rTagValue := ""
+	for _, tagItem := range tags {
+		if tagItem.Key != nil && *tagItem.Key == imageEntry.RoleTag {
+			rTagValue = *tagItem.Value
+			break
+		}
 	}
 
 	if rTagValue == "" {
@@ -437,47 +430,6 @@ func (b *backend) pathLoginRenew(
 	}
 
 	return framework.LeaseExtend(req.Auth.TTL, maxTTL, b.System())(req, data)
-}
-
-// Validates the instance by checking the InstanceState, InstanceStatus and SystemStatus
-func validateInstanceStatus(instanceStatus *ec2.DescribeInstanceStatusOutput) error {
-
-	if instanceStatus.InstanceStatuses == nil {
-		return fmt.Errorf("instance statuses not found")
-	}
-
-	if len(instanceStatus.InstanceStatuses) != 1 {
-		return fmt.Errorf("length of instance statuses is more than 1")
-	}
-
-	if instanceStatus.InstanceStatuses[0].InstanceState == nil {
-		return fmt.Errorf("instance state not found")
-	}
-
-	// Instance should be in 'running'(code 16) state.
-	if *instanceStatus.InstanceStatuses[0].InstanceState.Code != 16 {
-		return fmt.Errorf("instance state is not 'running'")
-	}
-
-	if instanceStatus.InstanceStatuses[0].InstanceStatus == nil {
-		return fmt.Errorf("instance status not found")
-	}
-
-	// InstanceStatus should be 'ok'
-	if *instanceStatus.InstanceStatuses[0].InstanceStatus.Status != "ok" {
-		return fmt.Errorf("instance status is not 'ok'")
-	}
-
-	if instanceStatus.InstanceStatuses[0].SystemStatus == nil {
-		return fmt.Errorf("system status not found")
-	}
-
-	// SystemStatus should be 'ok'
-	if *instanceStatus.InstanceStatuses[0].SystemStatus.Status != "ok" {
-		return fmt.Errorf("system status is not 'ok'")
-	}
-
-	return nil
 }
 
 // Struct to represent items of interest from the EC2 instance identity document.

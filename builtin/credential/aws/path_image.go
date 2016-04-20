@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -137,14 +139,17 @@ func (b *backend) pathImageRead(
 		return nil, nil
 	}
 
+	// Prepare the map of all the entries in the imageEntry.
+	respData := structs.New(imageEntry).Map()
+
+	// HMAC key belonging to the AMI should NOT be exported.
+	delete(respData, "hmac_key")
+
+	// Display the max_ttl in seconds.
+	respData["max_ttl"] = imageEntry.MaxTTL / time.Second
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"role_tag":                  imageEntry.RoleTag,
-			"policies":                  imageEntry.Policies,
-			"max_ttl":                   imageEntry.MaxTTL / time.Second,
-			"allow_instance_migration":  imageEntry.AllowInstanceMigration,
-			"disallow_reauthentication": imageEntry.DisallowReauthentication,
-		},
+		Data: respData,
 	}, nil
 }
 
@@ -213,13 +218,20 @@ func (b *backend) pathImageCreateUpdate(
 		imageEntry.RoleTag = data.Get("role_tag").(string)
 	}
 
+	imageEntry.HMACKey, err = uuid.GenerateUUID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate uuid HMAC key: %v", err)
+	}
+
 	entry, err := logical.StorageEntryJSON("image/"+imageID, imageEntry)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
@@ -230,6 +242,7 @@ type awsImageEntry struct {
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	HMACKey                  string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
 }
 
 const pathImageSyn = `
