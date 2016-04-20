@@ -50,6 +50,11 @@ These libraries are provided by the community.
 * [vaulted](https://github.com/chiefy/vaulted)
   * `npm install vaulted`
 
+### PHP
+
+* [vault-php-sdk](https://github.com/jippi/vault-php-sdk)
+  * `composer require jippi/vault-php-sdk`
+
 ### Python
 
 * [HVAC](https://github.com/ianunruh/hvac)
