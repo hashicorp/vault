@@ -219,8 +219,8 @@ type Core struct {
 
 	logger *log.Logger
 
-	// cacheDisabled indicates whether caches are disabled
-	cacheDisabled bool
+	// cachingDisabled indicates whether caches are disabled
+	cachingDisabled bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -318,7 +318,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logger:          conf.Logger,
 		defaultLeaseTTL: conf.DefaultLeaseTTL,
 		maxLeaseTTL:     conf.MaxLeaseTTL,
-		cacheDisabled:   conf.DisableCache,
+		cachingDisabled: conf.DisableCache,
 	}
 
 	// Setup the backends

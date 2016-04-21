@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -23,197 +22,6 @@ const (
 
 	ErrTooOld = "ciphertext version is disallowed by policy (too old)"
 )
-
-// policyCache implements a simple locking cache of policies
-type policyCache struct {
-	sync.RWMutex
-	cache map[string]*lockingPolicy
-}
-
-// getPolicy loads a policy into the cache or returns one already in the cache
-func (p *policyCache) getPolicy(req *logical.Request, name string) (*lockingPolicy, error) {
-	// We don't defer this since we may need to give it up and get a write lock
-	p.RLock()
-
-	// First, see if we're in the cache -- if so, return that
-	if p.cache[name] != nil {
-		defer p.RUnlock()
-		return p.cache[name], nil
-	}
-
-	// If we didn't find anything, we'll need to write into the cache, plus possibly
-	// persist the entry, so lock the cache
-	p.RUnlock()
-	p.Lock()
-	defer p.Unlock()
-
-	// Check one more time to ensure that another process did not write during
-	// our lock switcheroo.
-	if p.cache[name] != nil {
-		return p.cache[name], nil
-	}
-
-	// Note that we don't need to create the locking entry until the end,
-	// because the policy wasn't in the cache so we don't know about it, and we
-	// hold the cache lock so nothing else can be writing it in right now
-
-	// Check if the policy already exists
-	raw, err := req.Storage.Get("policy/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if raw == nil {
-		return nil, nil
-	}
-
-	// Decode the policy
-	policy := &Policy{
-		Keys: KeyEntryMap{},
-	}
-	err = json.Unmarshal(raw.Value, policy)
-	if err != nil {
-		return nil, err
-	}
-
-	persistNeeded := false
-	// Ensure we've moved from Key -> Keys
-	if policy.Key != nil && len(policy.Key) > 0 {
-		policy.migrateKeyToKeysMap()
-		persistNeeded = true
-	}
-
-	// With archiving, past assumptions about the length of the keys map are no longer valid
-	if policy.LatestVersion == 0 && len(policy.Keys) != 0 {
-		policy.LatestVersion = len(policy.Keys)
-		persistNeeded = true
-	}
-
-	// We disallow setting the version to 0, since they start at 1 since moving
-	// to rotate-able keys, so update if it's set to 0
-	if policy.MinDecryptionVersion == 0 {
-		policy.MinDecryptionVersion = 1
-		persistNeeded = true
-	}
-
-	// On first load after an upgrade, copy keys to the archive
-	if policy.ArchiveVersion == 0 {
-		persistNeeded = true
-	}
-
-	if persistNeeded {
-		err = policy.Persist(req.Storage)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	lp := &lockingPolicy{
-		policy: policy,
-	}
-	p.cache[name] = lp
-
-	return lp, nil
-}
-
-// generatePolicy is used to create a new named policy with a randomly
-// generated key
-func (p *policyCache) generatePolicy(storage logical.Storage, name string, derived bool) (*lockingPolicy, error) {
-	// Ensure one with this name doesn't already exist
-	lp, err := p.getPolicy(&logical.Request{
-		Storage: storage,
-	}, name)
-	if err != nil {
-		return nil, fmt.Errorf("error checking if policy already exists: %s", err)
-	}
-	if lp != nil {
-		return nil, fmt.Errorf("policy %s already exists", name)
-	}
-
-	p.Lock()
-	defer p.Unlock()
-
-	// Now we need to check again in the cache to ensure the policy wasn't
-	// created since we checked getPolicy. A policy being created holds a write
-	// lock until it's done, so it'll be in the cache at this point.
-	if lp := p.cache[name]; lp != nil {
-		return nil, fmt.Errorf("policy %s already exists", name)
-	}
-
-	// Create the policy object
-	policy := &Policy{
-		Name:       name,
-		CipherMode: "aes-gcm",
-		Derived:    derived,
-	}
-	if derived {
-		policy.KDFMode = kdfMode
-	}
-
-	err = policy.rotate(storage)
-	if err != nil {
-		return nil, err
-	}
-
-	lp = &lockingPolicy{
-		policy: policy,
-	}
-	p.cache[name] = lp
-
-	// Return the policy
-	return lp, nil
-}
-
-// deletePolicy deletes a policy
-func (p *policyCache) deletePolicy(storage logical.Storage, name string) error {
-	// Ensure one with this name exists
-	lp, err := p.getPolicy(&logical.Request{
-		Storage: storage,
-	}, name)
-	if err != nil {
-		return fmt.Errorf("error checking if policy already exists: %s", err)
-	}
-	if lp == nil {
-		return fmt.Errorf("policy %s does not exist", name)
-	}
-
-	p.Lock()
-	defer p.Unlock()
-
-	lp = p.cache[name]
-	if lp == nil {
-		return fmt.Errorf("policy %s not found", name)
-	}
-
-	// We need to ensure all other access has stopped
-	lp.Lock()
-	defer lp.Unlock()
-
-	// Verify this hasn't changed
-	if !lp.policy.DeletionAllowed {
-		return fmt.Errorf("deletion not allowed for policy %s", name)
-	}
-
-	err = storage.Delete("policy/" + name)
-	if err != nil {
-		return fmt.Errorf("error deleting policy %s: %s", name, err)
-	}
-
-	err = storage.Delete("archive/" + name)
-	if err != nil {
-		return fmt.Errorf("error deleting archive %s: %s", name, err)
-	}
-
-	lp.policy = nil
-	delete(p.cache, name)
-
-	return nil
-}
-
-// lockingPolicy holds a Policy guarded by a lock
-type lockingPolicy struct {
-	sync.RWMutex
-	policy *Policy
-}
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
@@ -521,23 +329,27 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 	// Verify the prefix
 	if !strings.HasPrefix(value, "vault:v") {
-		return "", certutil.UserError{Err: "invalid ciphertext"}
+		return "", certutil.UserError{Err: "invalid ciphertext: no prefix"}
 	}
 
 	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, "vault:v"), ":", 2)
 	if len(splitVerCiphertext) != 2 {
-		return "", certutil.UserError{Err: "invalid ciphertext"}
+		return "", certutil.UserError{Err: "invalid ciphertext: wrong number of fields"}
 	}
 
 	ver, err := strconv.Atoi(splitVerCiphertext[0])
 	if err != nil {
-		return "", certutil.UserError{Err: "invalid ciphertext"}
+		return "", certutil.UserError{Err: "invalid ciphertext: version number could not be decoded"}
 	}
 
 	if ver == 0 {
 		// Compatibility mode with initial implementation, where keys start at
 		// zero
 		ver = 1
+	}
+
+	if ver > p.LatestVersion {
+		return "", certutil.UserError{Err: "invalid ciphertext: version is too new"}
 	}
 
 	if p.MinDecryptionVersion > 0 && ver < p.MinDecryptionVersion {
@@ -560,7 +372,7 @@ func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 	// Decode the base64
 	decoded, err := base64.StdEncoding.DecodeString(splitVerCiphertext[1])
 	if err != nil {
-		return "", certutil.UserError{Err: "invalid ciphertext"}
+		return "", certutil.UserError{Err: "invalid ciphertext: could not decode base64"}
 	}
 
 	// Setup the cipher
@@ -582,7 +394,7 @@ func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 	// Verify and Decrypt
 	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return "", certutil.UserError{Err: "invalid ciphertext"}
+		return "", certutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
 	}
 
 	return base64.StdEncoding.EncodeToString(plain), nil
@@ -616,6 +428,8 @@ func (p *Policy) rotate(storage logical.Storage) error {
 	if p.MinDecryptionVersion == 0 {
 		p.MinDecryptionVersion = 1
 	}
+
+	//fmt.Printf("policy %s rotated to %d\n", p.Name, p.LatestVersion)
 
 	return p.Persist(storage)
 }

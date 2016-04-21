@@ -16,7 +16,7 @@ func mockPolicyStore(t *testing.T) *PolicyStore {
 
 func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
 	sysView := logical.TestSystemView()
-	sysView.CacheDisabledVal = true
+	sysView.CachingDisabledVal = true
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
 	p := NewPolicyStore(view, sysView)

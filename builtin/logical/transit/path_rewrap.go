@@ -59,7 +59,7 @@ func (b *backend) pathRewrapWrite(
 	}
 
 	// Get the policy
-	lp, err := b.policies.getPolicy(req, name)
+	lp, err := b.policies.getPolicy(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +73,11 @@ func (b *backend) pathRewrapWrite(
 	defer lp.RUnlock()
 
 	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
+	if lp.Policy() == nil {
 		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
-	plaintext, err := lp.policy.Decrypt(context, value)
+	plaintext, err := lp.Policy().Decrypt(context, value)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -93,7 +93,7 @@ func (b *backend) pathRewrapWrite(
 		return nil, fmt.Errorf("empty plaintext returned during rewrap")
 	}
 
-	ciphertext, err := lp.policy.Encrypt(context, plaintext)
+	ciphertext, err := lp.Policy().Encrypt(context, plaintext)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:

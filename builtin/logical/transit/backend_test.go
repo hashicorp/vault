@@ -559,16 +559,31 @@ func TestPolicyFuzzing(t *testing.T) {
 		return
 	}
 
-	be := Backend()
+	var be *backend
+	sysView := logical.TestSystemView()
 
+	be = Backend(&logical.BackendConfig{
+		System: sysView,
+	})
+	testPolicyFuzzingCommon(t, be)
+
+	sysView.CachingDisabledVal = true
+	be = Backend(&logical.BackendConfig{
+		System: sysView,
+	})
+	testPolicyFuzzingCommon(t, be)
+}
+
+func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	storage := &logical.LockingInmemStorage{}
 	wg := sync.WaitGroup{}
 
 	funcs := []string{"encrypt", "decrypt", "rotate", "change_min_version"}
+	//keys := []string{"test1", "test2", "test3", "test4", "test5"}
 	keys := []string{"test1", "test2", "test3"}
 
 	// This is the goroutine loop
-	doFuzzy := func() {
+	doFuzzy := func(id int) {
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
@@ -587,15 +602,24 @@ func TestPolicyFuzzing(t *testing.T) {
 		}
 		fd := &framework.FieldData{}
 
+		var retest bool
+		var chosenFunc, chosenKey string
+
+		//t.Logf("Starting")
 		for {
 			// Stop after 10 seconds
 			if time.Now().Sub(startTime) > 10*time.Second {
+				if retest {
+					t.Errorf("ended runtime on a retest, id is %d", id)
+				}
 				return
 			}
 
 			// Pick a function and a key
-			chosenFunc := funcs[rand.Int()%len(funcs)]
-			chosenKey := keys[rand.Int()%len(keys)]
+			if !retest {
+				chosenFunc = funcs[rand.Int()%len(funcs)]
+				chosenKey = keys[rand.Int()%len(keys)]
+			}
 
 			fd.Raw = map[string]interface{}{
 				"name": chosenKey,
@@ -605,33 +629,36 @@ func TestPolicyFuzzing(t *testing.T) {
 			// Try to write the key to make sure it exists
 			_, err := be.pathPolicyWrite(req, fd)
 			if err != nil {
-				t.Errorf("got an error: %v", err)
+				t.Fatalf("got an error: %v", err)
 				return
 			}
 
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
 			case "encrypt":
+				//t.Logf("%s, %s", chosenFunc, chosenKey)
 				fd.Raw["plaintext"] = base64.StdEncoding.EncodeToString([]byte(testPlaintext))
 				fd.Schema = be.pathEncrypt().Fields
 				resp, err := be.pathEncryptWrite(req, fd)
 				if err != nil {
-					t.Errorf("got an error: %v, resp is %#v", err, *resp)
+					t.Fatalf("got an error: %v, resp is %#v", err, *resp)
 					return
 				}
 				latestEncryptedText[chosenKey] = resp.Data["ciphertext"].(string)
 
 			// Rotate to a new key version
 			case "rotate":
+				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Schema = be.pathRotate().Fields
 				resp, err := be.pathRotateWrite(req, fd)
 				if err != nil {
-					t.Errorf("got an error: %v, resp is %#v", err, *resp)
+					t.Fatalf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
 					return
 				}
 
 			// Decrypt the ciphertext and compare the result
 			case "decrypt":
+				//t.Logf("%s, %s", chosenFunc, chosenKey)
 				ct := latestEncryptedText[chosenKey]
 				if ct == "" {
 					continue
@@ -645,13 +672,14 @@ func TestPolicyFuzzing(t *testing.T) {
 					if resp.Data["error"].(string) == ErrTooOld {
 						continue
 					}
-					t.Errorf("got an error: %v, resp is %#v, ciphertext was %s", err, *resp, latestEncryptedText[chosenKey])
-					return
+					t.Errorf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
+					retest = true
+					continue
 				}
 				ptb64 := resp.Data["plaintext"].(string)
 				pt, err := base64.StdEncoding.DecodeString(ptb64)
 				if err != nil {
-					t.Errorf("got an error decoding base64 plaintext: %v", err)
+					t.Fatalf("got an error decoding base64 plaintext: %v", err)
 					return
 				}
 				if string(pt) != testPlaintext {
@@ -660,9 +688,10 @@ func TestPolicyFuzzing(t *testing.T) {
 
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
+				//t.Logf("%s, %s", chosenFunc, chosenKey)
 				resp, err := be.pathPolicyRead(req, fd)
 				if err != nil {
-					t.Errorf("got an error reading policy %s: %v", chosenKey, err)
+					t.Fatalf("got an error reading policy %s: %v", chosenKey, err)
 					return
 				}
 				latestVersion := resp.Data["latest_version"].(int)
@@ -673,17 +702,22 @@ func TestPolicyFuzzing(t *testing.T) {
 				fd.Schema = be.pathConfig().Fields
 				resp, err = be.pathConfigWrite(req, fd)
 				if err != nil {
-					t.Errorf("got an error setting min decryption version: %v", err)
+					t.Fatalf("got an error setting min decryption version: %v", err)
 					return
 				}
 			}
+
+			if retest {
+				t.Errorf("success, setting retest false, id is %d", id)
+			}
+			retest = false
 		}
 	}
 
 	// Spawn 1000 of these workers for 10 seconds
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
-		go doFuzzy()
+		go doFuzzy(i)
 	}
 
 	// Wait for them all to finish

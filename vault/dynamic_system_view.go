@@ -70,7 +70,7 @@ func (d dynamicSystemView) Tainted() bool {
 	return d.mountEntry.Tainted
 }
 
-// CacheDisabled indicates whether to use caching behavior
-func (d dynamicSystemView) CacheDisabled() bool {
-	return d.core.cacheDisabled
+// CachingDisabled indicates whether to use caching behavior
+func (d dynamicSystemView) CachingDisabled() bool {
+	return d.core.cachingDisabled
 }

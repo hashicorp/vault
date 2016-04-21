@@ -6,7 +6,7 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend()
+	b := Backend(conf)
 	be, err := b.Backend.Setup(conf)
 	if err != nil {
 		return nil, err
@@ -15,7 +15,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return be, nil
 }
 
-func Backend() *backend {
+func Backend(conf *logical.BackendConfig) *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Paths: []*framework.Path{
@@ -33,8 +33,10 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{},
 	}
 
-	b.policies = policyCache{
-		cache: map[string]*lockingPolicy{},
+	if conf.System.CachingDisabled() {
+		b.policies = newSimplePolicyCRUD()
+	} else {
+		b.policies = newCachingPolicyCRUD()
 	}
 
 	return &b
@@ -42,5 +44,5 @@ func Backend() *backend {
 
 type backend struct {
 	*framework.Backend
-	policies policyCache
+	policies policyCRUD
 }

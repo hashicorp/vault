@@ -16,19 +16,24 @@ func resetKeysArchive() {
 }
 
 func Test_KeyUpgrade(t *testing.T) {
+	testKeyUpgradeCommon(t, newSimplePolicyCRUD())
+	testKeyUpgradeCommon(t, newCachingPolicyCRUD())
+}
+
+func testKeyUpgradeCommon(t *testing.T, policies policyCRUD) {
 	storage := &logical.InmemStorage{}
-	policies := &policyCache{
-		cache: map[string]*lockingPolicy{},
-	}
 	lp, err := policies.generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if lp == nil {
-		t.Fatal("nil policy")
+		t.Fatal("nil lockingPolicy")
 	}
 
-	policy := lp.policy
+	policy := lp.Policy()
+	if policy == nil {
+		t.Fatal("nil policy in lockingPolicy")
+	}
 
 	testBytes := make([]byte, len(policy.Keys[1].Key))
 	copy(testBytes, policy.Keys[1].Key)
@@ -48,6 +53,11 @@ func Test_KeyUpgrade(t *testing.T) {
 }
 
 func Test_ArchivingUpgrade(t *testing.T) {
+	testArchivingUpgradeCommon(t, newSimplePolicyCRUD())
+	testArchivingUpgradeCommon(t, newCachingPolicyCRUD())
+}
+
+func testArchivingUpgradeCommon(t *testing.T, policies policyCRUD) {
 	resetKeysArchive()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -56,19 +66,19 @@ func Test_ArchivingUpgrade(t *testing.T) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	policies := &policyCache{
-		cache: map[string]*lockingPolicy{},
-	}
 
 	lp, err := policies.generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if lp == nil {
-		t.Fatal("policy is nil")
+		t.Fatal("nil lockingPolicy")
 	}
 
-	policy := lp.policy
+	policy := lp.Policy()
+	if policy == nil {
+		t.Fatal("nil policy in lockingPolicy")
+	}
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, policy.Keys[1])
@@ -106,26 +116,35 @@ func Test_ArchivingUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Expire from the cache since we modified it under-the-hood
-	delete(policies.cache, "test")
+	// If it's a caching CRUD, expire from the cache since we modified it
+	// under-the-hood
+	if cachingCRUD, ok := policies.(*cachingPolicyCRUD); ok {
+		delete(cachingCRUD.cache, "test")
+	}
 
 	// Now get the policy again; the upgrade should happen automatically
-	lp, err = policies.getPolicy(&logical.Request{
-		Storage: storage,
-	}, "test")
+	lp, err = policies.getPolicy(storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if lp == nil {
-		t.Fatal("policy is nil")
+		t.Fatal("nil lockingPolicy")
 	}
 
-	policy = lp.policy
+	policy = lp.Policy()
+	if policy == nil {
+		t.Fatal("nil policy in lockingPolicy")
+	}
 
 	checkKeys(t, policy, storage, "upgrade", 10, 10, 10)
 }
 
 func Test_Archiving(t *testing.T) {
+	testArchivingCommon(t, newSimplePolicyCRUD())
+	testArchivingCommon(t, newCachingPolicyCRUD())
+}
+
+func testArchivingCommon(t *testing.T, policies policyCRUD) {
 	resetKeysArchive()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -135,19 +154,18 @@ func Test_Archiving(t *testing.T) {
 
 	storage := &logical.InmemStorage{}
 
-	policies := &policyCache{
-		cache: map[string]*lockingPolicy{},
-	}
-
 	lp, err := policies.generatePolicy(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if lp == nil {
-		t.Fatal("policy is nil")
+		t.Fatal("nil lockingPolicy")
 	}
 
-	policy := lp.policy
+	policy := lp.Policy()
+	if policy == nil {
+		t.Fatal("nil policy in lockingPolicy")
+	}
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, policy.Keys[1])

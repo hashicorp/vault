@@ -29,7 +29,7 @@ type SystemView interface {
 
 	// Returns true if caching is disabled. If true, no caches should be used,
 	// despite known slowdowns.
-	CacheDisabled() bool
+	CachingDisabled() bool
 }
 
 type StaticSystemView struct {
@@ -37,7 +37,7 @@ type StaticSystemView struct {
 	MaxLeaseTTLVal     time.Duration
 	SudoPrivilegeVal   bool
 	TaintedVal         bool
-	CacheDisabledVal   bool
+	CachingDisabledVal bool
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -56,6 +56,6 @@ func (d StaticSystemView) Tainted() bool {
 	return d.TaintedVal
 }
 
-func (d StaticSystemView) CacheDisabled() bool {
-	return d.CacheDisabledVal
+func (d StaticSystemView) CachingDisabled() bool {
+	return d.CachingDisabledVal
 }

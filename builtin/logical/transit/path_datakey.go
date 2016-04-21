@@ -73,7 +73,7 @@ func (b *backend) pathDatakeyWrite(
 	}
 
 	// Get the policy
-	lp, err := b.policies.getPolicy(req, name)
+	lp, err := b.policies.getPolicy(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (b *backend) pathDatakeyWrite(
 	defer lp.RUnlock()
 
 	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
+	if lp.Policy() == nil {
 		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
@@ -107,7 +107,7 @@ func (b *backend) pathDatakeyWrite(
 		return nil, err
 	}
 
-	ciphertext, err := lp.policy.Encrypt(context, base64.StdEncoding.EncodeToString(newKey))
+	ciphertext, err := lp.Policy().Encrypt(context, base64.StdEncoding.EncodeToString(newKey))
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
