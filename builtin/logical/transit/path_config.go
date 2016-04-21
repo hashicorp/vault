@@ -52,10 +52,14 @@ func (b *backend) pathConfigWrite(
 			logical.ErrInvalidRequest
 	}
 
+	// Store some values so we can detect if the policy changed after locking
+	lp.RLock()
 	currDeletionAllowed := lp.Policy().DeletionAllowed
 	currMinDecryptionVersion := lp.Policy().MinDecryptionVersion
+	lp.RUnlock()
 
-	// Hold both locks since we want to ensure the policy doesn't change from underneath us
+	// Hold both locks since we want to ensure the policy doesn't change from
+	// underneath us
 	b.policies.Lock()
 	defer b.policies.Unlock()
 	lp.Lock()
@@ -77,7 +81,7 @@ func (b *backend) pathConfigWrite(
 
 	resp := &logical.Response{}
 
-	// Check for anything to have been updated since we got the policy
+	// Check for anything to have been updated since we got the write lock
 	if currDeletionAllowed != lp.Policy().DeletionAllowed ||
 		currMinDecryptionVersion != lp.Policy().MinDecryptionVersion {
 		resp.AddWarning("key configuration has changed since this endpoint was called, not updating")

@@ -602,24 +602,18 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 		}
 		fd := &framework.FieldData{}
 
-		var retest bool
 		var chosenFunc, chosenKey string
 
 		//t.Logf("Starting")
 		for {
 			// Stop after 10 seconds
 			if time.Now().Sub(startTime) > 10*time.Second {
-				if retest {
-					t.Errorf("ended runtime on a retest, id is %d", id)
-				}
 				return
 			}
 
 			// Pick a function and a key
-			if !retest {
-				chosenFunc = funcs[rand.Int()%len(funcs)]
-				chosenKey = keys[rand.Int()%len(keys)]
-			}
+			chosenFunc = funcs[rand.Int()%len(funcs)]
+			chosenKey = keys[rand.Int()%len(keys)]
 
 			fd.Raw = map[string]interface{}{
 				"name": chosenKey,
@@ -630,7 +624,6 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			_, err := be.pathPolicyWrite(req, fd)
 			if err != nil {
 				t.Fatalf("got an error: %v", err)
-				return
 			}
 
 			switch chosenFunc {
@@ -642,7 +635,6 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				resp, err := be.pathEncryptWrite(req, fd)
 				if err != nil {
 					t.Fatalf("got an error: %v, resp is %#v", err, *resp)
-					return
 				}
 				latestEncryptedText[chosenKey] = resp.Data["ciphertext"].(string)
 
@@ -653,7 +645,6 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				resp, err := be.pathRotateWrite(req, fd)
 				if err != nil {
 					t.Fatalf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
-					return
 				}
 
 			// Decrypt the ciphertext and compare the result
@@ -672,9 +663,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 					if resp.Data["error"].(string) == ErrTooOld {
 						continue
 					}
-					t.Errorf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
-					retest = true
-					continue
+					t.Fatalf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
 				}
 				ptb64 := resp.Data["plaintext"].(string)
 				pt, err := base64.StdEncoding.DecodeString(ptb64)
@@ -692,7 +681,6 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				resp, err := be.pathPolicyRead(req, fd)
 				if err != nil {
 					t.Fatalf("got an error reading policy %s: %v", chosenKey, err)
-					return
 				}
 				latestVersion := resp.Data["latest_version"].(int)
 
@@ -703,14 +691,8 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				resp, err = be.pathConfigWrite(req, fd)
 				if err != nil {
 					t.Fatalf("got an error setting min decryption version: %v", err)
-					return
 				}
 			}
-
-			if retest {
-				t.Errorf("success, setting retest false, id is %d", id)
-			}
-			retest = false
 		}
 	}
 

@@ -41,6 +41,9 @@ type policyCRUD interface {
 	RUnlock()
 }
 
+// The mutex is kept separate from the struct since we may set it to its own
+// mutex (if the object is shared) or a shared mutext (if the object isn't
+// shared and only the locking is)
 type mutexLockingPolicy struct {
 	mutex  *sync.RWMutex
 	policy *Policy
@@ -70,7 +73,8 @@ func (m *mutexLockingPolicy) SetPolicy(p *Policy) {
 	m.policy = p
 }
 
-// The caller should hold the write lock when calling this
+// fetchPolicyFromStorage fetches the policy from backend storage. The caller
+// should hold the write lock when calling this, to handle upgrades.
 func fetchPolicyFromStorage(storage logical.Storage, name string) (*Policy, error) {
 	// Check if the policy already exists
 	raw, err := storage.Get("policy/" + name)
@@ -137,8 +141,6 @@ func generatePolicyCommon(p policyCRUD, storage logical.Storage, name string, de
 		return policy, nil
 	}
 
-	//log.Printf("generating a new policy with name %s", name)
-
 	// Create the policy object
 	policy = &Policy{
 		Name:       name,
@@ -157,7 +159,8 @@ func generatePolicyCommon(p policyCRUD, storage logical.Storage, name string, de
 	return policy, err
 }
 
-// deletePolicy deletes a policy. The caller should hold the write lock for both the policy and lockingPolicy prior to calling this.
+// deletePolicyCommon deletes a policy. The caller should hold the write lock
+// for both the policy and lockingPolicy prior to calling this.
 func deletePolicyCommon(p policyCRUD, lp lockingPolicy, storage logical.Storage, name string) error {
 	if lp.Policy() == nil {
 		// This got deleted before we grabbed the lock

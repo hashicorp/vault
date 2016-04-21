@@ -6,8 +6,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// policyCache implements CRUD operations with a simple locking cache of
-// policies
+// cachingPolicyCRUD implements CRUD operations with a simple locking cache of
+// policies in memory
 type cachingPolicyCRUD struct {
 	sync.RWMutex
 	cache map[string]lockingPolicy
@@ -19,6 +19,7 @@ func newCachingPolicyCRUD() *cachingPolicyCRUD {
 	}
 }
 
+// See general comments on the interface method
 func (p *cachingPolicyCRUD) getPolicy(storage logical.Storage, name string) (lockingPolicy, error) {
 	// We don't defer this since we may need to give it up and get a write lock
 	p.RLock()
@@ -44,6 +45,7 @@ func (p *cachingPolicyCRUD) getPolicy(storage logical.Storage, name string) (loc
 	return p.refreshPolicy(storage, name)
 }
 
+// See general comments on the interface method
 func (p *cachingPolicyCRUD) refreshPolicy(storage logical.Storage, name string) (lockingPolicy, error) {
 	// Check once more to ensure it hasn't been added to the cache since the lock was acquired
 	if p.cache[name] != nil {
@@ -70,8 +72,7 @@ func (p *cachingPolicyCRUD) refreshPolicy(storage logical.Storage, name string) 
 	return lp, nil
 }
 
-// generatePolicy is used to create a new named policy with a randomly
-// generated key. The caller should hold the write lock prior to calling this.
+// See general comments on the interface method
 func (p *cachingPolicyCRUD) generatePolicy(storage logical.Storage, name string, derived bool) (lockingPolicy, error) {
 	policy, err := generatePolicyCommon(p, storage, name, derived)
 	if err != nil {
@@ -96,7 +97,7 @@ func (p *cachingPolicyCRUD) generatePolicy(storage logical.Storage, name string,
 	return lp, nil
 }
 
-// deletePolicy deletes a policy
+// See general comments on the interface method
 func (p *cachingPolicyCRUD) deletePolicy(storage logical.Storage, lp lockingPolicy, name string) error {
 	err := deletePolicyCommon(p, lp, storage, name)
 	if err != nil {

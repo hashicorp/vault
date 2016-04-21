@@ -7,8 +7,8 @@ import (
 )
 
 // Directly implements CRUD operations without caching, mapped to the backend,
-// but implements locking to ensure that we can't overwrite data on the backend
-// from multiple operators
+// but implements shared locking to ensure that we can't overwrite data on the
+// backend from multiple operators
 type simplePolicyCRUD struct {
 	sync.RWMutex
 	locks         map[string]*sync.RWMutex
@@ -38,6 +38,7 @@ func (p *simplePolicyCRUD) ensureLockExists(name string) {
 	p.locksMapMutex.RUnlock()
 }
 
+// See general comments on the interface method
 func (p *simplePolicyCRUD) getPolicy(storage logical.Storage, name string) (lockingPolicy, error) {
 	// Use a write lock since fetching the policy can cause a need for upgrade persistence
 	p.Lock()
@@ -46,6 +47,7 @@ func (p *simplePolicyCRUD) getPolicy(storage logical.Storage, name string) (lock
 	return p.refreshPolicy(storage, name)
 }
 
+// See general comments on the interface method
 func (p *simplePolicyCRUD) refreshPolicy(storage logical.Storage, name string) (lockingPolicy, error) {
 	p.ensureLockExists(name)
 
@@ -65,7 +67,7 @@ func (p *simplePolicyCRUD) refreshPolicy(storage logical.Storage, name string) (
 	return lp, nil
 }
 
-// The caller must hold the write lock when calling this
+// See general comments on the interface method
 func (p *simplePolicyCRUD) generatePolicy(storage logical.Storage, name string, derived bool) (lockingPolicy, error) {
 	p.ensureLockExists(name)
 
@@ -82,7 +84,7 @@ func (p *simplePolicyCRUD) generatePolicy(storage logical.Storage, name string, 
 	return lp, nil
 }
 
-// The caller must hold the write lock when calling this
+// See general comments on the interface method
 func (p *simplePolicyCRUD) deletePolicy(storage logical.Storage, lp lockingPolicy, name string) error {
 	return deletePolicyCommon(p, lp, storage, name)
 }

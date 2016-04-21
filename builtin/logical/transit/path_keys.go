@@ -36,6 +36,7 @@ func (b *backend) pathKeys() *framework.Path {
 
 func (b *backend) pathPolicyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Grab a write lock right off the bat
 	b.policies.Lock()
 	defer b.policies.Unlock()
 
@@ -95,6 +96,7 @@ func (b *backend) pathPolicyDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
+	// Some sanity checking
 	lp, err := b.policies.getPolicy(req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error looking up policy %s, error is %s", name, err)), err
@@ -103,10 +105,22 @@ func (b *backend) pathPolicyDelete(
 		return logical.ErrorResponse(fmt.Sprintf("no such key %s", name)), logical.ErrInvalidRequest
 	}
 
+	// Hold both locks since we'll be affecting both the cache (if it exists)
+	// and the locking policy itself
 	b.policies.Lock()
 	defer b.policies.Unlock()
 	lp.Lock()
 	defer lp.Unlock()
+
+	// Make sure that we have up-to-date values since deletePolicy will check
+	// things like whether deletion is allowed
+	lp, err = b.policies.refreshPolicy(req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if lp == nil {
+		return nil, fmt.Errorf("error finding key %s after locking for deletion", name)
+	}
 
 	err = b.policies.deletePolicy(req.Storage, lp, name)
 	if err != nil {

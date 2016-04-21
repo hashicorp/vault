@@ -41,6 +41,7 @@ func (b *backend) pathRotateWrite(
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
 	}
 
+	// Store so we can detect later if this has changed out from under us
 	keyVersion := lp.Policy().LatestVersion
 
 	// lock the policies object so we can refresh
@@ -70,7 +71,6 @@ func (b *backend) pathRotateWrite(
 		return resp, nil
 	}
 
-	//fmt.Printf("Rotating key %s, orig seen version is %d, currVersion is %d\n", name, keyVersion, lp.Policy().LatestVersion)
 	// Rotate the policy
 	err = lp.Policy().rotate(req.Storage)
 
