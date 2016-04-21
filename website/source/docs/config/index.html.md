@@ -50,9 +50,9 @@ sending a SIGHUP to the server process. These are denoted below.
   "tcp" is currently the only option available. A full reference for the
    inner syntax is below.
 
-* `disable_cache` (optional) - A boolean. If true, this will disable the
-  read cache used by the physical storage subsystem. This will very
-  significantly impact performance.
+* `disable_cache` (optional) - A boolean. If true, this will disable all caches
+  within Vault, including the read cache used by the physical storage
+  subsystem. This will very significantly impact performance.
 
 * `disable_mlock` (optional) - A boolean. If true, this will disable the
   server from executing the `mlock` syscall to prevent memory from being

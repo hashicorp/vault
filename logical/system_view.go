@@ -26,6 +26,10 @@ type SystemView interface {
 	// when the stored CRL will be removed during the unmounting process
 	// anyways), we can ignore the errors to allow unmounting to complete.
 	Tainted() bool
+
+	// Returns true if caching is disabled. If true, no caches should be used,
+	// despite known slowdowns.
+	CacheDisabled() bool
 }
 
 type StaticSystemView struct {
@@ -33,6 +37,7 @@ type StaticSystemView struct {
 	MaxLeaseTTLVal     time.Duration
 	SudoPrivilegeVal   bool
 	TaintedVal         bool
+	CacheDisabledVal   bool
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -49,4 +54,8 @@ func (d StaticSystemView) SudoPrivilege(path string, token string) bool {
 
 func (d StaticSystemView) Tainted() bool {
 	return d.TaintedVal
+}
+
+func (d StaticSystemView) CacheDisabled() bool {
+	return d.CacheDisabledVal
 }

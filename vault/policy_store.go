@@ -22,8 +22,9 @@ const (
 // PolicyStore is used to provide durable storage of policy, and to
 // manage ACLs associated with them.
 type PolicyStore struct {
-	view *BarrierView
-	lru  *lru.TwoQueueCache
+	view   *BarrierView
+	lru    *lru.TwoQueueCache
+	system logical.SystemView
 }
 
 // PolicyEntry is used to store a policy by name
@@ -34,12 +35,16 @@ type PolicyEntry struct {
 
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
-func NewPolicyStore(view *BarrierView) *PolicyStore {
-	cache, _ := lru.New2Q(policyCacheSize)
+func NewPolicyStore(view *BarrierView, system logical.SystemView) *PolicyStore {
 	p := &PolicyStore{
-		view: view,
-		lru:  cache,
+		view:   view,
+		system: system,
 	}
+	if !system.CacheDisabled() {
+		cache, _ := lru.New2Q(policyCacheSize)
+		p.lru = cache
+	}
+
 	return p
 }
 
@@ -50,7 +55,7 @@ func (c *Core) setupPolicyStore() error {
 	view := c.systemBarrierView.SubView(policySubPath)
 
 	// Create the policy store
-	c.policyStore = NewPolicyStore(view)
+	c.policyStore = NewPolicyStore(view, &dynamicSystemView{core: c})
 
 	// Ensure that the default policy exists, and if not, create it
 	policy, err := c.policyStore.GetPolicy("default")
@@ -95,23 +100,29 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 		return fmt.Errorf("failed to persist policy: %v", err)
 	}
 
-	// Update the LRU cache
-	ps.lru.Add(p.Name, p)
+	if !ps.system.CacheDisabled() {
+		// Update the LRU cache
+		ps.lru.Add(p.Name, p)
+	}
 	return nil
 }
 
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 	defer metrics.MeasureSince([]string{"policy", "get_policy"}, time.Now())
-	// Check for cached policy
-	if raw, ok := ps.lru.Get(name); ok {
-		return raw.(*Policy), nil
+	if !ps.system.CacheDisabled() {
+		// Check for cached policy
+		if raw, ok := ps.lru.Get(name); ok {
+			return raw.(*Policy), nil
+		}
 	}
 
 	// Special case the root policy
 	if name == "root" {
 		p := &Policy{Name: "root"}
-		ps.lru.Add(p.Name, p)
+		if !ps.system.CacheDisabled() {
+			ps.lru.Add(p.Name, p)
+		}
 		return p, nil
 	}
 
@@ -152,8 +163,11 @@ func (ps *PolicyStore) GetPolicy(name string) (*Policy, error) {
 		policy = p
 	}
 
-	// Update the LRU cache
-	ps.lru.Add(name, policy)
+	if !ps.system.CacheDisabled() {
+		// Update the LRU cache
+		ps.lru.Add(name, policy)
+	}
+
 	return policy, nil
 }
 
@@ -178,8 +192,10 @@ func (ps *PolicyStore) DeletePolicy(name string) error {
 		return fmt.Errorf("failed to delete policy: %v", err)
 	}
 
-	// Clear the cache
-	ps.lru.Remove(name)
+	if !ps.system.CacheDisabled() {
+		// Clear the cache
+		ps.lru.Remove(name)
+	}
 	return nil
 }
 
