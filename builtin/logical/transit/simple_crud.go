@@ -11,8 +11,7 @@ import (
 // backend from multiple operators
 type simplePolicyCRUD struct {
 	sync.RWMutex
-	locks         map[string]*sync.RWMutex
-	locksMapMutex sync.RWMutex
+	locks map[string]*sync.RWMutex
 }
 
 func newSimplePolicyCRUD() *simplePolicyCRUD {
@@ -21,21 +20,14 @@ func newSimplePolicyCRUD() *simplePolicyCRUD {
 	}
 }
 
+// The write lock must be held before calling this; for this CRUD type this
+// should always be the case, since the only method not requiring a write lock
+// when called is getPolicy, and that itself grabs a write lock before calling
+// refreshPolicy
 func (p *simplePolicyCRUD) ensureLockExists(name string) {
-	p.locksMapMutex.RLock()
-
 	if p.locks[name] == nil {
-		p.locksMapMutex.RUnlock()
-		p.locksMapMutex.Lock()
-		// Make sure nothing has appeared since we switched the lock type
-		if p.locks[name] == nil {
-			p.locks[name] = &sync.RWMutex{}
-		}
-		p.locksMapMutex.Unlock()
-		return
+		p.locks[name] = &sync.RWMutex{}
 	}
-
-	p.locksMapMutex.RUnlock()
 }
 
 // See general comments on the interface method

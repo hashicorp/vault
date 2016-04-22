@@ -42,7 +42,7 @@ type policyCRUD interface {
 }
 
 // The mutex is kept separate from the struct since we may set it to its own
-// mutex (if the object is shared) or a shared mutext (if the object isn't
+// mutex (if the object is shared) or a shared mutex (if the object isn't
 // shared and only the locking is)
 type mutexLockingPolicy struct {
 	mutex  *sync.RWMutex
