@@ -942,6 +942,16 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Success!
 	c.sealed = false
+	if c.ha != nil {
+		sd, ok := c.ha.(physical.ServiceDiscovery)
+		if ok {
+			go func() {
+				if err := sd.AdvertiseSealed(c.sealed); err != nil {
+					c.logger.Printf("[WARN] core: failed to advertise unsealed status: %v", err)
+				}
+			}()
+		}
+	}
 	return true, nil
 }
 
@@ -1087,6 +1097,17 @@ func (c *Core) sealInternal() error {
 	}
 	c.logger.Printf("[INFO] core: vault is sealed")
 
+	if c.ha != nil {
+		sd, ok := c.ha.(physical.ServiceDiscovery)
+		if ok {
+			go func() {
+				if err := sd.AdvertiseSealed(c.sealed); err != nil {
+					c.logger.Printf("[WARN] core: failed to advertise sealed status: %v", err)
+				}
+			}()
+		}
+	}
+
 	return nil
 }
 
@@ -1202,6 +1223,16 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Printf("[INFO] core: entering standby mode")
+
+	// Advertise ourselves as a standby
+	sd, ok := c.ha.(physical.ServiceDiscovery)
+	if ok {
+		go func() {
+			if err := sd.AdvertiseActive(false); err != nil {
+				c.logger.Printf("[WARN] core: failed to advertise standby status: %v", err)
+			}
+		}()
+	}
 
 	// Monitor for key rotation
 	keyRotateDone := make(chan struct{})
@@ -1396,7 +1427,20 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 		Key:   coreLeaderPrefix + uuid,
 		Value: []byte(c.advertiseAddr),
 	}
-	return c.barrier.Put(ent)
+	err := c.barrier.Put(ent)
+	if err != nil {
+		return err
+	}
+
+	sd, ok := c.ha.(physical.ServiceDiscovery)
+	if ok {
+		go func() {
+			if err := sd.AdvertiseActive(true); err != nil {
+				c.logger.Printf("[WARN] core: failed to advertise active status: %v", err)
+			}
+		}()
+	}
+	return nil
 }
 
 func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {

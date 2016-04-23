@@ -4,6 +4,9 @@ import "fmt"
 
 const DefaultParallelOperations = 128
 
+// ShutdownSignal
+type ShutdownChannel chan struct{}
+
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
 // data outside of Vault. As such, it is completely untrusted,
@@ -40,6 +43,28 @@ type HABackend interface {
 type AdvertiseDetect interface {
 	// DetectHostAddr is used to detect the host address
 	DetectHostAddr() (string, error)
+
+	// UpdateAdvertiseAddr allows for a non-Running backend to update the
+	// advertise address.  HABackends may want to present a different
+	// address that wasn't available when a Backend was created.
+	UpdateAdvertiseAddr(addr string) error
+}
+
+// ServiceDiscovery is an optional interface that an HABackend can implement.
+// If they do, the state of a backend is advertised to the service discovery
+// network.
+type ServiceDiscovery interface {
+	// AdvertiseActive is used to reflect whether or not a backend is in
+	// an active or standby state.
+	AdvertiseActive(bool) error
+
+	// AdvertiseSealed is used to reflect whether or not a backend is in
+	// a sealed state or not.
+	AdvertiseSealed(bool) error
+
+	// Run executes any background service discovery tasks until the
+	// shutdown channel is closed.
+	RunServiceDiscovery(ShutdownChannel) error
 }
 
 type Lock interface {

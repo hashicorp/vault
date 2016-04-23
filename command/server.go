@@ -286,6 +286,17 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// If the backend supports service discovery, run service discovery
+	if coreConfig.HAPhysical != nil {
+		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
+		if ok {
+			if err := sd.RunServiceDiscovery(c.ShutdownCh); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+				return 1
+			}
+		}
+	}
+
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
