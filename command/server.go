@@ -203,6 +203,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
 		coreConfig.AdvertiseAddr = envAA
+		if consulBackend, ok := (backend).(*physical.ConsulBackend); ok {
+			consulBackend.UpdateAdvertiseAddr(envAA)
+		}
 	}
 
 	// Attempt to detect the advertise address, if possible
@@ -220,6 +223,9 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("Failed to detect advertise address.")
 		} else {
 			coreConfig.AdvertiseAddr = advertise
+			if consulBackend, ok := (backend).(*physical.ConsulBackend); ok {
+				consulBackend.UpdateAdvertiseAddr(advertise)
+			}
 		}
 	}
 
