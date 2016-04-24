@@ -200,6 +200,9 @@ For Consul, the following options are supported:
 
   * `scheme` (optional) - "http" or "https" for talking to Consul.
 
+  * `disable_registration` (optional) - If true, then Vault will not register
+    itself with Vault.  Defaults to "false".
+
   * `token` (optional) - An access token to use to write data to Consul.
 
   * `max_parallel` (optional) - The maximum number of connections to Consul;

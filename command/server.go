@@ -203,9 +203,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
 		coreConfig.AdvertiseAddr = envAA
-		if consulBackend, ok := (backend).(*physical.ConsulBackend); ok {
-			consulBackend.UpdateAdvertiseAddr(envAA)
-		}
 	}
 
 	// Attempt to detect the advertise address, if possible
@@ -223,9 +220,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("Failed to detect advertise address.")
 		} else {
 			coreConfig.AdvertiseAddr = advertise
-			if consulBackend, ok := (backend).(*physical.ConsulBackend); ok {
-				consulBackend.UpdateAdvertiseAddr(advertise)
-			}
 		}
 	}
 
@@ -296,6 +290,11 @@ func (c *ServerCommand) Run(args []string) int {
 	if coreConfig.HAPhysical != nil {
 		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
 		if ok {
+			if err := sd.UpdateAdvertiseAddr(coreConfig.AdvertiseAddr); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error configuring service discovery: %v", err))
+				return 1
+			}
+
 			if err := sd.RunServiceDiscovery(c.ShutdownCh); err != nil {
 				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1

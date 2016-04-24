@@ -43,11 +43,6 @@ type HABackend interface {
 type AdvertiseDetect interface {
 	// DetectHostAddr is used to detect the host address
 	DetectHostAddr() (string, error)
-
-	// UpdateAdvertiseAddr allows for a non-Running backend to update the
-	// advertise address.  HABackends may want to present a different
-	// address that wasn't available when a Backend was created.
-	UpdateAdvertiseAddr(addr string) error
 }
 
 // ServiceDiscovery is an optional interface that an HABackend can implement.
@@ -65,6 +60,11 @@ type ServiceDiscovery interface {
 	// Run executes any background service discovery tasks until the
 	// shutdown channel is closed.
 	RunServiceDiscovery(ShutdownChannel) error
+
+	// UpdateAdvertiseAddr allows for a non-Running backend to update the
+	// advertise address.  HABackends may want to present a different
+	// address that wasn't available when a Backend was created.
+	UpdateAdvertiseAddr(addr string) error
 }
 
 type Lock interface {

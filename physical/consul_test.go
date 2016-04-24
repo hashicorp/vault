@@ -86,67 +86,81 @@ func testConsul_testConsulBackend(t *testing.T) {
 
 func TestConsul_newConsulBackend(t *testing.T) {
 	tests := []struct {
-		Name         string
-		Config       map[string]string
-		Fail         bool
-		checkTimeout time.Duration
-		path         string
-		service      string
-		address      string
-		scheme       string
-		token        string
-		max_parallel int
+		name          string
+		consulConfig  map[string]string
+		fail          bool
+		advertiseAddr string
+		checkTimeout  time.Duration
+		path          string
+		service       string
+		address       string
+		scheme        string
+		token         string
+		max_parallel  int
+		disableReg    bool
 	}{
 		{
-			Name:         "Valid default config",
-			Config:       map[string]string{},
-			checkTimeout: 5 * time.Second,
-			path:         "vault",
-			service:      "vault",
-			address:      "127.0.0.1",
-			scheme:       "http",
-			token:        "",
-			max_parallel: 4,
+			name:          "Valid default config",
+			consulConfig:  map[string]string{},
+			checkTimeout:  5 * time.Second,
+			advertiseAddr: "http://127.0.0.1:8200",
+			path:          "vault/",
+			service:       "vault",
+			address:       "127.0.0.1:8500",
+			scheme:        "http",
+			token:         "",
+			max_parallel:  4,
+			disableReg:    false,
 		},
 		{
-			Name: "Valid modified config",
-			Config: map[string]string{
-				"path":          "seaTech/",
-				"service":       "astronomy",
-				"check_timeout": "6s",
-				"address":       "127.0.0.2",
-				"scheme":        "https",
-				"token":         "deadbeef-cafeefac-deadc0de-feedface",
-				"max_parallel":  "4",
+			name: "Valid modified config",
+			consulConfig: map[string]string{
+				"path":                 "seaTech/",
+				"service":              "astronomy",
+				"advertiseAddr":        "http://127.0.0.2:8200",
+				"check_timeout":        "6s",
+				"address":              "127.0.0.2",
+				"scheme":               "https",
+				"token":                "deadbeef-cafeefac-deadc0de-feedface",
+				"max_parallel":         "4",
+				"disable_registration": "false",
 			},
-			checkTimeout: 6 * time.Second,
-			path:         "seaTech/",
-			service:      "astronomy",
-			address:      "127.0.0.2",
-			scheme:       "https",
-			token:        "deadbeef-cafeefac-deadc0de-feedface",
-			max_parallel: 4,
+			checkTimeout:  6 * time.Second,
+			path:          "seaTech/",
+			service:       "astronomy",
+			advertiseAddr: "http://127.0.0.2:8200",
+			address:       "127.0.0.2",
+			scheme:        "https",
+			token:         "deadbeef-cafeefac-deadc0de-feedface",
+			max_parallel:  4,
 		},
 		{
-			Name: "check timeout too short",
-			Fail: true,
-			Config: map[string]string{
+			name: "check timeout too short",
+			fail: true,
+			consulConfig: map[string]string{
 				"check_timeout": "99ms",
 			},
 		},
 	}
 
 	for _, test := range tests {
-		be, err := newConsulBackend(test.Config)
-		if test.Fail && err == nil {
-			t.Fatalf("Expected config %s to fail", test.Name)
-		} else if !test.Fail && err != nil {
-			t.Fatalf("Expected config %s to not fail: %v", test.Name, err)
+		be, err := newConsulBackend(test.consulConfig)
+		if test.fail {
+			if err == nil {
+				t.Fatalf(`Expected config "%s" to fail`, test.name)
+			} else {
+				continue
+			}
+		} else if !test.fail && err != nil {
+			t.Fatalf("Expected config %s to not fail: %v", test.name, err)
 		}
 
 		c, ok := be.(*ConsulBackend)
 		if !ok {
-			t.Fatalf("Expected ConsulBackend")
+			t.Fatalf("Expected ConsulBackend: %s", test.name)
+		}
+		if err := c.UpdateAdvertiseAddr(test.advertiseAddr); err != nil {
+			t.Fatalf("bad: %v", err)
 		}
 
 		if test.checkTimeout != c.checkTimeout {
@@ -154,7 +168,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		}
 
 		if test.path != c.path {
-			t.Errorf("bad: %v != %v", test.path, c.path)
+			t.Errorf("bad: %s %v != %v", test.name, test.path, c.path)
 		}
 
 		if test.service != c.serviceName {
@@ -162,7 +176,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		}
 
 		if test.address != c.consulClientConf.Address {
-			t.Errorf("bad: %v != %v", test.address, c.consulClientConf.Address)
+			t.Errorf("bad: %s %v != %v", test.name, test.address, c.consulClientConf.Address)
 		}
 
 		if test.scheme != c.consulClientConf.Scheme {
@@ -206,14 +220,20 @@ func TestConsul_serviceTags(t *testing.T) {
 func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
 	tests := []struct {
 		addr string
+		host string
+		port int
 		pass bool
 	}{
 		{
 			addr: "http://127.0.0.1:8200/",
+			host: "127.0.0.1",
+			port: 8200,
 			pass: true,
 		},
 		{
 			addr: "http://127.0.0.1:8200",
+			host: "127.0.0.1",
+			port: 8200,
 			pass: true,
 		},
 		{
@@ -244,8 +264,12 @@ func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
 			}
 		}
 
-		if c.advertiseAddr != test.addr {
-			t.Fatalf("bad: %v != %v", c.advertiseAddr, test.addr)
+		if c.advertiseHost != test.host {
+			t.Fatalf("bad: %v != %v", c.advertiseHost, test.host)
+		}
+
+		if c.advertisePort != test.port {
+			t.Fatalf("bad: %v != %v", c.advertisePort, test.port)
 		}
 	}
 }
@@ -330,21 +354,25 @@ func TestConsul_checkID(t *testing.T) {
 
 func TestConsul_serviceID(t *testing.T) {
 	passingTests := []struct {
+		name          string
 		advertiseAddr string
 		serviceName   string
 		expected      string
 	}{
 		{
+			name:          "valid host w/o slash",
 			advertiseAddr: "http://127.0.0.1:8200",
 			serviceName:   "sea-tech-astronomy",
 			expected:      "sea-tech-astronomy:127.0.0.1:8200",
 		},
 		{
+			name:          "valid host w/ slash",
 			advertiseAddr: "http://127.0.0.1:8200/",
 			serviceName:   "sea-tech-astronomy",
 			expected:      "sea-tech-astronomy:127.0.0.1:8200",
 		},
 		{
+			name:          "valid https host w/ slash",
 			advertiseAddr: "https://127.0.0.1:8200/",
 			serviceName:   "sea-tech-astronomy",
 			expected:      "sea-tech-astronomy:127.0.0.1:8200",
@@ -357,14 +385,10 @@ func TestConsul_serviceID(t *testing.T) {
 		})
 
 		if err := c.UpdateAdvertiseAddr(test.advertiseAddr); err != nil {
-			t.Fatalf("bad: %v", err)
+			t.Fatalf("bad: %s %v", test.name, err)
 		}
 
-		serviceID, err := c.serviceID()
-		if err != nil {
-			t.Fatalf("bad: %v", err)
-		}
-
+		serviceID := c.serviceID()
 		if serviceID != test.expected {
 			t.Fatalf("bad: %v != %v", serviceID, test.expected)
 		}

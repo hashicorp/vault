@@ -44,21 +44,23 @@ const (
 // prefix within Consul. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
 type ConsulBackend struct {
-	path             string
-	client           *api.Client
-	kv               *api.KV
-	permitPool       *PermitPool
-	serviceLock      sync.RWMutex
-	service          *api.AgentServiceRegistration
-	sealedCheck      *api.AgentCheckRegistration
-	advertiseAddr    string
-	consulClientConf *api.Config
-	serviceName      string
-	running          bool
-	active           bool
-	sealed           bool
-	checkTimeout     time.Duration
-	checkTimer       *time.Timer
+	path                string
+	client              *api.Client
+	kv                  *api.KV
+	permitPool          *PermitPool
+	serviceLock         sync.RWMutex
+	service             *api.AgentServiceRegistration
+	sealedCheck         *api.AgentCheckRegistration
+	advertiseHost       string
+	advertisePort       int
+	consulClientConf    *api.Config
+	serviceName         string
+	running             bool
+	active              bool
+	sealed              bool
+	disableRegistration bool
+	checkTimeout        time.Duration
+	checkTimer          *time.Timer
 }
 
 // newConsulBackend constructs a Consul backend using the given API client
@@ -76,6 +78,17 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	}
 	if strings.HasPrefix(path, "/") {
 		path = strings.TrimPrefix(path, "/")
+	}
+
+	// Allow admins to disable consul integration
+	disableReg, ok := conf["disable_registration"]
+	var disableRegistration bool
+	if ok && disableReg != "" {
+		b, err := strconv.ParseBool(disableReg)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
+		}
+		disableRegistration = b
 	}
 
 	// Get the service name to advertise in Consul
@@ -141,14 +154,15 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 
 	// Setup the backend
 	c := &ConsulBackend{
-		path:             path,
-		client:           client,
-		kv:               client.KV(),
-		permitPool:       NewPermitPool(maxParInt),
-		consulClientConf: consulConf,
-		serviceName:      service,
-		checkTimeout:     checkTimeout,
-		checkTimer:       time.NewTimer(checkTimeout),
+		path:                path,
+		client:              client,
+		kv:                  client.KV(),
+		permitPool:          NewPermitPool(maxParInt),
+		consulClientConf:    consulConf,
+		serviceName:         service,
+		checkTimeout:        checkTimeout,
+		checkTimer:          time.NewTimer(checkTimeout),
+		disableRegistration: disableRegistration,
 	}
 	return c, nil
 }
@@ -160,21 +174,13 @@ func (c *ConsulBackend) UpdateAdvertiseAddr(addr string) error {
 		return fmt.Errorf("service registration unable to update advertise address, backend already running")
 	}
 
-	url, err := url.Parse(addr)
+	host, port, err := parseAdvertiseAddr(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`updating advertise address failed to parse URL "%v": {{err}}`, addr), err)
+		return errwrap.Wrapf(fmt.Sprintf(`failed to parse advertise address "%v": {{err}}`, addr), err)
 	}
 
-	_, portStr, err := net.SplitHostPort(url.Host)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`updating advertise address failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
-	}
-	_, err = strconv.ParseInt(portStr, 10, 0)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`updating advertise address failed to parse port "%v": {{err}}`, portStr), err)
-	}
-
-	c.advertiseAddr = addr
+	c.advertiseHost = host
+	c.advertisePort = int(port)
 	return nil
 }
 
@@ -197,10 +203,12 @@ func (c *ConsulBackend) AdvertiseActive(active bool) error {
 		return nil
 	}
 
-	c.service.Tags = serviceTags(active)
-	agent := c.client.Agent()
-	if err := agent.ServiceRegister(c.service); err != nil {
-		return errwrap.Wrapf("service registration failed: {{err}}", err)
+	if !c.disableRegistration {
+		c.service.Tags = serviceTags(active)
+		agent := c.client.Agent()
+		if err := agent.ServiceRegister(c.service); err != nil {
+			return errwrap.Wrapf("service registration failed: {{err}}", err)
+		}
 	}
 
 	// Save a cached copy of the active state: no way to query Core
@@ -219,8 +227,10 @@ func (c *ConsulBackend) AdvertiseSealed(sealed bool) error {
 		return nil
 	}
 
-	// Push a TTL check immediately to update the state
-	c.runCheck()
+	if !c.disableRegistration {
+		// Push a TTL check immediately to update the state
+		c.runCheck()
+	}
 
 	return nil
 }
@@ -229,35 +239,22 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel) (err err
 	c.serviceLock.Lock()
 	defer c.serviceLock.Unlock()
 
+	if c.disableRegistration {
+		return nil
+	}
+
 	if c.running {
 		return fmt.Errorf("service registration routine already running")
 	}
 
-	url, err := url.Parse(c.advertiseAddr)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`service registration failed to parse URL "%v": {{err}}`, c.advertiseAddr), err)
-	}
-
-	host, portStr, err := net.SplitHostPort(url.Host)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`service registration failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
-	}
-	port, err := strconv.ParseInt(portStr, 10, 0)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`service registration failed to parse port "%v": {{err}}`, portStr), err)
-	}
-
-	serviceID, err := c.serviceID()
-	if err != nil {
-		return err
-	}
+	serviceID := c.serviceID()
 
 	c.service = &api.AgentServiceRegistration{
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              serviceTags(c.active),
-		Port:              int(port),
-		Address:           host,
+		Port:              c.advertisePort,
+		Address:           c.advertiseHost,
 		EnableTagOverride: false,
 	}
 
@@ -351,22 +348,31 @@ func (c *ConsulBackend) checkID() string {
 
 // serviceID returns the Vault ServiceID for use in Consul.  Assume at least
 // a read lock is held.
-func (c *ConsulBackend) serviceID() (string, error) {
-	url, err := url.Parse(c.advertiseAddr)
-	if err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf(`service registration failed to parse URL "%v": {{err}}`, c.advertiseAddr), err)
+func (c *ConsulBackend) serviceID() string {
+	return fmt.Sprintf("%s:%s:%d", c.serviceName, c.advertiseHost, c.advertisePort)
+}
+
+func parseAdvertiseAddr(addr string) (host string, port int, err error) {
+	if addr == "" {
+		return "", -1, fmt.Errorf("advertise address must not be empty")
 	}
 
-	host, portStr, err := net.SplitHostPort(url.Host)
+	url, err := url.Parse(addr)
 	if err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf(`service registration failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
-	}
-	port, err := strconv.ParseInt(portStr, 10, 0)
-	if err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf(`service registration failed to parse port "%v": {{err}}`, portStr), err)
+		return "", -2, errwrap.Wrapf(fmt.Sprintf(`failed to parse advertise URL "%v": {{err}}`, addr), err)
 	}
 
-	return fmt.Sprintf("%s:%s:%d", c.serviceName, host, int(port)), nil
+	var portStr string
+	host, portStr, err = net.SplitHostPort(url.Host)
+	if err != nil {
+		return "", -3, errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
+	}
+	portNum, err := strconv.ParseInt(portStr, 10, 0)
+	if err != nil || portNum < 1 || portNum > 65535 {
+		return "", -4, errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+	}
+
+	return host, int(portNum), nil
 }
 
 func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
