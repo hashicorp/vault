@@ -91,9 +91,9 @@ type Entry struct {
 type Factory func(map[string]string) (Backend, error)
 
 // NewBackend returns a new backend with the given type and configuration.
-// The backend is looked up in the BuiltinBackends variable.
+// The backend is looked up in the builtinBackends variable.
 func NewBackend(t string, conf map[string]string) (Backend, error) {
-	f, ok := BuiltinBackends[t]
+	f, ok := builtinBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown physical backend type: %s", t)
 	}
@@ -102,7 +102,7 @@ func NewBackend(t string, conf map[string]string) (Backend, error) {
 
 // BuiltinBackends is the list of built-in physical backends that can
 // be used with NewBackend.
-var BuiltinBackends = map[string]Factory{
+var builtinBackends = map[string]Factory{
 	"inmem": func(map[string]string) (Backend, error) {
 		return NewInmem(), nil
 	},
