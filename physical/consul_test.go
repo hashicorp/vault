@@ -71,7 +71,7 @@ func testConsul_testConsulBackend(t *testing.T) {
 		t.Fatalf("bad")
 	}
 
-	if c.sealed != false {
+	if c.unsealed != false {
 		t.Fatalf("bad")
 	}
 
@@ -315,42 +315,42 @@ func TestConsul_AdvertiseSealed(t *testing.T) {
 
 	c := testConsulBackend(t)
 
-	if c.sealed != false {
+	if c.unsealed == true {
 		t.Fatalf("bad")
 	}
 
 	if err := c.AdvertiseSealed(true); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
-	if c.sealed != true {
+	if c.unsealed == true {
 		t.Fatalf("bad")
 	}
 
 	if err := c.AdvertiseSealed(true); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
-	if c.sealed != true {
+	if c.unsealed == true {
 		t.Fatalf("bad")
 	}
 
 	if err := c.AdvertiseSealed(false); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
-	if c.sealed != false {
+	if c.unsealed == false {
 		t.Fatalf("bad")
 	}
 
 	if err := c.AdvertiseSealed(false); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
-	if c.sealed != false {
+	if c.unsealed == false {
 		t.Fatalf("bad")
 	}
 
 	if err := c.AdvertiseSealed(true); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
-	if c.sealed != true {
+	if c.unsealed == true {
 		t.Fatalf("bad")
 	}
 }
