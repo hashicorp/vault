@@ -69,8 +69,8 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		"put":    put_statement,
 		"get":    "SELECT value FROM " + quoted_table + " WHERE path = $1 AND key = $2",
 		"delete": "DELETE FROM " + quoted_table + " WHERE path = $1 AND key = $2",
-		"list":   "SELECT key FROM " + quoted_table + " WHERE path = $1" +
-				"UNION SELECT substr(path, length($1)+1) FROM " + quoted_table + "WHERE parent_path = $1",
+		"list": "SELECT key FROM " + quoted_table + " WHERE path = $1" +
+			"UNION SELECT substr(path, length($1)+1) FROM " + quoted_table + "WHERE parent_path = $1",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {
@@ -97,18 +97,18 @@ func (m *PostgreSQLBackend) splitKey(fullPath string) (string, string, string) {
 	var path string
 
 	pieces := strings.Split(fullPath, "/")
-	depth  := len(pieces)
-	key    := pieces[depth-1]
-	
+	depth := len(pieces)
+	key := pieces[depth-1]
+
 	if depth == 1 {
 		parentPath = ""
-		path       = "/"
+		path = "/"
 	} else if depth == 2 {
 		parentPath = "/"
-		path       = "/" + pieces[0] + "/"
+		path = "/" + pieces[0] + "/"
 	} else {
 		parentPath = "/" + strings.Join(pieces[:depth-2], "/") + "/"
-		path       = "/" + strings.Join(pieces[:depth-1], "/") + "/"
+		path = "/" + strings.Join(pieces[:depth-1], "/") + "/"
 	}
 
 	return parentPath, path, key
