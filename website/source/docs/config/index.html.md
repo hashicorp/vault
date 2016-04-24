@@ -200,8 +200,14 @@ For Consul, the following options are supported:
 
   * `scheme` (optional) - "http" or "https" for talking to Consul.
 
+  * `check_timeout` (optional) - The check interval used to send health check
+    information to Consul.  Defaults to "5s".
+
   * `disable_registration` (optional) - If true, then Vault will not register
     itself with Vault.  Defaults to "false".
+
+  * `service` (optional) - The name of the service to register with Consul.
+    Defaults to "vault".
 
   * `token` (optional) - An access token to use to write data to Consul.
 
@@ -229,6 +235,86 @@ settings](https://www.consul.io/docs/agent/encryption.html):
     communication.  Set accordingly to the
     [key_file](https://www.consul.io/docs/agent/options.html#key_file) setting
     in Consul.
+
+```
+// Sample Consul Backend configuration with local Consul Agent
+backend "consul" {
+  // address MUST match Consul's `addresses.http` config value (or
+  // `addresses.https` depending on the scheme provided below).
+  address = "127.0.0.1:8500"
+  #address = "unix:///tmp/.consul.http.sock"
+
+  // scheme defaults to "http" (suitable for loopback and UNIX sockets), but
+  // should be "https" when Consul exists on a remote node (a non-standard
+  // deployment).  All decryption happen within Vault so this value does not
+  // change Vault's Threat Model.
+  scheme = "http"
+
+  // token is a Consul ACL Token that has write privileges to the path
+  // specified below.  Use of a Consul ACL Token is a best pracitce.
+  token = "[redacted]" // Vault's Consul ACL Token
+
+  // path must be writable by the Consul ACL Token
+  path = "vault/"
+}
+```
+
+Once properly configured, an unsealed Vault installation should be available
+on the network at `active.vault.service.consul`. Unsealed Vault instances in
+the standby state are available at `standby.vault.service.consul`.  All
+unsealed Vault instances are available as healthy in the
+`vault.service.consul` pool.  Sealed Vault instances will mark themselves as
+critical to avoid showing up by default in Consul's service discovery.
+
+```
+% dig active.vault.service.consul srv
+; <<>> DiG 9.8.3-P1 <<>> active.vault.service.consul srv
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 11331
+;; flags: qr aa rd; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;active.vault.service.consul.   IN      SRV
+
+;; ANSWER SECTION:
+active.vault.service.consul. 0  IN      SRV     1 1 8200 vault1.node.dc1.consul.
+
+;; ADDITIONAL SECTION:
+vault1.node.dc1.consul.      0  IN      A       172.17.33.46
+
+;; Query time: 0 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Sat Apr 23 17:33:14 2016
+;; MSG SIZE  rcvd: 172
+% dig +short standby.vault.service.consul srv
+1 1 8200 vault3.node.dc1.consul.
+1 1 8200 vault2.node.dc1.consul.
+% dig +short vault.service.consul srv
+1 1 8200 vault3.node.dc1.consul.
+1 1 8200 vault1.node.dc1.consul.
+1 1 8200 vault2.node.dc1.consul.
+% dig +short vault.service.consul a
+172.17.33.46
+172.17.34.32
+172.17.35.29
+vault1% vault seal
+% dig +short vault.service.consul srv
+1 1 8200 vault3.node.dc1.consul.
+1 1 8200 vault2.node.dc1.consul.
+vault1% vault unseal
+Key (will be hidden):
+Sealed: false
+Key Shares: 5
+Key Threshold: 3
+Unseal Progress: 0
+% dig +short vault.service.consul srv
+1 1 8200 vault1.node.dc1.consul.
+1 1 8200 vault3.node.dc1.consul.
+1 1 8200 vault2.node.dc1.consul.
+```
 
 #### Backend Reference: etcd (Community-Supported)
 
