@@ -128,10 +128,11 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			max_parallel: 4,
 		},
 		{
+			Name: "check timeout too short",
+			Fail: true,
 			Config: map[string]string{
 				"check_timeout": "99ms",
 			},
-			Fail: true,
 		},
 	}
 

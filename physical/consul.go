@@ -93,7 +93,7 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 		}
 
 		min, _ := lib.DurationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
-		if d < min {
+		if min < checkMinBuffer {
 			return nil, fmt.Errorf("Consul check_timeout must be greater than %v", min)
 		}
 
