@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"crypto/tls"
@@ -38,6 +39,10 @@ const (
 	// defaultServiceName is the default Consul service name used when
 	// advertising a Vault instance.
 	defaultServiceName = "vault"
+
+	// registrationRetryInterval specifies the retry duration to use when
+	// a registration to the Consul agent fails.
+	registrationRetryInterval = 1 * time.Second
 )
 
 // ConsulBackend is a physical backend that stores data at specific
@@ -51,13 +56,14 @@ type ConsulBackend struct {
 	serviceLock         sync.RWMutex
 	service             *api.AgentServiceRegistration
 	sealedCheck         *api.AgentCheckRegistration
+	registrationLock    int64
 	advertiseHost       string
 	advertisePort       int
 	consulClientConf    *api.Config
 	serviceName         string
 	running             bool
 	active              bool
-	sealed              bool
+	unsealed            bool
 	disableRegistration bool
 	checkTimeout        time.Duration
 	checkTimer          *time.Timer
@@ -184,8 +190,7 @@ func (c *ConsulBackend) UpdateAdvertiseAddr(addr string) error {
 	return nil
 }
 
-// serviceTags returns all of the relevant tags for Consul.  Assumes
-// c.serviceLock held for writing.
+// serviceTags returns all of the relevant tags for Consul.
 func serviceTags(active bool) []string {
 	activeTag := "standby"
 	if active {
@@ -203,16 +208,35 @@ func (c *ConsulBackend) AdvertiseActive(active bool) error {
 		return nil
 	}
 
-	if !c.disableRegistration {
-		c.service.Tags = serviceTags(active)
-		agent := c.client.Agent()
-		if err := agent.ServiceRegister(c.service); err != nil {
-			return errwrap.Wrapf("service registration failed: {{err}}", err)
-		}
-	}
-
 	// Save a cached copy of the active state: no way to query Core
 	c.active = active
+
+	// Ensure serial registration to the Consul agent.  Allow for
+	// concurrent calls to update active status while a single task
+	// attempts, until successful, to update the Consul Agent.
+	if !c.disableRegistration && atomic.CompareAndSwapInt64(&c.registrationLock, 0, 1) {
+		defer atomic.CompareAndSwapInt64(&c.registrationLock, 1, 0)
+
+		// Retry agent registration until successful
+	registration_complete:
+		for {
+			c.service.Tags = serviceTags(c.active)
+			agent := c.client.Agent()
+			err := agent.ServiceRegister(c.service)
+			if err == nil {
+				break registration_complete
+			}
+
+			// wtb logger c.logger.Printf("[WARN] service registration failed: %v", err)
+			c.serviceLock.Unlock()
+			time.Sleep(registrationRetryInterval)
+			c.serviceLock.Lock()
+
+			if !c.running {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
@@ -220,7 +244,7 @@ func (c *ConsulBackend) AdvertiseActive(active bool) error {
 func (c *ConsulBackend) AdvertiseSealed(sealed bool) error {
 	c.serviceLock.Lock()
 	defer c.serviceLock.Unlock()
-	c.sealed = sealed
+	c.unsealed = !sealed
 
 	// Vault is still bootstrapping
 	if c.service == nil {
@@ -258,9 +282,9 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel) (err err
 		EnableTagOverride: false,
 	}
 
-	checkStatus := "failing"
-	if !c.sealed {
-		checkStatus = "passing"
+	checkStatus := api.HealthCritical
+	if c.unsealed {
+		checkStatus = api.HealthPassing
 	}
 
 	c.sealedCheck = &api.AgentCheckRegistration{
@@ -333,7 +357,7 @@ func (c *ConsulBackend) runCheck() {
 
 	// Run a TTL check
 	agent := c.client.Agent()
-	if !c.sealed {
+	if c.unsealed {
 		agent.UpdateTTL(c.checkID(), "Vault Unsealed", api.HealthPassing)
 	} else {
 		agent.UpdateTTL(c.checkID(), "Vault Sealed", api.HealthCritical)

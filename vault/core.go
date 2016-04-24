@@ -946,7 +946,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
 			go func() {
-				if err := sd.AdvertiseSealed(c.sealed); err != nil {
+				if err := sd.AdvertiseSealed(false); err != nil {
 					c.logger.Printf("[WARN] core: failed to advertise unsealed status: %v", err)
 				}
 			}()
@@ -1101,7 +1101,7 @@ func (c *Core) sealInternal() error {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
 			go func() {
-				if err := sd.AdvertiseSealed(c.sealed); err != nil {
+				if err := sd.AdvertiseSealed(true); err != nil {
 					c.logger.Printf("[WARN] core: failed to advertise sealed status: %v", err)
 				}
 			}()
@@ -1223,16 +1223,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Printf("[INFO] core: entering standby mode")
-
-	// Advertise ourselves as a standby
-	sd, ok := c.ha.(physical.ServiceDiscovery)
-	if ok {
-		go func() {
-			if err := sd.AdvertiseActive(false); err != nil {
-				c.logger.Printf("[WARN] core: failed to advertise standby status: %v", err)
-			}
-		}()
-	}
 
 	// Monitor for key rotation
 	keyRotateDone := make(chan struct{})
@@ -1465,7 +1455,19 @@ func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	return c.barrier.Delete(key)
+	err := c.barrier.Delete(key)
+
+	// Advertise ourselves as a standby
+	sd, ok := c.ha.(physical.ServiceDiscovery)
+	if ok {
+		go func() {
+			if err := sd.AdvertiseActive(false); err != nil {
+				c.logger.Printf("[WARN] core: failed to advertise standby status: %v", err)
+			}
+		}()
+	}
+
+	return err
 }
 
 // emitMetrics is used to periodically expose metrics while runnig
