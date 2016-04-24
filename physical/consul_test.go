@@ -275,6 +275,11 @@ func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
 }
 
 func TestConsul_AdvertiseActive(t *testing.T) {
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		t.Skipf("No consul process running, skipping test")
+	}
+
 	c := testConsulBackend(t)
 
 	if c.active != false {
@@ -303,6 +308,11 @@ func TestConsul_AdvertiseActive(t *testing.T) {
 }
 
 func TestConsul_AdvertiseSealed(t *testing.T) {
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		t.Skipf("No consul process running, skipping test")
+	}
+
 	c := testConsulBackend(t)
 
 	if c.sealed != false {
@@ -396,9 +406,9 @@ func TestConsul_serviceID(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
-	addr := os.Getenv("CONSUL_ADDR")
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		t.SkipNow()
+		t.Skipf("No consul process running, skipping test")
 	}
 
 	conf := api.DefaultConfig()
@@ -427,9 +437,9 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
-	addr := os.Getenv("CONSUL_ADDR")
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		t.SkipNow()
+		t.Skipf("No consul process running, skipping test")
 	}
 
 	conf := api.DefaultConfig()
