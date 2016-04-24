@@ -511,7 +511,10 @@ func (c *ConsulBackend) DetectHostAddr() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	addr := self["Member"]["Addr"].(string)
+	addr, ok := self["Member"]["Addr"].(string)
+	if !ok {
+		return "", fmt.Errorf("Unable to convert an address to string")
+	}
 	return addr, nil
 }
 
