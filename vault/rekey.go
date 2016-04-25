@@ -124,13 +124,6 @@ func (c *Core) RekeyInit(config *SealConfig, recovery bool) error {
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
 func (c *Core) BarrierRekeyInit(config *SealConfig) error {
-	// Right now we don't support this, but the rest of the code is ready for
-	// when we do, hence the check below for this to be false if
-	// config.StoredShares is greater than zero
-	if c.seal.StoredKeysSupported() {
-		return fmt.Errorf("rekeying of barrier not supported when stored key support is available")
-	}
-
 	if config.StoredShares > 0 {
 		if !c.seal.StoredKeysSupported() {
 			return fmt.Errorf("storing keys not supported by barrier seal")

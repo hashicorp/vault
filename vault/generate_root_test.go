@@ -11,9 +11,16 @@ import (
 
 func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
+	testCore_GenerateRoot_Lifecycle_Common(t, c, [][]byte{master})
 
+	bc, rc := TestSealDefConfigs()
+	c, _, recoveryKeys, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	testCore_GenerateRoot_Lifecycle_Common(t, c, recoveryKeys)
+}
+
+func testCore_GenerateRoot_Lifecycle_Common(t *testing.T, c *Core, keys [][]byte) {
 	// Verify update not allowed
-	if _, err := c.GenerateRootUpdate(master, ""); err == nil {
+	if _, err := c.GenerateRootUpdate(keys[0], ""); err == nil {
 		t.Fatalf("no root generation in progress")
 	}
 
@@ -76,7 +83,14 @@ func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
 
 func TestCore_GenerateRoot_Init(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
+	testCore_GenerateRoot_Init_Common(t, c)
 
+	bc, rc := TestSealDefConfigs()
+	c, _, _, _ = TestCoreUnsealedWithConfigs(t, bc, rc)
+	testCore_GenerateRoot_Init_Common(t, c)
+}
+
+func testCore_GenerateRoot_Init_Common(t *testing.T, c *Core) {
 	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
@@ -94,9 +108,26 @@ func TestCore_GenerateRoot_Init(t *testing.T) {
 	}
 }
 
-func TestCore_GenerateRoot_InvalidMaster(t *testing.T) {
+func TestCore_GenerateRoot_InvalidMasterNonce(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
+	// Make the master invalid
+	master[0]++
+	testCore_GenerateRoot_InvalidMasterNonce_Common(t, c, [][]byte{master})
 
+	bc, rc := TestSealDefConfigs()
+	// For ease of use let's make the threshold the same as the shares and also
+	// no stored shares so we get an error after the full set
+	bc.StoredShares = 0
+	bc.SecretShares = 5
+	bc.SecretThreshold = 5
+	rc.SecretShares = 5
+	rc.SecretThreshold = 5
+	// In this case, pass in master keys instead as they'll be invalid
+	c, masterKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	testCore_GenerateRoot_InvalidMasterNonce_Common(t, c, masterKeys)
+}
+
+func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys [][]byte) {
 	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
@@ -116,29 +147,16 @@ func TestCore_GenerateRoot_InvalidMaster(t *testing.T) {
 		t.Fatalf("bad: no rekey config received")
 	}
 
-	// Provide the master (invalid)
-	master[0]++
-	_, err = c.GenerateRootUpdate(master, rgconf.Nonce)
+	// Provide the nonce (invalid)
+	_, err = c.GenerateRootUpdate(keys[0], "abcd")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-}
 
-func TestCore_GenerateRoot_InvalidNonce(t *testing.T) {
-	c, master, _ := TestCoreUnsealed(t)
-
-	otpBytes, err := GenerateRandBytes(16)
-	if err != nil {
-		t.Fatal(err)
+	// Provide the master (invalid)
+	for _, key := range keys {
+		_, err = c.GenerateRootUpdate(key, rgconf.Nonce)
 	}
-
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Provide the nonce (invalid)
-	_, err = c.GenerateRootUpdate(master, "abcd")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -146,7 +164,14 @@ func TestCore_GenerateRoot_InvalidNonce(t *testing.T) {
 
 func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
+	testCore_GenerateRoot_Update_OTP_Common(t, c, [][]byte{master})
 
+	bc, rc := TestSealDefConfigs()
+	c, _, recoveryKeys, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	testCore_GenerateRoot_Update_OTP_Common(t, c, recoveryKeys[0:rc.SecretThreshold])
+}
+
+func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byte) {
 	otpBytes, err := GenerateRandBytes(16)
 	if err != nil {
 		t.Fatal(err)
@@ -168,10 +193,13 @@ func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 		t.Fatalf("bad: no root generation config received")
 	}
 
-	// Provide the master
-	result, err := c.GenerateRootUpdate(master, rkconf.Nonce)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	// Provide the keys
+	var result *GenerateRootResult
+	for _, key := range keys {
+		result, err = c.GenerateRootUpdate(key, rkconf.Nonce)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 	}
 	if result == nil {
 		t.Fatalf("Bad, result is nil")
@@ -222,7 +250,14 @@ func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 
 func TestCore_GenerateRoot_Update_PGP(t *testing.T) {
 	c, master, _ := TestCoreUnsealed(t)
+	testCore_GenerateRoot_Update_PGP_Common(t, c, [][]byte{master})
 
+	bc, rc := TestSealDefConfigs()
+	c, _, recoveryKeys, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	testCore_GenerateRoot_Update_PGP_Common(t, c, recoveryKeys[0:rc.SecretThreshold])
+}
+
+func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byte) {
 	// Start a root generation
 	err := c.GenerateRootInit("", pgpkeys.TestPubKey1)
 	if err != nil {
@@ -238,10 +273,13 @@ func TestCore_GenerateRoot_Update_PGP(t *testing.T) {
 		t.Fatalf("bad: no root generation config received")
 	}
 
-	// Provide the master
-	result, err := c.GenerateRootUpdate(master, rkconf.Nonce)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	// Provide the keys
+	var result *GenerateRootResult
+	for _, key := range keys {
+		result, err = c.GenerateRootUpdate(key, rkconf.Nonce)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 	}
 	if result == nil {
 		t.Fatalf("Bad, result is nil")

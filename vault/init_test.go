@@ -9,6 +9,17 @@ import (
 )
 
 func TestCore_Init(t *testing.T) {
+	c, conf := testCore_NewTestCore(t, nil)
+	testCore_Init_Common(t, c, conf, &SealConfig{SecretShares: 5, SecretThreshold: 3}, nil)
+
+	c, conf = testCore_NewTestCore(t, &TestSeal{})
+	bc, rc := TestSealDefConfigs()
+	rc.SecretShares = 4
+	rc.SecretThreshold = 2
+	testCore_Init_Common(t, c, conf, bc, rc)
+}
+
+func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
 	inm := physical.NewInmem()
 	conf := &CoreConfig{
 		Physical:     inm,
@@ -16,12 +27,16 @@ func TestCore_Init(t *testing.T) {
 		LogicalBackends: map[string]logical.Factory{
 			"generic": LeasedPassthroughBackendFactory,
 		},
+		Seal: seal,
 	}
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	return c, conf
+}
 
+func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, recoveryConf *SealConfig) {
 	init, err := c.Initialized()
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -39,24 +54,35 @@ func TestCore_Init(t *testing.T) {
 	if outConf != nil {
 		t.Fatalf("bad: %v", outConf)
 	}
-
-	sealConf := &SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
+	if recoveryConf != nil {
+		outConf, err := c.seal.RecoveryConfig()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if outConf != nil {
+			t.Fatalf("bad: %v", outConf)
+		}
 	}
-	res, err := c.Initialize(sealConf, nil)
+
+	res, err := c.Initialize(barrierConf, recoveryConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	if len(res.SecretShares) != 1 {
-		t.Fatalf("Bad: %v", res)
+	if len(res.SecretShares) != (barrierConf.SecretShares - barrierConf.StoredShares) {
+		t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *barrierConf)
 	}
-	if res.RootToken == "" {
-		t.Fatalf("Bad: %v", res)
+	if recoveryConf != nil {
+		if len(res.RecoveryShares) != recoveryConf.SecretShares {
+			t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *recoveryConf)
+		}
 	}
 
-	_, err = c.Initialize(sealConf, nil)
+	if res.RootToken == "" {
+		t.Fatalf("Bad: %#v", res)
+	}
+
+	_, err = c.Initialize(barrierConf, recoveryConf)
 	if err != ErrAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
@@ -75,8 +101,17 @@ func TestCore_Init(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(outConf, sealConf) {
-		t.Fatalf("bad: %v expect: %v", outConf, sealConf)
+	if !reflect.DeepEqual(outConf, barrierConf) {
+		t.Fatalf("bad: %v expect: %v", outConf, barrierConf)
+	}
+	if recoveryConf != nil {
+		outConf, err = c.seal.RecoveryConfig()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !reflect.DeepEqual(outConf, recoveryConf) {
+			t.Fatalf("bad: %v expect: %v", outConf, recoveryConf)
+		}
 	}
 
 	// New Core, same backend
@@ -85,7 +120,7 @@ func TestCore_Init(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	_, err = c2.Initialize(sealConf, nil)
+	_, err = c2.Initialize(barrierConf, recoveryConf)
 	if err != ErrAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
@@ -104,7 +139,16 @@ func TestCore_Init(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if !reflect.DeepEqual(outConf, sealConf) {
-		t.Fatalf("bad: %v expect: %v", outConf, sealConf)
+	if !reflect.DeepEqual(outConf, barrierConf) {
+		t.Fatalf("bad: %v expect: %v", outConf, barrierConf)
+	}
+	if recoveryConf != nil {
+		outConf, err = c2.seal.RecoveryConfig()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !reflect.DeepEqual(outConf, recoveryConf) {
+			t.Fatalf("bad: %v expect: %v", outConf, recoveryConf)
+		}
 	}
 }

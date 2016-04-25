@@ -56,6 +56,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 	sealThreshold, err := core.RekeyThreshold(recovery)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	// Format the status
@@ -75,6 +76,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, err)
+				return
 			}
 			status.PGPFingerprints = pgpFingerprints
 			status.Backup = rekeyConf.Backup
@@ -93,6 +95,15 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 
 	if req.Backup && len(req.PGPKeys) == 0 {
 		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"))
+		return
+	}
+
+	// Right now we don't support this, but the rest of the code is ready for
+	// when we do, hence the check below for this to be false if
+	// StoredShares is greater than zero
+	if core.SealAccess().StoredKeysSupported() {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("rekeying of barrier not supported when stored key support is available"))
+		return
 	}
 
 	// Initialize the rekey
