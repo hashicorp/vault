@@ -148,11 +148,12 @@ Matching Route: {{.RoutePattern}}
 
 {{.Synopsis}}
 
+{{ if .Fields -}}
 ## PARAMETERS
 {{range .Fields}}
 {{indent 4 .Key}} ({{.Type}})
 {{indent 8 .Description}}
-{{end}}
+{{end}}{{end}}
 ## DESCRIPTION
 
 {{.Description}}
