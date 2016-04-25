@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -10,6 +11,85 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
+
+func TestBackend_HMAC(t *testing.T) {
+	nonce, err := createRoleTagNonce()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rTag := &roleTag{
+		Version: "v1",
+		Nonce:   nonce,
+		AmiID:   "abcd-123",
+	}
+
+	rTag.Version = ""
+	val, err := prepareRoleTagPlaintextValue(rTag)
+	if err == nil {
+		t.Fatalf("expected error for missing version")
+	}
+	rTag.Version = "v1"
+
+	rTag.Nonce = ""
+	val, err = prepareRoleTagPlaintextValue(rTag)
+	if err == nil {
+		t.Fatalf("expected error for missing nonce")
+	}
+	rTag.Nonce = nonce
+
+	rTag.AmiID = ""
+	val, err = prepareRoleTagPlaintextValue(rTag)
+	if err == nil {
+		t.Fatalf("expected error for missing ami_id")
+	}
+	rTag.AmiID = "abcd-123"
+
+	val, err = prepareRoleTagPlaintextValue(rTag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(val, "a=") ||
+		!strings.Contains(val, "p=") ||
+		!strings.Contains(val, "d=") ||
+		!strings.HasPrefix(val, "v1") {
+		t.Fatalf("incorrect information in role tag plaintext value")
+	}
+
+	rTag.InstanceID = "instance-123"
+	val, err = prepareRoleTagPlaintextValue(rTag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(val, "i=") {
+		t.Fatalf("missing instance ID in role tag plaintext value")
+	}
+
+	rTag.MaxTTL = 200
+	val, err = prepareRoleTagPlaintextValue(rTag)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(val, "t=") {
+		t.Fatalf("missing instance ID in role tag plaintext value")
+	}
+}
+
+func TestBackend_CreateRoleTagNonce(t *testing.T) {
+	nonce, err := createRoleTagNonce()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nonce == "" {
+		t.Fatalf("failed to create role tag nonce")
+	}
+	nonceBytes, err := base64.StdEncoding.DecodeString(nonce)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(nonceBytes) == 0 {
+		t.Fatalf("length of role tag nonce is zero")
+	}
+}
 
 func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	config := logical.TestBackendConfig()
@@ -391,6 +471,7 @@ func TestBackend_PathImage(t *testing.T) {
 }
 
 func TestBackend_parseRoleTagValue(t *testing.T) {
+	// create a backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -399,6 +480,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create an entry for an AMI
 	data := map[string]interface{}{
 		"policies": "p,q,r,s",
 		"max_ttl":  "120s",
@@ -414,6 +496,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// verify that the entry is created
 	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "image/abcd-123",
@@ -423,6 +506,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 		t.Fatalf("expected an image entry for abcd-123")
 	}
 
+	// create a role tag
 	data2 := map[string]interface{}{
 		"policies": "p,q,r,s",
 	}
@@ -441,6 +525,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 	}
 	tagValue := resp.Data["tag_value"].(string)
 
+	// parse the value and check if the verifiable values match
 	rTag, err := parseRoleTagValue(storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -616,6 +701,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		return
 	}
 
+	// create the backend
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -624,6 +710,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// get the API credentials from env vars
 	clientConfig := map[string]interface{}{
 		"access_key": os.Getenv("AWS_ACCESS_KEY"),
 		"secret_key": os.Getenv("AWS_SECRET_KEY"),
@@ -633,6 +720,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		t.Fatalf("credentials not configured")
 	}
 
+	// store the credentials
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
@@ -643,6 +731,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// write an entry for an ami
 	data := map[string]interface{}{
 		"policies": "root",
 		"max_ttl":  "120s",

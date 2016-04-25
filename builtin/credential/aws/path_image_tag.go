@@ -206,6 +206,10 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 		return "", fmt.Errorf("missing ami_id")
 	}
 
+	if rTag.Policies == nil || len(rTag.Policies) == 0 {
+		rTag.Policies = []string{"default"}
+	}
+
 	// Attach Version, Nonce, AMI ID, Policies, DisallowReauthentication fields.
 	value := fmt.Sprintf("%s:%s:a=%s:p=%s:d=%s", rTag.Version, rTag.Nonce, rTag.AmiID, strings.Join(rTag.Policies, ","), strconv.FormatBool(rTag.DisallowReauthentication))
 
