@@ -11,6 +11,96 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
+func TestBackend_ConfigTidyIdentities(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"safety_buffer": "60",
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/tidy/identities",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_ConfigTidyRoleTags(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"safety_buffer": "60",
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/tidy/roletags",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_TidyIdentities(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "tidy/identities",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_TidyRoleTags(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "tidy/roletags",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_ConfigClient(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -421,6 +511,7 @@ func TestBackend_PathImageTag(t *testing.T) {
 }
 
 func TestBackend_PathBlacklistRoleTag(t *testing.T) {
+	// create the backend
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -429,6 +520,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create an image entry
 	data := map[string]interface{}{
 		"ami_id":   "abcd-123",
 		"policies": "p,q,r,s",
@@ -444,6 +536,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create a role tag against an image registered before
 	data2 := map[string]interface{}{
 		"policies": "p,q,r,s",
 	}
@@ -467,6 +560,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
 	}
 
+	// blacklist that role tag
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "blacklist/roletag/" + tag,
@@ -479,6 +573,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatalf("failed to blacklist the roletag: %s\n", tag)
 	}
 
+	// read the blacklist entry
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "blacklist/roletag/" + tag,
@@ -494,6 +589,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatalf("failed to read the blacklisted role tag:%s. Err: %s\n", tag, resp.Data["error"])
 	}
 
+	// delete the blacklisted entry
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "blacklist/roletag/" + tag,
@@ -503,6 +599,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// try to read the deleted entry
 	tagEntry, err := blacklistRoleTagEntry(storage, tag)
 	if err != nil {
 		t.Fatal(err)

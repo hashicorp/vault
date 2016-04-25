@@ -28,6 +28,8 @@ expiration, before it is removed from the backend storage.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.CreateOperation: b.pathConfigTidyIdentitiesCreateUpdate,
 			logical.UpdateOperation: b.pathConfigTidyIdentitiesCreateUpdate,
+			logical.ReadOperation:   b.pathConfigTidyIdentitiesRead,
+			logical.DeleteOperation: b.pathConfigTidyIdentitiesDelete,
 		},
 
 		HelpSynopsis:    pathConfigTidyIdentitiesHelpSyn,
@@ -39,14 +41,14 @@ func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, d
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	entry, err := configTidyWhitelistIdentity(req.Storage)
+	entry, err := configTidyIdentities(req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func configTidyWhitelistIdentity(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+func configTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
 	entry, err := s.Get("config/tidy/identities")
 	if err != nil {
 		return nil, err
@@ -65,7 +67,7 @@ func configTidyWhitelistIdentity(s logical.Storage) (*tidyWhitelistIdentityConfi
 func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
-	configEntry, err := configTidyWhitelistIdentity(req.Storage)
+	configEntry, err := configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +103,7 @@ func (b *backend) pathConfigTidyIdentitiesRead(req *logical.Request, data *frame
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	clientConfig, err := configTidyWhitelistIdentity(req.Storage)
+	clientConfig, err := configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
 	}

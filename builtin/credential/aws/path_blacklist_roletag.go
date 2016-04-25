@@ -89,7 +89,7 @@ func (b *backend) pathBlacklistRoleTagDelete(
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	err := req.Storage.Delete("blacklist/roletag/" + tag)
+	err := req.Storage.Delete("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
 	}

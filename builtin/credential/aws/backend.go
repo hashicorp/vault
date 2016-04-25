@@ -84,7 +84,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		// safety_buffer defaults to 72h
 		safety_buffer := 259200
-		tidyBlacklistConfigEntry, err := configTidyBlacklistRoleTag(req.Storage)
+		tidyBlacklistConfigEntry, err := configTidyRoleTags(req.Storage)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 
 		// reset the safety_buffer to 72h
 		safety_buffer = 259200
-		tidyWhitelistConfigEntry, err := configTidyWhitelistIdentity(req.Storage)
+		tidyWhitelistConfigEntry, err := configTidyIdentities(req.Storage)
 		if err != nil {
 			return err
 		}
