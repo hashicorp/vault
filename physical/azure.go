@@ -3,13 +3,14 @@ package physical
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/armon/go-metrics"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/armon/go-metrics"
 )
 
 // MaxBlobSize at this time
@@ -22,7 +23,7 @@ type AzureBackend struct {
 	client    storage.BlobStorageClient
 }
 
-// newS3Backend constructs a S3 backend using a pre-existing
+// newAzureBackend constructs an Azure backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
 // from the environment, AWS credential files or by IAM role.
 func newAzureBackend(conf map[string]string) (Backend, error) {
