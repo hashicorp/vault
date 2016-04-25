@@ -147,7 +147,7 @@ Each login from an EC2 instance creates/updates an entry in the identity whiteli
 Entries in this list can be viewed or deleted using this endpoint.
 
 The entries in the whitelist are not automatically deleted. Although, they will have an
-expiration time set on the entry. There is a separate endpoint 'whitelist/identity/tidy',
+expiration time set on the entry. There is a separate endpoint 'tidy/identities',
 that needs to be invoked to clean-up all the expired entries in the whitelist.
 `
 

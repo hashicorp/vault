@@ -461,6 +461,6 @@ provided. All future logins will succeed only if the client nonce matches the no
 whitelisted entry.
 
 The entries in the whitelist are not automatically deleted. Although, they will have an
-expiration time set on the entry. There is a separate endpoint 'whitelist/identity/tidy',
+expiration time set on the entry. There is a separate endpoint 'tidy/identities',
 that needs to be invoked to clean-up all the expired entries in the whitelist.
 `

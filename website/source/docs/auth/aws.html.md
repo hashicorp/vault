@@ -208,8 +208,8 @@ the backend mount. The least of these three dictates the maximum TTL of the
 issued token, and correspondingly will be set as the expiration times of these
 entries.
 
-The endpoints `aws/auth/whitelist/identity/tidy` and
-`aws/auth/blacklist/roletag/tidy` are provided to clean up the entries present
+The endpoints `aws/auth/tidy/identities` and
+`aws/auth/tidy/roletags` are provided to clean up the entries present
 in these lists. These endpoints allow defining a safety buffer, such that an
 entry must not only be expired, but be past expiration by the amount of time
 dictated by the safety buffer in order to actually remove the entry.
@@ -217,7 +217,7 @@ dictated by the safety buffer in order to actually remove the entry.
 Additionally, the backend performs has a periodic function that does the tidying
 of both blacklist role tags and whitelist identities. This periodic tidying is
 activated by default and will have a safety buffer of 72 hours. This can be
-configured via `config/tidy/blacklist/roletag` and `config/tidy/whitelist/identity`
+configured via `config/tidy/roletags` and `config/tidy/identities`
 endpoints.
 
 ### Varying Public Certificates
@@ -546,7 +546,7 @@ The response will be in JSON. For example:
   </dd>
 </dl>
 
-### /auth/aws/config/tidy/whitelist/identity
+### /auth/aws/config/tidy/identities
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -558,7 +558,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/whitelist/identity`</dd>
+  <dd>`/auth/aws/config/tidy/identities`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -597,7 +597,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/whitelist/identity`</dd>
+  <dd>`/auth/aws/config/tidy/identities`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -635,7 +635,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/whitelist/identity`</dd>
+  <dd>`/auth/aws/config/tidy/identities`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -649,7 +649,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws/config/tidy/blacklist/roletag
+### /auth/aws/config/tidy/roletags
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -661,7 +661,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/blacklist/roletag`</dd>
+  <dd>`/auth/aws/config/tidy/roletags`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -699,7 +699,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/blacklist/roletag`</dd>
+  <dd>`/auth/aws/config/tidy/roletags`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -737,7 +737,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/blacklist/roletag`</dd>
+  <dd>`/auth/aws/config/tidy/roletags`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1214,7 +1214,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/blacklist/roletag/tidy
+### /auth/aws/tidy/roletags
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1226,7 +1226,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/blacklist/roletag/tidy`</dd>
+  <dd>`/auth/aws/tidy/roletags`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1358,7 +1358,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/whitelist/identity/tidy
+### /auth/aws/tidy/identities
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1370,7 +1370,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/whitelist/identity/tidy`</dd>
+  <dd>`/auth/aws/tidy/identities`</dd>
 
   <dt>Parameters</dt>
   <dd>

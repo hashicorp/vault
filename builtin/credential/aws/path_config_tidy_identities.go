@@ -6,9 +6,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfigTidyWhitelistIdentity(b *backend) *framework.Path {
+func pathConfigTidyIdentities(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config/tidy/whitelist/identity$",
+		Pattern: "config/tidy/identities$",
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -23,19 +23,19 @@ expiration, before it is removed from the backend storage.`,
 			},
 		},
 
-		ExistenceCheck: b.pathConfigTidyWhitelistIdentityExistenceCheck,
+		ExistenceCheck: b.pathConfigTidyIdentitiesExistenceCheck,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigTidyWhitelistIdentityCreateUpdate,
-			logical.UpdateOperation: b.pathConfigTidyWhitelistIdentityCreateUpdate,
+			logical.CreateOperation: b.pathConfigTidyIdentitiesCreateUpdate,
+			logical.UpdateOperation: b.pathConfigTidyIdentitiesCreateUpdate,
 		},
 
-		HelpSynopsis:    pathConfigTidyWhitelistIdentityHelpSyn,
-		HelpDescription: pathConfigTidyWhitelistIdentityHelpDesc,
+		HelpSynopsis:    pathConfigTidyIdentitiesHelpSyn,
+		HelpDescription: pathConfigTidyIdentitiesHelpDesc,
 	}
 }
 
-func (b *backend) pathConfigTidyWhitelistIdentityExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
@@ -47,7 +47,7 @@ func (b *backend) pathConfigTidyWhitelistIdentityExistenceCheck(req *logical.Req
 }
 
 func configTidyWhitelistIdentity(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
-	entry, err := s.Get("config/tidy/whitelist/identity")
+	entry, err := s.Get("config/tidy/identities")
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func configTidyWhitelistIdentity(s logical.Storage) (*tidyWhitelistIdentityConfi
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyWhitelistIdentityCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 	configEntry, err := configTidyWhitelistIdentity(req.Storage)
@@ -85,7 +85,7 @@ func (b *backend) pathConfigTidyWhitelistIdentityCreateUpdate(req *logical.Reque
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
 
-	entry, err := logical.StorageEntryJSON("config/tidy/whitelist/identity", configEntry)
+	entry, err := logical.StorageEntryJSON("config/tidy/identities", configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (b *backend) pathConfigTidyWhitelistIdentityCreateUpdate(req *logical.Reque
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyWhitelistIdentityRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentitiesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
@@ -114,11 +114,11 @@ func (b *backend) pathConfigTidyWhitelistIdentityRead(req *logical.Request, data
 	}, nil
 }
 
-func (b *backend) pathConfigTidyWhitelistIdentityDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentitiesDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	if err := req.Storage.Delete("config/tidy/whitelist/identity"); err != nil {
+	if err := req.Storage.Delete("config/tidy/identities"); err != nil {
 		return nil, err
 	}
 
@@ -130,10 +130,10 @@ type tidyWhitelistIdentityConfig struct {
 	DisablePeriodicTidy bool `json:"disable_periodic_tidy" structs:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
 }
 
-const pathConfigTidyWhitelistIdentityHelpSyn = `
+const pathConfigTidyIdentitiesHelpSyn = `
 Configures the periodic tidying operation of the whitelisted identity entries.
 `
-const pathConfigTidyWhitelistIdentityHelpDesc = `
+const pathConfigTidyIdentitiesHelpDesc = `
 By default, the expired entries in teb whitelist will be attempted to be removed
 periodically. This operation will look for expired items in the list and purge them.
 However, there is a safety buffer duration (defaults to 72h), which purges the entries,

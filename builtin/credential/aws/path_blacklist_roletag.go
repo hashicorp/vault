@@ -65,7 +65,7 @@ func (b *backend) pathBlacklistRoleTagExistenceCheck(req *logical.Request, data 
 
 // Fetch an entry from the role tag blacklist for a given tag.
 func blacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
-	entry, err := s.Get("blacklist/roletag/" + tag)
+	entry, err := s.Get("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 	// Expiration time is decided by the max_ttl value.
 	blEntry.ExpirationTime = currentTime.Add(rTag.MaxTTL)
 
-	entry, err := logical.StorageEntryJSON("blacklist/roletag/"+tag, blEntry)
+	entry, err := logical.StorageEntryJSON("blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)), blEntry)
 	if err != nil {
 		return nil, err
 	}

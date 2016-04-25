@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathWhitelistIdentityTidy(b *backend) *framework.Path {
+func pathTidyIdentities(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/identity/tidy$",
+		Pattern: "tidy/identities$",
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -21,11 +21,11 @@ expiration, before it is removed from the backend storage.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathWhitelistIdentityTidyUpdate,
+			logical.UpdateOperation: b.pathTidyIdentitiesUpdate,
 		},
 
-		HelpSynopsis:    pathWhitelistIdentityTidySyn,
-		HelpDescription: pathWhitelistIdentityTidyDesc,
+		HelpSynopsis:    pathTidyIdentitiesSyn,
+		HelpDescription: pathTidyIdentitiesDesc,
 	}
 }
 
@@ -67,17 +67,17 @@ func tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
 	return nil
 }
 
-// pathWhitelistIdentityTidyUpdate is used to delete entries in the whitelist that are expired.
-func (b *backend) pathWhitelistIdentityTidyUpdate(
+// pathTidyIdentitiesUpdate is used to delete entries in the whitelist that are expired.
+func (b *backend) pathTidyIdentitiesUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return nil, tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
 }
 
-const pathWhitelistIdentityTidySyn = `
+const pathTidyIdentitiesSyn = `
 Clean-up the whitelisted instance identity entries.
 `
 
-const pathWhitelistIdentityTidyDesc = `
+const pathTidyIdentitiesDesc = `
 When an instance identity is whitelisted, the expiration time of the whitelist
 entry is set to the least amont 'max_ttl' of the registered AMI, 'max_ttl' of the
 role tag and 'max_ttl' of the backend mount.

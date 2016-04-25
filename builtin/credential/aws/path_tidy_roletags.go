@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathBlacklistRoleTagTidy(b *backend) *framework.Path {
+func pathTidyRoleTags(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "blacklist/roletag/tidy$",
+		Pattern: "tidy/roletags$",
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -21,11 +21,11 @@ expiration, before it is removed from the backend storage.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathBlacklistRoleTagTidyUpdate,
+			logical.UpdateOperation: b.pathTidyRoleTagsUpdate,
 		},
 
-		HelpSynopsis:    pathBlacklistRoleTagTidySyn,
-		HelpDescription: pathBlacklistRoleTagTidyDesc,
+		HelpSynopsis:    pathTidyRoleTagsSyn,
+		HelpDescription: pathTidyRoleTagsDesc,
 	}
 }
 
@@ -66,17 +66,17 @@ func tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
 	return nil
 }
 
-// pathBlacklistRoleTagTidyUpdate is used to clean-up the entries in the role tag blacklist.
-func (b *backend) pathBlacklistRoleTagTidyUpdate(
+// pathTidyRoleTagsUpdate is used to clean-up the entries in the role tag blacklist.
+func (b *backend) pathTidyRoleTagsUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return nil, tidyBlacklistRoleTag(req.Storage, data.Get("safety_buffer").(int))
 }
 
-const pathBlacklistRoleTagTidySyn = `
+const pathTidyRoleTagsSyn = `
 Clean-up the blacklisted role tag entries.
 `
 
-const pathBlacklistRoleTagTidyDesc = `
+const pathTidyRoleTagsDesc = `
 When a role tag is blacklisted, the expiration time of the blacklist entry is
 determined by the 'max_ttl' present in the role tag. If 'max_ttl' is not provided
 in the role tag, the backend mount's 'max_ttl' value will be used to determine
