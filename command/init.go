@@ -24,8 +24,8 @@ func (c *InitCommand) Run(args []string) int {
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.IntVar(&storedShares, "stored-shares", 0, "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
-	flags.IntVar(&recoveryShares, "recovery-shares", 0, "")
-	flags.IntVar(&recoveryThreshold, "recovery-threshold", 0, "")
+	flags.IntVar(&recoveryShares, "recovery-shares", 5, "")
+	flags.IntVar(&recoveryThreshold, "recovery-threshold", 3, "")
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
 	if err := flags.Parse(args); err != nil {
@@ -161,10 +161,10 @@ Init Options:
                             'vault unseal' command, you will need to hex decode
                             and decrypt; this will be the plaintext unseal key.
 
-  -recovery-shares=0        The number of key shares to split the recovery key
+  -recovery-shares=5        The number of key shares to split the recovery key
                             into. This is not normally available.
 
-  -recovery-threshold=0     The number of key shares required to reconstruct
+  -recovery-threshold=3     The number of key shares required to reconstruct
                             the recovery key. This is not normally available.
 
   -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the

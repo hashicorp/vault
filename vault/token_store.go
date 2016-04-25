@@ -524,7 +524,9 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 }
 
 // UseToken is used to manage restricted use tokens and decrement
-// their available uses.
+// their available uses. Note: this is potentially racy, but the simple
+// solution of a global lock would be severely detrimental to performance. Also
+// note the specific revoke case below.
 func (ts *TokenStore) UseToken(te *TokenEntry) error {
 	// If the token is not restricted, there is nothing to do
 	if te.NumUses == 0 {

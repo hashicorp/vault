@@ -85,34 +85,14 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 			return nil, fmt.Errorf("recovery configuration must be supplied")
 		}
 
-		if recoveryConfig.SecretShares == 0 {
-			return nil, fmt.Errorf("recovery configuration must specify a positive number of shares, or a negative number to disable")
+		if recoveryConfig.SecretShares < 1 {
+			return nil, fmt.Errorf("recovery configuration must specify a positive number of shares")
 		}
-		if recoveryConfig.SecretShares > 0 {
-			// Check if the seal configuraiton is valid
-			if err := recoveryConfig.Validate(); err != nil {
-				c.logger.Printf("[ERR] core: invalid recovery configuration: %v", err)
-				return nil, fmt.Errorf("invalid recovery configuration: %v", err)
-			}
-		}
-	}
 
-	if c.seal.StoredKeysSupported() {
-		if barrierConfig.SecretShares != 1 {
-			return nil, fmt.Errorf("secret shares must be 1")
-		}
-		if barrierConfig.SecretThreshold != barrierConfig.SecretShares {
-			return nil, fmt.Errorf("secret threshold must be same as secret shares")
-		}
-		if barrierConfig.StoredShares != barrierConfig.SecretShares {
-			return nil, fmt.Errorf("stored shares must be same as secret shares")
-		}
-		if barrierConfig.PGPKeys != nil && len(barrierConfig.PGPKeys) > 0 {
-			return nil, fmt.Errorf("PGP keys not supported when storing shares")
-		}
-	} else {
-		if barrierConfig.StoredShares > 0 {
-			return nil, fmt.Errorf("stored keys are not supported")
+		// Check if the seal configuraiton is valid
+		if err := recoveryConfig.Validate(); err != nil {
+			c.logger.Printf("[ERR] core: invalid recovery configuration: %v", err)
+			return nil, fmt.Errorf("invalid recovery configuration: %v", err)
 		}
 	}
 

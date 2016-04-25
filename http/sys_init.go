@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
@@ -53,6 +54,30 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		SecretShares:    req.RecoveryShares,
 		SecretThreshold: req.RecoveryThreshold,
 		PGPKeys:         req.RecoveryPGPKeys,
+	}
+
+	if core.SealAccess().StoredKeysSupported() {
+		if barrierConfig.SecretShares != 1 {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares must be 1"))
+			return
+		}
+		if barrierConfig.SecretThreshold != barrierConfig.SecretShares {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("secret threshold must be same as secret shares"))
+			return
+		}
+		if barrierConfig.StoredShares != barrierConfig.SecretShares {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("stored shares must be same as secret shares"))
+			return
+		}
+		if barrierConfig.PGPKeys != nil && len(barrierConfig.PGPKeys) > 0 {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("PGP keys not supported when storing shares"))
+			return
+		}
+	} else {
+		if barrierConfig.StoredShares > 0 {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("stored keys are not supported"))
+			return
+		}
 	}
 
 	result, initErr := core.Initialize(barrierConfig, recoveryConfig)
