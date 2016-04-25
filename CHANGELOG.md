@@ -1,4 +1,4 @@
-## 0.6.0 (Unreleased)
+## 0.5.3 (Unreleased)
 
 SECURITY:
 
@@ -23,6 +23,11 @@ DEPRECATIONS/BREAKING CHANGES:
 
  * `auth/token/revoke-prefix` has been removed. See the security notice for
    details. [GH-1280]
+
+FEATURES:
+
+ * **Azure Physical Backend**: You can now use Azure blob object storage as
+   your Vault physical data store [GH-1266]
 
 IMPROVEMENTS:
 
