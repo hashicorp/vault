@@ -27,7 +27,6 @@ func testConsulBackend(t *testing.T) *ConsulBackend {
 }
 
 func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
-	const serviceID = "vaultTestService"
 	be, err := newConsulBackend(*conf)
 	if err != nil {
 		t.Fatalf("Expected Consul to initialize: %v", err)
@@ -38,8 +37,10 @@ func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
 		t.Fatalf("Expected ConsulBackend")
 	}
 
+	c.consulClientConf = api.DefaultConfig()
+
 	c.service = &api.AgentServiceRegistration{
-		ID:                serviceID,
+		ID:                c.serviceID(),
 		Name:              c.serviceName,
 		Tags:              serviceTags(c.active),
 		Port:              8200,
@@ -51,7 +52,7 @@ func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
 		ID:        c.checkID(),
 		Name:      "Vault Sealed Status",
 		Notes:     "Vault service is healthy when Vault is in an unsealed status and can become an active Vault server",
-		ServiceID: serviceID,
+		ServiceID: c.serviceID(),
 		AgentServiceCheck: api.AgentServiceCheck{
 			TTL:    c.checkTimeout.String(),
 			Status: api.HealthPassing,
@@ -159,7 +160,10 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		if !ok {
 			t.Fatalf("Expected ConsulBackend: %s", test.name)
 		}
-		if err := c.UpdateAdvertiseAddr(test.advertiseAddr); err != nil {
+		c.disableRegistration = true
+
+		var shutdownCh ShutdownChannel
+		if err := c.RunServiceDiscovery(shutdownCh, test.advertiseAddr); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 
@@ -217,7 +221,7 @@ func TestConsul_serviceTags(t *testing.T) {
 	}
 }
 
-func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
+func TestConsul_parseAdvertiseAddr(t *testing.T) {
 	tests := []struct {
 		addr string
 		host string
@@ -237,6 +241,18 @@ func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
 			pass: true,
 		},
 		{
+			addr: "https://127.0.0.1:8200",
+			host: "127.0.0.1",
+			port: 8200,
+			pass: true,
+		},
+		{
+			addr: "unix:///tmp/.vault.addr.sock",
+			host: "/tmp/.vault.addr.sock",
+			port: 0,
+			pass: true,
+		},
+		{
 			addr: "127.0.0.1:8200",
 			pass: false,
 		},
@@ -247,11 +263,7 @@ func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
 	}
 	for _, test := range tests {
 		c := testConsulBackend(t)
-		if c == nil {
-			t.Fatalf("bad")
-		}
-
-		err := c.UpdateAdvertiseAddr(test.addr)
+		host, port, err := c.parseAdvertiseAddr(test.addr)
 		if test.pass {
 			if err != nil {
 				t.Fatalf("bad: %v", err)
@@ -264,12 +276,12 @@ func TestConsul_UpdateAdvertiseAddr(t *testing.T) {
 			}
 		}
 
-		if c.advertiseHost != test.host {
-			t.Fatalf("bad: %v != %v", c.advertiseHost, test.host)
+		if host != test.host {
+			t.Fatalf("bad: %v != %v", host, test.host)
 		}
 
-		if c.advertisePort != test.port {
-			t.Fatalf("bad: %v != %v", c.advertisePort, test.port)
+		if port != test.port {
+			t.Fatalf("bad: %v != %v", port, test.port)
 		}
 	}
 }
@@ -394,7 +406,7 @@ func TestConsul_serviceID(t *testing.T) {
 			"service": test.serviceName,
 		})
 
-		if err := c.UpdateAdvertiseAddr(test.advertiseAddr); err != nil {
+		if err := c.setAdvertiseAddr(test.advertiseAddr); err != nil {
 			t.Fatalf("bad: %s %v", test.name, err)
 		}
 

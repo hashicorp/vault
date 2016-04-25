@@ -173,23 +173,6 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	return c, nil
 }
 
-// UpdateAdvertiseAddr provides a pre-initialization hook for updating
-// Consul's advertise address.
-func (c *ConsulBackend) UpdateAdvertiseAddr(addr string) error {
-	if c.running {
-		return fmt.Errorf("service registration unable to update advertise address, backend already running")
-	}
-
-	host, port, err := parseAdvertiseAddr(addr)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse advertise address "%v": {{err}}`, addr), err)
-	}
-
-	c.advertiseHost = host
-	c.advertisePort = int(port)
-	return nil
-}
-
 // serviceTags returns all of the relevant tags for Consul.
 func serviceTags(active bool) []string {
 	activeTag := "standby"
@@ -218,13 +201,13 @@ func (c *ConsulBackend) AdvertiseActive(active bool) error {
 		defer atomic.CompareAndSwapInt64(&c.registrationLock, 1, 0)
 
 		// Retry agent registration until successful
-	registration_complete:
 		for {
 			c.service.Tags = serviceTags(c.active)
 			agent := c.client.Agent()
 			err := agent.ServiceRegister(c.service)
 			if err == nil {
-				break registration_complete
+				// Success
+				return nil
 			}
 
 			// wtb logger c.logger.Printf("[WARN] service registration failed: %v", err)
@@ -233,11 +216,13 @@ func (c *ConsulBackend) AdvertiseActive(active bool) error {
 			c.serviceLock.Lock()
 
 			if !c.running {
+				// Shutting down
 				return err
 			}
 		}
 	}
 
+	// Successful concurrent update to active state
 	return nil
 }
 
@@ -259,7 +244,15 @@ func (c *ConsulBackend) AdvertiseSealed(sealed bool) error {
 	return nil
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel) (err error) {
+func (c *ConsulBackend) setAdvertiseAddr(addr string) (err error) {
+	c.advertiseHost, c.advertisePort, err = c.parseAdvertiseAddr(addr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertiseAddr string) (err error) {
 	c.serviceLock.Lock()
 	defer c.serviceLock.Unlock()
 
@@ -267,8 +260,8 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel) (err err
 		return nil
 	}
 
-	if c.running {
-		return fmt.Errorf("service registration routine already running")
+	if err := c.setAdvertiseAddr(advertiseAddr); err != nil {
+		return err
 	}
 
 	serviceID := c.serviceID()
@@ -376,7 +369,7 @@ func (c *ConsulBackend) serviceID() string {
 	return fmt.Sprintf("%s:%s:%d", c.serviceName, c.advertiseHost, c.advertisePort)
 }
 
-func parseAdvertiseAddr(addr string) (host string, port int, err error) {
+func (c *ConsulBackend) parseAdvertiseAddr(addr string) (host string, port int, err error) {
 	if addr == "" {
 		return "", -1, fmt.Errorf("advertise address must not be empty")
 	}
@@ -389,10 +382,19 @@ func parseAdvertiseAddr(addr string) (host string, port int, err error) {
 	var portStr string
 	host, portStr, err = net.SplitHostPort(url.Host)
 	if err != nil {
-		return "", -3, errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
+		if url.Scheme == "http" {
+			portStr = "80"
+		} else if url.Scheme == "https" {
+			portStr = "443"
+		} else if url.Scheme == "unix" {
+			portStr = "0"
+			host = url.Path
+		} else {
+			return "", -3, errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
+		}
 	}
 	portNum, err := strconv.ParseInt(portStr, 10, 0)
-	if err != nil || portNum < 1 || portNum > 65535 {
+	if err != nil || portNum < 0 || portNum > 65535 {
 		return "", -4, errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
 	}
 
