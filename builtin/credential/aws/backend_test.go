@@ -12,7 +12,8 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
-func TestBackend_createRoleTagValue(t *testing.T) {
+func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
+	// create a backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -22,6 +23,7 @@ func TestBackend_createRoleTagValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create an entry for ami
 	data := map[string]interface{}{
 		"policies": "p,q,r,s",
 	}
@@ -35,32 +37,99 @@ func TestBackend_createRoleTagValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// read the created image entry
 	imageEntry, err := awsImage(storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// create a nonce for the role tag
 	nonce, err := createRoleTagNonce()
 	if err != nil {
 		t.Fatal(err)
 	}
-	rTag := &roleTag{
+	rTag1 := &roleTag{
 		Version:  "v1",
 		AmiID:    "abcd-123",
 		Nonce:    nonce,
 		Policies: []string{"p", "q", "r"},
 		MaxTTL:   200,
 	}
-	val, err := createRoleTagValue(rTag, imageEntry)
+
+	// create a role tag against the image entry
+	val, err := createRoleTagValue(rTag1, imageEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if val == "" {
 		t.Fatalf("failed to create role tag")
 	}
+
+	// parse the created role tag
+	rTag2, err := parseRoleTagValue(storage, val)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check the values in parsed role tag
+	if rTag2.Version != "v1" ||
+		rTag2.Nonce != nonce ||
+		rTag2.AmiID != "abcd-123" ||
+		rTag2.MaxTTL != 200 ||
+		!policyutil.EquivalentPolicies(rTag2.Policies, []string{"p", "q", "r"}) ||
+		len(rTag2.HMAC) == 0 {
+		t.Fatalf("parsed role tag is invalid")
+	}
+
+	// verify the tag contents using image specific HMAC key
+	verified, err := verifyRoleTagValue(rTag2, imageEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verified {
+		t.Fatalf("failed to verify the role tag")
+	}
+
+	// register a different ami
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/ami-6789",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// entry for the newly created ami entry
+	imageEntry2, err := awsImage(storage, "ami-6789")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// try to verify the tag created with previous image's HMAC key
+	// with the newly registered entry's HMAC key
+	verified, err = verifyRoleTagValue(rTag2, imageEntry2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified {
+		t.Fatalf("verification of role tag should have failed: invalid AMI ID")
+	}
+
+	// modify any value in role tag and try to verify it
+	rTag2.Version = "v2"
+	verified, err = verifyRoleTagValue(rTag2, imageEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified {
+		t.Fatalf("verification of role tag should have failed: invalid Version")
+	}
 }
 
 func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
+	// create a nonce for the role tag
 	nonce, err := createRoleTagNonce()
 	if err != nil {
 		t.Fatal(err)
@@ -72,6 +141,8 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	}
 
 	rTag.Version = ""
+	// try to create plaintext part of role tag
+	// without specifying version
 	val, err := prepareRoleTagPlaintextValue(rTag)
 	if err == nil {
 		t.Fatalf("expected error for missing version")
@@ -79,6 +150,8 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	rTag.Version = "v1"
 
 	rTag.Nonce = ""
+	// try to create plaintext part of role tag
+	// without specifying nonce
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err == nil {
 		t.Fatalf("expected error for missing nonce")
@@ -86,16 +159,21 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	rTag.Nonce = nonce
 
 	rTag.AmiID = ""
+	// try to create plaintext part of role tag
+	// without specifying ami_id
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err == nil {
 		t.Fatalf("expected error for missing ami_id")
 	}
 	rTag.AmiID = "abcd-123"
 
+	// create the plaintext part of the tag
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// verify if it contains known fields
 	if !strings.Contains(val, "a=") ||
 		!strings.Contains(val, "p=") ||
 		!strings.Contains(val, "d=") ||
@@ -104,25 +182,30 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	}
 
 	rTag.InstanceID = "instance-123"
+	// create the role tag with instance_id specified
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// verify it
 	if !strings.Contains(val, "i=") {
 		t.Fatalf("missing instance ID in role tag plaintext value")
 	}
 
 	rTag.MaxTTL = 200
+	// create the role tag with max_ttl specified
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// verify it
 	if !strings.Contains(val, "t=") {
 		t.Fatalf("missing instance ID in role tag plaintext value")
 	}
 }
 
 func TestBackend_CreateRoleTagNonce(t *testing.T) {
+	// create a nonce for the role tag
 	nonce, err := createRoleTagNonce()
 	if err != nil {
 		t.Fatal(err)
@@ -130,6 +213,8 @@ func TestBackend_CreateRoleTagNonce(t *testing.T) {
 	if nonce == "" {
 		t.Fatalf("failed to create role tag nonce")
 	}
+
+	// verify that the value returned is base64 encoded
 	nonceBytes, err := base64.StdEncoding.DecodeString(nonce)
 	if err != nil {
 		t.Fatal(err)
@@ -140,6 +225,7 @@ func TestBackend_CreateRoleTagNonce(t *testing.T) {
 }
 
 func TestBackend_ConfigTidyIdentities(t *testing.T) {
+	// create a backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -149,10 +235,10 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// configure the tidying behavior of whitelist identities
 	data := map[string]interface{}{
 		"safety_buffer": "60",
 	}
-
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/tidy/identities",
@@ -183,6 +269,15 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		Path:      "config/tidy/roletags",
 		Storage:   storage,
 		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/tidy/roletags",
+		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)

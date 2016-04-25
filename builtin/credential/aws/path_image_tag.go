@@ -149,6 +149,14 @@ func (b *backend) pathImageTagUpdate(
 // createRoleTagValue prepares the plaintext version of the role tag,
 // and appends a HMAC of the plaintext value to it, before returning.
 func createRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (string, error) {
+	if rTag == nil {
+		return "", fmt.Errorf("nil role tag")
+	}
+
+	if imageEntry == nil {
+		return "", fmt.Errorf("nil image entry")
+	}
+
 	// Attach version, nonce, policies and maxTTL to the role tag value.
 	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
@@ -161,6 +169,10 @@ func createRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (string, error
 // Takes in the plaintext part of the role tag, creates a HMAC of it and returns
 // a role tag value containing both the plaintext part and the HMAC part.
 func appendHMAC(rTagPlainText string, imageEntry *awsImageEntry) (string, error) {
+	if imageEntry == nil {
+		return "", fmt.Errorf("nil image entry")
+	}
+
 	// Create the HMAC of the value
 	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlainText)
 	if err != nil {
@@ -180,6 +192,14 @@ func appendHMAC(rTagPlainText string, imageEntry *awsImageEntry) (string, error)
 // computes the HMAC from it using the backend specific key and
 // compares it with the received HMAC.
 func verifyRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (bool, error) {
+	if rTag == nil {
+		return false, fmt.Errorf("nil role tag")
+	}
+
+	if imageEntry == nil {
+		return false, fmt.Errorf("nil image entry")
+	}
+
 	// Fetch the plaintext part of role tag
 	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
@@ -196,6 +216,9 @@ func verifyRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (bool, error) 
 
 // prepareRoleTagPlaintextValue builds the role tag value without the HMAC in it.
 func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
+	if rTag == nil {
+		return "", fmt.Errorf("nil role tag")
+	}
 	if rTag.Version == "" {
 		return "", fmt.Errorf("missing version")
 	}
@@ -335,7 +358,9 @@ type roleTag struct {
 }
 
 func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
-	return rTag1.Version == rTag2.Version &&
+	return rTag1 != nil &&
+		rTag2 != nil &&
+		rTag1.Version == rTag2.Version &&
 		rTag1.Nonce == rTag2.Nonce &&
 		policyutil.EquivalentPolicies(rTag1.Policies, rTag2.Policies) &&
 		rTag1.MaxTTL == rTag2.MaxTTL &&
