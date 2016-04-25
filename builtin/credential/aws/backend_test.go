@@ -12,7 +12,55 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
-func TestBackend_HMAC(t *testing.T) {
+func TestBackend_createRoleTagValue(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := map[string]interface{}{
+		"policies": "p,q,r,s",
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/abcd-123",
+		Storage:   storage,
+		Data:      data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imageEntry, err := awsImage(storage, "abcd-123")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nonce, err := createRoleTagNonce()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rTag := &roleTag{
+		Version:  "v1",
+		AmiID:    "abcd-123",
+		Nonce:    nonce,
+		Policies: []string{"p", "q", "r"},
+		MaxTTL:   200,
+	}
+	val, err := createRoleTagValue(rTag, imageEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val == "" {
+		t.Fatalf("failed to create role tag")
+	}
+}
+
+func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	nonce, err := createRoleTagNonce()
 	if err != nil {
 		t.Fatal(err)
