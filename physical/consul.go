@@ -351,9 +351,9 @@ func (c *ConsulBackend) runCheck() {
 	// Run a TTL check
 	agent := c.client.Agent()
 	if c.unsealed {
-		agent.UpdateTTL(c.checkID(), "Vault Unsealed", api.HealthPassing)
+		agent.PassTTL(c.checkID(), "Vault Unsealed")
 	} else {
-		agent.UpdateTTL(c.checkID(), "Vault Sealed", api.HealthCritical)
+		agent.FailTTL(c.checkID(), "Vault Sealed")
 	}
 }
 
