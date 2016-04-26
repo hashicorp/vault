@@ -40,39 +40,39 @@ type Marshaler interface {
 // Binary data (B), and [][]byte will be marshaled as binary data set
 // (BS).
 //
-// `dynamodb` struct tag can be used to control how the value will be
+// `dynamodbav` struct tag can be used to control how the value will be
 // marshaled into a AttributeValue.
 //
 //		// Field is ignored
-//		Field int `dynamodb:"-"`
+//		Field int `dynamodbav:"-"`
 //
 //		// Field AttributeValue map key "myName"
-//		Field int `dynamodb:"myName"`
+//		Field int `dynamodbav:"myName"`
 //
 //		// Field AttributeValue map key "myName", and
 //		// Field is omitted if it is empty
-//		Field int `dynamodb:"myName,omitempty"`
+//		Field int `dynamodbav:"myName,omitempty"`
 //
 //		// Field AttributeValue map key "Field", and
 //		// Field is omitted if it is empty
-//		Field int `dynamodb:",omitempty"`
+//		Field int `dynamodbav:",omitempty"`
 //
 //		// Field's elems will be omitted if empty
 //		// only valid for slices, and maps.
-//		Field []string `dynamodb:",omitemptyelem"`
+//		Field []string `dynamodbav:",omitemptyelem"`
 //
 //		// Field will be marshaled as a AttributeValue string
 //		// only value for number types, (int,uint,float)
-//		Field int `dynamodb:",string"`
+//		Field int `dynamodbav:",string"`
 //
 //		// Field will be marshaled as a binary set
-//		Field [][]byte `dynamodb:",binaryset"`
+//		Field [][]byte `dynamodbav:",binaryset"`
 //
 //		// Field will be marshaled as a number set
-//		Field []int `dynamodb:",numberset"`
+//		Field []int `dynamodbav:",numberset"`
 //
 //		// Field will be marshaled as a string set
-//		Field []string `dynamodb:",stringset"`
+//		Field []string `dynamodbav:",stringset"`
 //
 // The omitempty tag is only used during Marshaling and is ignored for
 // Unmarshal. Any zero value or a value when marshaled results in a

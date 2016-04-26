@@ -36,7 +36,7 @@ const (
 
 	// Maximum allowed depth when recursively substituing variable names.
 	_DEPTH_VALUES = 99
-	_VERSION      = "1.10.1"
+	_VERSION      = "1.11.0"
 )
 
 // Version returns current package version literal.
@@ -56,6 +56,9 @@ var (
 	// Indicate whether to align "=" sign with spaces to produce pretty output
 	// or reduce all possible spaces for compact format.
 	PrettyFormat = true
+
+	// Explicitly write DEFAULT section header
+	DefaultHeader = false
 )
 
 func init() {
@@ -350,7 +353,7 @@ func (f *File) WriteToIndent(w io.Writer, indent string) (n int64, err error) {
 			}
 		}
 
-		if i > 0 {
+		if i > 0 || DefaultHeader {
 			if _, err = buf.WriteString("[" + sname + "]" + LineBreak); err != nil {
 				return 0, err
 			}

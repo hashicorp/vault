@@ -134,6 +134,17 @@ type IssueActivityEvent struct {
 	Sender *User       `json:"sender,omitempty"`
 }
 
+// EditChange represents the changes when an issue, pull request, or comment has
+// been edited.
+type EditChange struct {
+	Title *struct {
+		From *string `json:"from,omitempty"`
+	} `json:"title,omitempty"`
+	Body *struct {
+		From *string `json:"from,omitempty"`
+	} `json:"body,omitempty"`
+}
+
 // IssueCommentEvent is triggered when an issue comment is created on an issue
 // or pull request.
 // The Webhook event name is "issue_comment".
@@ -141,14 +152,15 @@ type IssueActivityEvent struct {
 // GitHub docs: https://developer.github.com/v3/activity/events/types/#issuecommentevent
 type IssueCommentEvent struct {
 	// Action is the action that was performed on the comment.
-	// Possible value is: "created".
+	// Possible values are: "created", "edited", "deleted".
 	Action  *string       `json:"action,omitempty"`
 	Issue   *Issue        `json:"issue,omitempty"`
 	Comment *IssueComment `json:"comment,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	Repo   *Repository `json:"repository,omitempty"`
-	Sender *User       `json:"sender,omitempty"`
+	Changes *EditChange `json:"changes,omitempty"`
+	Repo    *Repository `json:"repository,omitempty"`
+	Sender  *User       `json:"sender,omitempty"`
 }
 
 // IssuesEvent is triggered when an issue is assigned, unassigned, labeled,
@@ -158,15 +170,16 @@ type IssueCommentEvent struct {
 // GitHub docs: https://developer.github.com/v3/activity/events/types/#issuesevent
 type IssuesEvent struct {
 	// Action is the action that was performed. Possible values are: "assigned",
-	// "unassigned", "labeled", "unlabeled", "opened", "closed", "reopened".
+	// "unassigned", "labeled", "unlabeled", "opened", "closed", "reopened", "edited".
 	Action   *string `json:"action,omitempty"`
 	Issue    *Issue  `json:"issue,omitempty"`
 	Assignee *User   `json:"assignee,omitempty"`
 	Label    *Label  `json:"label,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	Repo   *Repository `json:"repository,omitempty"`
-	Sender *User       `json:"sender,omitempty"`
+	Changes *EditChange `json:"changes,omitempty"`
+	Repo    *Repository `json:"repository,omitempty"`
+	Sender  *User       `json:"sender,omitempty"`
 }
 
 // MemberEvent is triggered when a user is added as a collaborator to a repository.
@@ -241,16 +254,17 @@ type PublicEvent struct {
 type PullRequestEvent struct {
 	// Action is the action that was performed. Possible values are: "assigned",
 	// "unassigned", "labeled", "unlabeled", "opened", "closed", or "reopened",
-	// "synchronize". If the action is "closed" and the merged key is false, the
-	// pull request was closed with unmerged commits. If the action is "closed" and
-	// the merged key is true, the pull request was merged.
+	// "synchronize", "edited". If the action is "closed" and the merged key is false,
+	// the pull request was closed with unmerged commits. If the action is "closed"
+	// and the merged key is true, the pull request was merged.
 	Action      *string      `json:"action,omitempty"`
 	Number      *int         `json:"number,omitempty"`
 	PullRequest *PullRequest `json:"pull_request,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	Repo   *Repository `json:"repository,omitempty"`
-	Sender *User       `json:"sender,omitempty"`
+	Changes *EditChange `json:"changes,omitempty"`
+	Repo    *Repository `json:"repository,omitempty"`
+	Sender  *User       `json:"sender,omitempty"`
 }
 
 // PullRequestReviewCommentEvent is triggered when a comment is created on a
@@ -260,14 +274,15 @@ type PullRequestEvent struct {
 // GitHub docs: https://developer.github.com/v3/activity/events/types/#pullrequestreviewcommentevent
 type PullRequestReviewCommentEvent struct {
 	// Action is the action that was performed on the comment.
-	// Possible value is: "created".
+	// Possible values are: "created", "edited", "deleted".
 	Action      *string             `json:"action,omitempty"`
 	PullRequest *PullRequest        `json:"pull_request,omitempty"`
 	Comment     *PullRequestComment `json:"comment,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	Repo   *Repository `json:"repository,omitempty"`
-	Sender *User       `json:"sender,omitempty"`
+	Changes *EditChange `json:"changes,omitempty"`
+	Repo    *Repository `json:"repository,omitempty"`
+	Sender  *User       `json:"sender,omitempty"`
 }
 
 // PushEvent represents a git push to a GitHub repository.
@@ -376,7 +391,8 @@ type ReleaseEvent struct {
 //
 // GitHub docs: https://developer.github.com/v3/activity/events/types/#repositoryevent
 type RepositoryEvent struct {
-	// Action is the action that was performed. Possible value is: "created".
+	// Action is the action that was performed. Possible values are: "created", "deleted",
+	// "publicized", "privatized".
 	Action *string     `json:"action,omitempty"`
 	Repo   *Repository `json:"repository,omitempty"`
 

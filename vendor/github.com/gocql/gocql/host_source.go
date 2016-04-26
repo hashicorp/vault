@@ -390,6 +390,6 @@ func (r *ringDescriber) refreshRing() error {
 		}
 	}
 
-	r.session.pool.SetPartitioner(partitioner)
+	r.session.metadata.setPartitioner(partitioner)
 	return nil
 }

@@ -909,7 +909,7 @@ func yaml_parser_fetch_next_token(parser *yaml_parser_t) bool {
 		b == '@' || b == '`') ||
 		(b == '-' && !is_blank(buf[pos+1])) ||
 		(parser.flow_level == 0 &&
-			(buf[pos] == '?' || buf[pos+1] == ':') &&
+			(buf[pos] == '?' || buf[pos] == ':') &&
 			!is_blank(buf[pos+1])) {
 		return yaml_parser_fetch_plain_scalar(parser)
 	}

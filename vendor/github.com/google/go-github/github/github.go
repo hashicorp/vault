@@ -41,6 +41,7 @@ const (
 
 	mediaTypeV3      = "application/vnd.github.v3+json"
 	defaultMediaType = "application/octet-stream"
+	mediaTypeV3SHA   = "application/vnd.github.v3.sha"
 
 	// Media Type values to access preview APIs
 
@@ -60,14 +61,19 @@ const (
 	// https://developer.github.com/changes/2016-02-11-issue-locking-api/
 	mediaTypeIssueLockingPreview = "application/vnd.github.the-key-preview+json"
 
-	// https://developer.github.com/changes/2016-02-24-commit-reference-sha-api/
-	mediaTypeCommitReferenceSHAPreview = "application/vnd.github.chitauri-preview+sha"
+	// https://help.github.com/enterprise/2.4/admin/guides/migrations/exporting-the-github-com-organization-s-repositories/
+	mediaTypeMigrationsPreview = "application/vnd.github.wyandotte-preview+json"
+
+	// https://developer.github.com/changes/2016-04-06-deployment-and-deployment-status-enhancements/
+	mediaTypeDeploymentStatusPreview = "application/vnd.github.ant-man-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
 type Client struct {
 	// HTTP client used to communicate with the API.
 	client *http.Client
+	// clientMu protects the client during calls that modify the CheckRedirect func.
+	clientMu sync.Mutex
 
 	// Base URL for API requests.  Defaults to the public GitHub API, but can be
 	// set to a domain endpoint to use with GitHub Enterprise.  BaseURL should
@@ -84,17 +90,19 @@ type Client struct {
 	rate   Rate // Rate limit for the client as determined by the most recent API call.
 
 	// Services used for talking to different parts of the GitHub API.
-	Activity      *ActivityService
-	Gists         *GistsService
-	Git           *GitService
-	Gitignores    *GitignoresService
-	Issues        *IssuesService
-	Organizations *OrganizationsService
-	PullRequests  *PullRequestsService
-	Repositories  *RepositoriesService
-	Search        *SearchService
-	Users         *UsersService
-	Licenses      *LicensesService
+	Activity       *ActivityService
+	Authorizations *AuthorizationsService
+	Gists          *GistsService
+	Git            *GitService
+	Gitignores     *GitignoresService
+	Issues         *IssuesService
+	Organizations  *OrganizationsService
+	PullRequests   *PullRequestsService
+	Repositories   *RepositoriesService
+	Search         *SearchService
+	Users          *UsersService
+	Licenses       *LicensesService
+	Migrations     *MigrationService
 }
 
 // ListOptions specifies the optional parameters to various List methods that
@@ -147,6 +155,7 @@ func NewClient(httpClient *http.Client) *Client {
 
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent, UploadURL: uploadURL}
 	c.Activity = &ActivityService{client: c}
+	c.Authorizations = &AuthorizationsService{client: c}
 	c.Gists = &GistsService{client: c}
 	c.Git = &GitService{client: c}
 	c.Gitignores = &GitignoresService{client: c}
@@ -157,6 +166,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Search = &SearchService{client: c}
 	c.Users = &UsersService{client: c}
 	c.Licenses = &LicensesService{client: c}
+	c.Migrations = &MigrationService{client: c}
 	return c
 }
 
@@ -329,7 +339,11 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
+		resp.Body.Close()
+	}()
 
 	response := newResponse(resp)
 
@@ -354,6 +368,7 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 			}
 		}
 	}
+
 	return response, err
 }
 
@@ -366,6 +381,13 @@ type ErrorResponse struct {
 	Response *http.Response // HTTP response that caused this error
 	Message  string         `json:"message"` // error message
 	Errors   []Error        `json:"errors"`  // more detail on individual errors
+	// Block is only populated on certain types of errors such as code 451.
+	// See https://developer.github.com/changes/2016-03-17-the-451-status-code-is-now-supported/
+	// for more information.
+	Block *struct {
+		Reason    string     `json:"reason,omitempty"`
+		CreatedAt *Timestamp `json:"created_at,omitempty"`
+	} `json:"block,omitempty"`
 }
 
 func (r *ErrorResponse) Error() string {

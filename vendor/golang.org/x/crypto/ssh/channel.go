@@ -217,7 +217,7 @@ func (c *channel) writePacket(packet []byte) error {
 
 func (c *channel) sendMessage(msg interface{}) error {
 	if debugMux {
-		log.Printf("send %d: %#v", c.mux.chanList.offset, msg)
+		log.Printf("send(%d): %#v", c.mux.chanList.offset, msg)
 	}
 
 	p := Marshal(msg)
@@ -371,7 +371,7 @@ func (c *channel) close() {
 	close(c.msg)
 	close(c.incomingRequests)
 	c.writeMu.Lock()
-	// This is not necesary for a normal channel teardown, but if
+	// This is not necessary for a normal channel teardown, but if
 	// there was another error, it is.
 	c.sentClose = true
 	c.writeMu.Unlock()

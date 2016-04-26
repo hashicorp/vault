@@ -91,7 +91,7 @@ Some tips for getting more performance from the driver:
 
 Important Default Keyspace Changes
 ----------------------------------
-gocql no longer supports executing "use <keyspace>" statements to simplfy the library. The user still has the
+gocql no longer supports executing "use <keyspace>" statements to simplify the library. The user still has the
 ability to define the default keyspace for connections but now the keyspace can only be defined before a
 session is created. Queries can still access keyspaces by indicating the keyspace in the query:
 ```sql
@@ -200,6 +200,7 @@ The following community maintained tools are known to integrate with gocql:
 * [cqlc](http://relops.com/cqlc) which generates gocql compliant code from your Cassandra schema so that you can write type safe CQL statements in Go with a natural query syntax.
 * [gocassa](https://github.com/hailocab/gocassa) provides query building, adds data binding, and provides easy-to-use "recipe" tables for common query use-cases.
 * [gocqltable](https://github.com/kristoiv/gocqltable) is a wrapper around gocql that aims to simplify common operations whilst working the library.
+* [gockle](https://github.com/willfaught/gockle) provides simple, mockable interfaces that wrap gocql types
 
 Other Projects
 --------------

@@ -188,7 +188,7 @@ func (s *connection) serverHandshake(config *ServerConfig) (*Permissions, error)
 	tr := newTransport(s.sshConn.conn, config.Rand, false /* not client */)
 	s.transport = newServerTransport(tr, s.clientVersion, s.serverVersion, config)
 
-	if err := s.transport.requestKeyChange(); err != nil {
+	if err := s.transport.requestInitialKeyChange(); err != nil {
 		return nil, err
 	}
 

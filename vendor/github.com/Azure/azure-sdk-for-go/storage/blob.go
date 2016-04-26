@@ -88,6 +88,16 @@ type BlobListResponse struct {
 	NextMarker string   `xml:"NextMarker"`
 	MaxResults int64    `xml:"MaxResults"`
 	Blobs      []Blob   `xml:"Blobs>Blob"`
+
+	// BlobPrefix is used to traverse blobs as if it were a file system.
+	// It is returned if ListBlobsParameters.Delimiter is specified.
+	// The list here can be thought of as "folders" that may contain
+	// other folders or blobs.
+	BlobPrefixes []string `xml:"Blobs>BlobPrefix>Name"`
+
+	// Delimiter is used to traverse blobs as if it were a file system.
+	// It is returned if ListBlobsParameters.Delimiter is specified.
+	Delimiter string `xml:"Delimiter"`
 }
 
 // ListContainersParameters defines the set of customizable parameters to make a
@@ -749,14 +759,16 @@ func (b BlobStorageClient) PutPageBlob(container, name string, size int64, extra
 // with 512-byte boundaries and chunk must be of size multiplies by 512.
 //
 // See https://msdn.microsoft.com/en-us/library/ee691975.aspx
-func (b BlobStorageClient) PutPage(container, name string, startByte, endByte int64, writeType PageWriteType, chunk []byte) error {
+func (b BlobStorageClient) PutPage(container, name string, startByte, endByte int64, writeType PageWriteType, chunk []byte, extraHeaders map[string]string) error {
 	path := fmt.Sprintf("%s/%s", container, name)
 	uri := b.client.getEndpoint(blobServiceName, path, url.Values{"comp": {"page"}})
 	headers := b.client.getStandardHeaders()
 	headers["x-ms-blob-type"] = string(BlobTypePage)
 	headers["x-ms-page-write"] = string(writeType)
 	headers["x-ms-range"] = fmt.Sprintf("bytes=%v-%v", startByte, endByte)
-
+	for k, v := range extraHeaders {
+		headers[k] = v
+	}
 	var contentLength int64
 	var data io.Reader
 	if writeType == PageWriteTypeClear {
@@ -825,12 +837,16 @@ func (b BlobStorageClient) PutAppendBlob(container, name string, extraHeaders ma
 // AppendBlock appends a block to an append blob.
 //
 // See https://msdn.microsoft.com/en-us/library/azure/mt427365.aspx
-func (b BlobStorageClient) AppendBlock(container, name string, chunk []byte) error {
+func (b BlobStorageClient) AppendBlock(container, name string, chunk []byte, extraHeaders map[string]string) error {
 	path := fmt.Sprintf("%s/%s", container, name)
 	uri := b.client.getEndpoint(blobServiceName, path, url.Values{"comp": {"appendblock"}})
 	headers := b.client.getStandardHeaders()
 	headers["x-ms-blob-type"] = string(BlobTypeAppend)
 	headers["Content-Length"] = fmt.Sprintf("%v", len(chunk))
+
+	for k, v := range extraHeaders {
+		headers[k] = v
+	}
 
 	resp, err := b.client.exec("PUT", uri, headers, bytes.NewReader(chunk))
 	if err != nil {
@@ -908,8 +924,8 @@ func (b BlobStorageClient) waitForBlobCopy(container, name, copyID string) error
 // DeleteBlob deletes the given blob from the specified container.
 // If the blob does not exists at the time of the Delete Blob operation, it
 // returns error. See https://msdn.microsoft.com/en-us/library/azure/dd179413.aspx
-func (b BlobStorageClient) DeleteBlob(container, name string) error {
-	resp, err := b.deleteBlob(container, name)
+func (b BlobStorageClient) DeleteBlob(container, name string, extraHeaders map[string]string) error {
+	resp, err := b.deleteBlob(container, name, extraHeaders)
 	if err != nil {
 		return err
 	}
@@ -921,8 +937,8 @@ func (b BlobStorageClient) DeleteBlob(container, name string) error {
 // blob is deleted with this call, returns true. Otherwise returns false.
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd179413.aspx
-func (b BlobStorageClient) DeleteBlobIfExists(container, name string) (bool, error) {
-	resp, err := b.deleteBlob(container, name)
+func (b BlobStorageClient) DeleteBlobIfExists(container, name string, extraHeaders map[string]string) (bool, error) {
+	resp, err := b.deleteBlob(container, name, extraHeaders)
 	if resp != nil && (resp.statusCode == http.StatusAccepted || resp.statusCode == http.StatusNotFound) {
 		return resp.statusCode == http.StatusAccepted, nil
 	}
@@ -930,10 +946,13 @@ func (b BlobStorageClient) DeleteBlobIfExists(container, name string) (bool, err
 	return false, err
 }
 
-func (b BlobStorageClient) deleteBlob(container, name string) (*storageResponse, error) {
+func (b BlobStorageClient) deleteBlob(container, name string, extraHeaders map[string]string) (*storageResponse, error) {
 	verb := "DELETE"
 	uri := b.client.getEndpoint(blobServiceName, pathForBlob(container, name), url.Values{})
 	headers := b.client.getStandardHeaders()
+	for k, v := range extraHeaders {
+		headers[k] = v
+	}
 
 	return b.client.exec(verb, uri, headers, nil)
 }
@@ -962,7 +981,7 @@ func (b BlobStorageClient) GetBlobSASURI(container, name string, expiry time.Tim
 	if err != nil {
 		return "", err
 	}
-	signedExpiry := expiry.Format(time.RFC3339)
+	signedExpiry := expiry.UTC().Format(time.RFC3339)
 	signedResource := "b"
 
 	stringToSign, err := blobSASStringToSign(b.client.apiVersion, canonicalizedResource, signedExpiry, signedPermissions)

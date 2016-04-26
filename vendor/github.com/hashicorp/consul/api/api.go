@@ -3,9 +3,11 @@ package api
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -122,6 +124,30 @@ type Config struct {
 	Token string
 }
 
+// TLSConfig is used to generate a TLSClientConfig that's useful for talking to
+// Consul using TLS.
+type TLSConfig struct {
+	// Address is the optional address of the Consul server. The port, if any
+	// will be removed from here and this will be set to the ServerName of the
+	// resulting config.
+	Address string
+
+	// CAFile is the optional path to the CA certificate used for Consul
+	// communication, defaults to the system bundle if not specified.
+	CAFile string
+
+	// CertFile is the optional path to the certificate for Consul
+	// communication. If this is set then you need to also set KeyFile.
+	CertFile string
+
+	// KeyFile is the optional path to the private key for Consul communication.
+	// If this is set then you need to also set CertFile.
+	KeyFile string
+
+	// InsecureSkipVerify if set to true will disable TLS host verification.
+	InsecureSkipVerify bool
+}
+
 // DefaultConfig returns a default configuration for the client. By default this
 // will pool and reuse idle connections to Consul. If you have a long-lived
 // client object, this is the desired behavior and should make the most efficient
@@ -194,15 +220,68 @@ func defaultConfig(transportFn func() *http.Transport) *Config {
 		}
 
 		if !doVerify {
-			transport := transportFn()
-			transport.TLSClientConfig = &tls.Config{
+			tlsClientConfig, err := SetupTLSConfig(&TLSConfig{
 				InsecureSkipVerify: true,
+			})
+
+			// We don't expect this to fail given that we aren't
+			// parsing any of the input, but we panic just in case
+			// since this doesn't have an error return.
+			if err != nil {
+				panic(err)
 			}
+
+			transport := transportFn()
+			transport.TLSClientConfig = tlsClientConfig
 			config.HttpClient.Transport = transport
 		}
 	}
 
 	return config
+}
+
+// TLSConfig is used to generate a TLSClientConfig that's useful for talking to
+// Consul using TLS.
+func SetupTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
+	tlsClientConfig := &tls.Config{
+		InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
+	}
+
+	if tlsConfig.Address != "" {
+		server := tlsConfig.Address
+		hasPort := strings.LastIndex(server, ":") > strings.LastIndex(server, "]")
+		if hasPort {
+			var err error
+			server, _, err = net.SplitHostPort(server)
+			if err != nil {
+				return nil, err
+			}
+		}
+		tlsClientConfig.ServerName = server
+	}
+
+	if tlsConfig.CertFile != "" && tlsConfig.KeyFile != "" {
+		tlsCert, err := tls.LoadX509KeyPair(tlsConfig.CertFile, tlsConfig.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+	}
+
+	if tlsConfig.CAFile != "" {
+		data, err := ioutil.ReadFile(tlsConfig.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA file: %v", err)
+		}
+
+		caPool := x509.NewCertPool()
+		if !caPool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("failed to parse CA certificate")
+		}
+		tlsClientConfig.RootCAs = caPool
+	}
+
+	return tlsClientConfig, nil
 }
 
 // Client provides a client to the Consul API

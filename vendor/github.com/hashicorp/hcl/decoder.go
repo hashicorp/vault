@@ -21,6 +21,17 @@ var (
 	nodeType reflect.Type = findNodeType()
 )
 
+// Unmarshal accepts a byte slice as input and writes the
+// data to the value pointed to by v.
+func Unmarshal(bs []byte, v interface{}) error {
+	root, err := parse(bs)
+	if err != nil {
+		return err
+	}
+
+	return DecodeObject(v, root)
+}
+
 // Decode reads the given input and decodes it into the structure
 // given by `out`.
 func Decode(out interface{}, in string) error {
@@ -324,6 +335,14 @@ func (d *decoder) decodeMap(name string, node ast.Node, result reflect.Value) er
 	for _, item := range n.Items {
 		if item.Val == nil {
 			continue
+		}
+
+		// github.com/hashicorp/terraform/issue/5740
+		if len(item.Keys) == 0 {
+			return &parser.PosError{
+				Pos: node.Pos(),
+				Err: fmt.Errorf("%s: map must have string keys", name),
+			}
 		}
 
 		// Get the key we're dealing with, which is the first item

@@ -432,7 +432,7 @@ func unmarshalVarint(info TypeInfo, data []byte, value interface{}) error {
 	}
 
 	int64Val := bytesToInt64(data)
-	if len(data) < 8 && data[0]&0x80 > 0 {
+	if len(data) > 0 && len(data) < 8 && data[0]&0x80 > 0 {
 		int64Val -= (1 << uint(len(data)*8))
 	}
 	return unmarshalIntlike(info, int64Val, data, value)
@@ -929,6 +929,10 @@ func marshalList(info TypeInfo, value interface{}) ([]byte, error) {
 	rv := reflect.ValueOf(value)
 	t := rv.Type()
 	k := t.Kind()
+	if k == reflect.Slice && rv.IsNil() {
+		return nil, nil
+	}
+
 	switch k {
 	case reflect.Slice, reflect.Array:
 		buf := &bytes.Buffer{}
@@ -994,6 +998,9 @@ func unmarshalList(info TypeInfo, data []byte, value interface{}) error {
 			if k == reflect.Array {
 				return unmarshalErrorf("unmarshal list: can not store nil in array value")
 			}
+			if rv.IsNil() {
+				return nil
+			}
 			rv.Set(reflect.Zero(t))
 			return nil
 		}
@@ -1032,6 +1039,10 @@ func marshalMap(info TypeInfo, value interface{}) ([]byte, error) {
 	}
 
 	rv := reflect.ValueOf(value)
+	if rv.IsNil() {
+		return nil, nil
+	}
+
 	t := rv.Type()
 	if t.Kind() != reflect.Map {
 		return nil, marshalErrorf("can not marshal %T into %s", value, info)
@@ -1344,12 +1355,7 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 				return nil, err
 			}
 
-			if data == nil && typeCanBeNull(e.Type) {
-				buf = appendInt(buf, -1)
-			} else {
-				buf = appendInt(buf, int32(len(data)))
-				buf = append(buf, data...)
-			}
+			buf = appendBytes(buf, data)
 		}
 
 		return buf, nil
@@ -1366,12 +1372,7 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 				return nil, err
 			}
 
-			if data == nil && typeCanBeNull(e.Type) {
-				buf = appendInt(buf, -1)
-			} else {
-				buf = appendInt(buf, int32(len(data)))
-				buf = append(buf, data...)
-			}
+			buf = appendBytes(buf, data)
 		}
 
 		return buf, nil
@@ -1406,37 +1407,19 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 			f = k.FieldByName(e.Name)
 		}
 
-		if !f.IsValid() {
-			if _, ok := e.Type.(CollectionType); ok {
-				f = reflect.Zero(goType(e.Type))
-			} else {
-				buf = appendInt(buf, -1)
-				continue
-			}
-		} else if f.Kind() == reflect.Ptr {
-			if f.IsNil() {
-				buf = appendInt(buf, -1)
-				continue
-			} else {
-				f = f.Elem()
+		var data []byte
+		if f.IsValid() && f.CanInterface() {
+			var err error
+			data, err = Marshal(e.Type, f.Interface())
+			if err != nil {
+				return nil, err
 			}
 		}
 
-		data, err := Marshal(e.Type, f.Interface())
-		if err != nil {
-			return nil, err
-		}
-
-		if data == nil && typeCanBeNull(e.Type) {
-			buf = appendInt(buf, -1)
-		} else {
-			buf = appendInt(buf, int32(len(data)))
-			buf = append(buf, data...)
-		}
+		buf = appendBytes(buf, data)
 	}
 
 	return buf, nil
-
 }
 
 func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {

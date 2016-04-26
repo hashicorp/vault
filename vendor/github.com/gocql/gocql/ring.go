@@ -2,6 +2,7 @@ package gocql
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
 type ring struct {
@@ -9,11 +10,28 @@ type ring struct {
 	// to in the case it can not reach any of its hosts. They are also used to boot
 	// strap the initial connection.
 	endpoints []string
+
 	// hosts are the set of all hosts in the cassandra ring that we know of
 	mu    sync.RWMutex
 	hosts map[string]*HostInfo
 
+	hostList []*HostInfo
+	pos      uint32
+
 	// TODO: we should store the ring metadata here also.
+}
+
+func (r *ring) rrHost() *HostInfo {
+	// TODO: should we filter hosts that get used here? These hosts will be used
+	// for the control connection, should we also provide an iterator?
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.hostList) == 0 {
+		return nil
+	}
+
+	pos := int(atomic.AddUint32(&r.pos, 1) - 1)
+	return r.hostList[pos%len(r.hostList)]
 }
 
 func (r *ring) getHost(addr string) *HostInfo {
@@ -72,4 +90,19 @@ func (r *ring) removeHost(addr string) bool {
 	delete(r.hosts, addr)
 	r.mu.Unlock()
 	return ok
+}
+
+type clusterMetadata struct {
+	mu          sync.RWMutex
+	partitioner string
+}
+
+func (c *clusterMetadata) setPartitioner(partitioner string) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.partitioner != partitioner {
+		// TODO: update other things now
+		c.partitioner = partitioner
+	}
 }

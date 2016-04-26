@@ -37,6 +37,10 @@ const (
 // Client is the object that needs to be constructed to perform
 // operations on the storage account.
 type Client struct {
+	// HTTPClient is the http.Client used to initiate API
+	// requests.  If it is nil, http.DefaultClient is used.
+	HTTPClient *http.Client
+
 	accountName string
 	accountKey  []byte
 	useHTTPS    bool
@@ -318,7 +322,11 @@ func (c Client) exec(verb, url string, headers map[string]string, body io.Reader
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	httpClient := http.Client{}
+
+	httpClient := c.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err

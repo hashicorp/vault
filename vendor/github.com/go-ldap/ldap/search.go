@@ -375,10 +375,14 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 	foundSearchResultDone := false
 	for !foundSearchResultDone {
 		l.Debug.Printf("%d: waiting for response", messageID)
-		packet = <-channel
+		packetResponse, ok := <-channel
+		if !ok {
+			return nil, NewError(ErrorNetwork, errors.New("ldap: channel closed"))
+		}
+		packet, err = packetResponse.ReadPacket()
 		l.Debug.Printf("%d: got response %p", messageID, packet)
-		if packet == nil {
-			return nil, NewError(ErrorNetwork, errors.New("ldap: could not retrieve message"))
+		if err != nil {
+			return nil, err
 		}
 
 		if l.Debug {

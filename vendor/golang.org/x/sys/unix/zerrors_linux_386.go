@@ -826,6 +826,7 @@ const (
 	O_RDWR                           = 0x2
 	O_RSYNC                          = 0x101000
 	O_SYNC                           = 0x101000
+	O_TMPFILE                        = 0x410000
 	O_TRUNC                          = 0x200
 	O_WRONLY                         = 0x1
 	PACKET_ADD_MEMBERSHIP            = 0x1

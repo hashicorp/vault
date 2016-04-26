@@ -88,8 +88,11 @@ type Encoder interface {
 // same name.  Including the "comma" option signals that the field should be
 // encoded as a single comma-delimited value.  Including the "space" option
 // similarly encodes the value as a single space-delimited string. Including
-// the "brackets" option signals that the multiple URL values should have "[]"
-// appended to the value name.
+// the "semicolon" option will encode the value as a semicolon-delimited string.
+// Including the "brackets" option signals that the multiple URL values should
+// have "[]" appended to the value name. "numbered" will append a number to
+// the end of each incidence of the value name, example:
+// name0=value0&name1=value1, etc.
 //
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
@@ -184,6 +187,8 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				del = ','
 			} else if opts.Contains("space") {
 				del = ' '
+			} else if opts.Contains("semicolon") {
+				del = ';'
 			} else if opts.Contains("brackets") {
 				name = name + "[]"
 			}
@@ -202,7 +207,11 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				values.Add(name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
-					values.Add(name, valueString(sv.Index(i), opts))
+					k := name
+					if opts.Contains("numbered") {
+						k = fmt.Sprintf("%s%d", name, i)
+					}
+					values.Add(k, valueString(sv.Index(i), opts))
 				}
 			}
 			continue

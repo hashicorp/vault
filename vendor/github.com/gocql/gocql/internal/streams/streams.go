@@ -62,12 +62,12 @@ func (s *IDGenerator) GetStream() (int, bool) {
 
 		for j := 0; j < bucketBits; j++ {
 			mask := uint64(1 << streamOffset(j))
-			if bucket&mask == 0 {
+			for bucket&mask == 0 {
 				if atomic.CompareAndSwapUint64(&s.streams[pos], bucket, bucket|mask) {
 					atomic.AddInt32(&s.inuseStreams, 1)
 					return streamFromBucket(int(pos), j), true
 				}
-				bucket = atomic.LoadUint64(&s.streams[offset])
+				bucket = atomic.LoadUint64(&s.streams[pos])
 			}
 		}
 	}

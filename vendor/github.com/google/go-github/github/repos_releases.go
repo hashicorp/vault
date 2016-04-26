@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // RepositoryRelease represents a GitHub release in a repository.
@@ -213,27 +215,48 @@ func (s *RepositoriesService) GetReleaseAsset(owner, repo string, id int) (*Rele
 	return asset, resp, err
 }
 
-// DownloadReleaseAsset downloads a release asset.
+// DownloadReleaseAsset downloads a release asset or returns a redirect URL.
 //
 // DownloadReleaseAsset returns an io.ReadCloser that reads the contents of the
 // specified release asset. It is the caller's responsibility to close the ReadCloser.
+// If a redirect is returned, the redirect URL will be returned as a string instead
+// of the io.ReadCloser. Exactly one of rc and redirectURL will be zero.
 //
 // GitHub API docs : http://developer.github.com/v3/repos/releases/#get-a-single-release-asset
-func (s *RepositoriesService) DownloadReleaseAsset(owner, repo string, id int) (io.ReadCloser, error) {
+func (s *RepositoriesService) DownloadReleaseAsset(owner, repo string, id int) (rc io.ReadCloser, redirectURL string, err error) {
 	u := fmt.Sprintf("repos/%s/%s/releases/assets/%d", owner, repo, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	req.Header.Set("Accept", defaultMediaType)
 
+	s.client.clientMu.Lock()
+	defer s.client.clientMu.Unlock()
+
+	var loc string
+	saveRedirect := s.client.client.CheckRedirect
+	s.client.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		loc = req.URL.String()
+		return errors.New("disable redirect")
+	}
+	defer func() { s.client.client.CheckRedirect = saveRedirect }()
+
 	resp, err := s.client.client.Do(req)
 	if err != nil {
-		return nil, err
+		if !strings.Contains(err.Error(), "disable redirect") {
+			return nil, "", err
+		}
+		return nil, loc, nil
 	}
 
-	return resp.Body, nil
+	if err := CheckResponse(resp); err != nil {
+		resp.Body.Close()
+		return nil, "", err
+	}
+
+	return resp.Body, "", nil
 }
 
 // EditReleaseAsset edits a repository release asset.

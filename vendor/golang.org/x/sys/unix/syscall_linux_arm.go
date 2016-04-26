@@ -108,6 +108,8 @@ func Seek(fd int, offset int64, whence int) (newoffset int64, err error) {
 
 // Vsyscalls on amd64.
 //sysnb	Gettimeofday(tv *Timeval) (err error)
+//sys	EpollWait(epfd int, events []EpollEvent, msec int) (n int, err error)
+//sys	Pause() (err error)
 
 func Time(t *Time_t) (Time_t, error) {
 	var tv Timeval

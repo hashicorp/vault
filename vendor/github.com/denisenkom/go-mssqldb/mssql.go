@@ -182,15 +182,30 @@ type MssqlStmt struct {
 	c          *MssqlConn
 	query      string
 	paramCount int
+	notifSub   *queryNotifSub
+}
+
+type queryNotifSub struct {
+	msgText string
+	options string
+	timeout uint32
 }
 
 func (c *MssqlConn) Prepare(query string) (driver.Stmt, error) {
 	q, paramCount := parseParams(query)
-	return &MssqlStmt{c, q, paramCount}, nil
+	return &MssqlStmt{c, q, paramCount, nil}, nil
 }
 
 func (s *MssqlStmt) Close() error {
 	return nil
+}
+
+func (s *MssqlStmt) SetQueryNotification(id, options string, timeout time.Duration) {
+	to := uint32(timeout / time.Second)
+	if to < 1 {
+		to = 1
+	}
+	s.notifSub = &queryNotifSub{id, options, to}
 }
 
 func (s *MssqlStmt) NumInput() int {
@@ -202,6 +217,12 @@ func (s *MssqlStmt) sendQuery(args []driver.Value) (err error) {
 		{hdrtype: dataStmHdrTransDescr,
 			data: transDescrHdr{s.c.sess.tranid, 1}.pack()},
 	}
+
+	if s.notifSub != nil {
+		headers = append(headers, headerStruct{hdrtype: dataStmHdrQueryNotif,
+			data: queryNotifHdr{s.notifSub.msgText, s.notifSub.options, s.notifSub.timeout}.pack()})
+	}
+
 	if len(args) != s.paramCount {
 		return errors.New(fmt.Sprintf("sql: expected %d parameters, got %d", s.paramCount, len(args)))
 	}
@@ -262,8 +283,13 @@ func (s *MssqlStmt) Query(args []driver.Value) (res driver.Rows, err error) {
 loop:
 	for tok := range tokchan {
 		switch token := tok.(type) {
-		case doneStruct:
-			break loop
+		// by ignoring DONE token we effectively
+		// skip empty result-sets
+		// this improves results in queryes like that:
+		// set nocount on; select 1
+		// see TestIgnoreEmptyResults test
+		//case doneStruct:
+			//break loop
 		case []columnStruct:
 			cols = make([]string, len(token))
 			for i, col := range token {
