@@ -1,6 +1,8 @@
 package physical
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
@@ -8,12 +10,13 @@ import (
 )
 
 func testNewBackend(t *testing.T) {
-	_, err := NewBackend("foobar", nil)
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	_, err := NewBackend("foobar", logger, nil)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 
-	b, err := NewBackend("inmem", nil)
+	b, err := NewBackend("inmem", logger, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

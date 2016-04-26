@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -37,7 +38,8 @@ func TestZookeeperBackend(t *testing.T) {
 		client.Close()
 	}()
 
-	b, err := NewBackend("zookeeper", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("zookeeper", logger, map[string]string{
 		"address": addr + "," + addr,
 		"path":    randPath,
 	})
@@ -75,7 +77,8 @@ func TestZookeeperHABackend(t *testing.T) {
 		client.Close()
 	}()
 
-	b, err := NewBackend("zookeeper", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("zookeeper", logger, map[string]string{
 		"address": addr + "," + addr,
 		"path":    randPath,
 	})

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -21,12 +22,13 @@ var MaxBlobSize = 1024 * 1024 * 4
 type AzureBackend struct {
 	container string
 	client    storage.BlobStorageClient
+	logger    *log.Logger
 }
 
 // newAzureBackend constructs an Azure backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
 // from the environment, AWS credential files or by IAM role.
-func newAzureBackend(conf map[string]string) (Backend, error) {
+func newAzureBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 
 	container := os.Getenv("AZURE_BLOB_CONTAINER")
 	if container == "" {
@@ -63,6 +65,7 @@ func newAzureBackend(conf map[string]string) (Backend, error) {
 	a := &AzureBackend{
 		container: container,
 		client:    client.GetBlobService(),
+		logger:    logger,
 	}
 	return a, nil
 }

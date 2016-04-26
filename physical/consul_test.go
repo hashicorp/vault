@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -27,7 +28,8 @@ func testConsulBackend(t *testing.T) *ConsulBackend {
 }
 
 func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
-	be, err := newConsulBackend(*conf)
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	be, err := newConsulBackend(*conf, logger)
 	if err != nil {
 		t.Fatalf("Expected Consul to initialize: %v", err)
 	}
@@ -145,7 +147,8 @@ func TestConsul_newConsulBackend(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		be, err := newConsulBackend(test.consulConfig)
+		logger := log.New(os.Stderr, "", log.LstdFlags)
+		be, err := newConsulBackend(test.consulConfig, logger)
 		if test.fail {
 			if err == nil {
 				t.Fatalf(`Expected config "%s" to fail`, test.name)
@@ -435,7 +438,8 @@ func TestConsulBackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	b, err := NewBackend("consul", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("consul", logger, map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
@@ -466,7 +470,8 @@ func TestConsulHABackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	b, err := NewBackend("consul", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("consul", logger, map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "-1",

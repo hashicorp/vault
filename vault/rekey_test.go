@@ -2,6 +2,8 @@ package vault
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"reflect"
 	"testing"
 
@@ -352,8 +354,9 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 
 func TestCore_Standby_Rekey(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmem()
-	inmha := physical.NewInmemHA()
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	inm := physical.NewInmem(logger)
+	inmha := physical.NewInmemHA(logger)
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,

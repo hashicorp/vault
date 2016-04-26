@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"sort"
 	"strings"
@@ -25,11 +26,12 @@ type MySQLBackend struct {
 	dbTable    string
 	client     *sql.DB
 	statements map[string]*sql.Stmt
+	logger     *log.Logger
 }
 
 // newMySQLBackend constructs a MySQL backend using the given API client and
 // server address and credential for accessing mysql database.
-func newMySQLBackend(conf map[string]string) (Backend, error) {
+func newMySQLBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	// Get the MySQL credentials to perform read/write operations.
 	username, ok := conf["username"]
 	if !ok || username == "" {
@@ -91,6 +93,7 @@ func newMySQLBackend(conf map[string]string) (Backend, error) {
 		dbTable:    dbTable,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
+		logger:     logger,
 	}
 
 	// Prepare all the statements required

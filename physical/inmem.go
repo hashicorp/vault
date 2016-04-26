@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"log"
 	"strings"
 	"sync"
 
@@ -14,10 +15,11 @@ type InmemBackend struct {
 	root       *radix.Tree
 	l          sync.RWMutex
 	permitPool *PermitPool
+	logger     *log.Logger
 }
 
 // NewInmem constructs a new in-memory backend
-func NewInmem() *InmemBackend {
+func NewInmem(logger *log.Logger) *InmemBackend {
 	in := &InmemBackend{
 		root:       radix.New(),
 		permitPool: NewPermitPool(DefaultParallelOperations),

@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -27,11 +28,12 @@ type ZookeeperBackend struct {
 	path   string
 	client *zk.Conn
 	acl    []zk.ACL
+	logger *log.Logger
 }
 
 // newZookeeperBackend constructs a Zookeeper backend using the given API client
 // and the prefix in the KV store.
-func newZookeeperBackend(conf map[string]string) (Backend, error) {
+func newZookeeperBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	// Get the path in Zookeeper
 	path, ok := conf["path"]
 	if !ok {
@@ -120,6 +122,7 @@ func newZookeeperBackend(conf map[string]string) (Backend, error) {
 		path:   path,
 		client: client,
 		acl:    acl,
+		logger: logger,
 	}
 	return c, nil
 }

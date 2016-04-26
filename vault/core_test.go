@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -17,9 +19,10 @@ var (
 )
 
 func TestNewCore_badAdvertiseAddr(t *testing.T) {
+	logger = log.New(os.Stderr, "", log.LstdFlags)
 	conf := &CoreConfig{
 		AdvertiseAddr: "127.0.0.1:8200",
-		Physical:      physical.NewInmem(),
+		Physical:      physical.NewInmem(logger),
 		DisableMlock:  true,
 	}
 	_, err := NewCore(conf)
@@ -951,8 +954,9 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_Standby_Seal(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmem()
-	inmha := physical.NewInmemHA()
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+	inm := physical.NewInmem(logger)
+	inmha := physical.NewInmemHA(logger)
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
@@ -1056,8 +1060,9 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmem()
-	inmha := physical.NewInmemHA()
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+	inm := physical.NewInmem(logger)
+	inmha := physical.NewInmemHA(logger)
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
@@ -1230,8 +1235,9 @@ func TestCore_StepDown(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmem()
-	inmha := physical.NewInmemHA()
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+	inm := physical.NewInmem(logger)
+	inmha := physical.NewInmemHA(logger)
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,
@@ -1386,12 +1392,14 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
-	inmha := physical.NewInmemHA()
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+	inmha := physical.NewInmemHA(logger)
 	testCore_Standby_Common(t, inmha, inmha)
 }
 
 func TestCore_Standby_SeparateHA(t *testing.T) {
-	testCore_Standby_Common(t, physical.NewInmemHA(), physical.NewInmemHA())
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+	testCore_Standby_Common(t, physical.NewInmemHA(logger), physical.NewInmemHA(logger))
 }
 
 func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.HABackend) {
@@ -1925,8 +1933,9 @@ func testWaitActive(t *testing.T, core *Core) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	inm := physical.NewInmem()
-	inmha := physical.NewInmemHA()
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+	inm := physical.NewInmem(logger)
+	inmha := physical.NewInmemHA(logger)
 	advertiseOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
 		Physical:      inm,

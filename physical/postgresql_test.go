@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"log"
 	"os"
 	"testing"
 
@@ -19,7 +20,8 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 
 	// Run vault tests
-	b, err := NewBackend("postgresql", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("postgresql", logger, map[string]string{
 		"connection_url": connURL,
 		"table":          table,
 	})

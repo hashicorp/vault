@@ -3,6 +3,7 @@ package physical
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -50,6 +51,7 @@ const (
 // it allows Vault to run on multiple machines in a highly-available manner.
 type ConsulBackend struct {
 	path                string
+	logger              *log.Logger
 	client              *api.Client
 	kv                  *api.KV
 	permitPool          *PermitPool
@@ -71,7 +73,7 @@ type ConsulBackend struct {
 
 // newConsulBackend constructs a Consul backend using the given API client
 // and the prefix in the KV store.
-func newConsulBackend(conf map[string]string) (Backend, error) {
+func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	// Get the path in Consul
 	path, ok := conf["path"]
 	if !ok {
@@ -80,9 +82,11 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 
 	// Ensure path is suffixed but not prefixed
 	if !strings.HasSuffix(path, "/") {
+		logger.Printf("[WARN]: consul: appending trailing forward slash to path")
 		path += "/"
 	}
 	if strings.HasPrefix(path, "/") {
+		logger.Printf("[WARN]: consul: trimming path of its forward slash")
 		path = strings.TrimPrefix(path, "/")
 	}
 
@@ -156,11 +160,13 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
+		logger.Printf("[DEBUG]: consul: max_parallel set to %d", maxParInt)
 	}
 
 	// Setup the backend
 	c := &ConsulBackend{
 		path:                path,
+		logger:              logger,
 		client:              client,
 		kv:                  client.KV(),
 		permitPool:          NewPermitPool(maxParInt),
@@ -210,7 +216,7 @@ func (c *ConsulBackend) AdvertiseActive(active bool) error {
 				return nil
 			}
 
-			// wtb logger c.logger.Printf("[WARN] service registration failed: %v", err)
+			c.logger.Printf("[WARN] consul: service registration failed: %v", err)
 			c.serviceLock.Unlock()
 			time.Sleep(registrationRetryInterval)
 			c.serviceLock.Lock()
@@ -301,13 +307,13 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertis
 		for {
 			select {
 			case <-shutdownCh:
-				// wtb logger: log.Printf("[DEBUG]: Shutting down consul backend")
+				c.logger.Printf("[INFO]: consul: Shutting down consul backend")
 				break shutdown
 			}
 		}
 
 		if err := agent.ServiceDeregister(serviceID); err != nil {
-			// wtb logger: log.Printf("[WARNING]: service deregistration failed: {{err}}", err)
+			c.logger.Printf("[WARN]: consul: service deregistration failed: {{err}}", err)
 		}
 		c.running = false
 	}()

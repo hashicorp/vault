@@ -1,6 +1,9 @@
 package physical
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 const DefaultParallelOperations = 128
 
@@ -83,23 +86,23 @@ type Entry struct {
 }
 
 // Factory is the factory function to create a physical backend.
-type Factory func(map[string]string) (Backend, error)
+type Factory func(config map[string]string, logger *log.Logger) (Backend, error)
 
 // NewBackend returns a new backend with the given type and configuration.
 // The backend is looked up in the builtinBackends variable.
-func NewBackend(t string, conf map[string]string) (Backend, error) {
+func NewBackend(t string, logger *log.Logger, conf map[string]string) (Backend, error) {
 	f, ok := builtinBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown physical backend type: %s", t)
 	}
-	return f(conf)
+	return f(conf, logger)
 }
 
 // BuiltinBackends is the list of built-in physical backends that can
 // be used with NewBackend.
 var builtinBackends = map[string]Factory{
-	"inmem": func(map[string]string) (Backend, error) {
-		return NewInmem(), nil
+	"inmem": func(_ map[string]string, logger *log.Logger) (Backend, error) {
+		return NewInmem(logger), nil
 	},
 	"consul":     newConsulBackend,
 	"zookeeper":  newZookeeperBackend,

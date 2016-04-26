@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"log"
 	"os"
 	"testing"
 
@@ -27,7 +28,8 @@ func TestMySQLBackend(t *testing.T) {
 	password := os.Getenv("MYSQL_PASSWORD")
 
 	// Run vault tests
-	b, err := NewBackend("mysql", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("mysql", logger, map[string]string{
 		"address":  address,
 		"database": database,
 		"table":    table,

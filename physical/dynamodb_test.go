@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -47,7 +48,8 @@ func TestDynamoDBBackend(t *testing.T) {
 		})
 	}()
 
-	b, err := NewBackend("dynamodb", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("dynamodb", logger, map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,
 		"session_token": creds.SessionToken,
@@ -95,7 +97,8 @@ func TestDynamoDBHABackend(t *testing.T) {
 		})
 	}()
 
-	b, err := NewBackend("dynamodb", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("dynamodb", logger, map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,
 		"session_token": creds.SessionToken,

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -67,10 +68,11 @@ type EtcdBackend struct {
 	path       string
 	kAPI       client.KeysAPI
 	permitPool *PermitPool
+	logger     *log.Logger
 }
 
 // newEtcdBackend constructs a etcd backend using a given machine address.
-func newEtcdBackend(conf map[string]string) (Backend, error) {
+func newEtcdBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	// Get the etcd path form the configuration.
 	path, ok := conf["path"]
 	if !ok {
@@ -173,6 +175,7 @@ func newEtcdBackend(conf map[string]string) (Backend, error) {
 		path:       path,
 		kAPI:       kAPI,
 		permitPool: NewPermitPool(DefaultParallelOperations),
+		logger:     logger,
 	}, nil
 }
 

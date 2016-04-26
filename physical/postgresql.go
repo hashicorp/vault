@@ -3,6 +3,7 @@ package physical
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -16,11 +17,12 @@ type PostgreSQLBackend struct {
 	table      string
 	client     *sql.DB
 	statements map[string]*sql.Stmt
+	logger     *log.Logger
 }
 
 // newPostgreSQLBackend constructs a PostgreSQL backend using the given
 // API client, server address, credentials, and database.
-func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
+func newPostgreSQLBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	// Get the PostgreSQL credentials to perform read/write operations.
 	connURL, ok := conf["connection_url"]
 	if !ok || connURL == "" {
@@ -62,6 +64,7 @@ func newPostgreSQLBackend(conf map[string]string) (Backend, error) {
 		table:      quoted_table,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
+		logger:     logger,
 	}
 
 	// Prepare all the statements required

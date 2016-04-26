@@ -3,6 +3,7 @@ package physical
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,19 +17,22 @@ import (
 // and non-performant. It is meant mostly for local testing and development.
 // It can be improved in the future.
 type FileBackend struct {
-	Path string
-
-	l sync.Mutex
+	Path   string
+	l      sync.Mutex
+	logger *log.Logger
 }
 
 // newFileBackend constructs a Filebackend using the given directory
-func newFileBackend(conf map[string]string) (Backend, error) {
+func newFileBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	path, ok := conf["path"]
 	if !ok {
 		return nil, fmt.Errorf("'path' must be set")
 	}
 
-	return &FileBackend{Path: path}, nil
+	return &FileBackend{
+		Path:   path,
+		logger: logger,
+	}, nil
 }
 
 func (b *FileBackend) Delete(k string) error {
