@@ -31,48 +31,38 @@ func (b *backend) pathRotateWrite(
 	name := d.Get("name").(string)
 
 	// Get the policy
-	lp, err := b.policies.getPolicy(req.Storage, name)
+	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-
-	// Error if invalid policy
-	if lp == nil {
+	if p == nil {
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
 	}
 
 	// Store so we can detect later if this has changed out from under us
-	keyVersion := lp.Policy().LatestVersion
+	keyVersion := p.LatestVersion
 
-	// lock the policies object so we can refresh
-	b.policies.Lock()
-	defer b.policies.Unlock()
-	lp.Lock()
-	defer lp.Unlock()
+	b.lm.UnlockPolicy(name, lockType)
 
 	// Refresh in case it's changed since before we grabbed the lock
-	lp, err = b.policies.refreshPolicy(req.Storage, name)
+	p, err = b.lm.RefreshPolicy(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if lp == nil {
+	if p == nil {
 		return nil, fmt.Errorf("error finding key %s after locking for changes", name)
 	}
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.Policy() == nil {
-		return nil, fmt.Errorf("no existing key named %s could be found", name)
-	}
+	defer b.lm.UnlockPolicy(name, exclusive)
 
 	// Make sure that the policy hasn't been rotated simultaneously
-	if keyVersion != lp.Policy().LatestVersion {
+	if keyVersion != p.LatestVersion {
 		resp := &logical.Response{}
 		resp.AddWarning("key has been rotated since this endpoint was called; did not perform rotation")
 		return resp, nil
 	}
 
 	// Rotate the policy
-	err = lp.Policy().rotate(req.Storage)
+	err = p.rotate(req.Storage)
 
 	return nil, err
 }

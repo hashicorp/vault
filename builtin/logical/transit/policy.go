@@ -235,6 +235,67 @@ func (p *Policy) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
+func (p *Policy) needsUpgrade() bool {
+	// Ensure we've moved from Key -> Keys
+	if p.Key != nil && len(p.Key) > 0 {
+		return true
+	}
+
+	// With archiving, past assumptions about the length of the keys map are no longer valid
+	if p.LatestVersion == 0 && len(p.Keys) != 0 {
+		return true
+	}
+
+	// We disallow setting the version to 0, since they start at 1 since moving
+	// to rotate-able keys, so update if it's set to 0
+	if p.MinDecryptionVersion == 0 {
+		return true
+	}
+
+	// On first load after an upgrade, copy keys to the archive
+	if p.ArchiveVersion == 0 {
+		return true
+	}
+
+	return false
+}
+
+func (p *Policy) upgrade(storage logical.Storage) error {
+	persistNeeded := false
+	// Ensure we've moved from Key -> Keys
+	if p.Key != nil && len(p.Key) > 0 {
+		p.migrateKeyToKeysMap()
+		persistNeeded = true
+	}
+
+	// With archiving, past assumptions about the length of the keys map are no longer valid
+	if p.LatestVersion == 0 && len(p.Keys) != 0 {
+		p.LatestVersion = len(p.Keys)
+		persistNeeded = true
+	}
+
+	// We disallow setting the version to 0, since they start at 1 since moving
+	// to rotate-able keys, so update if it's set to 0
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
+		persistNeeded = true
+	}
+
+	// On first load after an upgrade, copy keys to the archive
+	if p.ArchiveVersion == 0 {
+		persistNeeded = true
+	}
+
+	if persistNeeded {
+		err := p.Persist(storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // DeriveKey is used to derive the encryption key that should
 // be used depending on the policy. If derivation is disabled the
 // raw key is used and no context is required, otherwise the KDF

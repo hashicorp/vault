@@ -33,16 +33,12 @@ func Backend(conf *logical.BackendConfig) *backend {
 		Secrets: []*framework.Secret{},
 	}
 
-	if conf.System.CachingDisabled() {
-		b.policies = newSimplePolicyCRUD()
-	} else {
-		b.policies = newCachingPolicyCRUD()
-	}
+	b.lm = newLockManager(conf.System.CachingDisabled())
 
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
-	policies policyCRUD
+	lm *lockManager
 }

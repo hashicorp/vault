@@ -604,7 +604,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 		var chosenFunc, chosenKey string
 
-		//t.Logf("Starting")
+		//t.Errorf("Starting %d", id)
 		for {
 			// Stop after 10 seconds
 			if time.Now().Sub(startTime) > 10*time.Second {
@@ -629,7 +629,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
 			case "encrypt":
-				//t.Logf("%s, %s", chosenFunc, chosenKey)
+				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Raw["plaintext"] = base64.StdEncoding.EncodeToString([]byte(testPlaintext))
 				fd.Schema = be.pathEncrypt().Fields
 				resp, err := be.pathEncryptWrite(req, fd)
@@ -649,7 +649,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Decrypt the ciphertext and compare the result
 			case "decrypt":
-				//t.Logf("%s, %s", chosenFunc, chosenKey)
+				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				ct := latestEncryptedText[chosenKey]
 				if ct == "" {
 					continue
@@ -677,7 +677,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
-				//t.Logf("%s, %s", chosenFunc, chosenKey)
+				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := be.pathPolicyRead(req, fd)
 				if err != nil {
 					t.Fatalf("got an error reading policy %s: %v", chosenKey, err)

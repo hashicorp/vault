@@ -36,55 +36,58 @@ func (b *backend) pathKeys() *framework.Path {
 
 func (b *backend) pathPolicyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Grab a write lock right off the bat
-	b.policies.Lock()
-	defer b.policies.Unlock()
-
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 
-	// Generate the policy; this will also check if it exists for safety
-	_, err := b.policies.generatePolicy(req.Storage, name, derived)
-	return nil, err
+	p, lockType, upserted, err := b.lm.GetPolicyUpsert(req.Storage, name, derived)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, fmt.Errorf("error generating key: returned policy was nil")
+	}
+
+	defer b.lm.UnlockPolicy(name, lockType)
+
+	resp := &logical.Response{}
+	if !upserted {
+		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
+	}
+
+	return nil, nil
 }
 
 func (b *backend) pathPolicyRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	lp, err := b.policies.getPolicy(req.Storage, name)
+	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if lp == nil {
+	if p == nil {
 		return nil, nil
 	}
 
-	lp.RLock()
-	defer lp.RUnlock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.Policy() == nil {
-		return nil, fmt.Errorf("no existing policy named %s could be found", name)
-	}
+	defer b.lm.UnlockPolicy(name, lockType)
 
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"name":                   lp.Policy().Name,
-			"cipher_mode":            lp.Policy().CipherMode,
-			"derived":                lp.Policy().Derived,
-			"deletion_allowed":       lp.Policy().DeletionAllowed,
-			"min_decryption_version": lp.Policy().MinDecryptionVersion,
-			"latest_version":         lp.Policy().LatestVersion,
+			"name":                   p.Name,
+			"cipher_mode":            p.CipherMode,
+			"derived":                p.Derived,
+			"deletion_allowed":       p.DeletionAllowed,
+			"min_decryption_version": p.MinDecryptionVersion,
+			"latest_version":         p.LatestVersion,
 		},
 	}
-	if lp.Policy().Derived {
-		resp.Data["kdf_mode"] = lp.Policy().KDFMode
+	if p.Derived {
+		resp.Data["kdf_mode"] = p.KDFMode
 	}
 
 	retKeys := map[string]int64{}
-	for k, v := range lp.Policy().Keys {
+	for k, v := range p.Keys {
 		retKeys[strconv.Itoa(k)] = v.CreationTime
 	}
 	resp.Data["keys"] = retKeys
@@ -96,33 +99,17 @@ func (b *backend) pathPolicyDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	// Some sanity checking
-	lp, err := b.policies.getPolicy(req.Storage, name)
+	// Some sanity checking before we lock it all in the DeletePolicy method
+	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error looking up policy %s, error is %s", name, err)), err
 	}
-	if lp == nil {
+	if p == nil {
 		return logical.ErrorResponse(fmt.Sprintf("no such key %s", name)), logical.ErrInvalidRequest
 	}
+	b.lm.UnlockPolicy(name, lockType)
 
-	// Hold both locks since we'll be affecting both the cache (if it exists)
-	// and the locking policy itself
-	b.policies.Lock()
-	defer b.policies.Unlock()
-	lp.Lock()
-	defer lp.Unlock()
-
-	// Make sure that we have up-to-date values since deletePolicy will check
-	// things like whether deletion is allowed
-	lp, err = b.policies.refreshPolicy(req.Storage, name)
-	if err != nil {
-		return nil, err
-	}
-	if lp == nil {
-		return nil, fmt.Errorf("error finding key %s after locking for deletion", name)
-	}
-
-	err = b.policies.deletePolicy(req.Storage, lp, name)
+	err = b.lm.DeletePolicy(req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}
