@@ -18,7 +18,7 @@ type lockManager struct {
 	locks map[string]*sync.RWMutex
 
 	// A mutex for the map itself
-	lockMutex sync.RWMutex
+	locksMutex sync.RWMutex
 
 	// If caching is enabled, the map of name to in-memory policy cache
 	cache map[string]*Policy
@@ -52,13 +52,13 @@ func (lm *lockManager) UnlockAll(name string) {
 }
 
 func (lm *lockManager) LockPolicy(name string, writeLock bool) {
-	lm.lockMutex.RLock()
+	lm.locksMutex.RLock()
 	lock := lm.locks[name]
 	if lock != nil {
 		// We want to give this up before locking the lock, but it's safe --
 		// the only time we ever write to a value in this map is the first time
 		// we access the value, so it won't be changing out from under us
-		lm.lockMutex.RUnlock()
+		lm.locksMutex.RUnlock()
 		if writeLock {
 			lock.Lock()
 		} else {
@@ -67,8 +67,8 @@ func (lm *lockManager) LockPolicy(name string, writeLock bool) {
 		return
 	}
 
-	lm.lockMutex.RUnlock()
-	lm.lockMutex.Lock()
+	lm.locksMutex.RUnlock()
+	lm.locksMutex.Lock()
 
 	// Don't defer the unlock call because if we get a valid lock below we want
 	// to release the lock mutex right away to avoid the possibility of
@@ -77,7 +77,7 @@ func (lm *lockManager) LockPolicy(name string, writeLock bool) {
 	// Check to make sure it hasn't been created since
 	lock = lm.locks[name]
 	if lock != nil {
-		lm.lockMutex.Unlock()
+		lm.locksMutex.Unlock()
 		if writeLock {
 			lock.Lock()
 		} else {
@@ -88,7 +88,7 @@ func (lm *lockManager) LockPolicy(name string, writeLock bool) {
 
 	lock = &sync.RWMutex{}
 	lm.locks[name] = lock
-	lm.lockMutex.Unlock()
+	lm.locksMutex.Unlock()
 	if writeLock {
 		lock.Lock()
 	} else {
@@ -97,9 +97,9 @@ func (lm *lockManager) LockPolicy(name string, writeLock bool) {
 }
 
 func (lm *lockManager) UnlockPolicy(name string, writeLock bool) {
-	lm.lockMutex.RLock()
+	lm.locksMutex.RLock()
 	lock := lm.locks[name]
-	lm.lockMutex.RUnlock()
+	lm.locksMutex.RUnlock()
 
 	if writeLock {
 		lock.Unlock()
@@ -131,7 +131,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		lm.globalMutex.RLock()
 		p = lm.cache[name]
 		if p != nil {
-			defer lm.globalMutex.RUnlock()
+			lm.globalMutex.RUnlock()
 			return
 		}
 		lm.globalMutex.RUnlock()
@@ -139,16 +139,20 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		// When we return, since we didn't have the policy in the cache, if
 		// there was no error, write the value in.
 		defer func() {
-			if err == nil {
-				lm.globalMutex.Lock()
-				defer lm.globalMutex.Unlock()
-				// Make sure a policy didn't appear
-				exp := lm.cache[name]
-				if exp != nil {
-					p = exp
-					return
-				}
+			lm.globalMutex.Lock()
+			defer lm.globalMutex.Unlock()
+			// Make sure a policy didn't appear. If so, it will only be set if
+			// there was no error, so now just clear the error and return that
+			// policy.
+			exp := lm.cache[name]
+			if exp != nil {
+				upserted = false
+				err = nil
+				p = exp
+				return
+			}
 
+			if err == nil {
 				lm.cache[name] = p
 			}
 		}()
@@ -156,13 +160,13 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 
 	p, err = lm.getStoredPolicy(storage, name)
 	if err != nil {
-		defer lm.UnlockPolicy(name, shared)
+		lm.UnlockPolicy(name, shared)
 		return
 	}
 
 	if p == nil {
 		if !upsert {
-			defer lm.UnlockPolicy(name, shared)
+			lm.UnlockPolicy(name, shared)
 			return
 		}
 
@@ -279,7 +283,8 @@ func (lm *lockManager) DeletePolicy(storage logical.Storage, name string) error 
 	return nil
 }
 
-// When this function returns it's the responsibility of the caller to call UnlockAll if err is not nil
+// When this function returns it's the responsibility of the caller to call
+// UnlockPolicy if err is nil and policy is not nil
 func (lm *lockManager) RefreshPolicy(storage logical.Storage, name string) (p *Policy, err error) {
 	lm.LockPolicy(name, exclusive)
 
