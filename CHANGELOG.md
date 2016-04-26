@@ -23,11 +23,21 @@ DEPRECATIONS/BREAKING CHANGES:
 
  * `auth/token/revoke-prefix` has been removed. See the security notice for
    details. [GH-1280]
+ * Vault will now automatically register itself as the `vault` service when
+   using the `consul` backend and will perform its own health checks.  See
+   the Consul backend documentation for information on how to disable
+   auto-registration and service checks.
 
 FEATURES:
 
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
+ * **Consul Backend**: Consul backend will automatically register a `vault`
+   service and perform its own health checking.  By default the active node
+   can be found at `active.vault.service.consul` and all with standby nodes
+   are `standby.vault.service.consul`.  Sealed vaults are marked critical and
+   are not listed by default in Consul's service discovery.  See the
+   documentation for details. [GH-1349]
 
 IMPROVEMENTS:
 
@@ -70,7 +80,7 @@ BUG FIXES:
    contained in the backend config [GH-1256]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
- 
+
 ## 0.5.2 (March 16th, 2016)
 
 FEATURES:
