@@ -53,9 +53,10 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 		path = v
 	}
 
+	// NOTE: requires HOME env var to be set
 	path, err := homedir.Expand(path)
 	if err != nil {
-		return nil, fmt.Errorf("Error expanding config path: %s", err)
+		return nil, fmt.Errorf("Error expanding config path %s: %s", path, err)
 	}
 
 	contents, err := ioutil.ReadFile(path)

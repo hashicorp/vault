@@ -32,13 +32,15 @@ listener "tcp" {
 	consulhcl = `
 backend "consul" {
     prefix = "foo/"
-	advertise_addr = "http://127.0.0.1:8200"
+    advertise_addr = "http://127.0.0.1:8200"
+    disable_registration = "true"
 }
 `
 	haconsulhcl = `
 ha_backend "consul" {
     prefix = "bar/"
-	advertise_addr = "http://127.0.0.1:8200"
+    advertise_addr = "http://127.0.0.1:8200"
+    disable_registration = "true"
 }
 `
 

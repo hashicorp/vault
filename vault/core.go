@@ -942,6 +942,16 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Success!
 	c.sealed = false
+	if c.ha != nil {
+		sd, ok := c.ha.(physical.ServiceDiscovery)
+		if ok {
+			go func() {
+				if err := sd.AdvertiseSealed(false); err != nil {
+					c.logger.Printf("[WARN] core: failed to advertise unsealed status: %v", err)
+				}
+			}()
+		}
+	}
 	return true, nil
 }
 
@@ -1086,6 +1096,17 @@ func (c *Core) sealInternal() error {
 		return err
 	}
 	c.logger.Printf("[INFO] core: vault is sealed")
+
+	if c.ha != nil {
+		sd, ok := c.ha.(physical.ServiceDiscovery)
+		if ok {
+			go func() {
+				if err := sd.AdvertiseSealed(true); err != nil {
+					c.logger.Printf("[WARN] core: failed to advertise sealed status: %v", err)
+				}
+			}()
+		}
+	}
 
 	return nil
 }
@@ -1396,7 +1417,20 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 		Key:   coreLeaderPrefix + uuid,
 		Value: []byte(c.advertiseAddr),
 	}
-	return c.barrier.Put(ent)
+	err := c.barrier.Put(ent)
+	if err != nil {
+		return err
+	}
+
+	sd, ok := c.ha.(physical.ServiceDiscovery)
+	if ok {
+		go func() {
+			if err := sd.AdvertiseActive(true); err != nil {
+				c.logger.Printf("[WARN] core: failed to advertise active status: %v", err)
+			}
+		}()
+	}
+	return nil
 }
 
 func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
@@ -1421,7 +1455,19 @@ func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	return c.barrier.Delete(key)
+	err := c.barrier.Delete(key)
+
+	// Advertise ourselves as a standby
+	sd, ok := c.ha.(physical.ServiceDiscovery)
+	if ok {
+		go func() {
+			if err := sd.AdvertiseActive(false); err != nil {
+				c.logger.Printf("[WARN] core: failed to advertise standby status: %v", err)
+			}
+		}()
+	}
+
+	return err
 }
 
 // emitMetrics is used to periodically expose metrics while runnig

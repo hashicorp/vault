@@ -365,7 +365,7 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's commong to all backends
+	// Pull out the advertise address since it's common to all backends
 	var advertiseAddr string
 	if v, ok := m["advertise_addr"]; ok {
 		advertiseAddr = v
@@ -398,7 +398,7 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("ha_backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's commong to all backends
+	// Pull out the advertise address since it's common to all backends
 	var advertiseAddr string
 	if v, ok := m["advertise_addr"]; ok {
 		advertiseAddr = v

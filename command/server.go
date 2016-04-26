@@ -205,7 +205,7 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.AdvertiseAddr = envAA
 	}
 
-	// Attempt to detect the advertise address possible
+	// Attempt to detect the advertise address, if possible
 	var detect physical.AdvertiseDetect
 	if coreConfig.HAPhysical != nil {
 		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
@@ -283,6 +283,17 @@ func (c *ServerCommand) Run(args []string) int {
 			info["backend"] += " (HA available)"
 			info["advertise address"] = coreConfig.AdvertiseAddr
 			infoKeys = append(infoKeys, "advertise address")
+		}
+	}
+
+	// If the backend supports service discovery, run service discovery
+	if coreConfig.HAPhysical != nil {
+		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
+		if ok {
+			if err := sd.RunServiceDiscovery(c.ShutdownCh, coreConfig.AdvertiseAddr); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+				return 1
+			}
 		}
 	}
 
