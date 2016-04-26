@@ -221,11 +221,11 @@ func TestConsul_serviceTags(t *testing.T) {
 	}
 }
 
-func TestConsul_parseAdvertiseAddr(t *testing.T) {
+func TestConsul_setAdvertiseAddr(t *testing.T) {
 	tests := []struct {
 		addr string
 		host string
-		port int
+		port int64
 		pass bool
 	}{
 		{
@@ -249,7 +249,7 @@ func TestConsul_parseAdvertiseAddr(t *testing.T) {
 		{
 			addr: "unix:///tmp/.vault.addr.sock",
 			host: "/tmp/.vault.addr.sock",
-			port: 0,
+			port: -1,
 			pass: true,
 		},
 		{
@@ -263,7 +263,7 @@ func TestConsul_parseAdvertiseAddr(t *testing.T) {
 	}
 	for _, test := range tests {
 		c := testConsulBackend(t)
-		host, port, err := c.parseAdvertiseAddr(test.addr)
+		err := c.setAdvertiseAddr(test.addr)
 		if test.pass {
 			if err != nil {
 				t.Fatalf("bad: %v", err)
@@ -276,12 +276,12 @@ func TestConsul_parseAdvertiseAddr(t *testing.T) {
 			}
 		}
 
-		if host != test.host {
-			t.Fatalf("bad: %v != %v", host, test.host)
+		if c.advertiseHost != test.host {
+			t.Fatalf("bad: %v != %v", c.advertiseHost, test.host)
 		}
 
-		if port != test.port {
-			t.Fatalf("bad: %v != %v", port, test.port)
+		if c.advertisePort != test.port {
+			t.Fatalf("bad: %v != %v", c.advertisePort, test.port)
 		}
 	}
 }

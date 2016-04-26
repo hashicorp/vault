@@ -58,7 +58,7 @@ type ConsulBackend struct {
 	sealedCheck         *api.AgentCheckRegistration
 	registrationLock    int64
 	advertiseHost       string
-	advertisePort       int
+	advertisePort       int64
 	consulClientConf    *api.Config
 	serviceName         string
 	running             bool
@@ -244,14 +244,6 @@ func (c *ConsulBackend) AdvertiseSealed(sealed bool) error {
 	return nil
 }
 
-func (c *ConsulBackend) setAdvertiseAddr(addr string) (err error) {
-	c.advertiseHost, c.advertisePort, err = c.parseAdvertiseAddr(addr)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertiseAddr string) (err error) {
 	c.serviceLock.Lock()
 	defer c.serviceLock.Unlock()
@@ -270,7 +262,7 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertis
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              serviceTags(c.active),
-		Port:              c.advertisePort,
+		Port:              int(c.advertisePort),
 		Address:           c.advertiseHost,
 		EnableTagOverride: false,
 	}
@@ -369,36 +361,36 @@ func (c *ConsulBackend) serviceID() string {
 	return fmt.Sprintf("%s:%s:%d", c.serviceName, c.advertiseHost, c.advertisePort)
 }
 
-func (c *ConsulBackend) parseAdvertiseAddr(addr string) (host string, port int, err error) {
+func (c *ConsulBackend) setAdvertiseAddr(addr string) (err error) {
 	if addr == "" {
-		return "", -1, fmt.Errorf("advertise address must not be empty")
+		return fmt.Errorf("advertise address must not be empty")
 	}
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return "", -2, errwrap.Wrapf(fmt.Sprintf(`failed to parse advertise URL "%v": {{err}}`, addr), err)
+		return errwrap.Wrapf(fmt.Sprintf(`failed to parse advertise URL "%v": {{err}}`, addr), err)
 	}
 
 	var portStr string
-	host, portStr, err = net.SplitHostPort(url.Host)
+	c.advertiseHost, portStr, err = net.SplitHostPort(url.Host)
 	if err != nil {
 		if url.Scheme == "http" {
 			portStr = "80"
 		} else if url.Scheme == "https" {
 			portStr = "443"
 		} else if url.Scheme == "unix" {
-			portStr = "0"
-			host = url.Path
+			portStr = "-1"
+			c.advertiseHost = url.Path
 		} else {
-			return "", -3, errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
+			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
 		}
 	}
-	portNum, err := strconv.ParseInt(portStr, 10, 0)
-	if err != nil || portNum < 0 || portNum > 65535 {
-		return "", -4, errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+	c.advertisePort, err = strconv.ParseInt(portStr, 10, 0)
+	if err != nil || c.advertisePort < -1 || c.advertisePort > 65535 {
+		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
 	}
 
-	return host, int(portNum), nil
+	return nil
 }
 
 func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
