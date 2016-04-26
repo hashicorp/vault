@@ -9,7 +9,7 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func TestSeal(t *testing.T) {
+func Test_Seal(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
