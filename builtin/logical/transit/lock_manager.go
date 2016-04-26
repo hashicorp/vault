@@ -41,9 +41,9 @@ func (lm *lockManager) CacheActive() bool {
 	return lm.cache != nil
 }
 
-func (lm *lockManager) LockAll(name string) {
+func (lm *lockManager) lockAll(name string) {
 	lm.globalMutex.Lock()
-	lm.LockPolicy(name, exclusive)
+	lm.lockPolicy(name, exclusive)
 }
 
 func (lm *lockManager) UnlockAll(name string) {
@@ -51,7 +51,7 @@ func (lm *lockManager) UnlockAll(name string) {
 	lm.globalMutex.Unlock()
 }
 
-func (lm *lockManager) LockPolicy(name string, writeLock bool) {
+func (lm *lockManager) lockPolicy(name string, writeLock bool) {
 	lm.locksMutex.RLock()
 	lock := lm.locks[name]
 	if lock != nil {
@@ -125,7 +125,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 	// complicated lock juggling as we call various functions. We'll also defer
 	// the store into the cache.
 	lockType = shared
-	lm.LockPolicy(name, shared)
+	lm.lockPolicy(name, shared)
 
 	if lm.CacheActive() {
 		lm.globalMutex.RLock()
@@ -177,7 +177,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		// simply checking the disk again is sufficient.
 		lm.UnlockPolicy(name, shared)
 		lockType = exclusive
-		lm.LockPolicy(name, exclusive)
+		lm.lockPolicy(name, exclusive)
 
 		p, err = lm.getStoredPolicy(storage, name)
 		if err != nil {
@@ -212,7 +212,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 	if p.needsUpgrade() {
 		lm.UnlockPolicy(name, shared)
 		lockType = exclusive
-		lm.LockPolicy(name, exclusive)
+		lm.lockPolicy(name, exclusive)
 
 		// Reload the policy with the write lock to ensure we still need the upgrade
 		p, err = lm.getStoredPolicy(storage, name)
@@ -241,7 +241,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 }
 
 func (lm *lockManager) DeletePolicy(storage logical.Storage, name string) error {
-	lm.LockAll(name)
+	lm.lockAll(name)
 	defer lm.UnlockAll(name)
 
 	var p *Policy
@@ -286,7 +286,7 @@ func (lm *lockManager) DeletePolicy(storage logical.Storage, name string) error 
 // When this function returns it's the responsibility of the caller to call
 // UnlockPolicy if err is nil and policy is not nil
 func (lm *lockManager) RefreshPolicy(storage logical.Storage, name string) (p *Policy, err error) {
-	lm.LockPolicy(name, exclusive)
+	lm.lockPolicy(name, exclusive)
 
 	if lm.CacheActive() {
 		p = lm.cache[name]
