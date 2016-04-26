@@ -202,14 +202,13 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 	
 	if len(ldapGroups) == 0 {
-		resp.AddWarning(
-			fmt.Sprintf(
-				"no LDAP groups found in user DN '%s' or group DN '%s';only policies from locally-defined groups available", 
-				cfg.UserDN,
-				cfg.GroupDN
-			)
-		)
+		errString := fmt.Sprintf(
+			"no LDAP groups found in user DN '%s' or group DN '%s';only policies from locally-defined groups available",
+			cfg.UserDN,
+			cfg.GroupDN)
+		resp.AddWarning(errString)
 	}
+
 	var allgroups []string
 	// Import the custom added groups from ldap backend
 	user, err := b.User(req.Storage, username)
