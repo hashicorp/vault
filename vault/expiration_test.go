@@ -375,7 +375,10 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	if err := exp.RevokeByToken("foobarbaz"); err != nil {
+	te := &TokenEntry{
+		ID: "foobarbaz",
+	}
+	if err := exp.RevokeByToken(te); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -719,7 +722,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 
 	indexEntry, err := exp.indexByToken(le.ClientToken, le.LeaseID)
 	if err != nil {
-		t.Fatalf("err: %v")
+		t.Fatalf("err: %v", err)
 	}
 	if indexEntry == nil {
 		t.Fatalf("err: should have found a secondary index entry")
@@ -740,7 +743,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 
 	indexEntry, err = exp.indexByToken(le.ClientToken, le.LeaseID)
 	if err != nil {
-		t.Fatalf("err: %v")
+		t.Fatalf("err: %v", err)
 	}
 	if indexEntry != nil {
 		t.Fatalf("err: should not have found a secondary index entry")

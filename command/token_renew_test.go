@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -16,7 +17,7 @@ func TestTokenRenew(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenRenewCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -55,7 +56,7 @@ func TestTokenRenewWithIncrement(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenRenewCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -95,7 +96,7 @@ func TestTokenRenewSelf(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenRenewCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -138,7 +139,7 @@ func TestTokenRenewSelfWithIncrement(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenRenewCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

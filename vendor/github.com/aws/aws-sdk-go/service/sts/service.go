@@ -30,7 +30,7 @@ import (
 // the Query API, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html"
 // target="_blank) in Using IAM. For information about using security tokens
 // with other AWS products, go to AWS Services That Work with IAM (http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)
-// in the Using IAM.
+// in the IAM User Guide.
 //
 // If you're new to AWS and need additional technical information about a specific
 // AWS product, you can find the product's technical documentation at http://aws.amazon.com/documentation/
@@ -39,11 +39,10 @@ import (
 //  Endpoints
 //
 // The AWS Security Token Service (STS) has a default endpoint of https://sts.amazonaws.com
-// that maps to the US East (N. Virginia) region. Additional regions are available,
-// but must first be activated in the AWS Management Console before you can
-// use a different region's endpoint. For more information about activating
-// a region for STS see Activating STS in a New Region (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html)
-// in the Using IAM.
+// that maps to the US East (N. Virginia) region. Additional regions are available
+// and are activated by default. For more information, see Activating and Deactivating
+// AWS STS in an AWS Region (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html)
+// in the IAM User Guide.
 //
 // For information about STS endpoints, see Regions and Endpoints (http://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region)
 // in the AWS General Reference.

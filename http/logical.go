@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
+type PrepareRequestFunc func(req *logical.Request) error
+
+func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Determine the path...
 		if !strings.HasPrefix(r.URL.Path, "/v1/") {
@@ -53,11 +55,11 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 		}
 
 		// Parse the request if we can
-		var req map[string]interface{}
+		var data map[string]interface{}
 		if op == logical.UpdateOperation {
-			err := parseRequest(r, &req)
+			err := parseRequest(r, &data)
 			if err == io.EOF {
-				req = nil
+				data = nil
 				err = nil
 			}
 			if err != nil {
@@ -66,15 +68,27 @@ func handleLogical(core *vault.Core, dataOnly bool) http.Handler {
 			}
 		}
 
+		req := requestAuth(r, &logical.Request{
+			Operation:  op,
+			Path:       path,
+			Data:       data,
+			Connection: getConnection(r),
+		})
+
+		// Certain endpoints may require changes to the request object.
+		// They will have a callback registered to do the needful.
+		// Invoking it before proceeding.
+		if prepareRequestCallback != nil {
+			if err := prepareRequestCallback(req); err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
 		// it. Vault core handles stripping this if we need to.
-		resp, ok := request(core, w, r, requestAuth(r, &logical.Request{
-			Operation:  op,
-			Path:       path,
-			Data:       req,
-			Connection: getConnection(r),
-		}))
+		resp, ok := request(core, w, r, req)
 		if !ok {
 			return
 		}

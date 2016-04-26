@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -15,7 +16,7 @@ import (
 func TestInit(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -45,23 +46,24 @@ func TestInit(t *testing.T) {
 		t.Fatal("should be initialized")
 	}
 
-	sealConf, err := core.SealConfig()
+	sealConf, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	expected := &vault.SealConfig{
+		Type:            "shamir",
 		SecretShares:    5,
 		SecretThreshold: 3,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
-		t.Fatalf("bad: %#v", sealConf)
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 }
 
 func TestInit_Check(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -100,7 +102,7 @@ func TestInit_Check(t *testing.T) {
 func TestInit_custom(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -134,23 +136,24 @@ func TestInit_custom(t *testing.T) {
 		t.Fatal("should be initialized")
 	}
 
-	sealConf, err := core.SealConfig()
+	sealConf, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	expected := &vault.SealConfig{
+		Type:            "shamir",
 		SecretShares:    7,
 		SecretThreshold: 3,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
-		t.Fatalf("bad: %#v", sealConf)
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 }
 
 func TestInit_PGP(t *testing.T) {
 	ui := new(cli.MockUi)
 	c := &InitCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			Ui: ui,
 		},
 	}
@@ -206,7 +209,7 @@ func TestInit_PGP(t *testing.T) {
 		t.Fatal("should be initialized")
 	}
 
-	sealConf, err := core.SealConfig()
+	sealConf, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -221,12 +224,13 @@ func TestInit_PGP(t *testing.T) {
 	}
 
 	expected := &vault.SealConfig{
+		Type:            "shamir",
 		SecretShares:    4,
 		SecretThreshold: 2,
 		PGPKeys:         pgpKeys,
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
-		t.Fatalf("bad:\nexpected: %#v\ngot: %#v", expected, sealConf)
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 
 	re, err := regexp.Compile("\\s+Initial Root Token:\\s+(.*)")

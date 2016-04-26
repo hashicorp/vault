@@ -277,6 +277,29 @@ func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, e
 	return repository, resp, err
 }
 
+// GetByID fetches a repository.
+//
+// Note: GetByID uses the undocumented GitHub API endpoint /repositories/:id.
+func (s *RepositoriesService) GetByID(id int) (*Repository, *Response, error) {
+	u := fmt.Sprintf("repositories/%d", id)
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when the license support fully launches
+	// https://developer.github.com/v3/licenses/#get-a-repositorys-license
+	req.Header.Set("Accept", mediaTypeLicensesPreview)
+
+	repository := new(Repository)
+	resp, err := s.client.Do(req, repository)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return repository, resp, err
+}
+
 // Edit updates a repository.
 //
 // GitHub API docs: http://developer.github.com/v3/repos/#edit

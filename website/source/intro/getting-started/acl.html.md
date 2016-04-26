@@ -78,16 +78,17 @@ back to a root user later.
 ```
 $ vault token-create -policy="secret"
 Key            	Value
-token          	d97ef000-48cf-45d9-1907-3ea6ce298a29
-token_duration 	2592000
-token_renewable	true
-token_policies 	[secret]
+token           d97ef000-48cf-45d9-1907-3ea6ce298a29
+token_accessor  71770cc5-14da-f0af-c6ce-17a0ae398d67
+token_duration  2592000
+token_renewable true
+token_policies  [default secret]
 
 $ vault auth d97ef000-48cf-45d9-1907-3ea6ce298a29
-Successfully authenticated! The policies that are associated
-with this token are listed below:
-
-secret
+Successfully authenticated!
+token: d97ef000-48cf-45d9-1907-3ea6ce298a29
+token_duration: 2591938
+token_policies: [default, secret]
 ```
 
 You can now verify that you can write data to `secret/`, but only

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/audit"
@@ -26,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/helper/mlock"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
@@ -40,7 +42,7 @@ type ServerCommand struct {
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
 
-	Meta
+	meta.Meta
 
 	ReloadFuncs map[string][]server.ReloadFunc
 }
@@ -49,7 +51,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress string
-	flags := c.Meta.FlagSet("server", FlagSetDefault)
+	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
@@ -122,13 +124,13 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	// If mlock isn't supported, show a warning. We disable this in
-	// dev because it is quite scary to see when first using Vault.
+	// If mlockall(2) isn't supported, show a warning.  We disable this
+	// in dev because it is quite scary to see when first using Vault.
 	if !dev && !mlock.Supported() {
 		c.Ui.Output("==> WARNING: mlock not supported on this system!\n")
-		c.Ui.Output("  The `mlock` syscall to prevent memory from being swapped to")
-		c.Ui.Output("  disk is not supported on this system. Enabling mlock or")
-		c.Ui.Output("  running Vault on a system with mlock is much more secure.\n")
+		c.Ui.Output("  An `mlockall(2)`-like syscall to prevent memory from being")
+		c.Ui.Output("  swapped to disk is not supported on this system. Running")
+		c.Ui.Output("  Vault on an mlockall(2) enabled system is much more secure.\n")
 	}
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
@@ -148,7 +150,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the backend
 	backend, err := physical.NewBackend(
-		config.Backend.Type, config.Backend.Config)
+		config.Backend.Type, logger, config.Backend.Config)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing backend of type %s: %s",
@@ -156,10 +158,16 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	infoKeys := make([]string, 0, 10)
+	info := make(map[string]string)
+
+	var seal vault.Seal = &vault.DefaultSeal{}
+
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
 		AdvertiseAddr:      config.Backend.AdvertiseAddr,
 		HAPhysical:         nil,
+		Seal:               seal,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
@@ -174,7 +182,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var ok bool
 	if config.HABackend != nil {
 		habackend, err := physical.NewBackend(
-			config.HABackend.Type, config.HABackend.Config)
+			config.HABackend.Type, logger, config.HABackend.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing backend of type %s: %s",
@@ -197,7 +205,7 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.AdvertiseAddr = envAA
 	}
 
-	// Attempt to detect the advertise address possible
+	// Attempt to detect the advertise address, if possible
 	var detect physical.AdvertiseDetect
 	if coreConfig.HAPhysical != nil {
 		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
@@ -216,10 +224,12 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the core
-	core, err := vault.NewCore(coreConfig)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error initializing core: %s", err))
-		return 1
+	core, newCoreError := vault.NewCore(coreConfig)
+	if newCoreError != nil {
+		if !errwrap.ContainsType(newCoreError, new(vault.NonFatalError)) {
+			c.Ui.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			return 1
+		}
 	}
 
 	// If we're in dev mode, then initialize the core
@@ -256,8 +266,6 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Compile server information for output later
-	infoKeys := make([]string, 0, 10)
-	info := make(map[string]string)
 	info["backend"] = config.Backend.Type
 	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
@@ -275,6 +283,17 @@ func (c *ServerCommand) Run(args []string) int {
 			info["backend"] += " (HA available)"
 			info["advertise address"] = coreConfig.AdvertiseAddr
 			infoKeys = append(infoKeys, "advertise address")
+		}
+	}
+
+	// If the backend supports service discovery, run service discovery
+	if coreConfig.HAPhysical != nil {
+		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
+		if ok {
+			if err := sd.RunServiceDiscovery(c.ShutdownCh, coreConfig.AdvertiseAddr); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+				return 1
+			}
 		}
 	}
 
@@ -314,7 +333,8 @@ func (c *ServerCommand) Run(args []string) int {
 	info["version"] = version.GetVersion().String()
 
 	// Server configuration output
-	padding := 18
+	padding := 24
+	sort.Strings(infoKeys)
 	c.Ui.Output("==> Vault server configuration:\n")
 	for _, k := range infoKeys {
 		c.Ui.Output(fmt.Sprintf(
@@ -337,6 +357,11 @@ func (c *ServerCommand) Run(args []string) int {
 	server.Handler = vaulthttp.Handler(core)
 	for _, ln := range lns {
 		go server.Serve(ln)
+	}
+
+	if newCoreError != nil {
+		c.Ui.Output("==> Warning:\n\nNon-fatal error during initialization; check the logs for more information.")
+		c.Ui.Output("")
 	}
 
 	// Output the header that the server has started
@@ -362,6 +387,16 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 		}
 	}
+
+	for _, listener := range lns {
+		listener.Close()
+	}
+
+	err = seal.Finalize()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+	}
+
 	return 0
 }
 
@@ -370,7 +405,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 	init, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
-	})
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -642,15 +677,16 @@ General Options:
 
 // MakeShutdownCh returns a channel that can be used for shutdown
 // notifications for commands. This channel will send a message for every
-// interrupt or SIGTERM received.
+// SIGINT or SIGTERM received.
 func MakeShutdownCh() chan struct{} {
 	resultCh := make(chan struct{})
 
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	shutdownCh := make(chan os.Signal, 4)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGINT)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for {
-			<-signalCh
+			<-shutdownCh
 			resultCh <- struct{}{}
 		}
 	}()

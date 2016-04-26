@@ -110,6 +110,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Backend = c2.Backend
 	}
 
+	result.HABackend = c.HABackend
+	if c2.HABackend != nil {
+		result.HABackend = c2.HABackend
+	}
+
 	result.Telemetry = c.Telemetry
 	if c2.Telemetry != nil {
 		result.Telemetry = c2.Telemetry
@@ -360,7 +365,7 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's commong to all backends
+	// Pull out the advertise address since it's common to all backends
 	var advertiseAddr string
 	if v, ok := m["advertise_addr"]; ok {
 		advertiseAddr = v
@@ -393,7 +398,7 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("ha_backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's commong to all backends
+	// Pull out the advertise address since it's common to all backends
 	var advertiseAddr string
 	if v, ok := m["advertise_addr"]; ok {
 		advertiseAddr = v

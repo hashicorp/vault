@@ -26,23 +26,35 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/renew/", handleLogical(core, false))
+	mux.Handle("/v1/sys/renew/", handleLogical(core, false, nil))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
 	mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core))
 	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
-	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core))
-	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core))
-	mux.Handle("/v1/sys/capabilities", handleSysCapabilities(core))
-	mux.Handle("/v1/sys/capabilities-self", handleSysCapabilities(core))
-	mux.Handle("/v1/sys/capabilities-accessor", handleSysCapabilitiesAccessor(core))
-	mux.Handle("/v1/sys/", handleLogical(core, true))
-	mux.Handle("/v1/", handleLogical(core, false))
+	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core, false))
+	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core, false))
+	mux.Handle("/v1/sys/rekey-recovery-key/init", handleSysRekeyInit(core, true))
+	mux.Handle("/v1/sys/rekey-recovery-key/update", handleSysRekeyUpdate(core, true))
+	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesSelfCallback))
+	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
+	mux.Handle("/v1/", handleLogical(core, false, nil))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
 
 	return handler
+}
+
+// ClientToken is required in the handler of sys/capabilities-self endpoint in
+// system backend. But the ClientToken gets obfuscated before the request gets
+// forwarded to any logical backend. So, setting the ClientToken in the data
+// field for this request.
+func sysCapabilitiesSelfCallback(req *logical.Request) error {
+	if req == nil || req.Data == nil {
+		return fmt.Errorf("invalid request")
+	}
+	req.Data["token"] = req.ClientToken
+	return nil
 }
 
 // stripPrefix is a helper to strip a prefix from the path. It will

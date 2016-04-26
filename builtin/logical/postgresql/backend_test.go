@@ -24,8 +24,9 @@ func TestBackend_basic(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d1, false),
 			testAccStepRole(t),
@@ -45,8 +46,9 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d, false),
 			testAccStepRole(t),
@@ -72,8 +74,9 @@ func TestBackend_configConnection(t *testing.T) {
 	d4 := map[string]interface{}{}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d1, false),
 			testAccStepConfig(t, d2, false),

@@ -10,43 +10,50 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysRekeyInit(core *vault.Core) http.Handler {
+func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			handleSysRekeyInitGet(core, w, r)
-		case "POST", "PUT":
-			handleSysRekeyInitPut(core, w, r)
-		case "DELETE":
-			handleSysRekeyInitDelete(core, w, r)
+		switch {
+		case recovery && !core.SealAccess().RecoveryKeySupported():
+			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
+		case r.Method == "GET":
+			handleSysRekeyInitGet(core, recovery, w, r)
+		case r.Method == "POST" || r.Method == "PUT":
+			handleSysRekeyInitPut(core, recovery, w, r)
+		case r.Method == "DELETE":
+			handleSysRekeyInitDelete(core, recovery, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
 
-func handleSysRekeyInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	// Get the current configuration
-	sealConfig, err := core.SealConfig()
+func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	barrierConfig, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if sealConfig == nil {
+	if barrierConfig == nil {
 		respondError(w, http.StatusBadRequest, fmt.Errorf(
 			"server is not yet initialized"))
 		return
 	}
 
 	// Get the rekey configuration
-	rekeyConf, err := core.RekeyConfig()
+	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Get the progress
-	progress, err := core.RekeyProgress()
+	progress, err := core.RekeyProgress(recovery)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	sealThreshold, err := core.RekeyThreshold(recovery)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -58,7 +65,7 @@ func handleSysRekeyInitGet(core *vault.Core, w http.ResponseWriter, r *http.Requ
 		T:        0,
 		N:        0,
 		Progress: progress,
-		Required: sealConfig.SecretThreshold,
+		Required: sealThreshold,
 	}
 	if rekeyConf != nil {
 		status.Nonce = rekeyConf.Nonce
@@ -69,6 +76,7 @@ func handleSysRekeyInitGet(core *vault.Core, w http.ResponseWriter, r *http.Requ
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, err)
+				return
 			}
 			status.PGPFingerprints = pgpFingerprints
 			status.Backup = rekeyConf.Backup
@@ -77,7 +85,7 @@ func handleSysRekeyInitGet(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	respondOk(w, status)
 }
 
-func handleSysRekeyInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req RekeyRequest
 	if err := parseRequest(r, &req); err != nil {
@@ -87,25 +95,35 @@ func handleSysRekeyInitPut(core *vault.Core, w http.ResponseWriter, r *http.Requ
 
 	if req.Backup && len(req.PGPKeys) == 0 {
 		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"))
+		return
+	}
+
+	// Right now we don't support this, but the rest of the code is ready for
+	// when we do, hence the check below for this to be false if
+	// StoredShares is greater than zero
+	if core.SealAccess().StoredKeysSupported() {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("rekeying of barrier not supported when stored key support is available"))
+		return
 	}
 
 	// Initialize the rekey
 	err := core.RekeyInit(&vault.SealConfig{
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
+		StoredShares:    req.StoredShares,
 		PGPKeys:         req.PGPKeys,
 		Backup:          req.Backup,
-	})
+	}, recovery)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	handleSysRekeyInitGet(core, w, r)
+	handleSysRekeyInitGet(core, recovery, w, r)
 }
 
-func handleSysRekeyInitDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	err := core.RekeyCancel()
+func handleSysRekeyInitDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	err := core.RekeyCancel(recovery)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -113,7 +131,7 @@ func handleSysRekeyInitDelete(core *vault.Core, w http.ResponseWriter, r *http.R
 	respondOk(w, nil)
 }
 
-func handleSysRekeyUpdate(core *vault.Core) http.Handler {
+func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request
 		var req RekeyUpdateRequest
@@ -138,7 +156,7 @@ func handleSysRekeyUpdate(core *vault.Core) http.Handler {
 		}
 
 		// Use the key to make progress on rekey
-		result, err := core.RekeyUpdate(key, req.Nonce)
+		result, err := core.RekeyUpdate(key, req.Nonce, recovery)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
@@ -167,6 +185,7 @@ func handleSysRekeyUpdate(core *vault.Core) http.Handler {
 type RekeyRequest struct {
 	SecretShares    int      `json:"secret_shares"`
 	SecretThreshold int      `json:"secret_threshold"`
+	StoredShares    int      `json:"stored_shares"`
 	PGPKeys         []string `json:"pgp_keys"`
 	Backup          bool     `json:"backup"`
 }

@@ -29,13 +29,15 @@ type Deployment struct {
 
 // DeploymentRequest represents a deployment request
 type DeploymentRequest struct {
-	Ref              *string   `json:"ref,omitempty"`
-	Task             *string   `json:"task,omitempty"`
-	AutoMerge        *bool     `json:"auto_merge,omitempty"`
-	RequiredContexts *[]string `json:"required_contexts,omitempty"`
-	Payload          *string   `json:"payload,omitempty"`
-	Environment      *string   `json:"environment,omitempty"`
-	Description      *string   `json:"description,omitempty"`
+	Ref                   *string   `json:"ref,omitempty"`
+	Task                  *string   `json:"task,omitempty"`
+	AutoMerge             *bool     `json:"auto_merge,omitempty"`
+	RequiredContexts      *[]string `json:"required_contexts,omitempty"`
+	Payload               *string   `json:"payload,omitempty"`
+	Environment           *string   `json:"environment,omitempty"`
+	Description           *string   `json:"description,omitempty"`
+	TransientEnvironment  *bool     `json:"transient_environment,omitempty"`
+	ProductionEnvironment *bool     `json:"production_environment,omitempty"`
 }
 
 // DeploymentsListOptions specifies the optional parameters to the
@@ -91,6 +93,9 @@ func (s *RepositoriesService) CreateDeployment(owner, repo string, request *Depl
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when deployment support fully launches
+	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
+
 	d := new(Deployment)
 	resp, err := s.client.Do(req, d)
 	if err != nil {
@@ -105,7 +110,7 @@ func (s *RepositoriesService) CreateDeployment(owner, repo string, request *Depl
 type DeploymentStatus struct {
 	ID *int `json:"id,omitempty"`
 	// State is the deployment state.
-	// Possible values are: "pending", "success", "failure", "error".
+	// Possible values are: "pending", "success", "failure", "error", "inactive".
 	State         *string    `json:"state,omitempty"`
 	Creator       *User      `json:"creator,omitempty"`
 	Description   *string    `json:"description,omitempty"`
@@ -118,9 +123,12 @@ type DeploymentStatus struct {
 
 // DeploymentStatusRequest represents a deployment request
 type DeploymentStatusRequest struct {
-	State       *string `json:"state,omitempty"`
-	TargetURL   *string `json:"target_url,omitempty"`
-	Description *string `json:"description,omitempty"`
+	State          *string `json:"state,omitempty"`
+	TargetURL      *string `json:"target_url,omitempty"` // Deprecated. Use LogURL instead.
+	LogURL         *string `json:"log_url,omitempty"`
+	Description    *string `json:"description,omitempty"`
+	EnvironmentURL *string `json:"environment_url,omitempty"`
+	AutoInactive   *bool   `json:"auto_inactive,omitempty"`
 }
 
 // ListDeploymentStatuses lists the statuses of a given deployment of a repository.
@@ -157,6 +165,9 @@ func (s *RepositoriesService) CreateDeploymentStatus(owner, repo string, deploym
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when deployment support fully launches
+	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
 
 	d := new(DeploymentStatus)
 	resp, err := s.client.Do(req, d)

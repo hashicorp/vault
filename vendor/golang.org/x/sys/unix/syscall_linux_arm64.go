@@ -8,6 +8,7 @@ package unix
 
 const _SYS_dup = SYS_DUP3
 
+//sys	EpollWait(epfd int, events []EpollEvent, msec int) (n int, err error) = SYS_EPOLL_PWAIT
 //sys	Fchown(fd int, uid int, gid int) (err error)
 //sys	Fstat(fd int, stat *Stat_t) (err error)
 //sys	Fstatat(fd int, path string, stat *Stat_t, flags int) (err error)
@@ -79,8 +80,6 @@ func NsecToTimespec(nsec int64) (ts Timespec) {
 	return
 }
 
-func TimevalToNsec(tv Timeval) int64 { return int64(tv.Sec)*1e9 + int64(tv.Usec)*1e3 }
-
 func NsecToTimeval(nsec int64) (tv Timeval) {
 	nsec += 999 // round up to microsecond
 	tv.Sec = nsec / 1e9
@@ -150,6 +149,18 @@ func (cmsg *Cmsghdr) SetLen(length int) {
 
 func InotifyInit() (fd int, err error) {
 	return InotifyInit1(0)
+}
+
+func Dup2(oldfd int, newfd int) (err error) {
+	return Dup3(oldfd, newfd, 0)
+}
+
+func Pause() (err error) {
+	_, _, e1 := Syscall6(SYS_PPOLL, 0, 0, 0, 0, 0, 0)
+	if e1 != 0 {
+		err = errnoErr(e1)
+	}
+	return
 }
 
 // TODO(dfc): constants that should be in zsysnum_linux_arm64.go, remove

@@ -14,6 +14,7 @@ package unix
 // Lookup linux_dirent{,64} in kernel source code for details.
 const _SYS_getdents = SYS_GETDENTS
 
+//sys	EpollWait(epfd int, events []EpollEvent, msec int) (n int, err error)
 //sys	Fchown(fd int, uid int, gid int) (err error)
 //sys	Fstatfs(fd int, buf *Statfs_t) (err error)
 //sys	Ftruncate(fd int, length int64) (err error)
@@ -24,6 +25,7 @@ const _SYS_getdents = SYS_GETDENTS
 //sysnb	Getuid() (uid int)
 //sys	Lchown(path string, uid int, gid int) (err error)
 //sys	Listen(s int, n int) (err error)
+//sys	Pause() (err error)
 //sys	Pread(fd int, p []byte, offset int64) (n int, err error) = SYS_PREAD64
 //sys	Pwrite(fd int, p []byte, offset int64) (n int, err error) = SYS_PWRITE64
 //sys	Seek(fd int, offset int64, whence int) (off int64, err error) = SYS_LSEEK
@@ -84,8 +86,6 @@ func NsecToTimespec(nsec int64) (ts Timespec) {
 	ts.Nsec = nsec % 1e9
 	return
 }
-
-func TimevalToNsec(tv Timeval) int64 { return int64(tv.Sec)*1e9 + int64(tv.Usec)*1e3 }
 
 func NsecToTimeval(nsec int64) (tv Timeval) {
 	nsec += 999 // round up to microsecond

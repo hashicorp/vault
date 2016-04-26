@@ -95,6 +95,25 @@ func (s *UsersService) Get(user string) (*User, *Response, error) {
 	return uResp, resp, err
 }
 
+// GetByID fetches a user.
+//
+// Note: GetByID uses the undocumented GitHub API endpoint /user/:id.
+func (s *UsersService) GetByID(id int) (*User, *Response, error) {
+	u := fmt.Sprintf("user/%d", id)
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	user := new(User)
+	resp, err := s.client.Do(req, user)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return user, resp, err
+}
+
 // Edit the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/users/#update-the-authenticated-user

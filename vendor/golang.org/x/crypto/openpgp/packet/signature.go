@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/dsa"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/binary"
 	"hash"
@@ -531,6 +532,12 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 			sig.DSASigR.bitLength = uint16(8 * len(sig.DSASigR.bytes))
 			sig.DSASigS.bytes = s.Bytes()
 			sig.DSASigS.bitLength = uint16(8 * len(sig.DSASigS.bytes))
+		}
+	case PubKeyAlgoECDSA:
+		r, s, err := ecdsa.Sign(config.Random(), priv.PrivateKey.(*ecdsa.PrivateKey), digest)
+		if err == nil {
+			sig.ECDSASigR = fromBig(r)
+			sig.ECDSASigS = fromBig(s)
 		}
 	default:
 		err = errors.UnsupportedError("public key algorithm: " + strconv.Itoa(int(sig.PubKeyAlgo)))

@@ -99,8 +99,13 @@ var LDAPResultCodeMap = map[uint8]string{
 }
 
 func getLDAPResultCode(packet *ber.Packet) (code uint8, description string) {
-	if len(packet.Children) >= 2 {
+	if packet == nil {
+		return ErrorUnexpectedResponse, "Empty packet"
+	} else if len(packet.Children) >= 2 {
 		response := packet.Children[1]
+		if response == nil {
+			return ErrorUnexpectedResponse, "Empty response in packet"
+		}
 		if response.ClassType == ber.ClassApplication && response.TagType == ber.TypeConstructed && len(response.Children) >= 3 {
 			// Children[1].Children[2] is the diagnosticMessage which is guaranteed to exist as seen here: https://tools.ietf.org/html/rfc4511#section-4.1.9
 			return uint8(response.Children[0].Value.(int64)), response.Children[2].Value.(string)

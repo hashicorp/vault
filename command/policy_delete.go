@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // PolicyDeleteCommand is a Command that enables a new endpoint.
 type PolicyDeleteCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *PolicyDeleteCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("policy-delete", FlagSetDefault)
+	flags := c.Meta.FlagSet("policy-delete", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -58,7 +60,6 @@ Usage: vault policy-delete [options] name
   doesn't exist, it is identical to not being associated with that policy.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

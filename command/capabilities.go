@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // CapabilitiesCommand is a Command that enables a new endpoint.
 type CapabilitiesCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *CapabilitiesCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("capabilities", FlagSetDefault)
+	flags := c.Meta.FlagSet("capabilities", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -80,7 +82,6 @@ Usage: vault capabilities [options] [token] path
   is invalid, this command will respond with a ["deny"].
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

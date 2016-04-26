@@ -174,12 +174,12 @@ func (m *ExpirationManager) Stop() error {
 func (m *ExpirationManager) Revoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
 
-	return m.revokeCommon(leaseID, false)
+	return m.revokeCommon(leaseID, false, false)
 }
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
 // during revocation and still remove entries/index/lease timers
-func (m *ExpirationManager) revokeCommon(leaseID string, force bool) error {
+func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
@@ -193,11 +193,13 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force bool) error {
 	}
 
 	// Revoke the entry
-	if err := m.revokeEntry(le); err != nil {
-		if !force {
-			return err
-		} else {
-			m.logger.Printf("[WARN]: revocation from the backend failed, but in force mode so ignoring; error was: %s", err)
+	if !skipToken || le.Auth == nil {
+		if err := m.revokeEntry(le); err != nil {
+			if !force {
+				return err
+			} else {
+				m.logger.Printf("[WARN]: revocation from the backend failed, but in force mode so ignoring; error was: %s", err)
+			}
 		}
 	}
 
@@ -238,12 +240,14 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	return m.revokePrefixCommon(prefix, false)
 }
 
-// RevokeByToken is used to revoke all the secrets issued with
-// a given token. This is done by using the secondary index.
-func (m *ExpirationManager) RevokeByToken(token string) error {
+// RevokeByToken is used to revoke all the secrets issued with a given token.
+// This is done by using the secondary index. It also removes the lease entry
+// for the token itself. As a result it should *ONLY* ever be called from the
+// token store's revokeSalted function.
+func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 	// Lookup the leases
-	existing, err := m.lookupByToken(token)
+	existing, err := m.lookupByToken(te.ID)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
@@ -255,7 +259,17 @@ func (m *ExpirationManager) RevokeByToken(token string) error {
 				leaseID, idx+1, len(existing), err)
 		}
 	}
-	return nil
+
+	tokenLeaseID := path.Join(te.Path, m.tokenStore.SaltID(te.ID))
+
+	// We want to skip the revokeEntry call as that will call back into
+	// revocation logic in the token store, which is what is running this
+	// function in the first place -- it'd be a deadlock loop. Since the only
+	// place that this function is called is revokeSalted in the token store,
+	// we're already revoking the token, so we just want to clean up the lease.
+	// This avoids spurious revocations later in the log when the timer runs
+	// out, and eases up resource usage.
+	return m.revokeCommon(tokenLeaseID, false, true)
 }
 
 func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error {
@@ -274,7 +288,7 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
-		if err := m.revokeCommon(leaseID, force); err != nil {
+		if err := m.revokeCommon(leaseID, force, false); err != nil {
 			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
 				leaseID, idx+1, len(existing), err)
 		}

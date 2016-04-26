@@ -53,6 +53,7 @@ func getInstances(address string) (map[string]map[string]string, error) {
 		return nil, err
 	}
 	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(5*time.Second))
 	_, err = conn.Write([]byte{3})
 	if err != nil {
 		return nil, err
@@ -541,6 +542,36 @@ const (
 	dataStmHdrTransDescr    = 2 // MARS transaction descriptor (required)
 	dataStmHdrTraceActivity = 3
 )
+
+// Query Notifications Header
+// http://msdn.microsoft.com/en-us/library/dd304949.aspx
+type queryNotifHdr struct {
+	notifyId      string
+	ssbDeployment string
+	notifyTimeout uint32
+}
+
+func (hdr queryNotifHdr) pack() (res []byte) {
+	notifyId := str2ucs2(hdr.notifyId)
+	ssbDeployment := str2ucs2(hdr.ssbDeployment)
+
+	res = make([]byte, 2+len(notifyId)+2+len(ssbDeployment)+4)
+	b := res
+
+	binary.LittleEndian.PutUint16(b, uint16(len(notifyId)))
+	b = b[2:]
+	copy(b, notifyId)
+	b = b[len(notifyId):]
+
+	binary.LittleEndian.PutUint16(b, uint16(len(ssbDeployment)))
+	b = b[2:]
+	copy(b, ssbDeployment)
+	b = b[len(ssbDeployment):]
+
+	binary.LittleEndian.PutUint32(b, hdr.notifyTimeout)
+
+	return res
+}
 
 // MARS Transaction Descriptor Header
 // http://msdn.microsoft.com/en-us/library/dd340515.aspx

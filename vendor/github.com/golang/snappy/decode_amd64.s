@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build !appengine
+// +build gc
+// +build !noasm
+
 #include "textflag.h"
 
-// func decode(dst, src []byte) int
-//
 // The asm code generally follows the pure Go code in decode_other.go, except
 // where marked with a "!!!".
+
+// func decode(dst, src []byte) int
 //
 // All local variables fit into registers. The non-zero stack size is only to
 // spill registers and push args when issuing a CALL. The register allocation:

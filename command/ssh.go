@@ -11,13 +11,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/ssh"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
 )
 
 // SSHCommand is a Command that establishes a SSH connection
 // with target by generating a dynamic key
 type SSHCommand struct {
-	Meta
+	meta.Meta
 }
 
 // Structure to hold the fields returned when asked for a credential from SSHh backend.
@@ -34,7 +35,7 @@ func (c *SSHCommand) Run(args []string) int {
 	var noExec bool
 	var sshCmdArgs []string
 	var sshDynamicKeyFileName string
-	flags := c.Meta.FlagSet("ssh", FlagSetDefault)
+	flags := c.Meta.FlagSet("ssh", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&role, "role", "", "")
 	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
@@ -255,9 +256,7 @@ Usage: vault ssh [options] username@ip
   See [https://github.com/hashicorp/vault-ssh-agent]
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 SSH Options:
 
   -role             Role to be used to create the key.

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 func getBackendConfig(c *Core) *logical.BackendConfig {
@@ -518,7 +517,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad:\ngot:\n%#v\nexpected:\n%#v\n", out, expected)
 	}
 }
 
@@ -1041,46 +1040,6 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_RevokePrefix(t *testing.T) {
-	exp := mockExpiration(t)
-	ts := exp.tokenStore
-
-	// Create new token
-	root, err := ts.rootToken()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Create a new token
-	auth := &logical.Auth{
-		ClientToken: root.ID,
-		LeaseOptions: logical.LeaseOptions{
-			TTL: time.Hour,
-		},
-	}
-	err = exp.RegisterAuth("auth/github/login", auth)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-prefix/auth/github/")
-	resp, err := ts.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	out, err := ts.Lookup(root.ID)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if out != nil {
-		t.Fatalf("bad: %v", out)
-	}
-}
-
 func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
@@ -1248,22 +1207,16 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("got a nil response")
 	}
 
-	var actual tsRoleEntry
-	err = mapstructure.WeakDecode(resp.Data, &actual)
-	if err != nil {
-		t.Fatalf("error decoding role json: %v", err)
+	expected := map[string]interface{}{
+		"name":             "test",
+		"orphan":           true,
+		"period":           float64(259200),
+		"allowed_policies": []string{"test1", "test2"},
+		"path_suffix":      "happenin",
 	}
 
-	expected := tsRoleEntry{
-		Name:            "test",
-		Orphan:          true,
-		Period:          72 * time.Hour,
-		AllowedPolicies: []string{"test1", "test2"},
-		PathSuffix:      "happenin",
-	}
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
 	}
 
 	// Now test updating; this should be set to an UpdateOperation
@@ -1294,21 +1247,16 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("got a nil response")
 	}
 
-	err = mapstructure.WeakDecode(resp.Data, &actual)
-	if err != nil {
-		t.Fatalf("error decoding role json: %v", err)
+	expected = map[string]interface{}{
+		"name":             "test",
+		"orphan":           true,
+		"period":           float64(284400),
+		"allowed_policies": []string{"test3"},
+		"path_suffix":      "happenin",
 	}
 
-	expected = tsRoleEntry{
-		Name:            "test",
-		Orphan:          true,
-		Period:          79 * time.Hour,
-		AllowedPolicies: []string{"test3"},
-		PathSuffix:      "happenin",
-	}
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, actual)
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
 	}
 
 	req.Operation = logical.ListOperation

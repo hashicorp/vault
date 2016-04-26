@@ -63,6 +63,7 @@ As you might expect, secrets can be read with `vault read`:
 ```
 $ vault read secret/hello
 Key             Value
+lease_duration  2592000
 excited         yes
 value           world
 ```
@@ -109,7 +110,7 @@ and delete it. We can do this with `vault delete`:
 
 ```
 $ vault delete secret/hello
-Success! Deleted 'secret/hello'
+Success! Deleted 'secret/hello' if it existed.
 ```
 
 ## Next

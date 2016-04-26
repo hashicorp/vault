@@ -3,17 +3,19 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // TokenRevokeCommand is a Command that mounts a new mount.
 type TokenRevokeCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *TokenRevokeCommand) Run(args []string) int {
 	var mode string
 	var accessor bool
-	flags := c.Meta.FlagSet("token-revoke", FlagSetDefault)
+	flags := c.Meta.FlagSet("token-revoke", meta.FlagSetDefault)
 	flags.BoolVar(&accessor, "accessor", false, "")
 	flags.StringVar(&mode, "mode", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -46,7 +48,7 @@ func (c *TokenRevokeCommand) Run(args []string) int {
 	case !accessor && mode == "orphan":
 		fn = client.Auth().Token().RevokeOrphan
 	case !accessor && mode == "path":
-		fn = client.Auth().Token().RevokePrefix
+		fn = client.Sys().RevokePrefix
 	case accessor && mode == "":
 		fn = client.Auth().Token().RevokeAccessor
 	case accessor && mode == "orphan":
@@ -63,7 +65,7 @@ func (c *TokenRevokeCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.Ui.Output("Revocation successful.")
+	c.Ui.Output("Success! Token revoked if it existed.")
 	return 0
 }
 
@@ -91,7 +93,8 @@ Usage: vault token-revoke [options] [token|accessor]
 
     * With the "path" value, tokens created from the given auth path
       prefix will be deleted, along with all their children. In this case
-      the "token" arg above is actually a "path".
+      the "token" arg above is actually a "path". This mode does *not*
+      work with token values or parts of token values.
 
   Token can be revoked using the token accessor. This can be done by
   setting the '-accessor' flag. Note that when '-accessor' flag is set,
@@ -99,9 +102,7 @@ Usage: vault token-revoke [options] [token|accessor]
   a token accessor always revokes the token along with it's child tokens.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Token Options:
 
   -accessor               A boolean flag, if set, treats the argument as an accessor of the token.

@@ -74,6 +74,16 @@ func New(s interface{}) *Struct {
 // fields will be neglected.
 func (s *Struct) Map() map[string]interface{} {
 	out := make(map[string]interface{})
+	s.FillMap(out)
+	return out
+}
+
+// FillMap is the same as Map. Instead of returning the output, it fills the
+// given map.
+func (s *Struct) FillMap(out map[string]interface{}) {
+	if out == nil {
+		return
+	}
 
 	fields := s.structFields()
 
@@ -124,8 +134,6 @@ func (s *Struct) Map() map[string]interface{} {
 
 		out[name] = finalVal
 	}
-
-	return out
 }
 
 // Values converts the given s struct's field values to a []interface{}.  A
@@ -425,6 +433,12 @@ func strctVal(s interface{}) reflect.Value {
 // refer to Struct types Map() method. It panics if s's kind is not struct.
 func Map(s interface{}) map[string]interface{} {
 	return New(s).Map()
+}
+
+// FillMap is the same as Map. Instead of returning the output, it fills the
+// given map.
+func FillMap(s interface{}, out map[string]interface{}) {
+	New(s).FillMap(out)
 }
 
 // Values converts the given struct to a []interface{}. For more info refer to

@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -195,16 +196,39 @@ func mustParse(f string, typ oid.Oid, s []byte) time.Time {
 	return t
 }
 
-func expect(str, char string, pos int) {
-	if c := str[pos : pos+1]; c != char {
-		errorf("expected '%v' at position %v; got '%v'", char, pos, c)
+var invalidTimestampErr = errors.New("invalid timestamp")
+
+type timestampParser struct {
+	err error
+}
+
+func (p *timestampParser) expect(str, char string, pos int) {
+	if p.err != nil {
+		return
+	}
+	if pos+1 > len(str) {
+		p.err = invalidTimestampErr
+		return
+	}
+	if c := str[pos : pos+1]; c != char && p.err == nil {
+		p.err = fmt.Errorf("expected '%v' at position %v; got '%v'", char, pos, c)
 	}
 }
 
-func mustAtoi(str string) int {
-	result, err := strconv.Atoi(str)
+func (p *timestampParser) mustAtoi(str string, begin int, end int) int {
+	if p.err != nil {
+		return 0
+	}
+	if begin < 0 || end < 0 || begin > end || end > len(str) {
+		p.err = invalidTimestampErr
+		return 0
+	}
+	result, err := strconv.Atoi(str[begin:end])
 	if err != nil {
-		errorf("expected number; got '%v'", str)
+		if p.err == nil {
+			p.err = fmt.Errorf("expected number; got '%v'", str)
+		}
+		return 0
 	}
 	return result
 }
@@ -305,28 +329,37 @@ func parseTs(currentLocation *time.Location, str string) interface{} {
 		}
 		return []byte(str)
 	}
+	t, err := ParseTimestamp(currentLocation, str)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+func ParseTimestamp(currentLocation *time.Location, str string) (time.Time, error) {
+	p := timestampParser{}
 
 	monSep := strings.IndexRune(str, '-')
 	// this is Gregorian year, not ISO Year
 	// In Gregorian system, the year 1 BC is followed by AD 1
-	year := mustAtoi(str[:monSep])
+	year := p.mustAtoi(str, 0, monSep)
 	daySep := monSep + 3
-	month := mustAtoi(str[monSep+1 : daySep])
-	expect(str, "-", daySep)
+	month := p.mustAtoi(str, monSep+1, daySep)
+	p.expect(str, "-", daySep)
 	timeSep := daySep + 3
-	day := mustAtoi(str[daySep+1 : timeSep])
+	day := p.mustAtoi(str, daySep+1, timeSep)
 
 	var hour, minute, second int
 	if len(str) > monSep+len("01-01")+1 {
-		expect(str, " ", timeSep)
+		p.expect(str, " ", timeSep)
 		minSep := timeSep + 3
-		expect(str, ":", minSep)
-		hour = mustAtoi(str[timeSep+1 : minSep])
+		p.expect(str, ":", minSep)
+		hour = p.mustAtoi(str, timeSep+1, minSep)
 		secSep := minSep + 3
-		expect(str, ":", secSep)
-		minute = mustAtoi(str[minSep+1 : secSep])
+		p.expect(str, ":", secSep)
+		minute = p.mustAtoi(str, minSep+1, secSep)
 		secEnd := secSep + 3
-		second = mustAtoi(str[secSep+1 : secEnd])
+		second = p.mustAtoi(str, secSep+1, secEnd)
 	}
 	remainderIdx := monSep + len("01-01 00:00:00") + 1
 	// Three optional (but ordered) sections follow: the
@@ -337,18 +370,18 @@ func parseTs(currentLocation *time.Location, str string) interface{} {
 	nanoSec := 0
 	tzOff := 0
 
-	if remainderIdx < len(str) && str[remainderIdx:remainderIdx+1] == "." {
+	if remainderIdx+1 <= len(str) && str[remainderIdx:remainderIdx+1] == "." {
 		fracStart := remainderIdx + 1
 		fracOff := strings.IndexAny(str[fracStart:], "-+ ")
 		if fracOff < 0 {
 			fracOff = len(str) - fracStart
 		}
-		fracSec := mustAtoi(str[fracStart : fracStart+fracOff])
+		fracSec := p.mustAtoi(str, fracStart, fracStart+fracOff)
 		nanoSec = fracSec * (1000000000 / int(math.Pow(10, float64(fracOff))))
 
 		remainderIdx += fracOff + 1
 	}
-	if tzStart := remainderIdx; tzStart < len(str) && (str[tzStart:tzStart+1] == "-" || str[tzStart:tzStart+1] == "+") {
+	if tzStart := remainderIdx; tzStart+1 <= len(str) && (str[tzStart:tzStart+1] == "-" || str[tzStart:tzStart+1] == "+") {
 		// time zone separator is always '-' or '+' (UTC is +00)
 		var tzSign int
 		if c := str[tzStart : tzStart+1]; c == "-" {
@@ -356,30 +389,30 @@ func parseTs(currentLocation *time.Location, str string) interface{} {
 		} else if c == "+" {
 			tzSign = +1
 		} else {
-			errorf("expected '-' or '+' at position %v; got %v", tzStart, c)
+			return time.Time{}, fmt.Errorf("expected '-' or '+' at position %v; got %v", tzStart, c)
 		}
-		tzHours := mustAtoi(str[tzStart+1 : tzStart+3])
+		tzHours := p.mustAtoi(str, tzStart+1, tzStart+3)
 		remainderIdx += 3
 		var tzMin, tzSec int
-		if tzStart+3 < len(str) && str[tzStart+3:tzStart+4] == ":" {
-			tzMin = mustAtoi(str[tzStart+4 : tzStart+6])
+		if tzStart+4 <= len(str) && str[tzStart+3:tzStart+4] == ":" {
+			tzMin = p.mustAtoi(str, tzStart+4, tzStart+6)
 			remainderIdx += 3
 		}
-		if tzStart+6 < len(str) && str[tzStart+6:tzStart+7] == ":" {
-			tzSec = mustAtoi(str[tzStart+7 : tzStart+9])
+		if tzStart+7 <= len(str) && str[tzStart+6:tzStart+7] == ":" {
+			tzSec = p.mustAtoi(str, tzStart+7, tzStart+9)
 			remainderIdx += 3
 		}
 		tzOff = tzSign * ((tzHours * 60 * 60) + (tzMin * 60) + tzSec)
 	}
 	var isoYear int
-	if remainderIdx < len(str) && str[remainderIdx:remainderIdx+3] == " BC" {
+	if remainderIdx+3 <= len(str) && str[remainderIdx:remainderIdx+3] == " BC" {
 		isoYear = 1 - year
 		remainderIdx += 3
 	} else {
 		isoYear = year
 	}
 	if remainderIdx < len(str) {
-		errorf("expected end of input, got %v", str[remainderIdx:])
+		return time.Time{}, fmt.Errorf("expected end of input, got %v", str[remainderIdx:])
 	}
 	t := time.Date(isoYear, time.Month(month), day,
 		hour, minute, second, nanoSec,
@@ -396,7 +429,7 @@ func parseTs(currentLocation *time.Location, str string) interface{} {
 		}
 	}
 
-	return t
+	return t, p.err
 }
 
 // formatTs formats t into a format postgres understands.

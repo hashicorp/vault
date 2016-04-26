@@ -250,25 +250,16 @@ necessary.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-      Update the policies associated with an existing user.
+      Login with the username and password.
   </dd>
 
   <dt>Method</dt>
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/userpass/users/<username>/policies`</dd>
+  <dd>`/auth/userpass/login/<username>`</dd>
 
   <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">username</span>
-        <span class="param-flags">required</span>
-            Username for this user.
-      </li>
-    </ul>
-  </dd>
   <dd>
     <ul>
       <li>

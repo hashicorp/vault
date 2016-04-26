@@ -1,5 +1,7 @@
 language: go
-go: 1.5
+go: 
+ - 1.6
+ - tip
 sudo: false
 before_install:
 - go get github.com/axw/gocov/gocov

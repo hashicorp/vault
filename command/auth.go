@@ -2,6 +2,7 @@ package command
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/kv-builder"
 	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ryanuber/columnize"
 )
@@ -24,7 +26,7 @@ type AuthHandler interface {
 
 // AuthCommand is a Command that handles authentication.
 type AuthCommand struct {
-	Meta
+	meta.Meta
 
 	Handlers map[string]AuthHandler
 
@@ -35,7 +37,7 @@ type AuthCommand struct {
 func (c *AuthCommand) Run(args []string) int {
 	var method string
 	var methods, methodHelp, noVerify bool
-	flags := c.Meta.FlagSet("auth", FlagSetDefault)
+	flags := c.Meta.FlagSet("auth", meta.FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
 	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.BoolVar(&noVerify, "no-verify", false, "")
@@ -153,6 +155,13 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Cache the previous token so that it can be restored if authentication fails
+	var previousToken string
+	if previousToken, err = tokenHelper.Get(); err != nil {
+		c.Ui.Error(fmt.Sprintf("Error caching the previous token: %s\n\n", err))
+		return 1
+	}
+
 	// Store the token!
 	if err := tokenHelper.Store(token); err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -160,14 +169,6 @@ func (c *AuthCommand) Run(args []string) int {
 				"Authentication was not successful and did not persist.\n"+
 				"Please reauthenticate, or fix the issue above if possible.",
 			err))
-		return 1
-	}
-
-	// Build the client again so it can read the token we just wrote
-	client, err = c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client to verify the token: %s", err))
 		return 1
 	}
 
@@ -179,15 +180,41 @@ func (c *AuthCommand) Run(args []string) int {
 		return 0
 	}
 
+	// Build the client again so it can read the token we just wrote
+	client, err = c.Client()
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(
+			"Error initializing client to verify the token: %s", err))
+		if err := tokenHelper.Store(previousToken); err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error restoring the previous token: %s\n\n"+
+					"Please reauthenticate with a valid token.",
+				err))
+		}
+		return 1
+	}
+
 	// Verify the token
 	secret, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error validating token: %s", err))
+		if err := tokenHelper.Store(previousToken); err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error restoring the previous token: %s\n\n"+
+					"Please reauthenticate with a valid token.",
+				err))
+		}
 		return 1
 	}
 	if secret == nil {
 		c.Ui.Error(fmt.Sprintf("Error: Invalid token"))
+		if err := tokenHelper.Store(previousToken); err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error restoring the previous token: %s\n\n"+
+					"Please reauthenticate with a valid token.",
+				err))
+		}
 		return 1
 	}
 
@@ -201,9 +228,13 @@ func (c *AuthCommand) Run(args []string) int {
 		policies = append(policies, v.(string))
 	}
 
-	output := "Successfully authenticated!"
+	output := "Successfully authenticated! You are now logged in."
+	if method != "" {
+		output += "\nThe token below is already saved in the session. You do not"
+		output += "\nneed to \"vault auth\" again with the token."
+	}
 	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
-	output += fmt.Sprintf("\ntoken_duration: %d", int(secret.Data["ttl"].(float64)))
+	output += fmt.Sprintf("\ntoken_duration: %s", secret.Data["ttl"].(json.Number).String())
 	if len(policies) > 0 {
 		output += fmt.Sprintf("\ntoken_policies: [%s]", strings.Join(policies, ", "))
 	}
@@ -211,6 +242,7 @@ func (c *AuthCommand) Run(args []string) int {
 	c.Ui.Output(output)
 
 	return 0
+
 }
 
 func (c *AuthCommand) listMethods() int {
@@ -273,7 +305,7 @@ Usage: vault auth [options] [token or config...]
 
 General Options:
 
-  ` + generalOptionsUsage() + `
+  ` + meta.GeneralOptionsUsage() + `
 
 Auth Options:
 

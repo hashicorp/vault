@@ -146,9 +146,18 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 	}
 
 	// Get the seal configuration
-	config, err := c.SealConfig()
-	if err != nil {
-		return nil, err
+	var config *SealConfig
+	var err error
+	if c.seal.RecoveryKeySupported() {
+		config, err = c.seal.RecoveryConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		config, err = c.seal.BarrierConfig()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Ensure the barrier is initialized
@@ -214,9 +223,16 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 	}
 
 	// Verify the master key
-	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: root generation aborted, master key verification failed: %v", err)
-		return nil, err
+	if c.seal.RecoveryKeySupported() {
+		if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
+			c.logger.Printf("[ERR] core: root generation aborted, recovery key verification failed: %v", err)
+			return nil, err
+		}
+	} else {
+		if err := c.barrier.VerifyMaster(masterKey); err != nil {
+			c.logger.Printf("[ERR] core: root generation aborted, master key verification failed: %v", err)
+			return nil, err
+		}
 	}
 
 	te, err := c.tokenStore.rootToken()

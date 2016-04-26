@@ -1276,7 +1276,7 @@ func yaml_emitter_analyze_scalar(emitter *yaml_emitter_t, value []byte) bool {
 
 	for i, w := 0, 0; i < len(value); i += w {
 		w = width(value[i])
-		followed_by_whitespace = i+w >= len(value) || is_blankz_at(value, w)
+		followed_by_whitespace = i+w >= len(value) || is_blankz_at(value, i+w)
 
 		if i == 0 {
 			switch value[i] {

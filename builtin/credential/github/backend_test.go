@@ -47,8 +47,9 @@ func TestBackend_Config(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, config_data1),
 			testLoginWrite(t, login_data, expectedTTL1.Nanoseconds(), false),
@@ -103,8 +104,9 @@ func TestBackend_basic(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccMap(t, "default", "root"),

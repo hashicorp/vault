@@ -162,8 +162,7 @@ func (s *RepositoriesService) GetCommitSHA1(owner, repo, ref, lastSHA string) (s
 		req.Header.Set("If-None-Match", `"`+lastSHA+`"`)
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeCommitReferenceSHAPreview)
+	req.Header.Set("Accept", mediaTypeV3SHA)
 
 	var buf bytes.Buffer
 	resp, err := s.client.Do(req, &buf)

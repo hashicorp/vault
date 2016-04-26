@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -24,12 +25,13 @@ import (
 type S3Backend struct {
 	bucket string
 	client *s3.S3
+	logger *log.Logger
 }
 
 // newS3Backend constructs a S3 backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
 // from the environment, AWS credential files or by IAM role.
-func newS3Backend(conf map[string]string) (Backend, error) {
+func newS3Backend(conf map[string]string, logger *log.Logger) (Backend, error) {
 
 	bucket := os.Getenv("AWS_S3_BUCKET")
 	if bucket == "" {
@@ -88,6 +90,7 @@ func newS3Backend(conf map[string]string) (Backend, error) {
 	s := &S3Backend{
 		client: s3conn,
 		bucket: bucket,
+		logger: logger,
 	}
 	return s, nil
 }

@@ -2,6 +2,7 @@ package userpass
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -54,7 +55,8 @@ func TestBackend_TTLDurations(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testUsersWrite(t, "test", data1, true),
 			testUsersWrite(t, "test", data2, true),
@@ -78,9 +80,13 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
+			testAccStepUser(t, "web2", "password", "foo"),
+			testAccStepUser(t, "web3", "password", "foo"),
+			testAccStepList(t, []string{"web", "web2", "web3"}),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 		},
 	})
@@ -99,10 +105,11 @@ func TestBackend_userCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepReadUser(t, "web", "foo"),
+			testAccStepReadUser(t, "web", "default,foo"),
 			testAccStepDeleteUser(t, "web"),
 			testAccStepReadUser(t, "web", ""),
 		},
@@ -122,7 +129,8 @@ func TestBackend_userCreateOperation(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testUserCreateOperation(t, "web", "password", "foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
@@ -143,10 +151,11 @@ func TestBackend_passwordUpdate(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepReadUser(t, "web", "foo"),
+			testAccStepReadUser(t, "web", "default,foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 			testUpdatePassword(t, "web", "newpassword"),
 			testAccStepLogin(t, "web", "newpassword", []string{"default", "foo"}),
@@ -168,13 +177,14 @@ func TestBackend_policiesUpdate(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		AcceptanceTest: true,
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
-			testAccStepReadUser(t, "web", "foo"),
+			testAccStepReadUser(t, "web", "default,foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
 			testUpdatePolicies(t, "web", "foo,bar"),
-			testAccStepReadUser(t, "web", "foo,bar"),
+			testAccStepReadUser(t, "web", "bar,default,foo"),
 			testAccStepLogin(t, "web", "password", []string{"bar", "default", "foo"}),
 		},
 	})
@@ -225,6 +235,24 @@ func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expe
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("Expected error but received nil")
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepList(t *testing.T, users []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "users",
+		Check: func(resp *logical.Response) error {
+			if resp.IsError() {
+				return fmt.Errorf("Got error response: %#v", *resp)
+			}
+
+			exp := []string{"web", "web2", "web3"}
+			if !reflect.DeepEqual(exp, resp.Data["keys"].([]string)) {
+				return fmt.Errorf("expected:\n%#v\ngot:\n%#v\n", exp, resp.Data["keys"])
 			}
 			return nil
 		},

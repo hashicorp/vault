@@ -162,17 +162,17 @@ func (s *SimpleRetryPolicy) Attempt(q RetryableQuery) bool {
 type HostStateNotifier interface {
 	AddHost(host *HostInfo)
 	RemoveHost(addr string)
-	// TODO(zariel): add host up/down
+	HostUp(host *HostInfo)
+	HostDown(addr string)
 }
 
 // HostSelectionPolicy is an interface for selecting
 // the most appropriate host to execute a given query.
 type HostSelectionPolicy interface {
 	HostStateNotifier
-	SetHosts
 	SetPartitioner
 	//Pick returns an iteration function over selected hosts
-	Pick(*Query) NextHost
+	Pick(ExecutableQuery) NextHost
 }
 
 // SelectedHost is an interface returned when picking a host from a host
@@ -181,6 +181,14 @@ type SelectedHost interface {
 	Info() *HostInfo
 	Mark(error)
 }
+
+type selectedHost HostInfo
+
+func (host *selectedHost) Info() *HostInfo {
+	return (*HostInfo)(host)
+}
+
+func (host *selectedHost) Mark(err error) {}
 
 // NextHost is an iteration function over picked hosts
 type NextHost func() SelectedHost
@@ -197,15 +205,11 @@ type roundRobinHostPolicy struct {
 	mu    sync.RWMutex
 }
 
-func (r *roundRobinHostPolicy) SetHosts(hosts []*HostInfo) {
-	r.hosts.set(hosts)
-}
-
 func (r *roundRobinHostPolicy) SetPartitioner(partitioner string) {
 	// noop
 }
 
-func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
+func (r *roundRobinHostPolicy) Pick(qry ExecutableQuery) NextHost {
 	// i is used to limit the number of attempts to find a host
 	// to the number of hosts known to this policy
 	var i int
@@ -223,7 +227,7 @@ func (r *roundRobinHostPolicy) Pick(qry *Query) NextHost {
 		}
 		host := hosts[(pos)%uint32(len(hosts))]
 		i++
-		return selectedRoundRobinHost{host}
+		return (*selectedHost)(host)
 	}
 }
 
@@ -235,18 +239,12 @@ func (r *roundRobinHostPolicy) RemoveHost(addr string) {
 	r.hosts.remove(addr)
 }
 
-// selectedRoundRobinHost is a host returned by the roundRobinHostPolicy and
-// implements the SelectedHost interface
-type selectedRoundRobinHost struct {
-	info *HostInfo
+func (r *roundRobinHostPolicy) HostUp(host *HostInfo) {
+	r.AddHost(host)
 }
 
-func (host selectedRoundRobinHost) Info() *HostInfo {
-	return host.info
-}
-
-func (host selectedRoundRobinHost) Mark(err error) {
-	// noop
+func (r *roundRobinHostPolicy) HostDown(addr string) {
+	r.RemoveHost(addr)
 }
 
 // TokenAwareHostPolicy is a token aware host selection policy, where hosts are
@@ -262,18 +260,6 @@ type tokenAwareHostPolicy struct {
 	partitioner string
 	tokenRing   *tokenRing
 	fallback    HostSelectionPolicy
-}
-
-func (t *tokenAwareHostPolicy) SetHosts(hosts []*HostInfo) {
-	t.hosts.set(hosts)
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	// always update the fallback
-	t.fallback.SetHosts(hosts)
-
-	t.resetTokenRing()
 }
 
 func (t *tokenAwareHostPolicy) SetPartitioner(partitioner string) {
@@ -299,10 +285,19 @@ func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
 
 func (t *tokenAwareHostPolicy) RemoveHost(addr string) {
 	t.hosts.remove(addr)
+	t.fallback.RemoveHost(addr)
 
 	t.mu.Lock()
 	t.resetTokenRing()
 	t.mu.Unlock()
+}
+
+func (t *tokenAwareHostPolicy) HostUp(host *HostInfo) {
+	t.AddHost(host)
+}
+
+func (t *tokenAwareHostPolicy) HostDown(addr string) {
+	t.RemoveHost(addr)
 }
 
 func (t *tokenAwareHostPolicy) resetTokenRing() {
@@ -323,13 +318,8 @@ func (t *tokenAwareHostPolicy) resetTokenRing() {
 	t.tokenRing = tokenRing
 }
 
-func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
+func (t *tokenAwareHostPolicy) Pick(qry ExecutableQuery) NextHost {
 	if qry == nil {
-		return t.fallback.Pick(qry)
-	} else if qry.binding != nil && len(qry.values) == 0 {
-		// If this query was created using session.Bind we wont have the query
-		// values yet, so we have to pass down to the next policy.
-		// TODO: Remove this and handle this case
 		return t.fallback.Pick(qry)
 	}
 
@@ -359,7 +349,7 @@ func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 	return func() SelectedHost {
 		if !hostReturned {
 			hostReturned = true
-			return selectedTokenAwareHost{host}
+			return (*selectedHost)(host)
 		}
 
 		// fallback
@@ -376,20 +366,6 @@ func (t *tokenAwareHostPolicy) Pick(qry *Query) NextHost {
 
 		return fallbackHost
 	}
-}
-
-// selectedTokenAwareHost is a host returned by the tokenAwareHostPolicy and
-// implements the SelectedHost interface
-type selectedTokenAwareHost struct {
-	info *HostInfo
-}
-
-func (host selectedTokenAwareHost) Info() *HostInfo {
-	return host.info
-}
-
-func (host selectedTokenAwareHost) Mark(err error) {
-	// noop
 }
 
 // HostPoolHostPolicy is a host policy which uses the bitly/go-hostpool library
@@ -466,11 +442,19 @@ func (r *hostPoolHostPolicy) RemoveHost(addr string) {
 	r.hp.SetHosts(hosts)
 }
 
+func (r *hostPoolHostPolicy) HostUp(host *HostInfo) {
+	r.AddHost(host)
+}
+
+func (r *hostPoolHostPolicy) HostDown(addr string) {
+	r.RemoveHost(addr)
+}
+
 func (r *hostPoolHostPolicy) SetPartitioner(partitioner string) {
 	// noop
 }
 
-func (r *hostPoolHostPolicy) Pick(qry *Query) NextHost {
+func (r *hostPoolHostPolicy) Pick(qry ExecutableQuery) NextHost {
 	return func() SelectedHost {
 		r.mu.RLock()
 		defer r.mu.RUnlock()
@@ -485,15 +469,20 @@ func (r *hostPoolHostPolicy) Pick(qry *Query) NextHost {
 			return nil
 		}
 
-		return selectedHostPoolHost{host, hostR}
+		return selectedHostPoolHost{
+			policy: r,
+			info:   host,
+			hostR:  hostR,
+		}
 	}
 }
 
 // selectedHostPoolHost is a host returned by the hostPoolHostPolicy and
 // implements the SelectedHost interface
 type selectedHostPoolHost struct {
-	info  *HostInfo
-	hostR hostpool.HostPoolResponse
+	policy *hostPoolHostPolicy
+	info   *HostInfo
+	hostR  hostpool.HostPoolResponse
 }
 
 func (host selectedHostPoolHost) Info() *HostInfo {
@@ -501,49 +490,13 @@ func (host selectedHostPoolHost) Info() *HostInfo {
 }
 
 func (host selectedHostPoolHost) Mark(err error) {
+	host.policy.mu.RLock()
+	defer host.policy.mu.RUnlock()
+
+	if _, ok := host.policy.hostMap[host.info.Peer()]; !ok {
+		// host was removed between pick and mark
+		return
+	}
+
 	host.hostR.Mark(err)
-}
-
-//ConnSelectionPolicy is an interface for selecting an
-//appropriate connection for executing a query
-type ConnSelectionPolicy interface {
-	SetConns(conns []*Conn)
-	Pick(*Query) *Conn
-}
-
-type roundRobinConnPolicy struct {
-	conns []*Conn
-	pos   uint32
-	mu    sync.RWMutex
-}
-
-func RoundRobinConnPolicy() func() ConnSelectionPolicy {
-	return func() ConnSelectionPolicy {
-		return &roundRobinConnPolicy{}
-	}
-}
-
-func (r *roundRobinConnPolicy) SetConns(conns []*Conn) {
-	r.mu.Lock()
-	r.conns = conns
-	r.mu.Unlock()
-}
-
-func (r *roundRobinConnPolicy) Pick(qry *Query) *Conn {
-	pos := int(atomic.AddUint32(&r.pos, 1) - 1)
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	if len(r.conns) == 0 {
-		return nil
-	}
-
-	for i := 0; i < len(r.conns); i++ {
-		conn := r.conns[(pos+i)%len(r.conns)]
-		if conn.AvailableStreams() > 0 {
-			return conn
-		}
-	}
-
-	return nil
 }

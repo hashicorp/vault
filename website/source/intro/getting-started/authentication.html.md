@@ -39,7 +39,12 @@ You can create more tokens using `vault token-create`:
 
 ```
 $ vault token-create
-6c38f603-6441-2161-c543-ee15b7206563
+Key             Value
+token           c2c2fbd5-2893-b385-6fa5-30050439f698
+token_accessor  0c1c3317-3d58-17e5-c1a9-3f54fa26610e
+token_duration  0
+token_renewable true
+token_policies  [root]
 ```
 
 By default, this will create a child token of your current token that
@@ -52,8 +57,8 @@ that user created as well.
 After a token is created, you can revoke it with `vault token-revoke`:
 
 ```
-$ vault token-revoke 6c38f603-6441-2161-c543-ee15b7206563
-Revocation successful.
+$ vault token-revoke c2c2fbd5-2893-b385-6fa5-30050439f698
+Success! Token revoked if it existed.
 ```
 
 In a previous section, we use the `vault revoke` command. This command

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/crypto/bcrypt"
@@ -90,6 +91,10 @@ func (b *backend) pathLoginRenew(
 	if user == nil {
 		// User no longer exists, do not renew
 		return nil, nil
+	}
+
+	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.Policies) {
+		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
 	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(req, d)

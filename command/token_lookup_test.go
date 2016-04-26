@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -16,7 +17,7 @@ func TestTokenLookupAccessor(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenLookupCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -62,7 +63,7 @@ func TestTokenLookupSelf(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenLookupCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -88,7 +89,7 @@ func TestTokenLookup(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &TokenLookupCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

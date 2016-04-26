@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"log"
@@ -138,7 +139,6 @@ type Conn struct {
 	addr            string
 	version         uint8
 	currentKeyspace string
-	started         bool
 
 	host *HostInfo
 
@@ -208,13 +208,38 @@ func Connect(host *HostInfo, addr string, cfg *ConnConfig,
 		c.setKeepalive(cfg.Keepalive)
 	}
 
-	go c.serve()
+	frameTicker := make(chan struct{}, 1)
+	startupErr := make(chan error, 1)
+	go func() {
+		for range frameTicker {
+			err := c.recv()
+			startupErr <- err
+			if err != nil {
+				return
+			}
+		}
+	}()
 
-	if err := c.startup(); err != nil {
+	err = c.startup(frameTicker)
+	close(frameTicker)
+	if err != nil {
 		conn.Close()
 		return nil, err
 	}
-	c.started = true
+
+	select {
+	case err := <-startupErr:
+		if err != nil {
+			log.Println(err)
+			c.Close()
+			return nil, err
+		}
+	case <-time.After(c.timeout):
+		c.Close()
+		return nil, errors.New("gocql: no response to connection startup within timeout")
+	}
+
+	go c.serve()
 
 	return c, nil
 }
@@ -250,7 +275,7 @@ func (c *Conn) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (c *Conn) startup() error {
+func (c *Conn) startup(frameTicker chan struct{}) error {
 	m := map[string]string{
 		"CQL_VERSION": c.cfg.CQLVersion,
 	}
@@ -259,7 +284,8 @@ func (c *Conn) startup() error {
 		m["COMPRESSION"] = c.compressor.Name()
 	}
 
-	framer, err := c.exec(&writeStartupFrame{opts: m}, nil)
+	frameTicker <- struct{}{}
+	framer, err := c.exec(context.Background(), &writeStartupFrame{opts: m}, nil)
 	if err != nil {
 		return err
 	}
@@ -275,13 +301,13 @@ func (c *Conn) startup() error {
 	case *readyFrame:
 		return nil
 	case *authenticateFrame:
-		return c.authenticateHandshake(v)
+		return c.authenticateHandshake(v, frameTicker)
 	default:
 		return NewErrProtocol("Unknown type of response to startup frame: %s", v)
 	}
 }
 
-func (c *Conn) authenticateHandshake(authFrame *authenticateFrame) error {
+func (c *Conn) authenticateHandshake(authFrame *authenticateFrame, frameTicker chan struct{}) error {
 	if c.auth == nil {
 		return fmt.Errorf("authentication required (using %q)", authFrame.class)
 	}
@@ -294,7 +320,8 @@ func (c *Conn) authenticateHandshake(authFrame *authenticateFrame) error {
 	req := &writeAuthResponseFrame{data: resp}
 
 	for {
-		framer, err := c.exec(req, nil)
+		frameTicker <- struct{}{}
+		framer, err := c.exec(context.Background(), req, nil)
 		if err != nil {
 			return err
 		}
@@ -353,7 +380,7 @@ func (c *Conn) closeWithError(err error) {
 	close(c.quit)
 	c.conn.Close()
 
-	if c.started && err != nil {
+	if err != nil {
 		c.errorHandler.HandleError(c, err, true)
 	}
 }
@@ -505,7 +532,7 @@ type callReq struct {
 	timer *time.Timer
 }
 
-func (c *Conn) exec(req frameWriter, tracer Tracer) (*framer, error) {
+func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*framer, error) {
 	// TODO: move tracer onto conn
 	stream, ok := c.streams.GetStream()
 	if !ok {
@@ -567,6 +594,11 @@ func (c *Conn) exec(req frameWriter, tracer Tracer) (*framer, error) {
 		timeoutCh = call.timer.C
 	}
 
+	var ctxDone <-chan struct{}
+	if ctx != nil {
+		ctxDone = ctx.Done()
+	}
+
 	select {
 	case err := <-call.resp:
 		close(call.timeout)
@@ -584,6 +616,9 @@ func (c *Conn) exec(req frameWriter, tracer Tracer) (*framer, error) {
 		close(call.timeout)
 		c.handleTimeout()
 		return nil, ErrTimeoutNoResponse
+	case <-ctxDone:
+		close(call.timeout)
+		return nil, ctx.Err()
 	case <-c.quit:
 		return nil, ErrConnectionClosed
 	}
@@ -616,7 +651,7 @@ type inflightPrepare struct {
 	preparedStatment *preparedStatment
 }
 
-func (c *Conn) prepareStatement(stmt string, tracer Tracer) (*preparedStatment, error) {
+func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer) (*preparedStatment, error) {
 	stmtCacheKey := c.session.stmtsLRU.keyFor(c.addr, c.currentKeyspace, stmt)
 	flight, ok := c.session.stmtsLRU.execIfMissing(stmtCacheKey, func(lru *lru.Cache) *inflightPrepare {
 		flight := new(inflightPrepare)
@@ -634,7 +669,7 @@ func (c *Conn) prepareStatement(stmt string, tracer Tracer) (*preparedStatment, 
 		statement: stmt,
 	}
 
-	framer, err := c.exec(prep, tracer)
+	framer, err := c.exec(ctx, prep, tracer)
 	if err != nil {
 		flight.err = err
 		flight.wg.Done()
@@ -689,6 +724,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 	// frame checks that it is not 0
 	params.serialConsistency = qry.serialCons
 	params.defaultTimestamp = qry.defaultTimestamp
+	params.defaultTimestampValue = qry.defaultTimestampValue
 
 	if len(qry.pageState) > 0 {
 		params.pagingState = qry.pageState
@@ -705,7 +741,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 	if qry.shouldPrepare() {
 		// Prepare all DML queries. Other queries can not be prepared.
 		var err error
-		info, err = c.prepareStatement(qry.stmt, qry.trace)
+		info, err = c.prepareStatement(qry.context, qry.stmt, qry.trace)
 		if err != nil {
 			return &Iter{err: err}
 		}
@@ -756,7 +792,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 		}
 	}
 
-	framer, err := c.exec(frame, qry.trace)
+	framer, err := c.exec(qry.context, frame, qry.trace)
 	if err != nil {
 		return &Iter{err: err}
 	}
@@ -856,7 +892,7 @@ func (c *Conn) UseKeyspace(keyspace string) error {
 	q := &writeQueryFrame{statement: `USE "` + keyspace + `"`}
 	q.params.consistency = Any
 
-	framer, err := c.exec(q, nil)
+	framer, err := c.exec(context.Background(), q, nil)
 	if err != nil {
 		return err
 	}
@@ -899,7 +935,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 		entry := &batch.Entries[i]
 		b := &req.statements[i]
 		if len(entry.Args) > 0 || entry.binding != nil {
-			info, err := c.prepareStatement(entry.Stmt, nil)
+			info, err := c.prepareStatement(batch.context, entry.Stmt, nil)
 			if err != nil {
 				return &Iter{err: err}
 			}
@@ -943,7 +979,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 	}
 
 	// TODO: should batch support tracing?
-	framer, err := c.exec(req, nil)
+	framer, err := c.exec(batch.context, req, nil)
 	if err != nil {
 		return &Iter{err: err}
 	}

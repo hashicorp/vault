@@ -62,6 +62,12 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t *testing.T) *Core {
+	return TestCoreWithSeal(t, nil)
+}
+
+// TestCoreWithSeal returns a pure in-memory, uninitialized core with the
+// specified seal for testing.
+func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 	noopAudits := map[string]audit.Factory{
 		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -75,7 +81,7 @@ func TestCore(t *testing.T) *Core {
 				HMACType: "hmac-sha256",
 			})
 			if err != nil {
-				t.Fatal("error getting new salt: %v", err)
+				t.Fatalf("error getting new salt: %v", err)
 			}
 			return &noopAudit{
 				Config: config,
@@ -100,14 +106,21 @@ func TestCore(t *testing.T) *Core {
 		logicalBackends[backendName] = backendFactory
 	}
 
-	physicalBackend := physical.NewInmem()
-	c, err := NewCore(&CoreConfig{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	physicalBackend := physical.NewInmem(logger)
+	conf := &CoreConfig{
 		Physical:           physicalBackend,
 		AuditBackends:      noopAudits,
 		LogicalBackends:    logicalBackends,
 		CredentialBackends: noopBackends,
 		DisableMlock:       true,
-	})
+		Logger:             logger,
+	}
+	if testSeal != nil {
+		conf.Seal = testSeal
+	}
+
+	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -121,7 +134,7 @@ func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
 	result, err := core.Initialize(&SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -362,4 +375,50 @@ func GenerateRandBytes(length int) ([]byte, error) {
 	}
 
 	return buf, nil
+}
+
+/*
+ * TestSeal items
+ */
+
+func TestCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
+	seal := &TestSeal{}
+	core := TestCoreWithSeal(t, seal)
+	result, err := core.Initialize(barrierConf, recoveryConf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	err = core.UnsealWithStoredKeys()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if sealed, _ := core.Sealed(); sealed {
+		for _, key := range result.SecretShares {
+			if _, err := core.Unseal(key); err != nil {
+
+				t.Fatalf("unseal err: %s", err)
+			}
+		}
+
+		sealed, err = core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+	}
+
+	return core, result.SecretShares, result.RecoveryShares, result.RootToken
+}
+
+func TestSealDefConfigs() (*SealConfig, *SealConfig) {
+	return &SealConfig{
+			SecretShares:    5,
+			SecretThreshold: 3,
+			StoredShares:    2,
+		}, &SealConfig{
+			SecretShares:    5,
+			SecretThreshold: 3,
+		}
 }

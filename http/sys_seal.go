@@ -135,7 +135,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	sealConfig, err := core.SealConfig()
+	sealConfig, err := core.SealAccess().BarrierConfig()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

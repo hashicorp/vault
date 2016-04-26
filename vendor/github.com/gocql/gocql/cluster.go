@@ -16,24 +16,10 @@ type PoolConfig struct {
 	// HostSelectionPolicy sets the policy for selecting which host to use for a
 	// given query (default: RoundRobinHostPolicy())
 	HostSelectionPolicy HostSelectionPolicy
-
-	// ConnSelectionPolicy sets the policy factory for selecting a connection to use for
-	// each host for a query (default: RoundRobinConnPolicy())
-	ConnSelectionPolicy func() ConnSelectionPolicy
 }
 
 func (p PoolConfig) buildPool(session *Session) *policyConnPool {
-	hostSelection := p.HostSelectionPolicy
-	if hostSelection == nil {
-		hostSelection = RoundRobinHostPolicy()
-	}
-
-	connSelection := p.ConnSelectionPolicy
-	if connSelection == nil {
-		connSelection = RoundRobinConnPolicy()
-	}
-
-	return newPolicyConnPool(session, hostSelection, connSelection)
+	return newPolicyConnPool(session)
 }
 
 type DiscoveryConfig struct {

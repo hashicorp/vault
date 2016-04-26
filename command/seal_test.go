@@ -4,18 +4,19 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestSeal(t *testing.T) {
+func Test_Seal(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
 	c := &SealCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

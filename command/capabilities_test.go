@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -14,7 +15,7 @@ func TestCapabilities_Basic(t *testing.T) {
 	defer ln.Close()
 	ui := new(cli.MockUi)
 	c := &CapabilitiesCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

@@ -1,8 +1,14 @@
 package physical
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 const DefaultParallelOperations = 128
+
+// ShutdownSignal
+type ShutdownChannel chan struct{}
 
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store
@@ -42,6 +48,23 @@ type AdvertiseDetect interface {
 	DetectHostAddr() (string, error)
 }
 
+// ServiceDiscovery is an optional interface that an HABackend can implement.
+// If they do, the state of a backend is advertised to the service discovery
+// network.
+type ServiceDiscovery interface {
+	// AdvertiseActive is used to reflect whether or not a backend is in
+	// an active or standby state.
+	AdvertiseActive(bool) error
+
+	// AdvertiseSealed is used to reflect whether or not a backend is in
+	// a sealed state or not.
+	AdvertiseSealed(bool) error
+
+	// Run executes any background service discovery tasks until the
+	// shutdown channel is closed.
+	RunServiceDiscovery(shutdownCh ShutdownChannel, advertiseAddr string) error
+}
+
 type Lock interface {
 	// Lock is used to acquire the given lock
 	// The stopCh is optional and if closed should interrupt the lock
@@ -63,28 +86,29 @@ type Entry struct {
 }
 
 // Factory is the factory function to create a physical backend.
-type Factory func(map[string]string) (Backend, error)
+type Factory func(config map[string]string, logger *log.Logger) (Backend, error)
 
 // NewBackend returns a new backend with the given type and configuration.
-// The backend is looked up in the BuiltinBackends variable.
-func NewBackend(t string, conf map[string]string) (Backend, error) {
-	f, ok := BuiltinBackends[t]
+// The backend is looked up in the builtinBackends variable.
+func NewBackend(t string, logger *log.Logger, conf map[string]string) (Backend, error) {
+	f, ok := builtinBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown physical backend type: %s", t)
 	}
-	return f(conf)
+	return f(conf, logger)
 }
 
 // BuiltinBackends is the list of built-in physical backends that can
 // be used with NewBackend.
-var BuiltinBackends = map[string]Factory{
-	"inmem": func(map[string]string) (Backend, error) {
-		return NewInmem(), nil
+var builtinBackends = map[string]Factory{
+	"inmem": func(_ map[string]string, logger *log.Logger) (Backend, error) {
+		return NewInmem(logger), nil
 	},
 	"consul":     newConsulBackend,
 	"zookeeper":  newZookeeperBackend,
 	"file":       newFileBackend,
 	"s3":         newS3Backend,
+	"azure":      newAzureBackend,
 	"dynamodb":   newDynamoDBBackend,
 	"etcd":       newEtcdBackend,
 	"mysql":      newMySQLBackend,

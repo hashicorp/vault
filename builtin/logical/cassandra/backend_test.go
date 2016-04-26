@@ -15,8 +15,9 @@ func TestBackend_basic(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepRole(t),
@@ -29,8 +30,9 @@ func TestBackend_roleCrud(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepRole(t),

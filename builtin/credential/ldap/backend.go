@@ -99,6 +99,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
+	if c == nil {
+		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
+	}
 
 	// Format binddn
 	binddn := ""
@@ -164,36 +167,49 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 				}
 			}
 		}
-
 	} else {
 		userdn = binddn
 	}
 
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
 	// Find groups by searching in groupDN for any of the memberUid, member or uniqueMember attributes
 	// and retrieving the CN in the DN result
-	sresult, err := c.Search(&ldap.SearchRequest{
-		BaseDN: cfg.GroupDN,
-		Scope:  2, // subtree
-		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
-	})
-	if err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
-	}
-
-	for _, e := range sresult.Entries {
-		dn, err := ldap.ParseDN(e.DN)
+	if cfg.GroupDN != "" {
+		sresult, err := c.Search(&ldap.SearchRequest{
+			BaseDN: cfg.GroupDN,
+			Scope:  2, // subtree
+			Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
+		})
 		if err != nil {
-			return nil, nil, err
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
 		}
-		for _, rdn := range dn.RDNs {
-			for _, rdnTypeAndValue := range rdn.Attributes {
-				if strings.EqualFold(rdnTypeAndValue.Type, "CN" ) {
-					ldapGroups[rdnTypeAndValue.Value] = true
+	
+		for _, e := range sresult.Entries {
+			dn, err := ldap.ParseDN(e.DN)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, rdn := range dn.RDNs {
+				for _, rdnTypeAndValue := range rdn.Attributes {
+					if strings.EqualFold(rdnTypeAndValue.Type, "CN" ) {
+						ldapGroups[rdnTypeAndValue.Value] = true
+					}
 				}
 			}
 		}
 	}
-
+	
+	if len(ldapGroups) == 0 {
+		resp.AddWarning(
+			fmt.Sprintf(
+				"no LDAP groups found in user DN '%s' or group DN '%s';only policies from locally-defined groups available", 
+				cfg.UserDN,
+				cfg.GroupDN
+			)
+		)
+	}
 	var allgroups []string
 	// Import the custom added groups from ldap backend
 	user, err := b.User(req.Storage, username)
@@ -215,10 +231,16 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if len(policies) == 0 {
-		return nil, logical.ErrorResponse("user is not member of any authorized group"), nil
+		errStr := "user is not a member of any authorized group"
+		if len(resp.Warnings()) > 0 {
+			errStr = fmt.Sprintf("%s; additionally, %s", errStr, resp.Warnings()[0])
+		}
+
+		resp.Data["error"] = errStr
+		return nil, resp, nil
 	}
 
-	return policies, nil, nil
+	return policies, resp, nil
 }
 
 const backendHelp = `

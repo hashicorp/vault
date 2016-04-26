@@ -5,9 +5,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+func pathUsersList(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "users/?",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathUserList,
+		},
+
+		HelpSynopsis:    pathUserHelpSyn,
+		HelpDescription: pathUserHelpDesc,
+	}
+}
 
 func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
@@ -92,6 +106,15 @@ func (b *backend) setUser(s logical.Storage, username string, userEntry *UserEnt
 	return s.Put(entry)
 }
 
+func (b *backend) pathUserList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	users, err := req.Storage.List("user/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(users), nil
+}
+
 func (b *backend) pathUserDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("username").(string)))
@@ -115,6 +138,8 @@ func (b *backend) pathUserRead(
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"policies": strings.Join(user.Policies, ","),
+			"ttl":      user.TTL.Seconds(),
+			"max_ttl":  user.MaxTTL.Seconds(),
 		},
 	}, nil
 }
@@ -137,11 +162,8 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		}
 	}
 
-	if _, ok := d.GetOk("policies"); ok {
-		err = b.updateUserPolicies(req, d, userEntry)
-		if err != nil {
-			return nil, err
-		}
+	if policiesRaw, ok := d.GetOk("policies"); ok {
+		userEntry.Policies = policyutil.ParsePolicies(policiesRaw.(string))
 	}
 
 	ttlStr := userEntry.TTL.String()

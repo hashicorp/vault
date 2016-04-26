@@ -9,11 +9,12 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/meta"
 )
 
 // RekeyCommand is a Command that rekeys the vault.
 type RekeyCommand struct {
-	Meta
+	meta.Meta
 
 	// Key can be used to pre-seed the key. If it is set, it will not
 	// be asked with the `password` helper.
@@ -21,20 +22,24 @@ type RekeyCommand struct {
 
 	// The nonce for the rekey request to send along
 	Nonce string
+
+	// Whether to use the recovery key instead of barrier key, if available
+	RecoveryKey bool
 }
 
 func (c *RekeyCommand) Run(args []string) int {
-	var init, cancel, status, delete, retrieve, backup bool
+	var init, cancel, status, delete, retrieve, backup, recoveryKey bool
 	var shares, threshold int
 	var nonce string
 	var pgpKeys pgpkeys.PubKeyFilesFlag
-	flags := c.Meta.FlagSet("rekey", FlagSetDefault)
+	flags := c.Meta.FlagSet("rekey", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
 	flags.BoolVar(&cancel, "cancel", false, "")
 	flags.BoolVar(&status, "status", false, "")
 	flags.BoolVar(&delete, "delete", false, "")
 	flags.BoolVar(&retrieve, "retrieve", false, "")
 	flags.BoolVar(&backup, "backup", false, "")
+	flags.BoolVar(&recoveryKey, "recovery-key", c.RecoveryKey, "")
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.StringVar(&nonce, "nonce", "", "")
@@ -58,19 +63,24 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Check if we are running doing any restricted variants
 	switch {
 	case init:
-		return c.initRekey(client, shares, threshold, pgpKeys, backup)
+		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey)
 	case cancel:
-		return c.cancelRekey(client)
+		return c.cancelRekey(client, recoveryKey)
 	case status:
-		return c.rekeyStatus(client)
+		return c.rekeyStatus(client, recoveryKey)
 	case retrieve:
-		return c.rekeyRetrieveStored(client)
+		return c.rekeyRetrieveStored(client, recoveryKey)
 	case delete:
-		return c.rekeyDeleteStored(client)
+		return c.rekeyDeleteStored(client, recoveryKey)
 	}
 
 	// Check if the rekey is started
-	rekeyStatus, err := client.Sys().RekeyStatus()
+	var rekeyStatus *api.RekeyStatusResponse
+	if recoveryKey {
+		rekeyStatus, err = client.Sys().RekeyRecoveryKeyStatus()
+	} else {
+		rekeyStatus, err = client.Sys().RekeyStatus()
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error reading rekey status: %s", err))
 		return 1
@@ -78,11 +88,19 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	// Start the rekey process if not started
 	if !rekeyStatus.Started {
-		rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
-			SecretShares:    shares,
-			SecretThreshold: threshold,
-			PGPKeys:         pgpKeys,
-		})
+		if recoveryKey {
+			rekeyStatus, err = client.Sys().RekeyRecoveryKeyInit(&api.RekeyInitRequest{
+				SecretShares:    shares,
+				SecretThreshold: threshold,
+				PGPKeys:         pgpKeys,
+			})
+		} else {
+			rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
+				SecretShares:    shares,
+				SecretThreshold: threshold,
+				PGPKeys:         pgpKeys,
+			})
+		}
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
 			return 1
@@ -121,7 +139,12 @@ func (c *RekeyCommand) Run(args []string) int {
 	}
 
 	// Provide the key, this may potentially complete the update
-	result, err := client.Sys().RekeyUpdate(strings.TrimSpace(key), c.Nonce)
+	var result *api.RekeyUpdateResponse
+	if recoveryKey {
+		result, err = client.Sys().RekeyRecoveryKeyUpdate(strings.TrimSpace(key), c.Nonce)
+	} else {
+		result, err = client.Sys().RekeyUpdate(strings.TrimSpace(key), c.Nonce)
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error attempting rekey update: %s", err))
 		return 1
@@ -129,7 +152,7 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	// If we are not complete, then dump the status
 	if !result.Complete {
-		return c.rekeyStatus(client)
+		return c.rekeyStatus(client, recoveryKey)
 	}
 
 	// Space between the key prompt, if any, and the output
@@ -175,14 +198,21 @@ func (c *RekeyCommand) Run(args []string) int {
 func (c *RekeyCommand) initRekey(client *api.Client,
 	shares, threshold int,
 	pgpKeys pgpkeys.PubKeyFilesFlag,
-	backup bool) int {
+	backup, recoveryKey bool) int {
 	// Start the rekey
-	status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+	request := &api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
 		PGPKeys:         pgpKeys,
 		Backup:          backup,
-	})
+	}
+	var status *api.RekeyStatusResponse
+	var err error
+	if recoveryKey {
+		status, err = client.Sys().RekeyRecoveryKeyInit(request)
+	} else {
+		status, err = client.Sys().RekeyInit(request)
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
 		return 1
@@ -213,8 +243,13 @@ be deleted at a later time with 'vault rekey -delete'.
 }
 
 // cancelRekey is used to abort the rekey process
-func (c *RekeyCommand) cancelRekey(client *api.Client) int {
-	err := client.Sys().RekeyCancel()
+func (c *RekeyCommand) cancelRekey(client *api.Client, recovery bool) int {
+	var err error
+	if recovery {
+		err = client.Sys().RekeyRecoveryKeyCancel()
+	} else {
+		err = client.Sys().RekeyCancel()
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to cancel rekey: %s", err))
 		return 1
@@ -224,9 +259,15 @@ func (c *RekeyCommand) cancelRekey(client *api.Client) int {
 }
 
 // rekeyStatus is used just to fetch and dump the status
-func (c *RekeyCommand) rekeyStatus(client *api.Client) int {
+func (c *RekeyCommand) rekeyStatus(client *api.Client, recovery bool) int {
 	// Check the status
-	status, err := client.Sys().RekeyStatus()
+	var status *api.RekeyStatusResponse
+	var err error
+	if recovery {
+		status, err = client.Sys().RekeyRecoveryKeyStatus()
+	} else {
+		status, err = client.Sys().RekeyStatus()
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error reading rekey status: %s", err))
 		return 1
@@ -239,7 +280,7 @@ func (c *RekeyCommand) dumpRekeyStatus(status *api.RekeyStatusResponse) int {
 	// Dump the status
 	statString := fmt.Sprintf(
 		"Nonce: %s\n"+
-			"Started: %v\n"+
+			"Started: %t\n"+
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
 			"Rekey Progress: %d\n"+
@@ -259,8 +300,14 @@ func (c *RekeyCommand) dumpRekeyStatus(status *api.RekeyStatusResponse) int {
 	return 0
 }
 
-func (c *RekeyCommand) rekeyRetrieveStored(client *api.Client) int {
-	storedKeys, err := client.Sys().RekeyRetrieveBackup()
+func (c *RekeyCommand) rekeyRetrieveStored(client *api.Client, recovery bool) int {
+	var storedKeys *api.RekeyRetrieveResponse
+	var err error
+	if recovery {
+		storedKeys, err = client.Sys().RekeyRetrieveRecoveryBackup()
+	} else {
+		storedKeys, err = client.Sys().RekeyRetrieveBackup()
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error retrieving stored keys: %s", err))
 		return 1
@@ -273,8 +320,13 @@ func (c *RekeyCommand) rekeyRetrieveStored(client *api.Client) int {
 	return OutputSecret(c.Ui, "table", secret)
 }
 
-func (c *RekeyCommand) rekeyDeleteStored(client *api.Client) int {
-	err := client.Sys().RekeyDeleteBackup()
+func (c *RekeyCommand) rekeyDeleteStored(client *api.Client, recovery bool) int {
+	var err error
+	if recovery {
+		err = client.Sys().RekeyDeleteRecoveryBackup()
+	} else {
+		err = client.Sys().RekeyDeleteBackup()
+	}
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to delete stored keys: %s", err))
 		return 1
@@ -300,9 +352,7 @@ Usage: vault rekey [options] [key]
   keys be provided.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Rekey Options:
 
   -init                   Initialize the rekey operation by setting the desired
@@ -348,6 +398,9 @@ Rekey Options:
                           stored at "core/unseal-keys-backup" in your physical
                           storage. You can retrieve or delete them via the
                           'sys/rekey/backup' endpoint.
+
+  -recovery-key=false     Whether to rekey the recovery key instead of the
+                          barrier key. This is not normally available.
 `
 	return strings.TrimSpace(helpText)
 }

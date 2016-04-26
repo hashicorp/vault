@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -15,7 +16,7 @@ func TestPolicyList(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &PolicyListCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -36,7 +37,7 @@ func TestPolicyRead(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &PolicyListCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

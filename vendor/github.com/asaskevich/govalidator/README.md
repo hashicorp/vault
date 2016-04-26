@@ -42,6 +42,7 @@ func Filter(array []interface{}, iterator ConditionIterator) []interface{}
 func Find(array []interface{}, iterator ConditionIterator) interface{}
 func GetLine(s string, index int) (string, error)
 func GetLines(s string) []string
+func IsHost(s string) bool
 func InRange(value, left, right float64) bool
 func IsASCII(str string) bool
 func IsAlpha(str string) bool
@@ -149,7 +150,7 @@ type User struct {
 	LastName string
 }
 
-str, _ := govalidator.ToString(&User{"John", "Juan"})
+str := govalidator.ToString(&User{"John", "Juan"})
 println(str)
 ```
 ###### Each, Map, Filter, Count for slices
@@ -199,6 +200,7 @@ Here is a list of available validators for struct fields (validator - used funct
 "halfwidth":      IsHalfWidth,
 "hexadecimal":    IsHexadecimal,
 "hexcolor":       IsHexcolor,
+"host":           IsHost,
 "int":            IsInt,
 "ip":             IsIP,
 "ipv4":           IsIPv4,
@@ -288,4 +290,3 @@ If you do have a contribution for the package feel free to put up a Pull Request
 * [Simon ccl1115](https://github.com/ccl1115)
 
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/asaskevich/govalidator/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-

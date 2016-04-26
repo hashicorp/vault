@@ -3,16 +3,18 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // RemountCommand is a Command that remounts a mounted secret backend
 // to a new endpoint.
 type RemountCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *RemountCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("remount", FlagSetDefault)
+	flags := c.Meta.FlagSet("remount", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -66,8 +68,7 @@ Usage: vault remount [options] from to
   Example: vault remount secret/ generic/
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 
 	return strings.TrimSpace(helpText)
 }

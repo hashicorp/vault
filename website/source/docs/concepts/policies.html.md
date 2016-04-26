@@ -65,9 +65,9 @@ over operations. The capabilities are:
 
   * `delete` - Delete the value at a path.
 
-  * `list` - List values at a path. Note that the keys returned by a `list`
-    operation are *not* filtered by policies. You should not store
-    sensitive/secret values in keys.
+  * `list` - List key names at a path. Note that the keys returned by a
+    `list` operation are *not* filtered by policies.  Do not encode sensitive
+    information in key names.
 
   * `sudo` - Gain access to paths that are _root-protected_. This is _additive_
     to other capabilities, so a path that requires `sudo` access will also

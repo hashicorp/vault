@@ -103,17 +103,19 @@ Success! Data written to: auth/github/config
 
 After configuring that, you must map the teams of that organization to
 policies within Vault. Use the `map/teams/<team>` endpoints to do that.
+Team names must be slugified, so if your team name is: `Some Amazing Team`, 
+you will need to include it as: `some-amazing-team`. 
 Example:
 
 ```
-$ vault write auth/github/map/teams/owners value=root
-Success! Data written to: auth/github/map/teams/owners
+$ vault write auth/github/map/teams/admins value=root
+Success! Data written to: auth/github/map/teams/admins
 ```
 
-The above would make anyone in the "owners" team a root user in Vault
+The above would make anyone in the "admins" team a root user in Vault
 (not recommended).
 
-You can then auth with a user that is a member of the "owners" team using a Personal Access Token with the `read:org` scope.
+You can then auth with a user that is a member of the "admins" team using a Personal Access Token with the `read:org` scope.
 
 ```
 $ vault auth -method=github token=000000905b381e723b3d6a7d52f148a5d43c4b45

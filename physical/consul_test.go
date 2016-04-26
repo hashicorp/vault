@@ -2,17 +2,428 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul/api"
 )
 
-func TestConsulBackend(t *testing.T) {
-	addr := os.Getenv("CONSUL_ADDR")
+type consulConf map[string]string
+
+var (
+	addrCount int = 0
+)
+
+func testHostIP() string {
+	a := addrCount
+	addrCount++
+	return fmt.Sprintf("127.0.0.%d", a)
+}
+
+func testConsulBackend(t *testing.T) *ConsulBackend {
+	return testConsulBackendConfig(t, &consulConf{})
+}
+
+func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	be, err := newConsulBackend(*conf, logger)
+	if err != nil {
+		t.Fatalf("Expected Consul to initialize: %v", err)
+	}
+
+	c, ok := be.(*ConsulBackend)
+	if !ok {
+		t.Fatalf("Expected ConsulBackend")
+	}
+
+	c.consulClientConf = api.DefaultConfig()
+
+	c.service = &api.AgentServiceRegistration{
+		ID:                c.serviceID(),
+		Name:              c.serviceName,
+		Tags:              serviceTags(c.active),
+		Port:              8200,
+		Address:           testHostIP(),
+		EnableTagOverride: false,
+	}
+
+	c.sealedCheck = &api.AgentCheckRegistration{
+		ID:        c.checkID(),
+		Name:      "Vault Sealed Status",
+		Notes:     "Vault service is healthy when Vault is in an unsealed status and can become an active Vault server",
+		ServiceID: c.serviceID(),
+		AgentServiceCheck: api.AgentServiceCheck{
+			TTL:    c.checkTimeout.String(),
+			Status: api.HealthPassing,
+		},
+	}
+
+	return c
+}
+
+func testConsul_testConsulBackend(t *testing.T) {
+	c := testConsulBackend(t)
+	if c == nil {
+		t.Fatalf("bad")
+	}
+
+	if c.active != false {
+		t.Fatalf("bad")
+	}
+
+	if c.unsealed != false {
+		t.Fatalf("bad")
+	}
+
+	if c.service == nil {
+		t.Fatalf("bad")
+	}
+
+	if c.sealedCheck == nil {
+		t.Fatalf("bad")
+	}
+}
+
+func TestConsul_newConsulBackend(t *testing.T) {
+	tests := []struct {
+		name          string
+		consulConfig  map[string]string
+		fail          bool
+		advertiseAddr string
+		checkTimeout  time.Duration
+		path          string
+		service       string
+		address       string
+		scheme        string
+		token         string
+		max_parallel  int
+		disableReg    bool
+	}{
+		{
+			name:          "Valid default config",
+			consulConfig:  map[string]string{},
+			checkTimeout:  5 * time.Second,
+			advertiseAddr: "http://127.0.0.1:8200",
+			path:          "vault/",
+			service:       "vault",
+			address:       "127.0.0.1:8500",
+			scheme:        "http",
+			token:         "",
+			max_parallel:  4,
+			disableReg:    false,
+		},
+		{
+			name: "Valid modified config",
+			consulConfig: map[string]string{
+				"path":                 "seaTech/",
+				"service":              "astronomy",
+				"advertiseAddr":        "http://127.0.0.2:8200",
+				"check_timeout":        "6s",
+				"address":              "127.0.0.2",
+				"scheme":               "https",
+				"token":                "deadbeef-cafeefac-deadc0de-feedface",
+				"max_parallel":         "4",
+				"disable_registration": "false",
+			},
+			checkTimeout:  6 * time.Second,
+			path:          "seaTech/",
+			service:       "astronomy",
+			advertiseAddr: "http://127.0.0.2:8200",
+			address:       "127.0.0.2",
+			scheme:        "https",
+			token:         "deadbeef-cafeefac-deadc0de-feedface",
+			max_parallel:  4,
+		},
+		{
+			name: "check timeout too short",
+			fail: true,
+			consulConfig: map[string]string{
+				"check_timeout": "99ms",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		logger := log.New(os.Stderr, "", log.LstdFlags)
+		be, err := newConsulBackend(test.consulConfig, logger)
+		if test.fail {
+			if err == nil {
+				t.Fatalf(`Expected config "%s" to fail`, test.name)
+			} else {
+				continue
+			}
+		} else if !test.fail && err != nil {
+			t.Fatalf("Expected config %s to not fail: %v", test.name, err)
+		}
+
+		c, ok := be.(*ConsulBackend)
+		if !ok {
+			t.Fatalf("Expected ConsulBackend: %s", test.name)
+		}
+		c.disableRegistration = true
+
+		var shutdownCh ShutdownChannel
+		if err := c.RunServiceDiscovery(shutdownCh, test.advertiseAddr); err != nil {
+			t.Fatalf("bad: %v", err)
+		}
+
+		if test.checkTimeout != c.checkTimeout {
+			t.Errorf("bad: %v != %v", test.checkTimeout, c.checkTimeout)
+		}
+
+		if test.path != c.path {
+			t.Errorf("bad: %s %v != %v", test.name, test.path, c.path)
+		}
+
+		if test.service != c.serviceName {
+			t.Errorf("bad: %v != %v", test.service, c.serviceName)
+		}
+
+		if test.address != c.consulClientConf.Address {
+			t.Errorf("bad: %s %v != %v", test.name, test.address, c.consulClientConf.Address)
+		}
+
+		if test.scheme != c.consulClientConf.Scheme {
+			t.Errorf("bad: %v != %v", test.scheme, c.consulClientConf.Scheme)
+		}
+
+		if test.token != c.consulClientConf.Token {
+			t.Errorf("bad: %v != %v", test.token, c.consulClientConf.Token)
+		}
+
+		// FIXME(sean@): Unable to test max_parallel
+		// if test.max_parallel != cap(c.permitPool) {
+		// 	t.Errorf("bad: %v != %v", test.max_parallel, cap(c.permitPool))
+		// }
+	}
+}
+
+func TestConsul_serviceTags(t *testing.T) {
+	tests := []struct {
+		active bool
+		tags   []string
+	}{
+		{
+			active: true,
+			tags:   []string{"active"},
+		},
+		{
+			active: false,
+			tags:   []string{"standby"},
+		},
+	}
+
+	for _, test := range tests {
+		tags := serviceTags(test.active)
+		if !reflect.DeepEqual(tags[:], test.tags[:]) {
+			t.Errorf("Bad %v: %v %v", test.active, tags, test.tags)
+		}
+	}
+}
+
+func TestConsul_setAdvertiseAddr(t *testing.T) {
+	tests := []struct {
+		addr string
+		host string
+		port int64
+		pass bool
+	}{
+		{
+			addr: "http://127.0.0.1:8200/",
+			host: "127.0.0.1",
+			port: 8200,
+			pass: true,
+		},
+		{
+			addr: "http://127.0.0.1:8200",
+			host: "127.0.0.1",
+			port: 8200,
+			pass: true,
+		},
+		{
+			addr: "https://127.0.0.1:8200",
+			host: "127.0.0.1",
+			port: 8200,
+			pass: true,
+		},
+		{
+			addr: "unix:///tmp/.vault.addr.sock",
+			host: "/tmp/.vault.addr.sock",
+			port: -1,
+			pass: true,
+		},
+		{
+			addr: "127.0.0.1:8200",
+			pass: false,
+		},
+		{
+			addr: "127.0.0.1",
+			pass: false,
+		},
+	}
+	for _, test := range tests {
+		c := testConsulBackend(t)
+		err := c.setAdvertiseAddr(test.addr)
+		if test.pass {
+			if err != nil {
+				t.Fatalf("bad: %v", err)
+			}
+		} else {
+			if err == nil {
+				t.Fatalf("bad, expected fail")
+			} else {
+				continue
+			}
+		}
+
+		if c.advertiseHost != test.host {
+			t.Fatalf("bad: %v != %v", c.advertiseHost, test.host)
+		}
+
+		if c.advertisePort != test.port {
+			t.Fatalf("bad: %v != %v", c.advertisePort, test.port)
+		}
+	}
+}
+
+func TestConsul_AdvertiseActive(t *testing.T) {
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		t.SkipNow()
+		t.Skipf("No consul process running, skipping test")
+	}
+
+	c := testConsulBackend(t)
+
+	if c.active != false {
+		t.Fatalf("bad")
+	}
+
+	if err := c.AdvertiseActive(true); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+
+	if err := c.AdvertiseActive(true); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+
+	if err := c.AdvertiseActive(false); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+
+	if err := c.AdvertiseActive(false); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+
+	if err := c.AdvertiseActive(true); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+}
+
+func TestConsul_AdvertiseSealed(t *testing.T) {
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		t.Skipf("No consul process running, skipping test")
+	}
+
+	c := testConsulBackend(t)
+
+	if c.unsealed == true {
+		t.Fatalf("bad")
+	}
+
+	if err := c.AdvertiseSealed(true); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+	if c.unsealed == true {
+		t.Fatalf("bad")
+	}
+
+	if err := c.AdvertiseSealed(true); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+	if c.unsealed == true {
+		t.Fatalf("bad")
+	}
+
+	if err := c.AdvertiseSealed(false); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+	if c.unsealed == false {
+		t.Fatalf("bad")
+	}
+
+	if err := c.AdvertiseSealed(false); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+	if c.unsealed == false {
+		t.Fatalf("bad")
+	}
+
+	if err := c.AdvertiseSealed(true); err != nil {
+		t.Fatalf("bad: %v", err)
+	}
+	if c.unsealed == true {
+		t.Fatalf("bad")
+	}
+}
+
+func TestConsul_checkID(t *testing.T) {
+	c := testConsulBackend(t)
+	if c.checkID() != "vault-sealed-check" {
+		t.Errorf("bad")
+	}
+}
+
+func TestConsul_serviceID(t *testing.T) {
+	passingTests := []struct {
+		name          string
+		advertiseAddr string
+		serviceName   string
+		expected      string
+	}{
+		{
+			name:          "valid host w/o slash",
+			advertiseAddr: "http://127.0.0.1:8200",
+			serviceName:   "sea-tech-astronomy",
+			expected:      "sea-tech-astronomy:127.0.0.1:8200",
+		},
+		{
+			name:          "valid host w/ slash",
+			advertiseAddr: "http://127.0.0.1:8200/",
+			serviceName:   "sea-tech-astronomy",
+			expected:      "sea-tech-astronomy:127.0.0.1:8200",
+		},
+		{
+			name:          "valid https host w/ slash",
+			advertiseAddr: "https://127.0.0.1:8200/",
+			serviceName:   "sea-tech-astronomy",
+			expected:      "sea-tech-astronomy:127.0.0.1:8200",
+		},
+	}
+
+	for _, test := range passingTests {
+		c := testConsulBackendConfig(t, &consulConf{
+			"service": test.serviceName,
+		})
+
+		if err := c.setAdvertiseAddr(test.advertiseAddr); err != nil {
+			t.Fatalf("bad: %s %v", test.name, err)
+		}
+
+		serviceID := c.serviceID()
+		if serviceID != test.expected {
+			t.Fatalf("bad: %v != %v", serviceID, test.expected)
+		}
+	}
+}
+
+func TestConsulBackend(t *testing.T) {
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		t.Skipf("No consul process running, skipping test")
 	}
 
 	conf := api.DefaultConfig()
@@ -27,7 +438,8 @@ func TestConsulBackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	b, err := NewBackend("consul", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("consul", logger, map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
@@ -41,9 +453,9 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
-	addr := os.Getenv("CONSUL_ADDR")
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		t.SkipNow()
+		t.Skipf("No consul process running, skipping test")
 	}
 
 	conf := api.DefaultConfig()
@@ -58,7 +470,8 @@ func TestConsulHABackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	b, err := NewBackend("consul", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("consul", logger, map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "-1",

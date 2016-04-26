@@ -11,7 +11,9 @@ description: |-
 This page contains the list of breaking changes for Vault 0.6. Please read it
 carefully.
 
-Please note that this includes the full list of breaking changes _since Vault 0.5_. Some of these changes were introduced in later releases in the Vault 0.5.x series.
+Please note that this includes the full list of breaking changes __since Vault
+0.5__. Some of these changes were introduced in later releases in the Vault
+0.5.x series.
 
 ## PKI Backend Disallows RSA Keys < 2048 Bits
 
@@ -59,3 +61,18 @@ backend), this is a useful approach compared to strict issuer/serial number
 checking.
 
 You can use the new `cert/config` endpoint to disable this behavior.
+
+## The `auth/token/revoke-prefix` Endpoint Has Been Removed
+
+As part of addressing a minor security issue, this endpoint has been removed in
+favor of using `sys/revoke-prefix` for prefix-based revocation of both tokens
+and secrets leases.
+
+## Go API Uses `json.Number` For Decoding
+
+When using the Go API, it now calls `UseNumber()` on the decoder object. As a
+result, rather than always decode as a `float64`, numbers are returned as a
+`json.Number`, where they can be converted, with proper error checking, to
+`int64`, `float64`, or simply used as a `string` value. This fixes some display
+errors where numbers were being decoded as `float64` and printed in scientific
+notation.

@@ -2,6 +2,7 @@ package physical
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 )
@@ -13,7 +14,8 @@ func TestFileBackend(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	b, err := NewBackend("file", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("file", logger, map[string]string{
 		"path": dir,
 	})
 	if err != nil {

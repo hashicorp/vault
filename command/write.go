@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/kv-builder"
+	"github.com/hashicorp/vault/meta"
 )
 
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {
-	Meta
+	meta.Meta
 
 	// The fields below can be overwritten for tests
 	testStdin io.Reader
@@ -21,7 +22,7 @@ type WriteCommand struct {
 func (c *WriteCommand) Run(args []string) int {
 	var field, format string
 	var force bool
-	flags := c.Meta.FlagSet("write", FlagSetDefault)
+	flags := c.Meta.FlagSet("write", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&field, "field", "", "")
 	flags.BoolVar(&force, "force", false, "")
@@ -81,9 +82,9 @@ func (c *WriteCommand) Run(args []string) int {
 			// directly print the message. If mitchellh/cli exposes method
 			// to print without CR, this check needs to be removed.
 			if reflect.TypeOf(c.Ui).String() == "*cli.BasicUi" {
-				fmt.Fprintf(os.Stdout, val.(string))
+				fmt.Fprintf(os.Stdout, fmt.Sprintf("%v", val))
 			} else {
-				c.Ui.Output(val.(string))
+				c.Ui.Output(fmt.Sprintf("%v", val))
 			}
 			return 0
 		} else {
@@ -133,9 +134,7 @@ Usage: vault write [options] path [data]
   prefix the "@" with a slash: "\@".
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Write Options:
 
   -f | -force             Force the write to continue without any data values

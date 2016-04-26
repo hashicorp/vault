@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // StepDownCommand is a Command that seals the vault.
 type StepDownCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *StepDownCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("step-down", FlagSetDefault)
+	flags := c.Meta.FlagSet("step-down", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -48,7 +50,6 @@ Usage: vault step-down [options]
   same node to re-grab the lock and become active again.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

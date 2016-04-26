@@ -16,11 +16,7 @@ func Backend() *framework.Backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: append([]string{
-				"users/*",
-			},
-				mfa.MFARootPaths()...,
-			),
+			Root: mfa.MFARootPaths(),
 
 			Unauthenticated: []string{
 				"login/*",
@@ -29,6 +25,7 @@ func Backend() *framework.Backend {
 
 		Paths: append([]*framework.Path{
 			pathUsers(&b),
+			pathUsersList(&b),
 			pathUserPolicies(&b),
 			pathUserPassword(&b),
 		},

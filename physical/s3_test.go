@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -72,7 +73,8 @@ func TestS3Backend(t *testing.T) {
 		}
 	}()
 
-	b, err := NewBackend("s3", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("s3", logger, map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,
 		"session_token": creds.SessionToken,

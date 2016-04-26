@@ -5,16 +5,17 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/meta"
 	"github.com/ryanuber/columnize"
 )
 
 // AuditListCommand is a Command that lists the enabled audits.
 type AuditListCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *AuditListCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("audit-list", FlagSetDefault)
+	flags := c.Meta.FlagSet("audit-list", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -78,7 +79,6 @@ Usage: vault audit-list [options]
   only a root Vault user can view this.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -15,7 +16,7 @@ func TestRead(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &ReadCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -37,7 +38,7 @@ func TestRead_notFound(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &ReadCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -59,7 +60,7 @@ func TestRead_field(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &ReadCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -103,7 +104,7 @@ func TestRead_field_notFound(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &ReadCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},

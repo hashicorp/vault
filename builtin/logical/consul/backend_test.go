@@ -19,7 +19,8 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -28,8 +29,9 @@ func TestBackend_basic(t *testing.T) {
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
@@ -39,7 +41,8 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_management(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -48,8 +51,9 @@ func TestBackend_management(t *testing.T) {
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, config),
 			testAccStepWriteManagementPolicy(t, "test", ""),
@@ -59,7 +63,8 @@ func TestBackend_management(t *testing.T) {
 }
 
 func TestBackend_crud(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -68,8 +73,9 @@ func TestBackend_crud(t *testing.T) {
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
 			testAccStepReadPolicy(t, "test", testPolicy, 0),
@@ -79,7 +85,8 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
-	if os.Getenv("TF_ACC") == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
@@ -88,8 +95,9 @@ func TestBackend_role_lease(t *testing.T) {
 
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, "6h"),
 			testAccStepReadPolicy(t, "test", testPolicy, 6*time.Hour),

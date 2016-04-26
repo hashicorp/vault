@@ -21,7 +21,7 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -36,13 +36,15 @@ type User struct {
 	Revoke   []string `json:"revoke,omitempty"`
 }
 
-type UserRoles struct {
+// userListEntry is the user representation given by the server for ListUsers
+type userListEntry struct {
 	User  string `json:"user"`
 	Roles []Role `json:"roles"`
 }
 
-type userName struct {
-	User string `json:"user"`
+type UserRoles struct {
+	User  string `json:"user"`
+	Roles []Role `json:"roles"`
 }
 
 func v2AuthURL(ep url.URL, action string, name string) *url.URL {
@@ -198,7 +200,7 @@ func (u *httpAuthUserAPI) ListUsers(ctx context.Context) ([]string, error) {
 	}
 
 	var userList struct {
-		Users []User `json:"users"`
+		Users []userListEntry `json:"users"`
 	}
 
 	if err = json.Unmarshal(body, &userList); err != nil {

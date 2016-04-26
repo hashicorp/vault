@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // ReadCommand is a Command that reads data from the Vault.
 type ReadCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *ReadCommand) Run(args []string) int {
@@ -21,7 +22,7 @@ func (c *ReadCommand) Run(args []string) int {
 	var err error
 	var secret *api.Secret
 	var flags *flag.FlagSet
-	flags = c.Meta.FlagSet("read", FlagSetDefault)
+	flags = c.Meta.FlagSet("read", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&field, "field", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -69,9 +70,9 @@ func (c *ReadCommand) Run(args []string) int {
 			// directly print the message. If mitchellh/cli exposes method
 			// to print without CR, this check needs to be removed.
 			if reflect.TypeOf(c.Ui).String() == "*cli.BasicUi" {
-				fmt.Fprintf(os.Stdout, val.(string))
+				fmt.Fprintf(os.Stdout, fmt.Sprintf("%v", val))
 			} else {
-				c.Ui.Output(val.(string))
+				c.Ui.Output(fmt.Sprintf("%v", val))
 			}
 			return 0
 		} else {
@@ -100,9 +101,7 @@ Usage: vault read [options] path
   backends in use to determine key structure.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Read Options:
 
   -format=table           The format for output. By default it is a whitespace-

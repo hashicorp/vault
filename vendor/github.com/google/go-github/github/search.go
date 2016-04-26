@@ -148,7 +148,7 @@ func (s *SearchService) search(searchType string, query string, opt *SearchOptio
 		return nil, err
 	}
 
-	if opt.TextMatch {
+	if opt != nil && opt.TextMatch {
 		// Accept header defaults to "application/vnd.github.v3+json"
 		// We change it here to fetch back text-match metadata
 		req.Header.Set("Accept", "application/vnd.github.v3.text-match+json")

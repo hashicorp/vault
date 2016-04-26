@@ -13,10 +13,16 @@ type StarredRepository struct {
 	Repository *Repository `json:"repo,omitempty"`
 }
 
+// Stargazer represents a user that has starred a repository.
+type Stargazer struct {
+	StarredAt *Timestamp `json:"starred_at,omitempty"`
+	User      *User      `json:"user,omitempty"`
+}
+
 // ListStargazers lists people who have starred the specified repo.
 //
 // GitHub API Docs: https://developer.github.com/v3/activity/starring/#list-stargazers
-func (s *ActivityService) ListStargazers(owner, repo string, opt *ListOptions) ([]User, *Response, error) {
+func (s *ActivityService) ListStargazers(owner, repo string, opt *ListOptions) ([]Stargazer, *Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/stargazers", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -28,7 +34,10 @@ func (s *ActivityService) ListStargazers(owner, repo string, opt *ListOptions) (
 		return nil, nil, err
 	}
 
-	stargazers := new([]User)
+	// TODO: remove custom Accept header when this API fully launches
+	req.Header.Set("Accept", mediaTypeStarringPreview)
+
+	stargazers := new([]Stargazer)
 	resp, err := s.client.Do(req, stargazers)
 	if err != nil {
 		return nil, resp, err

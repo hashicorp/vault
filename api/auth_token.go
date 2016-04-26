@@ -1,11 +1,11 @@
 package api
 
-// TokenAuth is used to perform token backend operations on Vault.
+// TokenAuth is used to perform token backend operations on Vault
 type TokenAuth struct {
 	c *Client
 }
 
-// Token is used to return the client for logical-backend API calls.
+// Token is used to return the client for token-backend API calls
 func (a *Auth) Token() *TokenAuth {
 	return &TokenAuth{c: a.c}
 }
@@ -127,19 +127,6 @@ func (c *TokenAuth) RevokeAccessor(accessor string) error {
 // child tokens are orphaned rather than revoked)
 func (c *TokenAuth) RevokeOrphan(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-orphan/"+token)
-	resp, err := c.c.RawRequest(r)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
-}
-
-// RevokePrefix revokes a token based on a prefix, which can be used to revoke
-// e.g. all tokens issued by a certain credential mount
-func (c *TokenAuth) RevokePrefix(token string) error {
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-prefix/"+token)
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
 		return err

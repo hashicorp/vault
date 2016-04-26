@@ -252,11 +252,12 @@ func readShort(p []byte) uint16 {
 }
 
 type frameHeader struct {
-	version protoVersion
-	flags   byte
-	stream  int
-	op      frameOp
-	length  int
+	version       protoVersion
+	flags         byte
+	stream        int
+	op            frameOp
+	length        int
+	customPayload map[string][]byte
 }
 
 func (f frameHeader) String() string {
@@ -444,6 +445,10 @@ func (f *framer) parseFrame() (frame frame, err error) {
 		for _, v := range warnings {
 			log.Println(v)
 		}
+	}
+
+	if f.header.flags&flagCustomPayload == flagCustomPayload {
+		f.header.customPayload = f.readBytesMap()
 	}
 
 	// assumes that the frame body has been read into rbuf
@@ -1224,7 +1229,8 @@ type queryParams struct {
 	pagingState       []byte
 	serialConsistency SerialConsistency
 	// v3+
-	defaultTimestamp bool
+	defaultTimestamp      bool
+	defaultTimestampValue int64
 }
 
 func (q queryParams) String() string {
@@ -1296,7 +1302,12 @@ func (f *framer) writeQueryParams(opts *queryParams) {
 
 	if f.proto > protoVersion2 && opts.defaultTimestamp {
 		// timestamp in microseconds
-		ts := time.Now().UnixNano() / 1000
+		var ts int64
+		if opts.defaultTimestampValue != 0 {
+			ts = opts.defaultTimestampValue
+		} else {
+			ts = time.Now().UnixNano() / 1000
+		}
 		f.writeLong(ts)
 	}
 }
@@ -1629,6 +1640,19 @@ func (f *framer) readStringMap() map[string]string {
 	return m
 }
 
+func (f *framer) readBytesMap() map[string][]byte {
+	size := f.readShort()
+	m := make(map[string][]byte)
+
+	for i := 0; i < int(size); i++ {
+		k := f.readString()
+		v := f.readBytes()
+		m[k] = v
+	}
+
+	return m
+}
+
 func (f *framer) readStringMultiMap() map[string][]string {
 	size := f.readShort()
 	m := make(map[string][]string)
@@ -1644,6 +1668,15 @@ func (f *framer) readStringMultiMap() map[string][]string {
 
 func (f *framer) writeByte(b byte) {
 	f.wbuf = append(f.wbuf, b)
+}
+
+func appendBytes(p []byte, d []byte) []byte {
+	if d == nil {
+		return appendInt(p, -1)
+	}
+	p = appendInt(p, int32(len(d)))
+	p = append(p, d...)
+	return p
 }
 
 func appendShort(p []byte, n uint16) []byte {

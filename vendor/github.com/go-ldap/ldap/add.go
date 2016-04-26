@@ -77,10 +77,14 @@ func (l *Conn) Add(addRequest *AddRequest) error {
 	defer l.finishMessage(messageID)
 
 	l.Debug.Printf("%d: waiting for response", messageID)
-	packet = <-channel
+	packetResponse, ok := <-channel
+	if !ok {
+		return NewError(ErrorNetwork, errors.New("ldap: channel closed"))
+	}
+	packet, err = packetResponse.ReadPacket()
 	l.Debug.Printf("%d: got response %p", messageID, packet)
-	if packet == nil {
-		return NewError(ErrorNetwork, errors.New("ldap: could not retrieve message"))
+	if err != nil {
+		return err
 	}
 
 	if l.Debug {

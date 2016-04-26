@@ -194,10 +194,10 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/cert/certs`</dd>
+  <dd>`/auth/cert/certs` (LIST) or `/auth/cert/certs?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -247,7 +247,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       </li>
       <li>
         <span class="param">policies</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">optional</span>
         A comma-separated list of policies to set on tokens issued when
         authenticating against this CA certificate.
       </li>

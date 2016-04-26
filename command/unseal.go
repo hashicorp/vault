@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/meta"
 )
 
 // UnsealCommand is a Command that unseals the vault.
 type UnsealCommand struct {
-	Meta
+	meta.Meta
 
 	// Key can be used to pre-seed the key. If it is set, it will not
 	// be asked with the `password` helper.
@@ -19,7 +20,7 @@ type UnsealCommand struct {
 
 func (c *UnsealCommand) Run(args []string) int {
 	var reset bool
-	flags := c.Meta.FlagSet("unseal", FlagSetDefault)
+	flags := c.Meta.FlagSet("unseal", meta.FlagSetDefault)
 	flags.BoolVar(&reset, "reset", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -114,9 +115,7 @@ Usage: vault unseal [options] [key]
   only exists to assist in scripting.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Unseal Options:
 
   -reset                  Reset the unsealing process by throwing away

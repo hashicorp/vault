@@ -5,17 +5,18 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // MountTuneCommand is a Command that remounts a mounted secret backend
 // to a new endpoint.
 type MountTuneCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *MountTuneCommand) Run(args []string) int {
 	var defaultLeaseTTL, maxLeaseTTL string
-	flags := c.Meta.FlagSet("mount-tune", FlagSetDefault)
+	flags := c.Meta.FlagSet("mount-tune", meta.FlagSetDefault)
 	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
 	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -70,9 +71,7 @@ func (c *MountTuneCommand) Help() string {
   Example: vault mount-tune -default-lease-ttl="24h" secret
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Mount Options:
 
   -default-lease-ttl=<duration>  Default lease time-to-live for this backend.

@@ -321,8 +321,6 @@ func handleAuthResponse(c packetConn) (bool, []string, error) {
 			return false, msg.Methods, nil
 		case msgUserAuthSuccess:
 			return true, nil, nil
-		case msgDisconnect:
-			return false, nil, io.EOF
 		default:
 			return false, nil, unexpectedMessageError(msgUserAuthSuccess, packet[0])
 		}
