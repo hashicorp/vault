@@ -313,7 +313,7 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertis
 		}
 
 		if err := agent.ServiceDeregister(serviceID); err != nil {
-			c.logger.Printf("[WARN]: consul: service deregistration failed: {{err}}", err)
+			c.logger.Printf("[WARN]: consul: service deregistration failed: %v", err)
 		}
 		c.running = false
 	}()
