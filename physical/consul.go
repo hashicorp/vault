@@ -3,6 +3,7 @@ package physical
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -50,6 +51,7 @@ const (
 // it allows Vault to run on multiple machines in a highly-available manner.
 type ConsulBackend struct {
 	path                string
+	logger              *log.Logger
 	client              *api.Client
 	kv                  *api.KV
 	permitPool          *PermitPool
@@ -71,7 +73,7 @@ type ConsulBackend struct {
 
 // newConsulBackend constructs a Consul backend using the given API client
 // and the prefix in the KV store.
-func newConsulBackend(conf map[string]string) (Backend, error) {
+func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	// Get the path in Consul
 	path, ok := conf["path"]
 	if !ok {
@@ -161,6 +163,7 @@ func newConsulBackend(conf map[string]string) (Backend, error) {
 	// Setup the backend
 	c := &ConsulBackend{
 		path:                path,
+		logger:              logger,
 		client:              client,
 		kv:                  client.KV(),
 		permitPool:          NewPermitPool(maxParInt),

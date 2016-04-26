@@ -2,10 +2,12 @@ package physical
 
 import (
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/storage"
+	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/storage"
 )
 
 func TestAzureBackend(t *testing.T) {
@@ -22,7 +24,8 @@ func TestAzureBackend(t *testing.T) {
 
 	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
 
-	backend, err := NewBackend("azure", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	backend, err := NewBackend("azure", logger, map[string]string{
 		"container":   container,
 		"accountName": accountName,
 		"accountKey":  accountKey,

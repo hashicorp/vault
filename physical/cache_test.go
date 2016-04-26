@@ -1,16 +1,22 @@
 package physical
 
-import "testing"
+import (
+	"log"
+	"os"
+	"testing"
+)
 
 func TestCache(t *testing.T) {
-	inm := NewInmem()
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	inm := NewInmem(logger)
 	cache := NewCache(inm, 0)
 	testBackend(t, cache)
 	testBackend_ListPrefix(t, cache)
 }
 
 func TestCache_Purge(t *testing.T) {
-	inm := NewInmem()
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	inm := NewInmem(logger)
 	cache := NewCache(inm, 0)
 
 	ent := &Entry{

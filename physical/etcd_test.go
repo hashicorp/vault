@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -45,7 +46,8 @@ func TestEtcdBackend(t *testing.T) {
 		}
 	}()
 
-	b, err := NewBackend("etcd", map[string]string{
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	b, err := NewBackend("etcd", logger, map[string]string{
 		"address": addr,
 		"path":    randPath,
 	})

@@ -150,7 +150,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the backend
 	backend, err := physical.NewBackend(
-		config.Backend.Type, config.Backend.Config)
+		config.Backend.Type, logger, config.Backend.Config)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing backend of type %s: %s",
@@ -182,7 +182,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var ok bool
 	if config.HABackend != nil {
 		habackend, err := physical.NewBackend(
-			config.HABackend.Type, config.HABackend.Config)
+			config.HABackend.Type, logger, config.HABackend.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing backend of type %s: %s",

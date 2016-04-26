@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+var (
+	logger = log.New(os.Stderr, "", log.LstdFlags)
+)
+
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
 const TestEnvVar = "VAULT_ACC"
 
@@ -131,7 +135,7 @@ func Test(t TestT, c TestCase) {
 
 	// Create an in-memory Vault core
 	core, err := vault.NewCore(&vault.CoreConfig{
-		Physical: physical.NewInmem(),
+		Physical: physical.NewInmem(logger),
 		LogicalBackends: map[string]logical.Factory{
 			"test": func(conf *logical.BackendConfig) (logical.Backend, error) {
 				if c.Backend != nil {

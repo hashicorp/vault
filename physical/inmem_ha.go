@@ -2,21 +2,24 @@ package physical
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
 type InmemHABackend struct {
 	InmemBackend
-	locks map[string]string
-	l     sync.Mutex
-	cond  *sync.Cond
+	locks  map[string]string
+	l      sync.Mutex
+	cond   *sync.Cond
+	logger *log.Logger
 }
 
 // NewInmemHA constructs a new in-memory HA backend. This is only for testing.
-func NewInmemHA() *InmemHABackend {
+func NewInmemHA(logger *log.Logger) *InmemHABackend {
 	in := &InmemHABackend{
-		InmemBackend: *NewInmem(),
+		InmemBackend: *NewInmem(logger),
 		locks:        make(map[string]string),
+		logger:       logger,
 	}
 	in.cond = sync.NewCond(&in.l)
 	return in

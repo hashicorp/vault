@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 
@@ -20,7 +22,8 @@ func TestCore_Init(t *testing.T) {
 }
 
 func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
-	inm := physical.NewInmem()
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	inm := physical.NewInmem(logger)
 	conf := &CoreConfig{
 		Physical:     inm,
 		DisableMlock: true,

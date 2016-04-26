@@ -106,13 +106,15 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 		logicalBackends[backendName] = backendFactory
 	}
 
-	physicalBackend := physical.NewInmem()
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	physicalBackend := physical.NewInmem(logger)
 	conf := &CoreConfig{
 		Physical:           physicalBackend,
 		AuditBackends:      noopAudits,
 		LogicalBackends:    logicalBackends,
 		CredentialBackends: noopBackends,
 		DisableMlock:       true,
+		Logger:             logger,
 	}
 	if testSeal != nil {
 		conf.Seal = testSeal

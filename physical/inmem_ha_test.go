@@ -1,8 +1,13 @@
 package physical
 
-import "testing"
+import (
+	"log"
+	"os"
+	"testing"
+)
 
 func TestInmemHA(t *testing.T) {
-	inm := NewInmemHA()
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	inm := NewInmemHA(logger)
 	testHABackend(t, inm, inm)
 }
