@@ -114,7 +114,7 @@ func (a *AzureBackend) Get(key string) (*Entry, error) {
 // Delete is used to permanently delete an entry
 func (a *AzureBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"azure", "delete"}, time.Now())
-	_, err := a.client.DeleteBlobIfExists(a.container, key)
+	_, err := a.client.DeleteBlobIfExists(a.container, key, nil)
 	return err
 }
 
