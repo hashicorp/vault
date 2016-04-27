@@ -235,18 +235,43 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// configure the tidying behavior of whitelist identities
-	data := map[string]interface{}{
-		"safety_buffer": "60",
-	}
-	_, err = b.HandleRequest(&logical.Request{
+	// test update operation
+	tidyRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/tidy/identities",
 		Storage:   storage,
-		Data:      data,
-	})
+	}
+	data := map[string]interface{}{
+		"safety_buffer":         "60",
+		"disable_periodic_tidy": true,
+	}
+	tidyRequest.Data = data
+	_, err = b.HandleRequest(tidyRequest)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// test read operation
+	tidyRequest.Operation = logical.ReadOperation
+	resp, err := b.HandleRequest(tidyRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to read config/tidy/identities endpoint")
+	}
+	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
+		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+	}
+
+	// test delete operation
+	tidyRequest.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(tidyRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatalf("failed to delete config/tidy/identities")
 	}
 }
 
@@ -260,27 +285,43 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := map[string]interface{}{
-		"safety_buffer": "60",
-	}
-
-	_, err = b.HandleRequest(&logical.Request{
+	// test update operation
+	tidyRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/tidy/roletags",
 		Storage:   storage,
-		Data:      data,
-	})
+	}
+	data := map[string]interface{}{
+		"safety_buffer":         "60",
+		"disable_periodic_tidy": true,
+	}
+	tidyRequest.Data = data
+	_, err = b.HandleRequest(tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/tidy/roletags",
-		Storage:   storage,
-	})
+	// test read operation
+	tidyRequest.Operation = logical.ReadOperation
+	resp, err := b.HandleRequest(tidyRequest)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to read config/tidy/roletags endpoint")
+	}
+	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
+		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+	}
+
+	// test delete operation
+	tidyRequest.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(tidyRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatalf("failed to delete config/tidy/roletags")
 	}
 }
 
@@ -294,6 +335,7 @@ func TestBackend_TidyIdentities(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// test update operation
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "tidy/identities",
@@ -314,6 +356,7 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// test update operation
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "tidy/roletags",
@@ -381,6 +424,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		},
 	})
 
+	// test existence check returning false
 	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "config/client",
@@ -396,6 +440,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal("existence check should have returned 'false' for 'config/client'")
 	}
 
+	// create an entry
 	configClientCreateRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/client",
@@ -407,6 +452,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	//test existence check returning true
 	checkFound, exists, err = b.HandleExistenceCheck(&logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "config/client",
@@ -422,6 +468,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 		t.Fatal("existence check should have returned 'true' for 'config/client'")
 	}
 
+	// test the "config/client" read helper
 	clientConfig, err := clientConfigEntry(storage)
 	if err != nil {
 		t.Fatal(err)
@@ -432,7 +479,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 }
 
-func TestBackend_PathConfigCertificate(t *testing.T) {
+func TestBackend_pathConfigCertificate(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -442,11 +489,12 @@ func TestBackend_PathConfigCertificate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
+	certReq := &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "config/certificate/cert1",
 		Storage:   storage,
-	})
+		Path:      "config/certificate/cert1",
+	}
+	checkFound, exists, err := b.HandleExistenceCheck(certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,21 +527,17 @@ R0J5cUdTTTQ0QkFNREx3QXdMQUlVV1hCbGs0MHhUd1N3CjdIWDMyTXhYWXJ1c2U5QUNGQk5HbWRY
 MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 `,
 	}
-	_, err = b.HandleRequest(&logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "config/certificate/cert1",
-		Storage:   storage,
-		Data:      data,
-	})
+
+	certReq.Data = data
+	// test create operation
+	_, err = b.HandleRequest(certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	checkFound, exists, err = b.HandleExistenceCheck(&logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "config/certificate/cert1",
-		Storage:   storage,
-	})
+	certReq.Data = nil
+	// test existence check
+	checkFound, exists, err = b.HandleExistenceCheck(certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,11 +548,9 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 		t.Fatal("existence check should have returned 'true' for 'config/certificate/cert1'")
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config/certificate/cert1",
-		Storage:   storage,
-	})
+	certReq.Operation = logical.ReadOperation
+	// test read operation
+	resp, err := b.HandleRequest(certReq)
 	expectedCert := `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
@@ -531,9 +573,60 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 	if resp.Data["aws_public_cert"].(string) != expectedCert {
 		t.Fatal("bad: expected:%s\n got:%s\n", expectedCert, resp.Data["aws_public_cert"].(string))
 	}
+
+	certReq.Operation = logical.CreateOperation
+	certReq.Path = "config/certificate/cert2"
+	certReq.Data = data
+	// create another entry to test the list operation
+	_, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certReq.Operation = logical.ListOperation
+	certReq.Path = "config/certificates"
+	// test list operation
+	resp, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to list config/certificates")
+	}
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 2 {
+		t.Fatalf("invalid keys listed: %#v\n", keys)
+	}
+
+	certReq.Operation = logical.DeleteOperation
+	certReq.Path = "config/certificate/cert1"
+	_, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certReq.Path = "config/certificate/cert2"
+	_, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certReq.Operation = logical.ListOperation
+	certReq.Path = "config/certificates"
+	// test list operation
+	resp, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to list config/certificates")
+	}
+	if resp.Data["keys"] != nil {
+		t.Fatalf("no entries should be present")
+	}
 }
 
-func TestBackend_PathImage(t *testing.T) {
+func TestBackend_pathImage(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -570,6 +663,7 @@ func TestBackend_PathImage(t *testing.T) {
 	}
 
 	data["allow_instance_migration"] = true
+	data["disallow_reauthentication"] = true
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "image/ami-abcd123",
@@ -587,8 +681,35 @@ func TestBackend_PathImage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Data["allow_instance_migration"].(bool) {
-		t.Fatal("bad: allow_instance_migration: expected:true got:false\n")
+	if !resp.Data["allow_instance_migration"].(bool) || !resp.Data["disallow_reauthentication"].(bool) {
+		t.Fatal("bad: expected:true got:false\n")
+	}
+
+	// add another entry, to test listing of image entries
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "image/ami-abcd456",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "images",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data == nil || resp.IsError() {
+		t.Fatalf("failed to list the image entries")
+	}
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 2 {
+		t.Fatalf("bad: keys: %#v\n", keys)
 	}
 
 	_, err = b.HandleRequest(&logical.Request{
@@ -611,6 +732,7 @@ func TestBackend_PathImage(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: response: expected:nil actual:%#v\n", resp)
 	}
+
 }
 
 func TestBackend_parseRoleTagValue(t *testing.T) {
@@ -838,10 +960,25 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 }
 
 // This is an acceptance test.
+// Requires TEST_AWS_EC2_PKCS7, TEST_AWS_EC2_AMI_ID to be set.
+// If the test is not being run on an EC2 instance that has access to credentials using EC2RoleProvider,
+// then TEST_AWS_SECRET_KEY and TEST_AWS_ACCESS_KEY env vars are also required.
 func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
+	// This test case should be run only when certain env vars are set and
+	// executed as an acceptance test.
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
+	}
+
+	pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
+	if pkcs7 == "" {
+		t.Fatalf("env var TEST_AWS_EC2_PKCS7 not set")
+	}
+
+	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
+	if amiID == "" {
+		t.Fatalf("env var TEST_AWS_EC2_AMI_ID not set")
 	}
 
 	// create the backend
@@ -853,35 +990,44 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// get the API credentials from env vars
-	clientConfig := map[string]interface{}{
-		"access_key": os.Getenv("AWS_ACCESS_KEY"),
-		"secret_key": os.Getenv("AWS_SECRET_KEY"),
-	}
-	if clientConfig["access_key"] == "" ||
-		clientConfig["secret_key"] == "" {
-		t.Fatalf("credentials not configured")
+	accessKey := os.Getenv("TEST_AWS_ACCESS_KEY")
+	secretKey := os.Getenv("TEST_AWS_SECRET_KEY")
+
+	// In case of problems with making API calls using the credentials (2FA enabled,
+	// for instance), the keys need not be set if the test is running on an EC2
+	// instance with permissions to get the credentials using EC2RoleProvider.
+	if accessKey != "" && secretKey != "" {
+		// get the API credentials from env vars
+		clientConfig := map[string]interface{}{
+			"access_key": accessKey,
+			"secret_key": secretKey,
+		}
+		if clientConfig["access_key"] == "" ||
+			clientConfig["secret_key"] == "" {
+			t.Fatalf("credentials not configured")
+		}
+
+		// store the credentials
+		_, err = b.HandleRequest(&logical.Request{
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Path:      "config/client",
+			Data:      clientConfig,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	// store the credentials
-	_, err = b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Storage:   storage,
-		Path:      "config/client",
-		Data:      clientConfig,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// write an entry for an ami
+	// create an entry for the AMI. This is required for login to work.
 	data := map[string]interface{}{
 		"policies": "root",
 		"max_ttl":  "120s",
 	}
+
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/ami-fce3c696",
+		Path:      "image/" + amiID,
 		Storage:   storage,
 		Data:      data,
 	})
@@ -889,23 +1035,12 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loginInput := map[string]interface{}{"pkcs7": `MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewog
-ICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMu
-NjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAi
-MjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJv
-ZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJ
-ZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVu
-ZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4
-ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVn
-aW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkw
-FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6
-b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMx
-CwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEW
-BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
-0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA`,
+	loginInput := map[string]interface{}{
+		"pkcs7": pkcs7,
 		"nonce": "vault-client-nonce",
 	}
 
+	// perform the login operation.
 	loginRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
@@ -916,20 +1051,20 @@ BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Auth == nil {
-		t.Fatalf("login attempt failed")
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("first login attempt failed")
 	}
 
-	// try to login again and see if it succeeds
+	// Attempt to login again and see if it succeeds
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Auth == nil {
-		t.Fatalf("login attempt failed")
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("second login attempt failed")
 	}
 
-	//instanceID := resp.Auth.Metadata.(map[string]string)["instance_id"]
+	// verify the presence of instance_id in the response object.
 	instanceID := resp.Auth.Metadata["instance_id"]
 	if instanceID == "" {
 		t.Fatalf("instance ID not present in the response object")
@@ -945,6 +1080,7 @@ BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
 		t.Fatalf("login attempt should have failed due to client nonce mismatch")
 	}
 
+	// Check if a whitelist identity entry is created after the login.
 	wlRequest := &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "whitelist/identity/" + instanceID,
@@ -954,10 +1090,11 @@ BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Data == nil || resp.Data["ami_id"] != "ami-fce3c696" {
+	if resp == nil || resp.Data == nil || resp.Data["ami_id"] != amiID {
 		t.Fatalf("failed to read whitelist identity")
 	}
 
+	// Delete the whitelist identity entry.
 	wlRequest.Operation = logical.DeleteOperation
 	resp, err = b.HandleRequest(wlRequest)
 	if err != nil {
@@ -967,12 +1104,12 @@ BBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U
 		t.Fatalf("failed to delete whitelist identity")
 	}
 
-	// try to login again and see if it succeeds
+	// Allow a fresh login.
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Auth == nil {
+	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Fatalf("login attempt failed")
 	}
 }

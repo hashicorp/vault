@@ -192,6 +192,8 @@ func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) 
 // pathConfigCertificateDelete is used to delete the previously configured AWS Public Key
 // that is used to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return logical.ErrorResponse("missing cert_name"), nil
