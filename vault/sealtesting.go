@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"fmt"
+	"testing"
 )
 
 type TestSeal struct {
@@ -87,4 +88,46 @@ func (d *TestSeal) SetRecoveryKey(key []byte) error {
 	newbuf.Write(key)
 	d.recoveryKey = newbuf.Bytes()
 	return nil
+}
+
+func TestCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
+	seal := &TestSeal{}
+	core := TestCoreWithSeal(t, seal)
+	result, err := core.Initialize(barrierConf, recoveryConf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	err = core.UnsealWithStoredKeys()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if sealed, _ := core.Sealed(); sealed {
+		for _, key := range result.SecretShares {
+			if _, err := core.Unseal(key); err != nil {
+
+				t.Fatalf("unseal err: %s", err)
+			}
+		}
+
+		sealed, err = core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+	}
+
+	return core, result.SecretShares, result.RecoveryShares, result.RootToken
+}
+
+func TestSealDefConfigs() (*SealConfig, *SealConfig) {
+	return &SealConfig{
+			SecretShares:    5,
+			SecretThreshold: 3,
+			StoredShares:    2,
+		}, &SealConfig{
+			SecretShares:    5,
+			SecretThreshold: 3,
+		}
 }
