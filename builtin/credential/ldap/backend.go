@@ -103,23 +103,23 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
 	}
 
-	bindDN, response := getBindDN(cfg, c, username)
-	if response != nil {
-		return nil, response, nil
+	bindDN, err := getBindDN(cfg, c, username)
+	if err != nil {
+		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
 	if err = c.Bind(bindDN, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
 	}
 
-	userDN, response := getUserDN(cfg, c, bindDN)
-	if response != nil {
-		return nil, response, nil
+	userDN, err := getUserDN(cfg, c, bindDN)
+	if err != nil {
+		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
-	ldapGroups, response := getLdapGroups(cfg, c, userDN, username)
-	if response != nil {
-		return nil, response, nil
+	ldapGroups, err := getLdapGroups(cfg, c, userDN, username)
+	if err != nil {
+		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
 	ldapResponse := &logical.Response{
@@ -164,11 +164,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	return policies, ldapResponse, nil
 }
 
-func getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, *logical.Response) {
+func getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, error) {
 	bindDN := ""
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
-			return bindDN, logical.ErrorResponse(fmt.Sprintf("LDAP bind (service) failed: %v", err))
+			return bindDN, fmt.Errorf("LDAP bind (service) failed: %v", err)
 		}
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
@@ -176,10 +176,10 @@ func getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, *logica
 			Filter: fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username)),
 		})
 		if err != nil {
-			return bindDN, logical.ErrorResponse(fmt.Sprintf("LDAP search for binddn failed: %v", err))
+			return bindDN, fmt.Errorf("LDAP search for binddn failed: %v", err)
 		}
 		if len(result.Entries) != 1 {
-			return bindDN, logical.ErrorResponse("LDAP search for binddn 0 or not unique")
+			return bindDN, fmt.Errorf("LDAP search for binddn 0 or not unique")
 		}
 		bindDN = result.Entries[0].DN
 	} else {
@@ -193,61 +193,61 @@ func getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, *logica
 	return bindDN, nil
 }
 
-func getUserDN(cfg *ConfigEntry,c *ldap.Conn, binddn string) (string , *logical.Response) {
+func getUserDN(cfg *ConfigEntry,c *ldap.Conn, bindDN string) (string , error) {
 	userDN := ""
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
-			Filter: fmt.Sprintf("(userPrincipalName=%s)", ldap.EscapeFilter(binddn)),
+			Filter: fmt.Sprintf("(userPrincipalName=%s)", ldap.EscapeFilter(bindDN)),
 		})
 		if err != nil {
-			return userDN, logical.ErrorResponse(fmt.Sprintf("LDAP search failed for detecting user: %v", err))
+			return userDN, fmt.Errorf("LDAP search failed for detecting user: %v", err)
 		}
 		for _, e := range result.Entries {
 			userDN = e.DN
 		}
 	} else {
-		userDN = binddn
+		userDN = bindDN
 	}
 
 	return userDN, nil
 }
 
-func getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userdn string, username string) ([]string, *logical.Response) {
+func getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, username string) ([]string, error) {
 	// retrieve the groups in a string/bool map as a structure to avoid duplicates inside
 	ldapMap := make(map[string]bool)
 	// Fetch the optional memberOf property values on the user object
 	// This is the most common method used in Active Directory setup to retrieve the groups
 	result, err := c.Search(&ldap.SearchRequest{
-		BaseDN: userdn,
-		Scope:  0,        // base scope to fetch only the userdn
-		Filter: "(cn=*)", // bogus filter, required to fetch the userdn
+		BaseDN: userDN,
+		Scope:  0,        // base scope to fetch only the userDN
+		Filter: "(cn=*)", // bogus filter, required to fetch the CN from userDN
 		Attributes: []string{
 			"memberOf",
 		},
 	})
+	// this check remains in case something happens with the ldap query or connection
 	if err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP fetch of distinguishedName=%s failed: %v", userdn, err))
+		return nil, fmt.Errorf("LDAP fetch of distinguishedName=%s failed: %v", userDN, err)
 	}
-	if len(result.Entries) != 1 {
-		return nil, logical.ErrorResponse("LDAP search for binddn 0 or not unique")
-	}
+	// if there are more than one entry, we consider the results irrelevant and ignore them
+	if len(result.Entries) == 1 {
+		for _, attr := range result.Entries[0].Attributes {
+			// Find the groups the user is member of from the 'memberOf' attribute extracting the CN
+			if attr.Name == "memberOf" {
+				for _, value := range attr.Values {
+					memberOfDN, err := ldap.ParseDN(value)
+					if err != nil || len(memberOfDN.RDNs) == 0 {
+						continue
+					}
 
-	for _, attr := range result.Entries[0].Attributes {
-		// Find the groups the user is member of from the 'memberOf' attribute extracting the CN
-		if attr.Name == "memberOf" {
-			for _,value := range attr.Values {
-				memberOfDN, err := ldap.ParseDN(value)
-				if err != nil || len(memberOfDN.RDNs) == 0 {
-					continue
-				}
-
-				for _, rdn := range memberOfDN.RDNs {
-					for _, rdnTypeAndValue := range rdn.Attributes {
-						if strings.EqualFold(rdnTypeAndValue.Type, "CN") {
-							ldapMap[rdnTypeAndValue.Value] = true
+					for _, rdn := range memberOfDN.RDNs {
+						for _, rdnTypeAndValue := range rdn.Attributes {
+							if strings.EqualFold(rdnTypeAndValue.Type, "CN") {
+								ldapMap[rdnTypeAndValue.Value] = true
+							}
 						}
 					}
 				}
@@ -261,10 +261,10 @@ func getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userdn string, username strin
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.GroupDN,
 			Scope:  2, // subtree
-			Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userdn), ldap.EscapeFilter(userdn)),
+			Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", ldap.EscapeFilter(username), ldap.EscapeFilter(userDN), ldap.EscapeFilter(userDN)),
 		})
 		if err != nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err))
+			return nil, fmt.Errorf("LDAP search failed: %v", err)
 		}
 
 		for _, e := range result.Entries {
