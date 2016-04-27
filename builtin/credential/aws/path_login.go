@@ -311,6 +311,7 @@ func (b *backend) pathLoginUpdate(
 			Metadata: map[string]string{
 				"instance_id":      identityDoc.InstanceID,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
+				"ami_id":           identityDoc.AmiID,
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,

@@ -23,6 +23,8 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	backend := b.(*backend)
+
 	// create an entry for ami
 	data := map[string]interface{}{
 		"policies": "p,q,r,s",
