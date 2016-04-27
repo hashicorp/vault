@@ -78,6 +78,7 @@ BUG FIXES:
    capability of token roles [GH-1331]
  * credential/various: Fix renewal conditions when `default` policy is not
    contained in the backend config [GH-1256]
+ * physical/s3: Don't panic in certain error cases from bad S3 responses [GH-1353]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
 
