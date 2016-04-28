@@ -290,7 +290,21 @@ func (c *ServerCommand) Run(args []string) int {
 	if coreConfig.HAPhysical != nil {
 		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
 		if ok {
-			if err := sd.RunServiceDiscovery(c.ShutdownCh, coreConfig.AdvertiseAddr); err != nil {
+			activeFunc := func() bool {
+				if isLeader, _, err := core.Leader(); err != nil {
+					return isLeader
+				}
+				return false
+			}
+
+			sealedFunc := func() bool {
+				if sealed, err := core.Sealed(); err != nil {
+					return sealed
+				}
+				return true
+			}
+
+			if err := sd.RunServiceDiscovery(c.ShutdownCh, coreConfig.AdvertiseAddr, activeFunc, sealedFunc); err != nil {
 				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
