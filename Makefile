@@ -8,16 +8,16 @@ default: test
 
 # bin generates the releaseable binaries for Vault
 bin: generate
-	@sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 dev: generate
-	@VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # test runs the unit tests and vets the code
 test: generate
-	VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=120s -parallel=4
+	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
