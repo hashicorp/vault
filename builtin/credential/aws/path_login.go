@@ -40,9 +40,9 @@ func pathLogin(b *backend) *framework.Path {
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API and
 // checks if the instance is running and is healthy.
-func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocument) (*ec2.DescribeInstancesOutput, error) {
+func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.DescribeInstancesOutput, error) {
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, identityDoc.Region)
+	ec2Client, err := b.clientEC2(s, region)
 	if err != nil {
 		return nil, err
 	}
@@ -52,13 +52,13 @@ func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocum
 			&ec2.Filter{
 				Name: aws.String("instance-id"),
 				Values: []*string{
-					aws.String(identityDoc.InstanceID),
+					aws.String(instanceID),
 				},
 			},
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error fetching description for instance ID %s: %s\n", identityDoc.InstanceID, err)
+		return nil, fmt.Errorf("error fetching description for instance ID %s: %s\n", instanceID, err)
 	}
 	if len(status.Reservations) == 0 {
 		return nil, fmt.Errorf("no reservations found in instance description")
@@ -67,7 +67,7 @@ func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocum
 	if len(status.Reservations[0].Instances) == 0 {
 		return nil, fmt.Errorf("no instance details found in reservations")
 	}
-	if *status.Reservations[0].Instances[0].InstanceId != identityDoc.InstanceID {
+	if *status.Reservations[0].Instances[0].InstanceId != instanceID {
 		return nil, fmt.Errorf("expected instance ID not matching the instance ID in the instance description")
 	}
 	if status.Reservations[0].Instances[0].State == nil {
@@ -214,7 +214,7 @@ func (b *backend) pathLoginUpdate(
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
-	instanceDesc, err := b.validateInstance(req.Storage, identityDoc)
+	instanceDesc, err := b.validateInstance(req.Storage, identityDoc.InstanceID, identityDoc.Region)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
 	}
@@ -323,6 +323,7 @@ func (b *backend) pathLoginUpdate(
 			Policies: policies,
 			Metadata: map[string]string{
 				"instance_id":      identityDoc.InstanceID,
+				"region":           identityDoc.Region,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"ami_id":           identityDoc.AmiID,
 			},
@@ -416,19 +417,23 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 // pathLoginRenew is used to renew an authenticated token.
 func (b *backend) pathLoginRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	storedIdentity, err := whitelistIdentityEntry(req.Storage, req.Auth.Metadata["instance_id"])
-	if err != nil {
-		return nil, err
+	instanceID := req.Auth.Metadata["instance_id"]
+	if instanceID == "" {
+		return nil, fmt.Errorf("unable to fetch instance ID from metadata during renewal")
 	}
 
-	// For now, rTagMaxTTL is cached in internal data during login and used in renewal for
-	// setting the MaxTTL for the stored login identity entry.
-	//
-	// Ideally, the instance ID should be used to query the role tag again.
-	// For now, we only make an API call during login and not during renewal.
-	// If there is a need to do make an API call, this should be changed.
-	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
+	region := req.Auth.Metadata["region"]
+	if region == "" {
+		return nil, fmt.Errorf("unable to fetch region from metadata during renewal")
+	}
+
+	// Cross check that the instance is still in 'running' state
+	_, err := b.validateInstance(req.Storage, instanceID, region)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
+	}
+
+	storedIdentity, err := whitelistIdentityEntry(req.Storage, instanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -440,6 +445,13 @@ func (b *backend) pathLoginRenew(
 	}
 	if imageEntry == nil {
 		return logical.ErrorResponse("image entry not found"), nil
+	}
+
+	// For now, rTagMaxTTL is cached in internal data during login and used in renewal for
+	// setting the MaxTTL for the stored login identity entry.
+	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
+	if err != nil {
+		return nil, err
 	}
 
 	// Re-evaluate the maxTTL bounds.
