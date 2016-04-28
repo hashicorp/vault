@@ -784,7 +784,7 @@ func (c *Core) Standby() (bool, error) {
 }
 
 // Leader is used to get the current active leader
-func (c *Core) Leader() (bool, string, error) {
+func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	// Check if HA enabled
