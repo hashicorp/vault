@@ -44,6 +44,12 @@ This is an optional field, but if set, the created tag can only be used by the i
 				Description: "The maximum allowed lease duration.",
 			},
 
+			"allow_instance_migration": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution.",
+			},
+
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
@@ -79,6 +85,9 @@ func (b *backend) pathImageTagUpdate(
 
 	// This is an optional field.
 	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
+
+	// This is an optional field.
+	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
 
 	// Fetch the image entry corresponding to the AMI ID
 	imageEntry, err := awsImage(req.Storage, amiID)
@@ -132,6 +141,7 @@ func (b *backend) pathImageTagUpdate(
 		MaxTTL:                   maxTTL,
 		InstanceID:               instanceID,
 		DisallowReauthentication: disallowReauthentication,
+		AllowInstanceMigration:   allowInstanceMigration,
 	}, imageEntry)
 	if err != nil {
 		return nil, err
@@ -244,7 +254,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	}
 
 	// Attach Version, Nonce, AMI ID, Policies, DisallowReauthentication fields.
-	value := fmt.Sprintf("%s:%s:a=%s:p=%s:d=%s", rTag.Version, rTag.Nonce, rTag.AmiID, strings.Join(rTag.Policies, ","), strconv.FormatBool(rTag.DisallowReauthentication))
+	value := fmt.Sprintf("%s:%s:a=%s:p=%s:d=%s:m=%s", rTag.Version, rTag.Nonce, rTag.AmiID, strings.Join(rTag.Policies, ","), strconv.FormatBool(rTag.DisallowReauthentication), strconv.FormatBool(rTag.AllowInstanceMigration))
 
 	// Attach instance_id if set.
 	if rTag.InstanceID != "" {
@@ -300,6 +310,11 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
 		case strings.Contains(tagItem, "d="):
 			rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
+			if err != nil {
+				return nil, err
+			}
+		case strings.Contains(tagItem, "m="):
+			rTag.AllowInstanceMigration, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "m="))
 			if err != nil {
 				return nil, err
 			}
@@ -368,6 +383,7 @@ type roleTag struct {
 	AmiID                    string        `json:"ami_id" structs:"ami_id" mapstructure:"ami_id"`
 	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
 }
 
 func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
@@ -380,7 +396,8 @@ func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
 		rTag1.AmiID == rTag2.AmiID &&
 		rTag1.HMAC == rTag2.HMAC &&
 		rTag1.InstanceID == rTag2.InstanceID &&
-		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication
+		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication &&
+		rTag1.AllowInstanceMigration == rTag2.AllowInstanceMigration
 }
 
 const pathImageTagSyn = `

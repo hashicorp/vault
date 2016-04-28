@@ -174,6 +174,12 @@ actions; the current metadata does not provide for a way to allow this
 automatic behavior during reboots. The backend will be updated if this needed
 metadata becomes available.
 
+The `allow_instance_migration` option is set per-AMI, and can also be
+specified in a role tag. Since role tags can only restrict behavior, if the
+option is set to `false` on the AMI, a value of `true` in the role tag takes
+effect; however, if the option is set to `true` on the AMI, a value set in the
+role tag has no effect.
+
 ### Disabling Reauthentication
 
 If in a given organization's architecture a client fetches a long-lived Vault
@@ -187,7 +193,7 @@ When `disallow_reauthentication` option is enabled, the client can choose not
 to supply a nonce during login, although it is not an error to do so (the nonce
 is simply ignored). Note that reauthentication is enabled by default. If only
 a single login is desired, `disable_reauthentication` should be set explicitly
-on the registered AMI.
+on the registered AMI or on the role tag.
 
 The `disallow_reauthentication` option is set per-AMI, and can also be
 specified in a role tag. Since role tags can only restrict behavior, if the
@@ -1001,6 +1007,13 @@ The response will be in JSON. For example:
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
         If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/whitelist/identity endpoint. Defaults to 'false'.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">allow_instance_migration</span>
+        <span class="param-flags">optional</span>
+        If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution. Defaults to 'false'.
       </li>
     </ul>
   </dd>
