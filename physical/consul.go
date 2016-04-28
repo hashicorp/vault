@@ -79,6 +79,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 	if !ok {
 		path = "vault/"
 	}
+	logger.Printf("[DEBUG]: consul: config path set to %v", path)
 
 	// Ensure path is suffixed but not prefixed
 	if !strings.HasSuffix(path, "/") {
@@ -100,12 +101,14 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		}
 		disableRegistration = b
 	}
+	logger.Printf("[DEBUG]: consul: config disable_registration set to %v", disableRegistration)
 
 	// Get the service name to advertise in Consul
 	service, ok := conf["service"]
 	if !ok {
 		service = defaultServiceName
 	}
+	logger.Printf("[DEBUG]: consul: config service set to %s", service)
 
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]
@@ -121,6 +124,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		}
 
 		checkTimeout = d
+		logger.Printf("[DEBUG]: consul: config check_timeout set to %v", d)
 	}
 
 	// Configure the client
@@ -128,12 +132,15 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
+		logger.Printf("[DEBUG]: consul: config address set to %d", addr)
 	}
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
+		logger.Printf("[DEBUG]: consul: config scheme set to %d", scheme)
 	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
+		logger.Printf("[DEBUG]: consul: config token set")
 	}
 
 	if consulConf.Scheme == "https" {
@@ -146,6 +153,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		transport.MaxIdleConnsPerHost = 4
 		transport.TLSClientConfig = tlsClientConfig
 		consulConf.HttpClient.Transport = transport
+		logger.Printf("[DEBUG]: consul: configured TLS")
 	}
 
 	client, err := api.NewClient(consulConf)
