@@ -12,7 +12,7 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 cd "$DIR"
 
 # Set build tags
-BUILD_TAGS="${VAULT_BUILD_TAGS:-"vault"}"
+BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 
 # Get the git commit
 GIT_COMMIT="$(git rev-parse HEAD)"
