@@ -93,7 +93,7 @@ type backend struct {
 // Tidying of blacklist and whitelist are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
 func (b *backend) periodicFunc(req *logical.Request) error {
-	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
+	if b.nextTidyTime.IsZero() || !time.Now().UTC().Before(b.nextTidyTime) {
 		// safety_buffer defaults to 72h
 		safety_buffer := 259200
 		tidyBlacklistConfigEntry, err := b.configTidyRoleTags(req.Storage)
@@ -137,7 +137,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		}
 
 		// Update the nextTidyTime
-		b.nextTidyTime = time.Now().Add(b.tidyCooldownPeriod)
+		b.nextTidyTime = time.Now().UTC().Add(b.tidyCooldownPeriod)
 	}
 	return nil
 }
