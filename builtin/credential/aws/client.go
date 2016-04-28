@@ -75,10 +75,10 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 // flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.
 // If the client credentials configuration is deleted or updated in the backend, all
 // the cached EC2 client objects will be flushed.
+//
+// Lock should be actuired using b.configMutex.Lock() before calling this method and
+// unlocked using b.configMutex.Unlock() after returning.
 func (b *backend) flushCachedEC2Clients() {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
-
 	// deleting items in map during iteration is safe.
 	for region, _ := range b.EC2ClientsMap {
 		delete(b.EC2ClientsMap, region)

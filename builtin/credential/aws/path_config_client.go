@@ -95,8 +95,6 @@ func (b *backend) pathConfigClientDelete(
 		return nil, err
 	}
 
-	b.configMutex.Unlock()
-
 	// Remove all the cached EC2 client objects in the backend.
 	b.flushCachedEC2Clients()
 
@@ -151,11 +149,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 	}
 
 	if changedCreds {
-		// We have to be careful here to re-lock as we have a deferred unlock
-		// queued up and unlocking an unlocked mutex leads to a panic
-		b.configMutex.Unlock()
 		b.flushCachedEC2Clients()
-		b.configMutex.Lock()
 	}
 
 	return nil, nil
