@@ -39,6 +39,8 @@ func pathConfigClient(b *backend) *framework.Path {
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigClientExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	entry, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
@@ -48,9 +50,6 @@ func (b *backend) pathConfigClientExistenceCheck(
 
 // Fetch the client configuration required to access the AWS API.
 func (b *backend) clientConfigEntry(s logical.Storage) (*clientConfig, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	entry, err := s.Get("config/client")
 	if err != nil {
 		return nil, err
@@ -68,6 +67,8 @@ func (b *backend) clientConfigEntry(s logical.Storage) (*clientConfig, error) {
 
 func (b *backend) pathConfigClientRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	clientConfig, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err

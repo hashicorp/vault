@@ -467,16 +467,6 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if !exists {
 		t.Fatal("existence check should have returned 'true' for 'config/client'")
 	}
-
-	// test the "config/client" read helper
-	clientConfig, err := clientConfigEntry(storage)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if clientConfig.AccessKey != data["access_key"] ||
-		clientConfig.SecretKey != data["secret_key"] {
-		t.Fatalf("bad: expected: %#v\ngot: %#v\n", data, clientConfig)
-	}
 }
 
 func TestBackend_pathConfigCertificate(t *testing.T) {
