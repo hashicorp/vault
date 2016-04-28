@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -131,16 +132,22 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 
 // awsPublicCertificates returns a slice of all the parsed AWS public
 // certificates, that were registered using `config/certificate/<cert_name>` endpoint.
-// This method will also append two default certificates to the slice.
+// This method will also append default certificate to the slice.
 func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
 
-	// Get the list `cert_name`s of all the registered certificates.
+	var certs []*x509.Certificate
+	// Append the generic certificate provided in the AWS EC2 instance metadata documentation.
+	decodedCert, err := decodePEMAndParseCertificate(genericAWSPublicCertificate)
+	if err != nil {
+		return nil, err
+	}
+	certs = append(certs, decodedCert)
+
+	// Get the list of all the registered certificates.
 	registeredCerts, err := s.List("config/certificate/")
 	if err != nil {
 		return nil, err
 	}
-
-	var certs []*x509.Certificate
 
 	// Iterate through each certificate, parse and append it to a slice.
 	for _, cert := range registeredCerts {
@@ -158,13 +165,6 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 		certs = append(certs, decodedCert)
 	}
 
-	// Append the generic certificate provided in the documentation.
-	decodedCert, err := decodePEMAndParseCertificate(genericAWSPublicCertificate)
-	if err != nil {
-		return nil, err
-	}
-	certs = append(certs, decodedCert)
-
 	return certs, nil
 }
 
@@ -178,7 +178,6 @@ func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) 
 		return nil, err
 	}
 	if entry == nil {
-		// Existence check depends on this being nil when the storage entry is not present.
 		return nil, nil
 	}
 
@@ -209,7 +208,6 @@ func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framew
 // used to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) pathConfigCertificateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return logical.ErrorResponse("missing cert_name"), nil
@@ -224,9 +222,7 @@ func (b *backend) pathConfigCertificateRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"aws_public_cert": certificateEntry.AWSPublicCert,
-		},
+		Data: structs.New(certificateEntry).Map(),
 	}, nil
 }
 
@@ -234,7 +230,6 @@ func (b *backend) pathConfigCertificateRead(
 // used to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) pathConfigCertificateCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return logical.ErrorResponse("missing cert_name"), nil
@@ -303,12 +298,17 @@ Configure the AWS Public Key that is used to verify the PKCS#7 signature of the 
 `
 
 const pathConfigCertificateDesc = `
-AWS Public Key used to verify the PKCS#7 signature of the identity document
-varies by region. It can be found in AWS's documentation. The default key that
-is used to verify the signature is the one that is applicable for following regions:
-US East (N. Virginia), US West (Oregon), US West (N. California), EU (Ireland),
-EU (Frankfurt), Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
+AWS Public Key which is used to verify the PKCS#7 signature of the identity document,
+varies by region. The public key can be found in AWS EC2 instance metadata documentation.
+The default key that is used to verify the signature is the one that is applicable for
+following regions: US East (N. Virginia), US West (Oregon), US West (N. California),
+EU (Ireland), EU (Frankfurt), Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
 Asia Pacific (Sydney), and South America (Sao Paulo).
+
+If the instances belongs to region other than the above, the public key for the corresponding
+regions should be registered using this endpoint. PKCS#7 is verified using a collection
+of certificates containing the default certificate and all the registered certificates
+added using this endpoint.
 `
 const pathListCertificatesHelpSyn = `
 Lists all the AWS public certificates that are registered with Vault.

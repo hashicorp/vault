@@ -25,9 +25,9 @@ func pathConfigClient(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.CreateOperation: b.pathConfigClientCreateUpdate,
+			logical.UpdateOperation: b.pathConfigClientCreateUpdate,
 			logical.DeleteOperation: b.pathConfigClientDelete,
 			logical.ReadOperation:   b.pathConfigClientRead,
-			logical.UpdateOperation: b.pathConfigClientCreateUpdate,
 		},
 
 		HelpSynopsis:    pathConfigClientHelpSyn,
@@ -39,9 +39,6 @@ func pathConfigClient(b *backend) *framework.Path {
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigClientExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	entry, err := clientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
@@ -51,6 +48,9 @@ func (b *backend) pathConfigClientExistenceCheck(
 
 // Fetch the client configuration required to access the AWS API.
 func clientConfigEntry(s logical.Storage) (*clientConfig, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
 	entry, err := s.Get("config/client")
 	if err != nil {
 		return nil, err
@@ -68,9 +68,6 @@ func clientConfigEntry(s logical.Storage) (*clientConfig, error) {
 
 func (b *backend) pathConfigClientRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	clientConfig, err := clientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
@@ -88,6 +85,7 @@ func (b *backend) pathConfigClientRead(
 func (b *backend) pathConfigClientDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 
 	err := req.Storage.Delete("config/client")
 	if err != nil {
@@ -105,9 +103,6 @@ func (b *backend) pathConfigClientDelete(
 // that can be used to interact with AWS EC2 API.
 func (b *backend) pathConfigClientCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
-
 	configEntry, err := clientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
@@ -138,6 +133,9 @@ func (b *backend) pathConfigClientCreateUpdate(
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.SecretKey = data.Get("secret_key").(string)
 	}
+
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/client", configEntry)
 	if err != nil {
