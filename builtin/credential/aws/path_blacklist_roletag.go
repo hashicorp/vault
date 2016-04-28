@@ -91,11 +91,7 @@ func (b *backend) pathBlacklistRoleTagDelete(
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	err := req.Storage.Delete("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return nil, req.Storage.Delete("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
 }
 
 // If the given role tag is blacklisted, returns the details of the blacklist entry.
@@ -225,7 +221,7 @@ Blacklist a role tag so that it cannot be used by an EC2 instance to perform log
 in the future. This can be used if the role tag is suspected or believed to be possessed
 by an unintended party.
 
-By default, a cron task will periodically look for expired entries in the blacklist
+By default, a cron task will periodically looks for expired entries in the blacklist
 and delete them. The duration to periodically run this is one hour by default.
 However, this can be configured using the 'config/tidy/roletags' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/roletags' endpoint.

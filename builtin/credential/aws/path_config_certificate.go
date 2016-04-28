@@ -193,15 +193,13 @@ func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) 
 func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
+
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
-	err := req.Storage.Delete("config/certificate/" + certName)
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+
+	return nil, req.Storage.Delete("config/certificate/" + certName)
 }
 
 // pathConfigCertificateRead is used to view the configured AWS Public Key that is

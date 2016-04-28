@@ -38,14 +38,14 @@ expiration, before it is removed from the backend storage.`,
 }
 
 func (b *backend) pathConfigTidyRoleTagsExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := configTidyRoleTags(req.Storage)
+	entry, err := b.configTidyRoleTags(req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+func (b *backend) configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
@@ -66,7 +66,7 @@ func configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) 
 }
 
 func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	configEntry, err := configTidyRoleTags(req.Storage)
+	configEntry, err := b.configTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 }
 
 func (b *backend) pathConfigTidyRoleTagsRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := configTidyRoleTags(req.Storage)
+	clientConfig, err := b.configTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -119,11 +119,7 @@ func (b *backend) pathConfigTidyRoleTagsDelete(req *logical.Request, data *frame
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	if err := req.Storage.Delete("config/tidy/roletags"); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, req.Storage.Delete("config/tidy/roletags")
 }
 
 type tidyBlacklistRoleTagConfig struct {

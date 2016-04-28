@@ -24,7 +24,7 @@ func pathImage(b *backend) *framework.Path {
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "If set, enables the RoleTag for this AMI. The value set for this field should be the 'key' of the tag on the EC2 instance using the RoleTag. Defaults to empty string.",
+				Description: "If set, enables the RoleTag for this AMI. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'image/<ami_id>/roletag' endpoint. Defaults to empty string.",
 			},
 
 			"max_ttl": &framework.FieldSchema{
@@ -111,11 +111,7 @@ func awsImage(s logical.Storage, amiID string) (*awsImageEntry, error) {
 // pathImageDelete is used to delete the information registered for a given AMI ID.
 func (b *backend) pathImageDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("image/" + strings.ToLower(data.Get("ami_id").(string)))
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return nil, req.Storage.Delete("image/" + strings.ToLower(data.Get("ami_id").(string)))
 }
 
 // pathImageList is used to list all the AMI IDs registered with Vault.
@@ -255,15 +251,17 @@ be registered with Vault. After the authentication of the instance, the
 authorization for the instance to access Vault's resources is determined
 by the policies that are associated to the AMI through this endpoint.
 
-In case the AMI is shared by many instances, then a role tag can be created
-through the endpoint 'image/<ami_id>/tag'. This tag needs to be applied on the
-instance before it attempts to login to Vault. The policies on the tag should
-be a subset of policies that are associated to the AMI in this endpoint. In
-order to enable login using tags, RoleTag needs to be enabled in this endpoint.
+When the instances share an AMI and when only a subset of policies on the AMI
+are supposed to be applicable for any instance, then 'role_tag' option on the AMI
+can be enabled to create a role via the endpoint 'image/<ami_id>/tag'.
+This tag then needs to be applied on the instance before it attempts to login
+to Vault. The policies on the tag should be a subset of policies that are
+associated to the AMI in this endpoint. In order to enable login using tags,
+RoleTag needs to be enabled in this endpoint.
 
 Also, a 'max_ttl' can be configured in this endpoint that determines the maximum
 duration for which a login can be renewed. Note that the 'max_ttl' has a upper
-limit of the 'max_ttl' value that is applicable to the backend.
+limit of the 'max_ttl' value that is applicable to the backend's mount.
 `
 
 const pathListImagesHelpSyn = `

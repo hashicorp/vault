@@ -22,7 +22,7 @@ import (
 // * Instance metadata role
 func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config, error) {
 	// Read the configured secret key and access key
-	config, err := clientConfigEntry(s)
+	config, err := b.clientConfigEntry(s)
 	if err != nil {
 		return nil, err
 	}

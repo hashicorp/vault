@@ -39,7 +39,7 @@ func pathConfigClient(b *backend) *framework.Path {
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigClientExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := clientConfigEntry(req.Storage)
+	entry, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -47,7 +47,7 @@ func (b *backend) pathConfigClientExistenceCheck(
 }
 
 // Fetch the client configuration required to access the AWS API.
-func clientConfigEntry(s logical.Storage) (*clientConfig, error) {
+func (b *backend) clientConfigEntry(s logical.Storage) (*clientConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
@@ -68,7 +68,7 @@ func clientConfigEntry(s logical.Storage) (*clientConfig, error) {
 
 func (b *backend) pathConfigClientRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := clientConfigEntry(req.Storage)
+	clientConfig, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,7 @@ func (b *backend) pathConfigClientDelete(
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	err := req.Storage.Delete("config/client")
-	if err != nil {
+	if err := req.Storage.Delete("config/client"); err != nil {
 		b.configMutex.Unlock()
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func (b *backend) pathConfigClientDelete(
 // that can be used to interact with AWS EC2 API.
 func (b *backend) pathConfigClientCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	configEntry, err := clientConfigEntry(req.Storage)
+	configEntry, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
 	}

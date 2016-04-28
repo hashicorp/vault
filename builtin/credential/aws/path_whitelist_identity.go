@@ -92,11 +92,7 @@ func (b *backend) pathWhitelistIdentityDelete(
 		return logical.ErrorResponse("missing instance_id"), nil
 	}
 
-	if err := req.Storage.Delete("whitelist/identity/" + instanceID); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, req.Storage.Delete("whitelist/identity/" + instanceID)
 }
 
 // pathWhitelistIdentityRead is used to view an entry in the identity whitelist given an instance ID.
@@ -140,7 +136,7 @@ Each login from an EC2 instance creates/updates an entry in the identity whiteli
 
 Entries in this list can be viewed or deleted using this endpoint.
 
-By default, a cron task will periodically look for expired entries in the whitelist
+By default, a cron task will periodically looks for expired entries in the whitelist
 and delete them. The duration to periodically run this is one hour by default.
 However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/identities' endpoint.

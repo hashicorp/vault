@@ -77,6 +77,7 @@ func (b *backend) pathImageTagUpdate(
 	// Remove all other policies if 'root' is present.
 	policies := policyutil.ParsePolicies(data.Get("policies").(string))
 
+	// This is an optional field.
 	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
 
 	// Fetch the image entry corresponding to the AMI ID
@@ -95,11 +96,11 @@ func (b *backend) pathImageTagUpdate(
 
 	// There should be a HMAC key present in the image entry
 	if imageEntry.HMACKey == "" {
-		// Not able to find the HMACKey is an internal error
+		// Not being able to find the HMACKey is an internal error
 		return nil, fmt.Errorf("failed to find the HMAC key")
 	}
 
-	// Create a random nonce
+	// Create a random nonce.
 	nonce, err := createRoleTagNonce()
 	if err != nil {
 		return nil, err
@@ -158,29 +159,36 @@ func createRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (string, error
 	}
 
 	// Attach version, nonce, policies and maxTTL to the role tag value.
-	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
+	rTagPlaintext, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		return "", err
 	}
 
-	return appendHMAC(rTagPlainText, imageEntry)
+	// Attach HMAC to tag's plaintext and return.
+	return appendHMAC(rTagPlaintext, imageEntry)
 }
 
 // Takes in the plaintext part of the role tag, creates a HMAC of it and returns
 // a role tag value containing both the plaintext part and the HMAC part.
-func appendHMAC(rTagPlainText string, imageEntry *awsImageEntry) (string, error) {
+func appendHMAC(rTagPlaintext string, imageEntry *awsImageEntry) (string, error) {
+	if rTagPlaintext == "" {
+		return "", fmt.Errorf("empty role tag plaintext string")
+	}
+
 	if imageEntry == nil {
 		return "", fmt.Errorf("nil image entry")
 	}
 
 	// Create the HMAC of the value
-	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlainText)
+	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlaintext)
 	if err != nil {
 		return "", err
 	}
 
 	// attach the HMAC to the value
-	rTagValue := fmt.Sprintf("%s:%s", rTagPlainText, hmacB64)
+	rTagValue := fmt.Sprintf("%s:%s", rTagPlaintext, hmacB64)
+
+	// This limit of 255 is enforced on the EC2 instance. Hence complying to it here.
 	if len(rTagValue) > 255 {
 		return "", fmt.Errorf("role tag 'value' exceeding the limit of 255 characters")
 	}
@@ -201,16 +209,17 @@ func verifyRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (bool, error) 
 	}
 
 	// Fetch the plaintext part of role tag
-	rTagPlainText, err := prepareRoleTagPlaintextValue(rTag)
+	rTagPlaintext, err := prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
 		return false, err
 	}
 
 	// Compute the HMAC of the plaintext
-	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlainText)
+	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlaintext)
 	if err != nil {
 		return false, err
 	}
+
 	return subtle.ConstantTimeCompare([]byte(rTag.HMAC), []byte(hmacB64)) == 1, nil
 }
 
@@ -229,6 +238,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 		return "", fmt.Errorf("missing ami_id")
 	}
 
+	// This avoids an empty policy, ":p=:" in the role tag.
 	if rTag.Policies == nil || len(rTag.Policies) == 0 {
 		rTag.Policies = []string{"default"}
 	}
@@ -253,6 +263,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 // also verifies the correctness of the parsed role tag.
 func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
+
 	// Tag must contain version, nonce, policies and HMAC
 	if len(tagItems) < 4 {
 		return nil, fmt.Errorf("invalid tag")
@@ -263,45 +274,45 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 	// Cache the HMAC value. The last item in the collection.
 	rTag.HMAC = tagItems[len(tagItems)-1]
 
-	// Delete the HMAC from the list.
+	// Remove the HMAC from the list.
 	tagItems = tagItems[:len(tagItems)-1]
 
-	// Version is the first element.
+	// Version will be the first element.
 	rTag.Version = tagItems[0]
 	if rTag.Version != roleTagVersion {
 		return nil, fmt.Errorf("invalid role tag version")
 	}
 
-	// Nonce is the second element.
+	// Nonce will be the second element.
 	rTag.Nonce = tagItems[1]
 
-	if len(tagItems) > 2 {
-		// Delete the version and nonce from the list.
-		tagItems = tagItems[2:]
-		for _, tagItem := range tagItems {
-			var err error
-			switch {
-			case strings.Contains(tagItem, "i="):
-				rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
-			case strings.Contains(tagItem, "a="):
-				rTag.AmiID = strings.TrimPrefix(tagItem, "a=")
-			case strings.Contains(tagItem, "p="):
-				rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
-			case strings.Contains(tagItem, "d="):
-				rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
-				if err != nil {
-					return nil, err
-				}
-			case strings.Contains(tagItem, "t="):
-				rTag.MaxTTL, err = time.ParseDuration(strings.TrimPrefix(tagItem, "t="))
-				if err != nil {
-					return nil, err
-				}
-			default:
-				return nil, fmt.Errorf("unrecognized item in tag")
+	// Delete the version and nonce from the list.
+	tagItems = tagItems[2:]
+
+	for _, tagItem := range tagItems {
+		var err error
+		switch {
+		case strings.Contains(tagItem, "i="):
+			rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
+		case strings.Contains(tagItem, "a="):
+			rTag.AmiID = strings.TrimPrefix(tagItem, "a=")
+		case strings.Contains(tagItem, "p="):
+			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
+		case strings.Contains(tagItem, "d="):
+			rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
+			if err != nil {
+				return nil, err
 			}
+		case strings.Contains(tagItem, "t="):
+			rTag.MaxTTL, err = time.ParseDuration(strings.TrimPrefix(tagItem, "t="))
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unrecognized item %s in tag", tagItem)
 		}
 	}
+
 	if rTag.AmiID == "" {
 		return nil, fmt.Errorf("missing image ID")
 	}
@@ -320,8 +331,9 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 		return nil, err
 	}
 	if !verified {
-		return nil, fmt.Errorf("role tag signature mismatch")
+		return nil, fmt.Errorf("role tag signature verification failed")
 	}
+
 	return rTag, nil
 }
 
@@ -339,11 +351,11 @@ func createRoleTagHMACBase64(key, value string) (string, error) {
 
 // Creates a base64 encoded random nonce.
 func createRoleTagNonce() (string, error) {
-	uuidBytes, err := uuid.GenerateRandomBytes(8)
-	if err != nil {
+	if uuidBytes, err := uuid.GenerateRandomBytes(8); err != nil {
 		return "", err
+	} else {
+		return base64.StdEncoding.EncodeToString(uuidBytes), nil
 	}
-	return base64.StdEncoding.EncodeToString(uuidBytes), nil
 }
 
 // Struct roleTag represents a role tag in a struc form.
@@ -376,14 +388,14 @@ Create a tag for an EC2 instance.
 `
 
 const pathImageTagDesc = `
-When an AMI is used by more than one EC2 instance, policies to be associated
-during login are determined by a particular tag on the instance. This tag
-can be created using this endpoint.
+When an AMI is used by more than one EC2 instance and there is a need
+to apply only a subset of AMI's policies on the instance, create a 
+role tag using this endpoint and apply it on the instance.
 
 A RoleTag setting needs to be enabled in 'image/<ami_id>' endpoint, to be able
 to create a tag. Also, the policies to be associated with the tag should be
 a subset of the policies associated with the regisred AMI.
 
 This endpoint will return both the 'key' and the 'value' to be set for the
-instance tag.
+EC2 instance tag.
 `
