@@ -19,7 +19,7 @@ expiration, before it is removed from the backend storage.`,
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>' entries and 'whitelist/identity/<instance_id>' entries.",
+				Description: "If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>' entries.",
 			},
 		},
 
@@ -38,9 +38,6 @@ expiration, before it is removed from the backend storage.`,
 }
 
 func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	entry, err := configTidyIdentities(req.Storage)
 	if err != nil {
 		return false, err
@@ -49,6 +46,8 @@ func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, d
 }
 
 func configTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
 	entry, err := s.Get("config/tidy/identities")
 	if err != nil {
 		return nil, err
@@ -65,8 +64,6 @@ func configTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, erro
 }
 
 func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
 	configEntry, err := configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
@@ -74,18 +71,23 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 	if configEntry == nil {
 		configEntry = &tidyWhitelistIdentityConfig{}
 	}
+
 	safetyBufferInt, ok := data.GetOk("safety_buffer")
 	if ok {
 		configEntry.SafetyBuffer = safetyBufferInt.(int)
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.SafetyBuffer = data.Get("safety_buffer").(int)
 	}
+
 	disablePeriodicTidyBool, ok := data.GetOk("disable_periodic_tidy")
 	if ok {
 		configEntry.DisablePeriodicTidy = disablePeriodicTidyBool.(bool)
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
+
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/tidy/identities", configEntry)
 	if err != nil {
@@ -100,17 +102,14 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 }
 
 func (b *backend) pathConfigTidyIdentitiesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	clientConfig, err := configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-
 	if clientConfig == nil {
 		return nil, nil
 	}
+
 	return &logical.Response{
 		Data: structs.New(clientConfig).Map(),
 	}, nil
@@ -136,8 +135,8 @@ const pathConfigTidyIdentitiesHelpSyn = `
 Configures the periodic tidying operation of the whitelisted identity entries.
 `
 const pathConfigTidyIdentitiesHelpDesc = `
-By default, the expired entries in teb whitelist will be attempted to be removed
+By default, the expired entries in the whitelist will be attempted to be removed
 periodically. This operation will look for expired items in the list and purge them.
-However, there is a safety buffer duration (defaults to 72h), which purges the entries,
+However, there is a safety buffer duration (defaults to 72h), purges the entries
 only if they have been persisting this duration, past its expiration time.
 `

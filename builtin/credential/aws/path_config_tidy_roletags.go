@@ -19,7 +19,7 @@ expiration, before it is removed from the backend storage.`,
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries and 'whitelist/identity/<instance_id>' entries.",
+				Description: "If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries.",
 			},
 		},
 
@@ -38,9 +38,6 @@ expiration, before it is removed from the backend storage.`,
 }
 
 func (b *backend) pathConfigTidyRoleTagsExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	entry, err := configTidyRoleTags(req.Storage)
 	if err != nil {
 		return false, err
@@ -49,6 +46,9 @@ func (b *backend) pathConfigTidyRoleTagsExistenceCheck(req *logical.Request, dat
 }
 
 func configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
 	entry, err := s.Get("config/tidy/roletags")
 	if err != nil {
 		return nil, err
@@ -61,12 +61,11 @@ func configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) 
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
+
 	return &result, nil
 }
 
 func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
 	configEntry, err := configTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
@@ -87,6 +86,9 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
 
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
 	entry, err := logical.StorageEntryJSON("config/tidy/roletags", configEntry)
 	if err != nil {
 		return nil, err
@@ -100,17 +102,14 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 }
 
 func (b *backend) pathConfigTidyRoleTagsRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	clientConfig, err := configTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-
 	if clientConfig == nil {
 		return nil, nil
 	}
+
 	return &logical.Response{
 		Data: structs.New(clientConfig).Map(),
 	}, nil
@@ -138,6 +137,6 @@ Configures the periodic tidying operation of the blacklisted role tag entries.
 const pathConfigTidyRoleTagsHelpDesc = `
 By default, the expired entries in the blacklist will be attempted to be removed
 periodically. This operation will look for expired items in the list and purge them.
-However, there is a safety buffer duration (defaults to 72h), which purges the entries,
+However, there is a safety buffer duration (defaults to 72h), purges the entries
 only if they have been persisting this duration, past its expiration time.
 `
