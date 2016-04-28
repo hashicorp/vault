@@ -217,12 +217,12 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		// Reload the policy with the write lock to ensure we still need the upgrade
 		p, err = lm.getStoredPolicy(storage, name)
 		if err != nil {
-			defer lm.UnlockPolicy(name, exclusive)
+			lm.UnlockPolicy(name, exclusive)
 			return
 		}
 		if p == nil {
-			defer lm.UnlockPolicy(name, exclusive)
 			err = fmt.Errorf("error reloading policy for upgrade")
+			lm.UnlockPolicy(name, exclusive)
 			return
 		}
 
@@ -300,7 +300,7 @@ func (lm *lockManager) RefreshPolicy(storage logical.Storage, name string) (p *P
 
 	p, err = lm.getStoredPolicy(storage, name)
 	if err != nil {
-		defer lm.UnlockPolicy(name, exclusive)
+		lm.UnlockPolicy(name, exclusive)
 		return
 	}
 
