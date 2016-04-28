@@ -51,6 +51,17 @@ func (b *backend) pathBlacklistRoleTagsList(
 	if err != nil {
 		return nil, err
 	}
+
+	// Tags are base64 encoded and then indexed to avoid problems
+	// with the path separators being present in the tag.
+	// Reverse it before returning the list response.
+	for i, keyB64 := range tags {
+		if key, err := base64.StdEncoding.DecodeString(keyB64); err != nil {
+			return nil, err
+		} else {
+			tags[i] = string(key)
+		}
+	}
 	return logical.ListResponse(tags), nil
 }
 

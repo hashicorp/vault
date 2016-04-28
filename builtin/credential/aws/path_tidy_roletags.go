@@ -78,11 +78,10 @@ Clean-up the blacklisted role tag entries.
 
 const pathTidyRoleTagsDesc = `
 When a role tag is blacklisted, the expiration time of the blacklist entry is
-determined by the 'max_ttl' present in the role tag. If 'max_ttl' is not provided
-in the role tag, the backend mount's 'max_ttl' value will be used to determine
-the expiration time of the blacklist entry.
+set based on the least 'max_ttl' value set on: AMI entry, the role tag and the
+backend's mount.
 
-When this endpoint is invoked all the entries that are expired will be deleted.
+When this endpoint is invoked all, the entries that are expired will be deleted.
 
 A 'safety_buffer' (duration in seconds) can be provided, to ensure deletion of
 only those entries that are expired before 'safety_buffer' seconds. 

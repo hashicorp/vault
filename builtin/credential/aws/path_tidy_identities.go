@@ -79,10 +79,10 @@ Clean-up the whitelisted instance identity entries.
 
 const pathTidyIdentitiesDesc = `
 When an instance identity is whitelisted, the expiration time of the whitelist
-entry is set to the least amont 'max_ttl' of the registered AMI, 'max_ttl' of the
-role tag and 'max_ttl' of the backend mount.
+entry is set based on the least 'max_ttl' value set on: AMI entry, the role tag
+and the backend's mount.
 
-When this endpoint is invoked all the entries that are expired will be deleted.
+When this endpoint is invoked, all the entries that are expired will be deleted.
 
 A 'safety_buffer' (duration in seconds) can be provided, to ensure deletion of
 only those entries that are expired before 'safety_buffer' seconds. 
