@@ -979,7 +979,49 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 
 	testCoreMakeToken(t, c, root, "client", "3600s", []string{"foo"})
 
+	// Test via GET
 	req = logical.TestRequest(t, logical.ReadOperation, "lookup/client")
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	exp = map[string]interface{}{
+		"id":           "client",
+		"accessor":     resp.Data["accessor"],
+		"policies":     []string{"default", "foo"},
+		"path":         "auth/token/create",
+		"meta":         map[string]string(nil),
+		"display_name": "token",
+		"orphan":       false,
+		"num_uses":     0,
+		"creation_ttl": int64(3600),
+		"ttl":          int64(3600),
+		"role":         "",
+	}
+
+	if resp.Data["creation_time"].(int64) == 0 {
+		t.Fatalf("creation time was zero")
+	}
+	delete(resp.Data, "creation_time")
+
+	// Depending on timing of the test this may have ticked down, so accept 3599
+	if resp.Data["ttl"].(int64) == 3599 {
+		resp.Data["ttl"] = int64(3600)
+	}
+
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
+	}
+
+	// Test via POST
+	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
+	req.Data = map[string]interface{}{
+		"token": "client",
+	}
 	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
