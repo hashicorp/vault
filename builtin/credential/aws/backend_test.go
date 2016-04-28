@@ -66,7 +66,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// parse the created role tag
-	rTag2, err := parseRoleTagValue(storage, val)
+	rTag2, err := parseAndVerifyRoleTagValue(storage, val)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,7 +735,7 @@ func TestBackend_pathImage(t *testing.T) {
 
 }
 
-func TestBackend_parseRoleTagValue(t *testing.T) {
+func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	// create a backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -791,7 +791,7 @@ func TestBackend_parseRoleTagValue(t *testing.T) {
 	tagValue := resp.Data["tag_value"].(string)
 
 	// parse the value and check if the verifiable values match
-	rTag, err := parseRoleTagValue(storage, tagValue)
+	rTag, err := parseAndVerifyRoleTagValue(storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

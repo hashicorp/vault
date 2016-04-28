@@ -351,7 +351,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	}
 
 	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC.
-	rTag, err := parseRoleTagValue(s, rTagValue)
+	rTag, err := parseAndVerifyRoleTagValue(s, rTagValue)
 	if err != nil {
 		return nil, err
 	}

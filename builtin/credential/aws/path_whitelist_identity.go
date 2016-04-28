@@ -3,6 +3,7 @@ package aws
 import (
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -29,7 +30,7 @@ func pathWhitelistIdentity(b *backend) *framework.Path {
 
 func pathListWhitelistIdentities(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/identity/?",
+		Pattern: "whitelist/identities/?",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathWhitelistIdentitiesList,
@@ -91,8 +92,7 @@ func (b *backend) pathWhitelistIdentityDelete(
 		return logical.ErrorResponse("missing instance_id"), nil
 	}
 
-	err := req.Storage.Delete("whitelist/identity/" + instanceID)
-	if err != nil {
+	if err := req.Storage.Delete("whitelist/identity/" + instanceID); err != nil {
 		return nil, err
 	}
 
@@ -116,25 +116,19 @@ func (b *backend) pathWhitelistIdentityRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"ami_id":          entry.AmiID,
-			"creation_time":   entry.CreationTime.String(),
-			"expiration_time": entry.ExpirationTime.String(),
-			"client_nonce":    entry.ClientNonce,
-			"pending_time":    entry.PendingTime,
-		},
+		Data: structs.New(entry).Map(),
 	}, nil
 }
 
 // Struct to represent each item in the identity whitelist.
 type whitelistIdentity struct {
 	AmiID                    string    `json:"ami_id" structs:"ami_id" mapstructure:"ami_id"`
-	DisallowReauthentication bool      `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	PendingTime              string    `json:"pending_time" structs:"pending_time" mapstructure:"pending_time"`
 	ClientNonce              string    `json:"client_nonce" structs:"client_nonce" mapstructure:"client_nonce"`
 	CreationTime             time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
-	LastUpdatedTime          time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
+	DisallowReauthentication bool      `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	PendingTime              string    `json:"pending_time" structs:"pending_time" mapstructure:"pending_time"`
 	ExpirationTime           time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
+	LastUpdatedTime          time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
 }
 
 const pathWhitelistIdentitySyn = `
@@ -146,9 +140,10 @@ Each login from an EC2 instance creates/updates an entry in the identity whiteli
 
 Entries in this list can be viewed or deleted using this endpoint.
 
-The entries in the whitelist are not automatically deleted. Although, they will have an
-expiration time set on the entry. There is a separate endpoint 'tidy/identities',
-that needs to be invoked to clean-up all the expired entries in the whitelist.
+By default, a cron task will periodically look for expired entries in the whitelist
+and delete them. The duration to periodically run this is one hour by default.
+However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
+action can be triggered via the API as well, using the 'tidy/identities' endpoint.
 `
 
 const pathListWhitelistIdentitiesHelpSyn = `
@@ -158,5 +153,6 @@ List the items present in the identity whitelist.
 const pathListWhitelistIdentitiesHelpDesc = `
 The entries in the identity whitelist is keyed off of the EC2 instance IDs.
 This endpoint lists all the entries present in the identity whitelist, both
-expired and un-expired entries.
+expired and un-expired entries. Use 'tidy/identities' endpoint to clean-up
+the whitelist of identities.
 `

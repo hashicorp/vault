@@ -1161,7 +1161,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/blacklist/roletag?list=true`</dd>
+  <dd>`/auth/aws/blacklist/roletags?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1305,7 +1305,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/whitelist/identity?list=true`</dd>
+  <dd>`/auth/aws/whitelist/identities?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>

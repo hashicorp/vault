@@ -249,8 +249,9 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	return value, nil
 }
 
-// Parses the tag from string form into a struct form.
-func parseRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
+// Parses the tag from string form into a struct form. This method
+// also verifies the correctness of the parsed role tag.
+func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
 	// Tag must contain version, nonce, policies and HMAC
 	if len(tagItems) < 4 {
