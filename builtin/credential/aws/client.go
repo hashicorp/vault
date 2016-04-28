@@ -32,6 +32,7 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 	if config != nil {
 		switch {
 		case config.AccessKey != "" && config.SecretKey != "":
+			// Add the static credential provider
 			providers = append(providers, &credentials.StaticProvider{
 				Value: credentials.Value{
 					AccessKeyID:     config.AccessKey,
@@ -45,8 +46,10 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 		}
 	}
 
+	// Add the environment credential provider
 	providers = append(providers, &credentials.EnvProvider{})
 
+	// Add the instance metadata role provider
 	// Create the credentials required to access the API.
 	providers = append(providers, &ec2rolecreds.EC2RoleProvider{
 		Client: ec2metadata.New(session.New(&aws.Config{
@@ -70,34 +73,44 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 }
 
 // flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.
+// If the client credentials configuration is deleted or updated in the backend, all
+// the cached EC2 client objects will be flushed.
 func (b *backend) flushCachedEC2Clients() {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
+	// deleting items in map during iteration is safe.
 	for region, _ := range b.EC2ClientsMap {
 		delete(b.EC2ClientsMap, region)
 	}
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API.
-func (b *backend) clientEC2(s logical.Storage, region string, recreate bool) (*ec2.EC2, error) {
-	if !recreate {
-		b.configMutex.RLock()
-		if b.EC2ClientsMap[region] != nil {
-			defer b.configMutex.RUnlock()
-			return b.EC2ClientsMap[region], nil
-		}
-		b.configMutex.RUnlock()
+func (b *backend) clientEC2(s logical.Storage, region string) (*ec2.EC2, error) {
+	b.configMutex.RLock()
+	if b.EC2ClientsMap[region] != nil {
+		defer b.configMutex.RUnlock()
+		// If the client object was already created, return it.
+		return b.EC2ClientsMap[region], nil
 	}
 
+	// Release the read lock and acquire the write lock.
+	b.configMutex.RUnlock()
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
+	// If the client gets created while switching the locks, return it.
+	if b.EC2ClientsMap[region] != nil {
+		return b.EC2ClientsMap[region], nil
+	}
+
+	// Fetch the configured credentials
 	awsConfig, err := b.getClientConfig(s, region)
 	if err != nil {
 		return nil, err
 	}
 
+	// Create a new EC2 client object, cache it and return the same.
 	b.EC2ClientsMap[region] = ec2.New(session.New(awsConfig))
 	return b.EC2ClientsMap[region], nil
 }

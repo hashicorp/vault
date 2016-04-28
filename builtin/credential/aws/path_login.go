@@ -42,7 +42,7 @@ func pathLogin(b *backend) *framework.Path {
 // checks if the instance is running and is healthy.
 func (b *backend) validateInstance(s logical.Storage, identityDoc *identityDocument) (*ec2.DescribeInstancesOutput, error) {
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, identityDoc.Region, false)
+	ec2Client, err := b.clientEC2(s, identityDoc.Region)
 	if err != nil {
 		return nil, err
 	}
