@@ -1,3 +1,5 @@
+// +build vault
+
 package vault
 
 import (

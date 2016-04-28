@@ -2,6 +2,7 @@ TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox
+BUILD_TAGS?=vault
 
 default: test
 
@@ -16,7 +17,7 @@ dev: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	VAULT_TOKEN= VAULT_ACC= go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4
+	VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
@@ -24,11 +25,11 @@ testacc: generate
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	VAULT_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
+	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
 testrace: generate
-	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -race $(TEST) $(TESTARGS)
+	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS)
 
 cover:
 	./scripts/coverage.sh --html
