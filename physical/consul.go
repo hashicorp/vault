@@ -376,7 +376,6 @@ func (c *ConsulBackend) NotifyActiveStateChange() error {
 func (c *ConsulBackend) NotifySealedStateChange() error {
 	select {
 	case c.notifySealedCh <- notifyEvent{}:
-		return nil
 	default:
 		// NOTE: If this occurs Vault's sealed status could be out of
 		// sync with Consul until checkTimer expires.
