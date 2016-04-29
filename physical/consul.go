@@ -521,10 +521,14 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc a
 	tags := serviceTags(active)
 
 	var reregister bool
-	if currentVaultService == nil || registeredServiceID == "" {
+	switch {
+	case currentVaultService == nil,
+		registeredServiceID == "":
 		reregister = true
-	} else {
-		if len(currentVaultService.Tags) != 1 || currentVaultService.Tags[0] != tags[0] {
+	default:
+		switch {
+		case len(currentVaultService.Tags) != 1,
+			currentVaultService.Tags[0] != tags[0]:
 			reregister = true
 		}
 	}
