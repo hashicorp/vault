@@ -120,7 +120,6 @@ func (s *S3Backend) Get(key string) (*Entry, error) {
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
-
 	if awsErr, ok := err.(awserr.RequestFailure); ok {
 		// Return nil on 404s, error on anything else
 		if awsErr.StatusCode() == 404 {
@@ -128,6 +127,12 @@ func (s *S3Backend) Get(key string) (*Entry, error) {
 		} else {
 			return nil, err
 		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("got nil response from S3 but no error")
 	}
 
 	data := make([]byte, *resp.ContentLength)
@@ -171,6 +176,9 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("nil response from S3 but no error")
 	}
 
 	keys := []string{}

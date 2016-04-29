@@ -163,6 +163,14 @@ func (c *ServerCommand) Run(args []string) int {
 
 	var seal vault.Seal = &vault.DefaultSeal{}
 
+	// Ensure that the seal finalizer is called, even if using verify-only
+	defer func() {
+		err = seal.Finalize()
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+		}
+	}()
+
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
 		AdvertiseAddr:      config.Backend.AdvertiseAddr,
@@ -390,11 +398,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	for _, listener := range lns {
 		listener.Close()
-	}
-
-	err = seal.Finalize()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 	}
 
 	return 0

@@ -140,8 +140,15 @@ func TestCore_Rekey_Update(t *testing.T) {
 
 func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root string, recovery bool) {
 	// Start a rekey
+	var expType string
+	if recovery {
+		expType = c.seal.RecoveryType()
+	} else {
+		expType = c.seal.BarrierType()
+	}
+
 	newConf := &SealConfig{
-		Type:            "shamir",
+		Type:            expType,
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
@@ -208,7 +215,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 
 	newConf.Nonce = rkconf.Nonce
 	if !reflect.DeepEqual(sealConf, newConf) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v\n", newConf, sealConf)
+		t.Fatalf("\nexpected: %#v\nactual: %#v\nexpType: %s\nrecovery: %t", newConf, sealConf, expType, recovery)
 	}
 
 	// Attempt unseal if this was not recovery mode
@@ -230,7 +237,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 
 	// Start another rekey, this time we require a quorum!
 	newConf = &SealConfig{
-		Type:            "shamir",
+		Type:            expType,
 		SecretThreshold: 1,
 		SecretShares:    1,
 	}

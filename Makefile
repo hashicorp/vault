@@ -1,24 +1,23 @@
 TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
-	github.com/mitchellh/gox \
-	golang.org/x/tools/cmd/cover \
-	golang.org/x/tools/cmd/vet
+	github.com/mitchellh/gox
+BUILD_TAGS?=vault
 
 default: test
 
 # bin generates the releaseable binaries for Vault
 bin: generate
-	@sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 dev: generate
-	@VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # test runs the unit tests and vets the code
 test: generate
-	VAULT_TOKEN= VAULT_ACC= go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4
+	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=120s -parallel=4
 
 # testacc runs acceptance tests
 testacc: generate
@@ -26,11 +25,11 @@ testacc: generate
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	VAULT_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 45m
+	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
 testrace: generate
-	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -race $(TEST) $(TESTARGS)
+	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS)
 
 cover:
 	./scripts/coverage.sh --html

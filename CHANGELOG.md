@@ -76,8 +76,11 @@ BUG FIXES:
    `default` resulted in the same behavior anyways. [GH-1276]
  * credential/token: Fix issues renewing tokens when using the "suffix"
    capability of token roles [GH-1331]
+ * credential/token: Fix lookup via POST showing the request token instead of
+   the desired token [GH-1354]
  * credential/various: Fix renewal conditions when `default` policy is not
    contained in the backend config [GH-1256]
+ * physical/s3: Don't panic in certain error cases from bad S3 responses [GH-1353]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
 
