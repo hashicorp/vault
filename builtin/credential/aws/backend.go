@@ -43,7 +43,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 				"login",
 			},
 		},
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathLogin(b),
 			pathImage(b),
 			pathListImages(b),
@@ -59,7 +59,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathWhitelistIdentity(b),
 			pathTidyIdentities(b),
 			pathListWhitelistIdentities(b),
-		}),
+		},
 	}
 
 	return b.Backend, nil
