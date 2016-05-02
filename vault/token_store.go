@@ -594,16 +594,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	}
 
 	lock := ts.getTokenLock(te.ID)
-	lock.RLock()
 
-	// Minor optimization: if the token is already being revoked, return nil to
-	// indicate that it's no longer valid
-	if te.NumUses == -1 {
-		defer lock.RUnlock()
-		return nil, nil
-	}
-
-	lock.RUnlock()
 	lock.Lock()
 	defer lock.Unlock()
 
