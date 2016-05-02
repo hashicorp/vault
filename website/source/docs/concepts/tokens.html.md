@@ -42,14 +42,53 @@ Finally, the `-policy` flag can be used to set the policies associated
 with the token. Learn more about policies on the
 [policies concepts](/docs/concepts/policies.html) page.
 
+<a name="ttls-and-leases" />
 ## Token Time-To-Live and Leases
 
-Every non-root token has a time-to-live (TTL) associated with it.  After the
-TTL is up, the token will no longer function. In addition to no longer
-functioning, Vault will revoke it.
+Every non-root token has a time-to-live (TTL) associated with it, which is
+the number of seconds the token is valid for, _measured from the moment it is
+created_. After the TTL is up, the token will no longer function, and
+Vault will revoke it. You can find how much of a token's TTL is remaining
+by calling `vault token-lookup`.
 
 When a token is revoked, any leases associated with the token will be revoked
 as well, even if the TTLs on the individual leases are not yet up. For example,
 if a user requests AWS access keys, after the token expires the AWS access keys
-will also be revoked. In order to avoid your token being revoked, the `vault
-token-renew` command should be periodically used to renew the token.
+will also be revoked.
+
+To prevent your token being revoked, you should call the `vault
+token-renew` command periodically, which will attempt to extend the token's TTL.
+You can specify _the new TTL_ using the `increment` argument. If this is
+not specified, then Vault will use the default TTL specified by the
+`auth/token` mount, or the global [`default_lease_ttl`](/docs/config/index.html#default_lease_ttl).
+
+**NOTE:** Vault enforces a cap on the maximum lifetime of non-root tokens.
+This cap is called the "Max Lease TTL", and is measured in seconds
+from the moment the token was created. If renewing a token would cause
+its TTL to exceed this value, then Vault will cap the TTL at the Max Lease TTL.
+
+For example, suppose the system's Max Lease TTL has been set to 12 hours,
+and you have a token that was created 7 hours ago.
+If you were to renew this token with an `increment` of 6 hours,
+that would cause the token's TTL to exceed the max of 12 hours (7 + 6 = 13),
+so Vault will cap the TTL at 12 hours.
+
+You can configure this cap by changing the system's 
+[`max_lease_ttl`](/docs/config/index.html#max_lease_ttl) (which will affect
+all backends, such as AWS, PKI etc.), but the preferred method is to tune
+the `auth/token` mount itself:
+
+```console
+$ vault token-create -policy=default
+Key             Value
+token           db7b286c-30b6-9e3f-ca2e-30d46aeedbcd
+token_duration  2592000
+token_renewable true
+
+$ vault mount-tune -max-lease-ttl="2h" auth/token
+
+$ vault token-renew db7b286c-30b6-9e3f-ca2e-30d46aeedbcd
+Key             Value
+token           db7b286c-30b6-9e3f-ca2e-30d46aeedbcd
+token_duration  7157
+```
