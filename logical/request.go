@@ -54,9 +54,9 @@ type Request struct {
 	// request path with the MountPoint trimmed off.
 	MountPoint string
 
-	// WrapDuration contains the requested TTL of the token used to wrap the
+	// WrapTTL contains the requested TTL of the token used to wrap the
 	// response in a cubbyhole.
-	WrapDuration time.Duration
+	WrapTTL time.Duration
 }
 
 // Get returns a data field and guards for nil Data

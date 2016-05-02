@@ -17,6 +17,14 @@ const (
 
 	// policyCacheSize is the number of policies that are kept cached
 	policyCacheSize = 1024
+
+	// cubbyholeResponseWrappingPolicy is the policy that ensures cubbyhole
+	// response wrapping can always succeed
+	cubbyholeResponseWrappingPolicy = `
+path "cubbyhole/response" {
+    capabilities = ["create", "read"]
+}
+`
 )
 
 // PolicyStore is used to provide durable storage of policy, and to
@@ -63,6 +71,19 @@ func (c *Core) setupPolicyStore() error {
 			return err
 		}
 	}
+
+	// Ensure that the cubbyhole response wrapping policy exists
+	policy, err = c.policyStore.GetPolicy("cubbyhole-response-wrapping")
+	if err != nil {
+		return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
+	}
+	if policy == nil || policy.Raw != cubbyholeResponseWrappingPolicy {
+		err := c.policyStore.createCubbyholeResponseWrappingPolicy()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -79,10 +100,17 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 	if p.Name == "root" {
 		return fmt.Errorf("cannot update root policy")
 	}
+	if p.Name == "cubbyhole-response-wrapping" {
+		return fmt.Errorf("cannot update cubbyhole-response-wrapping policy")
+	}
 	if p.Name == "" {
 		return fmt.Errorf("policy name missing")
 	}
 
+	return ps.setPolicyInternal(p)
+}
+
+func (ps *PolicyStore) setPolicyInternal(p *Policy) error {
 	// Create the entry
 	entry, err := logical.StorageEntryJSON(p.Name, &PolicyEntry{
 		Version: 2,
@@ -174,6 +202,9 @@ func (ps *PolicyStore) DeletePolicy(name string) error {
 	if name == "default" {
 		return fmt.Errorf("cannot delete default policy")
 	}
+	if name == "cubbyhole-response-wrapping" {
+		return fmt.Errorf("cannot delete cubbyhole-response-wrapping policy")
+	}
 	if err := ps.view.Delete(name); err != nil {
 		return fmt.Errorf("failed to delete policy: %v", err)
 	}
@@ -235,5 +266,19 @@ path "cubbyhole" {
 	}
 
 	policy.Name = "default"
-	return ps.SetPolicy(policy)
+	return ps.setPolicyInternal(policy)
+}
+
+func (ps *PolicyStore) createCubbyholeResponseWrappingPolicy() error {
+	policy, err := Parse(cubbyholeResponseWrappingPolicy)
+	if err != nil {
+		return errwrap.Wrapf("error parsing cubbyhole-response-wrapping policy: {{err}}", err)
+	}
+
+	if policy == nil {
+		return fmt.Errorf("parsing cubbyhole-response-wrapping policy resulted in nil policy")
+	}
+
+	policy.Name = "cubbyhole-response-wrapping"
+	return ps.setPolicyInternal(policy)
 }

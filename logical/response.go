@@ -30,7 +30,7 @@ const (
 type WrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
-	Duration time.Duration
+	TTL time.Duration
 
 	// The token containing the wrapped response
 	Token string
@@ -130,6 +130,11 @@ func (r *Response) Warnings() []string {
 // ClearWarnings clears the response's warning list
 func (r *Response) ClearWarnings() {
 	r.warnings = make([]string, 0, 1)
+}
+
+// Copies the warnings from the other response to this one
+func (r *Response) CloneWarnings(other *Response) {
+	r.warnings = other.warnings
 }
 
 // IsError returns true if this response seems to indicate an error.

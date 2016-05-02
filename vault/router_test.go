@@ -20,7 +20,7 @@ type NoopBackend struct {
 	Requests []*logical.Request
 	Response *logical.Response
 
-	WrapDuration time.Duration
+	WrapTTL time.Duration
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -34,12 +34,12 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 		return nil, fmt.Errorf("missing view")
 	}
 
-	if n.Response == nil && (req.WrapDuration != 0 || n.WrapDuration != 0) {
+	if n.Response == nil && (req.WrapTTL != 0 || n.WrapTTL != 0) {
 		n.Response = &logical.Response{}
 	}
 
-	if n.WrapDuration != 0 {
-		n.Response.WrapInfo.Duration = n.WrapDuration
+	if n.WrapTTL != 0 {
+		n.Response.WrapInfo.TTL = n.WrapTTL
 	}
 
 	return n.Response, nil
@@ -420,10 +420,10 @@ func TestRouter_Wrapping(t *testing.T) {
 
 	// Just in the request
 	req = &logical.Request{
-		Path:         "wraptest/foo",
-		ClientToken:  root,
-		Operation:    logical.UpdateOperation,
-		WrapDuration: time.Duration(15 * time.Second),
+		Path:        "wraptest/foo",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		WrapTTL:     time.Duration(15 * time.Second),
 	}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
@@ -432,13 +432,13 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.Duration != time.Duration(15*time.Second) ||
+	if resp.WrapInfo.TTL != time.Duration(15*time.Second) ||
 		resp.WrapInfo.MountPoint != "wraptest/" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// Just in the response
-	n.WrapDuration = time.Duration(15 * time.Second)
+	n.WrapTTL = time.Duration(15 * time.Second)
 	req = &logical.Request{
 		Path:        "wraptest/foo",
 		ClientToken: root,
@@ -451,18 +451,18 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.Duration != time.Duration(15*time.Second) ||
+	if resp.WrapInfo.TTL != time.Duration(15*time.Second) ||
 		resp.WrapInfo.MountPoint != "wraptest/" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// In both, with request less
-	n.WrapDuration = time.Duration(15 * time.Second)
+	n.WrapTTL = time.Duration(15 * time.Second)
 	req = &logical.Request{
-		Path:         "wraptest/foo",
-		ClientToken:  root,
-		Operation:    logical.UpdateOperation,
-		WrapDuration: time.Duration(10 * time.Second),
+		Path:        "wraptest/foo",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		WrapTTL:     time.Duration(10 * time.Second),
 	}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
@@ -471,18 +471,18 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.Duration != time.Duration(10*time.Second) ||
+	if resp.WrapInfo.TTL != time.Duration(10*time.Second) ||
 		resp.WrapInfo.MountPoint != "wraptest/" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// In both, with response less
-	n.WrapDuration = time.Duration(10 * time.Second)
+	n.WrapTTL = time.Duration(10 * time.Second)
 	req = &logical.Request{
-		Path:         "wraptest/foo",
-		ClientToken:  root,
-		Operation:    logical.UpdateOperation,
-		WrapDuration: time.Duration(15 * time.Second),
+		Path:        "wraptest/foo",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		WrapTTL:     time.Duration(15 * time.Second),
 	}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
@@ -491,7 +491,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.Duration != time.Duration(10*time.Second) ||
+	if resp.WrapInfo.TTL != time.Duration(10*time.Second) ||
 		resp.WrapInfo.MountPoint != "wraptest/" {
 		t.Fatalf("bad: %#v", resp)
 	}

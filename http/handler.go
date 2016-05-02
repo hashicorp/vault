@@ -21,7 +21,7 @@ const (
 
 	// WrapHeaderName is the name of the header containing a directive to wrap the
 	// response.
-	WrapDurationHeaderName = "X-Vault-Wrap-Duration"
+	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -161,29 +161,29 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	return req
 }
 
-// requestWrapDuration adds the WrapDuration value to the logical.Request if it
+// requestWrapTTL adds the WrapTTL value to the logical.Request if it
 // exists.
-func requestWrapDuration(r *http.Request, req *logical.Request) (*logical.Request, error) {
+func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// First try for the header value
-	wrapDuration := r.Header.Get(WrapDurationHeaderName)
-	if wrapDuration == "" {
+	wrapTTL := r.Header.Get(WrapTTLHeaderName)
+	if wrapTTL == "" {
 		return req, nil
 	}
 
 	// If it has an allowed suffix parse as a duration string
-	if strings.HasSuffix(wrapDuration, "s") || strings.HasSuffix(wrapDuration, "m") || strings.HasSuffix(wrapDuration, "h") {
-		dur, err := time.ParseDuration(wrapDuration)
+	if strings.HasSuffix(wrapTTL, "s") || strings.HasSuffix(wrapTTL, "m") || strings.HasSuffix(wrapTTL, "h") {
+		dur, err := time.ParseDuration(wrapTTL)
 		if err != nil {
 			return req, err
 		}
-		req.WrapDuration = dur
+		req.WrapTTL = dur
 	} else {
 		// Parse as a straight number of seconds
-		seconds, err := strconv.ParseInt(wrapDuration, 10, 64)
+		seconds, err := strconv.ParseInt(wrapTTL, 10, 64)
 		if err != nil {
 			return req, err
 		}
-		req.WrapDuration = time.Duration(time.Duration(seconds) * time.Second)
+		req.WrapTTL = time.Duration(time.Duration(seconds) * time.Second)
 	}
 
 	return req, nil

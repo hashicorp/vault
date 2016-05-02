@@ -5,6 +5,7 @@ func SanitizeResponse(input *Response) *HTTPResponse {
 		Data:     input.Data,
 		Warnings: input.Warnings(),
 	}
+
 	if input.Secret != nil {
 		logicalResp.LeaseID = input.Secret.LeaseID
 		logicalResp.Renewable = input.Secret.Renewable
@@ -32,6 +33,7 @@ type HTTPResponse struct {
 	Renewable     bool                   `json:"renewable"`
 	LeaseDuration int                    `json:"lease_duration"`
 	Data          map[string]interface{} `json:"data"`
+	WrapInfo      *HTTPWrapInfo          `json:"wrap_info"`
 	Warnings      []string               `json:"warnings"`
 	Auth          *HTTPAuth              `json:"auth"`
 }
@@ -43,4 +45,9 @@ type HTTPAuth struct {
 	Metadata      map[string]string `json:"metadata"`
 	LeaseDuration int               `json:"lease_duration"`
 	Renewable     bool              `json:"renewable"`
+}
+
+type HTTPWrapInfo struct {
+	Token string `json:"token"`
+	TTL   int    `json:"ttl"`
 }

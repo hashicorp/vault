@@ -110,6 +110,32 @@ func TestPolicyStore_CRUD(t *testing.T) {
 	}
 }
 
+// Test predefined policy handling
+func TestPolicyStore_Predefined(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	// Ensure both default policies are created
+	err := core.setupPolicyStore()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// List should be two elements
+	out, err := core.policyStore.ListPolicies()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(out) != 2 || out[0] != "cubbyhole-response-wrapping" || out[1] != "default" {
+		t.Fatalf("bad: %v", out)
+	}
+
+	p, err := core.policyStore.GetPolicy("cubbyhole-response-wrapping")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if p.Raw != cubbyholeResponseWrappingPolicy {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", cubbyholeResponseWrappingPolicy, p.Raw)
+	}
+}
+
 func TestPolicyStore_ACL(t *testing.T) {
 	ps := mockPolicyStore(t)
 

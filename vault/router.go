@@ -261,19 +261,19 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 			// If either of the request or response requested wrapping, ensure that
 			// the lowest value is what ends up in the response.
 			switch {
-			case req.WrapDuration == 0 && resp.WrapInfo.Duration == 0:
-			case req.WrapDuration != 0 && resp.WrapInfo.Duration != 0:
-				if req.WrapDuration < resp.WrapInfo.Duration {
-					resp.WrapInfo.Duration = req.WrapDuration
+			case req.WrapTTL == 0 && resp.WrapInfo.TTL == 0:
+			case req.WrapTTL != 0 && resp.WrapInfo.TTL != 0:
+				if req.WrapTTL < resp.WrapInfo.TTL {
+					resp.WrapInfo.TTL = req.WrapTTL
 				}
-			case req.WrapDuration != 0:
-				resp.WrapInfo.Duration = req.WrapDuration
+			case req.WrapTTL != 0:
+				resp.WrapInfo.TTL = req.WrapTTL
 				// Only case left is that only resp defines it, which doesn't need to
 				// be explicitly handled
 			}
 
 			// Now set the mount point if we are wrapping
-			if resp.WrapInfo.Duration != 0 {
+			if resp.WrapInfo.TTL != 0 {
 				resp.WrapInfo.MountPoint = mount
 			}
 		}

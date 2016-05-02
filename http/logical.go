@@ -76,9 +76,9 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 			Data:       data,
 			Connection: getConnection(r),
 		})
-		req, err = requestWrapDuration(r, req)
+		req, err = requestWrapTTL(r, req)
 		if err != nil {
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-Duration header: {{err}}", err))
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err))
 			return
 		}
 
@@ -130,7 +130,16 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 			return
 		}
 
-		httpResp = logical.SanitizeResponse(resp)
+		if resp.WrapInfo.Token != "" {
+			httpResp = logical.HTTPResponse{
+				WrapInfo: &logical.HTTPWrapInfo{
+					Token: resp.WrapInfo.Token,
+					TTL:   int(resp.WrapInfo.TTL.Seconds()),
+				},
+			}
+		} else {
+			httpResp = logical.SanitizeResponse(resp)
+		}
 	}
 
 	// Respond
