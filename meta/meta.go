@@ -255,7 +255,7 @@ func GeneralOptionsUsage() string {
 
   -ca-path=path           Path to a directory of PEM encoded CA cert files
                           to verify the Vault server SSL certificate. If both
-                          -ca-cert and -ca-path are specified, -ca-path is used.
+                          -ca-cert and -ca-path are specified, -ca-cert is used.
                           Overrides the VAULT_CAPATH environment variable if set.
 
   -client-cert=path       Path to a PEM encoded client certificate for TLS
