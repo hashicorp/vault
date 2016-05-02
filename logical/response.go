@@ -34,10 +34,6 @@ type WrapInfo struct {
 
 	// The token containing the wrapped response
 	Token string
-
-	// The mount point of the backend, useful for further requests (such as
-	// logging in with the given credentials)
-	MountPoint string
 }
 
 // Response is a struct that stores the response of a request.

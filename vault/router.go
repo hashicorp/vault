@@ -250,11 +250,6 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 
 	// Reset the request before returning
 	defer func() {
-		// Keep the mount point populated in case it's needed for wrapping, but
-		// ensure that it hasn't been modified by the backend by setting it to
-		// the original value
-		req.MountPoint = mount
-
 		// We only run this if resp is not nil, so for instance we don't during
 		// an existence check
 		if resp != nil {
@@ -271,14 +266,10 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 				// Only case left is that only resp defines it, which doesn't need to
 				// be explicitly handled
 			}
-
-			// Now set the mount point if we are wrapping
-			if resp.WrapInfo.TTL != 0 {
-				resp.WrapInfo.MountPoint = mount
-			}
 		}
 
 		// Reset other parameters
+		req.MountPoint = ""
 		req.Path = original
 		req.Connection = originalConn
 		req.Storage = nil

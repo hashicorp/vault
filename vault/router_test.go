@@ -432,8 +432,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(15*time.Second) ||
-		resp.WrapInfo.MountPoint != "wraptest/" {
+	if resp.WrapInfo.TTL != time.Duration(15*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -451,8 +450,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(15*time.Second) ||
-		resp.WrapInfo.MountPoint != "wraptest/" {
+	if resp.WrapInfo.TTL != time.Duration(15*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -471,8 +469,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(10*time.Second) ||
-		resp.WrapInfo.MountPoint != "wraptest/" {
+	if resp.WrapInfo.TTL != time.Duration(10*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -491,8 +488,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(10*time.Second) ||
-		resp.WrapInfo.MountPoint != "wraptest/" {
+	if resp.WrapInfo.TTL != time.Duration(10*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
