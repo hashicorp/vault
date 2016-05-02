@@ -194,7 +194,7 @@ func (r *Router) RouteExistenceCheck(req *logical.Request) (bool, bool, error) {
 	return ok, exists, err
 }
 
-func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
+func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *logical.Response, ok bool, exists bool, err error) {
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
@@ -250,8 +250,36 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 
 	// Reset the request before returning
 	defer func() {
+		// Keep the mount point populated in case it's needed for wrapping, but
+		// ensure that it hasn't been modified by the backend by setting it to
+		// the original value
+		req.MountPoint = mount
+
+		// We only run this if resp is not nil, so for instance we don't during
+		// an existence check
+		if resp != nil {
+			// If either of the request or response requested wrapping, ensure that
+			// the lowest value is what ends up in the response.
+			switch {
+			case req.WrapDuration == 0 && resp.WrapInfo.Duration == 0:
+			case req.WrapDuration != 0 && resp.WrapInfo.Duration != 0:
+				if req.WrapDuration < resp.WrapInfo.Duration {
+					resp.WrapInfo.Duration = req.WrapDuration
+				}
+			case req.WrapDuration != 0:
+				resp.WrapInfo.Duration = req.WrapDuration
+				// Only case left is that only resp defines it, which doesn't need to
+				// be explicitly handled
+			}
+
+			// Now set the mount point if we are wrapping
+			if resp.WrapInfo.Duration != 0 {
+				resp.WrapInfo.MountPoint = mount
+			}
+		}
+
+		// Reset other parameters
 		req.Path = original
-		req.MountPoint = ""
 		req.Connection = originalConn
 		req.Storage = nil
 		req.ClientToken = clientToken
@@ -262,7 +290,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		ok, exists, err := re.backend.HandleExistenceCheck(req)
 		return nil, ok, exists, err
 	} else {
-		resp, err := re.backend.HandleRequest(req)
+		resp, err = re.backend.HandleRequest(req)
 		return resp, false, false, err
 	}
 }

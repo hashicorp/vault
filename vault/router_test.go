@@ -19,6 +19,8 @@ type NoopBackend struct {
 	Paths    []string
 	Requests []*logical.Request
 	Response *logical.Response
+
+	WrapDuration time.Duration
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -30,6 +32,14 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 	n.Requests = append(n.Requests, &requestCopy)
 	if req.Storage == nil {
 		return nil, fmt.Errorf("missing view")
+	}
+
+	if n.Response == nil && (req.WrapDuration != 0 || n.WrapDuration != 0) {
+		n.Response = &logical.Response{}
+	}
+
+	if n.WrapDuration != 0 {
+		n.Response.WrapInfo.Duration = n.WrapDuration
 	}
 
 	return n.Response, nil
@@ -372,5 +382,117 @@ func TestPathsToRadix(t *testing.T) {
 	raw, ok = r.Get("sub/bar")
 	if !ok || raw.(bool) != true {
 		t.Fatalf("bad: %v (sub/bar)", raw)
+	}
+}
+
+func TestRouter_Wrapping(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+
+	n := &NoopBackend{}
+
+	core.logicalBackends["noop"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return n, nil
+	}
+
+	meUUID, _ := uuid.GenerateUUID()
+	err := core.mount(&MountEntry{
+		UUID: meUUID,
+		Path: "wraptest",
+		Type: "noop",
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// No duration specified
+	req := &logical.Request{
+		Path:        "wraptest/foo",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+	}
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Just in the request
+	req = &logical.Request{
+		Path:         "wraptest/foo",
+		ClientToken:  root,
+		Operation:    logical.UpdateOperation,
+		WrapDuration: time.Duration(15 * time.Second),
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+	if resp.WrapInfo.Duration != time.Duration(15*time.Second) ||
+		resp.WrapInfo.MountPoint != "wraptest/" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Just in the response
+	n.WrapDuration = time.Duration(15 * time.Second)
+	req = &logical.Request{
+		Path:        "wraptest/foo",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+	if resp.WrapInfo.Duration != time.Duration(15*time.Second) ||
+		resp.WrapInfo.MountPoint != "wraptest/" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// In both, with request less
+	n.WrapDuration = time.Duration(15 * time.Second)
+	req = &logical.Request{
+		Path:         "wraptest/foo",
+		ClientToken:  root,
+		Operation:    logical.UpdateOperation,
+		WrapDuration: time.Duration(10 * time.Second),
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+	if resp.WrapInfo.Duration != time.Duration(10*time.Second) ||
+		resp.WrapInfo.MountPoint != "wraptest/" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// In both, with response less
+	n.WrapDuration = time.Duration(10 * time.Second)
+	req = &logical.Request{
+		Path:         "wraptest/foo",
+		ClientToken:  root,
+		Operation:    logical.UpdateOperation,
+		WrapDuration: time.Duration(15 * time.Second),
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+	if resp.WrapInfo.Duration != time.Duration(10*time.Second) ||
+		resp.WrapInfo.MountPoint != "wraptest/" {
+		t.Fatalf("bad: %#v", resp)
 	}
 }

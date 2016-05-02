@@ -3,6 +3,7 @@ package logical
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/mitchellh/copystructure"
 )
@@ -25,6 +26,19 @@ const (
 	// avoided like the HTTPContentType. The value must be an integer.
 	HTTPStatusCode = "http_status_code"
 )
+
+type WrapInfo struct {
+	// Setting to non-zero specifies that the response should be wrapped.
+	// Specifies the desired TTL of the wrapping token.
+	Duration time.Duration
+
+	// The token containing the wrapped response
+	Token string
+
+	// The mount point of the backend, useful for further requests (such as
+	// logging in with the given credentials)
+	MountPoint string
+}
 
 // Response is a struct that stores the response of a request.
 // It is used to abstract the details of the higher level request protocol.
@@ -54,6 +68,9 @@ type Response struct {
 	// Vault (backend, core, etc.) to add warnings without accidentally
 	// replacing what exists.
 	warnings []string
+
+	// Information for wrapping the response in a cubbyhole
+	WrapInfo WrapInfo
 }
 
 func init() {

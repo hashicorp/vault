@@ -6,15 +6,23 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
-// AuthHeaderName is the name of the header containing the token.
-const AuthHeaderName = "X-Vault-Token"
+const (
+	// AuthHeaderName is the name of the header containing the token.
+	AuthHeaderName = "X-Vault-Token"
+
+	// WrapHeaderName is the name of the header containing a directive to wrap the
+	// response.
+	WrapDurationHeaderName = "X-Vault-Wrap-Duration"
+)
 
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
@@ -151,6 +159,34 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	}
 
 	return req
+}
+
+// requestWrapDuration adds the WrapDuration value to the logical.Request if it
+// exists.
+func requestWrapDuration(r *http.Request, req *logical.Request) (*logical.Request, error) {
+	// First try for the header value
+	wrapDuration := r.Header.Get(WrapDurationHeaderName)
+	if wrapDuration == "" {
+		return req, nil
+	}
+
+	// If it has an allowed suffix parse as a duration string
+	if strings.HasSuffix(wrapDuration, "s") || strings.HasSuffix(wrapDuration, "m") || strings.HasSuffix(wrapDuration, "h") {
+		dur, err := time.ParseDuration(wrapDuration)
+		if err != nil {
+			return req, err
+		}
+		req.WrapDuration = dur
+	} else {
+		// Parse as a straight number of seconds
+		seconds, err := strconv.ParseInt(wrapDuration, 10, 64)
+		if err != nil {
+			return req, err
+		}
+		req.WrapDuration = time.Duration(time.Duration(seconds) * time.Second)
+	}
+
+	return req, nil
 }
 
 // Determines the type of the error being returned and sets the HTTP

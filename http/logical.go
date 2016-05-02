@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -68,12 +69,18 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 			}
 		}
 
+		var err error
 		req := requestAuth(r, &logical.Request{
 			Operation:  op,
 			Path:       path,
 			Data:       data,
 			Connection: getConnection(r),
 		})
+		req, err = requestWrapDuration(r, req)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-Duration header: {{err}}", err))
+			return
+		}
 
 		// Certain endpoints may require changes to the request object.
 		// They will have a callback registered to do the needful.
@@ -123,30 +130,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 			return
 		}
 
-		logicalResp := &LogicalResponse{
-			Data:     resp.Data,
-			Warnings: resp.Warnings(),
-		}
-		if resp.Secret != nil {
-			logicalResp.LeaseID = resp.Secret.LeaseID
-			logicalResp.Renewable = resp.Secret.Renewable
-			logicalResp.LeaseDuration = int(resp.Secret.TTL.Seconds())
-		}
-
-		// If we have authentication information, then
-		// set up the result structure.
-		if resp.Auth != nil {
-			logicalResp.Auth = &Auth{
-				ClientToken:   resp.Auth.ClientToken,
-				Accessor:      resp.Auth.Accessor,
-				Policies:      resp.Auth.Policies,
-				Metadata:      resp.Auth.Metadata,
-				LeaseDuration: int(resp.Auth.TTL.Seconds()),
-				Renewable:     resp.Auth.Renewable,
-			}
-		}
-
-		httpResp = logicalResp
+		httpResp = logical.SanitizeResponse(resp)
 	}
 
 	// Respond
@@ -220,22 +204,4 @@ func getConnection(r *http.Request) (connection *logical.Connection) {
 		ConnState:  r.TLS,
 	}
 	return
-}
-
-type LogicalResponse struct {
-	LeaseID       string                 `json:"lease_id"`
-	Renewable     bool                   `json:"renewable"`
-	LeaseDuration int                    `json:"lease_duration"`
-	Data          map[string]interface{} `json:"data"`
-	Warnings      []string               `json:"warnings"`
-	Auth          *Auth                  `json:"auth"`
-}
-
-type Auth struct {
-	ClientToken   string            `json:"client_token"`
-	Accessor      string            `json:"accessor"`
-	Policies      []string          `json:"policies"`
-	Metadata      map[string]string `json:"metadata"`
-	LeaseDuration int               `json:"lease_duration"`
-	Renewable     bool              `json:"renewable"`
 }
