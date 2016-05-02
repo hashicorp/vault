@@ -68,6 +68,8 @@ BUG FIXES:
  * command/various: Tell the JSON decoder to not convert all numbers to floats;
    fixes some various places where numbers were showing up in scientific
    notation
+ * credential/github: Make organization comparison case-insensitive during
+   login [GH-1359]
  * credential/ldap: Fix problem where certain error conditions when configuring
    or opening LDAP connections would cause a panic instead of return a useful
    error message [GH-1262]
