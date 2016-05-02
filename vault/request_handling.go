@@ -146,10 +146,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	// wrapped information, since the original response has been audit logged
 	if wrapping {
 		wrappingResp := &logical.Response{
-			WrapInfo: logical.WrapInfo{
-				Token: resp.WrapInfo.Token,
-				TTL:   resp.WrapInfo.TTL,
-			},
+			WrapInfo: resp.WrapInfo,
 		}
 		wrappingResp.CloneWarnings(resp)
 		resp = wrappingResp
@@ -162,45 +159,58 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, err := c.checkToken(req)
+	auth, te, ctErr := c.checkToken(req)
+	// We run this logic first because we want to decrement the use count even in the case of an error
 	if te != nil {
-		defer func() {
-			// Attempt to use the token (decrement num_uses)
-			// If a secret was generated and num_uses is currently 1, it will be
-			// immediately revoked; in that case, don't return the leased
-			// credentials as they are now invalid.
-			if retResp != nil &&
-				te != nil && te.NumUses == 1 &&
-				retResp.Secret != nil &&
-				// Some backends return a TTL even without a Lease ID
-				retResp.Secret.LeaseID != "" {
-				retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
-			}
-			if err := c.tokenStore.UseToken(te); err != nil {
-				c.logger.Printf("[ERR] core: failed to use token: %v", err)
-				retResp = nil
-				retAuth = nil
-				retErr = ErrInternalError
-			}
-		}()
+		// Attempt to use the token (decrement NumUses)
+		var err error
+		te, err = c.tokenStore.UseToken(te)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			return nil, nil, ErrInternalError
+		}
+		if te == nil {
+			// Token has been revoked by this point
+			return nil, nil, logical.ErrPermissionDenied
+		}
+		if te.NumUses == -1 {
+			// We defer a revocation until after logic has run, since this is a
+			// valid request (this is the token's final use). We pass the ID in
+			// directly just to be safe in case something else modifies te later.
+			defer func(id string) {
+				err = c.tokenStore.Revoke(id)
+				if err != nil {
+					c.logger.Printf("[ERR] core: failed to revoke token: %v", err)
+					retResp = nil
+					retAuth = nil
+					retErr = ErrInternalError
+				}
+				if retResp != nil && retResp.Secret != nil &&
+					// Some backends return a TTL even without a Lease ID
+					retResp.Secret.LeaseID != "" {
+					retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
+					return
+				}
+			}(te.ID)
+		}
 	}
-	if err != nil {
+	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
 		var errType error
-		switch err {
+		switch ctErr {
 		case ErrInternalError, logical.ErrPermissionDenied:
-			errType = err
+			errType = ctErr
 		default:
 			errType = logical.ErrInvalidRequest
 		}
 
-		if err := c.auditBroker.LogRequest(auth, req, err); err != nil {
+		if err := c.auditBroker.LogRequest(auth, req, ctErr); err != nil {
 			c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
 				req.Path, err)
 		}
 
-		return logical.ErrorResponse(err.Error()), nil, errType
+		return logical.ErrorResponse(ctErr.Error()), nil, errType
 	}
 
 	// Attach the display name

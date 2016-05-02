@@ -411,7 +411,7 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, te, err
 	}
 
 	// Check if this is a root protected path
@@ -450,13 +450,14 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 		}
 	}
 
-	// Check the standard non-root ACLs
+	// Check the standard non-root ACLs. Return the token entry if it's not
+	// allowed so we can decrement the use count.
 	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
-		return nil, nil, logical.ErrPermissionDenied
+		return nil, te, logical.ErrPermissionDenied
 	}
 	if rootPath && !rootPrivs {
-		return nil, nil, logical.ErrPermissionDenied
+		return nil, te, logical.ErrPermissionDenied
 	}
 
 	// Create the auth response
@@ -687,12 +688,20 @@ func (c *Core) Seal(token string) (retErr error) {
 		return err
 	}
 	// Attempt to use the token (decrement num_uses)
-	// If we can't, we still continue attempting the seal, so long as the token
-	// has appropriate permissions
+	// On error bail out; if the token has been revoked, bail out too
 	if te != nil {
-		if err := c.tokenStore.UseToken(te); err != nil {
+		te, err = c.tokenStore.UseToken(te)
+		if err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
-			retErr = ErrInternalError
+			return ErrInternalError
+		}
+		if te == nil {
+			// Token is no longer valid
+			return logical.ErrPermissionDenied
+		}
+		if te.NumUses == -1 {
+			// Token needs to be revoked
+			return c.tokenStore.Revoke(te.ID)
 		}
 	}
 
@@ -744,9 +753,18 @@ func (c *Core) StepDown(token string) error {
 	}
 	// Attempt to use the token (decrement num_uses)
 	if te != nil {
-		if err := c.tokenStore.UseToken(te); err != nil {
+		te, err = c.tokenStore.UseToken(te)
+		if err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
 			return err
+		}
+		if te == nil {
+			// Token has been revoked
+			return logical.ErrPermissionDenied
+		}
+		if te.NumUses == -1 {
+			// Token needs to be revoked
+			return c.tokenStore.Revoke(te.ID)
 		}
 	}
 

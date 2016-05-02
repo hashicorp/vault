@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -61,6 +63,8 @@ type TokenStore struct {
 	cubbyholeBackend *CubbyholeBackend
 
 	policyLookupFunc func(string) (*Policy, error)
+
+	tokenLocks map[string]*sync.RWMutex
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -86,6 +90,19 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		return nil, err
 	}
 	t.salt = salt
+
+	t.tokenLocks = map[string]*sync.RWMutex{}
+	for i := int64(0); i < 16; i++ {
+		for j := int64(0); j < 16; j++ {
+			for k := int64(0); k < 16; k++ {
+				t.tokenLocks[fmt.Sprintf("%s%s%s",
+					strconv.FormatInt(i, 16),
+					strconv.FormatInt(j, 16),
+					strconv.FormatInt(k, 16))] = &sync.RWMutex{}
+			}
+		}
+	}
+	t.tokenLocks["global"] = &sync.RWMutex{}
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -547,33 +564,74 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	return nil
 }
 
-// UseToken is used to manage restricted use tokens and decrement
-// their available uses. Note: this is potentially racy, but the simple
-// solution of a global lock would be severely detrimental to performance. Also
-// note the specific revoke case below.
-func (ts *TokenStore) UseToken(te *TokenEntry) error {
+func (ts *TokenStore) getTokenLock(id string) *sync.RWMutex {
+	// Find our multilevel lock, or fall back to global
+	var lock *sync.RWMutex
+	var ok bool
+	if len(id) >= 3 {
+		lock, ok = ts.tokenLocks[id[0:3]]
+	}
+	if !ok || lock == nil {
+		lock = ts.tokenLocks["global"]
+	}
+
+	return lock
+}
+
+// UseToken is used to manage restricted use tokens and decrement their
+// available uses. Returns two values: a potentially updated entry or, if the
+// token has been revoked, nil; and whether an error was encountered. The
+// locking here isn't perfect, as other parts of the code may update an entry,
+// but usually none after the entry is already created...so this is pretty
+// good.
+func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
+	if te == nil {
+		return nil, fmt.Errorf("invalid token entry provided for use count decrementing")
+	}
+
+	lock := ts.getTokenLock(te.ID)
+
+	lock.RLock()
 	// If the token is not restricted, there is nothing to do
 	if te.NumUses == 0 {
-		return nil
+		lock.RUnlock()
+		return te, nil
+	}
+
+	lock.RUnlock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Call lookupSalted to avoid lock contention
+	te, err := ts.lookupSalted(ts.SaltID(te.ID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh entry: %v", err)
+	}
+	if te == nil {
+		return nil, fmt.Errorf("token entry nil after refreshing to decrement use count; token has likely been used already")
+	}
+
+	// Check if it's already been revoked at this point, if so, don't return an
+	// error, but do indicate with a nil response that the token is no longer
+	// valid
+	if te.NumUses == -1 {
+		return nil, nil
 	}
 
 	// Decrement the count
 	te.NumUses -= 1
 
-	// Revoke the token if there are no remaining uses.
-	// XXX: There is a race condition here with parallel
-	// requests using the same token. This would require
-	// some global coordination to avoid, as we must ensure
-	// no requests using the same restricted token are handled
-	// in parallel.
+	// We need to indicate that this is no longer valid, but revocation is
+	// deferred to the end of the call, so this will make sure that any Lookup
+	// that happens doesn't return an entry
 	if te.NumUses == 0 {
-		return ts.Revoke(te.ID)
+		te.NumUses = -1
 	}
 
 	// Marshal the entry
 	enc, err := json.Marshal(te)
 	if err != nil {
-		return fmt.Errorf("failed to encode entry: %v", err)
+		return nil, fmt.Errorf("failed to encode entry: %v", err)
 	}
 
 	// Write under the primary ID
@@ -581,17 +639,23 @@ func (ts *TokenStore) UseToken(te *TokenEntry) error {
 	path := lookupPrefix + saltedId
 	le := &logical.StorageEntry{Key: path, Value: enc}
 	if err := ts.view.Put(le); err != nil {
-		return fmt.Errorf("failed to persist entry: %v", err)
+		return nil, fmt.Errorf("failed to persist entry: %v", err)
 	}
-	return nil
+
+	return te, nil
 }
 
-// Lookup is used to find a token given its ID
+// Lookup is used to find a token given its ID. It acquires a read lock, then calls lookupSalted.
 func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
+
+	lock := ts.getTokenLock(id)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	return ts.lookupSalted(ts.SaltID(id))
 }
 
@@ -614,6 +678,12 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 	if err := json.Unmarshal(raw.Value, entry); err != nil {
 		return nil, fmt.Errorf("failed to decode entry: %v", err)
 	}
+
+	// This is a token that is awaiting deferred revocation
+	if entry.NumUses == -1 {
+		return nil, nil
+	}
+
 	return entry, nil
 }
 
