@@ -117,10 +117,10 @@ func (c *Config) ReadEnvironment() error {
 	// If we need custom TLS configuration, then set it
 	if envCACert != "" || envCAPath != "" || envClientCert != "" || envClientKey != "" || envInsecure {
 		var err error
-		if envCACert != "" {
-			newCertPool, err = LoadCACert(envCACert)
-		} else if envCAPath != "" {
+		if envCAPath != "" {
 			newCertPool, err = LoadCAPath(envCAPath)
+		} else if envCACert != "" {
+			newCertPool, err = LoadCACert(envCACert)
 		}
 		if err != nil {
 			return fmt.Errorf("Error setting up CA path: %s", err)
