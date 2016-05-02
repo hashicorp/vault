@@ -65,11 +65,17 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 	}
 
 	// Create a config that can be used to make the API calls.
-	return &aws.Config{
+	cfg := &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(region),
 		HTTPClient:  cleanhttp.DefaultClient(),
-	}, nil
+	}
+
+	// Override the default endpoint with the configured endpoint.
+	if config.Endpoint != "" {
+		cfg.Endpoint = aws.String(config.Endpoint)
+	}
+	return cfg, nil
 }
 
 // flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.

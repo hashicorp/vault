@@ -19,6 +19,11 @@ func pathConfigClient(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "AWS Secret key with permissions to query EC2 instance metadata.",
 			},
+
+			"endpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The endpoint to be used to make API calls to AWS EC2.",
+			},
 		},
 
 		ExistenceCheck: b.pathConfigClientExistenceCheck,
@@ -134,6 +139,16 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry.SecretKey = data.Get("secret_key").(string)
 	}
 
+	endpointStr, ok := data.GetOk("endpoint")
+	if ok {
+		if configEntry.Endpoint != endpointStr.(string) {
+			changedCreds = true
+			configEntry.Endpoint = endpointStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.Endpoint = data.Get("endpoint").(string)
+	}
+
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -158,6 +173,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 type clientConfig struct {
 	AccessKey string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
 	SecretKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	Endpoint  string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
 }
 
 const pathConfigClientHelpSyn = `

@@ -467,6 +467,37 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if !exists {
 		t.Fatal("existence check should have returned 'true' for 'config/client'")
 	}
+
+	endpointData := map[string]interface{}{
+		"secret_key": "secretkey",
+		"access_key": "accesskey",
+		"endpoint":   "endpointvalue",
+	}
+
+	endpointReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/client",
+		Storage:   storage,
+		Data:      endpointData,
+	}
+	_, err = b.HandleRequest(endpointReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpointReq.Operation = logical.ReadOperation
+	resp, err := b.HandleRequest(endpointReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil ||
+		resp.IsError() {
+		t.Fatalf("")
+	}
+	actual := resp.Data["endpoint"].(string)
+	if actual != "endpointvalue" {
+		t.Fatalf("bad: endpoint: expected:endpointvalue actual:%s\n", actual)
+	}
 }
 
 func TestBackend_pathConfigCertificate(t *testing.T) {

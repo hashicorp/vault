@@ -383,6 +383,13 @@ The response will be in JSON. For example:
         AWS Secret key with permissions to query EC2 instance metadata.
       </li>
     </ul>
+    <ul>
+      <li>
+        <span class="param">endpoint</span>
+        <span class="param-flags">optional</span>
+        URL to override the default generated endpoint for making AWS EC2 API calls.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -419,6 +426,7 @@ The response will be in JSON. For example:
   "data": {
     "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
     "access_key": "VKIAJBRHKH6EVTTNXDHA"
+    "endpoint" "",
   },
   "lease_duration": 0,
   "renewable": false,
