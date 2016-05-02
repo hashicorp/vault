@@ -16,19 +16,19 @@ import (
 )
 
 const (
-	serverCertPath = "test-fixtures/rootcacert.pem"
-	serverKeyPath  = "test-fixtures/rootcakey.pem"
+	serverCertPath = "test-fixtures/cacert.pem"
+	serverKeyPath  = "test-fixtures/cakey.pem"
 	serverCAPath   = serverCertPath
 
-	testRootCACertPath1 = "test-fixtures/testrootcacert.pem"
-	testRootCAKeyPath1  = "test-fixtures/testrootcakey.pem"
-	testCertPath1       = "test-fixtures/testcert.pem"
-	testKeyPath1        = "test-fixtures/testkey.pem"
-	testIssuedCertCRL   = "test-fixtures/issuedcrl"
+	testRootCACertPath1 = "test-fixtures/testcacert1.pem"
+	testRootCAKeyPath1  = "test-fixtures/testcakey1.pem"
+	testCertPath1       = "test-fixtures/testissuedcert4.pem"
+	testKeyPath1        = "test-fixtures/testissuedkey4.pem"
+	testIssuedCertCRL   = "test-fixtures/issuedcertcrl"
 
-	testRootCACertPath2 = "test-fixtures/testrootcacert2.pem"
-	testRootCAKeyPath2  = "test-fixtures/testrootcakey2.pem"
-	testRootCertCRL     = "test-fixtures/rootcrl"
+	testRootCACertPath2 = "test-fixtures/testcacert2.pem"
+	testRootCAKeyPath2  = "test-fixtures/testcakey2.pem"
+	testRootCertCRL     = "test-fixtures/cacert2crl"
 )
 
 // Unlike testConnState, this method does not use the same 'tls.Config' objects for
