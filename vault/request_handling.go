@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	// Value for memoizing whether cubbyhole is mounted, e.g. if we are in normal operation and not test mode
-	cubbyholeMounted *bool
+	// Value for memoizing whether cubbyhole is mounted, e.g. if we are in
+	// normal operation and not test mode
+	cubbyholeMounted bool
 
 	// mutex to ensure the same
 	cubbyholeMountedMutex sync.Mutex
@@ -61,17 +62,14 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	// In order to wrap, we need cubbyhole to be mounted, so we ensure that
 	// cubbyhole is actually mounted, as it may not be during tests. We memoize
-	// this response, since cubbyhole cannot be mounted or unmounted during
+	// a true response, since cubbyhole cannot be mounted or unmounted during
 	// normal operation.
-	if cubbyholeMounted == nil {
+	if !cubbyholeMounted {
 		cubbyholeMountedMutex.Lock()
-		cubbyholeMounted = new(bool)
 		// Ensure it wasn't changed by another goroutine
-		if cubbyholeMounted == nil {
-			if c.router.MatchingMount("cubbyhole") != "" {
-				*cubbyholeMounted = true
-			} else {
-				*cubbyholeMounted = false
+		if !cubbyholeMounted {
+			if c.router.MatchingMount("cubbyhole/") != "" {
+				cubbyholeMounted = true
 			}
 		}
 		cubbyholeMountedMutex.Unlock()
@@ -80,7 +78,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	// We are wrapping if there is anything to wrap (not a nil response) and a
 	// TTL was specified for the token, plus if cubbyhole is mounted (which
 	// will be the case normally)
-	wrapping := *cubbyholeMounted && resp != nil && resp.WrapInfo.TTL != 0
+	wrapping := cubbyholeMounted && resp != nil && resp.WrapInfo.TTL != 0
 
 	// If we are wrapping, the first part happens before auditing so that
 	// resp.WrapInfo.Token can contain the HMAC'd wrapping token ID in the
@@ -150,6 +148,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		wrappingResp := &logical.Response{
 			WrapInfo: logical.WrapInfo{
 				Token: resp.WrapInfo.Token,
+				TTL:   resp.WrapInfo.TTL,
 			},
 		}
 		wrappingResp.CloneWarnings(resp)

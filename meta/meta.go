@@ -46,6 +46,7 @@ type Meta struct {
 	flagCAPath     string
 	flagClientCert string
 	flagClientKey  string
+	flagWrapTTL    string
 	flagInsecure   bool
 
 	// Queried if no token can be found
@@ -103,6 +104,10 @@ func (m *Meta) Client() (*api.Client, error) {
 		}
 	}
 
+	if m.flagWrapTTL != "" {
+		config.WrapTTL = m.flagWrapTTL
+	}
+
 	// Build the client
 	client, err := api.NewClient(config)
 	if err != nil {
@@ -155,6 +160,7 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 		f.StringVar(&m.flagCAPath, "ca-path", "", "")
 		f.StringVar(&m.flagClientCert, "client-cert", "", "")
 		f.StringVar(&m.flagClientKey, "client-key", "", "")
+		f.StringVar(&m.flagWrapTTL, "wrap-ttl", "", "")
 		f.BoolVar(&m.flagInsecure, "insecure", false, "")
 		f.BoolVar(&m.flagInsecure, "tls-skip-verify", false, "")
 	}
@@ -271,6 +277,14 @@ func GeneralOptionsUsage() string {
   -tls-skip-verify        Do not verify TLS certificate. This is highly
                           not recommended. Verification will also be skipped
                           if VAULT_SKIP_VERIFY is set.
+
+  -wrap-ttl               Indiciates that the response should be wrapped in a
+                          cubbyhole token with the requested TTL. The response
+                          will live at "/response" in the cubbyhole of the
+                          returned token with a key of "response" and can be
+                          parsed as a normal API Secret. The backend can also
+                          request wrapping; the lesser of the values is used.
+                          May also be specified via VAULT_WRAP_TTL.
 `
 	return general
 }
