@@ -94,12 +94,9 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	t.tokenLocks = map[string]*sync.RWMutex{}
 	for i := int64(0); i < 16; i++ {
 		for j := int64(0); j < 16; j++ {
-			for k := int64(0); k < 16; k++ {
-				t.tokenLocks[fmt.Sprintf("%s%s%s",
-					strconv.FormatInt(i, 16),
-					strconv.FormatInt(j, 16),
-					strconv.FormatInt(k, 16))] = &sync.RWMutex{}
-			}
+			t.tokenLocks[fmt.Sprintf("%s%s",
+				strconv.FormatInt(i, 16),
+				strconv.FormatInt(j, 16))] = &sync.RWMutex{}
 		}
 	}
 	t.tokenLocks["global"] = &sync.RWMutex{}
@@ -568,8 +565,8 @@ func (ts *TokenStore) getTokenLock(id string) *sync.RWMutex {
 	// Find our multilevel lock, or fall back to global
 	var lock *sync.RWMutex
 	var ok bool
-	if len(id) >= 3 {
-		lock, ok = ts.tokenLocks[id[0:3]]
+	if len(id) >= 2 {
+		lock, ok = ts.tokenLocks[id[0:2]]
 	}
 	if !ok || lock == nil {
 		lock = ts.tokenLocks["global"]
@@ -589,20 +586,28 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		return nil, fmt.Errorf("invalid token entry provided for use count decrementing")
 	}
 
-	lock := ts.getTokenLock(te.ID)
-
-	lock.RLock()
-	// If the token is not restricted, there is nothing to do
+	// This case won't be hit with a token with restricted uses because we go
+	// from 1 to -1. So it's a nice optimization to check this without a read
+	// lock.
 	if te.NumUses == 0 {
-		lock.RUnlock()
 		return te, nil
+	}
+
+	lock := ts.getTokenLock(te.ID)
+	lock.RLock()
+
+	// Minor optimization: if the token is already being revoked, return nil to
+	// indicate that it's no longer valid
+	if te.NumUses == -1 {
+		defer lock.RUnlock()
+		return nil, nil
 	}
 
 	lock.RUnlock()
 	lock.Lock()
 	defer lock.Unlock()
 
-	// Call lookupSalted to avoid lock contention
+	// Call lookupSalted instead of Lookup to avoid deadlocking since Lookup grabs a read lock
 	te, err := ts.lookupSalted(ts.SaltID(te.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
@@ -611,21 +616,20 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		return nil, fmt.Errorf("token entry nil after refreshing to decrement use count; token has likely been used already")
 	}
 
-	// Check if it's already been revoked at this point, if so, don't return an
-	// error, but do indicate with a nil response that the token is no longer
-	// valid
+	// If the token is already being revoked, return nil to indicate that it's
+	// no longer valid
 	if te.NumUses == -1 {
 		return nil, nil
 	}
 
-	// Decrement the count
-	te.NumUses -= 1
-
-	// We need to indicate that this is no longer valid, but revocation is
-	// deferred to the end of the call, so this will make sure that any Lookup
-	// that happens doesn't return an entry
-	if te.NumUses == 0 {
+	// Decrement the count. If this is our last use count, we need to indicate
+	// that this is no longer valid, but revocation is deferred to the end of
+	// the call, so this will make sure that any Lookup that happens doesn't
+	// return an entry.
+	if te.NumUses == 1 {
 		te.NumUses = -1
+	} else {
+		te.NumUses -= 1
 	}
 
 	// Marshal the entry
