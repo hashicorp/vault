@@ -8,8 +8,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
-			"Comment": "v2.1.1-beta",
-			"Rev": "a1883f7b98346e4908a6c25230c95a8a3026a10c"
+			"Comment": "v2.1.1-beta-4-gd4e45a6",
+			"Rev": "d4e45a63c9d269ddff72970df7c80d214aeddcf3"
 		},
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -184,28 +184,28 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/client",
-			"Comment": "v2.3.0-644-gfee71b1",
-			"Rev": "fee71b18a3093223b41a592e19373f01a44e227f"
+			"Comment": "v2.3.0-651-gfd27f9c",
+			"Rev": "fd27f9cd288c7ccd03d2555663a2ed20178d4b5c"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/pathutil",
-			"Comment": "v2.3.0-644-gfee71b1",
-			"Rev": "fee71b18a3093223b41a592e19373f01a44e227f"
+			"Comment": "v2.3.0-651-gfd27f9c",
+			"Rev": "fd27f9cd288c7ccd03d2555663a2ed20178d4b5c"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/tlsutil",
-			"Comment": "v2.3.0-644-gfee71b1",
-			"Rev": "fee71b18a3093223b41a592e19373f01a44e227f"
+			"Comment": "v2.3.0-651-gfd27f9c",
+			"Rev": "fd27f9cd288c7ccd03d2555663a2ed20178d4b5c"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/transport",
-			"Comment": "v2.3.0-644-gfee71b1",
-			"Rev": "fee71b18a3093223b41a592e19373f01a44e227f"
+			"Comment": "v2.3.0-651-gfd27f9c",
+			"Rev": "fd27f9cd288c7ccd03d2555663a2ed20178d4b5c"
 		},
 		{
 			"ImportPath": "github.com/coreos/etcd/pkg/types",
-			"Comment": "v2.3.0-644-gfee71b1",
-			"Rev": "fee71b18a3093223b41a592e19373f01a44e227f"
+			"Comment": "v2.3.0-651-gfd27f9c",
+			"Rev": "fd27f9cd288c7ccd03d2555663a2ed20178d4b5c"
 		},
 		{
 			"ImportPath": "github.com/denisenkom/go-mssqldb",
@@ -419,59 +419,59 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/bcrypt",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/blowfish",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/md4",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp/armor",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp/elgamal",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp/errors",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp/packet",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp/s2k",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/agent",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "2cb52d93744fdc9a51f5c87b36fe2208d424af5a"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
@@ -479,11 +479,11 @@
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
-			"Rev": "9ef2eddcc6774e42f998940fe1167216d36a7424"
+			"Rev": "f6a14f0423bcd7a0ae907ace2795e63ec5f9fe51"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2/internal",
-			"Rev": "9ef2eddcc6774e42f998940fe1167216d36a7424"
+			"Rev": "f6a14f0423bcd7a0ae907ace2795e63ec5f9fe51"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",

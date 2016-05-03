@@ -55,7 +55,33 @@ type ContainerListResponse struct {
 type Blob struct {
 	Name       string         `xml:"Name"`
 	Properties BlobProperties `xml:"Properties"`
-	// TODO (ahmetalpbalkan) Metadata
+	Metadata   BlobMetadata   `xml:"Metadata"`
+}
+
+// BlobMetadata contains various mtadata properties of the blob
+type BlobMetadata map[string]string
+
+type blobMetadataEntries struct {
+	Entries []blobMetadataEntry `xml:",any"`
+}
+type blobMetadataEntry struct {
+	XMLName xml.Name
+	Value   string `xml:",chardata"`
+}
+
+// UnmarshalXML converts the xml:Metadata into Metadata map
+func (bm *BlobMetadata) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var entries blobMetadataEntries
+	if err := d.DecodeElement(&entries, &start); err != nil {
+		return err
+	}
+	for _, entry := range entries.Entries {
+		if *bm == nil {
+			*bm = make(BlobMetadata)
+		}
+		(*bm)[strings.ToLower(entry.XMLName.Local)] = entry.Value
+	}
+	return nil
 }
 
 // BlobProperties contains various properties of a blob
@@ -457,7 +483,7 @@ func (b BlobStorageClient) GetBlobURL(container, name string) string {
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd179440.aspx
 func (b BlobStorageClient) GetBlob(container, name string) (io.ReadCloser, error) {
-	resp, err := b.getBlobRange(container, name, "")
+	resp, err := b.getBlobRange(container, name, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -472,8 +498,8 @@ func (b BlobStorageClient) GetBlob(container, name string) (io.ReadCloser, error
 // string must be in a format like "0-", "10-100" as defined in HTTP 1.1 spec.
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd179440.aspx
-func (b BlobStorageClient) GetBlobRange(container, name, bytesRange string) (io.ReadCloser, error) {
-	resp, err := b.getBlobRange(container, name, bytesRange)
+func (b BlobStorageClient) GetBlobRange(container, name, bytesRange string, extraHeaders map[string]string) (io.ReadCloser, error) {
+	resp, err := b.getBlobRange(container, name, bytesRange, extraHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +510,7 @@ func (b BlobStorageClient) GetBlobRange(container, name, bytesRange string) (io.
 	return resp.body, nil
 }
 
-func (b BlobStorageClient) getBlobRange(container, name, bytesRange string) (*storageResponse, error) {
+func (b BlobStorageClient) getBlobRange(container, name, bytesRange string, extraHeaders map[string]string) (*storageResponse, error) {
 	verb := "GET"
 	uri := b.client.getEndpoint(blobServiceName, pathForBlob(container, name), url.Values{})
 
@@ -492,6 +518,11 @@ func (b BlobStorageClient) getBlobRange(container, name, bytesRange string) (*st
 	if bytesRange != "" {
 		headers["Range"] = fmt.Sprintf("bytes=%s", bytesRange)
 	}
+
+	for k, v := range extraHeaders {
+		headers[k] = v
+	}
+
 	resp, err := b.client.exec(verb, uri, headers, nil)
 	if err != nil {
 		return nil, err
