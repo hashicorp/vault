@@ -107,13 +107,13 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 				return
 			}
 			keysInt, ok := resp.Data["keys"]
-			if !ok {
+			if !ok || keysInt == nil {
 				respondError(w, http.StatusNotFound, nil)
 				return
 			}
 			keys, ok := keysInt.([]string)
 			if !ok {
-				respondError(w, http.StatusNotFound, nil)
+				respondError(w, http.StatusInternalServerError, nil)
 				return
 			}
 			if len(keys) == 0 {
