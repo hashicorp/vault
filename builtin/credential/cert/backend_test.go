@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -52,7 +52,10 @@ func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, 
 		t.Fatal(err)
 	}
 	// Load the CA cert required by the client to authenticate the server.
-	serverCAs, err := api.LoadCACert(serverCAPath)
+	rootConfig := &rootcerts.Config{
+		CAFile: serverCAPath,
+	}
+	serverCAs, err := rootcerts.LoadCACerts(rootConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -569,7 +572,10 @@ func testConnState(t *testing.T, certPath, keyPath, rootCertPath string) tls.Con
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	rootCAs, err := api.LoadCACert(rootCertPath)
+	rootConfig := &rootcerts.Config{
+		CAFile: rootCertPath,
+	}
+	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

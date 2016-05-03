@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/mitchellh/mapstructure"
@@ -85,17 +86,14 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 
 	// Check if certificates are provided via config file.
 	if c.CACert != "" || c.CAPath != "" || c.TLSSkipVerify {
-		var certPool *x509.CertPool
-		var err error
-		if c.CACert != "" {
-			certPool, err = LoadCACert(c.CACert)
-		} else if c.CAPath != "" {
-			certPool, err = LoadCAPath(c.CAPath)
+		rootConfig := &rootcerts.Config{
+			CAFile: c.CACert,
+			CAPath: c.CAPath,
 		}
+		certPool, err := rootcerts.LoadCACerts(rootConfig)
 		if err != nil {
 			return nil, err
 		}
-
 		// Enable TLS on the HTTP client information
 		c.SetTLSParameters(clientConfig, certPool)
 	}
