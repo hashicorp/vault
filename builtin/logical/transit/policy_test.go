@@ -22,20 +22,18 @@ func Test_KeyUpgrade(t *testing.T) {
 
 func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 	storage := &logical.InmemStorage{}
-	p, lockType, upserted, err := lm.GetPolicyUpsert(storage, "test", false)
+	p, lock, upserted, err := lm.GetPolicyUpsert(storage, "test", false)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	defer lm.UnlockPolicy("test", lockType)
-
 	if !upserted {
 		t.Fatal("expected an upsert")
-	}
-	if lockType != exclusive {
-		t.Fatal("expected an exclusive lock")
 	}
 
 	testBytes := make([]byte, len(p.Keys[1].Key))
@@ -70,14 +68,14 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 
 	storage := &logical.InmemStorage{}
 
-	p, lockType, _, err := lm.GetPolicyUpsert(storage, "test", false)
+	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil {
-		t.Fatal("nil policy")
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
 	}
-	lm.UnlockPolicy("test", lockType)
+	lock.RUnlock()
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, p.Keys[1])
@@ -122,16 +120,67 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 	}
 
 	// Now get the policy again; the upgrade should happen automatically
-	p, lockType, err = lm.GetPolicy(storage, "test")
+	p, lock, err = lm.GetPolicyShared(storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil {
-		t.Fatal("nil lockingPolicy")
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
 	}
-	lm.UnlockPolicy("test", lockType)
+	lock.RUnlock()
 
 	checkKeys(t, p, storage, "upgrade", 10, 10, 10)
+
+	// Let's check some deletion logic while we're at it
+
+	// The policy should be in there
+	if lm.CacheActive() && lm.cache["test"] == nil {
+		t.Fatal("nil policy in cache")
+	}
+
+	// First we'll do this wrong, by not setting the deletion flag
+	err = lm.DeletePolicy(storage, "test")
+	if err == nil {
+		t.Fatal("got nil error, but should not have been able to delete since we didn't set the deletion flag on the policy")
+	}
+
+	// The policy should still be in there
+	if lm.CacheActive() && lm.cache["test"] == nil {
+		t.Fatal("nil policy in cache")
+	}
+
+	p, lock, err = lm.GetPolicyShared(storage, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil || lock == nil {
+		t.Fatal("policy or lock nil after bad delete")
+	}
+	lock.RUnlock()
+
+	// Now do it properly
+	p.DeletionAllowed = true
+	err = p.Persist(storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = lm.DeletePolicy(storage, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The policy should *not* be in there
+	if lm.CacheActive() && lm.cache["test"] != nil {
+		t.Fatal("non-nil policy in cache")
+	}
+
+	p, lock, err = lm.GetPolicyShared(storage, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != nil || lock != nil {
+		t.Fatal("policy or lock not nil after delete")
+	}
 }
 
 func Test_Archiving(t *testing.T) {
@@ -149,14 +198,16 @@ func testArchivingCommon(t *testing.T, lm *lockManager) {
 
 	storage := &logical.InmemStorage{}
 
-	p, lockType, _, err := lm.GetPolicyUpsert(storage, "test", false)
+	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	defer lm.UnlockPolicy("test", lockType)
 
 	// Store the initial key in the archive
 	keysArchive = append(keysArchive, p.Keys[1])
