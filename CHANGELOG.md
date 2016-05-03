@@ -27,6 +27,8 @@ DEPRECATIONS/BREAKING CHANGES:
    using the `consul` backend and will perform its own health checks.  See
    the Consul backend documentation for information on how to disable
    auto-registration and service checks.
+ * List operations that do not find any keys now return a `404` status code
+   rather than an empty response object [GH-1365]
 
 FEATURES:
 
