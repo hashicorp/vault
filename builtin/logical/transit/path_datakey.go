@@ -73,14 +73,16 @@ func (b *backend) pathDatakeyWrite(
 	}
 
 	// Get the policy
-	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
-	defer b.lm.UnlockPolicy(name, lockType)
 
 	newKey := make([]byte, 32)
 	bits := d.Get("bits").(int)

@@ -3,6 +3,7 @@ package transit
 import (
 	"encoding/base64"
 	"fmt"
+	"sync"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -44,12 +45,12 @@ func (b *backend) pathEncrypt() *framework.Path {
 func (b *backend) pathEncryptExistenceCheck(
 	req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return false, err
-	}
-	if p != nil {
-		defer b.lm.UnlockPolicy(name, lockType)
 	}
 	return p != nil, nil
 }
@@ -75,12 +76,15 @@ func (b *backend) pathEncryptWrite(
 
 	// Get the policy
 	var p *Policy
-	var lockType bool
+	var lock *sync.RWMutex
 	var upserted bool
 	if req.Operation == logical.CreateOperation {
-		p, lockType, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0)
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0)
 	} else {
-		p, lockType, err = b.lm.GetPolicy(req.Storage, name)
+		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
+	}
+	if lock != nil {
+		defer lock.RUnlock()
 	}
 	if err != nil {
 		return nil, err
@@ -88,7 +92,6 @@ func (b *backend) pathEncryptWrite(
 	if p == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
-	defer b.lm.UnlockPolicy(name, lockType)
 
 	ciphertext, err := p.Encrypt(context, value)
 	if err != nil {

@@ -42,7 +42,10 @@ func (b *backend) pathConfigWrite(
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists before we lock everything
-	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	if lock != nil {
+		defer lock.Unlock()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -52,30 +55,7 @@ func (b *backend) pathConfigWrite(
 			logical.ErrInvalidRequest
 	}
 
-	// Store some values so we can detect a change when we lock everything
-	currDeletionAllowed := p.DeletionAllowed
-	currMinDecryptionVersion := p.MinDecryptionVersion
-
-	b.lm.UnlockPolicy(name, lockType)
-
-	// Refresh in case it's changed since before we grabbed the lock
-	p, err = b.lm.RefreshPolicy(req.Storage, name)
-	if err != nil {
-		return nil, err
-	}
-	if p == nil {
-		return nil, fmt.Errorf("error finding key %s after locking for changes", name)
-	}
-	defer b.lm.UnlockPolicy(name, exclusive)
-
 	resp := &logical.Response{}
-
-	// Check for anything to have been updated since we got the write lock
-	if currDeletionAllowed != p.DeletionAllowed ||
-		currMinDecryptionVersion != p.MinDecryptionVersion {
-		resp.AddWarning("key configuration has changed since this endpoint was called, not updating")
-		return resp, nil
-	}
 
 	persistNeeded := false
 

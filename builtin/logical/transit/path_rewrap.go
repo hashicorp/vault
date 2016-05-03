@@ -59,7 +59,10 @@ func (b *backend) pathRewrapWrite(
 	}
 
 	// Get the policy
-	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +70,6 @@ func (b *backend) pathRewrapWrite(
 	if p == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
-
-	defer b.lm.UnlockPolicy(name, lockType)
 
 	plaintext, err := p.Decrypt(context, value)
 	if err != nil {

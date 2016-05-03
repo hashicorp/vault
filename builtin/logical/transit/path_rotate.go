@@ -1,8 +1,6 @@
 package transit
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,34 +29,15 @@ func (b *backend) pathRotateWrite(
 	name := d.Get("name").(string)
 
 	// Get the policy
-	p, lockType, err := b.lm.GetPolicy(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	if lock != nil {
+		defer lock.Unlock()
+	}
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
-	}
-
-	// Store so we can detect later if this has changed out from under us
-	keyVersion := p.LatestVersion
-
-	b.lm.UnlockPolicy(name, lockType)
-
-	// Refresh in case it's changed since before we grabbed the lock
-	p, err = b.lm.RefreshPolicy(req.Storage, name)
-	if err != nil {
-		return nil, err
-	}
-	if p == nil {
-		return nil, fmt.Errorf("error finding key %s after locking for changes", name)
-	}
-	defer b.lm.UnlockPolicy(name, exclusive)
-
-	// Make sure that the policy hasn't been rotated simultaneously
-	if keyVersion != p.LatestVersion {
-		resp := &logical.Response{}
-		resp.AddWarning("key has been rotated since this endpoint was called; did not perform rotation")
-		return resp, nil
 	}
 
 	// Rotate the policy
