@@ -70,6 +70,7 @@ BUG FIXES:
  * command/various: Tell the JSON decoder to not convert all numbers to floats;
    fixes some various places where numbers were showing up in scientific
    notation
+ * core: Properly persist mount-tuned TTLs for auth backends [GH-1371]
  * core: Don't accidentally crosswire SIGINT to the reload handler [GH-1372]
  * credential/github: Make organization comparison case-insensitive during
    login [GH-1359]
