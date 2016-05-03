@@ -29,7 +29,13 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 
 	var providers []credentials.Provider
 
+	endpoint := aws.String("")
 	if config != nil {
+		// Override the default endpoint with the configured endpoint.
+		if config.Endpoint != "" {
+			endpoint = aws.String(config.Endpoint)
+		}
+
 		switch {
 		case config.AccessKey != "" && config.SecretKey != "":
 			// Add the static credential provider
@@ -65,25 +71,20 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 	}
 
 	// Create a config that can be used to make the API calls.
-	cfg := &aws.Config{
+	return &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(region),
 		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-
-	// Override the default endpoint with the configured endpoint.
-	if config.Endpoint != "" {
-		cfg.Endpoint = aws.String(config.Endpoint)
-	}
-	return cfg, nil
+		Endpoint:    endpoint,
+	}, nil
 }
 
 // flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.
 // If the client credentials configuration is deleted or updated in the backend, all
 // the cached EC2 client objects will be flushed.
 //
-// Lock should be actuired using b.configMutex.Lock() before calling this method and
-// unlocked using b.configMutex.Unlock() after returning.
+// Write lock should be acquired using b.configMutex.Lock() before calling this method
+// and lock should be released using b.configMutex.Unlock() after the method returns.
 func (b *backend) flushCachedEC2Clients() {
 	// deleting items in map during iteration is safe.
 	for region, _ := range b.EC2ClientsMap {
@@ -110,7 +111,7 @@ func (b *backend) clientEC2(s logical.Storage, region string) (*ec2.EC2, error) 
 		return b.EC2ClientsMap[region], nil
 	}
 
-	// Fetch the configured credentials
+	// Create a AWS config object using a chain of providers.
 	awsConfig, err := b.getClientConfig(s, region)
 	if err != nil {
 		return nil, err

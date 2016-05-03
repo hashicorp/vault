@@ -18,13 +18,13 @@ import (
 
 const roleTagVersion = "v1"
 
-func pathImageTag(b *backend) *framework.Path {
+func pathRoleTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "image/" + framework.GenericNameRegex("ami_id") + "/roletag$",
+		Pattern: "role/" + framework.GenericNameRegex("role_name") + "/tag$",
 		Fields: map[string]*framework.FieldSchema{
-			"ami_id": &framework.FieldSchema{
+			"role_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "AMI ID to create a tag for.",
+				Description: "Name of the role.",
 			},
 
 			"instance_id": &framework.FieldSchema{
@@ -58,30 +58,36 @@ This is an optional field, but if set, the created tag can only be used by the i
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathImageTagUpdate,
+			logical.UpdateOperation: b.pathRoleTagUpdate,
 		},
 
-		HelpSynopsis:    pathImageTagSyn,
-		HelpDescription: pathImageTagDesc,
+		HelpSynopsis:    pathRoleTagSyn,
+		HelpDescription: pathRoleTagDesc,
 	}
 }
 
-// pathImageTagUpdate is used to create an EC2 instance tag which will
+// pathRoleTagUpdate is used to create an EC2 instance tag which will
 // identify the Vault resources that the instance will be authorized for.
-func (b *backend) pathImageTagUpdate(
+func (b *backend) pathRoleTagUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	amiID := strings.ToLower(data.Get("ami_id").(string))
-	if amiID == "" {
-		return logical.ErrorResponse("missing ami_id"), nil
+	roleName := strings.ToLower(data.Get("role_name").(string))
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
 	}
 
 	// Instance ID is an optional field.
 	instanceID := strings.ToLower(data.Get("instance_id").(string))
 
-	// Parse the given policies into a slice and add 'default' if not provided.
-	// Remove all other policies if 'root' is present.
-	policies := policyutil.ParsePolicies(data.Get("policies").(string))
+	// If no policies field was not supplied, then the tag should inherit all the policies
+	// on the role. But, it was provided, but set to empty explicitly, only "default" policy
+	// should be inherited. So, by leaving the policies var unset to anything when it is not
+	// supplied, we ensure that it inherits all the policies on the role.
+	var policies []string
+	policiesStr, ok := data.GetOk("policies")
+	if ok {
+		policies = policyutil.ParsePolicies(policiesStr.(string))
+	}
 
 	// This is an optional field.
 	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
@@ -89,22 +95,22 @@ func (b *backend) pathImageTagUpdate(
 	// This is an optional field.
 	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
 
-	// Fetch the image entry corresponding to the AMI ID
-	imageEntry, err := awsImage(req.Storage, amiID)
+	// Fetch the role entry
+	roleEntry, err := awsRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
-	if imageEntry == nil {
-		return logical.ErrorResponse(fmt.Sprintf("entry not found for AMI %s", amiID)), nil
+	if roleEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("entry not found for role %s", roleName)), nil
 	}
 
 	// If RoleTag is empty, disallow creation of tag.
-	if imageEntry.RoleTag == "" {
-		return logical.ErrorResponse("tag creation is not enabled for this image"), nil
+	if roleEntry.RoleTag == "" {
+		return logical.ErrorResponse("tag creation is not enabled for this role"), nil
 	}
 
-	// There should be a HMAC key present in the image entry
-	if imageEntry.HMACKey == "" {
+	// There should be a HMAC key present in the role entry
+	if roleEntry.HMACKey == "" {
 		// Not being able to find the HMACKey is an internal error
 		return nil, fmt.Errorf("failed to find the HMAC key")
 	}
@@ -115,7 +121,7 @@ func (b *backend) pathImageTagUpdate(
 		return nil, err
 	}
 
-	// max_ttl for the role tag should be less than the max_ttl set on the image.
+	// max_ttl for the role tag should be less than the max_ttl set on the role.
 	maxTTL := time.Duration(data.Get("max_ttl").(int)) * time.Second
 
 	// max_ttl on the tag should not be greater than the system view's max_ttl value.
@@ -123,9 +129,9 @@ func (b *backend) pathImageTagUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("Registered AMI does not have a max_ttl set. So, the given TTL of %d seconds should be less than the max_ttl set for the corresponding backend mount of %d seconds.", maxTTL/time.Second, b.System().MaxLeaseTTL()/time.Second)), nil
 	}
 
-	// If max_ttl is set for the image, check the bounds for tag's max_ttl value using that.
-	if imageEntry.MaxTTL != time.Duration(0) && maxTTL > imageEntry.MaxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than the max_ttl set for the corresponding image of %d seconds", maxTTL/time.Second, imageEntry.MaxTTL/time.Second)), nil
+	// If max_ttl is set for the role, check the bounds for tag's max_ttl value using that.
+	if roleEntry.MaxTTL != time.Duration(0) && maxTTL > roleEntry.MaxTTL {
+		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than the max_ttl set for the corresponding role of %d seconds", maxTTL/time.Second, roleEntry.MaxTTL/time.Second)), nil
 	}
 
 	if maxTTL < time.Duration(0) {
@@ -135,14 +141,14 @@ func (b *backend) pathImageTagUpdate(
 	// Create a role tag out of all the information provided.
 	rTagValue, err := createRoleTagValue(&roleTag{
 		Version:                  roleTagVersion,
-		AmiID:                    amiID,
+		RoleName:                 roleName,
 		Nonce:                    nonce,
 		Policies:                 policies,
 		MaxTTL:                   maxTTL,
 		InstanceID:               instanceID,
 		DisallowReauthentication: disallowReauthentication,
 		AllowInstanceMigration:   allowInstanceMigration,
-	}, imageEntry)
+	}, roleEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +157,7 @@ func (b *backend) pathImageTagUpdate(
 	// This key value pair should be set on the EC2 instance.
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"tag_key":   imageEntry.RoleTag,
+			"tag_key":   roleEntry.RoleTag,
 			"tag_value": rTagValue,
 		},
 	}, nil
@@ -159,13 +165,13 @@ func (b *backend) pathImageTagUpdate(
 
 // createRoleTagValue prepares the plaintext version of the role tag,
 // and appends a HMAC of the plaintext value to it, before returning.
-func createRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (string, error) {
+func createRoleTagValue(rTag *roleTag, roleEntry *awsRoleEntry) (string, error) {
 	if rTag == nil {
 		return "", fmt.Errorf("nil role tag")
 	}
 
-	if imageEntry == nil {
-		return "", fmt.Errorf("nil image entry")
+	if roleEntry == nil {
+		return "", fmt.Errorf("nil role entry")
 	}
 
 	// Attach version, nonce, policies and maxTTL to the role tag value.
@@ -175,22 +181,22 @@ func createRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (string, error
 	}
 
 	// Attach HMAC to tag's plaintext and return.
-	return appendHMAC(rTagPlaintext, imageEntry)
+	return appendHMAC(rTagPlaintext, roleEntry)
 }
 
 // Takes in the plaintext part of the role tag, creates a HMAC of it and returns
 // a role tag value containing both the plaintext part and the HMAC part.
-func appendHMAC(rTagPlaintext string, imageEntry *awsImageEntry) (string, error) {
+func appendHMAC(rTagPlaintext string, roleEntry *awsRoleEntry) (string, error) {
 	if rTagPlaintext == "" {
 		return "", fmt.Errorf("empty role tag plaintext string")
 	}
 
-	if imageEntry == nil {
-		return "", fmt.Errorf("nil image entry")
+	if roleEntry == nil {
+		return "", fmt.Errorf("nil role entry")
 	}
 
 	// Create the HMAC of the value
-	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlaintext)
+	hmacB64, err := createRoleTagHMACBase64(roleEntry.HMACKey, rTagPlaintext)
 	if err != nil {
 		return "", err
 	}
@@ -198,7 +204,7 @@ func appendHMAC(rTagPlaintext string, imageEntry *awsImageEntry) (string, error)
 	// attach the HMAC to the value
 	rTagValue := fmt.Sprintf("%s:%s", rTagPlaintext, hmacB64)
 
-	// This limit of 255 is enforced on the EC2 instance. Hence complying to it here.
+	// This limit of 255 is enforced on the EC2 instance. Hence complying to that here.
 	if len(rTagValue) > 255 {
 		return "", fmt.Errorf("role tag 'value' exceeding the limit of 255 characters")
 	}
@@ -206,16 +212,15 @@ func appendHMAC(rTagPlaintext string, imageEntry *awsImageEntry) (string, error)
 	return rTagValue, nil
 }
 
-// verifyRoleTagValue rebuilds the role tag value without the HMAC,
-// computes the HMAC from it using the backend specific key and
-// compares it with the received HMAC.
-func verifyRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (bool, error) {
+// verifyRoleTagValue rebuilds the role tag's plaintext part, computes the HMAC
+// from it using the role specific HMAC key and compares it with the received HMAC.
+func verifyRoleTagValue(rTag *roleTag, roleEntry *awsRoleEntry) (bool, error) {
 	if rTag == nil {
 		return false, fmt.Errorf("nil role tag")
 	}
 
-	if imageEntry == nil {
-		return false, fmt.Errorf("nil image entry")
+	if roleEntry == nil {
+		return false, fmt.Errorf("nil role entry")
 	}
 
 	// Fetch the plaintext part of role tag
@@ -225,7 +230,7 @@ func verifyRoleTagValue(rTag *roleTag, imageEntry *awsImageEntry) (bool, error) 
 	}
 
 	// Compute the HMAC of the plaintext
-	hmacB64, err := createRoleTagHMACBase64(imageEntry.HMACKey, rTagPlaintext)
+	hmacB64, err := createRoleTagHMACBase64(roleEntry.HMACKey, rTagPlaintext)
 	if err != nil {
 		return false, err
 	}
@@ -244,17 +249,18 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	if rTag.Nonce == "" {
 		return "", fmt.Errorf("missing nonce")
 	}
-	if rTag.AmiID == "" {
-		return "", fmt.Errorf("missing ami_id")
+	if rTag.RoleName == "" {
+		return "", fmt.Errorf("missing role_name")
 	}
 
-	// This avoids an empty policy, ":p=:" in the role tag.
-	if rTag.Policies == nil || len(rTag.Policies) == 0 {
-		rTag.Policies = []string{"default"}
-	}
+	// Attach Version, Nonce, RoleName, DisallowReauthentication and AllowInstanceMigration
+	// fields to the role tag.
+	value := fmt.Sprintf("%s:%s:r=%s:d=%s:m=%s", rTag.Version, rTag.Nonce, rTag.RoleName, strconv.FormatBool(rTag.DisallowReauthentication), strconv.FormatBool(rTag.AllowInstanceMigration))
 
-	// Attach Version, Nonce, AMI ID, Policies, DisallowReauthentication fields.
-	value := fmt.Sprintf("%s:%s:a=%s:p=%s:d=%s:m=%s", rTag.Version, rTag.Nonce, rTag.AmiID, strings.Join(rTag.Policies, ","), strconv.FormatBool(rTag.DisallowReauthentication), strconv.FormatBool(rTag.AllowInstanceMigration))
+	// Attach the policies only if they are specified.
+	if len(rTag.Policies) != 0 {
+		value = fmt.Sprintf("%s:p=%s", value, strings.Join(rTag.Policies, ","))
+	}
 
 	// Attach instance_id if set.
 	if rTag.InstanceID != "" {
@@ -304,8 +310,8 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 		switch {
 		case strings.Contains(tagItem, "i="):
 			rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
-		case strings.Contains(tagItem, "a="):
-			rTag.AmiID = strings.TrimPrefix(tagItem, "a=")
+		case strings.Contains(tagItem, "r="):
+			rTag.RoleName = strings.TrimPrefix(tagItem, "r=")
 		case strings.Contains(tagItem, "p="):
 			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
 		case strings.Contains(tagItem, "d="):
@@ -328,20 +334,20 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 		}
 	}
 
-	if rTag.AmiID == "" {
-		return nil, fmt.Errorf("missing image ID")
+	if rTag.RoleName == "" {
+		return nil, fmt.Errorf("missing role name")
 	}
 
-	imageEntry, err := awsImage(s, rTag.AmiID)
+	roleEntry, err := awsRole(s, rTag.RoleName)
 	if err != nil {
 		return nil, err
 	}
-	if imageEntry == nil {
-		return nil, fmt.Errorf("entry not found for AMI %s", rTag.AmiID)
+	if roleEntry == nil {
+		return nil, fmt.Errorf("entry not found for %s", rTag.RoleName)
 	}
 
 	// Create a HMAC of the plaintext value of role tag and compare it with the given value.
-	verified, err := verifyRoleTagValue(rTag, imageEntry)
+	verified, err := verifyRoleTagValue(rTag, roleEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +358,7 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 	return rTag, nil
 }
 
-// Creates base64 encoded HMAC using a backend specific key.
+// Creates base64 encoded HMAC using a per-role key.
 func createRoleTagHMACBase64(key, value string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("invalid HMAC key")
@@ -380,7 +386,7 @@ type roleTag struct {
 	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	AmiID                    string        `json:"ami_id" structs:"ami_id" mapstructure:"ami_id"`
+	RoleName                 string        `json:"role_name" structs:"role_name" mapstructure:"role_name"`
 	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
@@ -393,26 +399,26 @@ func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
 		rTag1.Nonce == rTag2.Nonce &&
 		policyutil.EquivalentPolicies(rTag1.Policies, rTag2.Policies) &&
 		rTag1.MaxTTL == rTag2.MaxTTL &&
-		rTag1.AmiID == rTag2.AmiID &&
+		rTag1.RoleName == rTag2.RoleName &&
 		rTag1.HMAC == rTag2.HMAC &&
 		rTag1.InstanceID == rTag2.InstanceID &&
 		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication &&
 		rTag1.AllowInstanceMigration == rTag2.AllowInstanceMigration
 }
 
-const pathImageTagSyn = `
-Create a tag for an EC2 instance.
+const pathRoleTagSyn = `
+Create a tag on a role in order to be able to further restrict the capabilities of a role.
 `
 
-const pathImageTagDesc = `
-When an AMI is used by more than one EC2 instance and there is a need
-to apply only a subset of AMI's policies on the instance, create a 
-role tag using this endpoint and apply it on the instance.
+const pathRoleTagDesc = `
+If there are needs to apply only a subset of role's capabilities on the instance,
+create a role tag using this endpoint and attach the tag on the instance before
+performing login.
 
-A RoleTag setting needs to be enabled in 'image/<ami_id>' endpoint, to be able
-to create a tag. Also, the policies to be associated with the tag should be
-a subset of the policies associated with the regisred AMI.
+To be able to create a role tag, the 'role_tag' option on the role should be
+enabled via the endpoint 'role/<role_name>'. Also, the policies to be associated
+with the tag should be a subset of the policies associated with the registered role.
 
-This endpoint will return both the 'key' and the 'value' to be set for the
-EC2 instance tag.
+This endpoint will return both the 'key' and the 'value' of the tag to be set
+on the EC2 instance.
 `

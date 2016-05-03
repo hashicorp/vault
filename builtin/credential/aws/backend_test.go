@@ -23,22 +23,26 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create an entry for ami
+	// create a role entry
 	data := map[string]interface{}{
-		"policies": "p,q,r,s",
+		"policies":     "p,q,r,s",
+		"bound_ami_id": "abcd-123",
 	}
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123",
+		Path:      "role/abcd-123",
 		Storage:   storage,
 		Data:      data,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// read the created image entry
-	imageEntry, err := awsImage(storage, "abcd-123")
+	// read the created role entry
+	roleEntry, err := awsRole(storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,14 +54,14 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 	rTag1 := &roleTag{
 		Version:  "v1",
-		AmiID:    "abcd-123",
+		RoleName: "abcd-123",
 		Nonce:    nonce,
 		Policies: []string{"p", "q", "r"},
 		MaxTTL:   200,
 	}
 
-	// create a role tag against the image entry
-	val, err := createRoleTagValue(rTag1, imageEntry)
+	// create a role tag against the role entry
+	val, err := createRoleTagValue(rTag1, roleEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,15 +78,15 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// check the values in parsed role tag
 	if rTag2.Version != "v1" ||
 		rTag2.Nonce != nonce ||
-		rTag2.AmiID != "abcd-123" ||
+		rTag2.RoleName != "abcd-123" ||
 		rTag2.MaxTTL != 200 ||
 		!policyutil.EquivalentPolicies(rTag2.Policies, []string{"p", "q", "r"}) ||
 		len(rTag2.HMAC) == 0 {
 		t.Fatalf("parsed role tag is invalid")
 	}
 
-	// verify the tag contents using image specific HMAC key
-	verified, err := verifyRoleTagValue(rTag2, imageEntry)
+	// verify the tag contents using role specific HMAC key
+	verified, err := verifyRoleTagValue(rTag2, roleEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,36 +94,39 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 		t.Fatalf("failed to verify the role tag")
 	}
 
-	// register a different ami
-	_, err = b.HandleRequest(&logical.Request{
+	// register a different role
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/ami-6789",
+		Path:      "role/ami-6789",
 		Storage:   storage,
 		Data:      data,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// entry for the newly created ami entry
-	imageEntry2, err := awsImage(storage, "ami-6789")
+	// get the entry of the newly created role entry
+	roleEntry2, err := awsRole(storage, "ami-6789")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// try to verify the tag created with previous image's HMAC key
+	// try to verify the tag created with previous role's HMAC key
 	// with the newly registered entry's HMAC key
-	verified, err = verifyRoleTagValue(rTag2, imageEntry2)
+	verified, err = verifyRoleTagValue(rTag2, roleEntry2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if verified {
-		t.Fatalf("verification of role tag should have failed: invalid AMI ID")
+		t.Fatalf("verification of role tag should have failed")
 	}
 
 	// modify any value in role tag and try to verify it
 	rTag2.Version = "v2"
-	verified, err = verifyRoleTagValue(rTag2, imageEntry)
+	verified, err = verifyRoleTagValue(rTag2, roleEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,9 +142,9 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	rTag := &roleTag{
-		Version: "v1",
-		Nonce:   nonce,
-		AmiID:   "abcd-123",
+		Version:  "v1",
+		Nonce:    nonce,
+		RoleName: "abcd-123",
 	}
 
 	rTag.Version = ""
@@ -158,14 +165,14 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	}
 	rTag.Nonce = nonce
 
-	rTag.AmiID = ""
+	rTag.RoleName = ""
 	// try to create plaintext part of role tag
-	// without specifying ami_id
+	// without specifying role_name
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err == nil {
-		t.Fatalf("expected error for missing ami_id")
+		t.Fatalf("expected error for missing role_name")
 	}
-	rTag.AmiID = "abcd-123"
+	rTag.RoleName = "abcd-123"
 
 	// create the plaintext part of the tag
 	val, err = prepareRoleTagPlaintextValue(rTag)
@@ -174,7 +181,7 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	}
 
 	// verify if it contains known fields
-	if !strings.Contains(val, "a=") ||
+	if !strings.Contains(val, "r=") ||
 		!strings.Contains(val, "p=") ||
 		!strings.Contains(val, "d=") ||
 		!strings.HasPrefix(val, "v1") {
@@ -647,7 +654,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 	}
 }
 
-func TestBackend_pathImage(t *testing.T) {
+func TestBackend_pathRole(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -658,26 +665,33 @@ func TestBackend_pathImage(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"policies": "p,q,r,s",
-		"max_ttl":  "2h",
+		"policies":     "p,q,r,s",
+		"max_ttl":      "2h",
+		"bound_ami_id": "ami-abcd123",
 	}
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "image/ami-abcd123",
+		Path:      "role/ami-abcd123",
 		Data:      data,
 		Storage:   storage,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "image/ami-abcd123",
+		Path:      "role/ami-abcd123",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatal("failed to read the role entry")
 	}
 	if !policyutil.EquivalentPolicies(strings.Split(data["policies"].(string), ","), resp.Data["policies"].([]string)) {
 		t.Fatalf("bad: policies: expected: %#v\ngot: %#v\n", data, resp.Data)
@@ -685,18 +699,21 @@ func TestBackend_pathImage(t *testing.T) {
 
 	data["allow_instance_migration"] = true
 	data["disallow_reauthentication"] = true
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/ami-abcd123",
+		Path:      "role/ami-abcd123",
 		Data:      data,
 		Storage:   storage,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "image/ami-abcd123",
+		Path:      "role/ami-abcd123",
 		Storage:   storage,
 	})
 	if err != nil {
@@ -706,27 +723,30 @@ func TestBackend_pathImage(t *testing.T) {
 		t.Fatal("bad: expected:true got:false\n")
 	}
 
-	// add another entry, to test listing of image entries
-	_, err = b.HandleRequest(&logical.Request{
+	// add another entry, to test listing of role entries
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/ami-abcd456",
+		Path:      "role/ami-abcd456",
 		Data:      data,
 		Storage:   storage,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ListOperation,
-		Path:      "images",
+		Path:      "roles",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.Data == nil || resp.IsError() {
-		t.Fatalf("failed to list the image entries")
+		t.Fatalf("failed to list the role entries")
 	}
 	keys := resp.Data["keys"].([]string)
 	if len(keys) != 2 {
@@ -735,7 +755,7 @@ func TestBackend_pathImage(t *testing.T) {
 
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "image/ami-abcd123",
+		Path:      "role/ami-abcd123",
 		Storage:   storage,
 	})
 	if err != nil {
@@ -744,7 +764,7 @@ func TestBackend_pathImage(t *testing.T) {
 
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "image/ami-abcd123",
+		Path:      "role/ami-abcd123",
 		Storage:   storage,
 	})
 	if err != nil {
@@ -766,30 +786,34 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create an entry for an AMI
+	// create a role
 	data := map[string]interface{}{
-		"policies": "p,q,r,s",
-		"max_ttl":  "120s",
-		"role_tag": "VaultRole",
+		"policies":     "p,q,r,s",
+		"max_ttl":      "120s",
+		"role_tag":     "VaultRole",
+		"bound_ami_id": "abcd-123",
 	}
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "image/abcd-123",
+		Path:      "role/abcd-123",
 		Storage:   storage,
 		Data:      data,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// verify that the entry is created
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "image/abcd-123",
+		Path:      "role/abcd-123",
 		Storage:   storage,
 	})
 	if resp == nil {
-		t.Fatalf("expected an image entry for abcd-123")
+		t.Fatalf("expected an role entry for abcd-123")
 	}
 
 	// create a role tag
@@ -798,7 +822,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	}
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123/roletag",
+		Path:      "role/abcd-123/tag",
 		Storage:   storage,
 		Data:      data2,
 	})
@@ -821,12 +845,12 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	}
 	if rTag.Version != "v1" ||
 		!policyutil.EquivalentPolicies(rTag.Policies, []string{"p", "q", "r", "s"}) ||
-		rTag.AmiID != "abcd-123" {
+		rTag.RoleName != "abcd-123" {
 		t.Fatalf("bad: parsed role tag contains incorrect values. Got: %#v\n", rTag)
 	}
 }
 
-func TestBackend_PathImageTag(t *testing.T) {
+func TestBackend_PathRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -836,45 +860,49 @@ func TestBackend_PathImageTag(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"policies": "p,q,r,s",
-		"max_ttl":  "120s",
-		"role_tag": "VaultRole",
+		"policies":     "p,q,r,s",
+		"max_ttl":      "120s",
+		"role_tag":     "VaultRole",
+		"bound_ami_id": "abcd-123",
 	}
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "image/abcd-123",
+		Path:      "role/abcd-123",
 		Storage:   storage,
 		Data:      data,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "image/abcd-123",
+		Path:      "role/abcd-123",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp == nil {
-		t.Fatalf("failed to find an entry for ami_id: abcd-123")
+		t.Fatalf("failed to find a role entry for abcd-123")
 	}
 
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123/roletag",
+		Path:      "role/abcd-123/tag",
 		Storage:   storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.Data == nil {
-		t.Fatalf("failed to create a tag on ami_id: abcd-123")
+		t.Fatalf("failed to create a tag on role: abcd-123")
 	}
 	if resp.IsError() {
-		t.Fatalf("failed to create a tag on ami_id: abcd-123: %s\n", resp.Data["error"])
+		t.Fatalf("failed to create a tag on role: abcd-123: %s\n", resp.Data["error"])
 	}
 	if resp.Data["tag_value"].(string) == "" {
 		t.Fatalf("role tag not present in the response data: %#v\n", resp.Data)
@@ -891,29 +919,32 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create an image entry
+	// create an role entry
 	data := map[string]interface{}{
-		"ami_id":   "abcd-123",
-		"policies": "p,q,r,s",
-		"role_tag": "VaultRole",
+		"policies":     "p,q,r,s",
+		"role_tag":     "VaultRole",
+		"bound_ami_id": "abcd-123",
 	}
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "image/abcd-123",
+		Path:      "role/abcd-123",
 		Storage:   storage,
 		Data:      data,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// create a role tag against an image registered before
+	// create a role tag against an role registered before
 	data2 := map[string]interface{}{
 		"policies": "p,q,r,s",
 	}
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/abcd-123/roletag",
+		Path:      "role/abcd-123/tag",
 		Storage:   storage,
 		Data:      data2,
 	})
@@ -921,10 +952,10 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.Data == nil {
-		t.Fatalf("failed to create a tag on ami_id: abcd-123")
+		t.Fatalf("failed to create a tag on role: abcd-123")
 	}
 	if resp.IsError() {
-		t.Fatalf("failed to create a tag on ami_id: abcd-123: %s\n", resp.Data["error"])
+		t.Fatalf("failed to create a tag on role: abcd-123: %s\n", resp.Data["error"])
 	}
 	tag := resp.Data["tag_value"].(string)
 	if tag == "" {
@@ -1002,6 +1033,8 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		t.Fatalf("env var TEST_AWS_EC2_AMI_ID not set")
 	}
 
+	roleName := amiID
+
 	// create the backend
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
@@ -1040,18 +1073,22 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		}
 	}
 
-	// create an entry for the AMI. This is required for login to work.
+	// create an entry for the role. This is required for login to work.
 	data := map[string]interface{}{
-		"policies": "root",
-		"max_ttl":  "120s",
+		"policies":     "root",
+		"max_ttl":      "120s",
+		"bound_ami_id": amiID,
 	}
 
-	_, err = b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "image/" + amiID,
+		Path:      "role/" + roleName,
 		Storage:   storage,
 		Data:      data,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1068,7 +1105,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginInput,
 	}
-	resp, err := b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1111,7 +1148,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Data == nil || resp.Data["ami_id"] != amiID {
+	if resp == nil || resp.Data == nil || resp.Data["role_name"] != roleName {
 		t.Fatalf("failed to read whitelist identity")
 	}
 

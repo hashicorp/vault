@@ -104,6 +104,7 @@ func (b *backend) pathCertificatesList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
+
 	certs, err := req.Storage.List("config/certificate/")
 	if err != nil {
 		return nil, err
@@ -132,10 +133,10 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 
 // awsPublicCertificates returns a slice of all the parsed AWS public
 // certificates, that were registered using `config/certificate/<cert_name>` endpoint.
-// This method will also append default certificate to the slice.
+// This method will also append default certificate in the backend, to the slice.
 func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
-
 	var certs []*x509.Certificate
+
 	// Append the generic certificate provided in the AWS EC2 instance metadata documentation.
 	decodedCert, err := decodePEMAndParseCertificate(genericAWSPublicCertificate)
 	if err != nil {
@@ -173,6 +174,7 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
+
 	entry, err := s.Get("config/certificate/" + certName)
 	if err != nil {
 		return nil, err

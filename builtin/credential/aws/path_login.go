@@ -18,6 +18,13 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
+			"role_name": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Name of the pre-registered role in this backend against which the login
+is being attempted. If this is not supplied, the name of the AMI ID in
+the instance identity document will be assumed to be the name of the role.`,
+			},
+
 			"pkcs7": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "PKCS7 signature of the identity document.",
@@ -83,7 +90,7 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 // validateMetadata matches the given client nonce and pending time with the one cached
 // in the identity whitelist during the previous login. But, if reauthentication is
 // disabled, login attempt is failed immediately.
-func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, imageEntry *awsImageEntry) error {
+func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, roleEntry *awsRoleEntry) error {
 	// If reauthentication is disabled, doesn't matter what other metadata is provided,
 	// authentication will not succeed.
 	if storedIdentity.DisallowReauthentication {
@@ -109,7 +116,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	// ID from the whitelist is necessary, or the client must durably store
 	// the nonce.
 	//
-	// If the `allow_instance_migration` property of the registered AMI is
+	// If the `allow_instance_migration` property of the registered role is
 	// enabled, then the client nonce mismatch is ignored, as long as the
 	// pending time in the presented instance identity document is newer than
 	// the cached pending time. The new pendingTime is stored and used for
@@ -118,15 +125,15 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	// This is a weak criterion and hence the `allow_instance_migration` option
 	// should be used with caution.
 	if clientNonce != storedIdentity.ClientNonce {
-		if !imageEntry.AllowInstanceMigration {
+		if !roleEntry.AllowInstanceMigration {
 			return fmt.Errorf("client nonce mismatch")
 		}
-		if imageEntry.AllowInstanceMigration && !givenPendingTime.After(storedPendingTime) {
+		if roleEntry.AllowInstanceMigration && !givenPendingTime.After(storedPendingTime) {
 			return fmt.Errorf("client nonce mismatch and instance meta-data incorrect")
 		}
 	}
 
-	// Ensure that the 'pendingTime' on the given identity document is not before than the
+	// Ensure that the 'pendingTime' on the given identity document is not before the
 	// 'pendingTime' that was used for previous login. This disallows old metadata documents
 	// from being used to perform login.
 	if givenPendingTime.Before(storedPendingTime) {
@@ -154,9 +161,9 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 		return nil, fmt.Errorf("failed to parse the BER encoded PKCS#7 signature: %s\n", err)
 	}
 
-	// Get the public certificate that is used to verify the signature.
+	// Get the public certificates that are used to verify the signature.
 	// This returns a slice of certificates containing the default certificate
-	// and all the registered certificates using 'config/certificate/<cert_name>' endpoint
+	// and all the registered certificates via 'config/certificate/<cert_name>' endpoint
 	publicCerts, err := b.awsPublicCertificates(s)
 	if err != nil {
 		return nil, err
@@ -165,7 +172,7 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 		return nil, fmt.Errorf("certificates to verify the signature are not found")
 	}
 
-	// Before calling Verify() on the PKCS#7 struct, set the certificate to be used
+	// Before calling Verify() on the PKCS#7 struct, set the certificates to be used
 	// to verify the contents in the signer information.
 	pkcs7Data.Certificates = publicCerts
 
@@ -192,12 +199,11 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 // pathLoginUpdate is used to create a Vault token by the EC2 instances
 // by providing the pkcs7 signature of the instance identity document
 // and a client created nonce. Client nonce is optional if 'disallow_reauthentication'
-// option is enabled on the registered AMI.
+// option is enabled on the registered role.
 func (b *backend) pathLoginUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	pkcs7B64 := data.Get("pkcs7").(string)
-
 	if pkcs7B64 == "" {
 		return logical.ErrorResponse("missing pkcs7"), nil
 	}
@@ -211,6 +217,13 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("failed to extract instance identity document from PKCS#7 signature"), nil
 	}
 
+	roleName := data.Get("role_name").(string)
+
+	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for.
+	if roleName == "" {
+		roleName = identityDoc.AmiID
+	}
+
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
@@ -219,13 +232,13 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
 	}
 
-	// Get the entry for the AMI used by the instance.
-	imageEntry, err := awsImage(req.Storage, identityDoc.AmiID)
+	// Get the entry for the role used by the instance.
+	roleEntry, err := awsRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
-	if imageEntry == nil {
-		return logical.ErrorResponse("image entry not found"), nil
+	if roleEntry == nil {
+		return logical.ErrorResponse("role entry not found"), nil
 	}
 
 	// Get the entry from the identity whitelist, if there is one.
@@ -241,27 +254,28 @@ func (b *backend) pathLoginUpdate(
 		// Check if the client nonce match the cached nonce and if the pending time
 		// of the identity document is not before the pending time of the document
 		// with which previous login was made. If 'allow_instance_migration' is
-		// enabled on the registered AMI, client nonce requirement is relaxed.
-		if err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, imageEntry); err != nil {
+		// enabled on the registered role, client nonce requirement is relaxed.
+		if err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, roleEntry); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
-	// Load the current values for max TTL and policies from the image entry,
-	// before checking for overriding by the RoleTag
+	// Load the current values for max TTL and policies from the role entry,
+	// before checking for overriding max TTL in the role tag.
 	maxTTL := b.System().MaxLeaseTTL()
-	if imageEntry.MaxTTL > time.Duration(0) && imageEntry.MaxTTL < maxTTL {
-		maxTTL = imageEntry.MaxTTL
+	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
+		maxTTL = roleEntry.MaxTTL
 	}
 
-	policies := imageEntry.Policies
+	policies := roleEntry.Policies
 	rTagMaxTTL := time.Duration(0)
-	disallowReauthentication := imageEntry.DisallowReauthentication
+	disallowReauthentication := roleEntry.DisallowReauthentication
 
-	// Role tag is enabled for the AMI.
-	if imageEntry.RoleTag != "" {
+	if roleEntry.RoleTag != "" {
+		// Role tag is enabled on the role.
+
 		// Overwrite the policies with the ones returned from processing the role tag.
-		resp, err := b.handleRoleTagLogin(req.Storage, identityDoc, imageEntry, instanceDesc)
+		resp, err := b.handleRoleTagLogin(req.Storage, identityDoc, roleName, roleEntry, instanceDesc)
 		if err != nil {
 			return nil, err
 		}
@@ -269,15 +283,22 @@ func (b *backend) pathLoginUpdate(
 			return logical.ErrorResponse("failed to fetch and verify the role tag"), nil
 		}
 
-		policies = resp.Policies
-		rTagMaxTTL = resp.MaxTTL
+		// If there are no policies on the role tag, policies on the role are inherited.
+		// If policies on role tag are set, by this point, it is verified that it is a subset of the
+		// policies on the role. So, apply only those.
+		if len(resp.Policies) != 0 {
+			policies = resp.Policies
+		}
 
-		// If imageEntry had disallowReauthentication set to 'true', do not reset it
+		// If roleEntry had disallowReauthentication set to 'true', do not reset it
 		// to 'false' based on role tag having it not set. But, if role tag had it set,
 		// be sure to override the value.
 		if !disallowReauthentication {
 			disallowReauthentication = resp.DisallowReauthentication
 		}
+
+		// Cache the value of role tag's max_ttl value.
+		rTagMaxTTL = resp.MaxTTL
 
 		// Scope the maxTTL to the value set on the role tag.
 		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < maxTTL {
@@ -288,10 +309,10 @@ func (b *backend) pathLoginUpdate(
 	// Save the login attempt in the identity whitelist.
 	currentTime := time.Now().UTC()
 	if storedIdentity == nil {
-		// AmiID, ClientNonce and CreationTime of the identity entry,
+		// RoleName, ClientNonce and CreationTime of the identity entry,
 		// once set, should never change.
 		storedIdentity = &whitelistIdentity{
-			AmiID:        identityDoc.AmiID,
+			RoleName:     roleName,
 			ClientNonce:  clientNonce,
 			CreationTime: currentTime,
 		}
@@ -325,6 +346,7 @@ func (b *backend) pathLoginUpdate(
 				"instance_id":      identityDoc.InstanceID,
 				"region":           identityDoc.Region,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
+				"role_name":        roleName,
 				"ami_id":           identityDoc.AmiID,
 			},
 			LeaseOptions: logical.LeaseOptions{
@@ -334,7 +356,7 @@ func (b *backend) pathLoginUpdate(
 		},
 	}
 
-	// Enforce our image/role tag maximum TTL
+	// Cap the TTL value.
 	if maxTTL < resp.Auth.TTL {
 		resp.Auth.TTL = maxTTL
 	}
@@ -345,36 +367,38 @@ func (b *backend) pathLoginUpdate(
 
 // handleRoleTagLogin is used to fetch the role tag of the instance and verifies it to be correct.
 // Then the policies for the login request will be set off of the role tag, if certain creteria satisfies.
-func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, imageEntry *awsImageEntry, instanceDesc *ec2.DescribeInstancesOutput) (*roleTagLoginResponse, error) {
+func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, roleName string, roleEntry *awsRoleEntry, instanceDesc *ec2.DescribeInstancesOutput) (*roleTagLoginResponse, error) {
 	if identityDoc == nil {
 		return nil, fmt.Errorf("nil identityDoc")
 	}
-	if imageEntry == nil {
-		return nil, fmt.Errorf("nil imageEntry")
+	if roleEntry == nil {
+		return nil, fmt.Errorf("nil roleEntry")
 	}
 	if instanceDesc == nil {
 		return nil, fmt.Errorf("nil instanceDesc")
 	}
 
-	// Input validation is not performed here considering that it would have been done
-	// in validateInstance method.
+	// Input validation on instanceDesc is not performed here considering
+	// that it would have been done in validateInstance method.
 	tags := instanceDesc.Reservations[0].Instances[0].Tags
 	if tags == nil || len(tags) == 0 {
-		return nil, fmt.Errorf("missing tag with key %s on the instance", imageEntry.RoleTag)
+		return nil, fmt.Errorf("missing tag with key %s on the instance", roleEntry.RoleTag)
 	}
 
+	// Iterate through the tags attached on the instance and look for
+	// a tag with its 'key' matching the expected role tag value.
 	rTagValue := ""
 	for _, tagItem := range tags {
-		if tagItem.Key != nil && *tagItem.Key == imageEntry.RoleTag {
+		if tagItem.Key != nil && *tagItem.Key == roleEntry.RoleTag {
 			rTagValue = *tagItem.Value
 			break
 		}
 	}
 
-	// If 'role_tag' is enabled on the AMI, and if a corresponding tag is not found
+	// If 'role_tag' is enabled on the role, and if a corresponding tag is not found
 	// to be attached to the instance, fail.
 	if rTagValue == "" {
-		return nil, fmt.Errorf("missing tag with key %s on the instance", imageEntry.RoleTag)
+		return nil, fmt.Errorf("missing tag with key %s on the instance", roleEntry.RoleTag)
 	}
 
 	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC.
@@ -383,9 +407,10 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 		return nil, err
 	}
 
-	// Check if the role tag belongs to the AMI ID of the instance.
-	if rTag.AmiID != identityDoc.AmiID {
-		return nil, fmt.Errorf("role tag does not belong to the instance's AMI ID.")
+	// Check if the role name with which this login is being made is same
+	// as the role name embedded in the tag.
+	if rTag.RoleName != roleName {
+		return nil, fmt.Errorf("role_name on the tag is not matching the role_name supplied")
 	}
 
 	// If instance_id was set on the role tag, check if the same instance is attempting to login.
@@ -402,9 +427,9 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 		return nil, fmt.Errorf("role tag is blacklisted")
 	}
 
-	// Ensure that the policies on the RoleTag is a subset of policies on the image
-	if !strutil.StrListSubset(imageEntry.Policies, rTag.Policies) {
-		return nil, fmt.Errorf("policies on the role tag must be subset of policies on the image")
+	// Ensure that the policies on the RoleTag is a subset of policies on the role
+	if !strutil.StrListSubset(roleEntry.Policies, rTag.Policies) {
+		return nil, fmt.Errorf("policies on the role tag must be subset of policies on the role")
 	}
 
 	return &roleTagLoginResponse{
@@ -438,17 +463,18 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	// Ensure that image entry is not deleted.
-	imageEntry, err := awsImage(req.Storage, storedIdentity.AmiID)
+	// Ensure that role entry is not deleted.
+	roleEntry, err := awsRole(req.Storage, storedIdentity.RoleName)
 	if err != nil {
 		return nil, err
 	}
-	if imageEntry == nil {
-		return logical.ErrorResponse("image entry not found"), nil
+	if roleEntry == nil {
+		return logical.ErrorResponse("role entry not found"), nil
 	}
 
-	// For now, rTagMaxTTL is cached in internal data during login and used in renewal for
-	// setting the MaxTTL for the stored login identity entry.
+	// If the login was made using the role tag, then max_ttl from tag
+	// is cached in internal data during login and used here to cap the
+	// max_ttl of renewal.
 	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
 	if err != nil {
 		return nil, err
@@ -456,8 +482,8 @@ func (b *backend) pathLoginRenew(
 
 	// Re-evaluate the maxTTL bounds.
 	maxTTL := b.System().MaxLeaseTTL()
-	if imageEntry.MaxTTL > time.Duration(0) && imageEntry.MaxTTL < maxTTL {
-		maxTTL = imageEntry.MaxTTL
+	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
+		maxTTL = roleEntry.MaxTTL
 	}
 	if rTagMaxTTL > time.Duration(0) && maxTTL > rTagMaxTTL {
 		maxTTL = rTagMaxTTL
@@ -468,7 +494,7 @@ func (b *backend) pathLoginRenew(
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(maxTTL)
 
-	if err = setWhitelistIdentityEntry(req.Storage, req.Auth.Metadata["instance_id"], storedIdentity); err != nil {
+	if err = setWhitelistIdentityEntry(req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -498,14 +524,14 @@ const pathLoginDesc = `
 An EC2 instance is authenticated using the PKCS#7 signature of the instance identity
 document and a client created nonce. This nonce should be unique and should be used by
 the instance for all future logins, unless 'allow_instance_migration' option on the
-registered AMI is enabled, in which case client nonce is optional.
+registered role is enabled, in which case client nonce is optional.
 
 First login attempt, creates a whitelist entry in Vault associating the instance to the nonce
 provided. All future logins will succeed only if the client nonce matches the nonce in the
 whitelisted entry.
 
-By default, a cron task will periodically looks for expired entries in the whitelist
-and delete them. The duration to periodically run this is one hour by default.
+By default, a cron task will periodically look for expired entries in the whitelist
+and delete them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/identities' endpoint.
 `

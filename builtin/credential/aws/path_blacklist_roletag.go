@@ -14,8 +14,9 @@ func pathBlacklistRoleTag(b *backend) *framework.Path {
 		Pattern: "blacklist/roletag/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
 			"role_tag": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Role tag that needs be blacklisted. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64 encoded.",
+				Type: framework.TypeString,
+				Description: `Role tag to be blacklisted. The tag can be supplied as-is. In order
+to avoid any encoding problems, it can be base64 encoded.`,
 			},
 		},
 
@@ -52,13 +53,14 @@ func (b *backend) pathBlacklistRoleTagsList(
 		return nil, err
 	}
 
-	// Tags are base64 encoded and then indexed to avoid problems
+	// Tags are base64 encoded before indexing to avoid problems
 	// with the path separators being present in the tag.
 	// Reverse it before returning the list response.
 	for i, keyB64 := range tags {
 		if key, err := base64.StdEncoding.DecodeString(keyB64); err != nil {
 			return nil, err
 		} else {
+			// Overwrite the result with the decoded string.
 			tags[i] = string(key)
 		}
 	}
@@ -150,13 +152,13 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 		return logical.ErrorResponse("failed to verify the role tag and parse it"), nil
 	}
 
-	// Get the entry for the AMI mentioned in the role tag.
-	imageEntry, err := awsImage(req.Storage, rTag.AmiID)
+	// Get the entry for the role mentioned in the role tag.
+	roleEntry, err := awsRole(req.Storage, rTag.RoleName)
 	if err != nil {
 		return nil, err
 	}
-	if imageEntry == nil {
-		return logical.ErrorResponse("image entry not found"), nil
+	if roleEntry == nil {
+		return logical.ErrorResponse("role entry not found"), nil
 	}
 
 	// Check if the role tag is already blacklisted. If yes, update it.
@@ -170,7 +172,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 
 	currentTime := time.Now().UTC()
 
-	// Check if this is creation of entry.
+	// Check if this is a creation of blacklist entry.
 	if blEntry.CreationTime.IsZero() {
 		// Set the creation time for the blacklist entry.
 		// This should not be updated after setting it once.
@@ -185,13 +187,13 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 		rTag.MaxTTL = b.System().MaxLeaseTTL()
 	}
 
-	// The max_ttl value on the role tag is scoped by the value set on the AMI entry.
-	if imageEntry.MaxTTL > time.Duration(0) && rTag.MaxTTL > imageEntry.MaxTTL {
-		rTag.MaxTTL = imageEntry.MaxTTL
+	// The max_ttl value on the role tag is scoped by the value set on the role entry.
+	if roleEntry.MaxTTL > time.Duration(0) && rTag.MaxTTL > roleEntry.MaxTTL {
+		rTag.MaxTTL = roleEntry.MaxTTL
 	}
 
 	// Expiration time is decided by least of the max_ttl values set on:
-	// role tag, ami entry, backend's mount.
+	// role tag, role entry, backend's mount.
 	blEntry.ExpirationTime = currentTime.Add(rTag.MaxTTL)
 
 	entry, err := logical.StorageEntryJSON("blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)), blEntry)
@@ -217,12 +219,12 @@ Blacklist a previously created role tag.
 `
 
 const pathBlacklistRoleTagDesc = `
-Blacklist a role tag so that it cannot be used by an EC2 instance to perform logins
+Blacklist a role tag so that it cannot be used by any EC2 instance to perform logins
 in the future. This can be used if the role tag is suspected or believed to be possessed
 by an unintended party.
 
 By default, a cron task will periodically looks for expired entries in the blacklist
-and delete them. The duration to periodically run this is one hour by default.
+and delete them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/roletags' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/roletags' endpoint.
 
@@ -237,5 +239,5 @@ List the blacklisted role tags.
 const pathListBlacklistRoleTagsHelpDesc = `
 List all the entries present in the blacklist. This will show both the valid
 entries and the expired entries in the blacklist. Use 'tidy/roletags' endpoint
-to clean-up the blacklist of role tags.
+to clean-up the blacklist of role tags based on expiration time.
 `

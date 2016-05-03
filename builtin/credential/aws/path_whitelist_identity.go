@@ -86,7 +86,6 @@ func setWhitelistIdentityEntry(s logical.Storage, instanceID string, identity *w
 // pathWhitelistIdentityDelete is used to delete an entry from the identity whitelist given an instance ID.
 func (b *backend) pathWhitelistIdentityDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	instanceID := data.Get("instance_id").(string)
 	if instanceID == "" {
 		return logical.ErrorResponse("missing instance_id"), nil
@@ -118,7 +117,7 @@ func (b *backend) pathWhitelistIdentityRead(
 
 // Struct to represent each item in the identity whitelist.
 type whitelistIdentity struct {
-	AmiID                    string    `json:"ami_id" structs:"ami_id" mapstructure:"ami_id"`
+	RoleName                 string    `json:"role_name" structs:"role_name" mapstructure:"role_name"`
 	ClientNonce              string    `json:"client_nonce" structs:"client_nonce" mapstructure:"client_nonce"`
 	CreationTime             time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 	DisallowReauthentication bool      `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`

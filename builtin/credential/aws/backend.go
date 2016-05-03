@@ -18,6 +18,29 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return b.Setup(conf)
 }
 
+type backend struct {
+	*framework.Backend
+	Salt *salt.Salt
+
+	// Lock to make changes to any of the backend's configuration endpoints.
+	configMutex sync.RWMutex
+
+	// Duration after which the periodic function of the backend needs to
+	// tidy the blacklist and whitelist entries.
+	tidyCooldownPeriod time.Duration
+
+	// nextTidyTime holds the time at which the periodic func should initiatite
+	// the tidy operations. This is set by the periodicFunc based on the value
+	// of tidyCooldownPeriod.
+	nextTidyTime time.Time
+
+	// Map to hold the EC2 client objects indexed by region. This avoids the
+	// overhead of creating a client object for every login request. When
+	// the credentials are modified or deleted, all the cached client objects
+	// will be flushed.
+	EC2ClientsMap map[string]*ec2.EC2
+}
+
 func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
 		HashFunc: salt.SHA256Hash,
@@ -45,9 +68,9 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		},
 		Paths: []*framework.Path{
 			pathLogin(b),
-			pathImage(b),
-			pathListImages(b),
-			pathImageTag(b),
+			pathRole(b),
+			pathListRoles(b),
+			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),
 			pathConfigTidyRoleTags(b),
@@ -65,34 +88,18 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 	return b.Backend, nil
 }
 
-type backend struct {
-	*framework.Backend
-	Salt *salt.Salt
-
-	// Lock to make changes to any of the backend's configuration endpoints.
-	configMutex sync.RWMutex
-
-	// Duration after which the periodic function of the backend needs to be
-	// executed.
-	tidyCooldownPeriod time.Duration
-
-	// Var that holds the time at which the periodic func should initiatite
-	// the tidy operations.
-	nextTidyTime time.Time
-
-	// Map to hold the EC2 client objects indexed by region. This avoids the
-	// overhead of creating a client object for every login request.
-	EC2ClientsMap map[string]*ec2.EC2
-}
-
 // periodicFunc performs the tasks that the backend wishes to do periodically.
 // Currently this will be triggered once in a minute by the RollbackManager.
 //
-// The tasks being done are to cleanup the expired entries of both blacklist
-// and whitelist. Tidying is done not once in a minute, but once in an hour.
+// The tasks being done currently by this function are to cleanup the expired
+// entries of both blacklist role tags and whitelist identities. Tidying is done
+// not once in a minute, but once in an hour, controlled by 'tidyCooldownPeriod'.
 // Tidying of blacklist and whitelist are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
 func (b *backend) periodicFunc(req *logical.Request) error {
+
+	// Run the tidy operations for the first time. Then run it when current
+	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().UTC().Before(b.nextTidyTime) {
 		// safety_buffer defaults to 72h
 		safety_buffer := 259200
@@ -136,7 +143,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 			tidyWhitelistIdentity(req.Storage, safety_buffer)
 		}
 
-		// Update the nextTidyTime
+		// Update the time at which to run the tidy functions again.
 		b.nextTidyTime = time.Now().UTC().Add(b.tidyCooldownPeriod)
 	}
 	return nil
@@ -146,13 +153,13 @@ const backendHelp = `
 AWS auth backend takes in PKCS#7 signature of an AWS EC2 instance and a client
 created nonce to authenticates the EC2 instance with Vault.
 
-Authentication is backed by a preconfigured association of AMIs to Vault's policies
-through 'image/<ami_id>' endpoint. All the instances that are using this AMI will
-get the policies configured on the AMI.
+Authentication is backed by a preconfigured role in the backend. The role
+represents the authorization of resources by containing Vault's policies.
+Role can be created using 'role/<role_name>' endpoint.
 
-If there is need to further restrict the policies set on the AMI, 'role_tag' option
-can be enabled on the AMI and a tag can be generated using 'image/<ami_id>/roletag'
-endpoint. This tag represents the subset of capabilities set on the AMI. When the
-'role_tag' option is enabled on the AMI, the login operation requires that a respective
+If there is need to further restrict the policies set on the role, 'role_tag' option
+can be enabled on the role, and a tag can be generated using 'role/<role_name>/tag'
+endpoint. This tag represents the subset of capabilities set on the role. When the
+'role_tag' option is enabled on the role, the login operation requires that a respective
 role tag is attached to the EC2 instance that is performing the login.
 `

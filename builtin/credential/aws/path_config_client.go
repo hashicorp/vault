@@ -12,16 +12,19 @@ func pathConfigClient(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "",
 				Description: "AWS Access key with permissions to query EC2 instance metadata.",
 			},
 
 			"secret_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "",
 				Description: "AWS Secret key with permissions to query EC2 instance metadata.",
 			},
 
 			"endpoint": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "",
 				Description: "The endpoint to be used to make API calls to AWS EC2.",
 			},
 		},
@@ -46,6 +49,7 @@ func (b *backend) pathConfigClientExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
+
 	entry, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
@@ -152,6 +156,11 @@ func (b *backend) pathConfigClientCreateUpdate(
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
+	// Since this endpoint supports both create operation and update operation,
+	// the error checks for access_key and secret_key not being set are not present.
+	// This allows calling this endpoint multiple times to provide the values.
+	// Hence, the readers of this endpoint should do the validation on
+	// the validation of keys before using them.
 	entry, err := logical.StorageEntryJSON("config/client", configEntry)
 	if err != nil {
 		return nil, err
