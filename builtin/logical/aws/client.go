@@ -4,34 +4,40 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/logical"
 )
 
 func getRootConfig(s logical.Storage) (*aws.Config, error) {
+	credConfig := &awsutil.AWSCredentialsConfig{}
+
 	entry, err := s.Get("config/root")
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, fmt.Errorf(
-			"root credentials haven't been configured. Please configure\n" +
-				"them at the 'config/root' endpoint")
+	if entry != nil {
+		var config rootConfig
+		if err := entry.DecodeJSON(&config); err != nil {
+			return nil, fmt.Errorf("error reading root configuration: %s", err)
+		}
+
+		credConfig.AccessKey = config.AccessKey
+		credConfig.SecretKey = config.SecretKey
+		credConfig.Region = config.Region
 	}
 
-	var config rootConfig
-	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, fmt.Errorf("error reading root configuration: %s", err)
+	creds, err := awsutil.GenerateCredentialChain(credConfig)
+	if err != nil {
+		return nil, err
 	}
 
-	creds := credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, "")
 	return &aws.Config{
 		Credentials: creds,
-		Region:      aws.String(config.Region),
+		Region:      aws.String(credConfig.Region),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}, nil
 }
