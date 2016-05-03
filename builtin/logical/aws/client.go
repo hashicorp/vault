@@ -13,7 +13,7 @@ import (
 )
 
 func getRootConfig(s logical.Storage) (*aws.Config, error) {
-	credConfig := &awsutil.AWSCredentialsConfig{}
+	credsConfig := &awsutil.CredentialsConfig{}
 
 	entry, err := s.Get("config/root")
 	if err != nil {
@@ -25,23 +25,25 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 			return nil, fmt.Errorf("error reading root configuration: %s", err)
 		}
 
-		credConfig.AccessKey = config.AccessKey
-		credConfig.SecretKey = config.SecretKey
-		credConfig.Region = config.Region
+		credsConfig.AccessKey = config.AccessKey
+		credsConfig.SecretKey = config.SecretKey
+		credsConfig.Region = config.Region
 	}
 
-	if credConfig.Region == "" {
-		credConfig.Region = "us-east-1"
+	if credsConfig.Region == "" {
+		credsConfig.Region = "us-east-1"
 	}
 
-	creds, err := awsutil.GenerateCredentialChain(credConfig)
+	credsConfig.HTTPClient = cleanhttp.DefaultClient()
+
+	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
 		return nil, err
 	}
 
 	return &aws.Config{
 		Credentials: creds,
-		Region:      aws.String(credConfig.Region),
+		Region:      aws.String(credsConfig.Region),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}, nil
 }
