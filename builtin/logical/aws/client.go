@@ -30,6 +30,10 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 		credConfig.Region = config.Region
 	}
 
+	if credConfig.Region == "" {
+		credConfig.Region = "us-east-1"
+	}
+
 	creds, err := awsutil.GenerateCredentialChain(credConfig)
 	if err != nil {
 		return nil, err

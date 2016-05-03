@@ -21,6 +21,9 @@ func GenerateCredentialChain(config *AWSCredentialsConfig) (*credentials.Credent
 	if config == nil {
 		return nil, fmt.Errorf("nil configuration provided")
 	}
+	if config.Region == "" {
+		return nil, fmt.Errorf("region must be provided in credentials configuration")
+	}
 
 	var providers []credentials.Provider
 
