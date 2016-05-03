@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"golang.org/x/net/context"
 
 	"github.com/gocql/gocql/internal/lru"
 )
@@ -175,6 +177,10 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		}
 	}
 
+	if cfg.ReconnectInterval > 0 {
+		go s.reconnectDownedHosts(cfg.ReconnectInterval)
+	}
+
 	// TODO(zariel): we probably dont need this any more as we verify that we
 	// can connect to one of the endpoints supplied by using the control conn.
 	// See if there are any connections in the pool
@@ -186,6 +192,30 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 	s.useSystemSchema = hosts[0].Version().Major >= 3
 
 	return s, nil
+}
+
+func (s *Session) reconnectDownedHosts(intv time.Duration) {
+	for !s.Closed() {
+		time.Sleep(intv)
+
+		hosts := s.ring.allHosts()
+
+		// Print session.ring for debug.
+		if gocqlDebug {
+			buf := bytes.NewBufferString("Session.ring:")
+			for _, h := range hosts {
+				buf.WriteString("[" + h.Peer() + ":" + h.State().String() + "]")
+			}
+			log.Println(buf.String())
+		}
+
+		for _, h := range hosts {
+			if h.IsUp() {
+				continue
+			}
+			s.handleNodeUp(net.ParseIP(h.Peer()), h.Port(), true)
+		}
+	}
 }
 
 // SetConsistency sets the default consistency level for this session. This
