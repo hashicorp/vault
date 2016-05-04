@@ -183,7 +183,7 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 		if err != nil {
 			return req, err
 		}
-		req.WrapTTL = time.Duration(time.Duration(seconds) * time.Second)
+		req.WrapTTL = time.Duration(seconds) * time.Second
 	}
 
 	return req, nil

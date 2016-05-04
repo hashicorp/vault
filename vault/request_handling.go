@@ -112,8 +112,10 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 			},
 		}
 
-		_, err = c.router.Route(cubbyReq)
-		if err != nil {
+		cubbyResp, err := c.router.Route(cubbyReq)
+		if err != nil || cubbyResp == nil || cubbyResp.IsError() {
+			// Revoke since it's not yet being tracked for expiration
+			c.tokenStore.Revoke(te.ID)
 			c.logger.Printf("[ERR] core: failed to store wrapped response information: %v", err)
 			return nil, ErrInternalError
 		}
@@ -129,6 +131,8 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 		// Register the wrapped token with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
+			// Revoke since it's not yet being tracked for expiration
+			c.tokenStore.Revoke(te.ID)
 			c.logger.Printf("[ERR] core: failed to register cubbyhole wrapping token lease "+
 				"(request path: %s): %v", req.Path, err)
 			return nil, ErrInternalError
