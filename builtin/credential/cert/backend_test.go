@@ -101,6 +101,15 @@ func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, 
 	return connState
 }
 
+func failOnError(t *testing.T, resp *logical.Response, err error) {
+	if resp != nil && resp.IsError() {
+		t.Fatalf("error returned in response: %s", resp.Data["error"])
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_CRLs(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -130,10 +139,8 @@ func TestBackend_CRLs(t *testing.T) {
 		Data:      certData,
 	}
 
-	_, err = b.HandleRequest(certReq)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err := b.HandleRequest(certReq)
+	failOnError(t, resp, err)
 
 	// Connection state is presenting the client CA cert and its key.
 	// This is exactly what is registered at the backend.
@@ -146,13 +153,8 @@ func TestBackend_CRLs(t *testing.T) {
 			ConnState: &connState,
 		},
 	}
-	resp, err := b.HandleRequest(loginReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to login")
-	}
+	resp, err = b.HandleRequest(loginReq)
+	failOnError(t, resp, err)
 
 	// Now, without changing the registered client CA cert, present from
 	// the client side, a cert issued using the registered CA.
@@ -161,12 +163,7 @@ func TestBackend_CRLs(t *testing.T) {
 
 	// Attempt login with the updated connection
 	resp, err = b.HandleRequest(loginReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to login")
-	}
+	failOnError(t, resp, err)
 
 	// Register a CRL containing the issued client certificate used above.
 	issuedCRL, err := ioutil.ReadFile(testIssuedCertCRL)
@@ -183,10 +180,8 @@ func TestBackend_CRLs(t *testing.T) {
 		Path:      "crls/issuedcrl",
 		Data:      crlData,
 	}
-	_, err = b.HandleRequest(crlReq)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err = b.HandleRequest(crlReq)
+	failOnError(t, resp, err)
 
 	// Attempt login with the revoked certificate.
 	resp, err = b.HandleRequest(loginReq)
@@ -203,10 +198,8 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatal(err)
 	}
 	certData["certificate"] = clientCA2
-	_, err = b.HandleRequest(certReq)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err = b.HandleRequest(certReq)
+	failOnError(t, resp, err)
 
 	// Test login using a different client CA cert pair.
 	connState = connectionState(t, serverCAPath, serverCertPath, serverKeyPath, testRootCACertPath2, testRootCAKeyPath2)
@@ -214,12 +207,7 @@ func TestBackend_CRLs(t *testing.T) {
 
 	// Attempt login with the updated connection
 	resp, err = b.HandleRequest(loginReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to login")
-	}
+	failOnError(t, resp, err)
 
 	// Register a CRL containing the root CA certificate used above.
 	rootCRL, err := ioutil.ReadFile(testRootCertCRL)
@@ -227,10 +215,8 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatal(err)
 	}
 	crlData["crl"] = rootCRL
-	_, err = b.HandleRequest(crlReq)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err = b.HandleRequest(crlReq)
+	failOnError(t, resp, err)
 
 	// Attempt login with the same connection state but with the CRL registered
 	resp, err = b.HandleRequest(loginReq)
