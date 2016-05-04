@@ -8,10 +8,17 @@
 
 #include "textflag.h"
 
-// TODO: figure out why the XXX lines compile with Go 1.4 and Go tip but not
-// Go 1.6.
+// The XXX lines assemble on Go 1.4, 1.5 and 1.7, but not 1.6, due to a
+// Go toolchain regression. See https://github.com/golang/go/issues/15426 and
+// https://github.com/golang/snappy/issues/29
 //
-// This is https://github.com/golang/snappy/issues/29
+// As a workaround, the package was built with a known good assembler, and
+// those instructions were disassembled by "objdump -d" to yield the
+//	4e 0f b7 7c 5c 78       movzwq 0x78(%rsp,%r11,2),%r15
+// style comments, in AT&T asm syntax. Note that rsp here is a physical
+// register, not Go/asm's SP pseudo-register (see https://golang.org/doc/asm).
+// The instructions were then encoded as "BYTE $0x.." sequences, which assemble
+// fine on Go 1.6.
 
 // The asm code generally follows the pure Go code in encode_other.go, except
 // where marked with a "!!!".
@@ -21,19 +28,23 @@
 // func emitLiteral(dst, lit []byte) int
 //
 // All local variables fit into registers. The register allocation:
-//	- AX	return value
+//	- AX	len(lit)
 //	- BX	n
-//	- CX	len(lit)
-//	- SI	&lit[0]
+//	- DX	return value
 //	- DI	&dst[i]
+//	- R10	&lit[0]
 //
 // The 24 bytes of stack space is to call runtime·memmove.
+//
+// The unusual register allocation of local variables, such as R10 for the
+// source pointer, matches the allocation used at the call site in encodeBlock,
+// which makes it easier to manually inline this function.
 TEXT ·emitLiteral(SB), NOSPLIT, $24-56
 	MOVQ dst_base+0(FP), DI
-	MOVQ lit_base+24(FP), SI
-	MOVQ lit_len+32(FP), CX
-	MOVQ CX, AX
-	MOVL CX, BX
+	MOVQ lit_base+24(FP), R10
+	MOVQ lit_len+32(FP), AX
+	MOVQ AX, DX
+	MOVL AX, BX
 	SUBL $1, BX
 
 	CMPL BX, $60
@@ -45,32 +56,32 @@ threeBytes:
 	MOVB $0xf4, 0(DI)
 	MOVW BX, 1(DI)
 	ADDQ $3, DI
-	ADDQ $3, AX
-	JMP  emitLiteralEnd
+	ADDQ $3, DX
+	JMP  memmove
 
 twoBytes:
 	MOVB $0xf0, 0(DI)
 	MOVB BX, 1(DI)
 	ADDQ $2, DI
-	ADDQ $2, AX
-	JMP  emitLiteralEnd
+	ADDQ $2, DX
+	JMP  memmove
 
 oneByte:
 	SHLB $2, BX
 	MOVB BX, 0(DI)
 	ADDQ $1, DI
-	ADDQ $1, AX
+	ADDQ $1, DX
 
-emitLiteralEnd:
-	MOVQ AX, ret+48(FP)
+memmove:
+	MOVQ DX, ret+48(FP)
 
 	// copy(dst[i:], lit)
 	//
 	// This means calling runtime·memmove(&dst[i], &lit[0], len(lit)), so we push
-	// DI, SI and CX as arguments.
+	// DI, R10 and AX as arguments.
 	MOVQ DI, 0(SP)
-	MOVQ SI, 8(SP)
-	MOVQ CX, 16(SP)
+	MOVQ R10, 8(SP)
+	MOVQ AX, 16(SP)
 	CALL runtime·memmove(SB)
 	RET
 
@@ -79,55 +90,59 @@ emitLiteralEnd:
 // func emitCopy(dst []byte, offset, length int) int
 //
 // All local variables fit into registers. The register allocation:
-//	- BX	offset
-//	- CX	length
+//	- AX	length
 //	- SI	&dst[0]
 //	- DI	&dst[i]
+//	- R11	offset
+//
+// The unusual register allocation of local variables, such as R11 for the
+// offset, matches the allocation used at the call site in encodeBlock, which
+// makes it easier to manually inline this function.
 TEXT ·emitCopy(SB), NOSPLIT, $0-48
 	MOVQ dst_base+0(FP), DI
 	MOVQ DI, SI
-	MOVQ offset+24(FP), BX
-	MOVQ length+32(FP), CX
+	MOVQ offset+24(FP), R11
+	MOVQ length+32(FP), AX
 
 loop0:
 	// for length >= 68 { etc }
-	CMPL CX, $68
+	CMPL AX, $68
 	JLT  step1
 
 	// Emit a length 64 copy, encoded as 3 bytes.
 	MOVB $0xfe, 0(DI)
-	MOVW BX, 1(DI)
+	MOVW R11, 1(DI)
 	ADDQ $3, DI
-	SUBL $64, CX
+	SUBL $64, AX
 	JMP  loop0
 
 step1:
 	// if length > 64 { etc }
-	CMPL CX, $64
+	CMPL AX, $64
 	JLE  step2
 
 	// Emit a length 60 copy, encoded as 3 bytes.
 	MOVB $0xee, 0(DI)
-	MOVW BX, 1(DI)
+	MOVW R11, 1(DI)
 	ADDQ $3, DI
-	SUBL $60, CX
+	SUBL $60, AX
 
 step2:
 	// if length >= 12 || offset >= 2048 { goto step3 }
-	CMPL CX, $12
+	CMPL AX, $12
 	JGE  step3
-	CMPL BX, $2048
+	CMPL R11, $2048
 	JGE  step3
 
 	// Emit the remaining copy, encoded as 2 bytes.
-	MOVB BX, 1(DI)
-	SHRL $8, BX
-	SHLB $5, BX
-	SUBB $4, CX
-	SHLB $2, CX
-	ORB  CX, BX
-	ORB  $1, BX
-	MOVB BX, 0(DI)
+	MOVB R11, 1(DI)
+	SHRL $8, R11
+	SHLB $5, R11
+	SUBB $4, AX
+	SHLB $2, AX
+	ORB  AX, R11
+	ORB  $1, R11
+	MOVB R11, 0(DI)
 	ADDQ $2, DI
 
 	// Return the number of bytes written.
@@ -137,11 +152,11 @@ step2:
 
 step3:
 	// Emit the remaining copy, encoded as 3 bytes.
-	SUBL $1, CX
-	SHLB $2, CX
-	ORB  $2, CX
-	MOVB CX, 0(DI)
-	MOVW BX, 1(DI)
+	SUBL $1, AX
+	SHLB $2, AX
+	ORB  $2, AX
+	MOVB AX, 0(DI)
+	MOVW R11, 1(DI)
 	ADDQ $3, DI
 
 	// Return the number of bytes written.
@@ -154,33 +169,37 @@ step3:
 // func extendMatch(src []byte, i, j int) int
 //
 // All local variables fit into registers. The register allocation:
-//	- CX	&src[0]
-//	- DX	&src[len(src)]
-//	- SI	&src[i]
-//	- DI	&src[j]
-//	- R9	&src[len(src) - 8]
+//	- DX	&src[0]
+//	- SI	&src[j]
+//	- R13	&src[len(src) - 8]
+//	- R14	&src[len(src)]
+//	- R15	&src[i]
+//
+// The unusual register allocation of local variables, such as R15 for a source
+// pointer, matches the allocation used at the call site in encodeBlock, which
+// makes it easier to manually inline this function.
 TEXT ·extendMatch(SB), NOSPLIT, $0-48
-	MOVQ src_base+0(FP), CX
-	MOVQ src_len+8(FP), DX
-	MOVQ i+24(FP), SI
-	MOVQ j+32(FP), DI
-	ADDQ CX, DX
-	ADDQ CX, SI
-	ADDQ CX, DI
-	MOVQ DX, R9
-	SUBQ $8, R9
+	MOVQ src_base+0(FP), DX
+	MOVQ src_len+8(FP), R14
+	MOVQ i+24(FP), R15
+	MOVQ j+32(FP), SI
+	ADDQ DX, R14
+	ADDQ DX, R15
+	ADDQ DX, SI
+	MOVQ R14, R13
+	SUBQ $8, R13
 
 cmp8:
 	// As long as we are 8 or more bytes before the end of src, we can load and
 	// compare 8 bytes at a time. If those 8 bytes are equal, repeat.
-	CMPQ DI, R9
+	CMPQ SI, R13
 	JA   cmp1
-	MOVQ (SI), AX
-	MOVQ (DI), BX
+	MOVQ (R15), AX
+	MOVQ (SI), BX
 	CMPQ AX, BX
 	JNE  bsf
+	ADDQ $8, R15
 	ADDQ $8, SI
-	ADDQ $8, DI
 	JMP  cmp8
 
 bsf:
@@ -191,29 +210,29 @@ bsf:
 	XORQ AX, BX
 	BSFQ BX, BX
 	SHRQ $3, BX
-	ADDQ BX, DI
+	ADDQ BX, SI
 
 	// Convert from &src[ret] to ret.
-	SUBQ CX, DI
-	MOVQ DI, ret+40(FP)
+	SUBQ DX, SI
+	MOVQ SI, ret+40(FP)
 	RET
 
 cmp1:
 	// In src's tail, compare 1 byte at a time.
-	CMPQ DI, DX
+	CMPQ SI, R14
 	JAE  extendMatchEnd
-	MOVB (SI), AX
-	MOVB (DI), BX
+	MOVB (R15), AX
+	MOVB (SI), BX
 	CMPB AX, BX
 	JNE  extendMatchEnd
+	ADDQ $1, R15
 	ADDQ $1, SI
-	ADDQ $1, DI
 	JMP  cmp1
 
 extendMatchEnd:
 	// Convert from &src[ret] to ret.
-	SUBQ CX, DI
-	MOVQ DI, ret+40(FP)
+	SUBQ DX, SI
+	MOVQ SI, ret+40(FP)
 	RET
 
 // ----------------------------------------------------------------------------
@@ -232,8 +251,8 @@ extendMatchEnd:
 //	- R10	.	&src[nextEmit]
 //	- R11	96	prevHash, currHash, nextHash, offset
 //	- R12	104	&src[base], skip
-//	- R13	.	&src[nextS]
-//	- R14	.	len(src), bytesBetweenHashLookups, x
+//	- R13	.	&src[nextS], &src[len(src) - 8]
+//	- R14	.	len(src), bytesBetweenHashLookups, &src[len(src)], x
 //	- R15	112	candidate
 //
 // The second column (56, 64, etc) is the stack offset to spill the registers
@@ -352,6 +371,7 @@ inner0:
 	// table[nextHash] = uint16(s)
 	MOVQ SI, AX
 	SUBQ DX, AX
+
 	// XXX: MOVW AX, table-32768(SP)(R11*2)
 	// XXX: 66 42 89 44 5c 78       mov    %ax,0x78(%rsp,%r11,2)
 	BYTE $0x66
@@ -384,31 +404,62 @@ fourByteMatch:
 	CMPQ AX, $16
 	JLE  emitLiteralFastPath
 
-	// d += emitLiteral(dst[d:], src[nextEmit:s])
+	// ----------------------------------------
+	// Begin inline of the emitLiteral call.
 	//
-	// Push args.
-	MOVQ DI, 0(SP)
-	MOVQ $0, 8(SP)   // Unnecessary, as the callee ignores it, but conservative.
-	MOVQ $0, 16(SP)  // Unnecessary, as the callee ignores it, but conservative.
-	MOVQ R10, 24(SP)
-	MOVQ AX, 32(SP)
-	MOVQ AX, 40(SP)  // Unnecessary, as the callee ignores it, but conservative.
+	// d += emitLiteral(dst[d:], src[nextEmit:s])
 
+	MOVL AX, BX
+	SUBL $1, BX
+
+	CMPL BX, $60
+	JLT  inlineEmitLiteralOneByte
+	CMPL BX, $256
+	JLT  inlineEmitLiteralTwoBytes
+
+inlineEmitLiteralThreeBytes:
+	MOVB $0xf4, 0(DI)
+	MOVW BX, 1(DI)
+	ADDQ $3, DI
+	JMP  inlineEmitLiteralMemmove
+
+inlineEmitLiteralTwoBytes:
+	MOVB $0xf0, 0(DI)
+	MOVB BX, 1(DI)
+	ADDQ $2, DI
+	JMP  inlineEmitLiteralMemmove
+
+inlineEmitLiteralOneByte:
+	SHLB $2, BX
+	MOVB BX, 0(DI)
+	ADDQ $1, DI
+
+inlineEmitLiteralMemmove:
 	// Spill local variables (registers) onto the stack; call; unspill.
+	//
+	// copy(dst[i:], lit)
+	//
+	// This means calling runtime·memmove(&dst[i], &lit[0], len(lit)), so we push
+	// DI, R10 and AX as arguments.
+	MOVQ DI, 0(SP)
+	MOVQ R10, 8(SP)
+	MOVQ AX, 16(SP)
+	ADDQ AX, DI              // Finish the "d +=" part of "d += emitLiteral(etc)".
 	MOVQ SI, 72(SP)
 	MOVQ DI, 80(SP)
 	MOVQ R15, 112(SP)
-	CALL ·emitLiteral(SB)
+	CALL runtime·memmove(SB)
 	MOVQ 56(SP), CX
 	MOVQ 64(SP), DX
 	MOVQ 72(SP), SI
 	MOVQ 80(SP), DI
 	MOVQ 88(SP), R9
 	MOVQ 112(SP), R15
-
-	// Finish the "d +=" part of "d += emitLiteral(etc)".
-	ADDQ 48(SP), DI
 	JMP  inner1
+
+inlineEmitLiteralEnd:
+	// End inline of the emitLiteral call.
+	// ----------------------------------------
 
 emitLiteralFastPath:
 	// !!! Emit the 1-byte encoding "uint8(len(lit)-1)<<2".
@@ -442,60 +493,129 @@ inner1:
 	SUBQ R15, R11
 	SUBQ DX, R11
 
+	// ----------------------------------------
+	// Begin inline of the extendMatch call.
+	//
 	// s = extendMatch(src, candidate+4, s+4)
-	//
-	// Push args.
-	MOVQ DX, 0(SP)
+
+	// !!! R14 = &src[len(src)]
 	MOVQ src_len+32(FP), R14
-	MOVQ R14, 8(SP)
-	MOVQ R14, 16(SP)         // Unnecessary, as the callee ignores it, but conservative.
+	ADDQ DX, R14
+
+	// !!! R13 = &src[len(src) - 8]
+	MOVQ R14, R13
+	SUBQ $8, R13
+
+	// !!! R15 = &src[candidate + 4]
 	ADDQ $4, R15
-	MOVQ R15, 24(SP)
+	ADDQ DX, R15
+
+	// !!! s += 4
 	ADDQ $4, SI
-	SUBQ DX, SI
-	MOVQ SI, 32(SP)
 
-	// Spill local variables (registers) onto the stack; call; unspill.
+inlineExtendMatchCmp8:
+	// As long as we are 8 or more bytes before the end of src, we can load and
+	// compare 8 bytes at a time. If those 8 bytes are equal, repeat.
+	CMPQ SI, R13
+	JA   inlineExtendMatchCmp1
+	MOVQ (R15), AX
+	MOVQ (SI), BX
+	CMPQ AX, BX
+	JNE  inlineExtendMatchBSF
+	ADDQ $8, R15
+	ADDQ $8, SI
+	JMP  inlineExtendMatchCmp8
+
+inlineExtendMatchBSF:
+	// If those 8 bytes were not equal, XOR the two 8 byte values, and return
+	// the index of the first byte that differs. The BSF instruction finds the
+	// least significant 1 bit, the amd64 architecture is little-endian, and
+	// the shift by 3 converts a bit index to a byte index.
+	XORQ AX, BX
+	BSFQ BX, BX
+	SHRQ $3, BX
+	ADDQ BX, SI
+	JMP  inlineExtendMatchEnd
+
+inlineExtendMatchCmp1:
+	// In src's tail, compare 1 byte at a time.
+	CMPQ SI, R14
+	JAE  inlineExtendMatchEnd
+	MOVB (R15), AX
+	MOVB (SI), BX
+	CMPB AX, BX
+	JNE  inlineExtendMatchEnd
+	ADDQ $1, R15
+	ADDQ $1, SI
+	JMP  inlineExtendMatchCmp1
+
+inlineExtendMatchEnd:
+	// End inline of the extendMatch call.
+	// ----------------------------------------
+
+	// ----------------------------------------
+	// Begin inline of the emitCopy call.
 	//
-	// We don't need to unspill CX or R9 as we are just about to call another
-	// function.
-	MOVQ DI, 80(SP)
-	MOVQ R11, 96(SP)
-	MOVQ R12, 104(SP)
-	CALL ·extendMatch(SB)
-	MOVQ 64(SP), DX
-	MOVQ 80(SP), DI
-	MOVQ 96(SP), R11
-	MOVQ 104(SP), R12
-
-	// Finish the "s =" part of "s = extendMatch(etc)", remembering that the SI
-	// register holds &src[s], not s.
-	MOVQ 40(SP), SI
-	ADDQ DX, SI
-
 	// d += emitCopy(dst[d:], base-candidate, s-base)
-	//
-	// Push args.
-	MOVQ DI, 0(SP)
-	MOVQ $0, 8(SP)   // Unnecessary, as the callee ignores it, but conservative.
-	MOVQ $0, 16(SP)  // Unnecessary, as the callee ignores it, but conservative.
-	MOVQ R11, 24(SP)
+
+	// !!! length := s - base
 	MOVQ SI, AX
 	SUBQ R12, AX
-	MOVQ AX, 32(SP)
 
-	// Spill local variables (registers) onto the stack; call; unspill.
-	MOVQ SI, 72(SP)
-	MOVQ DI, 80(SP)
-	CALL ·emitCopy(SB)
-	MOVQ 56(SP), CX
-	MOVQ 64(SP), DX
-	MOVQ 72(SP), SI
-	MOVQ 80(SP), DI
-	MOVQ 88(SP), R9
+inlineEmitCopyLoop0:
+	// for length >= 68 { etc }
+	CMPL AX, $68
+	JLT  inlineEmitCopyStep1
 
-	// Finish the "d +=" part of "d += emitCopy(etc)".
-	ADDQ 40(SP), DI
+	// Emit a length 64 copy, encoded as 3 bytes.
+	MOVB $0xfe, 0(DI)
+	MOVW R11, 1(DI)
+	ADDQ $3, DI
+	SUBL $64, AX
+	JMP  inlineEmitCopyLoop0
+
+inlineEmitCopyStep1:
+	// if length > 64 { etc }
+	CMPL AX, $64
+	JLE  inlineEmitCopyStep2
+
+	// Emit a length 60 copy, encoded as 3 bytes.
+	MOVB $0xee, 0(DI)
+	MOVW R11, 1(DI)
+	ADDQ $3, DI
+	SUBL $60, AX
+
+inlineEmitCopyStep2:
+	// if length >= 12 || offset >= 2048 { goto inlineEmitCopyStep3 }
+	CMPL AX, $12
+	JGE  inlineEmitCopyStep3
+	CMPL R11, $2048
+	JGE  inlineEmitCopyStep3
+
+	// Emit the remaining copy, encoded as 2 bytes.
+	MOVB R11, 1(DI)
+	SHRL $8, R11
+	SHLB $5, R11
+	SUBB $4, AX
+	SHLB $2, AX
+	ORB  AX, R11
+	ORB  $1, R11
+	MOVB R11, 0(DI)
+	ADDQ $2, DI
+	JMP  inlineEmitCopyEnd
+
+inlineEmitCopyStep3:
+	// Emit the remaining copy, encoded as 3 bytes.
+	SUBL $1, AX
+	SHLB $2, AX
+	ORB  $2, AX
+	MOVB AX, 0(DI)
+	MOVW R11, 1(DI)
+	ADDQ $3, DI
+
+inlineEmitCopyEnd:
+	// End inline of the emitCopy call.
+	// ----------------------------------------
 
 	// nextEmit = s
 	MOVQ SI, R10
@@ -522,6 +642,7 @@ inner1:
 	MOVQ SI, AX
 	SUBQ DX, AX
 	SUBQ $1, AX
+
 	// XXX: MOVW AX, table-32768(SP)(R11*2)
 	// XXX: 66 42 89 44 5c 78       mov    %ax,0x78(%rsp,%r11,2)
 	BYTE $0x66
@@ -549,6 +670,7 @@ inner1:
 
 	// table[currHash] = uint16(s)
 	ADDQ $1, AX
+
 	// XXX: MOVW AX, table-32768(SP)(R11*2)
 	// XXX: 66 42 89 44 5c 78       mov    %ax,0x78(%rsp,%r11,2)
 	BYTE $0x66

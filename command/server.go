@@ -163,6 +163,14 @@ func (c *ServerCommand) Run(args []string) int {
 
 	var seal vault.Seal = &vault.DefaultSeal{}
 
+	// Ensure that the seal finalizer is called, even if using verify-only
+	defer func() {
+		err = seal.Finalize()
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+		}
+	}()
+
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
 		AdvertiseAddr:      config.Backend.AdvertiseAddr,
@@ -404,11 +412,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	for _, listener := range lns {
 		listener.Close()
-	}
-
-	err = seal.Finalize()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 	}
 
 	return 0
@@ -696,7 +699,6 @@ func MakeShutdownCh() chan struct{} {
 	resultCh := make(chan struct{})
 
 	shutdownCh := make(chan os.Signal, 4)
-	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGINT)
 	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for {
@@ -714,7 +716,7 @@ func MakeSighupCh() chan struct{} {
 	resultCh := make(chan struct{})
 
 	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGHUP)
+	signal.Notify(signalCh, syscall.SIGHUP)
 	go func() {
 		for {
 			<-signalCh

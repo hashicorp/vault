@@ -59,3 +59,6 @@ These libraries are provided by the community.
 
 * [HVAC](https://github.com/ianunruh/hvac)
   * `pip install hvac`
+
+### Scala
+ * [scala-vault](https://github.com/janstenpickle/scala-vault)

@@ -161,8 +161,12 @@ func (t *handshakeTransport) readOnePacket() ([]byte, error) {
 
 	t.readSinceKex += uint64(len(p))
 	if debugHandshake {
-		msg, err := decode(p)
-		log.Printf("%s got %T %v (%v)", t.id(), msg, msg, err)
+		if p[0] == msgChannelData || p[0] == msgChannelExtendedData {
+			log.Printf("%s got data (packet %d bytes)", t.id(), len(p))
+		} else {
+			msg, err := decode(p)
+			log.Printf("%s got %T %v (%v)", t.id(), msg, msg, err)
+		}
 	}
 	if p[0] != msgKexInit {
 		return p, nil
@@ -370,8 +374,8 @@ func (t *handshakeTransport) enterKeyExchangeLocked(otherInitPacket []byte) erro
 
 	if t.sessionID == nil {
 		t.sessionID = result.H
-		result.SessionID = result.H
 	}
+	result.SessionID = t.sessionID
 
 	t.conn.prepareKeyChange(algs, result)
 	if err = t.conn.writePacket([]byte{msgNewKeys}); err != nil {

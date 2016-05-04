@@ -1,6 +1,7 @@
 language: go
 
-sudo: false
+sudo: required
+dist: trusty
 
 cache:
   directories:

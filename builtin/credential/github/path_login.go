@@ -3,6 +3,7 @@ package github
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -143,7 +144,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	for _, o := range allOrgs {
-		if *o.Login == config.Org {
+		if strings.ToLower(*o.Login) == strings.ToLower(config.Org) {
 			org = &o
 			break
 		}

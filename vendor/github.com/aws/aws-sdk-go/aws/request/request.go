@@ -221,6 +221,13 @@ func (r *Request) Sign() error {
 //
 // Send will sign the request prior to sending. All Send Handlers will
 // be executed in the order they were set.
+//
+// Canceling a request is non-deterministic. If a request has been canceled,
+// then the transport will choose, randomly, one of the state channels during
+// reads or getting the connection.
+//
+// readLoop() and getConn(req *Request, cm connectMethod)
+// https://github.com/golang/go/blob/master/src/net/http/transport.go
 func (r *Request) Send() error {
 	for {
 		if aws.BoolValue(r.Retryable) {

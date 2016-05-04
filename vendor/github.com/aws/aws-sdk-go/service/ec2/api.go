@@ -1777,6 +1777,11 @@ func (c *EC2) CreateVpcRequest(input *CreateVpcInput) (req *request.Request, out
 // which includes only a default DNS server that we provide (AmazonProvidedDNS).
 // For more information about DHCP options, see DHCP Options Sets (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_DHCP_Options.html)
 // in the Amazon Virtual Private Cloud User Guide.
+//
+// You can specify the instance tenancy value for the VPC when you create it.
+// You can't change this value for the VPC after you create it. For more information,
+// see Dedicated Instances (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html.html)
+// in the Amazon Virtual Private Cloud User Guide.
 func (c *EC2) CreateVpc(input *CreateVpcInput) (*CreateVpcOutput, error) {
 	req, out := c.CreateVpcRequest(input)
 	err := req.Send()
@@ -1886,6 +1891,9 @@ func (c *EC2) CreateVpnConnectionRequest(input *CreateVpnConnectionInput) (req *
 //  If you decide to shut down your VPN connection for any reason and later
 // create a new VPN connection, you must reconfigure your customer gateway with
 // the new information returned from this call.
+//
+// This is an idempotent operation. If you perform the operation more than
+// once, Amazon EC2 doesn't return an error.
 //
 // For more information about VPN connections, see Adding a Hardware Virtual
 // Private Gateway to Your VPC (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_VPN.html)
@@ -3130,7 +3138,8 @@ func (c *EC2) DescribeIdFormatRequest(input *DescribeIdFormatInput) (req *reques
 // request only returns information about resource types whose ID formats can
 // be modified; it does not return information about other resource types.
 //
-// The following resource types support longer IDs: instance | reservation.
+// The following resource types support longer IDs: instance | reservation
+// | snapshot | volume.
 //
 // These settings apply to the IAM user who makes the request; they do not
 // apply to the entire AWS account. By default, an IAM user defaults to the
@@ -3318,7 +3327,8 @@ func (c *EC2) DescribeInstanceStatusRequest(input *DescribeInstanceStatusInput) 
 	return
 }
 
-// Describes the status of one or more instances.
+// Describes the status of one or more instances. By default, only running instances
+// are described, unless specified otherwise.
 //
 // Instance status includes the following components:
 //
@@ -3328,7 +3338,7 @@ func (c *EC2) DescribeInstanceStatusRequest(input *DescribeInstanceStatusInput) 
 // and Troubleshooting Instances with Failed Status Checks (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstances.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-//   Scheduled events - Amazon EC2 can schedule events (such as reboot, stop,
+//  Scheduled events - Amazon EC2 can schedule events (such as reboot, stop,
 // or terminate) for your instances related to hardware issues, software updates,
 // or system maintenance. For more information, see Scheduled Events for Your
 // Instances (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html)
@@ -5559,7 +5569,7 @@ func (c *EC2) ModifyIdFormatRequest(input *ModifyIdFormatInput) (req *request.Re
 // Modifies the ID format for the specified resource on a per-region basis.
 // You can specify that resources should receive longer IDs (17-character IDs)
 // when they are created. The following resource types support longer IDs: instance
-// | reservation.
+// | reservation | snapshot | volume.
 //
 // This setting applies to the IAM user who makes the request; it does not
 // apply to the entire AWS account. By default, an IAM user defaults to the
@@ -5964,6 +5974,49 @@ func (c *EC2) ModifyVpcEndpoint(input *ModifyVpcEndpointInput) (*ModifyVpcEndpoi
 	return out, err
 }
 
+const opModifyVpcPeeringConnectionOptions = "ModifyVpcPeeringConnectionOptions"
+
+// ModifyVpcPeeringConnectionOptionsRequest generates a request for the ModifyVpcPeeringConnectionOptions operation.
+func (c *EC2) ModifyVpcPeeringConnectionOptionsRequest(input *ModifyVpcPeeringConnectionOptionsInput) (req *request.Request, output *ModifyVpcPeeringConnectionOptionsOutput) {
+	op := &request.Operation{
+		Name:       opModifyVpcPeeringConnectionOptions,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ModifyVpcPeeringConnectionOptionsInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &ModifyVpcPeeringConnectionOptionsOutput{}
+	req.Data = output
+	return
+}
+
+// Modifies the VPC peering connection options on one side of a VPC peering
+// connection. You can do the following:
+//
+//  Enable/disable communication over the peering connection between an EC2-Classic
+// instance that's linked to your VPC (using ClassicLink) and instances in the
+// peer VPC.
+//
+// Enable/disable communication over the peering connection between instances
+// in your VPC and an EC2-Classic instance that's linked to the peer VPC.
+//
+//  If the peered VPCs are in different accounts, each owner must initiate
+// a separate request to enable or disable communication in either direction,
+// depending on whether their VPC was the requester or accepter for the VPC
+// peering connection. If the peered VPCs are in the same account, you can modify
+// the requester and accepter options in the same request. To confirm which
+// VPC is the accepter and requester for a VPC peering connection, use the DescribeVpcPeeringConnections
+// command.
+func (c *EC2) ModifyVpcPeeringConnectionOptions(input *ModifyVpcPeeringConnectionOptionsInput) (*ModifyVpcPeeringConnectionOptionsOutput, error) {
+	req, out := c.ModifyVpcPeeringConnectionOptionsRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opMonitorInstances = "MonitorInstances"
 
 // MonitorInstancesRequest generates a request for the MonitorInstances operation.
@@ -6091,7 +6144,11 @@ func (c *EC2) PurchaseScheduledInstancesRequest(input *PurchaseScheduledInstance
 // Scheduled Instances enable you to purchase Amazon EC2 compute capacity by
 // the hour for a one-year term. Before you can purchase a Scheduled Instance,
 // you must call DescribeScheduledInstanceAvailability to check for available
-// schedules and obtain a purchase token.
+// schedules and obtain a purchase token. After you purchase a Scheduled Instance,
+// you must call RunScheduledInstances during each scheduled time period.
+//
+// After you purchase a Scheduled Instance, you can't cancel, modify, or resell
+// your purchase.
 func (c *EC2) PurchaseScheduledInstances(input *PurchaseScheduledInstancesInput) (*PurchaseScheduledInstancesOutput, error) {
 	req, out := c.PurchaseScheduledInstancesRequest(input)
 	err := req.Send()
@@ -6125,8 +6182,8 @@ func (c *EC2) RebootInstancesRequest(input *RebootInstancesInput) (req *request.
 // succeeds if the instances are valid and belong to you. Requests to reboot
 // terminated instances are ignored.
 //
-// If a Linux/Unix instance does not cleanly shut down within four minutes,
-// Amazon EC2 performs a hard reboot.
+// If an instance does not cleanly shut down within four minutes, Amazon EC2
+// performs a hard reboot.
 //
 // For more information about troubleshooting, see Getting Console Output and
 // Rebooting Instances (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-console.html)
@@ -6887,7 +6944,9 @@ func (c *EC2) RunScheduledInstancesRequest(input *RunScheduledInstancesInput) (r
 // You must launch a Scheduled Instance during its scheduled time period. You
 // can't stop or reboot a Scheduled Instance, but you can terminate it as needed.
 // If you terminate a Scheduled Instance before the current scheduled time period
-// ends, you can launch it again after a few minutes.
+// ends, you can launch it again after a few minutes. For more information,
+// see Scheduled Instances (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-scheduled-instances.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 func (c *EC2) RunScheduledInstances(input *RunScheduledInstancesInput) (*RunScheduledInstancesOutput, error) {
 	req, out := c.RunScheduledInstancesRequest(input)
 	err := req.Send()
@@ -6959,32 +7018,29 @@ func (c *EC2) StopInstancesRequest(input *StopInstancesInput) (req *request.Requ
 	return
 }
 
-// Stops an Amazon EBS-backed instance. Each time you transition an instance
-// from stopped to started, Amazon EC2 charges a full instance hour, even if
-// transitions happen multiple times within a single hour.
+// Stops an Amazon EBS-backed instance.
 //
-// You can't start or stop Spot instances.
+// We don't charge hourly usage for a stopped instance, or data transfer fees;
+// however, your root partition Amazon EBS volume remains, continues to persist
+// your data, and you are charged for Amazon EBS volume usage. Each time you
+// transition an instance from stopped to started, Amazon EC2 charges a full
+// instance hour, even if transitions happen multiple times within a single
+// hour.
 //
-// Instances that use Amazon EBS volumes as their root devices can be quickly
-// stopped and started. When an instance is stopped, the compute resources are
-// released and you are not billed for hourly instance usage. However, your
-// root partition Amazon EBS volume remains, continues to persist your data,
-// and you are charged for Amazon EBS volume usage. You can restart your instance
-// at any time.
+// You can't start or stop Spot instances, and you can't stop instance store-backed
+// instances.
 //
-// Before stopping an instance, make sure it is in a state from which it can
-// be restarted. Stopping an instance does not preserve data stored in RAM.
+// When you stop an instance, we shut it down. You can restart your instance
+// at any time. Before stopping an instance, make sure it is in a state from
+// which it can be restarted. Stopping an instance does not preserve data stored
+// in RAM.
 //
-// Performing this operation on an instance that uses an instance store as
-// its root device returns an error.
-//
-// You can stop, start, and terminate EBS-backed instances. You can only terminate
-// instance store-backed instances. What happens to an instance differs if you
-// stop it or terminate it. For example, when you stop an instance, the root
-// device and any other devices attached to the instance persist. When you terminate
-// an instance, the root device and any other devices attached during the instance
-// launch are automatically deleted. For more information about the differences
-// between stopping and terminating instances, see Instance Lifecycle (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html)
+// Stopping an instance is different to rebooting or terminating it. For example,
+// when you stop an instance, the root device and any other devices attached
+// to the instance persist. When you terminate an instance, the root device
+// and any other devices attached during the instance launch are automatically
+// deleted. For more information about the differences between rebooting, stopping,
+// and terminating instances, see Instance Lifecycle (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // For more information about troubleshooting, see Troubleshooting Stopping
@@ -9450,11 +9506,10 @@ type CreateImageInput struct {
 	// at-signs (@), or underscores(_)
 	Name *string `locationName:"name" type:"string" required:"true"`
 
-	// By default, this parameter is set to false, which means Amazon EC2 attempts
-	// to shut down the instance cleanly before image creation and then reboots
-	// the instance. When the parameter is set to true, Amazon EC2 doesn't shut
-	// down the instance before creating the image. When this option is used, file
-	// system integrity on the created image can't be guaranteed.
+	// By default, Amazon EC2 attempts to shut down and reboot the instance before
+	// creating the image. If the 'No Reboot' option is set, Amazon EC2 doesn't
+	// shut down the instance before creating the image. When this option is used,
+	// file system integrity on the created image can't be guaranteed.
 	NoReboot *bool `locationName:"noReboot" type:"boolean"`
 }
 
@@ -10755,11 +10810,11 @@ type CreateVpcInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `locationName:"dryRun" type:"boolean"`
 
-	// The supported tenancy options for instances launched into the VPC. A value
-	// of default means that instances can be launched with any tenancy; a value
-	// of dedicated means all instances launched into the VPC are launched as dedicated
-	// tenancy instances regardless of the tenancy assigned to the instance at launch.
-	// Dedicated tenancy instances run on single-tenant hardware.
+	// The tenancy options for instances launched into the VPC. For default, instances
+	// are launched with shared tenancy by default. You can launch instances with
+	// any tenancy into a shared tenancy VPC. For dedicated, instances are launched
+	// as dedicated tenancy instances by default. You can only launch instances
+	// with a tenancy of dedicated or host into a dedicated tenancy VPC.
 	//
 	// Important: The host value cannot be used with this parameter. Use the default
 	// or dedicated values only.
@@ -13282,7 +13337,8 @@ type DescribeImportImageTasksInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `type:"boolean"`
 
-	// One or more filters.
+	// Filter tasks using the task-state filter and one of the following values:
+	// active, completed, deleting, deleted.
 	Filters []*Filter `locationNameList:"Filter" type:"list"`
 
 	// A list of import image task IDs.
@@ -21159,6 +21215,78 @@ func (s ModifyVpcEndpointOutput) GoString() string {
 	return s.String()
 }
 
+type ModifyVpcPeeringConnectionOptionsInput struct {
+	_ struct{} `type:"structure"`
+
+	// The VPC peering connection options for the accepter VPC.
+	AccepterPeeringConnectionOptions *PeeringConnectionOptionsRequest `type:"structure"`
+
+	// Checks whether you have the required permissions for the operation, without
+	// actually making the request, and provides an error response. If you have
+	// the required permissions, the error response is DryRunOperation. Otherwise,
+	// it is UnauthorizedOperation.
+	DryRun *bool `type:"boolean"`
+
+	// The VPC peering connection options for the requester VPC.
+	RequesterPeeringConnectionOptions *PeeringConnectionOptionsRequest `type:"structure"`
+
+	// The ID of the VPC peering connection.
+	VpcPeeringConnectionId *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s ModifyVpcPeeringConnectionOptionsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ModifyVpcPeeringConnectionOptionsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ModifyVpcPeeringConnectionOptionsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ModifyVpcPeeringConnectionOptionsInput"}
+	if s.VpcPeeringConnectionId == nil {
+		invalidParams.Add(request.NewErrParamRequired("VpcPeeringConnectionId"))
+	}
+	if s.AccepterPeeringConnectionOptions != nil {
+		if err := s.AccepterPeeringConnectionOptions.Validate(); err != nil {
+			invalidParams.AddNested("AccepterPeeringConnectionOptions", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.RequesterPeeringConnectionOptions != nil {
+		if err := s.RequesterPeeringConnectionOptions.Validate(); err != nil {
+			invalidParams.AddNested("RequesterPeeringConnectionOptions", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+type ModifyVpcPeeringConnectionOptionsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Information about the VPC peering connection options for the accepter VPC.
+	AccepterPeeringConnectionOptions *PeeringConnectionOptions `locationName:"accepterPeeringConnectionOptions" type:"structure"`
+
+	// Information about the VPC peering connection options for the requester VPC.
+	RequesterPeeringConnectionOptions *PeeringConnectionOptions `locationName:"requesterPeeringConnectionOptions" type:"structure"`
+}
+
+// String returns the string representation
+func (s ModifyVpcPeeringConnectionOptionsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ModifyVpcPeeringConnectionOptionsOutput) GoString() string {
+	return s.String()
+}
+
 // Contains the parameters for MonitorInstances.
 type MonitorInstancesInput struct {
 	_ struct{} `type:"structure"`
@@ -21704,6 +21832,68 @@ func (s NewDhcpConfiguration) String() string {
 // GoString returns the string representation
 func (s NewDhcpConfiguration) GoString() string {
 	return s.String()
+}
+
+// Describes the VPC peering connection options.
+type PeeringConnectionOptions struct {
+	_ struct{} `type:"structure"`
+
+	// If true, enables outbound communication from an EC2-Classic instance that's
+	// linked to a local VPC via ClassicLink to instances in a peer VPC.
+	AllowEgressFromLocalClassicLinkToRemoteVpc *bool `locationName:"allowEgressFromLocalClassicLinkToRemoteVpc" type:"boolean"`
+
+	// If true, enables outbound communication from instances in a local VPC to
+	// an EC2-Classic instance that's linked to a peer VPC via ClassicLink.
+	AllowEgressFromLocalVpcToRemoteClassicLink *bool `locationName:"allowEgressFromLocalVpcToRemoteClassicLink" type:"boolean"`
+}
+
+// String returns the string representation
+func (s PeeringConnectionOptions) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PeeringConnectionOptions) GoString() string {
+	return s.String()
+}
+
+// The VPC peering connection options.
+type PeeringConnectionOptionsRequest struct {
+	_ struct{} `type:"structure"`
+
+	// If true, enables outbound communication from an EC2-Classic instance that's
+	// linked to a local VPC via ClassicLink to instances in a peer VPC.
+	AllowEgressFromLocalClassicLinkToRemoteVpc *bool `type:"boolean" required:"true"`
+
+	// If true, enables outbound communication from instances in a local VPC to
+	// an EC2-Classic instance that's linked to a peer VPC via ClassicLink.
+	AllowEgressFromLocalVpcToRemoteClassicLink *bool `type:"boolean" required:"true"`
+}
+
+// String returns the string representation
+func (s PeeringConnectionOptionsRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PeeringConnectionOptionsRequest) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PeeringConnectionOptionsRequest) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PeeringConnectionOptionsRequest"}
+	if s.AllowEgressFromLocalClassicLinkToRemoteVpc == nil {
+		invalidParams.Add(request.NewErrParamRequired("AllowEgressFromLocalClassicLinkToRemoteVpc"))
+	}
+	if s.AllowEgressFromLocalVpcToRemoteClassicLink == nil {
+		invalidParams.Add(request.NewErrParamRequired("AllowEgressFromLocalVpcToRemoteClassicLink"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
 }
 
 // Describes the placement for the instance.
@@ -25698,29 +25888,28 @@ type StateReason struct {
 
 	// The message for the state change.
 	//
-	//   Server.SpotInstanceTermination: A Spot instance was terminated due to
-	// an increase in the market price.
+	//  Server.SpotInstanceTermination: A Spot instance was terminated due to an
+	// increase in the market price.
 	//
-	//   Server.InternalError: An internal error occurred during instance launch,
+	// Server.InternalError: An internal error occurred during instance launch,
 	// resulting in termination.
 	//
-	//   Server.InsufficientInstanceCapacity: There was insufficient instance capacity
+	// Server.InsufficientInstanceCapacity: There was insufficient instance capacity
 	// to satisfy the launch request.
 	//
-	//   Client.InternalError: A client error caused the instance to terminate
-	// on launch.
+	// Client.InternalError: A client error caused the instance to terminate on
+	// launch.
 	//
-	//   Client.InstanceInitiatedShutdown: The instance was shut down using the
-	// shutdown -h command from the instance.
+	// Client.InstanceInitiatedShutdown: The instance was shut down using the shutdown
+	// -h command from the instance.
 	//
-	//   Client.UserInitiatedShutdown: The instance was shut down using the Amazon
+	// Client.UserInitiatedShutdown: The instance was shut down using the Amazon
 	// EC2 API.
 	//
-	//   Client.VolumeLimitExceeded: The limit on the number of EBS volumes or
-	// total storage was exceeded. Decrease usage or request an increase in your
-	// limits.
+	// Client.VolumeLimitExceeded: The limit on the number of EBS volumes or total
+	// storage was exceeded. Decrease usage or request an increase in your limits.
 	//
-	//   Client.InvalidSnapshot.NotFound: The specified snapshot was not found.
+	// Client.InvalidSnapshot.NotFound: The specified snapshot was not found.
 	Message *string `locationName:"message" type:"string"`
 }
 
@@ -26627,13 +26816,15 @@ func (s VpcEndpoint) GoString() string {
 type VpcPeeringConnection struct {
 	_ struct{} `type:"structure"`
 
-	// The information of the peer VPC.
+	// Information about the peer VPC. CIDR block information is not returned when
+	// creating a VPC peering connection, or when describing a VPC peering connection
+	// that's in the initiating-request or pending-acceptance state.
 	AccepterVpcInfo *VpcPeeringConnectionVpcInfo `locationName:"accepterVpcInfo" type:"structure"`
 
 	// The time that an unaccepted VPC peering connection will expire.
 	ExpirationTime *time.Time `locationName:"expirationTime" type:"timestamp" timestampFormat:"iso8601"`
 
-	// The information of the requester VPC.
+	// Information about the requester VPC.
 	RequesterVpcInfo *VpcPeeringConnectionVpcInfo `locationName:"requesterVpcInfo" type:"structure"`
 
 	// The status of the VPC peering connection.
@@ -26653,6 +26844,29 @@ func (s VpcPeeringConnection) String() string {
 
 // GoString returns the string representation
 func (s VpcPeeringConnection) GoString() string {
+	return s.String()
+}
+
+// Describes the VPC peering connection options.
+type VpcPeeringConnectionOptionsDescription struct {
+	_ struct{} `type:"structure"`
+
+	// Indicates whether a local ClassicLink connection can communicate with the
+	// peer VPC over the VPC peering connection.
+	AllowEgressFromLocalClassicLinkToRemoteVpc *bool `locationName:"allowEgressFromLocalClassicLinkToRemoteVpc" type:"boolean"`
+
+	// Indicates whether a local VPC can communicate with a ClassicLink connection
+	// in the peer VPC over the VPC peering connection.
+	AllowEgressFromLocalVpcToRemoteClassicLink *bool `locationName:"allowEgressFromLocalVpcToRemoteClassicLink" type:"boolean"`
+}
+
+// String returns the string representation
+func (s VpcPeeringConnectionOptionsDescription) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s VpcPeeringConnectionOptionsDescription) GoString() string {
 	return s.String()
 }
 
@@ -26686,6 +26900,10 @@ type VpcPeeringConnectionVpcInfo struct {
 
 	// The AWS account ID of the VPC owner.
 	OwnerId *string `locationName:"ownerId" type:"string"`
+
+	// Information about the VPC peering connection options for the accepter or
+	// requester VPC.
+	PeeringOptions *VpcPeeringConnectionOptionsDescription `locationName:"peeringOptions" type:"structure"`
 
 	// The ID of the VPC.
 	VpcId *string `locationName:"vpcId" type:"string"`
