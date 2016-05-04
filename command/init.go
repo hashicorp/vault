@@ -92,8 +92,8 @@ func (c *InitCommand) Run(args []string) int {
 			"\n"+
 				"Recovery key initialized with %d keys and a key threshold of %d. Please\n"+
 				"securely distribute the above keys.",
-			shares,
-			threshold,
+			recoveryShares,
+			recoveryThreshold,
 		))
 	}
 

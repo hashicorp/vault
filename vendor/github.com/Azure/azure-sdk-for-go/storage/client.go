@@ -4,6 +4,7 @@ package storage
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -54,6 +55,11 @@ type storageResponse struct {
 	body       io.ReadCloser
 }
 
+type odataResponse struct {
+	storageResponse
+	odata odataErrorMessage
+}
+
 // AzureStorageServiceError contains fields of the error response from
 // Azure Storage Service REST API. See https://msdn.microsoft.com/en-us/library/azure/dd179382.aspx
 // Some fields might be specific to certain calls.
@@ -66,6 +72,20 @@ type AzureStorageServiceError struct {
 	Reason                    string `xml:"Reason"`
 	StatusCode                int
 	RequestID                 string
+}
+
+type odataErrorMessageMessage struct {
+	Lang  string `json:"lang"`
+	Value string `json:"value"`
+}
+
+type odataErrorMessageInternal struct {
+	Code    string                   `json:"code"`
+	Message odataErrorMessageMessage `json:"message"`
+}
+
+type odataErrorMessage struct {
+	Err odataErrorMessageInternal `json:"odata.error"`
 }
 
 // UnexpectedStatusCodeError is returned when a storage service responds with neither an error
@@ -166,6 +186,12 @@ func (c Client) GetQueueService() QueueServiceClient {
 	return QueueServiceClient{c}
 }
 
+// GetTableService returns a TableServiceClient which can operate on the table
+// service of the storage account.
+func (c Client) GetTableService() TableServiceClient {
+	return TableServiceClient{c}
+}
+
 // GetFileService returns a FileServiceClient which can operate on the file
 // service of the storage account.
 func (c Client) GetFileService() FileServiceClient {
@@ -228,6 +254,22 @@ func (c Client) buildCanonicalizedHeader(headers map[string]string) string {
 	return ch
 }
 
+func (c Client) buildCanonicalizedResourceTable(uri string) (string, error) {
+	errMsg := "buildCanonicalizedResourceTable error: %s"
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", fmt.Errorf(errMsg, err.Error())
+	}
+
+	cr := "/" + c.accountName
+
+	if len(u.Path) > 0 {
+		cr += u.Path
+	}
+
+	return cr, nil
+}
+
 func (c Client) buildCanonicalizedResource(uri string) (string, error) {
 	errMsg := "buildCanonicalizedResource error: %s"
 	u, err := url.Parse(uri)
@@ -236,6 +278,7 @@ func (c Client) buildCanonicalizedResource(uri string) (string, error) {
 	}
 
 	cr := "/" + c.accountName
+
 	if len(u.Path) > 0 {
 		cr += u.Path
 	}
@@ -266,6 +309,7 @@ func (c Client) buildCanonicalizedResource(uri string) (string, error) {
 			}
 		}
 	}
+
 	return cr, nil
 }
 
@@ -362,6 +406,70 @@ func (c Client) exec(verb, url string, headers map[string]string, body io.Reader
 		statusCode: resp.StatusCode,
 		headers:    resp.Header,
 		body:       resp.Body}, nil
+}
+
+func (c Client) execInternalJSON(verb, url string, headers map[string]string, body io.Reader) (*odataResponse, error) {
+	req, err := http.NewRequest(verb, url, body)
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	httpClient := c.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	respToRet := &odataResponse{}
+	respToRet.body = resp.Body
+	respToRet.statusCode = resp.StatusCode
+	respToRet.headers = resp.Header
+
+	statusCode := resp.StatusCode
+	if statusCode >= 400 && statusCode <= 505 {
+		var respBody []byte
+		respBody, err = readResponseBody(resp)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(respBody) == 0 {
+			// no error in response body
+			err = fmt.Errorf("storage: service returned without a response body (%d)", resp.StatusCode)
+			return respToRet, err
+		}
+		// try unmarshal as odata.error json
+		err = json.Unmarshal(respBody, &respToRet.odata)
+		return respToRet, err
+	}
+
+	return respToRet, nil
+}
+
+func (c Client) createSharedKeyLite(url string, headers map[string]string) (string, error) {
+	can, err := c.buildCanonicalizedResourceTable(url)
+
+	if err != nil {
+		return "", err
+	}
+	strToSign := headers["x-ms-date"] + "\n" + can
+
+	hmac := c.computeHmac256(strToSign)
+	return fmt.Sprintf("SharedKeyLite %s:%s", c.accountName, hmac), nil
+}
+
+func (c Client) execTable(verb, url string, headers map[string]string, body io.Reader) (*odataResponse, error) {
+	var err error
+	headers["Authorization"], err = c.createSharedKeyLite(url, headers)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.execInternalJSON(verb, url, headers, body)
 }
 
 func readResponseBody(resp *http.Response) ([]byte, error) {
