@@ -3,18 +3,29 @@ package policyutil
 import (
 	"sort"
 	"strings"
+
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 func ParsePolicies(policiesRaw string) []string {
-	var policies []string
-
-	if policiesRaw != "" {
-		policies = strings.Split(policiesRaw, ",")
+	if policiesRaw == "" {
+		return []string{"default"}
 	}
 
+	policies := strings.Split(policiesRaw, ",")
+
+	return SanitizePolicies(policies)
+}
+
+func SanitizePolicies(policies []string) []string {
 	defaultFound := false
 	for i, p := range policies {
 		policies[i] = strings.ToLower(strings.TrimSpace(p))
+		// Eliminate unnamed policies.
+		if policies[i] == "" {
+			continue
+		}
+
 		// If 'root' policy is present, ignore all other policies.
 		if policies[i] == "root" {
 			policies = []string{"root"}
@@ -31,10 +42,7 @@ func ParsePolicies(policiesRaw string) []string {
 		policies = append(policies, "default")
 	}
 
-	// Sort to make the computations on policies consistent.
-	sort.Strings(policies)
-
-	return policies
+	return strutil.RemoveDuplicates(policies)
 }
 
 // ComparePolicies checks whether the given policy sets are equivalent, as in,

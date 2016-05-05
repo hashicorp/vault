@@ -13,11 +13,9 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/hashicorp/vault/helper/awsutil"
 )
 
 // S3Backend is a physical backend that stores data
@@ -41,17 +39,17 @@ func newS3Backend(conf map[string]string, logger *log.Logger) (Backend, error) {
 		}
 	}
 
-	access_key, ok := conf["access_key"]
+	accessKey, ok := conf["access_key"]
 	if !ok {
-		access_key = ""
+		accessKey = ""
 	}
-	secret_key, ok := conf["secret_key"]
+	secretKey, ok := conf["secret_key"]
 	if !ok {
-		secret_key = ""
+		secretKey = ""
 	}
-	session_token, ok := conf["session_token"]
+	sessionToken, ok := conf["session_token"]
 	if !ok {
-		session_token = ""
+		sessionToken = ""
 	}
 	endpoint := os.Getenv("AWS_S3_ENDPOINT")
 	if endpoint == "" {
@@ -65,16 +63,15 @@ func newS3Backend(conf map[string]string, logger *log.Logger) (Backend, error) {
 		}
 	}
 
-	creds := credentials.NewChainCredentials([]credentials.Provider{
-		&credentials.StaticProvider{Value: credentials.Value{
-			AccessKeyID:     access_key,
-			SecretAccessKey: secret_key,
-			SessionToken:    session_token,
-		}},
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-	})
+	credsConfig := &awsutil.CredentialsConfig{
+		AccessKey:    accessKey,
+		SecretKey:    secretKey,
+		SessionToken: sessionToken,
+	}
+	creds, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		return nil, err
+	}
 
 	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: creds,
@@ -82,7 +79,7 @@ func newS3Backend(conf map[string]string, logger *log.Logger) (Backend, error) {
 		Region:      aws.String(region),
 	}))
 
-	_, err := s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
+	_, err = s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
 	if err != nil {
 		return nil, fmt.Errorf("unable to access bucket '%s': %v", bucket, err)
 	}
