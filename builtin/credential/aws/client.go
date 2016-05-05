@@ -4,12 +4,10 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -21,13 +19,15 @@ import (
 // * Environment variables
 // * Instance metadata role
 func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config, error) {
+	credsConfig := &awsutil.CredentialsConfig{
+		Region: region,
+	}
+
 	// Read the configured secret key and access key
 	config, err := b.clientConfigEntry(s)
 	if err != nil {
 		return nil, err
 	}
-
-	var providers []credentials.Provider
 
 	endpoint := aws.String("")
 	if config != nil {
@@ -36,38 +36,18 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 			endpoint = aws.String(config.Endpoint)
 		}
 
-		switch {
-		case config.AccessKey != "" && config.SecretKey != "":
-			// Add the static credential provider
-			providers = append(providers, &credentials.StaticProvider{
-				Value: credentials.Value{
-					AccessKeyID:     config.AccessKey,
-					SecretAccessKey: config.SecretKey,
-				}})
-		case config.AccessKey == "" && config.AccessKey == "":
-			// Attempt to get credentials from the IAM instance role below
-		default: // Have one or the other but not both and not neither
-			return nil, fmt.Errorf(
-				"static AWS client credentials haven't been properly configured (the access key or secret key were provided but not both); configure or remove them at the 'config/client' endpoint")
-		}
+		credsConfig.AccessKey = config.AccessKey
+		credsConfig.SecretKey = config.SecretKey
 	}
 
-	// Add the environment credential provider
-	providers = append(providers, &credentials.EnvProvider{})
+	credsConfig.HTTPClient = cleanhttp.DefaultClient()
 
-	// Add the instance metadata role provider
-	// Create the credentials required to access the API.
-	providers = append(providers, &ec2rolecreds.EC2RoleProvider{
-		Client: ec2metadata.New(session.New(&aws.Config{
-			Region:     aws.String(region),
-			HTTPClient: cleanhttp.DefaultClient(),
-		})),
-		ExpiryWindow: 15,
-	})
-
-	creds := credentials.NewChainCredentials(providers)
+	creds, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		return nil, err
+	}
 	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environemnt, or instance metadata")
+		return nil, fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
 	}
 
 	// Create a config that can be used to make the API calls.
