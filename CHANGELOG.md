@@ -56,6 +56,8 @@ IMPROVEMENTS:
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
+ * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
+   providers [GH-307]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
