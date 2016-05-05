@@ -237,12 +237,14 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.AllowInstanceMigration = data.Get("allow_instance_migration").(bool)
 	}
 
+	var resp logical.Response
+
 	maxTTLInt, ok := data.GetOk("max_ttl")
 	if ok {
 		maxTTL := time.Duration(maxTTLInt.(int)) * time.Second
 		systemMaxTTL := b.System().MaxLeaseTTL()
 		if maxTTL > systemMaxTTL {
-			return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than current mount/system default of %d seconds", maxTTL/time.Second, systemMaxTTL/time.Second)), nil
+			resp.AddWarning(fmt.Sprintf("Given TTL of %d seconds greater than current mount/system default of %d seconds; TTL will be capped at login time", maxTTL/time.Second, systemMaxTTL/time.Second))
 		}
 
 		if maxTTL < time.Duration(0) {
@@ -282,7 +284,11 @@ func (b *backend) pathRoleCreateUpdate(
 		return nil, err
 	}
 
-	return nil, nil
+	if len(resp.Warnings()) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 // Struct to hold the information associated with an AMI ID in Vault.

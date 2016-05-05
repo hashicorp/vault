@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -35,7 +36,7 @@ If set, the created tag can only be used by the instance with the given ID.`,
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Policies to be associated with the tag. If set, must be a subset of the role's policies.",
+				Description: "Policies to be associated with the tag. If set, must be a subset of the role's policies. If set, but set to an empty value, only the 'default' policy will be given to issued tokens.",
 			},
 
 			"max_ttl": &framework.FieldSchema{
@@ -76,25 +77,6 @@ func (b *backend) pathRoleTagUpdate(
 		return logical.ErrorResponse("missing role_name"), nil
 	}
 
-	// Instance ID is an optional field.
-	instanceID := strings.ToLower(data.Get("instance_id").(string))
-
-	// If no policies field was not supplied, then the tag should inherit all the policies
-	// on the role. But, it was provided, but set to empty explicitly, only "default" policy
-	// should be inherited. So, by leaving the policies var unset to anything when it is not
-	// supplied, we ensure that it inherits all the policies on the role.
-	var policies []string
-	policiesStr, ok := data.GetOk("policies")
-	if ok {
-		policies = policyutil.ParsePolicies(policiesStr.(string))
-	}
-
-	// This is an optional field.
-	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
-
-	// This is an optional field.
-	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
-
 	// Fetch the role entry
 	roleEntry, err := b.awsRole(req.Storage, roleName)
 	if err != nil {
@@ -115,10 +97,31 @@ func (b *backend) pathRoleTagUpdate(
 		return nil, fmt.Errorf("failed to find the HMAC key")
 	}
 
-	// Create a random nonce.
-	nonce, err := createRoleTagNonce()
-	if err != nil {
-		return nil, err
+	resp := &logical.Response{}
+
+	// Instance ID is an optional field.
+	instanceID := strings.ToLower(data.Get("instance_id").(string))
+
+	// If no policies field was not supplied, then the tag should inherit all the policies
+	// on the role. But, it was provided, but set to empty explicitly, only "default" policy
+	// should be inherited. So, by leaving the policies var unset to anything when it is not
+	// supplied, we ensure that it inherits all the policies on the role.
+	var policies []string
+	policiesStr, ok := data.GetOk("policies")
+	if ok {
+		policies = policyutil.ParsePolicies(policiesStr.(string))
+	}
+	if !strutil.StrListSubset(roleEntry.Policies, policies) {
+		resp.AddWarning("Policies on the tag are not a subset of the policies set on the role. Login will not be allowed with this tag unless the role policies are updated.")
+	}
+
+	// This is an optional field.
+	disallowReauthentication := data.Get("disallow_reauthentication").(bool)
+
+	// This is an optional field.
+	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
+	if allowInstanceMigration && !roleEntry.AllowInstanceMigration {
+		resp.AddWarning("Role does not allow instance migration. Login will not be allowed with this tag unless the role value is updated.")
 	}
 
 	// max_ttl for the role tag should be less than the max_ttl set on the role.
@@ -126,16 +129,21 @@ func (b *backend) pathRoleTagUpdate(
 
 	// max_ttl on the tag should not be greater than the system view's max_ttl value.
 	if maxTTL > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("Registered AMI does not have a max_ttl set. So, the given TTL of %d seconds should be less than the max_ttl set for the corresponding backend mount of %d seconds.", maxTTL/time.Second, b.System().MaxLeaseTTL()/time.Second)), nil
+		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the mount maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, b.System().MaxLeaseTTL()/time.Second))
 	}
-
 	// If max_ttl is set for the role, check the bounds for tag's max_ttl value using that.
 	if roleEntry.MaxTTL != time.Duration(0) && maxTTL > roleEntry.MaxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than the max_ttl set for the corresponding role of %d seconds", maxTTL/time.Second, roleEntry.MaxTTL/time.Second)), nil
+		resp.AddWarning(fmt.Sprintf("Given max TTL of %d is greater than the role maximum of %d seconds, and will be capped at login time.", maxTTL/time.Second, roleEntry.MaxTTL/time.Second))
 	}
 
 	if maxTTL < time.Duration(0) {
 		return logical.ErrorResponse("max_ttl cannot be negative"), nil
+	}
+
+	// Create a random nonce.
+	nonce, err := createRoleTagNonce()
+	if err != nil {
+		return nil, err
 	}
 
 	// Create a role tag out of all the information provided.
@@ -155,12 +163,12 @@ func (b *backend) pathRoleTagUpdate(
 
 	// Return the key to be used for the tag and the value to be used for that tag key.
 	// This key value pair should be set on the EC2 instance.
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"tag_key":   roleEntry.RoleTag,
-			"tag_value": rTagValue,
-		},
-	}, nil
+	resp.Data = map[string]interface{}{
+		"tag_key":   roleEntry.RoleTag,
+		"tag_value": rTagValue,
+	}
+
+	return resp, nil
 }
 
 // createRoleTagValue prepares the plaintext version of the role tag,
@@ -269,7 +277,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 
 	// Attach max_ttl if it is provided.
 	if rTag.MaxTTL > time.Duration(0) {
-		value = fmt.Sprintf("%s:t=%s", value, rTag.MaxTTL)
+		value = fmt.Sprintf("%s:t=%d", value, rTag.MaxTTL.Seconds())
 	}
 
 	return value, nil
@@ -325,7 +333,7 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 				return nil, err
 			}
 		case strings.Contains(tagItem, "t="):
-			rTag.MaxTTL, err = time.ParseDuration(strings.TrimPrefix(tagItem, "t="))
+			rTag.MaxTTL, err = time.ParseDuration(fmt.Sprintf("%ss", strings.TrimPrefix(tagItem, "t=")))
 			if err != nil {
 				return nil, err
 			}
