@@ -143,7 +143,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 		tag = string(tagBytes)
 	}
 
-	// Parse and the role tag from string form to a struct form and verify it.
+	// Parse and verify the role tag from string form to a struct form and verify it.
 	rTag, err := parseAndVerifyRoleTagValue(req.Storage, tag)
 	if err != nil {
 		return nil, err
@@ -180,21 +180,17 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 		blEntry.CreationTime = currentTime
 	}
 
-	// Decide the expiration time based on the max_ttl values.
-
-	// If max_ttl is not set for the role tag, fall back on the mount's max_ttl.
-	if rTag.MaxTTL == time.Duration(0) {
-		rTag.MaxTTL = b.System().MaxLeaseTTL()
+	// Decide the expiration time based on the max_ttl values. Since this is
+	// restricting access, use the greatest duration, not the least.
+	maxDur := rTag.MaxTTL
+	if roleEntry.MaxTTL > maxDur {
+		maxDur = roleEntry.MaxTTL
+	}
+	if b.System().MaxLeaseTTL() > maxDur {
+		maxDur = b.System().MaxLeaseTTL()
 	}
 
-	// The max_ttl value on the role tag is scoped by the value set on the role entry.
-	if roleEntry.MaxTTL > time.Duration(0) && rTag.MaxTTL > roleEntry.MaxTTL {
-		rTag.MaxTTL = roleEntry.MaxTTL
-	}
-
-	// Expiration time is decided by least of the max_ttl values set on:
-	// role tag, role entry, backend's mount.
-	blEntry.ExpirationTime = currentTime.Add(rTag.MaxTTL)
+	blEntry.ExpirationTime = currentTime.Add(maxDur)
 
 	entry, err := logical.StorageEntryJSON("blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)), blEntry)
 	if err != nil {
