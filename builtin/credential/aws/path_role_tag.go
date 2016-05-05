@@ -30,18 +30,18 @@ func pathRoleTag(b *backend) *framework.Path {
 			"instance_id": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Instance ID for which this tag is intended for.
-This is an optional field, but if set, the created tag can only be used by the instance with the given ID.`,
+If set, the created tag can only be used by the instance with the given ID.`,
 			},
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Policies to be associated with the tag.",
+				Description: "Policies to be associated with the tag. If set, must be a subset of the role's policies.",
 			},
 
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
-				Description: "The maximum allowed lease duration.",
+				Description: "If set, specifies the maximum allowed token lifetime.",
 			},
 
 			"allow_instance_migration": &framework.FieldSchema{
@@ -53,7 +53,7 @@ This is an optional field, but if set, the created tag can only be used by the i
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/whitelist/identity/<instance_id>' endpoint.",
+				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using the 'auth/aws/identity-whitelist/<instance_id>' endpoint.",
 			},
 		},
 

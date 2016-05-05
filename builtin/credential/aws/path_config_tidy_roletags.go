@@ -18,15 +18,16 @@ func pathConfigTidyRoleTags(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
-				Default: 259200, //72h
+				Default: 15552000, //180d
 				Description: `The amount of extra time that must have passed beyond the roletag
-expiration, before it is removed from the backend storage.`,
+expiration, before it is removed from the backend storage.
+Defaults to 4320h (180 days).`,
 			},
 
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries.",
+				Description: "If set to 'true', disables the periodic tidying of blacklisted entries.",
 			},
 		},
 
@@ -45,9 +46,6 @@ expiration, before it is removed from the backend storage.`,
 }
 
 func (b *backend) pathConfigTidyRoleTagsExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	entry, err := b.configTidyRoleTags(req.Storage)
 	if err != nil {
 		return false, err
@@ -56,6 +54,13 @@ func (b *backend) pathConfigTidyRoleTagsExistenceCheck(req *logical.Request, dat
 }
 
 func (b *backend) configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
+	return b.configTidyRoleTagsInternal(s)
+}
+
+func (b *backend) configTidyRoleTagsInternal(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
 	entry, err := s.Get(roletagBlacklistConfigPath)
 	if err != nil {
 		return nil, err
@@ -76,7 +81,7 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.configTidyRoleTags(req.Storage)
+	configEntry, err := b.configTidyRoleTagsInternal(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +114,6 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 }
 
 func (b *backend) pathConfigTidyRoleTagsRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	clientConfig, err := b.configTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err

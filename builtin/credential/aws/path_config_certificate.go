@@ -95,6 +95,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data
 	if certName == "" {
 		return false, fmt.Errorf("missing cert_name")
 	}
+
 	entry, err := b.awsPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return false, err
@@ -138,6 +139,11 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 // certificates, that were registered using `config/certificate/<cert_name>` endpoint.
 // This method will also append default certificate in the backend, to the slice.
 func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
+	// Lock at beginning and use internal method so that we are consistent as
+	// we iterate through
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
 	var certs []*x509.Certificate
 
 	// Append the generic certificate provided in the AWS EC2 instance metadata documentation.
@@ -155,7 +161,7 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 
 	// Iterate through each certificate, parse and append it to a slice.
 	for _, cert := range registeredCerts {
-		certEntry, err := b.awsPublicCertificateEntry(s, cert)
+		certEntry, err := b.awsPublicCertificateEntryInternal(s, cert)
 		if err != nil {
 			return nil, err
 		}
@@ -178,6 +184,11 @@ func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) 
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
+	return b.awsPublicCertificateEntryInternal(s, certName)
+}
+
+// Internal version of the above that does no locking
+func (b *backend) awsPublicCertificateEntryInternal(s logical.Storage, certName string) (*awsPublicCert, error) {
 	entry, err := s.Get("config/certificate/" + certName)
 	if err != nil {
 		return nil, err
@@ -238,8 +249,11 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
 
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
 	// Check if there is already a certificate entry registered.
-	certEntry, err := b.awsPublicCertificateEntry(req.Storage, certName)
+	certEntry, err := b.awsPublicCertificateEntryInternal(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -275,8 +289,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		return logical.ErrorResponse("invalid certificate; failed to decode and parse certificate"), nil
 	}
 
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
+	// Ensure that we have not
 	// If none of the checks fail, save the provided certificate.
 	entry, err := logical.StorageEntryJSON("config/certificate/"+certName, certEntry)
 	if err != nil {

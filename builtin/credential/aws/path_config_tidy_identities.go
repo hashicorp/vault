@@ -44,9 +44,6 @@ expiration, before it is removed from the backend storage.`,
 }
 
 func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	entry, err := b.configTidyIdentities(req.Storage)
 	if err != nil {
 		return false, err
@@ -55,6 +52,13 @@ func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, d
 }
 
 func (b *backend) configTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+	b.configMutex.RLock()
+	defer b.configMutex.RUnlock()
+
+	return b.configTidyIdentitiesInternal(s)
+}
+
+func (b *backend) configTidyIdentitiesInternal(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
 	entry, err := s.Get(identityWhitelistConfigPath)
 	if err != nil {
 		return nil, err
@@ -74,7 +78,7 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.configTidyIdentities(req.Storage)
+	configEntry, err := b.configTidyIdentitiesInternal(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +113,6 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 }
 
 func (b *backend) pathConfigTidyIdentitiesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.configMutex.RLock()
-	defer b.configMutex.RUnlock()
-
 	clientConfig, err := b.configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err

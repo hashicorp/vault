@@ -25,6 +25,9 @@ type backend struct {
 	// Lock to make changes to any of the backend's configuration endpoints.
 	configMutex sync.RWMutex
 
+	// Lock to make changes to the blacklist entries
+	blacklistMutex sync.RWMutex
+
 	// Duration after which the periodic function of the backend needs to
 	// tidy the blacklist and whitelist entries.
 	tidyCooldownPeriod time.Duration
@@ -101,8 +104,8 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().UTC().Before(b.nextTidyTime) {
-		// safety_buffer defaults to 72h
-		safety_buffer := 259200
+		// safety_buffer defaults to 180 days for roletag blacklist
+		safety_buffer := 15552000
 		tidyBlacklistConfigEntry, err := b.configTidyRoleTags(req.Storage)
 		if err != nil {
 			return err

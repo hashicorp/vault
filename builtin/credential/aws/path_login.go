@@ -419,7 +419,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	}
 
 	// Check if the role tag is blacklisted.
-	blacklistEntry, err := blacklistRoleTagEntry(s, rTagValue)
+	blacklistEntry, err := b.blacklistRoleTagEntry(s, rTagValue)
 	if err != nil {
 		return nil, err
 	}

@@ -48,6 +48,9 @@ func pathListBlacklistRoleTags(b *backend) *framework.Path {
 // Lists all the blacklisted role tags.
 func (b *backend) pathBlacklistRoleTagsList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.blacklistMutex.RLock()
+	defer b.blacklistMutex.RUnlock()
+
 	tags, err := req.Storage.List("blacklist/roletag/")
 	if err != nil {
 		return nil, err
@@ -69,7 +72,14 @@ func (b *backend) pathBlacklistRoleTagsList(
 
 // Fetch an entry from the role tag blacklist for a given tag.
 // This method takes a role tag in its original form and not a base64 encoded form.
-func blacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+func (b *backend) blacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+	b.blacklistMutex.RLock()
+	defer b.blacklistMutex.RUnlock()
+
+	return b.blacklistRoleTagEntryInternal(s, tag)
+}
+
+func (b *backend) blacklistRoleTagEntryInternal(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
 	entry, err := s.Get("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
@@ -88,6 +98,9 @@ func blacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntr
 // Deletes an entry from the role tag blacklist for a given tag.
 func (b *backend) pathBlacklistRoleTagDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.blacklistMutex.Lock()
+	defer b.blacklistMutex.Unlock()
+
 	tag := data.Get("role_tag").(string)
 	if tag == "" {
 		return logical.ErrorResponse("missing role_tag"), nil
@@ -106,7 +119,7 @@ func (b *backend) pathBlacklistRoleTagRead(
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	entry, err := blacklistRoleTagEntry(req.Storage, tag)
+	entry, err := b.blacklistRoleTagEntry(req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -161,8 +174,11 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 		return logical.ErrorResponse("role entry not found"), nil
 	}
 
+	b.blacklistMutex.Lock()
+	defer b.blacklistMutex.Unlock()
+
 	// Check if the role tag is already blacklisted. If yes, update it.
-	blEntry, err := blacklistRoleTagEntry(req.Storage, tag)
+	blEntry, err := b.blacklistRoleTagEntryInternal(req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
