@@ -66,7 +66,6 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	})
 
 	// Add the instance metadata role provider
-	// Create the credentials required to access the API.
 	providers = append(providers, &ec2rolecreds.EC2RoleProvider{
 		Client: ec2metadata.New(session.New(&aws.Config{
 			Region:     aws.String(c.Region),
@@ -75,9 +74,10 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 		ExpiryWindow: 15,
 	})
 
+	// Create the credentials required to access the API.
 	creds := credentials.NewChainCredentials(providers)
 	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environemnt, or instance metadata")
+		return nil, fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
 	}
 
 	return creds, nil
