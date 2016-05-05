@@ -21,7 +21,10 @@ type dsaSignature struct {
 // As per AWS documentation, this public key is valid for US East (N. Virginia),
 // US West (Oregon), US West (N. California), EU (Ireland), EU (Frankfurt),
 // Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
-// Asia Pacific (Sydney), and South America (Sao Paulo)
+// Asia Pacific (Sydney), and South America (Sao Paulo).
+//
+// It's also the same certificate, but for some reason listed separately, for
+// GovCloud (US)
 const genericAWSPublicCertificate = `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
@@ -117,7 +120,7 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 	// Decode the PEM block and error out if a block is not detected in the first attempt.
 	decodedPublicCert, rest := pem.Decode([]byte(certificate))
 	if len(rest) != 0 {
-		return nil, fmt.Errorf("invalid certificate; failed to decode certificate")
+		return nil, fmt.Errorf("invalid certificate; should be one PEM block only")
 	}
 
 	// Check if the certificate can be parsed.
