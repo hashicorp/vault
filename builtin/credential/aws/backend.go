@@ -28,6 +28,10 @@ type backend struct {
 	// Lock to make changes to the blacklist entries
 	blacklistMutex sync.RWMutex
 
+	// Guards the blacklist/whitelist tidy functions
+	tidyBlacklistCASGuard uint32
+	tidyWhitelistCASGuard uint32
+
 	// Duration after which the periodic function of the backend needs to
 	// tidy the blacklist and whitelist entries.
 	tidyCooldownPeriod time.Duration
@@ -122,7 +126,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		}
 		// tidy role tags if explicitly not disabled
 		if !skipBlacklistTidy {
-			tidyBlacklistRoleTag(req.Storage, safety_buffer)
+			b.tidyBlacklistRoleTag(req.Storage, safety_buffer)
 		}
 
 		// reset the safety_buffer to 72h
@@ -143,7 +147,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		}
 		// tidy identities if explicitly not disabled
 		if !skipWhitelistTidy {
-			tidyWhitelistIdentity(req.Storage, safety_buffer)
+			b.tidyWhitelistIdentity(req.Storage, safety_buffer)
 		}
 
 		// Update the time at which to run the tidy functions again.

@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -30,7 +31,14 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
-func tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
+func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
+	grabbed := atomic.CompareAndSwapUint32(&b.tidyWhitelistCASGuard, 0, 1)
+	if grabbed {
+		defer atomic.StoreUint32(&b.tidyWhitelistCASGuard, 0)
+	} else {
+		return fmt.Errorf("identity whitelist tidy operation already running")
+	}
+
 	bufferDuration := time.Duration(safety_buffer) * time.Second
 
 	identities, err := s.List("whitelist/identity/")
@@ -70,7 +78,7 @@ func tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
 // pathTidyIdentitiesUpdate is used to delete entries in the whitelist that are expired.
 func (b *backend) pathTidyIdentitiesUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
+	return nil, b.tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyIdentitiesSyn = `

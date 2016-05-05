@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -30,7 +31,14 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
+func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
+	grabbed := atomic.CompareAndSwapUint32(&b.tidyBlacklistCASGuard, 0, 1)
+	if grabbed {
+		defer atomic.StoreUint32(&b.tidyBlacklistCASGuard, 0)
+	} else {
+		return fmt.Errorf("roletag blacklist tidy operation already running")
+	}
+
 	bufferDuration := time.Duration(safety_buffer) * time.Second
 	tags, err := s.List("blacklist/roletag/")
 	if err != nil {
@@ -69,7 +77,7 @@ func tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
 // pathTidyRoleTagsUpdate is used to clean-up the entries in the role tag blacklist.
 func (b *backend) pathTidyRoleTagsUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, tidyBlacklistRoleTag(req.Storage, data.Get("safety_buffer").(int))
+	return nil, b.tidyBlacklistRoleTag(req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyRoleTagsSyn = `
