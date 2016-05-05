@@ -65,6 +65,9 @@ func (b *backend) configTidyIdentities(s logical.Storage) (*tidyWhitelistIdentit
 }
 
 func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
 	configEntry, err := b.configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
@@ -86,9 +89,6 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
-
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/tidy/identities", configEntry)
 	if err != nil {

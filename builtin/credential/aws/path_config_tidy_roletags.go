@@ -16,6 +16,7 @@ func pathConfigTidyRoleTags(b *backend) *framework.Path {
 				Description: `The amount of extra time that must have passed beyond the roletag
 expiration, before it is removed from the backend storage.`,
 			},
+
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
@@ -66,6 +67,9 @@ func (b *backend) configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagCo
 }
 
 func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
 	configEntry, err := b.configTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
@@ -85,9 +89,6 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
-
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/tidy/roletags", configEntry)
 	if err != nil {
