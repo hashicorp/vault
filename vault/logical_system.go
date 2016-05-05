@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -845,6 +846,14 @@ func (b *SystemBackend) handleMountTuneWrite(
 		return handleError(err)
 	}
 
+	var lock *sync.RWMutex
+	switch {
+	case strings.HasPrefix(path, "auth/"):
+		lock = &b.Core.authLock
+	default:
+		lock = &b.Core.mountsLock
+	}
+
 	// Timing configuration parameters
 	{
 		var newDefault, newMax *time.Duration
@@ -877,8 +886,9 @@ func (b *SystemBackend) handleMountTuneWrite(
 		}
 
 		if newDefault != nil || newMax != nil {
-			b.Core.mountsLock.Lock()
-			defer b.Core.mountsLock.Unlock()
+			lock.Lock()
+			defer lock.Unlock()
+
 			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
 				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
 				return handleError(err)

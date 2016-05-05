@@ -17,24 +17,25 @@ import (
 // This guide provides descriptions of the STS API. For more detailed information
 // about using this service, go to Temporary Security Credentials (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html).
 //
-//  As an alternative to using the API, you can use one of the AWS SDKs, which
+//   As an alternative to using the API, you can use one of the AWS SDKs, which
 // consist of libraries and sample code for various programming languages and
 // platforms (Java, Ruby, .NET, iOS, Android, etc.). The SDKs provide a convenient
 // way to create programmatic access to STS. For example, the SDKs take care
 // of cryptographically signing requests, managing errors, and retrying requests
 // automatically. For information about the AWS SDKs, including how to download
 // and install them, see the Tools for Amazon Web Services page (http://aws.amazon.com/tools/).
+//
 //  For information about setting up signatures and authorization through the
-// API, go to Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html"
-// target="_blank) in the AWS General Reference. For general information about
-// the Query API, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html"
-// target="_blank) in Using IAM. For information about using security tokens
-// with other AWS products, go to AWS Services That Work with IAM (http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)
+// API, go to Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html)
+// in the AWS General Reference. For general information about the Query API,
+// go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
+// in Using IAM. For information about using security tokens with other AWS
+// products, go to AWS Services That Work with IAM (http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)
 // in the IAM User Guide.
 //
 // If you're new to AWS and need additional technical information about a specific
 // AWS product, you can find the product's technical documentation at http://aws.amazon.com/documentation/
-// (http://aws.amazon.com/documentation/" target="_blank).
+// (http://aws.amazon.com/documentation/).
 //
 //  Endpoints
 //

@@ -231,6 +231,8 @@ var (
 	ErrFrameTooBig = errors.New("frame length is bigger than the maximum allowed")
 )
 
+const maxFrameHeaderSize = 9
+
 func writeInt(p []byte, n int32) {
 	p[0] = byte(n >> 24)
 	p[1] = byte(n >> 16)
@@ -339,23 +341,34 @@ type frame interface {
 }
 
 func readHeader(r io.Reader, p []byte) (head frameHeader, err error) {
-	_, err = io.ReadFull(r, p)
+	_, err = io.ReadFull(r, p[:1])
 	if err != nil {
-		return
+		return frameHeader{}, err
 	}
 
 	version := p[0] & protoVersionMask
 
 	if version < protoVersion1 || version > protoVersion4 {
-		err = fmt.Errorf("gocql: invalid version: %d", version)
-		return
+		return frameHeader{}, fmt.Errorf("gocql: unsupported response version: %d", version)
 	}
+
+	headSize := 9
+	if version < protoVersion3 {
+		headSize = 8
+	}
+
+	_, err = io.ReadFull(r, p[1:headSize])
+	if err != nil {
+		return frameHeader{}, err
+	}
+
+	p = p[:headSize]
 
 	head.version = protoVersion(p[0])
 	head.flags = p[1]
 
 	if version > protoVersion2 {
-		if len(p) < 9 {
+		if len(p) != 9 {
 			return frameHeader{}, fmt.Errorf("not enough bytes to read header require 9 got: %d", len(p))
 		}
 
@@ -363,7 +376,7 @@ func readHeader(r io.Reader, p []byte) (head frameHeader, err error) {
 		head.op = frameOp(p[4])
 		head.length = int(readInt(p[5:]))
 	} else {
-		if len(p) < 8 {
+		if len(p) != 8 {
 			return frameHeader{}, fmt.Errorf("not enough bytes to read header require 8 got: %d", len(p))
 		}
 
@@ -372,7 +385,7 @@ func readHeader(r io.Reader, p []byte) (head frameHeader, err error) {
 		head.length = int(readInt(p[4:]))
 	}
 
-	return
+	return head, nil
 }
 
 // explicitly enables tracing for the framers outgoing requests
@@ -401,9 +414,9 @@ func (f *framer) readFrame(head *frameHeader) error {
 	}
 
 	// assume the underlying reader takes care of timeouts and retries
-	_, err := io.ReadFull(f.r, f.rbuf)
+	n, err := io.ReadFull(f.r, f.rbuf)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read frame body: read %d/%d bytes: %v", n, head.length, err)
 	}
 
 	if head.flags&flagCompress == flagCompress {
@@ -544,6 +557,16 @@ func (f *framer) parseErrorFrame() frame {
 		res.BlockFor = f.readInt()
 		res.DataPresent = f.readByte() != 0
 		return res
+	case errWriteFailure:
+		res := &RequestErrWriteFailure{
+			errorFrame: errD,
+		}
+		res.Consistency = f.readConsistency()
+		res.Received = f.readInt()
+		res.BlockFor = f.readInt()
+		res.NumFailures = f.readInt()
+		res.WriteType = f.readString()
+		return res
 	case errFunctionFailure:
 		res := RequestErrFunctionFailure{
 			errorFrame: errD,
@@ -552,8 +575,12 @@ func (f *framer) parseErrorFrame() frame {
 		res.Function = f.readString()
 		res.ArgTypes = f.readStringList()
 		return res
+	case errInvalid, errBootstrapping, errConfig, errCredentials, errOverloaded,
+		errProtocol, errServer, errSyntax, errTruncate, errUnauthorized:
+		// TODO(zariel): we should have some distinct types for these errors
+		return errD
 	default:
-		return &errD
+		panic(fmt.Errorf("unknown error code: 0x%x", errD.code))
 	}
 }
 

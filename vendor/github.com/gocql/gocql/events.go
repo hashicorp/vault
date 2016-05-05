@@ -107,6 +107,17 @@ func (s *Session) handleEvent(framer *framer) {
 }
 
 func (s *Session) handleSchemaEvent(frames []frame) {
+	if s.schemaDescriber == nil {
+		return
+	}
+	for _, frame := range frames {
+		switch f := frame.(type) {
+		case *schemaChangeKeyspace:
+			s.schemaDescriber.clearSchema(f.keyspace)
+		case *schemaChangeTable:
+			s.schemaDescriber.clearSchema(f.keyspace)
+		}
+	}
 }
 
 func (s *Session) handleNodeEvent(frames []frame) {
@@ -233,6 +244,9 @@ func (s *Session) handleRemovedNode(ip net.IP, port int) {
 }
 
 func (s *Session) handleNodeUp(ip net.IP, port int, waitForBinary bool) {
+	if gocqlDebug {
+		log.Printf("gocql: Session.handleNodeUp: %s:%d\n", ip.String(), port)
+	}
 	addr := ip.String()
 	host := s.ring.getHost(addr)
 	if host != nil {
@@ -264,6 +278,9 @@ func (s *Session) handleNodeUp(ip net.IP, port int, waitForBinary bool) {
 }
 
 func (s *Session) handleNodeDown(ip net.IP, port int) {
+	if gocqlDebug {
+		log.Printf("gocql: Session.handleNodeDown: %s:%d\n", ip.String(), port)
+	}
 	addr := ip.String()
 	host := s.ring.getHost(addr)
 	if host == nil {

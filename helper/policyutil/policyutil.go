@@ -14,7 +14,7 @@ func ParsePolicies(policiesRaw string) []string {
 
 	defaultFound := false
 	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
+		policies[i] = strings.ToLower(strings.TrimSpace(p))
 		// If 'root' policy is present, ignore all other policies.
 		if policies[i] == "root" {
 			policies = []string{"root"}

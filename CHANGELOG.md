@@ -27,17 +27,19 @@ DEPRECATIONS/BREAKING CHANGES:
    using the `consul` backend and will perform its own health checks.  See
    the Consul backend documentation for information on how to disable
    auto-registration and service checks.
+ * List operations that do not find any keys now return a `404` status code
+   rather than an empty response object [GH-1365]
 
 FEATURES:
 
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
- * **Consul Backend**: Consul backend will automatically register a `vault`
-   service and perform its own health checking.  By default the active node
-   can be found at `active.vault.service.consul` and all with standby nodes
-   are `standby.vault.service.consul`.  Sealed vaults are marked critical and
-   are not listed by default in Consul's service discovery.  See the
-   documentation for details. [GH-1349]
+ * **Consul Backend Health Checks**: The Consul backend will automatically
+   register a `vault` service and perform its own health checking. By default
+   the active node can be found at `active.vault.service.consul` and all with
+   standby nodes are `standby.vault.service.consul`. Sealed vaults are marked
+   critical and are not listed by default in Consul's service discovery.  See
+   the documentation for details. [GH-1349]
 
 IMPROVEMENTS:
 
@@ -68,6 +70,10 @@ BUG FIXES:
  * command/various: Tell the JSON decoder to not convert all numbers to floats;
    fixes some various places where numbers were showing up in scientific
    notation
+ * core: Properly persist mount-tuned TTLs for auth backends [GH-1371]
+ * core: Don't accidentally crosswire SIGINT to the reload handler [GH-1372]
+ * credential/github: Make organization comparison case-insensitive during
+   login [GH-1359]
  * credential/ldap: Fix problem where certain error conditions when configuring
    or opening LDAP connections would cause a panic instead of return a useful
    error message [GH-1262]

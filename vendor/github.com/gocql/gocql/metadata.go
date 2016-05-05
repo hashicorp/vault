@@ -105,8 +105,6 @@ func (s *schemaDescriber) getSchema(keyspaceName string) (*KeyspaceMetadata, err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// TODO handle schema change events
-
 	metadata, found := s.cache[keyspaceName]
 	if !found {
 		// refresh the cache for this keyspace
@@ -119,6 +117,14 @@ func (s *schemaDescriber) getSchema(keyspaceName string) (*KeyspaceMetadata, err
 	}
 
 	return metadata, nil
+}
+
+// clears the already cached keyspace metadata
+func (s *schemaDescriber) clearSchema(keyspaceName string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.cache, keyspaceName)
 }
 
 // forcibly updates the current KeyspaceMetadata held by the schema describer
