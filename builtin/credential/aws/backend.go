@@ -25,6 +25,9 @@ type backend struct {
 	// Lock to make changes to any of the backend's configuration endpoints.
 	configMutex sync.RWMutex
 
+	// Lock to make changes to role entries
+	roleMutex sync.RWMutex
+
 	// Lock to make changes to the blacklist entries
 	blacklistMutex sync.RWMutex
 
@@ -75,8 +78,9 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		},
 		Paths: []*framework.Path{
 			pathLogin(b),
-			pathRole(b),
+			pathListRole(b),
 			pathListRoles(b),
+			pathRole(b),
 			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),

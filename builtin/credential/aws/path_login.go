@@ -233,7 +233,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Get the entry for the role used by the instance.
-	roleEntry, err := awsRole(req.Storage, roleName)
+	roleEntry, err := b.awsRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +402,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	}
 
 	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC.
-	rTag, err := parseAndVerifyRoleTagValue(s, rTagValue)
+	rTag, err := b.parseAndVerifyRoleTagValue(s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Ensure that role entry is not deleted.
-	roleEntry, err := awsRole(req.Storage, storedIdentity.RoleName)
+	roleEntry, err := b.awsRole(req.Storage, storedIdentity.RoleName)
 	if err != nil {
 		return nil, err
 	}

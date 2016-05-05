@@ -96,7 +96,7 @@ func (b *backend) pathRoleTagUpdate(
 	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
 
 	// Fetch the role entry
-	roleEntry, err := awsRole(req.Storage, roleName)
+	roleEntry, err := b.awsRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 
 // Parses the tag from string form into a struct form. This method
 // also verifies the correctness of the parsed role tag.
-func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
+func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
 
 	// Tag must contain version, nonce, policies and HMAC
@@ -338,7 +338,7 @@ func parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error)
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := awsRole(s, rTag.RoleName)
+	roleEntry, err := b.awsRole(s, rTag.RoleName)
 	if err != nil {
 		return nil, err
 	}

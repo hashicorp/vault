@@ -157,7 +157,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 	}
 
 	// Parse and verify the role tag from string form to a struct form and verify it.
-	rTag, err := parseAndVerifyRoleTagValue(req.Storage, tag)
+	rTag, err := b.parseAndVerifyRoleTagValue(req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (b *backend) pathBlacklistRoleTagUpdate(
 	}
 
 	// Get the entry for the role mentioned in the role tag.
-	roleEntry, err := awsRole(req.Storage, rTag.RoleName)
+	roleEntry, err := b.awsRole(req.Storage, rTag.RoleName)
 	if err != nil {
 		return nil, err
 	}

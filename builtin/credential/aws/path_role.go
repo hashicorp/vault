@@ -22,28 +22,26 @@ func pathRole(b *backend) *framework.Path {
 			},
 
 			"bound_ami_id": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `If set, defines a constraint that the EC2 instances that are trying to
-login, should be using the AMI ID specified by this parameter.
-`,
+				Type:        framework.TypeString,
+				Description: `If set, instances attempting login must be running the given AMI.`,
 			},
 
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "If set, enables the RoleTag for this AMI. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'role/<role_name>/tag' endpoint. Defaults to empty string.",
+				Description: "If set, enables the role tags for this role. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'role/<role_name>/tag' endpoint. Defaults to an empty string, meaning that role tags are disabled.",
 			},
 
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
-				Description: "The maximum allowed lease duration.",
+				Description: "The maximum allowed lifetime for tokens issued due to logins using this role.",
 			},
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "default",
-				Description: "Policies to be associated with the role.",
+				Description: "Policies to be set on tokens logging in using this role.",
 			},
 
 			"allow_instance_migration": &framework.FieldSchema{
@@ -55,7 +53,7 @@ login, should be using the AMI ID specified by this parameter.
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/whitelist/identity/<instance_id>' endpoint.",
+				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/identity-whitelist/<instance_id>' endpoint.",
 			},
 		},
 
@@ -73,8 +71,19 @@ login, should be using the AMI ID specified by this parameter.
 	}
 }
 
-// pathListRoles creates a path that enables listing of all the AMIs that are
-// registered with Vault.
+func pathListRole(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "role/?",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+
+		HelpSynopsis:    pathListRolesHelpSyn,
+		HelpDescription: pathListRolesHelpDesc,
+	}
+}
+
 func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
@@ -91,7 +100,7 @@ func pathListRoles(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := awsRole(req.Storage, strings.ToLower(data.Get("role_name").(string)))
+	entry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role_name").(string)))
 	if err != nil {
 		return false, err
 	}
@@ -99,7 +108,14 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 }
 
 // awsRole is used to get the information registered for the given AMI ID.
-func awsRole(s logical.Storage, role string) (*awsRoleEntry, error) {
+func (b *backend) awsRole(s logical.Storage, role string) (*awsRoleEntry, error) {
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
+
+	return b.awsRoleInternal(s, role)
+}
+
+func (b *backend) awsRoleInternal(s logical.Storage, role string) (*awsRoleEntry, error) {
 	entry, err := s.Get("role/" + strings.ToLower(role))
 	if err != nil {
 		return nil, err
@@ -123,12 +139,18 @@ func (b *backend) pathRoleDelete(
 		return logical.ErrorResponse("missing role_name"), nil
 	}
 
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
 	return nil, req.Storage.Delete("role/" + strings.ToLower(roleName))
 }
 
 // pathRoleList is used to list all the AMI IDs registered with Vault.
 func (b *backend) pathRoleList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
+
 	roles, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
@@ -139,7 +161,7 @@ func (b *backend) pathRoleList(
 // pathRoleRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleEntry, err := awsRole(req.Storage, strings.ToLower(data.Get("role_name").(string)))
+	roleEntry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role_name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +192,10 @@ func (b *backend) pathRoleCreateUpdate(
 		return logical.ErrorResponse("missing role_name"), nil
 	}
 
-	roleEntry, err := awsRole(req.Storage, roleName)
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	roleEntry, err := b.awsRoleInternal(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -235,15 +260,17 @@ func (b *backend) pathRoleCreateUpdate(
 		// There is a limit of 127 characters on the tag key for AWS EC2 instances.
 		// Complying to that requirement, do not allow the value of 'key' to be more than that.
 		if len(roleEntry.RoleTag) > 127 {
-			return logical.ErrorResponse("role tag 'key' is exceeding the limit of 127 characters"), nil
+			return logical.ErrorResponse("length of role tag exceeds the EC2 key limit of 127 characters"), nil
 		}
 	} else if req.Operation == logical.CreateOperation {
 		roleEntry.RoleTag = data.Get("role_tag").(string)
 	}
 
-	roleEntry.HMACKey, err = uuid.GenerateUUID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate uuid HMAC key: %v", err)
+	if roleEntry.HMACKey == "" {
+		roleEntry.HMACKey, err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate role HMAC key: %v", err)
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON("role/"+roleName, roleEntry)
@@ -288,7 +315,7 @@ subset of policies that are associated to the role. In order to enable
 login using tags, 'role_tag' option should be set while creating a role.
 
 Also, a 'max_ttl' can be configured in this endpoint that determines the maximum
-duration for which a login can be renewed. Note that the 'max_ttl' has a upper
+duration for which a login can be renewed. Note that the 'max_ttl' has an upper
 limit of the 'max_ttl' value on the backend's mount.
 `
 
