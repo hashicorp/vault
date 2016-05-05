@@ -176,7 +176,7 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		maxTTLStr = maxTTLStrRaw.(string)
 	}
 
-	userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
+	userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTLStr(ttlStr, maxTTLStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}

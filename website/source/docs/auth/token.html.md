@@ -599,8 +599,9 @@ of the header should be "X-Vault-Token" and the value should be the token.
         If set, tokens created against this role will <i>not</i> have a maximum
         lifetime. Instead, they will have a fixed TTL that is refreshed with
         each renewal. So long as they continue to be renewed, they will never
-        expire. The parameter is an integer duration of seconds or a duration
-        string (e.g. `"72h"`).
+        expire. The parameter is an integer duration of seconds. Tokens issued
+        track updates to the role value; the new period takes effect upon next
+        renew.
       </li>
       <li>
         <span class="param">path_suffix</span>

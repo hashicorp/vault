@@ -46,7 +46,7 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 
-	ttl, _, err := b.SanitizeTTL(config.TTL.String(), config.MaxTTL.String())
+	ttl, _, err := b.SanitizeTTLStr(config.TTL.String(), config.MaxTTL.String())
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("[ERR]:%s", err)), nil
 	}
