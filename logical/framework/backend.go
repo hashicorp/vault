@@ -225,8 +225,7 @@ func (b *Backend) System() logical.SystemView {
 // compares those with the SystemView values. If they are empty a value of 0 is
 // set, which will cause initial secret or LeaseExtend operations to use the
 // mount/system defaults.  If they are set, their boundaries are validated.
-func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
-	sysMaxTTL := b.System().MaxLeaseTTL()
+func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
 	if len(ttlStr) == 0 || ttlStr == "0" {
 		ttl = 0
 	} else {
@@ -234,10 +233,8 @@ func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Durati
 		if err != nil {
 			return 0, 0, fmt.Errorf("Invalid ttl: %s", err)
 		}
-		if ttl > sysMaxTTL {
-			return 0, 0, fmt.Errorf("\"ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
-		}
 	}
+
 	if len(maxTTLStr) == 0 || maxTTLStr == "0" {
 		maxTTL = 0
 	} else {
@@ -245,14 +242,26 @@ func (b *Backend) SanitizeTTL(ttlStr, maxTTLStr string) (ttl, maxTTL time.Durati
 		if err != nil {
 			return 0, 0, fmt.Errorf("Invalid max_ttl: %s", err)
 		}
-		if maxTTL > sysMaxTTL {
-			return 0, 0, fmt.Errorf("\"max_ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
-		}
+	}
+
+	ttl, maxTTL, err = b.SanitizeTTL(ttl, maxTTL)
+
+	return
+}
+
+// Caps the boundaries of ttl and max_ttl values to the backend mount's max_ttl value.
+func (b *Backend) SanitizeTTL(ttl, maxTTL time.Duration) (time.Duration, time.Duration, error) {
+	sysMaxTTL := b.System().MaxLeaseTTL()
+	if ttl > sysMaxTTL {
+		return 0, 0, fmt.Errorf("\"ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
+	}
+	if maxTTL > sysMaxTTL {
+		return 0, 0, fmt.Errorf("\"max_ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
 	}
 	if ttl > maxTTL && maxTTL != 0 {
 		ttl = maxTTL
 	}
-	return
+	return ttl, maxTTL, nil
 }
 
 // Route looks up the path that would be used for a given path string.
