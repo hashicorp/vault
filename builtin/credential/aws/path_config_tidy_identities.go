@@ -1,14 +1,20 @@
 package aws
 
 import (
+	"fmt"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	identityWhitelistConfigPath = "config/tidy/identity-whitelist"
+)
+
 func pathConfigTidyIdentities(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config/tidy/identities$",
+		Pattern: fmt.Sprintf("%s$", identityWhitelistConfigPath),
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -49,7 +55,7 @@ func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, d
 }
 
 func (b *backend) configTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
-	entry, err := s.Get("config/tidy/identities")
+	entry, err := s.Get(identityWhitelistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +96,7 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
 
-	entry, err := logical.StorageEntryJSON("config/tidy/identities", configEntry)
+	entry, err := logical.StorageEntryJSON(identityWhitelistConfigPath, configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +129,7 @@ func (b *backend) pathConfigTidyIdentitiesDelete(req *logical.Request, data *fra
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete("config/tidy/identities")
+	return nil, req.Storage.Delete(identityWhitelistConfigPath)
 }
 
 type tidyWhitelistIdentityConfig struct {

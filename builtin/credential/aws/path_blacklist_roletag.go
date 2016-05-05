@@ -11,7 +11,7 @@ import (
 
 func pathBlacklistRoleTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "blacklist/roletag/(?P<role_tag>.*)",
+		Pattern: "roletag-blacklist/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
 			"role_tag": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -34,7 +34,7 @@ to avoid any encoding problems, it can be base64 encoded.`,
 // Path to list all the blacklisted tags.
 func pathListBlacklistRoleTags(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "blacklist/roletags/?",
+		Pattern: "roletag-blacklist/?",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathBlacklistRoleTagsList,

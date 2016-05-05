@@ -1,14 +1,20 @@
 package aws
 
 import (
+	"fmt"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	roletagBlacklistConfigPath = "config/tidy/roletag-blacklist"
+)
+
 func pathConfigTidyRoleTags(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "config/tidy/roletags$",
+		Pattern: fmt.Sprintf("%s$", roletagBlacklistConfigPath),
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -50,7 +56,7 @@ func (b *backend) pathConfigTidyRoleTagsExistenceCheck(req *logical.Request, dat
 }
 
 func (b *backend) configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
-	entry, err := s.Get("config/tidy/roletags")
+	entry, err := s.Get(roletagBlacklistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +96,7 @@ func (b *backend) pathConfigTidyRoleTagsCreateUpdate(req *logical.Request, data 
 		configEntry.DisablePeriodicTidy = data.Get("disable_periodic_tidy").(bool)
 	}
 
-	entry, err := logical.StorageEntryJSON("config/tidy/roletags", configEntry)
+	entry, err := logical.StorageEntryJSON(roletagBlacklistConfigPath, configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +129,7 @@ func (b *backend) pathConfigTidyRoleTagsDelete(req *logical.Request, data *frame
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete("config/tidy/roletags")
+	return nil, req.Storage.Delete(roletagBlacklistConfigPath)
 }
 
 type tidyBlacklistRoleTagConfig struct {

@@ -10,7 +10,7 @@ import (
 
 func pathWhitelistIdentity(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/identity/" + framework.GenericNameRegex("instance_id"),
+		Pattern: "identity-whitelist/" + framework.GenericNameRegex("instance_id"),
 		Fields: map[string]*framework.FieldSchema{
 			"instance_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -30,7 +30,7 @@ func pathWhitelistIdentity(b *backend) *framework.Path {
 
 func pathListWhitelistIdentities(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/identities/?",
+		Pattern: "identity-whitelist/?",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathWhitelistIdentitiesList,

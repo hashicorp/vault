@@ -76,12 +76,12 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathConfigTidyRoleTags(b),
 			pathConfigTidyIdentities(b),
 			pathListCertificates(b),
-			pathBlacklistRoleTag(b),
 			pathListBlacklistRoleTags(b),
+			pathBlacklistRoleTag(b),
 			pathTidyRoleTags(b),
+			pathListWhitelistIdentities(b),
 			pathWhitelistIdentity(b),
 			pathTidyIdentities(b),
-			pathListWhitelistIdentities(b),
 		},
 	}
 
