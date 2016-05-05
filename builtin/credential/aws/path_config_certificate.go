@@ -248,13 +248,13 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	}
 
 	// Check if the value is provided by the client.
-	certStrB64, ok := data.GetOk("aws_public_cert")
+	certStrData, ok := data.GetOk("aws_public_cert")
 	if ok {
-		certBytes, err := base64.StdEncoding.DecodeString(certStrB64.(string))
-		if err != nil {
-			return nil, err
+		if certBytes, err := base64.StdEncoding.DecodeString(certStrData.(string)); err == nil {
+			certEntry.AWSPublicCert = string(certBytes)
+		} else {
+			certEntry.AWSPublicCert = certStrData
 		}
-		certEntry.AWSPublicCert = string(certBytes)
 	} else {
 		// aws_public_cert should be supplied for both create and update operations.
 		// If it is not provided, throw an error.
