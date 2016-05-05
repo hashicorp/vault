@@ -253,7 +253,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		if certBytes, err := base64.StdEncoding.DecodeString(certStrData.(string)); err == nil {
 			certEntry.AWSPublicCert = string(certBytes)
 		} else {
-			certEntry.AWSPublicCert = certStrData
+			certEntry.AWSPublicCert = certStrData.(string)
 		}
 	} else {
 		// aws_public_cert should be supplied for both create and update operations.

@@ -98,7 +98,6 @@ func (b *backend) pathConfigClientDelete(
 	defer b.configMutex.Unlock()
 
 	if err := req.Storage.Delete("config/client"); err != nil {
-		b.configMutex.Unlock()
 		return nil, err
 	}
 
@@ -112,6 +111,9 @@ func (b *backend) pathConfigClientDelete(
 // that can be used to interact with AWS EC2 API.
 func (b *backend) pathConfigClientCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
 	configEntry, err := b.clientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
@@ -152,9 +154,6 @@ func (b *backend) pathConfigClientCreateUpdate(
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.Endpoint = data.Get("endpoint").(string)
 	}
-
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
 
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
