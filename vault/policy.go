@@ -61,7 +61,8 @@ type PathCapabilities struct {
 	Prefix             string
 	Policy             string
 	Capabilities       []string
-	CapabilitiesBitmap uint32 `hcl:"-"`
+	CapabilitiesBitmap uint32   `hcl:"-"`
+	MFAMethods         []string `hcl:"mfa"`
 	Glob               bool
 }
 
@@ -117,6 +118,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		valid := []string{
 			"policy",
 			"capabilities",
+			"mfa",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))

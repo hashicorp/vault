@@ -37,6 +37,7 @@ var (
 		"auth/",
 		"sys/",
 		"cubbyhole/",
+		"mfa/",
 	}
 
 	untunableMounts = []string{
@@ -48,6 +49,7 @@ var (
 	// singletonMounts can only exist in one location and are
 	// loaded by default. These are types, not paths.
 	singletonMounts = []string{
+		"mfa",
 		"cubbyhole",
 		"system",
 	}
@@ -605,6 +607,17 @@ func requiredMountTable() *MountTable {
 		UUID:        cubbyholeUUID,
 	}
 
+	mfaUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create mfa UUID: %v", err))
+	}
+	mfaMount := &MountEntry{
+		Path:        "mfa/",
+		Type:        "mfa",
+		Description: "global Multi-Factor Authentication (MFA) setup",
+		UUID:        mfaUUID,
+	}
+
 	sysUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		panic(fmt.Sprintf("could not create sys UUID: %v", err))
@@ -615,7 +628,9 @@ func requiredMountTable() *MountTable {
 		Description: "system endpoints used for control, policy and debugging",
 		UUID:        sysUUID,
 	}
+
 	table.Entries = append(table.Entries, cubbyholeMount)
+	table.Entries = append(table.Entries, mfaMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
 }

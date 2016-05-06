@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/mfa"
 )
 
 const (
@@ -315,6 +316,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Setup the backends
+
+	// Logical Backends
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
@@ -324,11 +327,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends["generic"] = PassthroughBackendFactory
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
+	logicalBackends["mfa"] = mfa.MFABackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return NewSystemBackend(c, config), nil
 	}
 	c.logicalBackends = logicalBackends
 
+	// Credential Backends
 	credentialBackends := make(map[string]logical.Factory)
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
@@ -338,6 +343,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.credentialBackends = credentialBackends
 
+	// Audit Backends
 	auditBackends := make(map[string]audit.Factory)
 	for k, f := range conf.AuditBackends {
 		auditBackends[k] = f
