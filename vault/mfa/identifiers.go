@@ -41,7 +41,7 @@ func methodIdentifiersPaths(b *backend) *framework.Path {
 				Description: mfaTypesHelp,
 			},
 
-			"account_name": &framework.FieldSchema{
+			"totp_account_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: mfaTypesHelp,
@@ -60,21 +60,22 @@ func methodIdentifiersPaths(b *backend) *framework.Path {
 }
 
 type mfaIdentifierEntry struct {
-	CreationTime time.Time `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
-	TOTPURL      string    `json:"totp_url" mapstructure:"totp_url" structs:"totp_url"`
-	AccountName  string    `json:"account_name" mapstructure:"account_name" structs:"account_name"`
-	Identifier   string    `json:"identifier" mapstructure:"identifier" structs:"identifier"`
+	CreationTime    time.Time `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
+	TOTPURL         string    `json:"totp_url" mapstructure:"totp_url" structs:"totp_url"`
+	TOTPSecret      string    `json:"totp_secret" mapstructure:"totp_secret" structs:"totp_secret"`
+	TOTPAccountName string    `json:"totp_account_name" mapstructure:"totp_account_name" structs:"totp_account_name"`
+	Identifier      string    `json:"identifier" mapstructure:"identifier" structs:"identifier"`
 }
 
-func (b *backend) mfaBackendMethodIdentifiers(storage logical.Storage, methodName, identifier string) (*mfaMethodEntry, *mfaIdentifierEntry, error) {
+func (b *backend) mfaBackendMethodIdentifiers(methodName, identifier string) (*mfaMethodEntry, *mfaIdentifierEntry, error) {
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.mfaBackendMethodIdentifiersInternal(storage, methodName, identifier)
+	return b.mfaBackendMethodIdentifiersInternal(methodName, identifier)
 }
 
-func (b *backend) mfaBackendMethodIdentifiersInternal(storage logical.Storage, methodName, identifier string) (*mfaMethodEntry, *mfaIdentifierEntry, error) {
-	method, err := b.mfaBackendMethodInternal(storage, methodName)
+func (b *backend) mfaBackendMethodIdentifiersInternal(methodName, identifier string) (*mfaMethodEntry, *mfaIdentifierEntry, error) {
+	method, err := b.mfaBackendMethodInternal(methodName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,7 +83,7 @@ func (b *backend) mfaBackendMethodIdentifiersInternal(storage logical.Storage, m
 		return nil, nil, fmt.Errorf("method %s does not exist", methodName)
 	}
 
-	entry, err := storage.Get(fmt.Sprintf("method/%s/identifiers/%s", methodName, strings.ToLower(identifier)))
+	entry, err := b.storage.Get(fmt.Sprintf("method/%s/identifiers/%s", methodName, strings.ToLower(identifier)))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -108,7 +109,7 @@ func (b *backend) mfaBackendMethodIdentifiersList(
 	b.RLock()
 	defer b.RUnlock()
 
-	method, err := b.mfaBackendMethodInternal(req.Storage, methodName)
+	method, err := b.mfaBackendMethodInternal(methodName)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func (b *backend) mfaBackendMethodIdentifiersList(
 		return logical.ErrorResponse(fmt.Sprintf("method %s doesn't exist", methodName)), nil
 	}
 
-	entries, err := req.Storage.List(fmt.Sprintf("method/%s/identifiers/", methodName))
+	entries, err := b.storage.List(fmt.Sprintf("method/%s/identifiers/", methodName))
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +145,7 @@ func (b *backend) mfaBackendMethodIdentifiersDelete(
 	b.Lock()
 	defer b.Unlock()
 
-	err := req.Storage.Delete(fmt.Sprintf("method/%s/identifiers/%s", methodName, strings.ToLower(identifier)))
+	err := b.storage.Delete(fmt.Sprintf("method/%s/identifiers/%s", methodName, strings.ToLower(identifier)))
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +165,7 @@ func (b *backend) mfaBackendMethodIdentifiersRead(
 		return logical.ErrorResponse("identifier cannot be empty"), nil
 	}
 
-	_, entry, err := b.mfaBackendMethodIdentifiersInternal(req.Storage, methodName, identifier)
+	_, entry, err := b.mfaBackendMethodIdentifiersInternal(methodName, identifier)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +177,7 @@ func (b *backend) mfaBackendMethodIdentifiersRead(
 		Data: map[string]interface{}{
 			"creation_time_utc":    entry.CreationTime.Unix(),
 			"creation_time_string": entry.CreationTime.String(),
-			"account_name":         entry.AccountName,
+			"totp_account_name":    entry.TOTPAccountName,
 			"identifier":           entry.Identifier,
 		},
 	}
@@ -196,7 +197,7 @@ func (b *backend) mfaBackendMethodIdentifiersExistenceCheck(
 		return false, fmt.Errorf("identifier cannot be empty")
 	}
 
-	_, entry, err := b.mfaBackendMethodIdentifiers(req.Storage, methodName, identifier)
+	_, entry, err := b.mfaBackendMethodIdentifiers(methodName, identifier)
 	if err != nil {
 		return false, err
 	}
@@ -220,12 +221,12 @@ func (b *backend) mfaBackendMethodIdentifiersCreateUpdate(
 		return logical.ErrorResponse("identifier cannot be empty"), nil
 	}
 
-	accountName := data.Get("account_name").(string)
+	totpAccountName := data.Get("totp_account_name").(string)
 
 	b.Lock()
 	defer b.Unlock()
 
-	method, err := b.mfaBackendMethodInternal(req.Storage, methodName)
+	method, err := b.mfaBackendMethodInternal(methodName)
 	if err != nil {
 		return nil, err
 	}
@@ -234,9 +235,9 @@ func (b *backend) mfaBackendMethodIdentifiersCreateUpdate(
 	}
 
 	entry := &mfaIdentifierEntry{
-		CreationTime: time.Now().UTC(),
-		AccountName:  accountName,
-		Identifier:   identifier,
+		CreationTime:    time.Now().UTC(),
+		TOTPAccountName: totpAccountName,
+		Identifier:      identifier,
 	}
 
 	resp := &logical.Response{}
@@ -257,7 +258,7 @@ func (b *backend) mfaBackendMethodIdentifiersCreateUpdate(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonEntry); err != nil {
+	if err := b.storage.Put(jsonEntry); err != nil {
 		return nil, err
 	}
 
@@ -272,7 +273,7 @@ func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIden
 
 	opts := totp.GenerateOpts{
 		Algorithm:   alg,
-		AccountName: identifierEntry.AccountName,
+		AccountName: identifierEntry.TOTPAccountName,
 		Issuer:      fmt.Sprintf("Vault MFA: %s/%s", method.Name, identifierEntry.Identifier),
 	}
 
@@ -286,6 +287,7 @@ func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIden
 	}
 
 	identifierEntry.TOTPURL = key.String()
+	identifierEntry.TOTPSecret = key.Secret()
 
 	if resp.Data == nil {
 		resp.Data = map[string]interface{}{}
@@ -308,4 +310,39 @@ func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIden
 	resp.WrapInfo.TTL = 5 * time.Minute
 
 	return nil
+}
+
+func (b *backend) validateTOTP(methodName string, params map[string]string) (bool, error, error) {
+	if methodName == "" {
+		return false, fmt.Errorf("no method name supplied"), nil
+	}
+
+	if params["token"] == "" {
+		return false, fmt.Errorf("no token supplied"), nil
+	}
+
+	if params["identifier"] == "" {
+		return false, fmt.Errorf("no identifier supplied"), nil
+	}
+
+	method, identifierEntry, err := b.mfaBackendMethodIdentifiers(methodName, params["identifier"])
+	if err != nil {
+		return false, nil, err
+	}
+
+	alg, err := method.totpAlgorithm()
+	if err != nil {
+		return false, nil, err
+	}
+
+	opts := totp.ValidateOpts{
+		Algorithm: alg,
+	}
+
+	valid, err := totp.ValidateCustom(params["token"], identifierEntry.TOTPSecret, time.Now().UTC(), opts)
+	if err != nil {
+		return false, err, nil
+	}
+
+	return valid, nil, nil
 }

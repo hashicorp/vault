@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -204,6 +205,9 @@ type Core struct {
 
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
+
+	// Used to validate MFA
+	mfaBackend *mfa.MFABackend
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -458,12 +462,32 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, mfaMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return nil, te, logical.ErrPermissionDenied
 	}
 	if rootPath && !rootPrivs {
 		return nil, te, logical.ErrPermissionDenied
+	}
+	if mfaMethods != nil && len(mfaMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
+		mfaSuccess := false
+		for _, method := range sanitizedMFAMethods {
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
+			if userErr != nil {
+				return nil, te, logical.ErrInvalidRequest
+			}
+			if intErr != nil {
+				return nil, te, ErrInternalError
+			}
+			if valid {
+				mfaSuccess = true
+				break
+			}
+		}
+		if !mfaSuccess {
+			return nil, te, logical.ErrPermissionDenied
+		}
 	}
 
 	// Create the auth response
@@ -712,7 +736,7 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, mfaMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return logical.ErrPermissionDenied
 	}
@@ -720,6 +744,28 @@ func (c *Core) Seal(token string) (retErr error) {
 	// We always require root privileges for this operation
 	if !rootPrivs {
 		return logical.ErrPermissionDenied
+	}
+
+	// Check MFA methods
+	if mfaMethods != nil && len(mfaMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
+		mfaSuccess := false
+		for _, method := range sanitizedMFAMethods {
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
+			if userErr != nil {
+				return logical.ErrInvalidRequest
+			}
+			if intErr != nil {
+				return ErrInternalError
+			}
+			if valid {
+				mfaSuccess = true
+				break
+			}
+		}
+		if !mfaSuccess {
+			return logical.ErrPermissionDenied
+		}
 	}
 
 	//Seal the Vault
@@ -775,7 +821,7 @@ func (c *Core) StepDown(token string) error {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, mfaMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return logical.ErrPermissionDenied
 	}
@@ -783,6 +829,28 @@ func (c *Core) StepDown(token string) error {
 	// We always require root privileges for this operation
 	if !rootPrivs {
 		return logical.ErrPermissionDenied
+	}
+
+	// Check MFA methods
+	if mfaMethods != nil && len(mfaMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
+		mfaSuccess := false
+		for _, method := range sanitizedMFAMethods {
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
+			if userErr != nil {
+				return logical.ErrInvalidRequest
+			}
+			if intErr != nil {
+				return ErrInternalError
+			}
+			if valid {
+				mfaSuccess = true
+				break
+			}
+		}
+		if !mfaSuccess {
+			return logical.ErrPermissionDenied
+		}
 	}
 
 	select {

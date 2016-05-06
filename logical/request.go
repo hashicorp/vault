@@ -57,6 +57,9 @@ type Request struct {
 	// WrapTTL contains the requested TTL of the token used to wrap the
 	// response in a cubbyhole.
 	WrapTTL time.Duration
+
+	// MFAParams contains parameters consumed by MFA authenticators
+	MFAParams map[string]string
 }
 
 // Get returns a data field and guards for nil Data

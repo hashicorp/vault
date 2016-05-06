@@ -96,15 +96,15 @@ func methodPaths(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) mfaBackendMethod(storage logical.Storage, methodName string) (*mfaMethodEntry, error) {
+func (b *backend) mfaBackendMethod(methodName string) (*mfaMethodEntry, error) {
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.mfaBackendMethodInternal(storage, methodName)
+	return b.mfaBackendMethodInternal(methodName)
 }
 
-func (b *backend) mfaBackendMethodInternal(storage logical.Storage, methodName string) (*mfaMethodEntry, error) {
-	entry, err := storage.Get(fmt.Sprintf("method/%s/config", strings.ToLower(methodName)))
+func (b *backend) mfaBackendMethodInternal(methodName string) (*mfaMethodEntry, error) {
+	entry, err := b.storage.Get(fmt.Sprintf("method/%s/config", strings.ToLower(methodName)))
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (b *backend) mfaBackendMethodList(
 	b.RLock()
 	defer b.RUnlock()
 
-	entries, err := req.Storage.List("method/")
+	entries, err := b.storage.List("method/")
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (b *backend) mfaBackendMethodDelete(
 	b.Lock()
 	defer b.Unlock()
 
-	err := req.Storage.Delete(fmt.Sprintf("method/%s/config", strings.ToLower(methodName)))
+	err := b.storage.Delete(fmt.Sprintf("method/%s/config", strings.ToLower(methodName)))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (b *backend) mfaBackendMethodRead(
 		return logical.ErrorResponse("method name cannot be empty"), nil
 	}
 
-	method, err := b.mfaBackendMethod(req.Storage, methodName)
+	method, err := b.mfaBackendMethod(methodName)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (b *backend) mfaBackendMethodExistenceCheck(
 		return false, fmt.Errorf("method name cannot be empty")
 	}
 
-	method, err := b.mfaBackendMethod(req.Storage, name)
+	method, err := b.mfaBackendMethod(name)
 	if err != nil {
 		return false, err
 	}
@@ -211,7 +211,7 @@ func (b *backend) mfaBackendMethodCreateUpdate(
 	b.Lock()
 	defer b.Unlock()
 
-	entry, err := b.mfaBackendMethodInternal(req.Storage, methodName)
+	entry, err := b.mfaBackendMethodInternal(methodName)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (b *backend) mfaBackendMethodCreateUpdate(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonEntry); err != nil {
+	if err := b.storage.Put(jsonEntry); err != nil {
 		return nil, err
 	}
 

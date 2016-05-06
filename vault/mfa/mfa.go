@@ -11,17 +11,17 @@ import (
 
 // backendFactory constructs a new MFA backend
 func MFABackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	var b backend
+	var b MFABackend
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(mfaHelp),
 
 		Paths: []*framework.Path{
-			methodPaths(&b),
-			methodsListPaths(&b),
-			methodListPaths(&b),
-			methodIdentifiersPaths(&b),
-			methodIdentifiersListPaths(&b),
+			methodPaths(&b.backend),
+			methodsListPaths(&b.backend),
+			methodListPaths(&b.backend),
+			methodIdentifiersPaths(&b.backend),
+			methodIdentifiersListPaths(&b.backend),
 		},
 	}
 
@@ -33,12 +33,42 @@ func MFABackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return &b, nil
 }
 
+type MFABackend struct {
+	backend
+}
+
 type backend struct {
 	// Embeds framework.Backend
 	*framework.Backend
 
 	// Used to lock for configuration changes
 	sync.RWMutex
+
+	// Used to shortcut going through the Router for verification
+	storage logical.Storage
+}
+
+func (b *MFABackend) SetStorage(storage logical.Storage) {
+	b.storage = storage
+}
+
+func (b *MFABackend) ValidateMFA(methodName string, params map[string]string) (bool, error, error) {
+	method, err := b.mfaBackendMethod(methodName)
+	if err != nil {
+		return false, nil, err
+	}
+	if method == nil {
+		return false, fmt.Errorf("mfa method %s not found", methodName), nil
+	}
+
+	switch method.Type {
+	case "totp":
+		return b.validateTOTP(methodName, params)
+	default:
+		return false, nil, fmt.Errorf("invalid method type %s", method.Type)
+	}
+
+	return false, nil, nil
 }
 
 const (

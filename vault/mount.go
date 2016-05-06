@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/vault/mfa"
 )
 
 const (
@@ -501,6 +502,9 @@ func (c *Core) setupMounts() error {
 			ch := backend.(*CubbyholeBackend)
 			ch.saltUUID = entry.UUID
 			ch.storageView = view
+		case "mfa":
+			c.mfaBackend = backend.(*mfa.MFABackend)
+			c.mfaBackend.SetStorage(view)
 		}
 
 		// Mount the backend
