@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -59,7 +60,7 @@ func TestACL_Root(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	allowed, rootPrivs := acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo")
+	allowed, rootPrivs, _, _ := acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo")
 	if !rootPrivs {
 		t.Fatalf("expected root")
 	}
@@ -81,7 +82,7 @@ func TestACL_Single(t *testing.T) {
 
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	_, rootPrivs, _, _ := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -117,7 +118,7 @@ func TestACL_Single(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		allowed, rootPrivs, _, _ := acl.AllowOperation(tc.op, tc.path)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
@@ -142,59 +143,91 @@ func TestACL_Layered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	testLayeredACL(t, acl)
+	testLayeredACL(t, acl, false)
 }
 
-func testLayeredACL(t *testing.T, acl *ACL) {
+func TestACL_Layered_With_MFA(t *testing.T) {
+	policy1, err := Parse(aclPolicyWithMFA)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	policy2, err := Parse(aclPolicyWithMFA2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	acl, err := NewACL([]*Policy{policy1, policy2})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	testLayeredACL(t, acl, true)
+}
+
+func testLayeredACL(t *testing.T, acl *ACL, checkMFAMethods bool) {
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	_, rootPrivs, _, _ := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
 	type tcase struct {
-		op        logical.Operation
-		path      string
-		allowed   bool
-		rootPrivs bool
+		op         logical.Operation
+		path       string
+		allowed    bool
+		rootPrivs  bool
+		mfaMethods []string
 	}
 	tcases := []tcase{
-		{logical.ReadOperation, "root", false, false},
-		{logical.HelpOperation, "root", true, false},
+		{logical.ReadOperation, "root", false, false, nil},
+		{logical.HelpOperation, "root", true, false, nil},
 
-		{logical.ReadOperation, "dev/foo", true, true},
-		{logical.UpdateOperation, "dev/foo", true, true},
-		{logical.ReadOperation, "dev/hide/foo", false, false},
-		{logical.UpdateOperation, "dev/hide/foo", false, false},
+		{logical.ReadOperation, "dev/foo", true, true, nil},
+		{logical.UpdateOperation, "dev/foo", true, true, nil},
+		{logical.ReadOperation, "dev/hide/foo", false, false, nil},
+		{logical.UpdateOperation, "dev/hide/foo", false, false, nil},
 
-		{logical.DeleteOperation, "stage/foo", true, false},
-		{logical.ListOperation, "stage/aws/foo", true, true},
-		{logical.UpdateOperation, "stage/aws/foo", true, true},
-		{logical.UpdateOperation, "stage/aws/policy/foo", false, false},
+		{logical.DeleteOperation, "stage/foo", true, false, nil},
+		{logical.ListOperation, "stage/aws/foo", true, true, nil},
+		{logical.UpdateOperation, "stage/aws/foo", true, true, []string{"mfa1", "mfa2"}},
+		{logical.UpdateOperation, "stage/aws/policy/foo", false, false, nil},
 
-		{logical.DeleteOperation, "prod/foo", true, false},
-		{logical.UpdateOperation, "prod/foo", true, false},
-		{logical.ReadOperation, "prod/foo", true, false},
-		{logical.ListOperation, "prod/foo", true, false},
-		{logical.ReadOperation, "prod/aws/foo", false, false},
+		{logical.DeleteOperation, "prod/foo", true, false, []string{"mfa3"}},
+		{logical.UpdateOperation, "prod/foo", true, false, []string{"mfa3"}},
+		{logical.ReadOperation, "prod/foo", true, false, []string{"mfa3"}},
+		{logical.ListOperation, "prod/foo", true, false, []string{"mfa3"}},
+		{logical.ReadOperation, "prod/aws/foo", false, false, nil},
 
-		{logical.ReadOperation, "sys/status", false, false},
-		{logical.UpdateOperation, "sys/seal", true, true},
+		{logical.ReadOperation, "sys/status", false, false, nil},
+		{logical.UpdateOperation, "sys/seal", true, true, nil},
 
-		{logical.ReadOperation, "foo/bar", false, false},
-		{logical.ListOperation, "foo/bar", false, false},
-		{logical.UpdateOperation, "foo/bar", false, false},
-		{logical.CreateOperation, "foo/bar", false, false},
+		{logical.ReadOperation, "foo/bar", false, false, nil},
+		{logical.ListOperation, "foo/bar", false, false, nil},
+		{logical.UpdateOperation, "foo/bar", false, false, nil},
+		{logical.CreateOperation, "foo/bar", false, false, nil},
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		allowed, rootPrivs, mfaMethods, sudoMFAMethods := acl.AllowOperation(tc.op, tc.path)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
 		if rootPrivs != tc.rootPrivs {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+		if checkMFAMethods {
+			if rootPrivs {
+				// These are additive so we don't actually require exactly
+				// what's above, just make sure it's a subset
+				if !strutil.StrListSubset(sudoMFAMethods, tc.mfaMethods) {
+					t.Fatalf("bad: case %#v: %v, %v, %v", tc, allowed, rootPrivs, sudoMFAMethods)
+				}
+			} else {
+				if !reflect.DeepEqual(mfaMethods, tc.mfaMethods) {
+					t.Fatalf("bad: case %#v: %v, %v, %v", tc, allowed, rootPrivs, mfaMethods)
+				}
+			}
 		}
 	}
 }
@@ -240,6 +273,62 @@ path "stage/aws/policy/*" {
 }
 path "prod/*" {
 	policy = "write"
+}
+path "sys/seal" {
+	policy = "sudo"
+}
+path "foo/bar" {
+	capabilities = ["deny"]
+}
+`
+
+var aclPolicyWithMFA = `
+name = "dev"
+path "dev/*" {
+	policy = "sudo"
+}
+path "stage/*" {
+	policy = "write"
+}
+path "stage/aws/*" {
+	policy = "read"
+	capabilities = ["update", "sudo"]
+}
+path "stage/aws/policy/*" {
+	policy = "sudo"
+}
+path "prod/*" {
+	policy = "read"
+}
+path "prod/aws/*" {
+	policy = "deny"
+}
+path "sys/*" {
+	policy = "deny"
+}
+path "foo/bar" {
+	capabilities = ["read", "create", "sudo"]
+}
+`
+
+var aclPolicyWithMFA2 = `
+name = "ops"
+path "dev/hide/*" {
+	policy = "deny"
+}
+path "stage/aws/*" {
+	capabilities = ["update", "sudo"]
+	mfa_methods = ["mfa1", "mfa2"]
+}
+path "stage/aws/policy/*" {
+	policy = "deny"
+	# This should have no effect
+	capabilities = ["read", "update", "sudo"]
+	mfa_methods = ["mfa1", "mfa2"]
+}
+path "prod/*" {
+	policy = "write"
+	mfa_methods = ["mfa3"]
 }
 path "sys/seal" {
 	policy = "sudo"

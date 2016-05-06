@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -31,10 +32,22 @@ path "/foo/bar" {
 	policy = "read"
 }
 
+# Add MFA method required for "sudo" on foobar
+path "foo/bar" {
+	capabilities = ["sudo"]
+	mfa_methods = ["mfa1"]
+}
+
 # Add capabilities for creation and sudo to foobar
 # This will be separate; they are combined when compiled into an ACL
 path "foo/bar" {
 	capabilities = ["create", "sudo"]
+}
+
+# Add a second method to detect merging
+path "foo/bar" {
+	capabilities = ["sudo"]
+	mfa_methods = ["mfa2"]
 }
 `)
 
@@ -52,7 +65,7 @@ func TestPolicy_Parse(t *testing.T) {
 		&PathCapabilities{"", "deny",
 			[]string{
 				"deny",
-			}, DenyCapabilityInt, true},
+			}, DenyCapabilityInt, []string(nil), true},
 		&PathCapabilities{"stage/", "sudo",
 			[]string{
 				"create",
@@ -62,25 +75,40 @@ func TestPolicy_Parse(t *testing.T) {
 				"list",
 				"sudo",
 			}, CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
-				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt, true},
+				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt, []string(nil), true},
 		&PathCapabilities{"prod/version", "read",
 			[]string{
 				"read",
 				"list",
-			}, ReadCapabilityInt | ListCapabilityInt, false},
+			}, ReadCapabilityInt | ListCapabilityInt, []string(nil), false},
 		&PathCapabilities{"foo/bar", "read",
 			[]string{
 				"read",
 				"list",
-			}, ReadCapabilityInt | ListCapabilityInt, false},
+			}, ReadCapabilityInt | ListCapabilityInt, []string(nil), false},
+		&PathCapabilities{"foo/bar", "",
+			[]string{
+				"sudo",
+			}, SudoCapabilityInt, []string{"mfa1"}, false},
 		&PathCapabilities{"foo/bar", "",
 			[]string{
 				"create",
 				"sudo",
-			}, CreateCapabilityInt | SudoCapabilityInt, false},
+			}, CreateCapabilityInt | SudoCapabilityInt, []string(nil), false},
+		&PathCapabilities{"foo/bar", "",
+			[]string{
+				"sudo",
+			}, SudoCapabilityInt, []string{"mfa2"}, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
-		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)
+		var foundPaths, expectPaths string
+		for _, path := range p.Paths {
+			foundPaths = fmt.Sprintf("%s\n%#v", foundPaths, *path)
+		}
+		for _, path := range expect {
+			expectPaths = fmt.Sprintf("%s\n%#v", expectPaths, *path)
+		}
+		t.Errorf("expected \n\n%s\n\n to be \n\n%s\n\n", foundPaths, expectPaths)
 	}
 }
 

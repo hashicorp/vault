@@ -45,7 +45,7 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	// The operation type isn't important here as this is run from a path the
 	// user has already been given access to; we only care about whether they
 	// have sudo
-	_, rootPrivs, _ := acl.AllowOperation(logical.ReadOperation, path)
+	_, rootPrivs, _, _ := acl.AllowOperation(logical.ReadOperation, path)
 	return rootPrivs
 }
 

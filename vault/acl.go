@@ -19,8 +19,7 @@ type ACL struct {
 }
 
 type aclEntry struct {
-	// The fast-path pure-bitmap capabilities set. If this is zero, we check
-	// the MFA map instead.
+	// The fast-path pure-bitmap capabilities set. If the MFA map is not nil, we use that instead (and this should be zero)
 	capabilitiesBitmap uint32
 
 	// A map of capabilities to MFA methods configured for them
@@ -56,9 +55,15 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pc.Prefix, aclEntry{
-					capabilitiesBitmap: pc.CapabilitiesBitmap,
-				})
+				var entry aclEntry
+				if pc.MFAMethods != nil && len(pc.MFAMethods) != 0 {
+					// We have a MFA so we leave the bitmap at 0 and use the map
+					entry.capabilitiesToMFAMap = convertCapBitmapToMFAMap(pc.CapabilitiesBitmap, pc.MFAMethods)
+				} else {
+					// We don't have MFA so we use the straight bitmap to be speedier
+					entry.capabilitiesBitmap = pc.CapabilitiesBitmap
+				}
+				tree.Insert(pc.Prefix, entry)
 				continue
 			}
 			existing := raw.(aclEntry)
@@ -70,7 +75,8 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				// the MFA map, so checking the bitmap is sufficient.
 
 			case pc.CapabilitiesBitmap&DenyCapabilityInt > 0:
-				// If this new policy explicitly denies, only save the deny value
+				// If this new policy explicitly denies, only save the deny
+				// value and leave the map at nil
 				tree.Insert(pc.Prefix, aclEntry{
 					capabilitiesBitmap: DenyCapabilityInt,
 				})
@@ -85,8 +91,8 @@ func NewACL(policies []*Policy) (*ACL, error) {
 	return a, nil
 }
 
-func mergeACLEntryCapabilities(existing *aclEntry, pc *PathCapabilities) *aclEntry {
-	ret := &aclEntry{}
+func mergeACLEntryCapabilities(existing *aclEntry, pc *PathCapabilities) (ret *aclEntry) {
+	ret = &aclEntry{}
 
 	// Ensure that we start out with a representative map based on existing
 	switch {
@@ -106,6 +112,12 @@ func mergeACLEntryCapabilities(existing *aclEntry, pc *PathCapabilities) *aclEnt
 
 	// Now, create the map for the new path capabilities object
 	pathCapMFAMap := convertCapBitmapToMFAMap(pc.CapabilitiesBitmap, pc.MFAMethods)
+
+	/*
+		defer func() {
+			panic(fmt.Sprintf("existing:\n%#v\n, pc:\n%#v\n, currRetMap:\n%#v\n, pathCapMFAMap: \n%#v\n, ret:\n%#v\n", *existing, *pc, ret.capabilitiesToMFAMap, pathCapMFAMap, *ret))
+		}()
+	*/
 
 	switch {
 	case ret.capabilitiesToMFAMap == nil && pathCapMFAMap == nil:
@@ -140,7 +152,7 @@ func convertCapBitmapToMFAMap(bitmap uint32, mfaMethods []string) map[uint32][]s
 
 	ret := make(map[uint32][]string, 6)
 
-	// We use nil as a baseline to safe memory
+	// We use nil as a baseline to save memory
 	if mfaMethods != nil && len(mfaMethods) == 0 {
 		mfaMethods = nil
 	}
@@ -174,10 +186,10 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	}
 
 	// Find an exact matching rule, look for glob if no match
-	var capabilities uint32
+	var entry aclEntry
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		capabilities = raw.(uint32)
+		entry = raw.(aclEntry)
 		goto CHECK
 	}
 
@@ -186,49 +198,76 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		capabilities = raw.(uint32)
+		entry = raw.(aclEntry)
 	}
 
 CHECK:
-	if capabilities&SudoCapabilityInt > 0 {
+	if entry.capabilitiesToMFAMap == nil {
+		if entry.capabilitiesBitmap&SudoCapabilityInt > 0 {
+			pathCapabilities = append(pathCapabilities, SudoCapability)
+		}
+		if entry.capabilitiesBitmap&ReadCapabilityInt > 0 {
+			pathCapabilities = append(pathCapabilities, ReadCapability)
+		}
+		if entry.capabilitiesBitmap&ListCapabilityInt > 0 {
+			pathCapabilities = append(pathCapabilities, ListCapability)
+		}
+		if entry.capabilitiesBitmap&UpdateCapabilityInt > 0 {
+			pathCapabilities = append(pathCapabilities, UpdateCapability)
+		}
+		if entry.capabilitiesBitmap&DeleteCapabilityInt > 0 {
+			pathCapabilities = append(pathCapabilities, DeleteCapability)
+		}
+		if entry.capabilitiesBitmap&CreateCapabilityInt > 0 {
+			pathCapabilities = append(pathCapabilities, CreateCapability)
+		}
+
+		// If "deny" is explicitly set or if the path has no capabilities at all,
+		// set the path capabilities to "deny"
+		if entry.capabilitiesBitmap&DenyCapabilityInt > 0 || len(pathCapabilities) == 0 {
+			pathCapabilities = []string{DenyCapability}
+		}
+
+		return
+	}
+
+	// Potentially have some mfa methods to return, so look at the map
+	if _, ok := entry.capabilitiesToMFAMap[SudoCapabilityInt]; ok {
 		pathCapabilities = append(pathCapabilities, SudoCapability)
 	}
-	if capabilities&ReadCapabilityInt > 0 {
+	if _, ok := entry.capabilitiesToMFAMap[ReadCapabilityInt]; ok {
 		pathCapabilities = append(pathCapabilities, ReadCapability)
 	}
-	if capabilities&ListCapabilityInt > 0 {
+	if _, ok := entry.capabilitiesToMFAMap[ListCapabilityInt]; ok {
 		pathCapabilities = append(pathCapabilities, ListCapability)
 	}
-	if capabilities&UpdateCapabilityInt > 0 {
+	if _, ok := entry.capabilitiesToMFAMap[UpdateCapabilityInt]; ok {
 		pathCapabilities = append(pathCapabilities, UpdateCapability)
 	}
-	if capabilities&DeleteCapabilityInt > 0 {
+	if _, ok := entry.capabilitiesToMFAMap[DeleteCapabilityInt]; ok {
 		pathCapabilities = append(pathCapabilities, DeleteCapability)
 	}
-	if capabilities&CreateCapabilityInt > 0 {
+	if _, ok := entry.capabilitiesToMFAMap[CreateCapabilityInt]; ok {
 		pathCapabilities = append(pathCapabilities, CreateCapability)
 	}
 
-	// If "deny" is explicitly set or if the path has no capabilities at all,
-	// set the path capabilities to "deny"
-	if capabilities&DenyCapabilityInt > 0 || len(pathCapabilities) == 0 {
-		pathCapabilities = []string{DenyCapability}
-	}
+	// We don't store Deny in map; instead we clear the map and store just the bitmap, so we don't need to check deny here
+
 	return
 }
 
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
-func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool, mfaMethods []string) {
+func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool, mfaMethods, sudoMFAMethods []string) {
 	// Fast-path root
 	if a.root {
-		return true, true, nil
+		return true, true, nil, nil
 	}
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
-		return true, false, nil
+		return true, false, nil, nil
 	}
 
 	// Find an exact matching rule, look for glob if no match
@@ -242,7 +281,7 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	// Find a glob rule, default deny if no match
 	_, raw, ok = a.globRules.LongestPrefix(path)
 	if !ok {
-		return false, false, nil
+		return false, false, nil, nil
 	} else {
 		entry = raw.(aclEntry)
 	}
@@ -270,17 +309,13 @@ CHECK:
 			allowed = entry.capabilitiesBitmap&UpdateCapabilityInt > 0
 
 		default:
-			return false, false, nil
+			return false, false, nil, nil
 		}
 
 		return
 	}
 
 	// Potentially have some mfa methods to return, so look at the map
-	if methods, ok := entry.capabilitiesToMFAMap[SudoCapabilityInt]; ok {
-		sudo = true
-		mfaMethods = append(mfaMethods, methods...)
-	}
 	switch op {
 	case logical.ReadOperation:
 		if methods, ok := entry.capabilitiesToMFAMap[ReadCapabilityInt]; ok {
@@ -313,6 +348,14 @@ CHECK:
 		if _, ok := entry.capabilitiesToMFAMap[UpdateCapabilityInt]; ok {
 			allowed = true
 		}
+	}
+
+	// Sudo is additive, so we need to return a set of mfa methods specifically
+	// for sudo use so as not to end up adding any defined on sudo capability
+	// to all other methods
+	if methods, ok := entry.capabilitiesToMFAMap[SudoCapabilityInt]; ok {
+		sudo = true
+		sudoMFAMethods = append(mfaMethods, methods...)
 	}
 
 	return

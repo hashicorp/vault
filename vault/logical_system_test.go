@@ -66,6 +66,14 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int),
 			},
 		},
+		"mfa/": map[string]interface{}{
+			"type":        "mfa",
+			"description": "Multi-Factor Authentication (MFA) setup",
+			"config": map[string]interface{}{
+				"default_lease_ttl": 0,
+				"max_lease_ttl":     0,
+			},
+		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)

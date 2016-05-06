@@ -154,7 +154,7 @@ func TestPolicyStore_ACL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	testLayeredACL(t, acl)
+	testLayeredACL(t, acl, false)
 }
 
 func TestPolicyStore_v1Upgrade(t *testing.T) {

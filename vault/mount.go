@@ -618,7 +618,7 @@ func requiredMountTable() *MountTable {
 	mfaMount := &MountEntry{
 		Path:        "mfa/",
 		Type:        "mfa",
-		Description: "global Multi-Factor Authentication (MFA) setup",
+		Description: "Multi-Factor Authentication (MFA) setup",
 		UUID:        mfaUUID,
 	}
 

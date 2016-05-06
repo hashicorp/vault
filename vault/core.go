@@ -462,12 +462,17 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs, mfaMethods := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, mfaMethods, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return nil, te, logical.ErrPermissionDenied
 	}
-	if rootPath && !rootPrivs {
-		return nil, te, logical.ErrPermissionDenied
+	// If it's a root path we want to add potential sudo mfa methods, which are
+	// a superset of other mfa methods
+	if rootPath {
+		if !rootPrivs {
+			return nil, te, logical.ErrPermissionDenied
+		}
+		mfaMethods = sudoMFAMethods
 	}
 	if mfaMethods != nil && len(mfaMethods) > 0 {
 		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
@@ -736,7 +741,7 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs, mfaMethods := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, _, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return logical.ErrPermissionDenied
 	}
@@ -747,8 +752,8 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Check MFA methods
-	if mfaMethods != nil && len(mfaMethods) > 0 {
-		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
+	if sudoMFAMethods != nil && len(sudoMFAMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(sudoMFAMethods)
 		mfaSuccess := false
 		for _, method := range sanitizedMFAMethods {
 			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
@@ -821,7 +826,7 @@ func (c *Core) StepDown(token string) error {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs, mfaMethods := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, _, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return logical.ErrPermissionDenied
 	}
@@ -832,8 +837,8 @@ func (c *Core) StepDown(token string) error {
 	}
 
 	// Check MFA methods
-	if mfaMethods != nil && len(mfaMethods) > 0 {
-		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
+	if sudoMFAMethods != nil && len(sudoMFAMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(sudoMFAMethods)
 		mfaSuccess := false
 		for _, method := range sanitizedMFAMethods {
 			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)

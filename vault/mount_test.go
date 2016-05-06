@@ -321,7 +321,7 @@ func TestDefaultMountTable(t *testing.T) {
 }
 
 func verifyDefaultTable(t *testing.T, table *MountTable) {
-	if len(table.Entries) != 3 {
+	if len(table.Entries) != 4 {
 		t.Fatalf("bad: %v", table.Entries)
 	}
 	for idx, entry := range table.Entries {
@@ -341,6 +341,13 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 				t.Fatalf("bad: %v", entry)
 			}
 		case 2:
+			if entry.Path != "mfa/" {
+				t.Fatalf("bad: %v", entry)
+			}
+			if entry.Type != "mfa" {
+				t.Fatalf("bad: %v", entry)
+			}
+		case 3:
 			if entry.Path != "sys/" {
 				t.Fatalf("bad: %v", entry)
 			}
