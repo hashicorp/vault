@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -78,7 +79,12 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 		})
 		req, err = requestWrapTTL(r, req)
 		if err != nil {
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err))
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf("error parsing %s header: {{err}}", WrapTTLHeaderName), err))
+			return
+		}
+		req, err = requestMFA(r, req)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf("error parsing %s header: {{err}}", MFAHeaderName), err))
 			return
 		}
 

@@ -22,6 +22,9 @@ const (
 	// WrapHeaderName is the name of the header containing a directive to wrap the
 	// response.
 	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+
+	// MFAHeaderName is the name of the header containing any MFA information
+	MFAHeaderName = "X-Vault-MFA"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -184,6 +187,46 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 			return req, err
 		}
 		req.WrapTTL = time.Duration(seconds) * time.Second
+	}
+
+	return req, nil
+}
+
+// requestMFA adds the MFAParams value to the logical.Request if it
+// exists.
+func requestMFA(r *http.Request, req *logical.Request) (*logical.Request, error) {
+	// First try for the header value
+	mfaHeader := r.Header.Get(MFAHeaderName)
+	if mfaHeader == "" {
+		return req, nil
+	}
+
+	splitMFAHeader := strings.Split(mfaHeader, ":")
+
+	// We expect at least the method and some value to pass to it
+	if len(splitMFAHeader) < 2 {
+		return req, fmt.Errorf("invalid MFA header; must contain at least two key-value pairs")
+	}
+
+	foundMethod := false
+	for _, v := range splitMFAHeader {
+		splitV := strings.Split(v, "=")
+		if len(splitV) != 2 {
+			return req, fmt.Errorf("invalid MFA header; a key is in the wrong format")
+		}
+
+		if splitV[0] == "method" {
+			foundMethod = true
+		}
+
+		if req.MFAParams == nil {
+			req.MFAParams = make(map[string]string, len(splitV))
+		}
+		req.MFAParams[splitV[0]] = splitV[1]
+	}
+
+	if !foundMethod {
+		return req, fmt.Errorf("did not find method in MFA header")
 	}
 
 	return req, nil

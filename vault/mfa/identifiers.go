@@ -317,6 +317,10 @@ func (b *backend) validateTOTP(methodName string, params map[string]string) (boo
 		return false, fmt.Errorf("no method name supplied"), nil
 	}
 
+	if params == nil {
+		return false, fmt.Errorf("no params found"), nil
+	}
+
 	if params["token"] == "" {
 		return false, fmt.Errorf("no token supplied"), nil
 	}
@@ -328,6 +332,12 @@ func (b *backend) validateTOTP(methodName string, params map[string]string) (boo
 	method, identifierEntry, err := b.mfaBackendMethodIdentifiers(methodName, params["identifier"])
 	if err != nil {
 		return false, nil, err
+	}
+	if method == nil {
+		return false, fmt.Errorf("method not found"), nil
+	}
+	if identifierEntry == nil {
+		return false, fmt.Errorf("identifier not found"), nil
 	}
 
 	alg, err := method.totpAlgorithm()
