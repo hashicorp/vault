@@ -261,15 +261,32 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Load the current values for max TTL and policies from the role entry,
-	// before checking for overriding max TTL in the role tag.
-	maxTTL := b.System().MaxLeaseTTL()
-	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
-		maxTTL = roleEntry.MaxTTL
+	// before checking for overriding max TTL in the role tag.  The shortest
+	// max TTL is used to cap the token TTL; the longest max TTL is used to
+	// make the whitelist entry as long as possible as it controls for replay
+	// attacks.
+	shortestMaxTTL := b.System().MaxLeaseTTL()
+	longestMaxTTL := b.System().MaxLeaseTTL()
+	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < shortestMaxTTL {
+		shortestMaxTTL = roleEntry.MaxTTL
+	}
+	if roleEntry.MaxTTL > longestMaxTTL {
+		longestMaxTTL = roleEntry.MaxTTL
 	}
 
 	policies := roleEntry.Policies
 	rTagMaxTTL := time.Duration(0)
+
+	// Read this value from the role entry; however, once it's been set, do not
+	// allow it to be flipped back. This prevents a role with this set to false
+	// to be overridden by a role tag, then have the role tag swapped and have
+	// this go back to false.
 	disallowReauthentication := roleEntry.DisallowReauthentication
+	if storedIdentity != nil {
+		if !disallowReauthentication && storedIdentity.DisallowReauthentication {
+			disallowReauthentication = true
+		}
+	}
 
 	if roleEntry.RoleTag != "" {
 		// Role tag is enabled on the role.
@@ -300,9 +317,12 @@ func (b *backend) pathLoginUpdate(
 		// Cache the value of role tag's max_ttl value.
 		rTagMaxTTL = resp.MaxTTL
 
-		// Scope the maxTTL to the value set on the role tag.
-		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < maxTTL {
-			maxTTL = resp.MaxTTL
+		// Scope the shortestMaxTTL to the value set on the role tag.
+		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < shortestMaxTTL {
+			shortestMaxTTL = resp.MaxTTL
+		}
+		if resp.MaxTTL > longestMaxTTL {
+			longestMaxTTL = resp.MaxTTL
 		}
 	}
 
@@ -320,7 +340,7 @@ func (b *backend) pathLoginUpdate(
 
 	// DisallowReauthentication, PendingTime, LastUpdatedTime and ExpirationTime may change.
 	storedIdentity.LastUpdatedTime = currentTime
-	storedIdentity.ExpirationTime = currentTime.Add(maxTTL)
+	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 	storedIdentity.PendingTime = identityDoc.PendingTime
 	storedIdentity.DisallowReauthentication = disallowReauthentication
 
@@ -357,8 +377,8 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Cap the TTL value.
-	if maxTTL < resp.Auth.TTL {
-		resp.Auth.TTL = maxTTL
+	if shortestMaxTTL < resp.Auth.TTL {
+		resp.Auth.TTL = shortestMaxTTL
 	}
 
 	return resp, nil
@@ -481,24 +501,31 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Re-evaluate the maxTTL bounds.
-	maxTTL := b.System().MaxLeaseTTL()
-	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
-		maxTTL = roleEntry.MaxTTL
+	shortestMaxTTL := b.System().MaxLeaseTTL()
+	longestMaxTTL := b.System().MaxLeaseTTL()
+	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < shortestMaxTTL {
+		shortestMaxTTL = roleEntry.MaxTTL
 	}
-	if rTagMaxTTL > time.Duration(0) && maxTTL > rTagMaxTTL {
-		maxTTL = rTagMaxTTL
+	if roleEntry.MaxTTL > longestMaxTTL {
+		longestMaxTTL = roleEntry.MaxTTL
+	}
+	if rTagMaxTTL > time.Duration(0) && rTagMaxTTL < shortestMaxTTL {
+		shortestMaxTTL = rTagMaxTTL
+	}
+	if rTagMaxTTL > longestMaxTTL {
+		longestMaxTTL = rTagMaxTTL
 	}
 
 	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same.
 	currentTime := time.Now().UTC()
 	storedIdentity.LastUpdatedTime = currentTime
-	storedIdentity.ExpirationTime = currentTime.Add(maxTTL)
+	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 
 	if err = setWhitelistIdentityEntry(req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
-	return framework.LeaseExtend(req.Auth.TTL, maxTTL, b.System())(req, data)
+	return framework.LeaseExtend(req.Auth.TTL, shortestMaxTTL, b.System())(req, data)
 }
 
 // Struct to represent items of interest from the EC2 instance identity document.
