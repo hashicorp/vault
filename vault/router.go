@@ -256,15 +256,25 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 			// If either of the request or response requested wrapping, ensure that
 			// the lowest value is what ends up in the response.
 			switch {
-			case req.WrapTTL == 0 && resp.WrapInfo.TTL == 0:
-			case req.WrapTTL != 0 && resp.WrapInfo.TTL != 0:
+			case req.WrapTTL == 0 && (resp.WrapInfo == nil || resp.WrapInfo.TTL == 0):
+				// Neither defines it, so do nothing
+
+			case req.WrapTTL != 0 && (resp.WrapInfo != nil && resp.WrapInfo.TTL != 0):
+				// Both define, so use the lowest
 				if req.WrapTTL < resp.WrapInfo.TTL {
 					resp.WrapInfo.TTL = req.WrapTTL
 				}
+
 			case req.WrapTTL != 0:
-				resp.WrapInfo.TTL = req.WrapTTL
-				// Only case left is that only resp defines it, which doesn't need to
-				// be explicitly handled
+				// Response wrap info doesn't exist, or its TTL is zero, so set
+				// it to the request TTL
+				resp.WrapInfo = &logical.WrapInfo{
+					TTL: req.WrapTTL,
+				}
+
+			default:
+				// Only case left is that only resp defines it, which doesn't
+				// need to be explicitly handled
 			}
 		}
 

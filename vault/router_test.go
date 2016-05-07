@@ -39,7 +39,7 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 	}
 
 	if n.WrapTTL != 0 {
-		n.Response.WrapInfo.TTL = n.WrapTTL
+		n.Response.WrapInfo = &logical.WrapInfo{TTL: n.WrapTTL}
 	}
 
 	return n.Response, nil
@@ -432,7 +432,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(15*time.Second) {
+	if resp.WrapInfo == nil || resp.WrapInfo.TTL != time.Duration(15*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -450,7 +450,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(15*time.Second) {
+	if resp.WrapInfo == nil || resp.WrapInfo.TTL != time.Duration(15*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -469,7 +469,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(10*time.Second) {
+	if resp.WrapInfo == nil || resp.WrapInfo.TTL != time.Duration(10*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -488,7 +488,7 @@ func TestRouter_Wrapping(t *testing.T) {
 	if resp == nil {
 		t.Fatalf("bad: %v", resp)
 	}
-	if resp.WrapInfo.TTL != time.Duration(10*time.Second) {
+	if resp.WrapInfo == nil || resp.WrapInfo.TTL != time.Duration(10*time.Second) {
 		t.Fatalf("bad: %#v", resp)
 	}
 }

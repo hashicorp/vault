@@ -66,7 +66,7 @@ type Response struct {
 	warnings []string
 
 	// Information for wrapping the response in a cubbyhole
-	WrapInfo WrapInfo
+	WrapInfo *WrapInfo
 }
 
 func init() {
