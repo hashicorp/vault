@@ -3,6 +3,7 @@ package transit
 import (
 	"encoding/base64"
 	"fmt"
+	"sync"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -44,12 +45,14 @@ func (b *backend) pathEncrypt() *framework.Path {
 func (b *backend) pathEncryptExistenceCheck(
 	req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	lp, err := b.policies.getPolicy(req, name)
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return false, err
 	}
-
-	return lp != nil, nil
+	return p != nil, nil
 }
 
 func (b *backend) pathEncryptWrite(
@@ -63,8 +66,8 @@ func (b *backend) pathEncryptWrite(
 	// Decode the context if any
 	contextRaw := d.Get("context").(string)
 	var context []byte
+	var err error
 	if len(contextRaw) != 0 {
-		var err error
 		context, err = base64.StdEncoding.DecodeString(contextRaw)
 		if err != nil {
 			return logical.ErrorResponse("failed to decode context as base64"), logical.ErrInvalidRequest
@@ -72,37 +75,25 @@ func (b *backend) pathEncryptWrite(
 	}
 
 	// Get the policy
-	lp, err := b.policies.getPolicy(req, name)
+	var p *Policy
+	var lock *sync.RWMutex
+	var upserted bool
+	if req.Operation == logical.CreateOperation {
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0)
+	} else {
+		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
+	}
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-
-	// Error if invalid policy
-	if lp == nil {
-		if req.Operation != logical.CreateOperation {
-			return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
-		}
-
-		isDerived := len(context) != 0
-
-		lp, err = b.policies.generatePolicy(req.Storage, name, isDerived)
-		// If the error is that the policy has been created in the interim we
-		// will get the policy back, so only consider it an error if err is not
-		// nil and we do not get a policy back
-		if err != nil && lp != nil {
-			return nil, err
-		}
+	if p == nil {
+		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	lp.RLock()
-	defer lp.RUnlock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
-		return nil, fmt.Errorf("no existing policy named %s could be found", name)
-	}
-
-	ciphertext, err := lp.policy.Encrypt(context, value)
+	ciphertext, err := p.Encrypt(context, value)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
@@ -124,6 +115,11 @@ func (b *backend) pathEncryptWrite(
 			"ciphertext": ciphertext,
 		},
 	}
+
+	if req.Operation == logical.CreateOperation && !upserted {
+		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
+	}
+
 	return resp, nil
 }
 

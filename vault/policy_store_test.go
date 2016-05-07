@@ -10,7 +10,16 @@ import (
 func mockPolicyStore(t *testing.T) *PolicyStore {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(view)
+	p := NewPolicyStore(view, logical.TestSystemView())
+	return p
+}
+
+func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
+	sysView := logical.TestSystemView()
+	sysView.CachingDisabledVal = true
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "foo/")
+	p := NewPolicyStore(view, sysView)
 	return p
 }
 
@@ -44,7 +53,13 @@ func TestPolicyStore_Root(t *testing.T) {
 
 func TestPolicyStore_CRUD(t *testing.T) {
 	ps := mockPolicyStore(t)
+	testPolicyStore_CRUD(t, ps)
 
+	ps = mockPolicyStoreNoCache(t)
+	testPolicyStore_CRUD(t, ps)
+}
+
+func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	// Get should return nothing
 	p, err := ps.GetPolicy("dev")
 	if err != nil {
