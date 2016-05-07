@@ -113,11 +113,16 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		}
 
 		cubbyResp, err := c.router.Route(cubbyReq)
-		if err != nil || cubbyResp == nil || cubbyResp.IsError() {
+		if err != nil {
 			// Revoke since it's not yet being tracked for expiration
 			c.tokenStore.Revoke(te.ID)
 			c.logger.Printf("[ERR] core: failed to store wrapped response information: %v", err)
 			return nil, ErrInternalError
+		}
+		if cubbyResp != nil && cubbyResp.IsError() {
+			c.tokenStore.Revoke(te.ID)
+			c.logger.Printf("[ERR] core: failed to store wrapped response information: %v", cubbyResp.Data["error"])
+			return cubbyResp, nil
 		}
 
 		auth := &logical.Auth{
