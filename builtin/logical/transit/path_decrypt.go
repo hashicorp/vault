@@ -58,25 +58,18 @@ func (b *backend) pathDecryptWrite(
 	}
 
 	// Get the policy
-	lp, err := b.policies.getPolicy(req, name)
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-
-	// Error if invalid policy
-	if lp == nil {
+	if p == nil {
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	lp.RLock()
-	defer lp.RUnlock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
-		return nil, fmt.Errorf("no existing policy named %s could be found", name)
-	}
-
-	plaintext, err := lp.policy.Decrypt(context, ciphertext)
+	plaintext, err := p.Decrypt(context, ciphertext)
 	if err != nil {
 		switch err.(type) {
 		case certutil.UserError:
