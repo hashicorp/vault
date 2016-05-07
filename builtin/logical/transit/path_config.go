@@ -41,23 +41,18 @@ func (b *backend) pathConfigWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	// Check if the policy already exists
-	lp, err := b.policies.getPolicy(req, name)
+	// Check if the policy already exists before we lock everything
+	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	if lock != nil {
+		defer lock.Unlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-	if lp == nil {
+	if p == nil {
 		return logical.ErrorResponse(
-				fmt.Sprintf("no existing role named %s could be found", name)),
+				fmt.Sprintf("no existing key named %s could be found", name)),
 			logical.ErrInvalidRequest
-	}
-
-	lp.Lock()
-	defer lp.Unlock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
-		return nil, fmt.Errorf("no existing role named %s could be found", name)
 	}
 
 	resp := &logical.Response{}
@@ -78,12 +73,12 @@ func (b *backend) pathConfigWrite(
 		}
 
 		if minDecryptionVersion > 0 &&
-			minDecryptionVersion != lp.policy.MinDecryptionVersion {
-			if minDecryptionVersion > lp.policy.LatestVersion {
+			minDecryptionVersion != p.MinDecryptionVersion {
+			if minDecryptionVersion > p.LatestVersion {
 				return logical.ErrorResponse(
-					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, lp.policy.LatestVersion)), nil
+					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, p.LatestVersion)), nil
 			}
-			lp.policy.MinDecryptionVersion = minDecryptionVersion
+			p.MinDecryptionVersion = minDecryptionVersion
 			persistNeeded = true
 		}
 	}
@@ -91,8 +86,8 @@ func (b *backend) pathConfigWrite(
 	allowDeletionInt, ok := d.GetOk("deletion_allowed")
 	if ok {
 		allowDeletion := allowDeletionInt.(bool)
-		if allowDeletion != lp.policy.DeletionAllowed {
-			lp.policy.DeletionAllowed = allowDeletion
+		if allowDeletion != p.DeletionAllowed {
+			p.DeletionAllowed = allowDeletion
 			persistNeeded = true
 		}
 	}
@@ -100,8 +95,8 @@ func (b *backend) pathConfigWrite(
 	// Add this as a guard here before persisting since we now require the min
 	// decryption version to start at 1; even if it's not explicitly set here,
 	// force the upgrade
-	if lp.policy.MinDecryptionVersion == 0 {
-		lp.policy.MinDecryptionVersion = 1
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
 		persistNeeded = true
 	}
 
@@ -109,7 +104,7 @@ func (b *backend) pathConfigWrite(
 		return nil, nil
 	}
 
-	return resp, lp.policy.Persist(req.Storage)
+	return resp, p.Persist(req.Storage)
 }
 
 const pathConfigHelpSyn = `Configure a named encryption key`

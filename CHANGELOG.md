@@ -49,6 +49,8 @@ IMPROVEMENTS:
    command [GH-1228]
  * core: Add `mlock` support for FreeBSD, OpenBSD, NetBSD, and Darwin [GH-1297]
  * core: Don't keep lease timers around when tokens are revoked [GH-1277]
+ * core: If using the `disable_cache` option, caches for the policy store and
+   the `transit` backend are now disabled as well [GH-1346]
  * credential/cert: Renewal requests are rejected if the set of policies has
    changed since the token was issued [GH-477]
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
