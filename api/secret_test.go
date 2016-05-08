@@ -17,7 +17,11 @@ func TestParseSecret(t *testing.T) {
 	},
 	"warnings": [
 		"a warning!"
-	]
+	],
+	"wrap_info": {
+		"token": "token",
+		"ttl": 60
+	}
 }`)
 
 	secret, err := ParseSecret(strings.NewReader(raw))
@@ -34,6 +38,10 @@ func TestParseSecret(t *testing.T) {
 		},
 		Warnings: []string{
 			"a warning!",
+		},
+		WrapInfo: &SecretWrapInfo{
+			Token: "token",
+			TTL:   60,
 		},
 	}
 	if !reflect.DeepEqual(secret, expected) {
