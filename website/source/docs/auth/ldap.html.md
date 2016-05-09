@@ -102,40 +102,95 @@ ldap/      ldap
 token/     token     token based credentials
 ```
 
-To use the "ldap" auth backend, an operator must configure it with
-the address of the LDAP server that is to be used. An example is shown below.
+To use the ldap auth backend, it must first be configured with connection
+details for your LDAP server, information on how to authenticate users, and
+instructions on how to query for group membership.
+The configuration options are categorized and detailed below.
+
+Configuration is written to `auth/ldap/config`.
+
+### Connection parameters
+
+* `url` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`
+* `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
+* `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
+* `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
+
+### Binding parameters
+
+There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is method of specifying users supported by Active Directory. More information on UPN can be found [here](https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName).
+
+#### Binding - Authenticated Search
+
+* `binddn` (string, optional) - Distinguished name of object to bind when performing user search. Example: `cn=vault,ou=Users,dc=example,dc=com`
+* `bindpass` (string, optional) - Password to use along with `binddn` when performing user search.
+* `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
+* `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+
+#### Binding - Anonymous Search
+
+* `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
+* `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
+* `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+
+#### Binding - User Principal Name (AD)
+
+* `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
+
+### Group Membership Resolution
+
+Once a user has been authenticated, the LDAP auth backend must know how to resolve which groups the user is a member of. The configuration for this can vary depending on your LDAP server and your directory schema. There are two main strategies when resolving group membership - the first is searching for the authenticated user object and following an attribute to groups it is a member of. The second is to search for group objects of which the authenticated user is a member of. Both methods are supported.
+
+* `groupfilter` (string, optional) - Go template used when constructing the group membership query. The template can access the following context variables: \[`UserDN`, `Username`\]. The default is `(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`, which is compatible with several common directory schemas. To support nested group resolution for Active Directory, instead use the following query: `(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))`.
+* `groupdn` (string, required) - LDAP search base to use for group membership search. This can be the root containing either groups or users. Example: `ou=Groups,dc=example,dc=com`
+* `groupattr` (string, optional) - LDAP attribute to follow on objects returned by `groupfilter` in order to enumerate user group membership. Examples: for groupfilter queries returning _group_ objects, use: `cn`. For queries returning _user_ objects, use: `memberOf`. The default is `cn`.
+
+
 Use `vault path-help` for more details.
 
+## Examples:
+
+### Scenario 1
+
+* LDAP server running on `ldap.example.com`, port 389.
+* Server supports `STARTTLS` command to initiate encryption on the standard port.
+* CA Certificate stored in file named `ldap_ca_cert.pem`
+* Server is Active Directory supporting the userPrincipalName attribute. Users are identified as `username@example.com`.
+* Groups are nested, we will use `LDAP_MATCHING_RULE_IN_CHAIN` to walk the ancestry graph.
+* Group search will start under `ou=Groups,dc=example,dc=com`. For all group objects under that path, the `member` attribute will be checked for a match against the authenticated user.
+* Group names are identified using their `cn` attribute.
+
 ```
-$ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
-    userattr=uid \
-    userdn="dc=example,dc=com" \
-    groupdn="dc=example,dc=com" \
-    upndomain="forumsys.com" \
+$ vault write auth/ldap/config \
+    url="ldap://ldap.example.com" \
+    groupdn="ou=Groups,dc=example,dc=com" \
+    groupfilter="(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))" \
+    groupattr="cn" \
+    upndomain="example.com" \
     certificate=@ldap_ca_cert.pem \
     insecure_tls=false \
     starttls=true
 ...
 ```
 
-The above configures the target LDAP server, along with the parameters
-specifying how users and groups should be queried from the LDAP server.
+### Scenario 2
 
-If your users are not located directly below the "userdn", e.g. in several
-OUs like
+* LDAP server running on `ldap.example.com`, port 389.
+* Server supports `STARTTLS` command to initiate encryption on the standard port.
+* CA Certificate stored in file named `ldap_ca_cert.pem`
+* Server does not allow anonymous binds for performing user search.
+* Bind account used for searching is `cn=vault,ou=users,dc=example,dc=com` with password `My$ecrt3tP4ss`.
+* User objects are under the `ou=Users,dc-example,dc=com` organizational unit.
+* Username passed to vault when authenticating maps to the `sAMAccountName` attribute.
+* Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
+
 ```
-    ou=users,dc=example,dc=com
-ou=people    ou=external     ou=robots
-```
-you can also specify a `binddn` and `bindpass` for vault to search for the DN
-of a user. This also works for the AD where a typical setup is to have user
-DNs in the form `cn=Firstname Lastname,ou=Users,dc=example,dc=com` but you
-want to login users using the `sAMAccountName` attribute. For that specify
-```
-$ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
+$ vault write auth/ldap/config url="ldap://ldap.example.com" \
     userattr=sAMAccountName \
-    userdn="ou=users,dc=example,dc=com" \
-    groupdn="dc=example,dc=com" \
+    userdn="ou=Users,dc=example,dc=com" \
+    groupdn="ou=Users,dc=example,dc=com" \
+    groupfilter="(&(objectClass=person)(uid={{.Username}}))" \
+    groupattr="memberOf" \
     binddn="cn=vault,ou=users,dc=example,dc=com" \
     bindpass='My$ecrt3tP4ss' \
     certificate=@ldap_ca_cert.pem \
@@ -143,8 +198,30 @@ $ vault write auth/ldap/config url="ldap://ldap.forumsys.com" \
     starttls=true
 ...
 ```
-To discover the bind dn for a user with an anonymous bind, use the `discoverdn=true`
-parameter and leave the `binddn` / `bindpass` empty.
+
+### Scenario 3
+
+* LDAP server running on `ldap.example.com`, port 636 (LDAPS)
+* CA Certificate stored in file named `ldap_ca_cert.pem`
+* User objects are under the `ou=Users,dc=example,dc=com` organizational unit.
+* Username passed to vault when authenticating maps to the `uid` attribute.
+* User bind DN will be auto-discovered using anonymous binding.
+* Group membership will be resolved via any one of `memberUid`, `member`, or `uniqueMember` attributes. That search will begin under `ou=Groups,dc=example,dc=com`.
+* Group names are identified using the `cn` attribute.
+
+```
+$ vault write auth/ldap/config url="ldaps://ldap.example.com" \
+    userattr="uid" \
+    userdn="ou=Users,dc=example,dc=com" \
+    discoverdn=true \
+    groupdn="ou=Groups,dc=example,dc=com" \
+    certificate=@ldap_ca_cert.pem \
+    insecure_tls=false \
+    starttls=true
+...
+```
+
+## LDAP Group -> Policy Mapping
 
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
@@ -175,3 +252,6 @@ with this token are listed below:
 bar, foo, foobar
 ```
 
+## Note on policy mapping
+
+It should be noted that user -> policy mapping (via group membership) happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
