@@ -3,7 +3,6 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -97,14 +96,12 @@ func (b *backend) pathCAGenerateRoot(
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %s", err)
 	}
 
-	resp := b.Secret(SecretCertsType).Response(
-		map[string]interface{}{
+	resp := &logical.Response{
+		Data: map[string]interface{}{
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
 		},
-		map[string]interface{}{
-			"serial_number": cb.SerialNumber,
-		})
+	}
 
 	switch format {
 	case "pem":
@@ -134,8 +131,6 @@ func (b *backend) pathCAGenerateRoot(
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
 	}
-
-	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 
 	// Store it as the CA bundle
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
@@ -237,14 +232,12 @@ func (b *backend) pathCASignIntermediate(
 		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
 	}
 
-	resp := b.Secret(SecretCertsType).Response(
-		map[string]interface{}{
+	resp := &logical.Response{
+		Data: map[string]interface{}{
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
 		},
-		map[string]interface{}{
-			"serial_number": cb.SerialNumber,
-		})
+	}
 
 	switch format {
 	case "pem":
@@ -259,8 +252,6 @@ func (b *backend) pathCASignIntermediate(
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
 	}
-
-	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 
 	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "certs/" + cb.SerialNumber,

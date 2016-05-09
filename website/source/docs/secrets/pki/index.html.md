@@ -127,6 +127,15 @@ enforced. Software that can handle SHA256 signatures should also be able to
 handle 2048-bit keys, and 1024-bit keys are considered unsafe and are
 disallowed in the Internet PKI.
 
+### Token Lifetimes and Revocation
+
+When a token expires, it revokes all leases associated with it. This means that
+long-lived CA certs need correspondingly long-lived tokens, something that is
+easy to forget. Starting with 0.6, root and intermediate CA certs no longer
+have associated leases, to prevent unintended revocation when not using a token
+with a long enough lifetime. To revoke these certificates, use the `pki/revoke`
+endpoint.
+
 ## Quick Start
 
 #### Mount the backend
@@ -166,8 +175,6 @@ Now, we generate our root certificate:
 ```text
 $ vault write pki/root/generate/internal common_name=myvault.com ttl=87600h
 Key             Value
-lease_id        pki/root/generate/internal/aa959dd4-467e-e5ff-642b-371add518b40
-lease_duration  315359999
 certificate     -----BEGIN CERTIFICATE-----
 MIIDvTCCAqWgAwIBAgIUAsza+fvOw+Xh9ifYQ0gNN0ruuWcwDQYJKoZIhvcNAQEL
 BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wHhcNMTUxMTE5MTYwNDU5WhcNMjUx
@@ -1308,8 +1315,8 @@ subpath for interactive help output.
 
     ```javascript
     {
-      "lease_id": "pki/root/generate/internal/aa959dd4-467e-e5ff-642b-371add518b40",
-      "lease_duration": 315359999,
+      "lease_id": "",
+      "lease_duration": 0,
       "renewable": false,
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
@@ -1418,9 +1425,9 @@ subpath for interactive help output.
 
     ```javascript
     {
-      "lease_id": "pki/root/sign-intermediate/bc23e3c6-8dcd-48c6-f3af-dd2db7f815c2",
+      "lease_id": "",
       "renewable": false,
-      "lease_duration": 21600,
+      "lease_duration": 0,
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
