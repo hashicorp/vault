@@ -60,7 +60,7 @@ func (b *backend) clientConfigEntry(s logical.Storage) (*clientConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.clientConfigEntry(s)
+	return b.clientConfigEntryInternal(s)
 }
 
 // Internal version that does no locking
