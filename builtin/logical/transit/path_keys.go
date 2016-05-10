@@ -39,57 +39,57 @@ func (b *backend) pathPolicyWrite(
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 
-	// Check if the policy already exists
-	existing, err := b.policies.getPolicy(req, name)
+	p, lock, upserted, err := b.lm.GetPolicyUpsert(req.Storage, name, derived)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-	if existing != nil {
-		return nil, nil
+	if p == nil {
+		return nil, fmt.Errorf("error generating key: returned policy was nil")
 	}
 
-	// Generate the policy
-	_, err = b.policies.generatePolicy(req.Storage, name, derived)
-	return nil, err
+	resp := &logical.Response{}
+	if !upserted {
+		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
+	}
+
+	return nil, nil
 }
 
 func (b *backend) pathPolicyRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	lp, err := b.policies.getPolicy(req, name)
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-	if lp == nil {
+	if p == nil {
 		return nil, nil
-	}
-
-	lp.RLock()
-	defer lp.RUnlock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
-		return nil, fmt.Errorf("no existing policy named %s could be found", name)
 	}
 
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"name":                   lp.policy.Name,
-			"cipher_mode":            lp.policy.CipherMode,
-			"derived":                lp.policy.Derived,
-			"deletion_allowed":       lp.policy.DeletionAllowed,
-			"min_decryption_version": lp.policy.MinDecryptionVersion,
-			"latest_version":         lp.policy.LatestVersion,
+			"name":                   p.Name,
+			"cipher_mode":            p.CipherMode,
+			"derived":                p.Derived,
+			"deletion_allowed":       p.DeletionAllowed,
+			"min_decryption_version": p.MinDecryptionVersion,
+			"latest_version":         p.LatestVersion,
 		},
 	}
-	if lp.policy.Derived {
-		resp.Data["kdf_mode"] = lp.policy.KDFMode
+	if p.Derived {
+		resp.Data["kdf_mode"] = p.KDFMode
 	}
 
 	retKeys := map[string]int64{}
-	for k, v := range lp.policy.Keys {
+	for k, v := range p.Keys {
 		retKeys[strconv.Itoa(k)] = v.CreationTime
 	}
 	resp.Data["keys"] = retKeys
@@ -101,15 +101,8 @@ func (b *backend) pathPolicyDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	lp, err := b.policies.getPolicy(req, name)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error looking up policy %s, error is %s", name, err)), err
-	}
-	if lp == nil {
-		return logical.ErrorResponse(fmt.Sprintf("no such key %s", name)), logical.ErrInvalidRequest
-	}
-
-	err = b.policies.deletePolicy(req.Storage, name)
+	// Delete does its own locking
+	err := b.lm.DeletePolicy(req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}

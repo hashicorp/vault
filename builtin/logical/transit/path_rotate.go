@@ -1,8 +1,6 @@
 package transit
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,26 +29,19 @@ func (b *backend) pathRotateWrite(
 	name := d.Get("name").(string)
 
 	// Get the policy
-	lp, err := b.policies.getPolicy(req, name)
+	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	if lock != nil {
+		defer lock.Unlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-
-	// Error if invalid policy
-	if lp == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	if p == nil {
+		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
 	}
 
-	lp.Lock()
-	defer lp.Unlock()
-
-	// Verify if wasn't deleted before we grabbed the lock
-	if lp.policy == nil {
-		return nil, fmt.Errorf("no existing policy named %s could be found", name)
-	}
-
-	// Generate the policy
-	err = lp.policy.rotate(req.Storage)
+	// Rotate the policy
+	err = p.rotate(req.Storage)
 
 	return nil, err
 }

@@ -94,8 +94,9 @@ func (f *FormatJSON) FormatResponse(
 		Error: errString,
 
 		Auth: JSONAuth{
-			Policies: auth.Policies,
-			Metadata: auth.Metadata,
+			DisplayName: auth.DisplayName,
+			Policies:    auth.Policies,
+			Metadata:    auth.Metadata,
 		},
 
 		Request: JSONRequest{

@@ -69,3 +69,8 @@ func (d dynamicSystemView) fetchTTLs() (def, max time.Duration) {
 func (d dynamicSystemView) Tainted() bool {
 	return d.mountEntry.Tainted
 }
+
+// CachingDisabled indicates whether to use caching behavior
+func (d dynamicSystemView) CachingDisabled() bool {
+	return d.core.cachingDisabled
+}
