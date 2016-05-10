@@ -276,8 +276,8 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	}
 
 	// Attach max_ttl if it is provided.
-	if rTag.MaxTTL > time.Duration(0) {
-		value = fmt.Sprintf("%s:t=%d", value, rTag.MaxTTL.Seconds())
+	if int(rTag.MaxTTL.Seconds()) > 0 {
+		value = fmt.Sprintf("%s:t=%d", value, int(rTag.MaxTTL.Seconds()))
 	}
 
 	return value, nil

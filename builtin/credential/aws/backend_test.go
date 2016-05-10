@@ -6,11 +6,63 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
+
+func createBackend(conf *logical.BackendConfig) (*backend, error) {
+	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
+		HashFunc: salt.SHA256Hash,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	b := &backend{
+		// Setting the periodic func to be run once in an hour.
+		// If there is a real need, this can be made configurable.
+		tidyCooldownPeriod: time.Hour,
+		Salt:               salt,
+		EC2ClientsMap:      make(map[string]*ec2.EC2),
+	}
+
+	b.Backend = &framework.Backend{
+		PeriodicFunc: b.periodicFunc,
+		AuthRenew:    b.pathLoginRenew,
+		Help:         backendHelp,
+		PathsSpecial: &logical.Paths{
+			Unauthenticated: []string{
+				"login",
+			},
+		},
+		Paths: []*framework.Path{
+			pathLogin(b),
+			pathListRole(b),
+			pathListRoles(b),
+			pathRole(b),
+			pathRoleTag(b),
+			pathConfigClient(b),
+			pathConfigCertificate(b),
+			pathConfigTidyRoleTags(b),
+			pathConfigTidyIdentities(b),
+			pathListCertificates(b),
+			pathListBlacklistRoleTags(b),
+			pathBlacklistRoleTag(b),
+			pathTidyRoleTags(b),
+			pathListWhitelistIdentities(b),
+			pathWhitelistIdentity(b),
+			pathTidyIdentities(b),
+		},
+	}
+
+	return b, nil
+}
 
 func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// create a backend
@@ -18,7 +70,11 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +98,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// read the created role entry
-	roleEntry, err := awsRole(storage, "abcd-123")
+	roleEntry, err := b.awsRole(storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +113,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 		RoleName: "abcd-123",
 		Nonce:    nonce,
 		Policies: []string{"p", "q", "r"},
-		MaxTTL:   200,
+		MaxTTL:   200000000000, // 200s
 	}
 
 	// create a role tag against the role entry
@@ -70,7 +126,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// parse the created role tag
-	rTag2, err := parseAndVerifyRoleTagValue(storage, val)
+	rTag2, err := b.parseAndVerifyRoleTagValue(storage, val)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +135,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	if rTag2.Version != "v1" ||
 		rTag2.Nonce != nonce ||
 		rTag2.RoleName != "abcd-123" ||
-		rTag2.MaxTTL != 200 ||
+		rTag2.MaxTTL != 200000000000 || // 200s
 		!policyutil.EquivalentPolicies(rTag2.Policies, []string{"p", "q", "r"}) ||
 		len(rTag2.HMAC) == 0 {
 		t.Fatalf("parsed role tag is invalid")
@@ -109,7 +165,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// get the entry of the newly created role entry
-	roleEntry2, err := awsRole(storage, "ami-6789")
+	roleEntry2, err := b.awsRole(storage, "ami-6789")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,8 +238,8 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 
 	// verify if it contains known fields
 	if !strings.Contains(val, "r=") ||
-		!strings.Contains(val, "p=") ||
 		!strings.Contains(val, "d=") ||
+		!strings.Contains(val, "m=") ||
 		!strings.HasPrefix(val, "v1") {
 		t.Fatalf("incorrect information in role tag plaintext value")
 	}
@@ -199,7 +255,7 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 		t.Fatalf("missing instance ID in role tag plaintext value")
 	}
 
-	rTag.MaxTTL = 200
+	rTag.MaxTTL = 200000000000
 	// create the role tag with max_ttl specified
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err != nil {
@@ -207,7 +263,7 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	}
 	// verify it
 	if !strings.Contains(val, "t=") {
-		t.Fatalf("missing instance ID in role tag plaintext value")
+		t.Fatalf("missing max_ttl field in role tag plaintext value")
 	}
 }
 
@@ -237,7 +293,11 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +305,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	// test update operation
 	tidyRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/tidy/identities",
+		Path:      "config/tidy/identity-whitelist",
 		Storage:   storage,
 	}
 	data := map[string]interface{}{
@@ -265,7 +325,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to read config/tidy/identities endpoint")
+		t.Fatalf("failed to read config/tidy/identity-whitelist endpoint")
 	}
 	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
 		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
@@ -278,7 +338,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp != nil {
-		t.Fatalf("failed to delete config/tidy/identities")
+		t.Fatalf("failed to delete config/tidy/identity-whitelist")
 	}
 }
 
@@ -287,7 +347,11 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +359,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	// test update operation
 	tidyRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "config/tidy/roletags",
+		Path:      "config/tidy/roletag-blacklist",
 		Storage:   storage,
 	}
 	data := map[string]interface{}{
@@ -315,7 +379,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.IsError() {
-		t.Fatalf("failed to read config/tidy/roletags endpoint")
+		t.Fatalf("failed to read config/tidy/roletag-blacklist endpoint")
 	}
 	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
 		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
@@ -328,7 +392,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp != nil {
-		t.Fatalf("failed to delete config/tidy/roletags")
+		t.Fatalf("failed to delete config/tidy/roletag-blacklist")
 	}
 }
 
@@ -337,7 +401,11 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +426,11 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +451,11 @@ func TestBackend_ConfigClient(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -512,7 +588,11 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -659,7 +739,11 @@ func TestBackend_pathRole(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -781,7 +865,11 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -836,7 +924,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	tagValue := resp.Data["tag_value"].(string)
 
 	// parse the value and check if the verifiable values match
-	rTag, err := parseAndVerifyRoleTagValue(storage, tagValue)
+	rTag, err := b.parseAndVerifyRoleTagValue(storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -854,7 +942,11 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -914,7 +1006,11 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -965,7 +1061,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	// blacklist that role tag
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "blacklist/roletag/" + tag,
+		Path:      "roletag-blacklist/" + tag,
 		Storage:   storage,
 	})
 	if err != nil {
@@ -978,7 +1074,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	// read the blacklist entry
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "blacklist/roletag/" + tag,
+		Path:      "roletag-blacklist/" + tag,
 		Storage:   storage,
 	})
 	if err != nil {
@@ -994,7 +1090,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	// delete the blacklisted entry
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "blacklist/roletag/" + tag,
+		Path:      "roletag-blacklist/" + tag,
 		Storage:   storage,
 	})
 	if err != nil {
@@ -1002,7 +1098,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// try to read the deleted entry
-	tagEntry, err := blacklistRoleTagEntry(storage, tag)
+	tagEntry, err := b.blacklistRoleTagEntry(storage, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1039,7 +1135,11 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
-	b, err := Factory(config)
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1141,7 +1241,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	// Check if a whitelist identity entry is created after the login.
 	wlRequest := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "whitelist/identity/" + instanceID,
+		Path:      "identity-whitelist/" + instanceID,
 		Storage:   storage,
 	}
 	resp, err = b.HandleRequest(wlRequest)
