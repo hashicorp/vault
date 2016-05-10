@@ -29,6 +29,12 @@ DEPRECATIONS/BREAKING CHANGES:
    auto-registration and service checks.
  * List operations that do not find any keys now return a `404` status code
    rather than an empty response object [GH-1365]
+ * CA certificates issued from the `pki` backend no longer have associated
+   leases, and any CA certs already issued will ignore revocation requests from
+   the lease manager. This is to prevent CA certificates from being revoked
+   when the token used to issue the certificate expires; it was not be obvious
+   to users that they need to ensure that the token lifetime needed to be at
+   least as long as a potentially very long-lived CA cert.
 
 FEATURES:
 
