@@ -55,7 +55,7 @@ IMPROVEMENTS:
    fails to authenticate the provided token [GH-1233]
  * command/write: `-format` and `-field` can now be used with the `write`
    command [GH-1228]
- * core: Add `mlock` support for FreeBSD, OpenBSD, NetBSD, and Darwin [GH-1297]
+ * core: Add `mlock` support for FreeBSD, OpenBSD, and Darwin [GH-1297]
  * core: Don't keep lease timers around when tokens are revoked [GH-1277]
  * core: If using the `disable_cache` option, caches for the policy store and
    the `transit` backend are now disabled as well [GH-1346]
