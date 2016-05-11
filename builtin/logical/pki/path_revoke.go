@@ -55,7 +55,7 @@ func (b *backend) pathRevokeWrite(req *logical.Request, data *framework.FieldDat
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(b, req, serial)
+	return revokeCert(b, req, serial, false)
 }
 
 func (b *backend) pathRotateCRLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

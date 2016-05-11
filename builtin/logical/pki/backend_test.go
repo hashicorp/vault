@@ -489,6 +489,12 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				"common_name": "Root Cert",
 				"ttl":         "180h",
 			},
+			Check: func(resp *logical.Response) error {
+				if resp.Secret != nil && resp.Secret.LeaseID != "" {
+					return fmt.Errorf("root returned with a lease")
+				}
+				return nil
+			},
 		},
 
 		logicaltest.TestStep{
@@ -556,6 +562,9 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if certString == "" {
 					return fmt.Errorf("no certificate returned")
 				}
+				if resp.Secret != nil && resp.Secret.LeaseID != "" {
+					return fmt.Errorf("signed intermediate returned with a lease")
+				}
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
 				if err != nil {
@@ -595,6 +604,9 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				certString := resp.Data["certificate"].(string)
 				if certString == "" {
 					return fmt.Errorf("no certificate returned")
+				}
+				if resp.Secret != nil && resp.Secret.LeaseID != "" {
+					return fmt.Errorf("signed intermediate returned with a lease")
 				}
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
