@@ -110,7 +110,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+				Pattern: "roles/(?P<role_name>.+)",
 				Fields: map[string]*framework.FieldSchema{
 					"role_name": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -167,7 +167,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "create/" + framework.GenericNameRegex("role_name"),
+				Pattern: "create/(?P<role_name>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"role_name": &framework.FieldSchema{
@@ -1301,17 +1301,13 @@ func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
 
 func (ts *TokenStore) tokenStoreRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := ts.view.List(rolesPrefix)
+	rolesView := ts.view.SubView(rolesPrefix)
+	entries, err := CollectKeys(rolesView)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]string, len(entries))
-	for i, entry := range entries {
-		ret[i] = strings.TrimPrefix(entry, rolesPrefix)
-	}
-
-	return logical.ListResponse(ret), nil
+	return logical.ListResponse(entries), nil
 }
 
 func (ts *TokenStore) tokenStoreRoleDelete(
