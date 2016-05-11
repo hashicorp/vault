@@ -293,16 +293,17 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"id":           newRootToken,
-		"display_name": "root",
-		"meta":         interface{}(nil),
-		"num_uses":     float64(0),
-		"policies":     []interface{}{"root"},
-		"orphan":       true,
-		"creation_ttl": float64(0),
-		"ttl":          float64(0),
-		"path":         "auth/token/root",
-		"role":         "",
+		"id":               newRootToken,
+		"display_name":     "root",
+		"meta":             interface{}(nil),
+		"num_uses":         float64(0),
+		"policies":         []interface{}{"root"},
+		"orphan":           true,
+		"creation_ttl":     float64(0),
+		"ttl":              float64(0),
+		"path":             "auth/token/root",
+		"role":             "",
+		"explicit_max_ttl": float64(0),
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -375,16 +376,17 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"id":           newRootToken,
-		"display_name": "root",
-		"meta":         interface{}(nil),
-		"num_uses":     float64(0),
-		"policies":     []interface{}{"root"},
-		"orphan":       true,
-		"creation_ttl": float64(0),
-		"ttl":          float64(0),
-		"path":         "auth/token/root",
-		"role":         "",
+		"id":               newRootToken,
+		"display_name":     "root",
+		"meta":             interface{}(nil),
+		"num_uses":         float64(0),
+		"policies":         []interface{}{"root"},
+		"orphan":           true,
+		"creation_ttl":     float64(0),
+		"ttl":              float64(0),
+		"path":             "auth/token/root",
+		"role":             "",
+		"explicit_max_ttl": float64(0),
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
