@@ -601,7 +601,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
         each renewal. So long as they continue to be renewed, they will never
         expire. The parameter is an integer duration of seconds. Tokens issued
         track updates to the role value; the new period takes effect upon next
-        renew.
+        renew. This cannot be used in conjunction with `explicit_max_ttl`.
       </li>
       <li>
         <span class="param">path_suffix</span>
@@ -613,6 +613,16 @@ of the header should be "X-Vault-Token" and the value should be the token.
         suffix can be changed, allowing new callers to have the new suffix as
         part of their path, and then tokens with the old suffix can be revoked
         via `sys/revoke-prefix`.
+      </li>
+      <li>
+        <span class="param">explicit_max_ttl</span>
+        <span class="param-flags">optional</span>
+        If set, tokens created with this role have an explicit max TTL set upon
+        them. This maximum token TTL *cannot* be changed later, and unlike with
+        normal tokens, updates to the role or the system/mount max TTL value
+        will have no effect at renewal time -- the token will never be able to
+        be renewed or used past the value set at issue time. This cannot be
+        used in conjunction with `period`.
       </li>
     </ul>
   </dd>
