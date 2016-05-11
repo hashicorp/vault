@@ -29,6 +29,12 @@ DEPRECATIONS/BREAKING CHANGES:
    auto-registration and service checks.
  * List operations that do not find any keys now return a `404` status code
    rather than an empty response object [GH-1365]
+ * CA certificates issued from the `pki` backend no longer have associated
+   leases, and any CA certs already issued will ignore revocation requests from
+   the lease manager. This is to prevent CA certificates from being revoked
+   when the token used to issue the certificate expires; it was not be obvious
+   to users that they need to ensure that the token lifetime needed to be at
+   least as long as a potentially very long-lived CA cert.
 
 FEATURES:
 
@@ -43,11 +49,13 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * audit: Add the DisplayName value to the copy of the Request object embedded
+   in the associated Response, to match the original Request object [GH-1387]
  * command/auth: Restore the previous authenticated token if the `auth` command
    fails to authenticate the provided token [GH-1233]
  * command/write: `-format` and `-field` can now be used with the `write`
    command [GH-1228]
- * core: Add `mlock` support for FreeBSD, OpenBSD, NetBSD, and Darwin [GH-1297]
+ * core: Add `mlock` support for FreeBSD, OpenBSD, and Darwin [GH-1297]
  * core: Don't keep lease timers around when tokens are revoked [GH-1277]
  * core: If using the `disable_cache` option, caches for the policy store and
    the `transit` backend are now disabled as well [GH-1346]

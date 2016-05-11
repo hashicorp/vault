@@ -66,7 +66,7 @@ type Response struct {
 	warnings []string
 
 	// Information for wrapping the response in a cubbyhole
-	WrapInfo WrapInfo
+	WrapInfo *WrapInfo
 }
 
 func init() {
@@ -87,7 +87,7 @@ func init() {
 		if input.Auth != nil {
 			retAuth, err := copystructure.Copy(input.Auth)
 			if err != nil {
-				return nil, fmt.Errorf("error copying Secret: %v", err)
+				return nil, fmt.Errorf("error copying Auth: %v", err)
 			}
 			ret.Auth = retAuth.(*Auth)
 		}
@@ -95,7 +95,7 @@ func init() {
 		if input.Data != nil {
 			retData, err := copystructure.Copy(&input.Data)
 			if err != nil {
-				return nil, fmt.Errorf("error copying Secret: %v", err)
+				return nil, fmt.Errorf("error copying Data: %v", err)
 			}
 			ret.Data = retData.(map[string]interface{})
 		}
@@ -104,6 +104,14 @@ func init() {
 			for _, warning := range input.Warnings() {
 				ret.AddWarning(warning)
 			}
+		}
+
+		if input.WrapInfo != nil {
+			retWrapInfo, err := copystructure.Copy(input.WrapInfo)
+			if err != nil {
+				return nil, fmt.Errorf("error copying WrapInfo: %v", err)
+			}
+			ret.WrapInfo = retWrapInfo.(*WrapInfo)
 		}
 
 		return &ret, nil

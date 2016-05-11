@@ -78,7 +78,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	// We are wrapping if there is anything to wrap (not a nil response) and a
 	// TTL was specified for the token, plus if cubbyhole is mounted (which
 	// will be the case normally)
-	wrapping := cubbyholeMounted && resp != nil && resp.WrapInfo.TTL != 0
+	wrapping := cubbyholeMounted && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.TTL != 0
 
 	// If we are wrapping, the first part happens before auditing so that
 	// resp.WrapInfo.Token can contain the HMAC'd wrapping token ID in the

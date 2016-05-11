@@ -85,7 +85,7 @@ func newEtcdBackend(conf map[string]string, logger *log.Logger) (Backend, error)
 	}
 
 	// Set a default machines list and check for an overriding address value.
-	machines := "http://128.0.0.1:2379"
+	machines := "http://127.0.0.1:2379"
 	if address, ok := conf["address"]; ok {
 		machines = address
 	}

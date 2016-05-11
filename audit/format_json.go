@@ -46,6 +46,7 @@ func (f *FormatJSON) FormatRequest(
 			Path:        req.Path,
 			Data:        req.Data,
 			RemoteAddr:  getRemoteAddr(req),
+			WrapTTL:     int64(req.WrapTTL / time.Second),
 		},
 	})
 }
@@ -86,6 +87,14 @@ func (f *FormatJSON) FormatResponse(
 		}
 	}
 
+	var respWrapInfo *JSONWrapInfo
+	if resp.WrapInfo != nil {
+		respWrapInfo = &JSONWrapInfo{
+			TTL:   int64(resp.WrapInfo.TTL / time.Second),
+			Token: resp.WrapInfo.Token,
+		}
+	}
+
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
@@ -94,8 +103,9 @@ func (f *FormatJSON) FormatResponse(
 		Error: errString,
 
 		Auth: JSONAuth{
-			Policies: auth.Policies,
-			Metadata: auth.Metadata,
+			DisplayName: auth.DisplayName,
+			Policies:    auth.Policies,
+			Metadata:    auth.Metadata,
 		},
 
 		Request: JSONRequest{
@@ -103,6 +113,7 @@ func (f *FormatJSON) FormatResponse(
 			Path:       req.Path,
 			Data:       req.Data,
 			RemoteAddr: getRemoteAddr(req),
+			WrapTTL:    int64(req.WrapTTL / time.Second),
 		},
 
 		Response: JSONResponse{
@@ -110,6 +121,7 @@ func (f *FormatJSON) FormatResponse(
 			Secret:   respSecret,
 			Data:     resp.Data,
 			Redirect: resp.Redirect,
+			WrapInfo: respWrapInfo,
 		},
 	})
 }
@@ -139,6 +151,7 @@ type JSONRequest struct {
 	Path        string                 `json:"path"`
 	Data        map[string]interface{} `json:"data"`
 	RemoteAddr  string                 `json:"remote_address"`
+	WrapTTL     int64                  `json:"wrap_ttl"`
 }
 
 type JSONResponse struct {
@@ -146,6 +159,7 @@ type JSONResponse struct {
 	Secret   *JSONSecret            `json:"secret,emitempty"`
 	Data     map[string]interface{} `json:"data"`
 	Redirect string                 `json:"redirect"`
+	WrapInfo *JSONWrapInfo          `json:"wrap_info,omitempty"`
 }
 
 type JSONAuth struct {
@@ -158,6 +172,11 @@ type JSONAuth struct {
 
 type JSONSecret struct {
 	LeaseID string `json:"lease_id"`
+}
+
+type JSONWrapInfo struct {
+	TTL   int64  `json:"ttl"`
+	Token string `json:"token"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
