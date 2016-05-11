@@ -159,6 +159,35 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		allgroups = append(allgroups, user.Groups...)
 	}
 
+	// Fetch the optional memberOf property values on the user object
+	sresult, err := c.Search(&ldap.SearchRequest{
+		BaseDN: userdn,
+		Scope:  0,        // base scope to fetch only the userdn
+		Filter: "(cn=*)", // bogus filter, required to fetch the userdn
+		Attributes: []string{
+			"memberOf",
+		},
+	})
+	if err != nil {
+		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP fetch of distinguishedName=%s failed: %v", userdn, err)), nil
+	}
+	if len(sresult.Entries) != 1 {
+		return nil, logical.ErrorResponse("LDAP search for binddn 0 or not uniq"), nil
+	}
+
+	for _, attr := range sresult.Entries[0].Attributes {
+		if attr.Name == "memberOf" {
+			for _, groupdn := range attr.Values {
+				dn, err := ldap.ParseDN(groupdn)
+				if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
+					continue
+				}
+				gname := dn.RDNs[0].Attributes[0].Value
+				allgroups = append(allgroups, gname)
+			}
+		}
+	}
+
 	if cfg.GroupDN != "" {
 		// Enumerate all groups the user is member of. The search filter should
 		// work with both openldap and MS AD standard schemas.
