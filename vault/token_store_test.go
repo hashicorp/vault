@@ -955,17 +955,18 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":           root,
-		"accessor":     resp.Data["accessor"].(string),
-		"policies":     []string{"root"},
-		"path":         "auth/token/root",
-		"meta":         map[string]string(nil),
-		"display_name": "root",
-		"orphan":       true,
-		"num_uses":     0,
-		"creation_ttl": int64(0),
-		"ttl":          int64(0),
-		"role":         "",
+		"id":               root,
+		"accessor":         resp.Data["accessor"].(string),
+		"policies":         []string{"root"},
+		"path":             "auth/token/root",
+		"meta":             map[string]string(nil),
+		"display_name":     "root",
+		"orphan":           true,
+		"num_uses":         0,
+		"creation_ttl":     int64(0),
+		"ttl":              int64(0),
+		"role":             "",
+		"explicit_max_ttl": int64(0),
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -990,17 +991,18 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"id":           "client",
-		"accessor":     resp.Data["accessor"],
-		"policies":     []string{"default", "foo"},
-		"path":         "auth/token/create",
-		"meta":         map[string]string(nil),
-		"display_name": "token",
-		"orphan":       false,
-		"num_uses":     0,
-		"creation_ttl": int64(3600),
-		"ttl":          int64(3600),
-		"role":         "",
+		"id":               "client",
+		"accessor":         resp.Data["accessor"],
+		"policies":         []string{"default", "foo"},
+		"path":             "auth/token/create",
+		"meta":             map[string]string(nil),
+		"display_name":     "token",
+		"orphan":           false,
+		"num_uses":         0,
+		"creation_ttl":     int64(3600),
+		"ttl":              int64(3600),
+		"role":             "",
+		"explicit_max_ttl": int64(0),
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1031,17 +1033,18 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"id":           "client",
-		"accessor":     resp.Data["accessor"],
-		"policies":     []string{"default", "foo"},
-		"path":         "auth/token/create",
-		"meta":         map[string]string(nil),
-		"display_name": "token",
-		"orphan":       false,
-		"num_uses":     0,
-		"creation_ttl": int64(3600),
-		"ttl":          int64(3600),
-		"role":         "",
+		"id":               "client",
+		"accessor":         resp.Data["accessor"],
+		"policies":         []string{"default", "foo"},
+		"path":             "auth/token/create",
+		"meta":             map[string]string(nil),
+		"display_name":     "token",
+		"orphan":           false,
+		"num_uses":         0,
+		"creation_ttl":     int64(3600),
+		"ttl":              int64(3600),
+		"role":             "",
+		"explicit_max_ttl": int64(0),
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1095,17 +1098,18 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":           root,
-		"accessor":     resp.Data["accessor"],
-		"policies":     []string{"root"},
-		"path":         "auth/token/root",
-		"meta":         map[string]string(nil),
-		"display_name": "root",
-		"orphan":       true,
-		"num_uses":     0,
-		"creation_ttl": int64(0),
-		"ttl":          int64(0),
-		"role":         "",
+		"id":               root,
+		"accessor":         resp.Data["accessor"],
+		"policies":         []string{"root"},
+		"path":             "auth/token/root",
+		"meta":             map[string]string(nil),
+		"display_name":     "root",
+		"orphan":           true,
+		"num_uses":         0,
+		"creation_ttl":     int64(0),
+		"ttl":              int64(0),
+		"role":             "",
+		"explicit_max_ttl": int64(0),
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1252,9 +1256,10 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	expected := map[string]interface{}{
 		"name":             "test",
 		"orphan":           true,
-		"period":           float64(259200),
+		"period":           int64(259200),
 		"allowed_policies": []string{"test1", "test2"},
 		"path_suffix":      "happenin",
+		"explicit_max_ttl": int64(0),
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1292,9 +1297,57 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	expected = map[string]interface{}{
 		"name":             "test",
 		"orphan":           true,
-		"period":           float64(284400),
+		"period":           int64(284400),
 		"allowed_policies": []string{"test3"},
 		"path_suffix":      "happenin",
+		"explicit_max_ttl": int64(0),
+	}
+
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
+	}
+
+	// Now test setting explicit max ttl at the same time as period, which
+	// should be an error
+	req.Operation = logical.CreateOperation
+	req.Data = map[string]interface{}{
+		"explicit_max_ttl": "5",
+	}
+
+	resp, err = core.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	// Now set explicit max ttl and clear the period
+	req.Operation = logical.CreateOperation
+	req.Data = map[string]interface{}{
+		"explicit_max_ttl": "5",
+		"period":           "0s",
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Data = map[string]interface{}{}
+
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("got a nil response")
+	}
+
+	expected = map[string]interface{}{
+		"name":             "test",
+		"orphan":           true,
+		"explicit_max_ttl": int64(5),
+		"allowed_policies": []string{"test3"},
+		"path_suffix":      "happenin",
+		"period":           int64(0),
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1607,6 +1660,185 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		ttl = resp.Data["ttl"].(int64)
 		if ttl < 299 {
 			t.Fatalf("TTL too small")
+		}
+	}
+}
+
+func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.defaultLeaseTTL = 5 * time.Second
+	core.maxLeaseTTL = 5 * time.Hour
+
+	// Note: these requests are sent to Core since Core handles registration
+	// with the expiration manager and we need the storage to be consistent
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"explicit_max_ttl": "6s",
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// This first set of logic is to verify that a normal non-root token will
+	// be given a TTL of 5 seconds, and that renewing will cause the TTL to
+	// increase
+	{
+		req.Path = "auth/token/create"
+		req.Data = map[string]interface{}{
+			"policies": []string{"default"},
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl > 5 {
+			t.Fatalf("TTL too large")
+		}
+
+		// Let the TTL go down a bit to 3 seconds
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl < 4 {
+			t.Fatalf("TTL too small after renewal")
+		}
+	}
+
+	// Now we create a token against the role. After renew our max should still
+	// be the same.
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create/test"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl > 6 {
+			t.Fatalf("TTL too big")
+		}
+		maxTTL := resp.Data["explicit_max_ttl"].(int64)
+		if maxTTL != 6 {
+			t.Fatalf("expected 6 for explicit max TTL, got %d", maxTTL)
+		}
+
+		// Let the TTL go down a bit to 3 seconds (4 against explicit max)
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 300,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 4 {
+			t.Fatalf("TTL too big")
+		}
+
+		// Let the TTL go down a bit more to 2 seconds (2 against explicit max)
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 300,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 2 {
+			t.Fatalf("TTL too big")
+		}
+
+		// It should expire
+		time.Sleep(3 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 300,
+		}
+		resp, err = core.HandleRequest(req)
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err == nil {
+			t.Fatalf("expected error")
 		}
 	}
 }
