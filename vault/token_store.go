@@ -1047,20 +1047,20 @@ func (ts *TokenStore) handleCreateCommon(
 		sysView := ts.System()
 
 		// Limit the lease duration
-		if sysView.MaxLeaseTTL() != time.Duration(0) && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() {
+		if sysView.MaxLeaseTTL() != time.Duration(0) && role.ExplicitMaxTTL > sysView.MaxLeaseTTL() {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"role explicit max TTL of %d is greater than system/mount allowed value of %d seconds",
-				te.ExplicitMaxTTL.Seconds(), sysView.MaxLeaseTTL().Seconds())), logical.ErrInvalidRequest
+				role.ExplicitMaxTTL.Seconds(), sysView.MaxLeaseTTL().Seconds())), logical.ErrInvalidRequest
+		}
+
+		if te.TTL > role.ExplicitMaxTTL {
+			resp.AddWarning(fmt.Sprintf(
+				"Requested TTL higher than role explicit max TTL; value being capped to %d seconds",
+				role.ExplicitMaxTTL.Seconds()))
+			te.TTL = role.ExplicitMaxTTL
 		}
 
 		te.ExplicitMaxTTL = role.ExplicitMaxTTL
-
-		if te.TTL > te.ExplicitMaxTTL {
-			resp.AddWarning(fmt.Sprintf(
-				"Requested TTL higher than role explicit max TTL; value being capped to %d seconds",
-				te.ExplicitMaxTTL.Seconds()))
-			te.TTL = te.ExplicitMaxTTL
-		}
 	}
 
 	// Create the token

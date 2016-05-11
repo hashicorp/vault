@@ -1673,13 +1673,36 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 	// Note: these requests are sent to Core since Core handles registration
 	// with the expiration manager and we need the storage to be consistent
 
+	// Make sure we can't make it larger than the system/mount max; we should get a warning on role write and an error on token creation
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"explicit_max_ttl": "100h",
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("expected a warning")
+	}
+
+	req.Operation = logical.UpdateOperation
+	req.Path = "auth/token/create/test"
+	resp, err = core.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected an error")
+	}
+
+	// Reset to a good explicit max
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
 		"explicit_max_ttl": "6s",
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
