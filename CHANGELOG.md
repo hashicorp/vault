@@ -46,6 +46,12 @@ FEATURES:
    standby nodes are `standby.vault.service.consul`. Sealed vaults are marked
    critical and are not listed by default in Consul's service discovery.  See
    the documentation for details. [GH-1349]
+ * **Explicit Maximum Token TTLs using Token Roles**: If using token roles, you
+   can now set explicit maximum TTLs on tokens that do not honor changes in the
+   system- or mount-set values. This is useful, for instance, when the max TTL
+   of the system or the `auth/token` mount must be set high to accommodate
+   certain needs but you want more granular restrictions on tokens being issued
+   directly from `auth/token`. [GH-1399]
 
 IMPROVEMENTS:
 
