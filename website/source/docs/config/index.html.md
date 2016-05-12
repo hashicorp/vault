@@ -102,7 +102,10 @@ The supported options are:
       by default that TLS will be used.
 
   * `tls_cert_file` (required unless disabled) - The path to the certificate
-      for TLS. This is reloaded via SIGHUP.
+      for TLS. To configure the listener to use a CA certificate, concatenate
+      the primary certificate and the CA certificate together. The primary
+      certificate should appear first in the combined file. This is reloaded
+      via SIGHUP.
 
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate. This is reloaded via SIGHUP.
