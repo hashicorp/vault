@@ -10,7 +10,7 @@ import (
 	"github.com/pquerna/otp"
 )
 
-func methodsListPaths(b *backend) *framework.Path {
+func methodListPaths(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "methods/?$",
 
@@ -23,22 +23,9 @@ func methodsListPaths(b *backend) *framework.Path {
 	}
 }
 
-func methodListPaths(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "method/?$",
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.mfaBackendMethodList,
-		},
-
-		HelpSynopsis:    mfaListMethodsHelp,
-		HelpDescription: mfaListMethodsHelp,
-	}
-}
-
 func methodPaths(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "method/" + framework.GenericNameRegex("method_name") + "$",
+		Pattern: "methods/" + framework.GenericNameRegex("method_name") + "$",
 		Fields: map[string]*framework.FieldSchema{
 			"method_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -56,30 +43,31 @@ func methodPaths(b *backend) *framework.Path {
 				Default:     "sha1",
 				Description: mfaTOTPHashAlgorithmHelp,
 			},
+			/*
+				"duo_host": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "",
+				},
 
-			"duo_host": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "",
-			},
+				"duo_ikey": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "",
+				},
 
-			"duo_ikey": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "",
-			},
+				"duo_skey": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "",
+				},
 
-			"duo_skey": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "",
-			},
-
-			"duo_user_agent": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "",
-			},
+				"duo_user_agent": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "",
+				},
+			*/
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -96,6 +84,7 @@ func methodPaths(b *backend) *framework.Path {
 	}
 }
 
+// Return the method entry given a method name
 func (b *backend) mfaBackendMethod(methodName string) (*mfaMethodEntry, error) {
 	b.RLock()
 	defer b.RUnlock()
@@ -103,7 +92,12 @@ func (b *backend) mfaBackendMethod(methodName string) (*mfaMethodEntry, error) {
 	return b.mfaBackendMethodInternal(methodName)
 }
 
+// Return the method entry given the method name, without locking
 func (b *backend) mfaBackendMethodInternal(methodName string) (*mfaMethodEntry, error) {
+	if methodName == "" {
+		return nil, fmt.Errorf("method name cannot be empty")
+	}
+
 	entry, err := b.storage.Get(fmt.Sprintf("method/%s/config", strings.ToLower(methodName)))
 	if err != nil {
 		return nil, err
@@ -120,6 +114,7 @@ func (b *backend) mfaBackendMethodInternal(methodName string) (*mfaMethodEntry, 
 	return &result, nil
 }
 
+// List the configured methods
 func (b *backend) mfaBackendMethodList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.RLock()
@@ -132,12 +127,23 @@ func (b *backend) mfaBackendMethodList(
 
 	ret := make([]string, len(entries))
 	for i, entry := range entries {
-		ret[i] = strings.TrimPrefix(entry, "method/")
+		trimmedEntry := strings.TrimPrefix(entry, "method/")
+		splitTrimmed := strings.SplitN(trimmedEntry, "/", 2)
+		switch len(splitTrimmed) {
+		case 0:
+			// Shouldn't happen
+			continue
+		case 1:
+			ret[i] = trimmedEntry
+		default:
+			ret[i] = splitTrimmed[0]
+		}
 	}
 
 	return logical.ListResponse(ret), nil
 }
 
+// Delete a method
 func (b *backend) mfaBackendMethodDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	methodName := data.Get("method_name").(string)
@@ -156,6 +162,7 @@ func (b *backend) mfaBackendMethodDelete(
 	return nil, nil
 }
 
+// Return a method's configuration
 func (b *backend) mfaBackendMethodRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	methodName := data.Get("method_name").(string)
@@ -181,6 +188,7 @@ func (b *backend) mfaBackendMethodRead(
 	return resp, nil
 }
 
+// Existence check for methods
 func (b *backend) mfaBackendMethodExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
 	name := data.Get("method_name").(string)
@@ -228,7 +236,7 @@ func (b *backend) mfaBackendMethodCreateUpdate(
 		entry.Type = data.Get("type").(string)
 	}
 	switch entry.Type {
-	case "duo", "totp":
+	case "totp":
 	case "":
 		return logical.ErrorResponse("type cannot be empty"), nil
 	default:

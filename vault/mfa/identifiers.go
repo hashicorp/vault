@@ -11,7 +11,7 @@ import (
 
 func methodIdentifiersListPaths(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "method/" + framework.GenericNameRegex("method_name") + "/?$",
+		Pattern: "methods/" + framework.GenericNameRegex("method_name") + "/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.mfaBackendMethodIdentifiersList,
@@ -24,7 +24,7 @@ func methodIdentifiersListPaths(b *backend) *framework.Path {
 
 func methodIdentifiersPaths(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "method/" + framework.GenericNameRegex("method_name") + "/(?P<identifier>.+)",
+		Pattern: "methods/" + framework.GenericNameRegex("method_name") + "/(?P<identifier>.+)",
 		Fields: map[string]*framework.FieldSchema{
 			"method_name": &framework.FieldSchema{
 				Type:        framework.TypeString,

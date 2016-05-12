@@ -18,7 +18,6 @@ func MFABackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 
 		Paths: []*framework.Path{
 			methodPaths(&b.backend),
-			methodsListPaths(&b.backend),
 			methodListPaths(&b.backend),
 			methodIdentifiersPaths(&b.backend),
 			methodIdentifiersListPaths(&b.backend),
