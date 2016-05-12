@@ -110,6 +110,13 @@ are created, and the initial root token is setup. To initialize Vault
 use `vault init`. This is an _unauthenticated_ request, but it only works
 on brand new Vaults with no data:
 
+The vault client defaults to using `https` scheme, if you are running vault locally without a proper SSL cert, you'll want to set the client address to not use `https`:
+
+```
+export VAULT_ADDR=http://127.0.0.1:8200
+```
+prior to intializing the vault server.
+
 ```
 $ vault init
 Key 1: 427cd2c310be3b84fe69372e683a790e01
