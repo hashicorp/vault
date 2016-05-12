@@ -20,9 +20,10 @@ func pathLogin(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": &framework.FieldSchema{
 				Type: framework.TypeString,
-				Description: `Name of the pre-registered role in this backend against which the login
-is being attempted. If this is not supplied, the name of the AMI ID in
-the instance identity document will be assumed to be the name of the role.`,
+				Description: `Name of the role against which the login is being attempted.
+If 'role_name' is not specified, then the login endpoint looks for a role
+bearing the name of the AMI ID of the EC2 instance that is trying to login.
+If a matching role is not found, login fails.`,
 			},
 
 			"pkcs7": &framework.FieldSchema{
@@ -31,8 +32,10 @@ the instance identity document will be assumed to be the name of the role.`,
 			},
 
 			"nonce": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "The nonce created by a client of this backend. Nonce is used to avoid replay attacks. When the instances are configured to be allowed to login only once, nonce parameter is of no use and hence can be skipped.",
+				Type: framework.TypeString,
+				Description: `The nonce created by a client of this backend. When 'disallow_reauthentication'
+option is enabled on either the role or the role tag, then nonce parameter is
+optional. It is a required parameter otherwise.`,
 			},
 		},
 
@@ -550,7 +553,7 @@ Authenticates an EC2 instance with Vault.
 const pathLoginDesc = `
 An EC2 instance is authenticated using the PKCS#7 signature of the instance identity
 document and a client created nonce. This nonce should be unique and should be used by
-the instance for all future logins, unless 'allow_instance_migration' option on the
+the instance for all future logins, unless 'disallow_reauthenitcation' option on the
 registered role is enabled, in which case client nonce is optional.
 
 First login attempt, creates a whitelist entry in Vault associating the instance to the nonce
@@ -558,7 +561,7 @@ provided. All future logins will succeed only if the client nonce matches the no
 whitelisted entry.
 
 By default, a cron task will periodically look for expired entries in the whitelist
-and delete them. The duration to periodically run this, is one hour by default.
+and deletes them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/identities' endpoint.
 `

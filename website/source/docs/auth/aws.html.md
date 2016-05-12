@@ -31,7 +31,7 @@ found
 [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html).)
 
 During login, the backend verifies the signature on the PKCS#7 document,
-ensuring that the information contained within is certified accurate by AWS.
+ensuring that the information contained within, is certified accurate by AWS.
 Before succeeding the login attempt and returning a Vault token, the backend
 verifies the current running status of the instance via the EC2 API.
 
@@ -44,9 +44,9 @@ The basic mechanism of operaion is per-role. Roles are registered in the
 backend and associated with various optional restricitons, such as the set
 of allowed policies and max TTLs on the generated tokens. Each role can
 be specified with the contraints that are to be met during the login. For
-example, currently the contraint that is supported is to bound against AMI
-ID. The roles with this bound can only be used to login by the instances
-that are running on the specified AMI.
+example, currently the contraint that is supported is to bind against AMI
+ID. A role which is bound to a specific AMI, can only be used for login by
+those instances that are deployed on the same AMI.
 
 In many cases, an organization will use a "seed AMI" that is specialized after
 bootup by configuration management or similar processes. For this reason, an
@@ -79,11 +79,11 @@ investigation.
 During the first login, the backend stores the instance ID that authenticated
 in a `whitelist`. One method of operation of the backend is to disallow any
 authentication attempt for an instance ID contained in the whitelist, using the
-'disallow_reauthentication' option on the role. However, this has consequences
-for token rotation, as it means that once a token has expired, subsequent
-authentication attempts would fail. By default, reauthentication is enabled in
-this backend, and can be turned off using 'disallow_reauthentication' parameter
-on the registered role.
+'disallow_reauthentication' option on the role, meaning that an instance is
+allowed to login only once. However, this has consequences for token rotation,
+as it means that once a token has expired, subsequent authentication attempts
+would fail. By default, reauthentication is enabled in this backend, and can be
+turned off using 'disallow_reauthentication' parameter on the registered role.
 
 In the default method of operation, the client supplies a unique nonce during
 the first authentication attempt, storing this nonce in the client's memory for
@@ -153,7 +153,7 @@ If an EC2 instance loses its client nonce (due to a reboot, a stop/start of the
 client, etc.), subsequent login attempts will not succeed. If the client nonce
 is lost, normally the only option is to delete the entry corresponding to the
 instance ID from the identity `whitelist` in the backend. This can be done via
-the `auth/aws/whitelist/identity/<instance_id>` endpoint. This allows a new
+the `auth/aws/identity-whitelist/<instance_id>` endpoint. This allows a new
 client nonce to be accepted by the backend during the next login request.
 
 Under certain circumstances there is another useful setting. When the instance
@@ -196,7 +196,7 @@ hijacked by another entity.
 When `disallow_reauthentication` option is enabled, the client can choose not
 to supply a nonce during login, although it is not an error to do so (the nonce
 is simply ignored). Note that reauthentication is enabled by default. If only
-a single login is desired, `disable_reauthentication` should be set explicitly
+a single login is desired, `disallow_reauthentication` should be set explicitly
 on the role or on the role tag.
 
 The `disallow_reauthentication` option is set per-role, and can also be
@@ -207,14 +207,15 @@ role tag has no effect.
 
 ### Blacklisting Role Tags
 
-Role tags are tied to a specific role, but the backend has no control over which
-instances using that role should have any particular role tag; that is purely up
+Role tags are tied to a specific role, but the backend has no control over, which
+instances using that role, should have any particular role tag; that is purely up
 to the operator. Although role tags are only restrictive (a tag cannot escalate
 privileges above what is set on its role), if a role tag is found to have been
 used incorrectly, and the administrator wants to ensure that the role tag has no
 further effect, the role tag can be placed on a `blacklist` via the endpoint
-`auth/aws/blacklist/roletag/<role_tag>`. Note that this will not invalidate the
-tokens that were already issued; this only blocks any further login requests.
+`auth/aws/roletag-blacklist/<role_tag>`. Note that this will not invalidate the
+tokens that were already issued; this only blocks any further login requests from
+those instances that have the blacklisted tag attached to them.
 
 ### Expiration Times and Tidying of `blacklist` and `whitelist` Entries
 
@@ -225,7 +226,7 @@ time which is dynamically determined by three factors: `max_ttl` set on the role
 least of these three dictates the maximum TTL of the issued token, and
 correspondingly will be set as the expiration times of these entries.
 
-The endpoints `aws/auth/tidy/identities` and `aws/auth/tidy/roletags` are
+The endpoints `aws/auth/tidy/identity-whitelist` and `aws/auth/tidy/roletag-blacklist` are
 provided to clean up the entries present in these lists. These endpoints allow
 defining a safety buffer, such that an entry must not only be expired, but be
 past expiration by the amount of time dictated by the safety buffer in order
@@ -236,14 +237,14 @@ of the backend. This function does the tidying of both blacklist role tags
 and whitelist identities. Periodic tidying is activated by default and will
 have a safety buffer of 72 hours, meaning only those entries are deleted which
 were expired before 72 hours from when the tidy operation is being performed.
-This can be configured via `config/tidy/roletags` and `config/tidy/identities`
+This can be configured via `config/tidy/roletag-blacklist` and `config/tidy/identity-whitelist`
 endpoints.
 
 ### Varying Public Certificates
 
 The AWS public certificate which contains the public key used to verify the
 PKCS#7 signature varies for groups of regions. The default public certificate
-provided with the backend is applicable for many regions. Users of instances whose
+provided with the backend is applicable for many regions. Instances whose PKCS#7
 signatures cannot be verified by the default public certificate, can register a
 different public certificate which can be found [here]
 (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
@@ -355,15 +356,12 @@ The response will be in JSON. For example:
     The instance identity document fetched from the PKCS#7 signature
     will provide the EC2 instance ID. The credentials configured using
     this endpoint will be used to query the status of the instances via
-    DescribeInstanceStatus API. Also, if the login is performed using
-    the role tag, then these credentials will also be used to fetch the
-    tags that are set on the EC2 instance via DescribeTags API. If the
-    static credentials are not provided using this endpoint, then the
-    credentials will be retrieved from the environment variables
-    `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and `AWS_REGION` respectively.
-    If the credentials are still not found and if the backend is configured
-    on an EC2 instance with metadata querying capabilities, the credentials
-    are fetched automatically.
+    DescribeInstances API. If static credentials are not provided using
+    this endpoint, then the credentials will be retrieved from the
+    environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and `AWS_REGION`
+    respectively. If the credentials are still not found and if the
+    backend is configured on an EC2 instance with metadata querying
+    capabilities, the credentials are fetched automatically.
   </dd>
 
   <dt>Method</dt>
@@ -378,14 +376,14 @@ The response will be in JSON. For example:
       <li>
         <span class="param">access_key</span>
         <span class="param-flags">required</span>
-        AWS Access key with permissions to query EC2 instance metadata.
+        AWS Access key with permissions to query EC2 DescribeInstances API.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">secret_key</span>
         <span class="param-flags">required</span>
-        AWS Secret key with permissions to query EC2 instance metadata.
+        AWS Secret key with permissions to query EC2 DescribeInstances API.
       </li>
     </ul>
     <ul>
@@ -582,7 +580,7 @@ The response will be in JSON. For example:
   </dd>
 </dl>
 
-### /auth/aws/config/tidy/identities
+### /auth/aws/config/tidy/identity-whitelist
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -594,7 +592,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/identities`</dd>
+  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -610,8 +608,8 @@ The response will be in JSON. For example:
       <li>
         <span class="param">disable_periodic_tidy</span>
         <span class="param-flags">optional</span>
-        If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>'
-        entries and 'whitelist/identity/<instance_id>' entries.
+        If set to 'true', disables the periodic tidying of the 'identity-whitelist/<instance_id>'
+        entries.
       </li>
     </ul>
   </dd>
@@ -633,7 +631,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/identities`</dd>
+  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -671,7 +669,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/identities`</dd>
+  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -685,7 +683,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws/config/tidy/roletags
+### /auth/aws/config/tidy/roletag-blacklist
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -697,7 +695,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/roletags`</dd>
+  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -713,7 +711,7 @@ The response will be in JSON. For example:
       <li>
         <span class="param">disable_periodic_tidy</span>
         <span class="param-flags">optional</span>
-        If set to 'true', disables the periodic tidying of the 'blacklist/roletag/<role_tag>' entries and 'whitelist/identity/<instance_id>' entries.
+        If set to 'true', disables the periodic tidying of the 'roletag-blacklist/<role_tag>' entries.
       </li>
     </ul>
   </dd>
@@ -735,7 +733,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/roletags`</dd>
+  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -773,7 +771,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/roletags`</dd>
+  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -794,9 +792,9 @@ The response will be in JSON. For example:
   <dd>
     Registers a role in the backend. Only those instances which are using the role registered using this endpoint,
     will be able to perform the login operation. Contraints can be specified on the role, that are applied on the
-    instances that are attempting to login. Currently only one constraint is supported which is 'bound_ami_id',
-    which must be specified. Going forward, when more than one constraint is supported, the requirement will be to
-    specify at least one constraint, not necessarily 'bound_ami_id'.
+    instances attempting to login. Currently only one constraint is supported which is 'bound_ami_id', which must
+    be specified. Going forward, when more than one constraint is supported, the requirement will be to specify at
+    least one constraint, but not necessarily 'bound_ami_id'.
   </dd>
 
   <dt>Method</dt>
@@ -818,36 +816,31 @@ The response will be in JSON. For example:
       <li>
         <span class="param">bound_ami_id</span>
         <span class="param-flags">required</span>
-        If set, defines a constraint that the EC2 instances that are trying to login,
-        should be using the AMI ID specified by this parameter.
-      </li>
-    </ul>
-    <ul>
-      <li>
-        <span class="param">instance_id</span>
-        <span class="param-flags">optional</span>
-        Instance ID for which this tag is intended for. If set, the created tag can only be used by the instance with the given ID.
+        If set, defines a constraint on the EC2 instances that they should be using the AMI ID specified by this parameter.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">role_tag</span>
         <span class="param-flags">optional</span>
-        If set, enables the `roletag` login for this AMI, meaning that this AMI is shared among many EC2 instances. The value set for this field should be the `key` of the tag on the EC2 instance and the `tag_value` returned from `auth/aws/image/<ami_id>/roletag` should be the `value` of the tag on the instance. Defaults to empty string, meaning that this AMI is not shared among instances.
+        If set, enables the role tags for this role. The value set for this
+        field should be the 'key' of the tag on the EC2 instance. The 'value'
+        of the tag should be generated using 'role/<role_name>/tag' endpoint.
+        Defaults to an empty string, meaning that role tags are disabled.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">max_ttl</span>
         <span class="param-flags">optional</span>
-        The maximum allowed lease duration.
+        The maximum allowed lifetime of tokens issued using this role.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">policies</span>
         <span class="param-flags">optional</span>
-        Policies to be associated with the AMI.
+        Policies to be set on tokens issued using this role.
       </li>
     </ul>
     <ul>
@@ -861,7 +854,7 @@ The response will be in JSON. For example:
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/whitelist/identity/<instance_id>' endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
       </li>
     </ul>
   </dd>
@@ -964,7 +957,7 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes the previously registered AMI ID.
+    Deletes the previously registered role.
   </dd>
 
   <dt>Method</dt>
@@ -989,8 +982,8 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates a `roletag` on the role. Role tags provide an effective way to restrict the
-    policies that are set on the role.
+    Creates a role tag on the role. Role tags provide an effective way to restrict the
+    capabilities that are set on the role.
   </dd>
 
   <dt>Method</dt>
@@ -1012,21 +1005,30 @@ The response will be in JSON. For example:
       <li>
         <span class="param">policies</span>
         <span class="param-flags">optional</span>
-        Policies to be associated with the tag.
+        Policies to be associated with the tag. If set, must be a subset of
+        the role's policies. If set, but set to an empty value, only the
+        'default' policy will be given to issued tokens.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">max_ttl</span>
         <span class="param-flags">optional</span>
-        The maximum allowed lease duration.
+        If set, specifies the maximum allowed token lifetime.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">instance_id</span>
+        <span class="param-flags">optional</span>
+        Instance ID for which this tag is intended for. If set, the created tag can only be used by the instance with the given ID.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/whitelist/identity endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/identity-whitelist endpoint. Defaults to 'false'.
       </li>
     </ul>
     <ul>
@@ -1082,9 +1084,9 @@ The response will be in JSON. For example:
         <span class="param">role_name</span>
         <span class="param-flags">optional</span>
         Name of the role against which the login is being attempted.
-        If `role_name` is not specified, then the login endpoint assumes that there
-        is a role by the name matching the AMI ID of the EC2 instance that is trying
-        to login. If a matching role is not found, login fails.
+        If `role_name` is not specified, then the login endpoint looks for a role
+        bearing the name of the AMI ID of the EC2 instance that is trying to login.
+        If a matching role is not found, login fails.
       </li>
     </ul>
     <ul>
@@ -1099,7 +1101,7 @@ The response will be in JSON. For example:
         <span class="param">nonce</span>
         <span class="param-flags">required/optional, depends</span>
         The `nonce` created by a client of this backend. When `disallow_reauthentication`
-        option is enabled on either the AMI or the role tag, then `nonce` parameter is
+        option is enabled on either the role or the role tag, then `nonce` parameter is
         optional. It is a required parameter otherwise.
       </li>
     </ul>
@@ -1138,15 +1140,15 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/blacklist/roletag/<role_tag>
+### /auth/aws/roletag-blacklist/<role_tag>
 #### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Places a valid roletag in a blacklist. This ensures that the `roletag`
+    Places a valid role tag in a blacklist. This ensures that the role tag
     cannot be used by any instance to perform a login operation again.
-    Note that if this `roletag` was previousy used to perfom a successful
-    login, placing the `roletag` in the blacklist does not invalidate the
+    Note that if the role tag was previousy used to perfom a successful
+    login, placing the tag in the blacklist does not invalidate the
     already issued token.
   </dd>
 
@@ -1154,7 +1156,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/blacklist/roletag/<role_tag>`</dd>
+  <dd>`/auth/aws/roletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1162,7 +1164,8 @@ The response will be in JSON. For example:
       <li>
         <span class="param">role_tag</span>
         <span class="param-flags">required</span>
-        Role tag that needs be blacklisted. The tag can be supplied as-is, or can be base64 encoded.
+        Role tag to be blacklisted. The tag can be supplied as-is. In order
+        to avoid any encoding problems, it can be base64 encoded.
       </li>
     </ul>
   </dd>
@@ -1177,14 +1180,14 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns the blacklist entry of a previously blacklisted `roletag`.
+    Returns the blacklist entry of a previously blacklisted role tag.
   </dd>
 
   <dt>Method</dt>
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/blacklist/roletag/<role_tag>`</dd>
+  <dd>`/auth/aws/broletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1216,14 +1219,14 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Lists all the `roletags` that are blacklisted.
+    Lists all the role tags that are blacklisted.
   </dd>
 
   <dt>Method</dt>
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/blacklist/roletags?list=true`</dd>
+  <dd>`/auth/aws/roletag-blacklist?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1256,14 +1259,14 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes a blacklisted `roletag`.
+    Deletes a blacklisted role tag.
   </dd>
 
   <dt>Method</dt>
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/blacklist/roletag/<role_tag>`</dd>
+  <dd>`/auth/aws/roletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1276,7 +1279,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/tidy/roletags
+### /auth/aws/tidy/roletag-blacklist
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1288,7 +1291,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/tidy/roletags`</dd>
+  <dd>`/auth/aws/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1307,7 +1310,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/whitelist/identity/<instance_id>
+### /auth/aws/identity-whitelist/<instance_id>
 #### GET
 <dl class="api">
   <dt>Description</dt>
@@ -1319,7 +1322,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/whitelist/identity/<instance_id>`</dd>
+  <dd>`/auth/aws/identity-whitelist/<instance_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1327,7 +1330,8 @@ The response will be in JSON. For example:
       <li>
         <span class="param">instance_id</span>
         <span class="param-flags">required</span>
-        EC2 instance ID. A successful login operation from an EC2 instance gets cached in this whitelist, keyed off of instance ID.
+        EC2 instance ID. A successful login operation from an EC2 instance
+        gets cached in this whitelist, keyed off of instance ID.
       </li>
     </ul>
   </dd>
@@ -1367,7 +1371,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/whitelist/identities?list=true`</dd>
+  <dd>`/auth/aws/identity-whitelist?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1407,7 +1411,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/whitelist/identity/<instance_id>`</dd>
+  <dd>`/auth/aws/identity-whitelist/<instance_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1420,7 +1424,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/tidy/identities
+### /auth/aws/tidy/identity-whitelist
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1432,7 +1436,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/tidy/identities`</dd>
+  <dd>`/auth/aws/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>

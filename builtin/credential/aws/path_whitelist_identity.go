@@ -8,27 +8,28 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathWhitelistIdentity(b *backend) *framework.Path {
+func pathIdentityWhitelist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/" + framework.GenericNameRegex("instance_id"),
 		Fields: map[string]*framework.FieldSchema{
 			"instance_id": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "EC2 instance ID. A successful login operation from an EC2 instance gets cached in this whitelist, keyed off of instance ID.",
+				Type: framework.TypeString,
+				Description: `EC2 instance ID. A successful login operation from an EC2 instance
+gets cached in this whitelist, keyed off of instance ID.`,
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathWhitelistIdentityRead,
-			logical.DeleteOperation: b.pathWhitelistIdentityDelete,
+			logical.ReadOperation:   b.pathIdentityWhitelistRead,
+			logical.DeleteOperation: b.pathIdentityWhitelistDelete,
 		},
 
-		HelpSynopsis:    pathWhitelistIdentitySyn,
-		HelpDescription: pathWhitelistIdentityDesc,
+		HelpSynopsis:    pathIdentityWhitelistSyn,
+		HelpDescription: pathIdentityWhitelistDesc,
 	}
 }
 
-func pathListWhitelistIdentities(b *backend) *framework.Path {
+func pathListIdentityWhitelist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/?",
 
@@ -36,8 +37,8 @@ func pathListWhitelistIdentities(b *backend) *framework.Path {
 			logical.ListOperation: b.pathWhitelistIdentitiesList,
 		},
 
-		HelpSynopsis:    pathListWhitelistIdentitiesHelpSyn,
-		HelpDescription: pathListWhitelistIdentitiesHelpDesc,
+		HelpSynopsis:    pathListIdentityWhitelistHelpSyn,
+		HelpDescription: pathListIdentityWhitelistHelpDesc,
 	}
 }
 
@@ -83,8 +84,8 @@ func setWhitelistIdentityEntry(s logical.Storage, instanceID string, identity *w
 	return nil
 }
 
-// pathWhitelistIdentityDelete is used to delete an entry from the identity whitelist given an instance ID.
-func (b *backend) pathWhitelistIdentityDelete(
+// pathIdentityWhitelistDelete is used to delete an entry from the identity whitelist given an instance ID.
+func (b *backend) pathIdentityWhitelistDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := data.Get("instance_id").(string)
 	if instanceID == "" {
@@ -94,8 +95,8 @@ func (b *backend) pathWhitelistIdentityDelete(
 	return nil, req.Storage.Delete("whitelist/identity/" + instanceID)
 }
 
-// pathWhitelistIdentityRead is used to view an entry in the identity whitelist given an instance ID.
-func (b *backend) pathWhitelistIdentityRead(
+// pathIdentityWhitelistRead is used to view an entry in the identity whitelist given an instance ID.
+func (b *backend) pathIdentityWhitelistRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := data.Get("instance_id").(string)
 	if instanceID == "" {
@@ -126,26 +127,26 @@ type whitelistIdentity struct {
 	LastUpdatedTime          time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
 }
 
-const pathWhitelistIdentitySyn = `
+const pathIdentityWhitelistSyn = `
 Read or delete entries in the identity whitelist.
 `
 
-const pathWhitelistIdentityDesc = `
+const pathIdentityWhitelistDesc = `
 Each login from an EC2 instance creates/updates an entry in the identity whitelist.
 
 Entries in this list can be viewed or deleted using this endpoint.
 
-By default, a cron task will periodically looks for expired entries in the whitelist
-and delete them. The duration to periodically run this is one hour by default.
+By default, a cron task will periodically look for expired entries in the whitelist
+and deletes them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/identities' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/identities' endpoint.
 `
 
-const pathListWhitelistIdentitiesHelpSyn = `
-List the items present in the identity whitelist.
+const pathListIdentityWhitelistHelpSyn = `
+Lists the items present in the identity whitelist.
 `
 
-const pathListWhitelistIdentitiesHelpDesc = `
+const pathListIdentityWhitelistHelpDesc = `
 The entries in the identity whitelist is keyed off of the EC2 instance IDs.
 This endpoint lists all the entries present in the identity whitelist, both
 expired and un-expired entries. Use 'tidy/identities' endpoint to clean-up

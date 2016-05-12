@@ -22,8 +22,9 @@ func pathRole(b *backend) *framework.Path {
 			},
 
 			"bound_ami_id": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `If set, instances attempting login must be running the given AMI.`,
+				Type: framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that they should be
+using the AMI ID specified by this parameter.`,
 			},
 
 			"role_tag": &framework.FieldSchema{
@@ -35,13 +36,13 @@ func pathRole(b *backend) *framework.Path {
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
-				Description: "The maximum allowed lifetime for tokens issued due to logins using this role.",
+				Description: "The maximum allowed lifetime of tokens issued using this role.",
 			},
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "default",
-				Description: "Policies to be set on tokens logging in using this role.",
+				Description: "Policies to be set on tokens issued using this role.",
 			},
 
 			"allow_instance_migration": &framework.FieldSchema{

@@ -12,7 +12,7 @@ const (
 	identityWhitelistConfigPath = "config/tidy/identity-whitelist"
 )
 
-func pathConfigTidyIdentities(b *backend) *framework.Path {
+func pathConfigTidyIdentityWhitelist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", identityWhitelistConfigPath),
 		Fields: map[string]*framework.FieldSchema{
@@ -25,25 +25,25 @@ expiration, before it is removed from the backend storage.`,
 			"disable_periodic_tidy": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to 'true', disables the periodic tidying of the 'whitelist/identity/<instance_id>' entries.",
+				Description: "If set to 'true', disables the periodic tidying of the 'identity-whitelist/<instance_id>' entries.",
 			},
 		},
 
-		ExistenceCheck: b.pathConfigTidyIdentitiesExistenceCheck,
+		ExistenceCheck: b.pathConfigTidyIdentityWhitelistExistenceCheck,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigTidyIdentitiesCreateUpdate,
-			logical.UpdateOperation: b.pathConfigTidyIdentitiesCreateUpdate,
-			logical.ReadOperation:   b.pathConfigTidyIdentitiesRead,
-			logical.DeleteOperation: b.pathConfigTidyIdentitiesDelete,
+			logical.CreateOperation: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+			logical.UpdateOperation: b.pathConfigTidyIdentityWhitelistCreateUpdate,
+			logical.ReadOperation:   b.pathConfigTidyIdentityWhitelistRead,
+			logical.DeleteOperation: b.pathConfigTidyIdentityWhitelistDelete,
 		},
 
-		HelpSynopsis:    pathConfigTidyIdentitiesHelpSyn,
-		HelpDescription: pathConfigTidyIdentitiesHelpDesc,
+		HelpSynopsis:    pathConfigTidyIdentityWhitelistHelpSyn,
+		HelpDescription: pathConfigTidyIdentityWhitelistHelpDesc,
 	}
 }
 
-func (b *backend) pathConfigTidyIdentitiesExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.configTidyIdentities(req.Storage)
 	if err != nil {
 		return false, err
@@ -74,7 +74,7 @@ func (b *backend) configTidyIdentitiesInternal(s logical.Storage) (*tidyWhitelis
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -112,7 +112,7 @@ func (b *backend) pathConfigTidyIdentitiesCreateUpdate(req *logical.Request, dat
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyIdentitiesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	clientConfig, err := b.configTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (b *backend) pathConfigTidyIdentitiesRead(req *logical.Request, data *frame
 	}, nil
 }
 
-func (b *backend) pathConfigTidyIdentitiesDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -138,12 +138,12 @@ type tidyWhitelistIdentityConfig struct {
 	DisablePeriodicTidy bool `json:"disable_periodic_tidy" structs:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
 }
 
-const pathConfigTidyIdentitiesHelpSyn = `
+const pathConfigTidyIdentityWhitelistHelpSyn = `
 Configures the periodic tidying operation of the whitelisted identity entries.
 `
-const pathConfigTidyIdentitiesHelpDesc = `
+const pathConfigTidyIdentityWhitelistHelpDesc = `
 By default, the expired entries in the whitelist will be attempted to be removed
-periodically. This operation will look for expired items in the list and purge them.
+periodically. This operation will look for expired items in the list and purges them.
 However, there is a safety buffer duration (defaults to 72h), purges the entries
 only if they have been persisting this duration, past its expiration time.
 `

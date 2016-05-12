@@ -84,15 +84,15 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),
-			pathConfigTidyRoleTags(b),
-			pathConfigTidyIdentities(b),
+			pathConfigTidyRoletagBlacklist(b),
+			pathConfigTidyIdentityWhitelist(b),
 			pathListCertificates(b),
-			pathListBlacklistRoleTags(b),
-			pathBlacklistRoleTag(b),
-			pathTidyRoleTags(b),
-			pathListWhitelistIdentities(b),
-			pathWhitelistIdentity(b),
-			pathTidyIdentities(b),
+			pathListRoletagBlacklist(b),
+			pathRoletagBlacklist(b),
+			pathTidyRoletagBlacklist(b),
+			pathListIdentityWhitelist(b),
+			pathIdentityWhitelist(b),
+			pathTidyIdentityWhitelist(b),
 		},
 	}
 
@@ -168,9 +168,10 @@ Authentication is backed by a preconfigured role in the backend. The role
 represents the authorization of resources by containing Vault's policies.
 Role can be created using 'role/<role_name>' endpoint.
 
-If there is need to further restrict the policies set on the role, 'role_tag' option
-can be enabled on the role, and a tag can be generated using 'role/<role_name>/tag'
-endpoint. This tag represents the subset of capabilities set on the role. When the
-'role_tag' option is enabled on the role, the login operation requires that a respective
-role tag is attached to the EC2 instance that is performing the login.
+If there is need to further restrict the capabilities of the role on the instance
+that is using the role, 'role_tag' option can be enabled on the role, and a tag
+can be generated using 'role/<role_name>/tag' endpoint. This tag represents the
+subset of capabilities set on the role. When the 'role_tag' option is enabled on
+the role, the login operation requires that a respective role tag is attached to
+the EC2 instance which performs the login.
 `

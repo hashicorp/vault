@@ -419,9 +419,9 @@ Create a tag on a role in order to be able to further restrict the capabilities 
 `
 
 const pathRoleTagDesc = `
-If there are needs to apply only a subset of role's capabilities on the instance,
-create a role tag using this endpoint and attach the tag on the instance before
-performing login.
+If there are needs to apply only a subset of role's capabilities to any specific
+instance, create a role tag using this endpoint and attach the tag on the instance
+before performing login.
 
 To be able to create a role tag, the 'role_tag' option on the role should be
 enabled via the endpoint 'role/<role_name>'. Also, the policies to be associated

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathBlacklistRoleTag(b *backend) *framework.Path {
+func pathRoletagBlacklist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
@@ -21,32 +21,32 @@ to avoid any encoding problems, it can be base64 encoded.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathBlacklistRoleTagUpdate,
-			logical.ReadOperation:   b.pathBlacklistRoleTagRead,
-			logical.DeleteOperation: b.pathBlacklistRoleTagDelete,
+			logical.UpdateOperation: b.pathRoletagBlacklistUpdate,
+			logical.ReadOperation:   b.pathRoletagBlacklistRead,
+			logical.DeleteOperation: b.pathRoletagBlacklistDelete,
 		},
 
-		HelpSynopsis:    pathBlacklistRoleTagSyn,
-		HelpDescription: pathBlacklistRoleTagDesc,
+		HelpSynopsis:    pathRoletagBlacklistSyn,
+		HelpDescription: pathRoletagBlacklistDesc,
 	}
 }
 
 // Path to list all the blacklisted tags.
-func pathListBlacklistRoleTags(b *backend) *framework.Path {
+func pathListRoletagBlacklist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/?",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathBlacklistRoleTagsList,
+			logical.ListOperation: b.pathRoletagBlacklistsList,
 		},
 
-		HelpSynopsis:    pathListBlacklistRoleTagsHelpSyn,
-		HelpDescription: pathListBlacklistRoleTagsHelpDesc,
+		HelpSynopsis:    pathListRoletagBlacklistHelpSyn,
+		HelpDescription: pathListRoletagBlacklistHelpDesc,
 	}
 }
 
 // Lists all the blacklisted role tags.
-func (b *backend) pathBlacklistRoleTagsList(
+func (b *backend) pathRoletagBlacklistsList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.blacklistMutex.RLock()
 	defer b.blacklistMutex.RUnlock()
@@ -96,7 +96,7 @@ func (b *backend) blacklistRoleTagEntryInternal(s logical.Storage, tag string) (
 }
 
 // Deletes an entry from the role tag blacklist for a given tag.
-func (b *backend) pathBlacklistRoleTagDelete(
+func (b *backend) pathRoletagBlacklistDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.blacklistMutex.Lock()
 	defer b.blacklistMutex.Unlock()
@@ -111,7 +111,7 @@ func (b *backend) pathBlacklistRoleTagDelete(
 
 // If the given role tag is blacklisted, returns the details of the blacklist entry.
 // Returns 'nil' otherwise.
-func (b *backend) pathBlacklistRoleTagRead(
+func (b *backend) pathRoletagBlacklistRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	tag := data.Get("role_tag").(string)
@@ -132,10 +132,10 @@ func (b *backend) pathBlacklistRoleTagRead(
 	}, nil
 }
 
-// pathBlacklistRoleTagUpdate is used to blacklist a given role tag.
+// pathRoletagBlacklistUpdate is used to blacklist a given role tag.
 // Before a role tag is blacklisted, the correctness of the plaintext part
 // in the role tag is verified using the associated HMAC.
-func (b *backend) pathBlacklistRoleTagUpdate(
+func (b *backend) pathRoletagBlacklistUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	// The role_tag value provided, optionally can be base64 encoded.
@@ -226,17 +226,17 @@ type roleTagBlacklistEntry struct {
 	ExpirationTime time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
 }
 
-const pathBlacklistRoleTagSyn = `
+const pathRoletagBlacklistSyn = `
 Blacklist a previously created role tag.
 `
 
-const pathBlacklistRoleTagDesc = `
-Blacklist a role tag so that it cannot be used by any EC2 instance to perform logins
-in the future. This can be used if the role tag is suspected or believed to be possessed
-by an unintended party.
+const pathRoletagBlacklistDesc = `
+Blacklist a role tag so that it cannot be used by any EC2 instance to perform further
+logins. This can be used if the role tag is suspected or believed to be possessed by
+an unintended party.
 
-By default, a cron task will periodically looks for expired entries in the blacklist
-and delete them. The duration to periodically run this, is one hour by default.
+By default, a cron task will periodically look for expired entries in the blacklist
+and deletes them. The duration to periodically run this, is one hour by default.
 However, this can be configured using the 'config/tidy/roletags' endpoint. This tidy
 action can be triggered via the API as well, using the 'tidy/roletags' endpoint.
 
@@ -244,12 +244,12 @@ Also note that delete operation is supported on this endpoint to remove specific
 entries from the blacklist.
 `
 
-const pathListBlacklistRoleTagsHelpSyn = `
-List the blacklisted role tags.
+const pathListRoletagBlacklistHelpSyn = `
+Lists the blacklisted role tags.
 `
 
-const pathListBlacklistRoleTagsHelpDesc = `
-List all the entries present in the blacklist. This will show both the valid
+const pathListRoletagBlacklistHelpDesc = `
+Lists all the entries present in the blacklist. This will show both the valid
 entries and the expired entries in the blacklist. Use 'tidy/roletags' endpoint
 to clean-up the blacklist of role tags based on expiration time.
 `

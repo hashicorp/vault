@@ -49,15 +49,15 @@ func createBackend(conf *logical.BackendConfig) (*backend, error) {
 			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),
-			pathConfigTidyRoleTags(b),
-			pathConfigTidyIdentities(b),
+			pathConfigTidyRoletagBlacklist(b),
+			pathConfigTidyIdentityWhitelist(b),
 			pathListCertificates(b),
-			pathListBlacklistRoleTags(b),
-			pathBlacklistRoleTag(b),
-			pathTidyRoleTags(b),
-			pathListWhitelistIdentities(b),
-			pathWhitelistIdentity(b),
-			pathTidyIdentities(b),
+			pathListRoletagBlacklist(b),
+			pathRoletagBlacklist(b),
+			pathTidyRoletagBlacklist(b),
+			pathListIdentityWhitelist(b),
+			pathIdentityWhitelist(b),
+			pathTidyIdentityWhitelist(b),
 		},
 	}
 
@@ -413,7 +413,7 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	// test update operation
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "tidy/identities",
+		Path:      "tidy/identity-whitelist",
 		Storage:   storage,
 	})
 	if err != nil {
@@ -438,7 +438,7 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	// test update operation
 	_, err = b.HandleRequest(&logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "tidy/roletags",
+		Path:      "tidy/roletag-blacklist",
 		Storage:   storage,
 	})
 	if err != nil {

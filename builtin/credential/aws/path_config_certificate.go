@@ -310,24 +310,24 @@ type awsPublicCert struct {
 }
 
 const pathConfigCertificateSyn = `
-Configure the AWS Public Key that is used to verify the PKCS#7 signature of the identidy document.
+Adds the AWS Public Key that is used to verify the PKCS#7 signature of the identidy document.
 `
 
 const pathConfigCertificateDesc = `
 AWS Public Key which is used to verify the PKCS#7 signature of the identity document,
-varies by region. The public key can be found in AWS EC2 instance metadata documentation.
+varies by region. The public key(s) can be found in AWS EC2 instance metadata documentation.
 The default key that is used to verify the signature is the one that is applicable for
 following regions: US East (N. Virginia), US West (Oregon), US West (N. California),
 EU (Ireland), EU (Frankfurt), Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
 Asia Pacific (Sydney), and South America (Sao Paulo).
 
-If the instances belongs to region other than the above, the public key for the corresponding
-regions should be registered using this endpoint. PKCS#7 is verified using a collection
-of certificates containing the default certificate and all the registered certificates
-added using this endpoint.
+If the instances belongs to region other than the above, the public key(s) for the
+corresponding regions should be registered using this endpoint. PKCS#7 is verified
+using a collection of certificates containing the default certificate and all the
+certificates that are registered using this endpoint.
 `
 const pathListCertificatesHelpSyn = `
-Lists all the AWS public certificates that are registered with Vault.
+Lists all the AWS public certificates that are registered with the backend.
 `
 const pathListCertificatesHelpDesc = `
 Certificates will be listed by their respective names that were used during registration.

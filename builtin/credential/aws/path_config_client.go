@@ -13,19 +13,19 @@ func pathConfigClient(b *backend) *framework.Path {
 			"access_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "AWS Access key with permissions to query EC2 instance metadata.",
+				Description: "AWS Access key with permissions to query EC2 DescribeInstances API.",
 			},
 
 			"secret_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "AWS Secret key with permissions to query EC2 instance metadata.",
+				Description: "AWS Secret key with permissions to query EC2 DescribeInstances API.",
 			},
 
 			"endpoint": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "The endpoint to be used to make API calls to AWS EC2.",
+				Description: "URL to override the default generated endpoint for making AWS EC2 API calls.",
 			},
 		},
 
@@ -193,7 +193,7 @@ Configure the client credentials that are used to query instance details from AW
 `
 
 const pathConfigClientHelpDesc = `
-AWS auth backend makes API calls to retrieve EC2 instance metadata.
-The aws_secret_key and aws_access_key registered with Vault should have the
-permissions to make these API calls.
+AWS auth backend makes DescribeInstances API call to retrieve information regarding
+the instance that performs login. The aws_secret_key and aws_access_key registered with Vault should have the
+permissions to make the API call.
 `
