@@ -489,7 +489,7 @@ func (c *Core) Standby() (bool, error) {
 }
 
 // Leader is used to get the current active leader
-func (c *Core) Leader() (bool, string, error) {
+func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	// Check if HA enabled
@@ -650,11 +650,9 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
-			go func() {
-				if err := sd.AdvertiseSealed(false); err != nil {
-					c.logger.Printf("[WARN] core: failed to advertise unsealed status: %v", err)
-				}
-			}()
+			if err := sd.NotifySealedStateChange(); err != nil {
+				c.logger.Printf("[WARN] core: failed to notify unsealed status: %v", err)
+			}
 		}
 	}
 	return true, nil
@@ -822,11 +820,9 @@ func (c *Core) sealInternal() error {
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
-			go func() {
-				if err := sd.AdvertiseSealed(true); err != nil {
-					c.logger.Printf("[WARN] core: failed to advertise sealed status: %v", err)
-				}
-			}()
+			if err := sd.NotifySealedStateChange(); err != nil {
+				c.logger.Printf("[WARN] core: failed to notify sealed status: %v", err)
+			}
 		}
 	}
 
@@ -1146,11 +1142,9 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 
 	sd, ok := c.ha.(physical.ServiceDiscovery)
 	if ok {
-		go func() {
-			if err := sd.AdvertiseActive(true); err != nil {
-				c.logger.Printf("[WARN] core: failed to advertise active status: %v", err)
-			}
-		}()
+		if err := sd.NotifyActiveStateChange(); err != nil {
+			c.logger.Printf("[WARN] core: failed to notify active status: %v", err)
+		}
 	}
 	return nil
 }
@@ -1182,11 +1176,9 @@ func (c *Core) clearLeader(uuid string) error {
 	// Advertise ourselves as a standby
 	sd, ok := c.ha.(physical.ServiceDiscovery)
 	if ok {
-		go func() {
-			if err := sd.AdvertiseActive(false); err != nil {
-				c.logger.Printf("[WARN] core: failed to advertise standby status: %v", err)
-			}
-		}()
+		if err := sd.NotifyActiveStateChange(); err != nil {
+			c.logger.Printf("[WARN] core: failed to notify standby status: %v", err)
+		}
 	}
 
 	return err

@@ -3,6 +3,7 @@ package physical
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"reflect"
 	"testing"
@@ -39,28 +40,6 @@ func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
 		t.Fatalf("Expected ConsulBackend")
 	}
 
-	c.consulClientConf = api.DefaultConfig()
-
-	c.service = &api.AgentServiceRegistration{
-		ID:                c.serviceID(),
-		Name:              c.serviceName,
-		Tags:              serviceTags(c.active),
-		Port:              8200,
-		Address:           testHostIP(),
-		EnableTagOverride: false,
-	}
-
-	c.sealedCheck = &api.AgentCheckRegistration{
-		ID:        c.checkID(),
-		Name:      "Vault Sealed Status",
-		Notes:     "Vault service is healthy when Vault is in an unsealed status and can become an active Vault server",
-		ServiceID: c.serviceID(),
-		AgentServiceCheck: api.AgentServiceCheck{
-			TTL:    c.checkTimeout.String(),
-			Status: api.HealthPassing,
-		},
-	}
-
 	return c
 }
 
@@ -69,21 +48,27 @@ func testConsul_testConsulBackend(t *testing.T) {
 	if c == nil {
 		t.Fatalf("bad")
 	}
+}
 
-	if c.active != false {
-		t.Fatalf("bad")
+func testActiveFunc(activePct float64) activeFunction {
+	return func() bool {
+		var active bool
+		standbyProb := rand.Float64()
+		if standbyProb > activePct {
+			active = true
+		}
+		return active
 	}
+}
 
-	if c.unsealed != false {
-		t.Fatalf("bad")
-	}
-
-	if c.service == nil {
-		t.Fatalf("bad")
-	}
-
-	if c.sealedCheck == nil {
-		t.Fatalf("bad")
+func testSealedFunc(sealedPct float64) sealedFunction {
+	return func() bool {
+		var sealed bool
+		unsealedProb := rand.Float64()
+		if unsealedProb > sealedPct {
+			sealed = true
+		}
+		return sealed
 	}
 }
 
@@ -165,8 +150,15 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		}
 		c.disableRegistration = true
 
+		if c.disableRegistration == false {
+			addr := os.Getenv("CONSUL_HTTP_ADDR")
+			if addr == "" {
+				continue
+			}
+		}
+
 		var shutdownCh ShutdownChannel
-		if err := c.RunServiceDiscovery(shutdownCh, test.advertiseAddr); err != nil {
+		if err := c.RunServiceDiscovery(shutdownCh, test.advertiseAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 
@@ -180,18 +172,6 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		if test.service != c.serviceName {
 			t.Errorf("bad: %v != %v", test.service, c.serviceName)
-		}
-
-		if test.address != c.consulClientConf.Address {
-			t.Errorf("bad: %s %v != %v", test.name, test.address, c.consulClientConf.Address)
-		}
-
-		if test.scheme != c.consulClientConf.Scheme {
-			t.Errorf("bad: %v != %v", test.scheme, c.consulClientConf.Scheme)
-		}
-
-		if test.token != c.consulClientConf.Token {
-			t.Errorf("bad: %v != %v", test.token, c.consulClientConf.Token)
 		}
 
 		// FIXME(sean@): Unable to test max_parallel
@@ -289,7 +269,7 @@ func TestConsul_setAdvertiseAddr(t *testing.T) {
 	}
 }
 
-func TestConsul_AdvertiseActive(t *testing.T) {
+func TestConsul_NotifyActiveStateChange(t *testing.T) {
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
 		t.Skipf("No consul process running, skipping test")
@@ -297,32 +277,12 @@ func TestConsul_AdvertiseActive(t *testing.T) {
 
 	c := testConsulBackend(t)
 
-	if c.active != false {
-		t.Fatalf("bad")
-	}
-
-	if err := c.AdvertiseActive(true); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-
-	if err := c.AdvertiseActive(true); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-
-	if err := c.AdvertiseActive(false); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-
-	if err := c.AdvertiseActive(false); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-
-	if err := c.AdvertiseActive(true); err != nil {
+	if err := c.NotifyActiveStateChange(); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
 }
 
-func TestConsul_AdvertiseSealed(t *testing.T) {
+func TestConsul_NotifySealedStateChange(t *testing.T) {
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
 		t.Skipf("No consul process running, skipping test")
@@ -330,43 +290,8 @@ func TestConsul_AdvertiseSealed(t *testing.T) {
 
 	c := testConsulBackend(t)
 
-	if c.unsealed == true {
-		t.Fatalf("bad")
-	}
-
-	if err := c.AdvertiseSealed(true); err != nil {
+	if err := c.NotifySealedStateChange(); err != nil {
 		t.Fatalf("bad: %v", err)
-	}
-	if c.unsealed == true {
-		t.Fatalf("bad")
-	}
-
-	if err := c.AdvertiseSealed(true); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-	if c.unsealed == true {
-		t.Fatalf("bad")
-	}
-
-	if err := c.AdvertiseSealed(false); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-	if c.unsealed == false {
-		t.Fatalf("bad")
-	}
-
-	if err := c.AdvertiseSealed(false); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-	if c.unsealed == false {
-		t.Fatalf("bad")
-	}
-
-	if err := c.AdvertiseSealed(true); err != nil {
-		t.Fatalf("bad: %v", err)
-	}
-	if c.unsealed == true {
-		t.Fatalf("bad")
 	}
 }
 
