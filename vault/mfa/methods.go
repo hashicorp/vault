@@ -26,6 +26,7 @@ func methodListPaths(b *backend) *framework.Path {
 func methodPaths(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "methods/" + framework.GenericNameRegex("method_name") + "$",
+
 		Fields: map[string]*framework.FieldSchema{
 			"method_name": &framework.FieldSchema{
 				Type:        framework.TypeString,

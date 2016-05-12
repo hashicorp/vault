@@ -13,6 +13,13 @@ func methodIdentifiersListPaths(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "methods/" + framework.GenericNameRegex("method_name") + "/?$",
 
+		Fields: map[string]*framework.FieldSchema{
+			"method_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: mfaMethodNameHelp,
+			},
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.mfaBackendMethodIdentifiersList,
 		},
@@ -25,6 +32,7 @@ func methodIdentifiersListPaths(b *backend) *framework.Path {
 func methodIdentifiersPaths(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "methods/" + framework.GenericNameRegex("method_name") + "/(?P<identifier>.+)",
+
 		Fields: map[string]*framework.FieldSchema{
 			"method_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -46,8 +54,7 @@ func methodIdentifiersPaths(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.mfaBackendMethodIdentifiersRead,
-			logical.CreateOperation: b.mfaBackendMethodIdentifiersCreateUpdate,
-			logical.UpdateOperation: b.mfaBackendMethodIdentifiersCreateUpdate,
+			logical.CreateOperation: b.mfaBackendMethodIdentifiersCreate,
 			logical.DeleteOperation: b.mfaBackendMethodIdentifiersDelete,
 		},
 
@@ -201,7 +208,7 @@ func (b *backend) mfaBackendMethodIdentifiersExistenceCheck(
 	return entry != nil, nil
 }
 
-func (b *backend) mfaBackendMethodIdentifiersCreateUpdate(
+func (b *backend) mfaBackendMethodIdentifiersCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.Operation == logical.UpdateOperation {
 		return logical.ErrorResponse("identifiers cannot be updated; delete and recreate the identifier to reregister"), nil
@@ -243,6 +250,9 @@ func (b *backend) mfaBackendMethodIdentifiersCreateUpdate(
 		err := b.createTOTPKey(method, entry, resp)
 		if err != nil {
 			return nil, err
+		}
+		if resp.IsError() {
+			return resp, nil
 		}
 
 	default:

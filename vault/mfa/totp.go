@@ -12,6 +12,12 @@ import (
 )
 
 func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIdentifierEntry, resp *logical.Response) error {
+	if identifierEntry.TOTPAccountName == "" {
+		newResp := logical.ErrorResponse("\"totp_account_name\" must be set on the identifier")
+		*resp = *newResp
+		return nil
+	}
+
 	alg, err := method.totpAlgorithm()
 	if err != nil {
 		return err
@@ -38,7 +44,9 @@ func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIden
 	if resp.Data == nil {
 		resp.Data = map[string]interface{}{}
 	}
+
 	resp.Data["totp_secret"] = key.Secret()
+	resp.Data["totp_url"] = key.String()
 
 	keyImage, err := key.Image(1024, 1024)
 	if err != nil {
@@ -53,6 +61,9 @@ func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIden
 	resp.Data["totp_qrcode_png"] = base64.StdEncoding.EncodeToString(pngBuf.Bytes())
 
 	// Force the response into a cubbyhole
+	if resp.WrapInfo == nil {
+		resp.WrapInfo = &logical.WrapInfo{}
+	}
 	resp.WrapInfo.TTL = 5 * time.Minute
 
 	return nil

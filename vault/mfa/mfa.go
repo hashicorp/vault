@@ -17,10 +17,10 @@ func MFABackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 		Help: strings.TrimSpace(mfaHelp),
 
 		Paths: []*framework.Path{
-			methodPaths(&b.backend),
 			methodListPaths(&b.backend),
-			methodIdentifiersPaths(&b.backend),
+			methodPaths(&b.backend),
 			methodIdentifiersListPaths(&b.backend),
+			methodIdentifiersPaths(&b.backend),
 		},
 	}
 

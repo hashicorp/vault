@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestMFAMethods_CRUD_TOTP(t *testing.T) {
+func TestMFAIdentifiers_CRD_TOTP(t *testing.T) {
 	b, err := MFABackendFactory(logical.TestBackendConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -16,14 +16,29 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	b.(*MFABackend).SetStorage(storage)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "methods/test")
+	// Create the TOTP role
+	req := logical.TestRequest(t, logical.CreateOperation, "methods/test")
+	req.Operation = logical.CreateOperation
+	req.Data = map[string]interface{}{
+		"type":                "totp",
+		"totp_hash_algorithm": "sha256",
+	}
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
 	if resp != nil {
-		t.Fatalf("should not see a method")
+		t.Fatal("got response, expected a nil response")
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "methods/test/jeff@hashicorp.com")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("should not see an identifier")
 	}
 
 	req.Operation = logical.UpdateOperation
@@ -41,10 +56,10 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	//
 	// Creation
 	//
+	// Note that this function just does CRUD tests, the actual TOTP validation
+	// is in other tests
 	req.Operation = logical.CreateOperation
-	req.Data = map[string]interface{}{
-		"type": "somefin",
-	}
+	req.Data = map[string]interface{}{}
 
 	resp, err = b.HandleRequest(req)
 	if err != nil {
@@ -57,17 +72,16 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 		t.Fatalf("expected an error response, got %#v", *resp)
 	}
 
-	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
-		"type": "totp",
+		"totp_account_name": "jeff@hashicorp.com",
 	}
 
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
-	if resp != nil {
-		t.Fatalf("expected a nil response, got %#v", *resp)
+	if resp == nil {
+		t.Fatalf("got a nil response")
 	}
 
 	checkExists, found, err = b.HandleExistenceCheck(req)
@@ -79,40 +93,6 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("entry should have been found")
-	}
-
-	//
-	// Updating
-	//
-	req.Operation = logical.UpdateOperation
-	req.Data = map[string]interface{}{
-		"type":                "totp",
-		"totp_hash_algorithm": "sha28182",
-	}
-
-	resp, err = b.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp == nil {
-		t.Fatal("got a nil response, expected an error response")
-	}
-	if !resp.IsError() {
-		t.Fatalf("expected an error response, got %#v", *resp)
-	}
-
-	req.Operation = logical.UpdateOperation
-	req.Data = map[string]interface{}{
-		"type":                "totp",
-		"totp_hash_algorithm": "sha256",
-	}
-
-	resp, err = b.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
-	}
-	if resp != nil {
-		t.Fatalf("expected a nil response, got %#v", *resp)
 	}
 
 	//
@@ -129,10 +109,11 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"name":                "test",
-		"type":                "totp",
-		"totp_hash_algorithm": "sha256",
+		"totp_account_name": "jeff@hashicorp.com",
+		"identifier":        "jeff@hashicorp.com",
 	}
+	delete(resp.Data, "creation_time_utc")
+	delete(resp.Data, "creation_time_string")
 
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
@@ -141,8 +122,9 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	//
 	// Listing
 	//
-	req.Path = "methods"
+	req.Path = "methods/test/"
 	req.Operation = logical.ListOperation
+	req.Data = map[string]interface{}{}
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -152,7 +134,7 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	}
 
 	expectedList := []string{
-		"test",
+		"jeff@hashicorp.com",
 	}
 
 	if !reflect.DeepEqual(expectedList, resp.Data["keys"].([]string)) {
@@ -162,7 +144,7 @@ func TestMFAMethods_CRUD_TOTP(t *testing.T) {
 	//
 	// Deletion
 	//
-	req = logical.TestRequest(t, logical.DeleteOperation, "methods/test")
+	req = logical.TestRequest(t, logical.DeleteOperation, "methods/test/jeff@hashicorp.com")
 
 	resp, err = b.HandleRequest(req)
 	if err != nil {
