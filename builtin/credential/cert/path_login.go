@@ -149,7 +149,7 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
 		policy := b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs)
-		if policy != nil {
+		if policy != nil && !b.checkForChainInCRLs(policy.Certificates) {
 			return policy, nil, nil
 		}
 	}
@@ -245,18 +245,21 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 	return
 }
 
-func (b *backend) checkForValidChain(store logical.Storage, chains [][]*x509.Certificate) bool {
-	var badChain bool
-	for _, chain := range chains {
-		badChain = false
-		for _, cert := range chain {
-			badCRLs := b.findSerialInCRLs(cert.SerialNumber)
-			if len(badCRLs) != 0 {
-				badChain = true
-				break
-			}
+func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
+	badChain := false
+	for _, cert := range chain {
+		badCRLs := b.findSerialInCRLs(cert.SerialNumber)
+		if len(badCRLs) != 0 {
+			badChain = true
+			break
 		}
-		if !badChain {
+	}
+	return badChain
+}
+
+func (b *backend) checkForValidChain(store logical.Storage, chains [][]*x509.Certificate) bool {
+	for _, chain := range chains {
+		if !b.checkForChainInCRLs(chain) {
 			return true
 		}
 	}

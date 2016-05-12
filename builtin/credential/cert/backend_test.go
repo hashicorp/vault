@@ -110,6 +110,80 @@ func failOnError(t *testing.T, resp *logical.Response, err error) {
 	}
 }
 
+func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nonCACert, err := ioutil.ReadFile(testCertPath1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register the Non-CA certificate of the client key pair
+	certData := map[string]interface{}{
+		"certificate":  nonCACert,
+		"policies":     "abc",
+		"display_name": "cert1",
+		"ttl":          10000,
+	}
+	certReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/cert1",
+		Storage:   storage,
+		Data:      certData,
+	}
+
+	resp, err := b.HandleRequest(certReq)
+	failOnError(t, resp, err)
+
+	// Connection state is presenting the client Non-CA cert and its key.
+	// This is exactly what is registered at the backend.
+	connState := connectionState(t, serverCAPath, serverCertPath, serverKeyPath, testCertPath1, testKeyPath1)
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "login",
+		Connection: &logical.Connection{
+			ConnState: &connState,
+		},
+	}
+	// Login should succeed.
+	resp, err = b.HandleRequest(loginReq)
+	failOnError(t, resp, err)
+
+	// Register a CRL containing the issued client certificate used above.
+	issuedCRL, err := ioutil.ReadFile(testIssuedCertCRL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	crlData := map[string]interface{}{
+		"crl": issuedCRL,
+	}
+	crlReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "crls/issuedcrl",
+		Data:      crlData,
+	}
+	resp, err = b.HandleRequest(crlReq)
+	failOnError(t, resp, err)
+
+	// Attempt login with the same connection state but with the CRL registered
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected failure due to revoked certificate")
+	}
+}
+
 func TestBackend_CRLs(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
