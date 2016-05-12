@@ -247,33 +247,35 @@ func (b *backend) mfaBackendMethodCreateUpdate(
 		}
 	}
 
-	duoHostInt, ok := data.GetOk("duo_host")
-	if ok {
-		entry.DuoHost = duoHostInt.(string)
-	} else if req.Operation == logical.CreateOperation {
-		entry.DuoHost = data.Get("duo_host").(string)
-	}
+	/*
+		duoHostInt, ok := data.GetOk("duo_host")
+		if ok {
+			entry.DuoHost = duoHostInt.(string)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DuoHost = data.Get("duo_host").(string)
+		}
 
-	duoIKeyInt, ok := data.GetOk("duo_ikey")
-	if ok {
-		entry.DuoIKey = duoIKeyInt.(string)
-	} else if req.Operation == logical.CreateOperation {
-		entry.DuoIKey = data.Get("duo_ikey").(string)
-	}
+		duoIKeyInt, ok := data.GetOk("duo_ikey")
+		if ok {
+			entry.DuoIKey = duoIKeyInt.(string)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DuoIKey = data.Get("duo_ikey").(string)
+		}
 
-	duoSKeyInt, ok := data.GetOk("duo_skey")
-	if ok {
-		entry.DuoSKey = duoSKeyInt.(string)
-	} else if req.Operation == logical.CreateOperation {
-		entry.DuoSKey = data.Get("duo_skey").(string)
-	}
+		duoSKeyInt, ok := data.GetOk("duo_skey")
+		if ok {
+			entry.DuoSKey = duoSKeyInt.(string)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DuoSKey = data.Get("duo_skey").(string)
+		}
 
-	duoUserAgentInt, ok := data.GetOk("duo_user_agent")
-	if ok {
-		entry.DuoUserAgent = duoUserAgentInt.(string)
-	} else if req.Operation == logical.CreateOperation {
-		entry.DuoUserAgent = data.Get("duo_user_agent").(string)
-	}
+		duoUserAgentInt, ok := data.GetOk("duo_user_agent")
+		if ok {
+			entry.DuoUserAgent = duoUserAgentInt.(string)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DuoUserAgent = data.Get("duo_user_agent").(string)
+		}
+	*/
 
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON(fmt.Sprintf("method/%s/config", strings.ToLower(methodName)), entry)
@@ -297,17 +299,19 @@ type mfaMethodEntry struct {
 	// The hash type, such as "sha1"
 	TOTPHashAlgorithm string `json:"totp_hash_algorithm" mapstructure:"totp_hash_algorithm" structs:"totp_hash_algorithm"`
 
-	// The host to use for Duo authentication
-	DuoHost string `json:"duo_host" mapstructure:"duo_host" structs:"duo_host"`
+	/*
+		// The host to use for Duo authentication
+		DuoHost string `json:"duo_host" mapstructure:"duo_host" structs:"duo_host"`
 
-	// The integration key for Duo authentication
-	DuoIKey string `json:"duo_ikey" mapstructure:"duo_ikey" structs:"duo_ikey"`
+		// The integration key for Duo authentication
+		DuoIKey string `json:"duo_ikey" mapstructure:"duo_ikey" structs:"duo_ikey"`
 
-	// The secret key for Duo authentication
-	DuoSKey string `json:"duo_skey" mapstructure:"duo_skey" structs:"duo_skey"`
+		// The secret key for Duo authentication
+		DuoSKey string `json:"duo_skey" mapstructure:"duo_skey" structs:"duo_skey"`
 
-	// The user agent for Duo authentication
-	DuoUserAgent string `json:"duo_user_agent" mapstructure:"duo_user_agent" structs:"duo_user_agent"`
+		// The user agent for Duo authentication
+		DuoUserAgent string `json:"duo_user_agent" mapstructure:"duo_user_agent" structs:"duo_user_agent"`
+	*/
 }
 
 func (me *mfaMethodEntry) totpAlgorithm() (otp.Algorithm, error) {

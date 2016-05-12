@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+type MFAInfo struct {
+	// The method to use
+	Method string
+
+	// The user/service identifier on the method
+	Identifier string
+
+	// Extra parameters
+	Parameters map[string]string
+}
+
 // Request is a struct that stores the parameters and context
 // of a request being made to Vault. It is used to abstract
 // the details of the higher level request protocol from the handlers.
@@ -58,8 +69,9 @@ type Request struct {
 	// response in a cubbyhole.
 	WrapTTL time.Duration
 
-	// MFAParams contains parameters consumed by MFA authenticators
-	MFAParams map[string]string
+	// MFAInfo contains information and parameters consumed by MFA
+	// authenticators
+	MFAInfo *MFAInfo
 }
 
 // Get returns a data field and guards for nil Data
@@ -156,4 +168,10 @@ var (
 
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
+
+	// ErrMFAInvalid is returned if MFA is required but not provided or not valid
+	ErrMFAInvalid = errors.New("MFA is required but was not supplied or not valid")
+
+	// ErrMFAPermissionDenied is returned if no MFA method succeeded
+	ErrMFAPermissionDenied = errors.New("no MFA method succeeded with the given credentials")
 )

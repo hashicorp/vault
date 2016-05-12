@@ -231,8 +231,8 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 	}
 
 	// Cache and nil the MFA params
-	origMFAParams := req.MFAParams
-	req.MFAParams = nil
+	origMFAInfo := req.MFAInfo
+	req.MFAInfo = nil
 
 	// Attach the storage view for the request
 	req.Storage = re.storageView
@@ -288,7 +288,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 		req.Connection = originalConn
 		req.Storage = nil
 		req.ClientToken = clientToken
-		req.MFAParams = origMFAParams
+		req.MFAInfo = origMFAInfo
 	}()
 
 	// Invoke the backend

@@ -27,6 +27,15 @@ func (f *FormatJSON) FormatRequest(
 		errString = err.Error()
 	}
 
+	var reqMFAInfo *JSONMFAInfo
+	if req.MFAInfo != nil {
+		reqMFAInfo = &JSONMFAInfo{
+			Method:     req.MFAInfo.Method,
+			Identifier: req.MFAInfo.Identifier,
+			Parameters: req.MFAInfo.Parameters,
+		}
+	}
+
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
@@ -47,6 +56,7 @@ func (f *FormatJSON) FormatRequest(
 			Data:        req.Data,
 			RemoteAddr:  getRemoteAddr(req),
 			WrapTTL:     int64(req.WrapTTL / time.Second),
+			MFAInfo:     reqMFAInfo,
 		},
 	})
 }
@@ -95,6 +105,15 @@ func (f *FormatJSON) FormatResponse(
 		}
 	}
 
+	var reqMFAInfo *JSONMFAInfo
+	if req.MFAInfo != nil {
+		reqMFAInfo = &JSONMFAInfo{
+			Method:     req.MFAInfo.Method,
+			Identifier: req.MFAInfo.Identifier,
+			Parameters: req.MFAInfo.Parameters,
+		}
+	}
+
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
@@ -114,6 +133,7 @@ func (f *FormatJSON) FormatResponse(
 			Data:       req.Data,
 			RemoteAddr: getRemoteAddr(req),
 			WrapTTL:    int64(req.WrapTTL / time.Second),
+			MFAInfo:    reqMFAInfo,
 		},
 
 		Response: JSONResponse{
@@ -152,6 +172,7 @@ type JSONRequest struct {
 	Data        map[string]interface{} `json:"data"`
 	RemoteAddr  string                 `json:"remote_address"`
 	WrapTTL     int64                  `json:"wrap_ttl"`
+	MFAInfo     *JSONMFAInfo           `json:"mfa_info"`
 }
 
 type JSONResponse struct {
@@ -177,6 +198,12 @@ type JSONSecret struct {
 type JSONWrapInfo struct {
 	TTL   int64  `json:"ttl"`
 	Token string `json:"token"`
+}
+
+type JSONMFAInfo struct {
+	Method     string            `json:"method"`
+	Identifier string            `json:"identifier"`
+	Parameters map[string]string `json:"parameters"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

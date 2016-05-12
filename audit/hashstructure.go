@@ -53,8 +53,13 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		if err != nil {
 			return err
 		}
-
 		s.Data = data.(map[string]interface{})
+
+		if s.MFAInfo != nil {
+			if err := Hash(salter, s.MFAInfo); err != nil {
+				return err
+			}
+		}
 
 	case *logical.Response:
 		if s == nil {
@@ -77,7 +82,6 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		if err != nil {
 			return err
 		}
-
 		s.Data = data.(map[string]interface{})
 
 	case *logical.WrapInfo:
@@ -86,6 +90,19 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		}
 
 		s.Token = fn(s.Token)
+
+	case *logical.MFAInfo:
+		if s == nil {
+			return nil
+		}
+
+		mfaParams, err := HashStructure(s.Parameters, fn)
+		if err != nil {
+			return err
+		}
+
+		s.Parameters = mfaParams.(map[string]string)
+
 	}
 
 	return nil

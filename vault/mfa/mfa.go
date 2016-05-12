@@ -33,10 +33,6 @@ func MFABackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return &b, nil
 }
 
-type MFABackend struct {
-	backend
-}
-
 type backend struct {
 	// Embeds framework.Backend
 	*framework.Backend
@@ -44,15 +40,30 @@ type backend struct {
 	// Used to lock for configuration changes
 	sync.RWMutex
 
-	// Used to shortcut going through the Router for verification
+	// Used to avoid going through the Router for verification
 	storage logical.Storage
 }
 
+// MFABackend wraps the internal backend object to allow us to make public
+// methods on it
+type MFABackend struct {
+	backend
+}
+
+// Sets the storage for the backend. Since this backend is a singleton, the
+// storage is constant and we do not need to rely on the router giving the
+// right storage for a request.
 func (b *MFABackend) SetStorage(storage logical.Storage) {
 	b.storage = storage
 }
 
-func (b *MFABackend) ValidateMFA(methodName string, params map[string]string) (bool, error, error) {
+// ValidateMFA looks for the given method name and if found, attempts vaidation
+// with the given parameters
+func (b *MFABackend) ValidateMFA(methodName string, mfaInfo *logical.MFAInfo) (bool, error, error) {
+	if mfaInfo == nil {
+		return false, nil, fmt.Errorf("nil mfa information supplied for validation")
+	}
+
 	method, err := b.mfaBackendMethod(methodName)
 	if err != nil {
 		return false, nil, err
@@ -63,7 +74,7 @@ func (b *MFABackend) ValidateMFA(methodName string, params map[string]string) (b
 
 	switch method.Type {
 	case "totp":
-		return b.validateTOTP(methodName, params)
+		return b.validateTOTP(methodName, mfaInfo)
 	default:
 		return false, nil, fmt.Errorf("invalid method type %s", method.Type)
 	}

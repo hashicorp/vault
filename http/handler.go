@@ -192,7 +192,7 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 	return req, nil
 }
 
-// requestMFA adds the MFAParams value to the logical.Request if it
+// requestMFA adds the MFAInfo value to the logical.Request if it
 // exists.
 func requestMFA(r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// First try for the header value
@@ -208,7 +208,8 @@ func requestMFA(r *http.Request, req *logical.Request) (*logical.Request, error)
 		return req, fmt.Errorf("invalid MFA header; must contain at least two key-value pairs")
 	}
 
-	foundMethod := false
+	var mfaInfo logical.MFAInfo
+
 	for _, v := range splitMFAHeader {
 		splitV := strings.Split(v, "=")
 		if len(splitV) != 2 {
@@ -216,18 +217,27 @@ func requestMFA(r *http.Request, req *logical.Request) (*logical.Request, error)
 		}
 
 		if splitV[0] == "method" {
-			foundMethod = true
+			mfaInfo.Method = splitV[1]
+			continue
 		}
 
-		if req.MFAParams == nil {
-			req.MFAParams = make(map[string]string, len(splitV))
+		if splitV[0] == "identifier" {
+			mfaInfo.Identifier = splitV[1]
+			continue
 		}
-		req.MFAParams[splitV[0]] = splitV[1]
+
+		if mfaInfo.Parameters == nil {
+			mfaInfo.Parameters = make(map[string]string, len(splitMFAHeader))
+		}
+
+		mfaInfo.Parameters[splitV[0]] = splitV[1]
 	}
 
-	if !foundMethod {
+	if mfaInfo.Method == "" {
 		return req, fmt.Errorf("did not find method in MFA header")
 	}
+
+	req.MFAInfo = &mfaInfo
 
 	return req, nil
 }
@@ -276,13 +286,13 @@ func respondCommon(w http.ResponseWriter, resp *logical.Response, err error) boo
 		var statusCode int
 
 		switch err {
-		case logical.ErrPermissionDenied:
+		case logical.ErrPermissionDenied, logical.ErrMFAPermissionDenied:
 			statusCode = http.StatusForbidden
 		case logical.ErrUnsupportedOperation:
 			statusCode = http.StatusMethodNotAllowed
 		case logical.ErrUnsupportedPath:
 			statusCode = http.StatusNotFound
-		case logical.ErrInvalidRequest:
+		case logical.ErrInvalidRequest, logical.ErrMFAInvalid:
 			statusCode = http.StatusBadRequest
 		default:
 			statusCode = http.StatusBadRequest

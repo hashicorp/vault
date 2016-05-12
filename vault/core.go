@@ -482,9 +482,9 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
 		mfaSuccess := false
 		for _, method := range sanitizedMFAMethods {
-			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAInfo)
 			if userErr != nil {
-				return nil, te, logical.ErrInvalidRequest
+				return nil, te, logical.ErrMFAInvalid
 			}
 			if intErr != nil {
 				return nil, te, ErrInternalError
@@ -495,7 +495,7 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 			}
 		}
 		if !mfaSuccess {
-			return nil, te, logical.ErrPermissionDenied
+			return nil, te, logical.ErrMFAPermissionDenied
 		}
 	}
 
@@ -758,9 +758,9 @@ func (c *Core) Seal(token string) (retErr error) {
 		sanitizedMFAMethods := strutil.RemoveDuplicates(sudoMFAMethods)
 		mfaSuccess := false
 		for _, method := range sanitizedMFAMethods {
-			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAInfo)
 			if userErr != nil {
-				return logical.ErrInvalidRequest
+				return logical.ErrMFAInvalid
 			}
 			if intErr != nil {
 				return ErrInternalError
@@ -771,7 +771,7 @@ func (c *Core) Seal(token string) (retErr error) {
 			}
 		}
 		if !mfaSuccess {
-			return logical.ErrPermissionDenied
+			return logical.ErrMFAPermissionDenied
 		}
 	}
 
@@ -843,9 +843,9 @@ func (c *Core) StepDown(token string) error {
 		sanitizedMFAMethods := strutil.RemoveDuplicates(sudoMFAMethods)
 		mfaSuccess := false
 		for _, method := range sanitizedMFAMethods {
-			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAParams)
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAInfo)
 			if userErr != nil {
-				return logical.ErrInvalidRequest
+				return logical.ErrMFAInvalid
 			}
 			if intErr != nil {
 				return ErrInternalError
@@ -856,7 +856,7 @@ func (c *Core) StepDown(token string) error {
 			}
 		}
 		if !mfaSuccess {
-			return logical.ErrPermissionDenied
+			return logical.ErrMFAPermissionDenied
 		}
 	}
 
