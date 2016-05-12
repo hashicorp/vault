@@ -165,7 +165,7 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
-	validChain := b.checkForValidChain(req.Storage, trustedChains)
+	validChain := b.checkForValidChain(trustedChains)
 	if !validChain {
 		return nil, logical.ErrorResponse(
 			"no chain containing non-revoked certificates could be found for this login certificate",
@@ -257,7 +257,7 @@ func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
 	return badChain
 }
 
-func (b *backend) checkForValidChain(store logical.Storage, chains [][]*x509.Certificate) bool {
+func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 	for _, chain := range chains {
 		if !b.checkForChainInCRLs(chain) {
 			return true
