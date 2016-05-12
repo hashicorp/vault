@@ -67,6 +67,8 @@ IMPROVEMENTS:
    the `transit` backend are now disabled as well [GH-1346]
  * credential/cert: Renewal requests are rejected if the set of policies has
    changed since the token was issued [GH-477]
+ * credential/cert: Check CRLs for specific non-CA certs configured in the
+   backend [GH-1404]
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
  * credential/userpass: Add list support for users [GH-911]
