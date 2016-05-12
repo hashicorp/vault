@@ -68,7 +68,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 		},
 		"mfa/": map[string]interface{}{
 			"type":        "mfa",
-			"description": "Multi-Factor Authentication (MFA) setup",
+			"description": "multi-factor authentication (MFA) support",
 			"config": map[string]interface{}{
 				"default_lease_ttl": 0,
 				"max_lease_ttl":     0,

@@ -58,6 +58,14 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     float64(0),
 			},
 		},
+		"mfa/": map[string]interface{}{
+			"description": "multi-factor authentication (MFA) support",
+			"type":        "mfa",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
+		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
