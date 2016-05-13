@@ -493,7 +493,7 @@ The PostgreSQL backend has the following options:
 
     Examples:
 
-    * postgres://username:password@localhost:5432/database?sslmode=disabled
+    * postgres://username:password@localhost:5432/database?sslmode=disable
 
     * postgres://username:password@localhost:5432/database?sslmode=verify-full
 
