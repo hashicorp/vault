@@ -21,9 +21,9 @@ const roleTagVersion = "v1"
 
 func pathRoleTag(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "role/" + framework.GenericNameRegex("role_name") + "/tag$",
+		Pattern: "role/" + framework.GenericNameRegex("role") + "/tag$",
 		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
+			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
@@ -72,9 +72,9 @@ If set, the created tag can only be used by the instance with the given ID.`,
 func (b *backend) pathRoleTagUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	roleName := strings.ToLower(data.Get("role_name").(string))
+	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
-		return logical.ErrorResponse("missing role_name"), nil
+		return logical.ErrorResponse("missing role"), nil
 	}
 
 	// Fetch the role entry
@@ -149,7 +149,7 @@ func (b *backend) pathRoleTagUpdate(
 	// Create a role tag out of all the information provided.
 	rTagValue, err := createRoleTagValue(&roleTag{
 		Version:                  roleTagVersion,
-		RoleName:                 roleName,
+		Role:                     roleName,
 		Nonce:                    nonce,
 		Policies:                 policies,
 		MaxTTL:                   maxTTL,
@@ -257,13 +257,13 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	if rTag.Nonce == "" {
 		return "", fmt.Errorf("missing nonce")
 	}
-	if rTag.RoleName == "" {
-		return "", fmt.Errorf("missing role_name")
+	if rTag.Role == "" {
+		return "", fmt.Errorf("missing role")
 	}
 
-	// Attach Version, Nonce, RoleName, DisallowReauthentication and AllowInstanceMigration
+	// Attach Version, Nonce, Role, DisallowReauthentication and AllowInstanceMigration
 	// fields to the role tag.
-	value := fmt.Sprintf("%s:%s:r=%s:d=%s:m=%s", rTag.Version, rTag.Nonce, rTag.RoleName, strconv.FormatBool(rTag.DisallowReauthentication), strconv.FormatBool(rTag.AllowInstanceMigration))
+	value := fmt.Sprintf("%s:%s:r=%s:d=%s:m=%s", rTag.Version, rTag.Nonce, rTag.Role, strconv.FormatBool(rTag.DisallowReauthentication), strconv.FormatBool(rTag.AllowInstanceMigration))
 
 	// Attach the policies only if they are specified.
 	if len(rTag.Policies) != 0 {
@@ -319,7 +319,7 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 		case strings.Contains(tagItem, "i="):
 			rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
 		case strings.Contains(tagItem, "r="):
-			rTag.RoleName = strings.TrimPrefix(tagItem, "r=")
+			rTag.Role = strings.TrimPrefix(tagItem, "r=")
 		case strings.Contains(tagItem, "p="):
 			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
 		case strings.Contains(tagItem, "d="):
@@ -342,16 +342,16 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 		}
 	}
 
-	if rTag.RoleName == "" {
+	if rTag.Role == "" {
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.awsRole(s, rTag.RoleName)
+	roleEntry, err := b.awsRole(s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
-		return nil, fmt.Errorf("entry not found for %s", rTag.RoleName)
+		return nil, fmt.Errorf("entry not found for %s", rTag.Role)
 	}
 
 	// Create a HMAC of the plaintext value of role tag and compare it with the given value.
@@ -394,7 +394,7 @@ type roleTag struct {
 	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	RoleName                 string        `json:"role_name" structs:"role_name" mapstructure:"role_name"`
+	Role                     string        `json:"role" structs:"role" mapstructure:"role"`
 	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
@@ -407,7 +407,7 @@ func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {
 		rTag1.Nonce == rTag2.Nonce &&
 		policyutil.EquivalentPolicies(rTag1.Policies, rTag2.Policies) &&
 		rTag1.MaxTTL == rTag2.MaxTTL &&
-		rTag1.RoleName == rTag2.RoleName &&
+		rTag1.Role == rTag2.Role &&
 		rTag1.HMAC == rTag2.HMAC &&
 		rTag1.InstanceID == rTag2.InstanceID &&
 		rTag1.DisallowReauthentication == rTag2.DisallowReauthentication &&
@@ -424,7 +424,7 @@ instance, create a role tag using this endpoint and attach the tag on the instan
 before performing login.
 
 To be able to create a role tag, the 'role_tag' option on the role should be
-enabled via the endpoint 'role/<role_name>'. Also, the policies to be associated
+enabled via the endpoint 'role/<role>'. Also, the policies to be associated
 with the tag should be a subset of the policies associated with the registered role.
 
 This endpoint will return both the 'key' and the 'value' of the tag to be set

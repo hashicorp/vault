@@ -18,10 +18,10 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
+			"role": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Name of the role against which the login is being attempted.
-If 'role_name' is not specified, then the login endpoint looks for a role
+If 'role' is not specified, then the login endpoint looks for a role
 bearing the name of the AMI ID of the EC2 instance that is trying to login.
 If a matching role is not found, login fails.`,
 			},
@@ -220,7 +220,7 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("failed to extract instance identity document from PKCS#7 signature"), nil
 	}
 
-	roleName := data.Get("role_name").(string)
+	roleName := data.Get("role").(string)
 
 	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for.
 	if roleName == "" {
@@ -332,10 +332,10 @@ func (b *backend) pathLoginUpdate(
 	// Save the login attempt in the identity whitelist.
 	currentTime := time.Now().UTC()
 	if storedIdentity == nil {
-		// RoleName, ClientNonce and CreationTime of the identity entry,
+		// Role, ClientNonce and CreationTime of the identity entry,
 		// once set, should never change.
 		storedIdentity = &whitelistIdentity{
-			RoleName:     roleName,
+			Role:         roleName,
 			ClientNonce:  clientNonce,
 			CreationTime: currentTime,
 		}
@@ -369,7 +369,7 @@ func (b *backend) pathLoginUpdate(
 				"instance_id":      identityDoc.InstanceID,
 				"region":           identityDoc.Region,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
-				"role_name":        roleName,
+				"role":             roleName,
 				"ami_id":           identityDoc.AmiID,
 			},
 			LeaseOptions: logical.LeaseOptions{
@@ -432,8 +432,8 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 
 	// Check if the role name with which this login is being made is same
 	// as the role name embedded in the tag.
-	if rTag.RoleName != roleName {
-		return nil, fmt.Errorf("role_name on the tag is not matching the role_name supplied")
+	if rTag.Role != roleName {
+		return nil, fmt.Errorf("role on the tag is not matching the role supplied")
 	}
 
 	// If instance_id was set on the role tag, check if the same instance is attempting to login.
@@ -487,7 +487,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Ensure that role entry is not deleted.
-	roleEntry, err := b.awsRole(req.Storage, storedIdentity.RoleName)
+	roleEntry, err := b.awsRole(req.Storage, storedIdentity.Role)
 	if err != nil {
 		return nil, err
 	}

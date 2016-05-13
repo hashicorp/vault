@@ -110,7 +110,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 	rTag1 := &roleTag{
 		Version:  "v1",
-		RoleName: "abcd-123",
+		Role:     "abcd-123",
 		Nonce:    nonce,
 		Policies: []string{"p", "q", "r"},
 		MaxTTL:   200000000000, // 200s
@@ -134,7 +134,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// check the values in parsed role tag
 	if rTag2.Version != "v1" ||
 		rTag2.Nonce != nonce ||
-		rTag2.RoleName != "abcd-123" ||
+		rTag2.Role != "abcd-123" ||
 		rTag2.MaxTTL != 200000000000 || // 200s
 		!policyutil.EquivalentPolicies(rTag2.Policies, []string{"p", "q", "r"}) ||
 		len(rTag2.HMAC) == 0 {
@@ -198,9 +198,9 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	rTag := &roleTag{
-		Version:  "v1",
-		Nonce:    nonce,
-		RoleName: "abcd-123",
+		Version: "v1",
+		Nonce:   nonce,
+		Role:    "abcd-123",
 	}
 
 	rTag.Version = ""
@@ -221,14 +221,14 @@ func TestBackend_prepareRoleTagPlaintextValue(t *testing.T) {
 	}
 	rTag.Nonce = nonce
 
-	rTag.RoleName = ""
+	rTag.Role = ""
 	// try to create plaintext part of role tag
-	// without specifying role_name
+	// without specifying role
 	val, err = prepareRoleTagPlaintextValue(rTag)
 	if err == nil {
-		t.Fatalf("expected error for missing role_name")
+		t.Fatalf("expected error for missing role")
 	}
-	rTag.RoleName = "abcd-123"
+	rTag.Role = "abcd-123"
 
 	// create the plaintext part of the tag
 	val, err = prepareRoleTagPlaintextValue(rTag)
@@ -933,7 +933,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	}
 	if rTag.Version != "v1" ||
 		!policyutil.EquivalentPolicies(rTag.Policies, []string{"p", "q", "r", "s"}) ||
-		rTag.RoleName != "abcd-123" {
+		rTag.Role != "abcd-123" {
 		t.Fatalf("bad: parsed role tag contains incorrect values. Got: %#v\n", rTag)
 	}
 }
@@ -1248,7 +1248,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.Data == nil || resp.Data["role_name"] != roleName {
+	if resp == nil || resp.Data == nil || resp.Data["role"] != roleName {
 		t.Fatalf("failed to read whitelist identity")
 	}
 

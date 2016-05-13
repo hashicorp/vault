@@ -166,7 +166,7 @@ func (b *backend) pathRoletagBlacklistUpdate(
 	}
 
 	// Get the entry for the role mentioned in the role tag.
-	roleEntry, err := b.awsRole(req.Storage, rTag.RoleName)
+	roleEntry, err := b.awsRole(req.Storage, rTag.Role)
 	if err != nil {
 		return nil, err
 	}

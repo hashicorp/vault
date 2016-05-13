@@ -166,11 +166,11 @@ created nonce to authenticates the EC2 instance with Vault.
 
 Authentication is backed by a preconfigured role in the backend. The role
 represents the authorization of resources by containing Vault's policies.
-Role can be created using 'role/<role_name>' endpoint.
+Role can be created using 'role/<role>' endpoint.
 
 If there is need to further restrict the capabilities of the role on the instance
 that is using the role, 'role_tag' option can be enabled on the role, and a tag
-can be generated using 'role/<role_name>/tag' endpoint. This tag represents the
+can be generated using 'role/<role>/tag' endpoint. This tag represents the
 subset of capabilities set on the role. When the 'role_tag' option is enabled on
 the role, the login operation requires that a respective role tag is attached to
 the EC2 instance which performs the login.

@@ -128,7 +128,7 @@ instance. The tag holds information that represents a *subset* of privileges tha
 are set on the role and are used to further restrict the set of the role's
 privileges for that particular instance.
 
-A `role_tag` can be created using `auth/aws/role/<role_name>/tag` endpoint
+A `role_tag` can be created using `auth/aws/role/<role>/tag` endpoint
 and is immutable. The information present in the tag is SHA256 hashed and HMAC
 protected. The per-role key to HMAC is only maintained in the backend. This prevents
 an adversarial operator from modifying the tag when setting it on the EC2 instance
@@ -286,7 +286,7 @@ $ vault write auth/aws/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev
 #### Perform the login operation
 
 ```
-$ vault write auth/aws/login role_name=dev-role pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=vault-client-nonce
+$ vault write auth/aws/login role=dev-role pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=vault-client-nonce
 ```
 
 
@@ -313,7 +313,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role_name":"dev-role","pkcs7":"MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA","nonce":"vault-client-nonce"}'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA","nonce":"vault-client-nonce"}'
 ```
 
 
@@ -328,7 +328,7 @@ The response will be in JSON. For example:
       "role_tag_max_ttl": "0",
       "instance_id": "i-de0f1344"
       "ami_id": "ami-fce3c696"
-      "role_name": "dev-prod"
+      "role": "dev-prod"
     },
     "policies": [
       "default",
@@ -785,7 +785,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws/role/<role_name>
+### /auth/aws/role/<role>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -801,13 +801,13 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role_name>`</dd>
+  <dd>`/auth/aws/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
     <ul>
       <li>
-        <span class="param">role_name</span>
+        <span class="param">role</span>
         <span class="param-flags">required</span>
         Name of the role.
       </li>
@@ -825,7 +825,7 @@ The response will be in JSON. For example:
         <span class="param-flags">optional</span>
         If set, enables the role tags for this role. The value set for this
         field should be the 'key' of the tag on the EC2 instance. The 'value'
-        of the tag should be generated using 'role/<role_name>/tag' endpoint.
+        of the tag should be generated using 'role/<role>/tag' endpoint.
         Defaults to an empty string, meaning that role tags are disabled.
       </li>
     </ul>
@@ -876,7 +876,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role_name>`</dd>
+  <dd>`/auth/aws/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -964,7 +964,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role_name>`</dd>
+  <dd>`/auth/aws/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -977,7 +977,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/role/<role_name>/tag
+### /auth/aws/role/<role>/tag
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -990,13 +990,13 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role_name>/tag`</dd>
+  <dd>`/auth/aws/role/<role>/tag`</dd>
 
   <dt>Parameters</dt>
   <dd>
     <ul>
       <li>
-        <span class="param">role_name</span>
+        <span class="param">role</span>
         <span class="param-flags">required</span>
         Name of the role.
       </li>
@@ -1081,10 +1081,10 @@ The response will be in JSON. For example:
   <dd>
     <ul>
       <li>
-        <span class="param">role_name</span>
+        <span class="param">role</span>
         <span class="param-flags">optional</span>
         Name of the role against which the login is being attempted.
-        If `role_name` is not specified, then the login endpoint looks for a role
+        If `role` is not specified, then the login endpoint looks for a role
         bearing the name of the AMI ID of the EC2 instance that is trying to login.
         If a matching role is not found, login fails.
       </li>
@@ -1119,7 +1119,7 @@ The response will be in JSON. For example:
       "role_tag_max_ttl": "0",
       "instance_id": "i-de0f1344"
       "ami_id": "ami-fce36983"
-      "role_name": "dev-role"
+      "role": "dev-role"
     },
     "policies": [
       "default",
@@ -1348,7 +1348,7 @@ The response will be in JSON. For example:
     "expiration_time": "2016-05-05 10:09:16.67077232 +0000 UTC",
     "creation_time": "2016-04-14 14:09:16.67077232 +0000 UTC",
     "client_nonce": "vault-client-nonce",
-    "role_name": "dev-role"
+    "role": "dev-role"
   },
   "lease_duration": 0,
   "renewable": false,

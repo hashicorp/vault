@@ -14,9 +14,9 @@ import (
 
 func pathRole(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "role/" + framework.GenericNameRegex("role_name"),
+		Pattern: "role/" + framework.GenericNameRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
+			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
@@ -30,7 +30,7 @@ using the AMI ID specified by this parameter.`,
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "If set, enables the role tags for this role. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'role/<role_name>/tag' endpoint. Defaults to an empty string, meaning that role tags are disabled.",
+				Description: "If set, enables the role tags for this role. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'role/<role>/tag' endpoint. Defaults to an empty string, meaning that role tags are disabled.",
 			},
 
 			"max_ttl": &framework.FieldSchema{
@@ -101,7 +101,7 @@ func pathListRoles(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role_name").(string)))
+	entry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return false, err
 	}
@@ -135,9 +135,9 @@ func (b *backend) awsRoleInternal(s logical.Storage, role string) (*awsRoleEntry
 // pathRoleDelete is used to delete the information registered for a given AMI ID.
 func (b *backend) pathRoleDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role_name").(string)
+	roleName := data.Get("role").(string)
 	if roleName == "" {
-		return logical.ErrorResponse("missing role_name"), nil
+		return logical.ErrorResponse("missing role"), nil
 	}
 
 	b.roleMutex.Lock()
@@ -162,7 +162,7 @@ func (b *backend) pathRoleList(
 // pathRoleRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleEntry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role_name").(string)))
+	roleEntry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -188,9 +188,9 @@ func (b *backend) pathRoleRead(
 func (b *backend) pathRoleCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	roleName := strings.ToLower(data.Get("role_name").(string))
+	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
-		return logical.ErrorResponse("missing role_name"), nil
+		return logical.ErrorResponse("missing role"), nil
 	}
 
 	b.roleMutex.Lock()
@@ -316,7 +316,7 @@ that are associated to the role though this endpoint.
 
 When the instances require only a subset of policies on the role, then
 'role_tag' option on the role can be enabled to create a role tag via the
-endpoint 'role/<role_name>/tag'. This tag then needs to be applied on the
+endpoint 'role/<role>/tag'. This tag then needs to be applied on the
 instance before it attempts a login. The policies on the tag should be a
 subset of policies that are associated to the role. In order to enable
 login using tags, 'role_tag' option should be set while creating a role.
