@@ -1531,14 +1531,11 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		entry.PathSuffix = data.Get("path_suffix").(string)
 	}
 
-	allowedPoliciesInt, ok := data.GetOk("allowed_policies")
+	allowedPoliciesStr, ok := data.GetOk("allowed_policies")
 	if ok {
-		allowedPolicies := allowedPoliciesInt.(string)
-		if allowedPolicies != "" {
-			entry.AllowedPolicies = policyutil.ParsePolicies(allowedPolicies, true)
-		}
+		entry.AllowedPolicies = policyutil.ParsePolicies(allowedPoliciesStr.(string))
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.ParsePolicies(data.Get("allowed_policies").(string), true)
+		entry.AllowedPolicies = policyutil.ParsePolicies(data.Get("allowed_policies").(string))
 	}
 
 	// Explicit max TTLs and periods cannot be used at the same time since the

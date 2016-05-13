@@ -163,7 +163,7 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 	}
 
 	if policiesRaw, ok := d.GetOk("policies"); ok {
-		userEntry.Policies = policyutil.ParsePolicies(policiesRaw.(string), true)
+		userEntry.Policies = policyutil.ParsePolicies(policiesRaw.(string))
 	}
 
 	ttlStr := userEntry.TTL.String()

@@ -12,16 +12,15 @@ import (
 // If 'root' policy was present in the list of policies, then
 // all other policies will be ignored, the result will contain
 // just the 'root'. In cases where 'root' is not present, if
-// 'default' policy is not already present, it will be added
-// if addDefault is set to true.
-func ParsePolicies(policiesRaw string, addDefault bool) []string {
+// 'default' policy is not already present, it will be added.
+func ParsePolicies(policiesRaw string) []string {
 	if policiesRaw == "" {
 		return []string{"default"}
 	}
 
 	policies := strings.Split(policiesRaw, ",")
 
-	return SanitizePolicies(policies, addDefault)
+	return SanitizePolicies(policies, true)
 }
 
 // SanitizePolicies performs the common input validation tasks
