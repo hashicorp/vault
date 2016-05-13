@@ -54,3 +54,9 @@ tags
 # Editor backups
 *~
 *.sw[a-z]
+
+# IntelliJ IDEA project files
+.idea
+*.ipr
+*.iml
+
