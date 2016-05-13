@@ -1211,15 +1211,24 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	}
 }
 
-func TestTokenStore_RoleCRUD(t *testing.T) {
+func TestTokenStore_RoleCRUD_All(t *testing.T) {
+	roles := []string{"test", "foo/bar", "test/multiple/levels"}
+
+	// Test different role names
+	for _, role := range roles {
+		testTokenStore_RoleCRUD(t, role)
+	}
+}
+
+func testTokenStore_RoleCRUD(t *testing.T, roleName string) {
 	core, _, _, root := TestCoreWithTokenStore(t)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/roles/test")
+	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/roles/"+roleName)
 	req.ClientToken = root
 
 	resp, err := core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err reading role %s: %v %v", roleName, err, resp)
 	}
 	if resp != nil {
 		t.Fatalf("should not see a role")
@@ -1236,7 +1245,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err creating role %s: %v %v", roleName, err, resp)
 	}
 	if resp != nil {
 		t.Fatalf("expected a nil response")
@@ -1247,14 +1256,14 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err reading role %s: %v %v", roleName, err, resp)
 	}
 	if resp == nil {
 		t.Fatalf("got a nil response")
 	}
 
 	expected := map[string]interface{}{
-		"name":             "test",
+		"name":             roleName,
 		"orphan":           true,
 		"period":           int64(259200),
 		"allowed_policies": []string{"test1", "test2"},
@@ -1277,7 +1286,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err updating role %s: %v %v", roleName, err, resp)
 	}
 	if resp != nil {
 		t.Fatalf("expected a nil response")
@@ -1288,14 +1297,14 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err reading role %s: %v %v", roleName, err, resp)
 	}
 	if resp == nil {
 		t.Fatalf("got a nil response")
 	}
 
 	expected = map[string]interface{}{
-		"name":             "test",
+		"name":             roleName,
 		"orphan":           true,
 		"period":           int64(284400),
 		"allowed_policies": []string{"test3"},
@@ -1359,7 +1368,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Data = map[string]interface{}{}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err listing roles: %v %v", err, resp)
 	}
 	if resp == nil {
 		t.Fatalf("got a nil response")
@@ -1375,15 +1384,15 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	if len(keys) != 1 {
 		t.Fatalf("unexpected number of keys: %d", len(keys))
 	}
-	if keys[0] != "test" {
-		t.Fatalf("expected \"test\", got \"%s\"", keys[0])
+	if keys[0] != roleName {
+		t.Fatalf("expected \"%s\", got \"%s\"", roleName, keys[0])
 	}
 
 	req.Operation = logical.DeleteOperation
-	req.Path = "auth/token/roles/test"
+	req.Path = "auth/token/roles/" + roleName
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err deleting role %s: %v %v", roleName, err, resp)
 	}
 	if resp != nil {
 		t.Fatalf("expected a nil response")
@@ -1392,7 +1401,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	resp, err = core.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err reading role %s: %v %v", roleName, err, resp)
 	}
 	if resp != nil {
 		t.Fatalf("expected a nil response")
