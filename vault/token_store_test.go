@@ -1270,7 +1270,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"name":             "test",
 		"orphan":           true,
 		"period":           int64(259200),
-		"allowed_policies": []string{"test1", "test2"},
+		"allowed_policies": []string{"default", "test1", "test2"},
 		"path_suffix":      "happenin",
 		"explicit_max_ttl": int64(0),
 	}
@@ -1311,7 +1311,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"name":             "test",
 		"orphan":           true,
 		"period":           int64(284400),
-		"allowed_policies": []string{"test3"},
+		"allowed_policies": []string{"default", "test3"},
 		"path_suffix":      "happenin",
 		"explicit_max_ttl": int64(0),
 	}
@@ -1358,7 +1358,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"name":             "test",
 		"orphan":           true,
 		"explicit_max_ttl": int64(5),
-		"allowed_policies": []string{"test3"},
+		"allowed_policies": []string{"default", "test3"},
 		"path_suffix":      "happenin",
 		"period":           int64(0),
 	}

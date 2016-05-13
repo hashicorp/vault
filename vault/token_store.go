@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -510,6 +509,8 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
+	entry.Policies = policyutil.SanitizePolicies(entry.Policies, false)
+
 	err := ts.createAccessor(entry)
 	if err != nil {
 		return err
@@ -1001,8 +1002,8 @@ func (ts *TokenStore) handleCreateCommon(
 			data.Policies = role.AllowedPolicies
 		} else {
 			// Sanitize passed-in and role policies before comparison
-			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies)
-			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies)
+			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
+			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, true)
 
 			if !strutil.StrListSubset(sanitizedRolePolicies, sanitizedInputPolicies) {
 				return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", sanitizedInputPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
@@ -1016,33 +1017,16 @@ func (ts *TokenStore) handleCreateCommon(
 	// the client has root or sudo privileges
 	case !isSudo:
 		// Sanitize passed-in and parent policies before comparison
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies)
-		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies)
+		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
+		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, true)
 
 		if !strutil.StrListSubset(sanitizedParentPolicies, sanitizedInputPolicies) {
 			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 		}
 	}
 
-	// Use a map to filter out/prevent duplicates
-	policyMap := map[string]bool{}
-	for _, policy := range data.Policies {
-		if policy == "" {
-			// Don't allow a policy with no name, even though it is a valid
-			// slice member
-			continue
-		}
-		policyMap[policy] = true
-	}
-	if !policyMap["root"] &&
-		!data.NoDefaultPolicy {
-		policyMap["default"] = true
-	}
-
-	for k, _ := range policyMap {
-		te.Policies = append(te.Policies, k)
-	}
-	sort.Strings(te.Policies)
+	// Do not add the 'default' policy if requested not to.
+	te.Policies = policyutil.SanitizePolicies(data.Policies, !data.NoDefaultPolicy)
 
 	switch {
 	case role != nil:
@@ -1551,10 +1535,10 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 	if ok {
 		allowedPolicies := allowedPoliciesInt.(string)
 		if allowedPolicies != "" {
-			entry.AllowedPolicies = strings.Split(allowedPolicies, ",")
+			entry.AllowedPolicies = policyutil.ParsePolicies(allowedPolicies, true)
 		}
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = strings.Split(data.Get("allowed_policies").(string), ",")
+		entry.AllowedPolicies = policyutil.ParsePolicies(data.Get("allowed_policies").(string), true)
 	}
 
 	// Explicit max TTLs and periods cannot be used at the same time since the

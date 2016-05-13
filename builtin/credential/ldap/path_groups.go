@@ -95,7 +95,7 @@ func (b *backend) pathGroupWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Store it
 	entry, err := logical.StorageEntryJSON("group/"+d.Get("name").(string), &GroupEntry{
-		Policies: policyutil.ParsePolicies(d.Get("policies").(string)),
+		Policies: policyutil.ParsePolicies(d.Get("policies").(string), true),
 	})
 	if err != nil {
 		return nil, err

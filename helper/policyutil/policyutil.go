@@ -7,17 +7,32 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 )
 
-func ParsePolicies(policiesRaw string) []string {
+// ParsePolicies parses a comma-delimited list of policies.
+// The resulting collection will have no duplicate elements.
+// If 'root' policy was present in the list of policies, then
+// all other policies will be ignored, the result will contain
+// just the 'root'. In cases where 'root' is not present, if
+// 'default' policy is not already present, it will be added
+// if addDefault is set to true.
+func ParsePolicies(policiesRaw string, addDefault bool) []string {
 	if policiesRaw == "" {
 		return []string{"default"}
 	}
 
 	policies := strings.Split(policiesRaw, ",")
 
-	return SanitizePolicies(policies)
+	return SanitizePolicies(policies, addDefault)
 }
 
-func SanitizePolicies(policies []string) []string {
+// SanitizePolicies performs the common input validation tasks
+// which are performed on the list of policies across Vault.
+// The resulting collection will have no duplicate elements.
+// If 'root' policy was present in the list of policies, then
+// all other policies will be ignored, the result will contain
+// just the 'root'. In cases where 'root' is not present, if
+// 'default' policy is not already present, it will be added
+// if addDefault is set to true.
+func SanitizePolicies(policies []string, addDefault bool) []string {
 	defaultFound := false
 	for i, p := range policies {
 		policies[i] = strings.ToLower(strings.TrimSpace(p))
@@ -38,7 +53,7 @@ func SanitizePolicies(policies []string) []string {
 	}
 
 	// Always add 'default' except only if the policies contain 'root'.
-	if len(policies) == 0 || !defaultFound {
+	if addDefault && (len(policies) == 0 || !defaultFound) {
 		policies = append(policies, "default")
 	}
 

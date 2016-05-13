@@ -138,7 +138,7 @@ func (b *backend) pathCertWrite(
 	name := strings.ToLower(d.Get("name").(string))
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
-	policies := policyutil.ParsePolicies(d.Get("policies").(string))
+	policies := policyutil.ParsePolicies(d.Get("policies").(string), true)
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {

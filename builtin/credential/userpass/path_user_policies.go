@@ -44,7 +44,7 @@ func (b *backend) pathUserPoliciesUpdate(
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies").(string))
+	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies").(string), true)
 
 	return nil, b.setUser(req.Storage, username, userEntry)
 }
