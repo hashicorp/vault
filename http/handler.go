@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // AuthHeaderName is the name of the header containing the token.
@@ -38,6 +40,9 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesSelfCallback))
 	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
 	mux.Handle("/v1/", handleLogical(core, false, nil))
+
+	// This is probably wrong in quite a few ways - unsure how to register it properly? Something like Mounting, maybe?
+	mux.Handle("/metrics", prometheus.Handler())
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)

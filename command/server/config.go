@@ -85,8 +85,9 @@ func (b *Backend) GoString() string {
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
+	StatsiteAddr     string `hcl:"statsite_address"`
+	StatsdAddr       string `hcl:"statsd_address"`
+	EnablePrometheus bool   `hcl:"enable_prometheus"`
 
 	DisableHostname bool `hcl:"disable_hostname"`
 }
@@ -459,6 +460,7 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 	valid := []string{
 		"statsite_address",
 		"statsd_address",
+		"enable_prometheus",
 		"disable_hostname",
 	}
 	if err := checkHCLKeys(item.Val, valid); err != nil {
