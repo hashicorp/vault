@@ -35,8 +35,8 @@ func Backend() *framework.Backend {
 			secretAccessKeys(&b),
 		},
 
-		Rollback:       rollback,
-		RollbackMinAge: 5 * time.Minute,
+		WALRollback:       walRollback,
+		WALRollbackMinAge: 5 * time.Minute,
 	}
 
 	return b.Backend
