@@ -36,7 +36,7 @@
         "bundle check || bundle install --jobs 7",
         "bundle exec middleman build",
 
-        "/usr/bin/env bash ./scripts/deploy.sh"
+        "/bin/bash ./scripts/deploy.sh"
       ]
     }
   ]
