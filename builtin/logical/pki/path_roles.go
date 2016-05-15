@@ -339,7 +339,7 @@ func (b *backend) pathRoleCreate(
 		// If they are using the system default, cap it to the role max;
 		// if it was specified on the command line, make it an error
 		if len(entry.TTL) == 0 {
-			ttl = maxTTL
+			entry.TTL = entry.MaxTTL
 		} else {
 			return logical.ErrorResponse(
 				`"ttl" value must be less than "max_ttl" and/or backend default max lease TTL value`,
