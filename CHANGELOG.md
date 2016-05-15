@@ -38,6 +38,13 @@ DEPRECATIONS/BREAKING CHANGES:
 
 FEATURES:
 
+ * **AWS EC2 Auth Backend**: Provides a recure introduction mechanism for AWS EC2
+   instances allowing automated retrieval of Vault tokens. Unlike most Vault
+   authentication backends, this backend does not require first-deploying,
+   or provisioning security-sensitive credentials (tokens, username/password,
+   client certificates,etc). Instead, it treats AWS as a Trusted Third Party
+   and uses the cryptographically signed dynamic metadata information that
+   uniquely represents each EC2 instance.
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
  * **Consul Backend Health Checks**: The Consul backend will automatically
