@@ -275,7 +275,7 @@ func StartSSHHostTestServer() (string, error) {
 // Used to test the SSH secret backend.
 func executeServerCommand(ch ssh.Channel, req *ssh.Request) {
 	command := string(req.Payload[4:])
-	cmd := exec.Command("/bin/sh", "-c", command)
+	cmd := exec.Command("/bin/bash", []string{"-c", command}...)
 	req.Reply(true, nil)
 
 	cmd.Stdout = ch
