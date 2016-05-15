@@ -411,7 +411,7 @@ IMPROVEMENTS:
    provides a concatenated PEM bundle of returned values [GH-1008]
  * logical/pki: Add 30 seconds of slack to the validity start period to
    accommodate some clock skew in machines [GH-1036]
- * logical/postgres: Add `max_idle_connections` paramter [GH-950]
+ * logical/postgres: Add `max_idle_connections` parameter [GH-950]
  * logical/postgres: Add list support for roles path
  * logical/ssh: Add list support for roles path [GH-983]
  * logical/transit: Keys are archived and only keys between the latest version
@@ -644,7 +644,7 @@ ahead of time on the "vault-tool" mailing list.
    already switched to using "ttl" and others will follow in upcoming releases.
    In particular, the "token", "generic", and "pki" backends accept both "ttl"
    and "lease" but in 0.4 only "ttl" will be accepted. [GH-528]
- * **Downgrade Not Supported**: Due to enhancements in the storage subsytem,
+ * **Downgrade Not Supported**: Due to enhancements in the storage subsystem,
    values written by Vault 0.3+ will not be able to be read by prior versions
    of Vault. There are no expected upgrade issues, however, as with all
    critical infrastructure it is recommended to back up Vault's physical
@@ -887,7 +887,7 @@ IMPROVEMENTS:
   * core: Very verbose error if mlock fails [GH-59]
   * command/*: On error with TLS oversized record, show more human-friendly
     error message. [GH-123]
-  * command/read: `lease_renewable` is now outputed along with the secret to
+  * command/read: `lease_renewable` is now outputted along with the secret to
     show whether it is renewable or not
   * command/server: Add configuration option to disable mlock
   * command/server: Disable mlock for dev mode so it works on more systems

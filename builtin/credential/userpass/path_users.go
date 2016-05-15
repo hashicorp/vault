@@ -195,7 +195,7 @@ func (b *backend) pathUserWrite(
 
 type UserEntry struct {
 	// Password is deprecated in Vault 0.2 in favor of
-	// PasswordHash, but is retained for backwards compatibilty.
+	// PasswordHash, but is retained for backwards compatibility.
 	Password string
 
 	// PasswordHash is a bcrypt hash of the password. This is

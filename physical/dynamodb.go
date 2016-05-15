@@ -25,17 +25,17 @@ import (
 
 const (
 	// DefaultDynamoDBRegion is used when no region is configured
-	// explicitely.
+	// explicitly.
 	DefaultDynamoDBRegion = "us-east-1"
 	// DefaultDynamoDBTableName is used when no table name
-	// is configured explicitely.
+	// is configured explicitly.
 	DefaultDynamoDBTableName = "vault-dynamodb-backend"
 
 	// DefaultDynamoDBReadCapacity is the default read capacity
-	// that is used when none is configured explicitely.
+	// that is used when none is configured explicitly.
 	DefaultDynamoDBReadCapacity = 5
 	// DefaultDynamoDBWriteCapacity is the default write capacity
-	// that is used when none is configured explicitely.
+	// that is used when none is configured explicitly.
 	DefaultDynamoDBWriteCapacity = 5
 
 	// DynamoDBEmptyPath is the string that is used instead of

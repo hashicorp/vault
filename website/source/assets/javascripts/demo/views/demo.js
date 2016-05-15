@@ -11,7 +11,7 @@ Demo.DemoView = Ember.View.extend({
 
     var element = this.$();
 
-    // Record scoll position
+    // Record scroll position
     var x = element.scrollX, y = element.scrollY;
     // Focus
     element.find('input.shell')[0].focus();

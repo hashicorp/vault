@@ -22,7 +22,7 @@ data written to the storage backend.
 ![Keys](/assets/images/keys.png)
 
 To support key rotation, we need to support changing the unseal keys, master key, and the
-backend encryption key. We split this into two seperate operations, `rekey` and `rotate`.
+backend encryption key. We split this into two separate operations, `rekey` and `rotate`.
 
 The `rekey` operation is used to generate a new master key. When this is being done,
 it is possible to change the parameters of the key splitting, so that the number of shares

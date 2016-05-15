@@ -37,7 +37,7 @@ type routeEntry struct {
 	loginPaths  *radix.Tree
 }
 
-// SaltID is used to apply a salt and hash to an ID to make sure its not reversable
+// SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (re *routeEntry) SaltID(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
 }

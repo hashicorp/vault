@@ -83,7 +83,7 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	// Resolving domain names to IP address on the client side.
-	// Vault only deals with IP addressess.
+	// Vault only deals with IP addresses.
 	ip, err := net.ResolveIPAddr("ip", ipAddr)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %s", err))
@@ -187,7 +187,7 @@ func (c *SSHCommand) Run(args []string) int {
 	// If the session established was longer than the lease expiry, the secret
 	// might have been revoked already. If not, then revoke it. Since the key
 	// file is deleted and since user doesn't know the credential anymore, there
-	// is not point in Vault maintaining this secret anymore. Everytime the command
+	// is not point in Vault maintaining this secret anymore. Every time the command
 	// is run, a fresh credential is generated anyways.
 	err = client.Sys().Revoke(keySecret.LeaseID)
 	if err != nil {

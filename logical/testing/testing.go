@@ -71,7 +71,7 @@ type TestStep struct {
 	Check TestCheckFunc
 
 	// PreFlight is called directly before execution of the request, allowing
-	// modification of the request paramters (e.g. Path) with dynamic values.
+	// modification of the request parameters (e.g. Path) with dynamic values.
 	PreFlight PreFlightFunc
 
 	// ErrorOk, if true, will let erroneous responses through to the check

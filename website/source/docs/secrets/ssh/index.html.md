@@ -105,7 +105,7 @@ username@ip:~$
 ### Automate it!
 
 A single CLI command can be used to create a new OTP and invoke SSH with the
-correct paramters to connect to the host.
+correct parameters to connect to the host.
 
 ```text
 $ vault ssh -role otp_key_role username@x.x.x.x
