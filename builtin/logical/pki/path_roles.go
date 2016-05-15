@@ -339,13 +339,17 @@ func (b *backend) pathRoleCreate(
 		// If they are using the system default, cap it to the role max;
 		// if it was specified on the command line, make it an error
 		if len(entry.TTL) == 0 {
-			entry.TTL = entry.MaxTTL
+			ttl = maxTTL
 		} else {
 			return logical.ErrorResponse(
 				`"ttl" value must be less than "max_ttl" and/or backend default max lease TTL value`,
 			), nil
 		}
 	}
+
+	// Persist clamped TTLs
+	entry.TTL = ttl.String()
+	entry.MaxTTL = maxTTL.String()
 
 	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
 		return errResp, nil
