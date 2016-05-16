@@ -8,6 +8,19 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathGroupsList(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "groups/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathGroupList,
+		},
+
+		HelpSynopsis:    pathGroupHelpSyn,
+		HelpDescription: pathGroupHelpDesc,
+	}
+}
+
 func pathGroups(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `groups/(?P<name>.+)`,
@@ -92,6 +105,15 @@ func (b *backend) pathGroupWrite(
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathGroupList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	groups, err := req.Storage.List("group/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(groups), nil
 }
 
 type GroupEntry struct {
