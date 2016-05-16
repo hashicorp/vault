@@ -107,19 +107,16 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultInsecure)
-	oldWrapTTL := os.Getenv(EnvVaultWrapTTL)
 	os.Setenv("VAULT_CACERT", cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv("VAULT_CAPATH", cwd+"/test-fixtures/keys")
 	os.Setenv("VAULT_CLIENT_CERT", cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv("VAULT_CLIENT_KEY", cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv("VAULT_SKIP_VERIFY", "true")
-	os.Setenv("VAULT_WRAP_TTL", "60")
 	defer os.Setenv("VAULT_CACERT", oldCACert)
 	defer os.Setenv("VAULT_CAPATH", oldCAPath)
 	defer os.Setenv("VAULT_CLIENT_CERT", oldClientCert)
 	defer os.Setenv("VAULT_CLIENT_KEY", oldClientKey)
 	defer os.Setenv("VAULT_SKIP_VERIFY", oldSkipVerify)
-	defer os.Setenv("VAULT_WRAP_TTL", oldWrapTTL)
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
@@ -135,9 +132,5 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
-	}
-
-	if config.WrapTTL != "60" {
-		t.Fatalf("bad: %v", config.WrapTTL)
 	}
 }

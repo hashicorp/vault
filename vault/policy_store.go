@@ -7,6 +7,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -18,6 +19,9 @@ const (
 	// policyCacheSize is the number of policies that are kept cached
 	policyCacheSize = 1024
 
+	// cubbyholeResponseWrappingPolicyName is the name of the fixed policy
+	cubbyholeResponseWrappingPolicyName = "cubbyhole-response-wrapping"
+
 	// cubbyholeResponseWrappingPolicy is the policy that ensures cubbyhole
 	// response wrapping can always succeed
 	cubbyholeResponseWrappingPolicy = `
@@ -25,6 +29,13 @@ path "cubbyhole/response" {
     capabilities = ["create", "read"]
 }
 `
+)
+
+var (
+	immutablePolicies = []string{
+		"root",
+		cubbyholeResponseWrappingPolicyName,
+	}
 )
 
 // PolicyStore is used to provide durable storage of policy, and to
@@ -76,7 +87,7 @@ func (c *Core) setupPolicyStore() error {
 	}
 
 	// Ensure that the cubbyhole response wrapping policy exists
-	policy, err = c.policyStore.GetPolicy("cubbyhole-response-wrapping")
+	policy, err = c.policyStore.GetPolicy(cubbyholeResponseWrappingPolicyName)
 	if err != nil {
 		return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
 	}
@@ -100,14 +111,11 @@ func (c *Core) teardownPolicyStore() error {
 // SetPolicy is used to create or update the given policy
 func (ps *PolicyStore) SetPolicy(p *Policy) error {
 	defer metrics.MeasureSince([]string{"policy", "set_policy"}, time.Now())
-	if p.Name == "root" {
-		return fmt.Errorf("cannot update root policy")
-	}
-	if p.Name == "cubbyhole-response-wrapping" {
-		return fmt.Errorf("cannot update cubbyhole-response-wrapping policy")
-	}
 	if p.Name == "" {
 		return fmt.Errorf("policy name missing")
+	}
+	if strutil.StrListContains(immutablePolicies, p.Name) {
+		return fmt.Errorf("cannot update %s policy", p.Name)
 	}
 
 	return ps.setPolicyInternal(p)
@@ -208,14 +216,11 @@ func (ps *PolicyStore) ListPolicies() ([]string, error) {
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(name string) error {
 	defer metrics.MeasureSince([]string{"policy", "delete_policy"}, time.Now())
-	if name == "root" {
-		return fmt.Errorf("cannot delete root policy")
+	if strutil.StrListContains(immutablePolicies, name) {
+		return fmt.Errorf("cannot delete %s policy", name)
 	}
 	if name == "default" {
 		return fmt.Errorf("cannot delete default policy")
-	}
-	if name == "cubbyhole-response-wrapping" {
-		return fmt.Errorf("cannot delete cubbyhole-response-wrapping policy")
 	}
 	if err := ps.view.Delete(name); err != nil {
 		return fmt.Errorf("failed to delete policy: %v", err)
@@ -286,13 +291,13 @@ path "cubbyhole" {
 func (ps *PolicyStore) createCubbyholeResponseWrappingPolicy() error {
 	policy, err := Parse(cubbyholeResponseWrappingPolicy)
 	if err != nil {
-		return errwrap.Wrapf("error parsing cubbyhole-response-wrapping policy: {{err}}", err)
+		return errwrap.Wrapf(fmt.Sprintf("error parsing %s policy: {{err}}", cubbyholeResponseWrappingPolicyName), err)
 	}
 
 	if policy == nil {
-		return fmt.Errorf("parsing cubbyhole-response-wrapping policy resulted in nil policy")
+		return fmt.Errorf("parsing %s policy resulted in nil policy", cubbyholeResponseWrappingPolicyName)
 	}
 
-	policy.Name = "cubbyhole-response-wrapping"
+	policy.Name = cubbyholeResponseWrappingPolicyName
 	return ps.setPolicyInternal(policy)
 }

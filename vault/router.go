@@ -194,7 +194,7 @@ func (r *Router) RouteExistenceCheck(req *logical.Request) (bool, bool, error) {
 	return ok, exists, err
 }
 
-func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *logical.Response, ok bool, exists bool, err error) {
+func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	// Find the mount point
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(req.Path)
@@ -250,37 +250,8 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 
 	// Reset the request before returning
 	defer func() {
-		// We only run this if resp is not nil, so for instance we don't during
-		// an existence check
-		if resp != nil {
-			// If either of the request or response requested wrapping, ensure that
-			// the lowest value is what ends up in the response.
-			switch {
-			case req.WrapTTL == 0 && (resp.WrapInfo == nil || resp.WrapInfo.TTL == 0):
-				// Neither defines it, so do nothing
-
-			case req.WrapTTL != 0 && (resp.WrapInfo != nil && resp.WrapInfo.TTL != 0):
-				// Both define, so use the lowest
-				if req.WrapTTL < resp.WrapInfo.TTL {
-					resp.WrapInfo.TTL = req.WrapTTL
-				}
-
-			case req.WrapTTL != 0:
-				// Response wrap info doesn't exist, or its TTL is zero, so set
-				// it to the request TTL
-				resp.WrapInfo = &logical.WrapInfo{
-					TTL: req.WrapTTL,
-				}
-
-			default:
-				// Only case left is that only resp defines it, which doesn't
-				// need to be explicitly handled
-			}
-		}
-
-		// Reset other parameters
-		req.MountPoint = ""
 		req.Path = original
+		req.MountPoint = ""
 		req.Connection = originalConn
 		req.Storage = nil
 		req.ClientToken = clientToken
@@ -291,7 +262,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (resp *l
 		ok, exists, err := re.backend.HandleExistenceCheck(req)
 		return nil, ok, exists, err
 	} else {
-		resp, err = re.backend.HandleRequest(req)
+		resp, err := re.backend.HandleRequest(req)
 		return resp, false, false, err
 	}
 }

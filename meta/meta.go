@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-rootcerts"
@@ -47,6 +48,14 @@ type Meta struct {
 
 	// Queried if no token can be found
 	TokenHelper TokenHelperFunc
+}
+
+func (m *Meta) DefaultWrappingLookupFunc(operation, path string) string {
+	if m.flagWrapTTL != "" {
+		return m.flagWrapTTL
+	}
+
+	return os.Getenv(api.EnvVaultWrapTTL)
 }
 
 // Client returns the API client to a Vault server given the configured
@@ -94,15 +103,13 @@ func (m *Meta) Client() (*api.Client, error) {
 		}
 	}
 
-	if m.flagWrapTTL != "" {
-		config.WrapTTL = m.flagWrapTTL
-	}
-
 	// Build the client
 	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
+
+	client.SetWrappingLookupFunc(m.DefaultWrappingLookupFunc)
 
 	// If we have a token directly, then set that
 	token := m.ClientToken
@@ -200,17 +207,8 @@ func GeneralOptionsUsage() string {
   -tls-skip-verify        Do not verify TLS certificate. This is highly
                           not recommended. Verification will also be skipped
                           if VAULT_SKIP_VERIFY is set.
-
-  -wrap-ttl=""            Indiciates that the response should be wrapped in a
-                          cubbyhole token with the requested TTL. The response
-                          will live at "/response" in the cubbyhole of the
-                          returned token with a key of "response" and can be
-                          parsed as a normal API Secret. The backend can also
-                          request wrapping; the lesser of the values is used.
-                          This is a numeric string with an optional suffix of
-                          "s", "m", or "h"; if no suffix is specified it will
-                          be parsed as seconds. May also be specified via
-                          VAULT_WRAP_TTL.
 `
+
+	general += AdditionalOptionsUsage()
 	return general
 }
