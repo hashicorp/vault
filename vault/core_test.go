@@ -1154,7 +1154,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Give time to switch leaders
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Core1 should be in standby
 	standby, err = core.Standby()

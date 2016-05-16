@@ -46,7 +46,7 @@ type Path struct {
 	// priority.
 	//
 	// Note that only named capture fields are available in every operation,
-	// whereas all fields are avaiable in the Write operation.
+	// whereas all fields are available in the Write operation.
 	Fields map[string]*FieldSchema
 
 	// Callbacks are the set of callbacks that are called for a given

@@ -72,7 +72,7 @@ func (c *comm) Upload(path string, input io.Reader, fi *os.FileInfo) error {
 	target_dir := filepath.Dir(path)
 	target_file := filepath.Base(path)
 
-	// On windows, filepath.Dir uses backslash seperators (ie. "\tmp").
+	// On windows, filepath.Dir uses backslash separators (ie. "\tmp").
 	// This does not work when the target host is unix.  Switch to forward slash
 	// which works for unix and windows
 	target_dir = filepath.ToSlash(target_dir)

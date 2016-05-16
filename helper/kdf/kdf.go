@@ -11,7 +11,7 @@ import (
 	"fmt"
 )
 
-// PRF is a psuedo-random function that takes a key or seed,
+// PRF is a pseudo-random function that takes a key or seed,
 // as well as additional binary data and generates output that is
 // indistinguishable from random. Examples are cryptographic hash
 // functions or block ciphers.
@@ -19,7 +19,7 @@ type PRF func([]byte, []byte) ([]byte, error)
 
 // CounterMode implements the counter mode KDF that uses a psuedo-random-function (PRF)
 // along with a counter to generate derived keys. The KDF takes a base key
-// a derivation context, and the requried number of output bits.
+// a derivation context, and the required number of output bits.
 func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32) ([]byte, error) {
 	// Ensure the PRF is byte aligned
 	if prfLen%8 != 0 {

@@ -168,7 +168,7 @@ CHECK:
 	case logical.CreateOperation:
 		allowed = capabilities&CreateCapabilityInt > 0
 
-	// These three re-use UpdateCapabilityInt since that's the most appropraite capability/operation mapping
+	// These three re-use UpdateCapabilityInt since that's the most appropriate capability/operation mapping
 	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
 		allowed = capabilities&UpdateCapabilityInt > 0
 

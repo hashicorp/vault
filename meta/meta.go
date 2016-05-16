@@ -171,7 +171,7 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 	return f
 }
 
-// GeneralOptionsUsage returns the usage documenation for commonly
+// GeneralOptionsUsage returns the usage documentation for commonly
 // available options
 func GeneralOptionsUsage() string {
 	general := `

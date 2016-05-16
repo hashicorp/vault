@@ -136,7 +136,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 		}
 	}
 
-	// Check if the seal configuraiton is valid
+	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
 		c.logger.Printf("[ERR] core: invalid rekey seal configuration: %v", err)
 		return fmt.Errorf("invalid rekey seal configuration: %v", err)
@@ -181,7 +181,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 		return fmt.Errorf("stored shares not supported by recovery key")
 	}
 
-	// Check if the seal configuraiton is valid
+	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
 		c.logger.Printf("[ERR] core: invalid recovery configuration: %v", err)
 		return fmt.Errorf("invalid recovery configuration: %v", err)

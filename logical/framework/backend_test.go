@@ -314,8 +314,8 @@ func TestBackendHandleRequest_rollback(t *testing.T) {
 	}
 
 	b := &Backend{
-		Rollback:       callback,
-		RollbackMinAge: 1 * time.Millisecond,
+		WALRollback:       callback,
+		WALRollbackMinAge: 1 * time.Millisecond,
 	}
 
 	storage := new(logical.InmemStorage)
@@ -349,8 +349,8 @@ func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
 	}
 
 	b := &Backend{
-		Rollback:       callback,
-		RollbackMinAge: 5 * time.Second,
+		WALRollback:       callback,
+		WALRollbackMinAge: 5 * time.Second,
 	}
 
 	storage := new(logical.InmemStorage)
