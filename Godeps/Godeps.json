@@ -405,6 +405,10 @@
 			"Rev": "eecf4c70c626c7cfbb95c90195bc34d386c74ac6"
 		},
 		{
+			"ImportPath": "github.com/ncw/swift",
+			"Rev": "aaed45e6d8b38e37e6085a8e5541a11496f160bd"
+		},
+		{
 			"ImportPath": "github.com/ryanuber/columnize",
 			"Comment": "v2.1.0",
 			"Rev": "983d3a5fab1bf04d1b412465d2d9f8430e2e917e"
