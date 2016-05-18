@@ -96,7 +96,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data
 		return false, fmt.Errorf("missing cert_name")
 	}
 
-	entry, err := b.awsPublicCertificateEntry(req.Storage, certName)
+	entry, err := b.lockedAWSPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return false, err
 	}
@@ -161,7 +161,7 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 
 	// Iterate through each certificate, parse and append it to a slice.
 	for _, cert := range registeredCerts {
-		certEntry, err := b.awsPublicCertificateEntryInternal(s, cert)
+		certEntry, err := b.nonLockedAWSPublicCertificateEntry(s, cert)
 		if err != nil {
 			return nil, err
 		}
@@ -180,15 +180,15 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 
 // awsPublicCertificate is used to get the configured AWS Public Key that is used
 // to verify the PKCS#7 signature of the instance identity document.
-func (b *backend) awsPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
+func (b *backend) lockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.awsPublicCertificateEntryInternal(s, certName)
+	return b.nonLockedAWSPublicCertificateEntry(s, certName)
 }
 
 // Internal version of the above that does no locking
-func (b *backend) awsPublicCertificateEntryInternal(s logical.Storage, certName string) (*awsPublicCert, error) {
+func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	entry, err := s.Get("config/certificate/" + certName)
 	if err != nil {
 		return nil, err
@@ -227,7 +227,7 @@ func (b *backend) pathConfigCertificateRead(
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
 
-	certificateEntry, err := b.awsPublicCertificateEntry(req.Storage, certName)
+	certificateEntry, err := b.lockedAWSPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	defer b.configMutex.Unlock()
 
 	// Check if there is already a certificate entry registered.
-	certEntry, err := b.awsPublicCertificateEntryInternal(req.Storage, certName)
+	certEntry, err := b.nonLockedAWSPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}

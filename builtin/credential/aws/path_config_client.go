@@ -48,23 +48,23 @@ func pathConfigClient(b *backend) *framework.Path {
 func (b *backend) pathConfigClientExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
 
-	entry, err := b.clientConfigEntry(req.Storage)
+	entry, err := b.lockedClientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-// Fetch the client configuration required to access the AWS API.
-func (b *backend) clientConfigEntry(s logical.Storage) (*clientConfig, error) {
+// Fetch the client configuration required to access the AWS API, after acquiring an exclusive lock.
+func (b *backend) lockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.clientConfigEntryInternal(s)
+	return b.nonLockedClientConfigEntry(s)
 }
 
-// Internal version that does no locking
-func (b *backend) clientConfigEntryInternal(s logical.Storage) (*clientConfig, error) {
+// Fetch the client configuration required to access the AWS API.
+func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
 	entry, err := s.Get("config/client")
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (b *backend) clientConfigEntryInternal(s logical.Storage) (*clientConfig, e
 
 func (b *backend) pathConfigClientRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.clientConfigEntry(req.Storage)
+	clientConfig, err := b.lockedClientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.clientConfigEntryInternal(req.Storage)
+	configEntry, err := b.nonLockedClientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
 	}

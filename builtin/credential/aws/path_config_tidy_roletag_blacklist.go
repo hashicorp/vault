@@ -46,21 +46,21 @@ Defaults to 4320h (180 days).`,
 }
 
 func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.configTidyRoleTags(req.Storage)
+	entry, err := b.lockedConfigTidyRoleTags(req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func (b *backend) configTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+func (b *backend) lockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.configTidyRoleTagsInternal(s)
+	return b.nonLockedConfigTidyRoleTags(s)
 }
 
-func (b *backend) configTidyRoleTagsInternal(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+func (b *backend) nonLockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
 	entry, err := s.Get(roletagBlacklistConfigPath)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(req *logical.Reques
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.configTidyRoleTagsInternal(req.Storage)
+	configEntry, err := b.nonLockedConfigTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(req *logical.Reques
 }
 
 func (b *backend) pathConfigTidyRoletagBlacklistRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.configTidyRoleTags(req.Storage)
+	clientConfig, err := b.lockedConfigTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
 	}

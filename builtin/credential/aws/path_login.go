@@ -236,7 +236,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Get the entry for the role used by the instance.
-	roleEntry, err := b.awsRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +442,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	}
 
 	// Check if the role tag is blacklisted.
-	blacklistEntry, err := b.blacklistRoleTagEntry(s, rTagValue)
+	blacklistEntry, err := b.lockedBlacklistRoleTagEntry(s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +487,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Ensure that role entry is not deleted.
-	roleEntry, err := b.awsRole(req.Storage, storedIdentity.Role)
+	roleEntry, err := b.lockedAWSRole(req.Storage, storedIdentity.Role)
 	if err != nil {
 		return nil, err
 	}
