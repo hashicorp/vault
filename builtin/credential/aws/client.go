@@ -24,7 +24,7 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 	}
 
 	// Read the configured secret key and access key
-	config, err := b.clientConfigEntryInternal(s)
+	config, err := b.nonLockedClientConfigEntry(s)
 	if err != nil {
 		return nil, err
 	}

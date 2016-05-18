@@ -114,7 +114,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 	if b.nextTidyTime.IsZero() || !time.Now().UTC().Before(b.nextTidyTime) {
 		// safety_buffer defaults to 180 days for roletag blacklist
 		safety_buffer := 15552000
-		tidyBlacklistConfigEntry, err := b.configTidyRoleTags(req.Storage)
+		tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(req.Storage)
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 
 		// reset the safety_buffer to 72h
 		safety_buffer = 259200
-		tidyWhitelistConfigEntry, err := b.configTidyIdentities(req.Storage)
+		tidyWhitelistConfigEntry, err := b.lockedConfigTidyIdentities(req.Storage)
 		if err != nil {
 			return err
 		}
