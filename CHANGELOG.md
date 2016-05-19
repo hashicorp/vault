@@ -38,13 +38,23 @@ DEPRECATIONS/BREAKING CHANGES:
 
 FEATURES:
 
- * **AWS EC2 Auth Backend**: Provides a recure introduction mechanism for AWS EC2
-   instances allowing automated retrieval of Vault tokens. Unlike most Vault
-   authentication backends, this backend does not require first-deploying,
+ * **AWS EC2 Auth Backend**: Provides a secure introduction mechanism for AWS
+   EC2 instances allowing automated retrieval of Vault tokens. Unlike most
+   Vault authentication backends, this backend does not require first deploying
    or provisioning security-sensitive credentials (tokens, username/password,
-   client certificates,etc). Instead, it treats AWS as a Trusted Third Party
+   client certificates, etc). Instead, it treats AWS as a Trusted Third Party
    and uses the cryptographically signed dynamic metadata information that
-   uniquely represents each EC2 instance.
+   uniquely represents each EC2 instance. [Vault
+   Enterprise](https://www.hashicorp.com/vault.html) customers have access to a
+   turnkey client that speaks the backend API and makes access to a Vault token
+   easy.
+ * **Response Wrapping**: Nearly any response within Vault can now be wrapped
+   inside a single-use, time-limited token's cubbyhole, taking the [Cubbyhole
+   Authentication
+   Principles](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html)
+   mechanism to its logical conclusion. Retrieving the original response is as
+   simple as a single API command or the new `vault unwrap` command. This makes
+   secret distribution easier and more secure, including secure introduction.
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
  * **Consul Backend Health Checks**: The Consul backend will automatically
