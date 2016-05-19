@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/vault/mfa"
 )
 
 const (
@@ -37,6 +38,7 @@ var (
 		"auth/",
 		"sys/",
 		"cubbyhole/",
+		"mfa/",
 	}
 
 	untunableMounts = []string{
@@ -48,6 +50,7 @@ var (
 	// singletonMounts can only exist in one location and are
 	// loaded by default. These are types, not paths.
 	singletonMounts = []string{
+		"mfa",
 		"cubbyhole",
 		"system",
 	}
@@ -499,6 +502,9 @@ func (c *Core) setupMounts() error {
 			ch := backend.(*CubbyholeBackend)
 			ch.saltUUID = entry.UUID
 			ch.storageView = view
+		case "mfa":
+			c.mfaBackend = backend.(*mfa.MFABackend)
+			c.mfaBackend.SetStorage(view)
 		}
 
 		// Mount the backend
@@ -605,6 +611,17 @@ func requiredMountTable() *MountTable {
 		UUID:        cubbyholeUUID,
 	}
 
+	mfaUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create mfa UUID: %v", err))
+	}
+	mfaMount := &MountEntry{
+		Path:        "mfa/",
+		Type:        "mfa",
+		Description: "multi-factor authentication (MFA) support",
+		UUID:        mfaUUID,
+	}
+
 	sysUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		panic(fmt.Sprintf("could not create sys UUID: %v", err))
@@ -615,7 +632,9 @@ func requiredMountTable() *MountTable {
 		Description: "system endpoints used for control, policy and debugging",
 		UUID:        sysUUID,
 	}
+
 	table.Entries = append(table.Entries, cubbyholeMount)
+	table.Entries = append(table.Entries, mfaMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
 }

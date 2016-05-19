@@ -16,9 +16,11 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/mfa"
 )
 
 const (
@@ -204,6 +206,9 @@ type Core struct {
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
 
+	// Used to validate MFA
+	mfaBackend *mfa.MFABackend
+
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
 
@@ -319,6 +324,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Setup the backends
+
+	// Logical Backends
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
@@ -328,11 +335,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends["generic"] = PassthroughBackendFactory
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
+	logicalBackends["mfa"] = mfa.MFABackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return NewSystemBackend(c, config), nil
 	}
 	c.logicalBackends = logicalBackends
 
+	// Credential Backends
 	credentialBackends := make(map[string]logical.Factory)
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
@@ -342,6 +351,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.credentialBackends = credentialBackends
 
+	// Audit Backends
 	auditBackends := make(map[string]audit.Factory)
 	for k, f := range conf.AuditBackends {
 		auditBackends[k] = f
@@ -456,12 +466,37 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, mfaMethods, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		return nil, te, logical.ErrPermissionDenied
 	}
-	if rootPath && !rootPrivs {
-		return nil, te, logical.ErrPermissionDenied
+	// If it's a root path we want to add potential sudo mfa methods, which are
+	// a superset of other mfa methods
+	if rootPath {
+		if !rootPrivs {
+			return nil, te, logical.ErrPermissionDenied
+		}
+		mfaMethods = sudoMFAMethods
+	}
+	if mfaMethods != nil && len(mfaMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(mfaMethods)
+		mfaSuccess := false
+		for _, method := range sanitizedMFAMethods {
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAInfo)
+			if userErr != nil {
+				return nil, te, logical.ErrMFAInvalid
+			}
+			if intErr != nil {
+				return nil, te, ErrInternalError
+			}
+			if valid {
+				mfaSuccess = true
+				break
+			}
+		}
+		if !mfaSuccess {
+			return nil, te, logical.ErrMFAPermissionDenied
+		}
 	}
 
 	// Create the auth response
@@ -719,7 +754,7 @@ func (c *Core) Seal(token string) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, _, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
@@ -729,6 +764,28 @@ func (c *Core) Seal(token string) (retErr error) {
 	if !rootPrivs {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
+	}
+
+	// Check MFA methods
+	if sudoMFAMethods != nil && len(sudoMFAMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(sudoMFAMethods)
+		mfaSuccess := false
+		for _, method := range sanitizedMFAMethods {
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAInfo)
+			if userErr != nil {
+				return logical.ErrMFAInvalid
+			}
+			if intErr != nil {
+				return ErrInternalError
+			}
+			if valid {
+				mfaSuccess = true
+				break
+			}
+		}
+		if !mfaSuccess {
+			return logical.ErrMFAPermissionDenied
+		}
 	}
 
 	//Seal the Vault
@@ -791,7 +848,7 @@ func (c *Core) StepDown(token string) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs, _, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
@@ -801,6 +858,28 @@ func (c *Core) StepDown(token string) (retErr error) {
 	if !rootPrivs {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
+	}
+
+	// Check MFA methods
+	if sudoMFAMethods != nil && len(sudoMFAMethods) > 0 {
+		sanitizedMFAMethods := strutil.RemoveDuplicates(sudoMFAMethods)
+		mfaSuccess := false
+		for _, method := range sanitizedMFAMethods {
+			valid, userErr, intErr := c.mfaBackend.ValidateMFA(method, req.MFAInfo)
+			if userErr != nil {
+				return logical.ErrMFAInvalid
+			}
+			if intErr != nil {
+				return ErrInternalError
+			}
+			if valid {
+				mfaSuccess = true
+				break
+			}
+		}
+		if !mfaSuccess {
+			return logical.ErrMFAPermissionDenied
+		}
 	}
 
 	select {

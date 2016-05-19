@@ -22,6 +22,9 @@ const (
 	// WrapHeaderName is the name of the header containing a directive to wrap the
 	// response.
 	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+
+	// MFAHeaderName is the name of the header containing any MFA information
+	MFAHeaderName = "X-Vault-MFA"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -189,6 +192,56 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 	return req, nil
 }
 
+// requestMFA adds the MFAInfo value to the logical.Request if it
+// exists.
+func requestMFA(r *http.Request, req *logical.Request) (*logical.Request, error) {
+	// First try for the header value
+	mfaHeader := r.Header.Get(MFAHeaderName)
+	if mfaHeader == "" {
+		return req, nil
+	}
+
+	splitMFAHeader := strings.Split(mfaHeader, ":")
+
+	// We expect at least the method and some value to pass to it
+	if len(splitMFAHeader) < 2 {
+		return req, fmt.Errorf("invalid MFA header; must contain at least two key-value pairs")
+	}
+
+	var mfaInfo logical.MFAInfo
+
+	for _, v := range splitMFAHeader {
+		splitV := strings.Split(v, "=")
+		if len(splitV) != 2 {
+			return req, fmt.Errorf("invalid MFA header; a key is in the wrong format")
+		}
+
+		if splitV[0] == "method" {
+			mfaInfo.Method = splitV[1]
+			continue
+		}
+
+		if splitV[0] == "identifier" {
+			mfaInfo.Identifier = splitV[1]
+			continue
+		}
+
+		if mfaInfo.Parameters == nil {
+			mfaInfo.Parameters = make(map[string]string, len(splitMFAHeader))
+		}
+
+		mfaInfo.Parameters[splitV[0]] = splitV[1]
+	}
+
+	if mfaInfo.Method == "" {
+		return req, fmt.Errorf("did not find method in MFA header")
+	}
+
+	req.MFAInfo = &mfaInfo
+
+	return req, nil
+}
+
 // Determines the type of the error being returned and sets the HTTP
 // status code appropriately
 func respondErrorStatus(w http.ResponseWriter, err error) {
@@ -234,13 +287,13 @@ func respondCommon(w http.ResponseWriter, resp *logical.Response, err error) boo
 
 		if err != nil {
 			switch err {
-			case logical.ErrPermissionDenied:
+			case logical.ErrPermissionDenied, logical.ErrMFAPermissionDenied:
 				statusCode = http.StatusForbidden
 			case logical.ErrUnsupportedOperation:
 				statusCode = http.StatusMethodNotAllowed
 			case logical.ErrUnsupportedPath:
 				statusCode = http.StatusNotFound
-			case logical.ErrInvalidRequest:
+			case logical.ErrInvalidRequest, logical.ErrMFAInvalid:
 				statusCode = http.StatusBadRequest
 			}
 		}
