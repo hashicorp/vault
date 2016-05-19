@@ -52,7 +52,7 @@ func (b *backend) pathSTSRead(
 			return b.assumeRole(
 				req.Storage,
 				req.DisplayName, policyName, policyValue,
-				&ttl,
+				ttl,
 			)
 		} else {
 			return logical.ErrorResponse(
@@ -64,7 +64,7 @@ func (b *backend) pathSTSRead(
 	return b.secretTokenCreate(
 		req.Storage,
 		req.DisplayName, policyName, policyValue,
-		&ttl,
+		ttl,
 	)
 }
 

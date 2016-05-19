@@ -71,7 +71,7 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 
 func (b *backend) secretTokenCreate(s logical.Storage,
 	displayName, policyName, policy string,
-	lifeTimeInSeconds *int64) (*logical.Response, error) {
+	lifeTimeInSeconds int64) (*logical.Response, error) {
 	STSClient, err := clientSTS(s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -83,7 +83,7 @@ func (b *backend) secretTokenCreate(s logical.Storage,
 		&sts.GetFederationTokenInput{
 			Name:            aws.String(username),
 			Policy:          aws.String(policy),
-			DurationSeconds: lifeTimeInSeconds,
+			DurationSeconds: &lifeTimeInSeconds,
 		})
 
 	if err != nil {
@@ -113,7 +113,7 @@ func (b *backend) secretTokenCreate(s logical.Storage,
 
 func (b *backend) assumeRole(s logical.Storage,
 	displayName, policyName, policy string,
-	lifeTimeInSeconds *int64) (*logical.Response, error) {
+	lifeTimeInSeconds int64) (*logical.Response, error) {
 	STSClient, err := clientSTS(s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -125,7 +125,7 @@ func (b *backend) assumeRole(s logical.Storage,
 		&sts.AssumeRoleInput{
 			RoleSessionName: aws.String(username),
 			RoleArn:         aws.String(policy),
-			DurationSeconds: lifeTimeInSeconds,
+			DurationSeconds: &lifeTimeInSeconds,
 		})
 
 	if err != nil {
