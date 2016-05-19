@@ -23,6 +23,6 @@ on top of a strong security model to meet your secret storage needs.
 Furthermore, Vault is an open source tool. This means that the tool is
 as good as the entire community working together to improve it. This
 isn't just features and bug fixes, but finding potential security holes.
-Additionally, since it is an open source, your own security teams can
+Additionally, since it is open source, your own security teams can
 review and contribute to Vault and verify it meets your standards
 for security.
