@@ -29,6 +29,11 @@ var (
 	errRedirect = errors.New("redirect")
 )
 
+// WrappingLookupFunc is a function that, given an HTTP verb and a path,
+// returns an optional string duration to be used for response wrapping (e.g.
+// "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
+// however, end-of-path forward slashes are not trimmed, so must match your
+// called path precisely.
 type WrappingLookupFunc func(operation, path string) string
 
 // Config is used to configure the creation of the client.
@@ -242,7 +247,16 @@ func (c *Client) NewRequest(method, path string) *Request {
 	}
 
 	if c.wrappingLookupFunc != nil {
-		req.WrapTTL = c.wrappingLookupFunc(method, path)
+		var lookupPath string
+		switch {
+		case strings.HasPrefix(path, "/v1/"):
+			lookupPath = strings.TrimPrefix(path, "/v1/")
+		case strings.HasPrefix(path, "v1/"):
+			lookupPath = strings.TrimPrefix(path, "v1/")
+		default:
+			lookupPath = path
+		}
+		req.WrapTTL = c.wrappingLookupFunc(method, lookupPath)
 	}
 
 	return req
