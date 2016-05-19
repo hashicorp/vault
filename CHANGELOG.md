@@ -79,11 +79,14 @@ IMPROVEMENTS:
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
  * credential/ldap: `vault list` support for users and groups [GH-1270]
+ * credential/ldap: Support for the `memberOf` attribute for group membership
+   searching [GH-1245]
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
  * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
    providers [GH-307]
+ * secret/aws: Support for STS AssumeRole functionality [GH-1318]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
