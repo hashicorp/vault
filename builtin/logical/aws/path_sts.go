@@ -48,9 +48,17 @@ func (b *backend) pathSTSRead(
 	}
 	policyValue := string(policy.Value)
 	if strings.HasPrefix(policyValue, "arn:") {
-		return logical.ErrorResponse(
-				"Can't generate STS credentials for a managed policy; use an inline policy instead"),
-			logical.ErrInvalidRequest
+		if strings.Contains(policyValue, ":role/") {
+			return b.assumeRole(
+				req.Storage,
+				req.DisplayName, policyName, policyValue,
+				&ttl,
+			)
+		} else {
+			return logical.ErrorResponse(
+					"Can't generate STS credentials for a managed policy; use a role to assume or an inline policy instead"),
+				logical.ErrInvalidRequest
+		}
 	}
 	// Use the helper to create the secret
 	return b.secretTokenCreate(

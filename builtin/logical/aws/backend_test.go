@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -40,15 +42,21 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_basicSTS(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t)
+		},
+		Backend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testPolicy),
 			testAccStepReadSTS(t, "test"),
 			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
 			testAccStepReadSTSWithArnPolicy(t, "test"),
+			testAccStepWriteArnRoleRef(t, testRoleName),
+			testAccStepReadSTS(t, testRoleName),
 		},
+		Teardown: teardown,
 	})
 }
 
@@ -84,6 +92,123 @@ func testAccPreCheck(t *testing.T) {
 		log.Println("[INFO] Test: Using us-west-2 as test region")
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 	}
+
+	if v := os.Getenv("AWS_ACCOUNT_ID"); v == "" {
+		accountId, err := getAccountId()
+		if err != nil {
+			t.Fatal("AWS_ACCOUNT_ID could not be read from iam:GetUser for acceptance tests")
+		}
+		log.Printf("[INFO] Test: Used %s as AWS_ACCOUNT_ID", accountId)
+		os.Setenv("AWS_ACCOUNT_ID", accountId)
+	}
+}
+
+func getAccountId() (string, error) {
+	creds := credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		"")
+
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	svc := iam.New(session.New(awsConfig))
+
+	params := &iam.GetUserInput{}
+	res, err := svc.GetUser(params)
+
+	if err != nil {
+		return "", err
+	}
+
+	// split "arn:aws:iam::012345678912:user/username"
+	accountId := strings.Split(*res.User.Arn, ":")[4]
+	return accountId, nil
+}
+
+const testRoleName = "Vault-Acceptance-Test-AWS-Assume-Role"
+
+func createRole(t *testing.T) {
+	const testRoleAssumePolicy = `{
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Effect":"Allow",
+              "Principal": {
+                  "AWS": "arn:aws:iam::%s:root"
+              },
+              "Action": "sts:AssumeRole"
+           }
+      ]
+}
+`
+	creds := credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "")
+
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	svc := iam.New(session.New(awsConfig))
+	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, os.Getenv("AWS_ACCOUNT_ID"))
+
+	params := &iam.CreateRoleInput{
+		AssumeRolePolicyDocument: aws.String(trustPolicy),
+		RoleName:                 aws.String(testRoleName),
+		Path:                     aws.String("/"),
+	}
+
+	log.Printf("[INFO] AWS CreateRole: %s", testRoleName)
+	_, err := svc.CreateRole(params)
+
+	if err != nil {
+		t.Fatal("AWS CreateRole failed: %v", err)
+	}
+
+	attachment := &iam.AttachRolePolicyInput{
+		PolicyArn: aws.String(testPolicyArn),
+		RoleName:  aws.String(testRoleName), // Required
+	}
+	_, err = svc.AttachRolePolicy(attachment)
+
+	if err != nil {
+		t.Fatal("AWS CreateRole failed: %v", err)
+	}
+
+	// Sleep sometime because AWS is eventually consistent
+	log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+	time.Sleep(10 * time.Second)
+}
+
+func teardown() error {
+	creds := credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "")
+
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	svc := iam.New(session.New(awsConfig))
+
+	attachment := &iam.DetachRolePolicyInput{
+		PolicyArn: aws.String(testPolicyArn),
+		RoleName:  aws.String(testRoleName), // Required
+	}
+	_, err := svc.DetachRolePolicy(attachment)
+
+	params := &iam.DeleteRoleInput{
+		RoleName: aws.String(testRoleName),
+	}
+
+	log.Printf("[INFO] AWS DeleteRole: %s", testRoleName)
+	_, err = svc.DeleteRole(params)
+
+	if err != nil {
+		log.Printf("[WARN] AWS DeleteRole failed: %v", err)
+	}
+
+	return err
 }
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
@@ -178,7 +303,7 @@ func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.Test
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if resp.Data["error"] !=
-				"Can't generate STS credentials for a managed policy; use an inline policy instead" {
+				"Can't generate STS credentials for a managed policy; use a role to assume or an inline policy instead" {
 				t.Fatalf("bad: %v", resp)
 			}
 			return nil
@@ -314,6 +439,16 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 			}
 
 			return nil
+		},
+	}
+}
+
+func testAccStepWriteArnRoleRef(t *testing.T, roleName string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + roleName,
+		Data: map[string]interface{}{
+			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), roleName),
 		},
 	}
 }
