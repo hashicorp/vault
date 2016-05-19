@@ -79,6 +79,8 @@ IMPROVEMENTS:
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
  * credential/ldap: `vault list` support for users and groups [GH-1270]
+ * credential/ldap: Support for the `memberOf` attribute for group membership
+   searching [GH-1245]
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
