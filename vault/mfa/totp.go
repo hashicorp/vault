@@ -70,12 +70,6 @@ func (b *backend) createTOTPKey(method *mfaMethodEntry, identifierEntry *mfaIden
 	}
 	resp.Data["totp_qrcode_png_b64"] = base64.StdEncoding.EncodeToString(pngBuf.Bytes())
 
-	// Force the response into a cubbyhole
-	if resp.WrapInfo == nil {
-		resp.WrapInfo = &logical.WrapInfo{}
-	}
-	resp.WrapInfo.TTL = 5 * time.Minute
-
 	return nil
 }
 
