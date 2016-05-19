@@ -171,6 +171,12 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"unwrap": func() (cli.Command, error) {
+			return &command.UnwrapCommand{
+				Meta: *metaPtr,
+			}, nil
+		},
+
 		"list": func() (cli.Command, error) {
 			return &command.ListCommand{
 				Meta: *metaPtr,

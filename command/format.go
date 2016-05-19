@@ -157,6 +157,11 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		}
 	}
 
+	if s.WrapInfo != nil {
+		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
+		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %d", config.Delim, s.WrapInfo.TTL))
+	}
+
 	keys := make([]string, 0, len(s.Data))
 	for k := range s.Data {
 		keys = append(keys, k)

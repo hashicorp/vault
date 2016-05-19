@@ -23,10 +23,18 @@ const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
+const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 
 var (
 	errRedirect = errors.New("redirect")
 )
+
+// WrappingLookupFunc is a function that, given an HTTP verb and a path,
+// returns an optional string duration to be used for response wrapping (e.g.
+// "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
+// however, end-of-path forward slashes are not trimmed, so must match your
+// called path precisely.
+type WrappingLookupFunc func(operation, path string) string
 
 // Config is used to configure the creation of the client.
 type Config struct {
@@ -155,9 +163,10 @@ func (c *Config) ReadEnvironment() error {
 // Client is the client to the Vault API. Create a client with
 // NewClient.
 type Client struct {
-	addr   *url.URL
-	config *Config
-	token  string
+	addr               *url.URL
+	config             *Config
+	token              string
+	wrappingLookupFunc WrappingLookupFunc
 }
 
 // NewClient returns a new client for the given configuration.
@@ -166,7 +175,6 @@ type Client struct {
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
 func NewClient(c *Config) (*Client, error) {
-
 	u, err := url.Parse(c.Address)
 	if err != nil {
 		return nil, err
@@ -200,6 +208,12 @@ func NewClient(c *Config) (*Client, error) {
 	return client, nil
 }
 
+// SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
+// for a given operation and path
+func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
+	c.wrappingLookupFunc = lookupFunc
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -230,6 +244,19 @@ func (c *Client) NewRequest(method, path string) *Request {
 		},
 		ClientToken: c.token,
 		Params:      make(map[string][]string),
+	}
+
+	if c.wrappingLookupFunc != nil {
+		var lookupPath string
+		switch {
+		case strings.HasPrefix(path, "/v1/"):
+			lookupPath = strings.TrimPrefix(path, "/v1/")
+		case strings.HasPrefix(path, "v1/"):
+			lookupPath = strings.TrimPrefix(path, "v1/")
+		default:
+			lookupPath = path
+		}
+		req.WrapTTL = c.wrappingLookupFunc(method, lookupPath)
 	}
 
 	return req

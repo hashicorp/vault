@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -20,7 +21,7 @@ func handleSysLeader(core *vault.Core) http.Handler {
 func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	haEnabled := true
 	isLeader, address, err := core.Leader()
-	if err == vault.ErrHANotEnabled {
+	if errwrap.Contains(err, vault.ErrHANotEnabled.Error()) {
 		haEnabled = false
 		err = nil
 	}

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -68,16 +69,22 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 			}
 		}
 
+		var err error
 		req := requestAuth(r, &logical.Request{
 			Operation:  op,
 			Path:       path,
 			Data:       data,
 			Connection: getConnection(r),
 		})
+		req, err = requestWrapTTL(r, req)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err))
+			return
+		}
 
-		// Certain endpoints may require changes to the request object.
-		// They will have a callback registered to do the needful.
-		// Invoking it before proceeding.
+		// Certain endpoints may require changes to the request object. They
+		// will have a callback registered to do the needed operations, so
+		// invoke it before proceeding.
 		if prepareRequestCallback != nil {
 			if err := prepareRequestCallback(req); err != nil {
 				respondError(w, http.StatusInternalServerError, err)
@@ -148,30 +155,16 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 			return
 		}
 
-		logicalResp := &LogicalResponse{
-			Data:     resp.Data,
-			Warnings: resp.Warnings(),
-		}
-		if resp.Secret != nil {
-			logicalResp.LeaseID = resp.Secret.LeaseID
-			logicalResp.Renewable = resp.Secret.Renewable
-			logicalResp.LeaseDuration = int(resp.Secret.TTL.Seconds())
-		}
-
-		// If we have authentication information, then
-		// set up the result structure.
-		if resp.Auth != nil {
-			logicalResp.Auth = &Auth{
-				ClientToken:   resp.Auth.ClientToken,
-				Accessor:      resp.Auth.Accessor,
-				Policies:      resp.Auth.Policies,
-				Metadata:      resp.Auth.Metadata,
-				LeaseDuration: int(resp.Auth.TTL.Seconds()),
-				Renewable:     resp.Auth.Renewable,
+		if resp.WrapInfo != nil && resp.WrapInfo.Token != "" {
+			httpResp = logical.HTTPResponse{
+				WrapInfo: &logical.HTTPWrapInfo{
+					Token: resp.WrapInfo.Token,
+					TTL:   int(resp.WrapInfo.TTL.Seconds()),
+				},
 			}
+		} else {
+			httpResp = logical.SanitizeResponse(resp)
 		}
-
-		httpResp = logicalResp
 	}
 
 	// Respond
@@ -245,22 +238,4 @@ func getConnection(r *http.Request) (connection *logical.Connection) {
 		ConnState:  r.TLS,
 	}
 	return
-}
-
-type LogicalResponse struct {
-	LeaseID       string                 `json:"lease_id"`
-	Renewable     bool                   `json:"renewable"`
-	LeaseDuration int                    `json:"lease_duration"`
-	Data          map[string]interface{} `json:"data"`
-	Warnings      []string               `json:"warnings"`
-	Auth          *Auth                  `json:"auth"`
-}
-
-type Auth struct {
-	ClientToken   string            `json:"client_token"`
-	Accessor      string            `json:"accessor"`
-	Policies      []string          `json:"policies"`
-	Metadata      map[string]string `json:"metadata"`
-	LeaseDuration int               `json:"lease_duration"`
-	Renewable     bool              `json:"renewable"`
 }

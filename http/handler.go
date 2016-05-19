@@ -6,15 +6,23 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
-// AuthHeaderName is the name of the header containing the token.
-const AuthHeaderName = "X-Vault-Token"
+const (
+	// AuthHeaderName is the name of the header containing the token.
+	AuthHeaderName = "X-Vault-Token"
+
+	// WrapHeaderName is the name of the header containing a directive to wrap the
+	// response.
+	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+)
 
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
@@ -85,7 +93,7 @@ func parseRequest(r *http.Request, out interface{}) error {
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
 	resp, err := core.HandleRequest(r)
-	if err == vault.ErrStandby {
+	if errwrap.Contains(err, vault.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
 		return resp, false
 	}
@@ -153,13 +161,41 @@ func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
 	return req
 }
 
+// requestWrapTTL adds the WrapTTL value to the logical.Request if it
+// exists.
+func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, error) {
+	// First try for the header value
+	wrapTTL := r.Header.Get(WrapTTLHeaderName)
+	if wrapTTL == "" {
+		return req, nil
+	}
+
+	// If it has an allowed suffix parse as a duration string
+	if strings.HasSuffix(wrapTTL, "s") || strings.HasSuffix(wrapTTL, "m") || strings.HasSuffix(wrapTTL, "h") {
+		dur, err := time.ParseDuration(wrapTTL)
+		if err != nil {
+			return req, err
+		}
+		req.WrapTTL = dur
+	} else {
+		// Parse as a straight number of seconds
+		seconds, err := strconv.ParseInt(wrapTTL, 10, 64)
+		if err != nil {
+			return req, err
+		}
+		req.WrapTTL = time.Duration(seconds) * time.Second
+	}
+
+	return req, nil
+}
+
 // Determines the type of the error being returned and sets the HTTP
 // status code appropriately
 func respondErrorStatus(w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
 	switch {
 	// Keep adding more error types here to appropriate the status codes
-	case errwrap.ContainsType(err, new(vault.StatusBadRequest)):
+	case err != nil && errwrap.ContainsType(err, new(vault.StatusBadRequest)):
 		status = http.StatusBadRequest
 	}
 	respondError(w, status, err)
@@ -167,7 +203,7 @@ func respondErrorStatus(w http.ResponseWriter, err error) {
 
 func respondError(w http.ResponseWriter, status int, err error) {
 	// Adjust status code when sealed
-	if err == vault.ErrSealed {
+	if errwrap.Contains(err, vault.ErrSealed.Error()) {
 		status = http.StatusServiceUnavailable
 	}
 
@@ -194,19 +230,19 @@ func respondCommon(w http.ResponseWriter, resp *logical.Response, err error) boo
 	}
 
 	if resp.IsError() {
-		var statusCode int
+		statusCode := http.StatusBadRequest
 
-		switch err {
-		case logical.ErrPermissionDenied:
-			statusCode = http.StatusForbidden
-		case logical.ErrUnsupportedOperation:
-			statusCode = http.StatusMethodNotAllowed
-		case logical.ErrUnsupportedPath:
-			statusCode = http.StatusNotFound
-		case logical.ErrInvalidRequest:
-			statusCode = http.StatusBadRequest
-		default:
-			statusCode = http.StatusBadRequest
+		if err != nil {
+			switch err {
+			case logical.ErrPermissionDenied:
+				statusCode = http.StatusForbidden
+			case logical.ErrUnsupportedOperation:
+				statusCode = http.StatusMethodNotAllowed
+			case logical.ErrUnsupportedPath:
+				statusCode = http.StatusNotFound
+			case logical.ErrInvalidRequest:
+				statusCode = http.StatusBadRequest
+			}
 		}
 
 		err := fmt.Errorf("%s", resp.Data["error"].(string))

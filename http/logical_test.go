@@ -40,8 +40,9 @@ func TestLogical(t *testing.T) {
 		"data": map[string]interface{}{
 			"data": "bar",
 		},
-		"auth":     nil,
-		"warnings": nilWarnings,
+		"auth":      nil,
+		"wrap_info": nil,
+		"warnings":  nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -140,8 +141,9 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"role":             "",
 			"explicit_max_ttl": float64(0),
 		},
-		"warnings": nilWarnings,
-		"auth":     nil,
+		"warnings":  nilWarnings,
+		"wrap_info": nil,
+		"auth":      nil,
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -178,6 +180,7 @@ func TestLogical_CreateToken(t *testing.T) {
 		"renewable":      false,
 		"lease_duration": float64(0),
 		"data":           nil,
+		"wrap_info":      nil,
 		"auth": map[string]interface{}{
 			"policies":       []interface{}{"root"},
 			"metadata":       nil,

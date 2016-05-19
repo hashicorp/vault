@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-rootcerts"
@@ -42,10 +43,19 @@ type Meta struct {
 	flagCAPath     string
 	flagClientCert string
 	flagClientKey  string
+	flagWrapTTL    string
 	flagInsecure   bool
 
 	// Queried if no token can be found
 	TokenHelper TokenHelperFunc
+}
+
+func (m *Meta) DefaultWrappingLookupFunc(operation, path string) string {
+	if m.flagWrapTTL != "" {
+		return m.flagWrapTTL
+	}
+
+	return os.Getenv(api.EnvVaultWrapTTL)
 }
 
 // Client returns the API client to a Vault server given the configured
@@ -99,6 +109,8 @@ func (m *Meta) Client() (*api.Client, error) {
 		return nil, err
 	}
 
+	client.SetWrappingLookupFunc(m.DefaultWrappingLookupFunc)
+
 	// If we have a token directly, then set that
 	token := m.ClientToken
 
@@ -145,6 +157,7 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 		f.StringVar(&m.flagCAPath, "ca-path", "", "")
 		f.StringVar(&m.flagClientCert, "client-cert", "", "")
 		f.StringVar(&m.flagClientKey, "client-key", "", "")
+		f.StringVar(&m.flagWrapTTL, "wrap-ttl", "", "")
 		f.BoolVar(&m.flagInsecure, "insecure", false, "")
 		f.BoolVar(&m.flagInsecure, "tls-skip-verify", false, "")
 	}
@@ -195,5 +208,7 @@ func GeneralOptionsUsage() string {
                           not recommended. Verification will also be skipped
                           if VAULT_SKIP_VERIFY is set.
 `
+
+	general += AdditionalOptionsUsage()
 	return general
 }

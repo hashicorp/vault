@@ -67,12 +67,25 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			}
 		}
 
+		if s.WrapInfo != nil {
+			if err := Hash(salter, s.WrapInfo); err != nil {
+				return err
+			}
+		}
+
 		data, err := HashStructure(s.Data, fn)
 		if err != nil {
 			return err
 		}
 
 		s.Data = data.(map[string]interface{})
+
+	case *logical.WrapInfo:
+		if s == nil {
+			return nil
+		}
+
+		s.Token = fn(s.Token)
 	}
 
 	return nil

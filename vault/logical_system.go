@@ -1096,6 +1096,7 @@ func (b *SystemBackend) handlePolicySet(
 func (b *SystemBackend) handlePolicyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
+
 	if err := b.Core.policyStore.DeletePolicy(name); err != nil {
 		return handleError(err)
 	}
