@@ -21,6 +21,7 @@ func HelpFunc(commands map[string]cli.CommandFactory) string {
 		"write":     struct{}{},
 		"server":    struct{}{},
 		"status":    struct{}{},
+		"unwrap":    struct{}{},
 	}
 
 	// Determine the maximum key length, and classify based on type

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 	"time"
@@ -391,12 +392,25 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 
 	httpResponse := logical.SanitizeResponse(resp)
 
+	// Because of the way that JSON encodes (likely just in Go) we actually get
+	// mixed-up values for ints if we simply put this object in the response
+	// and encode the whole thing; so instead we marshal it first, then store
+	// the string response. This actually ends up making it easier on the
+	// client side, too, as it becomes a straight read-string-pass-to-unmarshal
+	// operation.
+
+	marshaledResponse, err := json.Marshal(httpResponse)
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to marshal wrapped response: %v", err)
+		return nil, ErrInternalError
+	}
+
 	cubbyReq := &logical.Request{
 		Operation:   logical.CreateOperation,
 		Path:        "cubbyhole/response",
 		ClientToken: te.ID,
 		Data: map[string]interface{}{
-			"response": httpResponse,
+			"response": string(marshaledResponse),
 		},
 	}
 
