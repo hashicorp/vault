@@ -19,8 +19,6 @@ type NoopBackend struct {
 	Paths    []string
 	Requests []*logical.Request
 	Response *logical.Response
-
-	WrapTTL time.Duration
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -32,14 +30,6 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 	n.Requests = append(n.Requests, &requestCopy)
 	if req.Storage == nil {
 		return nil, fmt.Errorf("missing view")
-	}
-
-	if n.Response == nil && (req.WrapTTL != 0 || n.WrapTTL != 0) {
-		n.Response = &logical.Response{}
-	}
-
-	if n.WrapTTL != 0 {
-		n.Response.WrapInfo = &logical.WrapInfo{TTL: n.WrapTTL}
 	}
 
 	return n.Response, nil

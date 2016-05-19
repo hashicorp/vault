@@ -161,28 +161,13 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// Route the request
 	resp, err := c.router.Route(req)
 	if resp != nil {
-		// If either of the request or response requested wrapping, ensure that
-		// the lowest value is what ends up in the response.
-		switch {
-		case req.WrapTTL == 0 && (resp.WrapInfo == nil || resp.WrapInfo.TTL == 0):
-			// Neither defines it, so do nothing
+		// We don't allow backends to specify this, so ensure it's not set
+		resp.WrapInfo = nil
 
-		case req.WrapTTL != 0 && (resp.WrapInfo != nil && resp.WrapInfo.TTL != 0):
-			// Both define, so use the lowest
-			if req.WrapTTL < resp.WrapInfo.TTL {
-				resp.WrapInfo.TTL = req.WrapTTL
-			}
-
-		case req.WrapTTL != 0:
-			// Response wrap info doesn't exist, or its TTL is zero, so set
-			// it to the request TTL
+		if req.WrapTTL != 0 {
 			resp.WrapInfo = &logical.WrapInfo{
 				TTL: req.WrapTTL,
 			}
-
-		default:
-			// Only case left is that only resp defines it, which doesn't
-			// need to be explicitly handled
 		}
 	}
 
