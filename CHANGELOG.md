@@ -78,6 +78,7 @@ IMPROVEMENTS:
    backend [GH-1404]
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
+ * credential/ldap: `vault list` support for users and groups [GH-1270]
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
@@ -114,6 +115,8 @@ BUG FIXES:
  * credential/various: Fix renewal conditions when `default` policy is not
    contained in the backend config [GH-1256]
  * physical/s3: Don't panic in certain error cases from bad S3 responses [GH-1353]
+ * secret/consul: Use non-pooled Consul API client to avoid leaving files open
+   [GH-1428]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
 

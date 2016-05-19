@@ -78,7 +78,7 @@ func (b *backend) pathRoleTagUpdate(
 	}
 
 	// Fetch the role entry
-	roleEntry, err := b.awsRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +346,7 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.awsRole(s, rTag.Role)
+	roleEntry, err := b.lockedAWSRole(s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}

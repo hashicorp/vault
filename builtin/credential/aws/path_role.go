@@ -101,7 +101,7 @@ func pathListRoles(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role").(string)))
+	entry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return false, err
 	}
@@ -109,14 +109,14 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 }
 
 // awsRole is used to get the information registered for the given AMI ID.
-func (b *backend) awsRole(s logical.Storage, role string) (*awsRoleEntry, error) {
+func (b *backend) lockedAWSRole(s logical.Storage, role string) (*awsRoleEntry, error) {
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
 
-	return b.awsRoleInternal(s, role)
+	return b.nonLockedAWSRole(s, role)
 }
 
-func (b *backend) awsRoleInternal(s logical.Storage, role string) (*awsRoleEntry, error) {
+func (b *backend) nonLockedAWSRole(s logical.Storage, role string) (*awsRoleEntry, error) {
 	entry, err := s.Get("role/" + strings.ToLower(role))
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (b *backend) pathRoleList(
 // pathRoleRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleEntry, err := b.awsRole(req.Storage, strings.ToLower(data.Get("role").(string)))
+	roleEntry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (b *backend) pathRoleCreateUpdate(
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	roleEntry, err := b.awsRoleInternal(req.Storage, roleName)
+	roleEntry, err := b.nonLockedAWSRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}

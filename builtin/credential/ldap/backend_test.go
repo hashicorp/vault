@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -38,6 +39,8 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepGroup(t, "engineers", "bar"),
 			testAccStepUser(t, "tesla", "engineers"),
 			testAccStepLogin(t, "tesla", "password"),
+			testAccStepGroupList(t, []string{"engineers", "scientists"}),
+			testAccStepUserList(t, []string{"tesla"}),
 		},
 	})
 }
@@ -319,5 +322,41 @@ func TestLDAPEscape(t *testing.T) {
 		if res != answer {
 			t.Errorf("Failed to escape %s: %s != %s\n", test, res, answer)
 		}
+	}
+}
+
+func testAccStepGroupList(t *testing.T, groups []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "groups",
+		Check: func(resp *logical.Response) error {
+			if resp.IsError() {
+				return fmt.Errorf("Got error response: %#v", *resp)
+			}
+
+			exp := groups
+			if !reflect.DeepEqual(exp, resp.Data["keys"].([]string)) {
+				return fmt.Errorf("expected:\n%#v\ngot:\n%#v\n", exp, resp.Data["keys"])
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "users",
+		Check: func(resp *logical.Response) error {
+			if resp.IsError() {
+				return fmt.Errorf("Got error response: %#v", *resp)
+			}
+
+			exp := users
+			if !reflect.DeepEqual(exp, resp.Data["keys"].([]string)) {
+				return fmt.Errorf("expected:\n%#v\ngot:\n%#v\n", exp, resp.Data["keys"])
+			}
+			return nil
+		},
 	}
 }
