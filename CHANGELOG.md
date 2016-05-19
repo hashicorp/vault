@@ -68,7 +68,7 @@ FEATURES:
    system- or mount-set values. This is useful, for instance, when the max TTL
    of the system or the `auth/token` mount must be set high to accommodate
    certain needs but you want more granular restrictions on tokens being issued
-   directly from `auth/token`. [GH-1399]
+   directly from the Token authentication backend at `auth/token`. [GH-1399]
 
 IMPROVEMENTS:
 
