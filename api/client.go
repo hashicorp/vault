@@ -29,6 +29,13 @@ var (
 	errRedirect = errors.New("redirect")
 )
 
+// WrappingLookupFunc is a function that, given an HTTP verb and a path,
+// returns an optional string duration to be used for response wrapping (e.g.
+// "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
+// however, end-of-path forward slashes are not trimmed, so must match your
+// called path precisely.
+type WrappingLookupFunc func(operation, path string) string
+
 // Config is used to configure the creation of the client.
 type Config struct {
 	// Address is the address of the Vault server. This should be a complete
@@ -36,14 +43,6 @@ type Config struct {
 	// cert or want to enable insecure mode, you need to specify a custom
 	// HttpClient.
 	Address string
-
-	// WrapTTL, if specified, asks the Vault server to return the normal
-	// response wrapped in the cubbyhole of a token, with the TTL of the token
-	// being set to the lesser of this value or a value requested by the
-	// backend originating the response. Specified either as a number of
-	// seconds, or a string duration with a "s", "m", or "h" suffix for
-	// "seconds", "minutes", or "hours" respectively.
-	WrapTTL string
 
 	// HttpClient is the HTTP client to use, which will currently always have the
 	// same values as http.DefaultClient. This is used to control redirect behavior.
@@ -86,7 +85,6 @@ func (c *Config) ReadEnvironment() error {
 	var envCAPath string
 	var envClientCert string
 	var envClientKey string
-	var envWrapTTL string
 	var envInsecure bool
 	var foundInsecure bool
 	var envTLSServerName string
@@ -109,9 +107,6 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultClientKey); v != "" {
 		envClientKey = v
-	}
-	if v := os.Getenv(EnvVaultWrapTTL); v != "" {
-		envWrapTTL = v
 	}
 	if v := os.Getenv(EnvVaultInsecure); v != "" {
 		var err error
@@ -141,10 +136,6 @@ func (c *Config) ReadEnvironment() error {
 		c.Address = envAddress
 	}
 
-	if envWrapTTL != "" {
-		c.WrapTTL = envWrapTTL
-	}
-
 	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
 	if foundInsecure {
 		clientTLSConfig.InsecureSkipVerify = envInsecure
@@ -172,9 +163,10 @@ func (c *Config) ReadEnvironment() error {
 // Client is the client to the Vault API. Create a client with
 // NewClient.
 type Client struct {
-	addr   *url.URL
-	config *Config
-	token  string
+	addr               *url.URL
+	config             *Config
+	token              string
+	wrappingLookupFunc WrappingLookupFunc
 }
 
 // NewClient returns a new client for the given configuration.
@@ -216,6 +208,12 @@ func NewClient(c *Config) (*Client, error) {
 	return client, nil
 }
 
+// SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
+// for a given operation and path
+func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
+	c.wrappingLookupFunc = lookupFunc
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -245,8 +243,20 @@ func (c *Client) NewRequest(method, path string) *Request {
 			Path:   path,
 		},
 		ClientToken: c.token,
-		WrapTTL:     c.config.WrapTTL,
 		Params:      make(map[string][]string),
+	}
+
+	if c.wrappingLookupFunc != nil {
+		var lookupPath string
+		switch {
+		case strings.HasPrefix(path, "/v1/"):
+			lookupPath = strings.TrimPrefix(path, "/v1/")
+		case strings.HasPrefix(path, "v1/"):
+			lookupPath = strings.TrimPrefix(path, "v1/")
+		default:
+			lookupPath = path
+		}
+		req.WrapTTL = c.wrappingLookupFunc(method, lookupPath)
 	}
 
 	return req

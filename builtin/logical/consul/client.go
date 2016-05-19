@@ -23,7 +23,7 @@ func client(s logical.Storage) (*api.Client, error) {
 		return nil, fmt.Errorf("error reading root configuration: %s", err)
 	}
 
-	consulConf := api.DefaultConfig()
+	consulConf := api.DefaultNonPooledConfig()
 	consulConf.Address = conf.Address
 	consulConf.Scheme = conf.Scheme
 	consulConf.Token = conf.Token

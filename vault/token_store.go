@@ -92,14 +92,11 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	t.salt = salt
 
 	t.tokenLocks = map[string]*sync.RWMutex{}
-	for i := int64(0); i < 16; i++ {
-		for j := int64(0); j < 16; j++ {
-			t.tokenLocks[fmt.Sprintf("%s%s",
-				strconv.FormatInt(i, 16),
-				strconv.FormatInt(j, 16))] = &sync.RWMutex{}
-		}
+	for i := int64(0); i < 256; i++ {
+		t.tokenLocks[fmt.Sprintf("%2x",
+			strconv.FormatInt(i, 16))] = &sync.RWMutex{}
 	}
-	t.tokenLocks["global"] = &sync.RWMutex{}
+	t.tokenLocks["custom"] = &sync.RWMutex{}
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -460,7 +457,7 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
 
-// SaltID is used to apply a salt and hash to an ID to make sure its not reversable
+// SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (ts *TokenStore) SaltID(id string) string {
 	return ts.salt.SaltID(id)
 }
@@ -580,7 +577,8 @@ func (ts *TokenStore) getTokenLock(id string) *sync.RWMutex {
 		lock, ok = ts.tokenLocks[id[0:2]]
 	}
 	if !ok || lock == nil {
-		lock = ts.tokenLocks["global"]
+		// Fall back for custom token IDs
+		lock = ts.tokenLocks["custom"]
 	}
 
 	return lock
@@ -614,20 +612,20 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
 	}
+	// If it can't be found we shouldn't be trying to use it, so if we get nil
+	// back, it is because it has been revoked in the interim or will be
+	// revoked (NumUses is -1)
 	if te == nil {
-		return nil, fmt.Errorf("token entry nil after refreshing to decrement use count; token has likely been used already")
-	}
-
-	// If the token is already being revoked, return nil to indicate that it's
-	// no longer valid
-	if te.NumUses == -1 {
-		return nil, nil
+		return nil, fmt.Errorf("token not found or fully used already")
 	}
 
 	// Decrement the count. If this is our last use count, we need to indicate
 	// that this is no longer valid, but revocation is deferred to the end of
 	// the call, so this will make sure that any Lookup that happens doesn't
-	// return an entry.
+	// return an entry. This essentially acts as a write-ahead lock and is
+	// especially useful since revocation can end up (via the expiration
+	// manager revoking children) attempting to acquire the same lock
+	// repeatedly.
 	if te.NumUses == 1 {
 		te.NumUses = -1
 	} else {

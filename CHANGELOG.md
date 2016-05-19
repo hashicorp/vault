@@ -38,6 +38,23 @@ DEPRECATIONS/BREAKING CHANGES:
 
 FEATURES:
 
+ * **AWS EC2 Auth Backend**: Provides a secure introduction mechanism for AWS
+   EC2 instances allowing automated retrieval of Vault tokens. Unlike most
+   Vault authentication backends, this backend does not require first deploying
+   or provisioning security-sensitive credentials (tokens, username/password,
+   client certificates, etc). Instead, it treats AWS as a Trusted Third Party
+   and uses the cryptographically signed dynamic metadata information that
+   uniquely represents each EC2 instance. [Vault
+   Enterprise](https://www.hashicorp.com/vault.html) customers have access to a
+   turnkey client that speaks the backend API and makes access to a Vault token
+   easy.
+ * **Response Wrapping**: Nearly any response within Vault can now be wrapped
+   inside a single-use, time-limited token's cubbyhole, taking the [Cubbyhole
+   Authentication
+   Principles](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html)
+   mechanism to its logical conclusion. Retrieving the original response is as
+   simple as a single API command or the new `vault unwrap` command. This makes
+   secret distribution easier and more secure, including secure introduction.
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
  * **Consul Backend Health Checks**: The Consul backend will automatically
@@ -51,7 +68,7 @@ FEATURES:
    system- or mount-set values. This is useful, for instance, when the max TTL
    of the system or the `auth/token` mount must be set high to accommodate
    certain needs but you want more granular restrictions on tokens being issued
-   directly from `auth/token`. [GH-1399]
+   directly from the Token authentication backend at `auth/token`. [GH-1399]
 
 IMPROVEMENTS:
 
@@ -71,11 +88,15 @@ IMPROVEMENTS:
    backend [GH-1404]
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
+ * credential/ldap: `vault list` support for users and groups [GH-1270]
+ * credential/ldap: Support for the `memberOf` attribute for group membership
+   searching [GH-1245]
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
  * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
    providers [GH-307]
+ * secret/aws: Support for STS AssumeRole functionality [GH-1318]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
@@ -107,6 +128,8 @@ BUG FIXES:
  * credential/various: Fix renewal conditions when `default` policy is not
    contained in the backend config [GH-1256]
  * physical/s3: Don't panic in certain error cases from bad S3 responses [GH-1353]
+ * secret/consul: Use non-pooled Consul API client to avoid leaving files open
+   [GH-1428]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
 
@@ -404,7 +427,7 @@ IMPROVEMENTS:
    provides a concatenated PEM bundle of returned values [GH-1008]
  * logical/pki: Add 30 seconds of slack to the validity start period to
    accommodate some clock skew in machines [GH-1036]
- * logical/postgres: Add `max_idle_connections` paramter [GH-950]
+ * logical/postgres: Add `max_idle_connections` parameter [GH-950]
  * logical/postgres: Add list support for roles path
  * logical/ssh: Add list support for roles path [GH-983]
  * logical/transit: Keys are archived and only keys between the latest version
@@ -637,7 +660,7 @@ ahead of time on the "vault-tool" mailing list.
    already switched to using "ttl" and others will follow in upcoming releases.
    In particular, the "token", "generic", and "pki" backends accept both "ttl"
    and "lease" but in 0.4 only "ttl" will be accepted. [GH-528]
- * **Downgrade Not Supported**: Due to enhancements in the storage subsytem,
+ * **Downgrade Not Supported**: Due to enhancements in the storage subsystem,
    values written by Vault 0.3+ will not be able to be read by prior versions
    of Vault. There are no expected upgrade issues, however, as with all
    critical infrastructure it is recommended to back up Vault's physical
@@ -880,7 +903,7 @@ IMPROVEMENTS:
   * core: Very verbose error if mlock fails [GH-59]
   * command/*: On error with TLS oversized record, show more human-friendly
     error message. [GH-123]
-  * command/read: `lease_renewable` is now outputed along with the secret to
+  * command/read: `lease_renewable` is now outputted along with the secret to
     show whether it is renewable or not
   * command/server: Add configuration option to disable mlock
   * command/server: Disable mlock for dev mode so it works on more systems

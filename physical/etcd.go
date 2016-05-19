@@ -37,7 +37,7 @@ const (
 	// The amount of time to wait between the semaphore key renewals
 	EtcdLockRenewInterval = 5 * time.Second
 
-	// The ammount of time to wait if a watch fails before trying again.
+	// The amount of time to wait if a watch fails before trying again.
 	EtcdWatchRetryInterval = time.Second
 
 	// The number of times to re-try a failed watch before signaling that leadership is lost.
@@ -316,7 +316,7 @@ type EtcdLock struct {
 	lock                                 sync.Mutex
 }
 
-// addSemaphoreKey aquires a new ordered semaphore key.
+// addSemaphoreKey acquires a new ordered semaphore key.
 func (c *EtcdLock) addSemaphoreKey() (string, uint64, error) {
 	// CreateInOrder is an atomic operation that can be used to enqueue a
 	// request onto a semaphore. In the rest of the comments, we refer to the
@@ -345,7 +345,7 @@ func (c *EtcdLock) renewSemaphoreKey() (string, uint64, error) {
 	return response.Node.Key, response.Index, nil
 }
 
-// getSemaphoreKey determines which semaphore key holder has aquired the lock
+// getSemaphoreKey determines which semaphore key holder has acquired the lock
 // and its value.
 func (c *EtcdLock) getSemaphoreKey() (string, string, uint64, error) {
 	// Get the list of waiters in order to see if we are next.
@@ -465,9 +465,9 @@ func (c *EtcdLock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan
 	close(closeCh)
 }
 
-// Lock attempts to aquire the lock by waiting for a new semaphore key in etcd
+// Lock attempts to acquire the lock by waiting for a new semaphore key in etcd
 // to become the first in the queue and will block until it is successful or
-// it recieves a signal on the provided channel. The returned channel will be
+// it receives a signal on the provided channel. The returned channel will be
 // closed when the lock is lost, either by an explicit call to Unlock or by
 // the associated semaphore key in etcd otherwise being deleted or expiring.
 //
@@ -526,7 +526,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr 
 
 			// If the error is not an etcd error, we can assume it's a notification
 			// of the stop channel having closed. In this scenario, we also want to
-			// remove our semaphore key as we are no longer waiting to aquire the
+			// remove our semaphore key as we are no longer waiting to acquire the
 			// lock.
 			if _, ok := err.(*client.Error); !ok {
 				delOpts := &client.DeleteOptions{

@@ -7,6 +7,19 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathUsersList(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "users/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathUserList,
+		},
+
+		HelpSynopsis:    pathUserHelpSyn,
+		HelpDescription: pathUserHelpDesc,
+	}
+}
+
 func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
@@ -25,7 +38,7 @@ func pathUsers(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathUserDelete,
 			logical.ReadOperation:   b.pathUserRead,
-			logical.UpdateOperation:  b.pathUserWrite,
+			logical.UpdateOperation: b.pathUserWrite,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
@@ -97,6 +110,15 @@ func (b *backend) pathUserWrite(
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathUserList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	users, err := req.Storage.List("user/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(users), nil
 }
 
 type UserEntry struct {

@@ -347,6 +347,10 @@ func (b *backend) pathRoleCreate(
 		}
 	}
 
+	// Persist clamped TTLs
+	entry.TTL = ttl.String()
+	entry.MaxTTL = maxTTL.String()
+
 	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
 		return errResp, nil
 	}

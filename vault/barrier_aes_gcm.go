@@ -281,7 +281,7 @@ func (b *AESGCMBarrier) ReloadMasterKey() error {
 		return fmt.Errorf("failed to read master key path: %v", err)
 	}
 
-	// The masterKeyPath could be missing (backwards incompatable),
+	// The masterKeyPath could be missing (backwards incompatible),
 	// we can ignore this and attempt to make progress with the current
 	// master key.
 	if out == nil {
@@ -377,7 +377,7 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 		return fmt.Errorf("failed to unmarshal barrier init file")
 	}
 
-	// Setup a new keyring, this is for backwards compatability
+	// Setup a new keyring, this is for backwards compatibility
 	keyring := NewKeyring()
 	keyring = keyring.SetMasterKey(key)
 	keyring, err = keyring.AddKey(&Key{

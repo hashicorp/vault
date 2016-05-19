@@ -88,9 +88,9 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 			return
 		}
 
-		// Certain endpoints may require changes to the request object.
-		// They will have a callback registered to do the needful.
-		// Invoking it before proceeding.
+		// Certain endpoints may require changes to the request object. They
+		// will have a callback registered to do the needed operations, so
+		// invoke it before proceeding.
 		if prepareRequestCallback != nil {
 			if err := prepareRequestCallback(req); err != nil {
 				respondError(w, http.StatusInternalServerError, err)

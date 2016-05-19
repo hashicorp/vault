@@ -31,7 +31,7 @@ type Backend interface {
 	List(prefix string) ([]string, error)
 }
 
-// HABackend is an extentions to the standard physical
+// HABackend is an extensions to the standard physical
 // backend to support high-availability. Vault only expects to
 // use mutual exclusion to allow multiple instances to act as a
 // hot standby for a leader that services all requests.

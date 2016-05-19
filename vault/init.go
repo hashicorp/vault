@@ -89,14 +89,14 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 			return nil, fmt.Errorf("recovery configuration must specify a positive number of shares")
 		}
 
-		// Check if the seal configuraiton is valid
+		// Check if the seal configuration is valid
 		if err := recoveryConfig.Validate(); err != nil {
 			c.logger.Printf("[ERR] core: invalid recovery configuration: %v", err)
 			return nil, fmt.Errorf("invalid recovery configuration: %v", err)
 		}
 	}
 
-	// Check if the seal configuraiton is valid
+	// Check if the seal configuration is valid
 	if err := barrierConfig.Validate(); err != nil {
 		c.logger.Printf("[ERR] core: invalid seal configuration: %v", err)
 		return nil, fmt.Errorf("invalid seal configuration: %v", err)

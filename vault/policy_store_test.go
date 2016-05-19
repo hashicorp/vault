@@ -142,12 +142,33 @@ func TestPolicyStore_Predefined(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	p, err := core.policyStore.GetPolicy("cubbyhole-response-wrapping")
+	pCubby, err := core.policyStore.GetPolicy("cubbyhole-response-wrapping")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if p.Raw != cubbyholeResponseWrappingPolicy {
-		t.Fatalf("bad: expected\n%s\ngot\n%s\n", cubbyholeResponseWrappingPolicy, p.Raw)
+	if pCubby.Raw != cubbyholeResponseWrappingPolicy {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", cubbyholeResponseWrappingPolicy, pCubby.Raw)
+	}
+	pRoot, err := core.policyStore.GetPolicy("root")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	err = core.policyStore.SetPolicy(pCubby)
+	if err == nil {
+		t.Fatalf("expected err setting %s", pCubby.Name)
+	}
+	err = core.policyStore.SetPolicy(pRoot)
+	if err == nil {
+		t.Fatalf("expected err setting %s", pRoot.Name)
+	}
+	err = core.policyStore.DeletePolicy(pCubby.Name)
+	if err == nil {
+		t.Fatalf("expected err deleting %s", pCubby.Name)
+	}
+	err = core.policyStore.DeletePolicy(pRoot.Name)
+	if err == nil {
+		t.Fatalf("expected err deleting %s", pRoot.Name)
 	}
 }
 

@@ -76,7 +76,7 @@ func GetWAL(s logical.Storage, id string) (*WALEntry, error) {
 	return &raw, nil
 }
 
-// DeleteWAL commits the WAL entry with the given ID. Once comitted,
+// DeleteWAL commits the WAL entry with the given ID. Once committed,
 // it is assumed that the operation was a success and doesn't need to
 // be rolled back.
 func DeleteWAL(s logical.Storage, id string) error {

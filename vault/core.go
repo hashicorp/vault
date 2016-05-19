@@ -700,8 +700,9 @@ func (c *Core) Seal(token string) (retErr error) {
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
+
 	if c.sealed {
-		return nil
+		return retErr
 	}
 
 	// Validate the token is a root token
@@ -720,9 +721,11 @@ func (c *Core) Seal(token string) (retErr error) {
 		// essentially does the same thing.
 		if c.standby {
 			c.logger.Printf("[ERR] core: vault cannot seal when in standby mode; please restart instead")
-			return errors.New("vault cannot seal when in standby mode; please restart instead")
+			retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
+			return retErr
 		}
-		return err
+		retErr = multierror.Append(retErr, err)
+		return retErr
 	}
 	// Attempt to use the token (decrement num_uses)
 	// On error bail out; if the token has been revoked, bail out too
@@ -730,27 +733,37 @@ func (c *Core) Seal(token string) (retErr error) {
 		te, err = c.tokenStore.UseToken(te)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
-			return ErrInternalError
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return retErr
 		}
 		if te == nil {
 			// Token is no longer valid
-			return logical.ErrPermissionDenied
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			return retErr
 		}
 		if te.NumUses == -1 {
 			// Token needs to be revoked
-			return c.tokenStore.Revoke(te.ID)
+			defer func(id string) {
+				err = c.tokenStore.Revoke(id)
+				if err != nil {
+					c.logger.Printf("[ERR] core: token needed revocation after seal but failed to revoke: %v", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+				}
+			}(te.ID)
 		}
 	}
 
 	// Verify that this operation is allowed
 	allowed, rootPrivs, _, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	// We always require root privileges for this operation
 	if !rootPrivs {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	// Check MFA methods
@@ -777,17 +790,15 @@ func (c *Core) Seal(token string) (retErr error) {
 
 	//Seal the Vault
 	err = c.sealInternal()
-	if err == nil && retErr == ErrInternalError {
-		c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
-	} else {
-		retErr = err
+	if err != nil {
+		retErr = multierror.Append(retErr, err)
 	}
 
-	return
+	return retErr
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(token string) error {
+func (c *Core) StepDown(token string) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
 
 	c.stateLock.Lock()
@@ -808,34 +819,45 @@ func (c *Core) StepDown(token string) error {
 
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
-		return err
+		retErr = multierror.Append(retErr, err)
+		return retErr
 	}
 	// Attempt to use the token (decrement num_uses)
 	if te != nil {
 		te, err = c.tokenStore.UseToken(te)
 		if err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
-			return err
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return retErr
 		}
 		if te == nil {
 			// Token has been revoked
-			return logical.ErrPermissionDenied
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			return retErr
 		}
 		if te.NumUses == -1 {
 			// Token needs to be revoked
-			return c.tokenStore.Revoke(te.ID)
+			defer func(id string) {
+				err = c.tokenStore.Revoke(id)
+				if err != nil {
+					c.logger.Printf("[ERR] core: token needed revocation after step-down but failed to revoke: %v", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+				}
+			}(te.ID)
 		}
 	}
 
 	// Verify that this operation is allowed
 	allowed, rootPrivs, _, sudoMFAMethods := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	// We always require root privileges for this operation
 	if !rootPrivs {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	// Check MFA methods
@@ -866,7 +888,7 @@ func (c *Core) StepDown(token string) error {
 		c.logger.Printf("[WARN] core: manual step-down operation already queued")
 	}
 
-	return nil
+	return retErr
 }
 
 // sealInternal is an internal method used to seal the vault.  It does not do

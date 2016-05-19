@@ -1,5 +1,9 @@
 package logical
 
+// This logic was pulled from the http package so that it can be used for
+// encoding wrapped responses as well. It simply translates the logical request
+// to an http response, with the values we want and omitting the values we
+// don't.
 func SanitizeResponse(input *Response) *HTTPResponse {
 	logicalResp := &HTTPResponse{
 		Data:     input.Data,
