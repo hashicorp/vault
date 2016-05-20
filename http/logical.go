@@ -41,6 +41,7 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 				list, err := strconv.ParseBool(listStr)
 				if err != nil {
 					respondError(w, http.StatusBadRequest, nil)
+					return
 				}
 				if list {
 					op = logical.ListOperation
@@ -169,6 +170,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 
 	// Respond
 	respondOk(w, httpResp)
+	return
 }
 
 // respondRaw is used when the response is using HTTPContentType and HTTPRawBody
