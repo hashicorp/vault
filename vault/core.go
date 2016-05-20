@@ -658,25 +658,54 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	return true, nil
 }
 
-// Seal is used to re-seal the Vault. This requires the Vault to
-// be unsealed again to perform any further operations.
-func (c *Core) Seal(token string) (retErr error) {
+// SealWithRequest takes in a logical.Request, acquires the lock, and passes
+// through to sealInternal
+func (c *Core) SealWithRequest(req *logical.Request) error {
+	defer metrics.MeasureSince([]string{"core", "seal-with-request"}, time.Now())
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	if c.sealed {
+		return nil
+	}
+
+	return c.sealInitCommon(req)
+}
+
+// Seal takes in a token and creates a logical.Request, acquires the lock, and
+// passes through to sealInternal
+func (c *Core) Seal(token string) error {
 	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
 	if c.sealed {
-		return retErr
+		return nil
 	}
 
-	// Validate the token is a root token
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/seal",
 		ClientToken: token,
 	}
 
+	return c.sealInitCommon(req)
+}
+
+// sealInitCommon is common logic for Seal and SealWithRequest and is used to
+// re-seal the Vault. This requires the Vault to be unsealed again to perform
+// any further operations.
+func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
+	defer metrics.MeasureSince([]string{"core", "seal-internal"}, time.Now())
+
+	if req == nil {
+		retErr = multierror.Append(retErr, errors.New("nil request to seal"))
+		return retErr
+	}
+
+	// Validate the token is a root token
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
 		// Since there is no token store in standby nodes, sealing cannot
@@ -692,6 +721,22 @@ func (c *Core) Seal(token string) (retErr error) {
 		retErr = multierror.Append(retErr, err)
 		return retErr
 	}
+
+	// Audit-log the request before going any further
+	auth := &logical.Auth{
+		ClientToken: req.ClientToken,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
+	}
+
+	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
+			req.Path, err)
+		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		return retErr
+	}
+
 	// Attempt to use the token (decrement num_uses)
 	// On error bail out; if the token has been revoked, bail out too
 	if te != nil {
@@ -741,8 +786,13 @@ func (c *Core) Seal(token string) (retErr error) {
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(token string) (retErr error) {
+func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
+
+	if req == nil {
+		retErr = multierror.Append(retErr, errors.New("nil request to step-down"))
+		return retErr
+	}
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
@@ -753,18 +803,27 @@ func (c *Core) StepDown(token string) (retErr error) {
 		return nil
 	}
 
-	// Validate the token is a root token
-	req := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: token,
-	}
-
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
 	}
+
+	// Audit-log the request before going any further
+	auth := &logical.Auth{
+		ClientToken: req.ClientToken,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
+	}
+
+	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
+			req.Path, err)
+		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		return retErr
+	}
+
 	// Attempt to use the token (decrement num_uses)
 	if te != nil {
 		te, err = c.tokenStore.UseToken(te)

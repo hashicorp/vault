@@ -1148,8 +1148,13 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
+	req := &logical.Request{
+		ClientToken: root,
+		Path:        "sys/step-down",
+	}
+
 	// Step down core
-	err = core.StepDown(root)
+	err = core.StepDown(req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
@@ -1191,7 +1196,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Step down core2
-	err = core2.StepDown(root)
+	err = core2.StepDown(req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
