@@ -14,72 +14,76 @@ import (
 
 type PrepareRequestFunc func(req *logical.Request) error
 
+func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Request, int, error) {
+	// Determine the path...
+	if !strings.HasPrefix(r.URL.Path, "/v1/") {
+		return nil, http.StatusNotFound, nil
+	}
+	path := r.URL.Path[len("/v1/"):]
+	if path == "" {
+		return nil, http.StatusNotFound, nil
+	}
+
+	// Determine the operation
+	var op logical.Operation
+	switch r.Method {
+	case "DELETE":
+		op = logical.DeleteOperation
+	case "GET":
+		op = logical.ReadOperation
+		// Need to call ParseForm to get query params loaded
+		queryVals := r.URL.Query()
+		listStr := queryVals.Get("list")
+		if listStr != "" {
+			list, err := strconv.ParseBool(listStr)
+			if err != nil {
+				return nil, http.StatusBadRequest, nil
+			}
+			if list {
+				op = logical.ListOperation
+			}
+		}
+	case "POST", "PUT":
+		op = logical.UpdateOperation
+	case "LIST":
+		op = logical.ListOperation
+	default:
+		return nil, http.StatusMethodNotAllowed, nil
+	}
+
+	// Parse the request if we can
+	var data map[string]interface{}
+	if op == logical.UpdateOperation {
+		err := parseRequest(r, &data)
+		if err == io.EOF {
+			data = nil
+			err = nil
+		}
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+	}
+
+	var err error
+	req := requestAuth(r, &logical.Request{
+		Operation:  op,
+		Path:       path,
+		Data:       data,
+		Connection: getConnection(r),
+	})
+	req, err = requestWrapTTL(r, req)
+	if err != nil {
+		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
+	}
+
+	return req, 0, nil
+}
+
 func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Determine the path...
-		if !strings.HasPrefix(r.URL.Path, "/v1/") {
-			respondError(w, http.StatusNotFound, nil)
-			return
-		}
-		path := r.URL.Path[len("/v1/"):]
-		if path == "" {
-			respondError(w, http.StatusNotFound, nil)
-			return
-		}
-
-		// Determine the operation
-		var op logical.Operation
-		switch r.Method {
-		case "DELETE":
-			op = logical.DeleteOperation
-		case "GET":
-			op = logical.ReadOperation
-			// Need to call ParseForm to get query params loaded
-			queryVals := r.URL.Query()
-			listStr := queryVals.Get("list")
-			if listStr != "" {
-				list, err := strconv.ParseBool(listStr)
-				if err != nil {
-					respondError(w, http.StatusBadRequest, nil)
-					return
-				}
-				if list {
-					op = logical.ListOperation
-				}
-			}
-		case "POST", "PUT":
-			op = logical.UpdateOperation
-		case "LIST":
-			op = logical.ListOperation
-		default:
-			respondError(w, http.StatusMethodNotAllowed, nil)
-			return
-		}
-
-		// Parse the request if we can
-		var data map[string]interface{}
-		if op == logical.UpdateOperation {
-			err := parseRequest(r, &data)
-			if err == io.EOF {
-				data = nil
-				err = nil
-			}
-			if err != nil {
-				respondError(w, http.StatusBadRequest, err)
-				return
-			}
-		}
-
-		var err error
-		req := requestAuth(r, &logical.Request{
-			Operation:  op,
-			Path:       path,
-			Data:       data,
-			Connection: getConnection(r),
-		})
-		req, err = requestWrapTTL(r, req)
-		if err != nil {
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err))
+		req, statusCode, err := buildLogicalRequest(w, r)
+		if err != nil || statusCode != 0 {
+			respondError(w, statusCode, err)
 			return
 		}
 
@@ -101,7 +105,7 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 			return
 		}
 		switch {
-		case op == logical.ReadOperation:
+		case req.Operation == logical.ReadOperation:
 			if resp == nil {
 				respondError(w, http.StatusNotFound, nil)
 				return
@@ -109,7 +113,7 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 
 		// Basically: if we have empty "keys" or no keys at all, 404. This
 		// provides consistency with GET.
-		case op == logical.ListOperation:
+		case req.Operation == logical.ListOperation:
 			if resp == nil || len(resp.Data) == 0 {
 				respondError(w, http.StatusNotFound, nil)
 				return
@@ -131,7 +135,7 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 		}
 
 		// Build the proper response
-		respondLogical(w, r, path, dataOnly, resp)
+		respondLogical(w, r, req.Path, dataOnly, resp)
 	})
 }
 
