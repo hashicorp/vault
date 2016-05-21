@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -45,11 +46,16 @@ func (b *backend) pathSTSRead(
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Role '%s' not found", policyName)), nil
 	}
-
+	policyValue := string(policy.Value)
+	if strings.HasPrefix(policyValue, "arn:") {
+		return logical.ErrorResponse(
+				"Can't generate STS credentials for a managed policy; use an inline policy instead"),
+			logical.ErrInvalidRequest
+	}
 	// Use the helper to create the secret
 	return b.secretTokenCreate(
 		req.Storage,
-		req.DisplayName, policyName, string(policy.Value),
+		req.DisplayName, policyName, policyValue,
 		&ttl,
 	)
 }

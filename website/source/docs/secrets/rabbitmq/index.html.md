@@ -20,7 +20,6 @@ the messaging queue with unique credentials, it makes auditing much easier when
 questionable data access is discovered: you can track it down to the specific
 instance of a service based on the RabbitMQ username.
 
-// TODO: Fix this
 Vault makes use both of its own internal revocation system as well as the
 deleting RabbitMQ users when creating RabbitMQ users to ensure that users
 become invalid within a reasonable time of the lease expiring.
@@ -30,7 +29,7 @@ on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 
-The first step to using the PostgreSQL backend is to mount it.
+The first step to using the RabbitMQ backend is to mount it.
 Unlike the `generic` backend, the `rabbitmq` backend is not mounted by default.
 
 ```text
@@ -57,8 +56,8 @@ Optionally, we can configure the lease settings for credentials generated
 by Vault. This is done by writing to the `config/lease` key:
 
 ```
-$ vault write postgresql/config/lease lease=1h lease_max=24h
-Success! Data written to: postgresql/config/lease
+$ vault write rabbitmq/config/lease lease=1h lease_max=24h
+Success! Data written to: rabbitmq/config/lease
 ```
 
 This restricts each credential to being valid or leased for 1 hour
@@ -123,25 +122,30 @@ subpath for interactive help output.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/RabbitMQ/config/connection`</dd>
+  <dd>`/rabbitmq/config/connection`</dd>
 
   <dt>Parameters</dt>
   <dd>
     <ul>
       <li>
-        <span class="param">uri</span>
+        <span class="param">connection_uri</span>
         <span class="param-flags">required</span>
-        The RabbitMQ management connection URI. e.g. "http://localhost:15672"
-      </li
+        The RabbitMQ management connection URI.
+      </li>
       <li>
         <span class="param">username</span>
         <span class="param-flags">required</span>
-        The RabbitMQ management administrator username. e.g. "admin"
+        The RabbitMQ management administrator username.
       </li>
       <li>
         <span class="param">password</span>
         <span class="param-flags">required</span>
-        The RabbitMQ management administrator password. e.g. "password"
+        The RabbitMQ management administrator password.
+      </li>
+      <li>
+        <span class="param">verify_connection</span>
+        <span class="param-flags">optional</span>
+        Whether to verify connection URI, username, and password.
       </li>
     </ul>
   </dd>
@@ -152,7 +156,7 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-### /postgresql/config/lease
+### /rabbitmq/config/lease
 #### POST
 
 <dl class="api">
@@ -303,7 +307,7 @@ subpath for interactive help output.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/postgresql/creds/<name>`</dd>
+  <dd>`/rabbitmq/creds/<name>`</dd>
 
   <dt>Parameters</dt>
   <dd>

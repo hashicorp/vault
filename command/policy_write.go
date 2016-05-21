@@ -6,15 +6,17 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // PolicyWriteCommand is a Command that enables a new endpoint.
 type PolicyWriteCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *PolicyWriteCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("policy-write", FlagSetDefault)
+	flags := c.Meta.FlagSet("policy-write", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -82,7 +84,6 @@ Usage: vault policy-write [options] name path
   loaded from the file at the given path.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

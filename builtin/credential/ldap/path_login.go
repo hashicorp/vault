@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -38,28 +39,36 @@ func (b *backend) pathLogin(
 	password := d.Get("password").(string)
 
 	policies, resp, err := b.Login(req, username, password)
-	if len(policies) == 0 {
-		return resp, err
+	// Handle an internal error
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		// Handle a logical error
+		if resp.IsError() {
+			return resp, nil
+		}
+	} else {
+		resp = &logical.Response{}
 	}
 
 	sort.Strings(policies)
 
-	return &logical.Response{
-		Auth: &logical.Auth{
-			Policies: policies,
-			Metadata: map[string]string{
-				"username": username,
-				"policies": strings.Join(policies, ","),
-			},
-			InternalData: map[string]interface{}{
-				"password": password,
-			},
-			DisplayName: username,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-			},
+	resp.Auth = &logical.Auth{
+		Policies: policies,
+		Metadata: map[string]string{
+			"username": username,
+			"policies": strings.Join(policies, ","),
 		},
-	}, nil
+		InternalData: map[string]interface{}{
+			"password": password,
+		},
+		DisplayName: username,
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(
@@ -67,16 +76,14 @@ func (b *backend) pathLoginRenew(
 
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
-	prevpolicies := req.Auth.Metadata["policies"]
 
-	policies, resp, err := b.Login(req, username, password)
-	if len(policies) == 0 {
+	loginPolicies, resp, err := b.Login(req, username, password)
+	if len(loginPolicies) == 0 {
 		return resp, err
 	}
 
-	sort.Strings(policies)
-	if strings.Join(policies, ",") != prevpolicies {
-		return logical.ErrorResponse("policies have changed, revoking login"), nil
+	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
+		return logical.ErrorResponse("policies have changed, not renewing"), nil
 	}
 
 	return framework.LeaseExtend(0, 0, b.System())(req, d)

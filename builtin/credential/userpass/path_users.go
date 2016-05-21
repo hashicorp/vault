@@ -5,16 +5,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "users/" + framework.GenericNameRegex("name"),
+		Pattern: "users/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},
@@ -43,16 +43,32 @@ func pathUsers(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.pathUserDelete,
 			logical.ReadOperation:   b.pathUserRead,
-			logical.UpdateOperation:  b.pathUserWrite,
+			logical.UpdateOperation: b.pathUserWrite,
+			logical.CreateOperation: b.pathUserWrite,
 		},
+
+		ExistenceCheck: b.userExistenceCheck,
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
 	}
 }
 
-func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
-	entry, err := s.Get("user/" + strings.ToLower(n))
+func (b *backend) userExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	userEntry, err := b.user(req.Storage, data.Get("username").(string))
+	if err != nil {
+		return false, err
+	}
+
+	return userEntry != nil, nil
+}
+
+func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
+	entry, err := s.Get("user/" + strings.ToLower(username))
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +84,18 @@ func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
 	return &result, nil
 }
 
+func (b *backend) setUser(s logical.Storage, username string, userEntry *UserEntry) error {
+	entry, err := logical.StorageEntryJSON("user/"+username, userEntry)
+	if err != nil {
+		return err
+	}
+
+	return s.Put(entry)
+}
+
 func (b *backend) pathUserDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("name").(string)))
+	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("username").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +105,7 @@ func (b *backend) pathUserDelete(
 
 func (b *backend) pathUserRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.User(req.Storage, strings.ToLower(d.Get("name").(string)))
+	user, err := b.user(req.Storage, strings.ToLower(d.Get("username").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -95,43 +120,53 @@ func (b *backend) pathUserRead(
 	}, nil
 }
 
-func (b *backend) pathUserWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := strings.ToLower(d.Get("name").(string))
-	password := d.Get("password").(string)
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
-
-	// Generate a hash of the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	username := strings.ToLower(d.Get("username").(string))
+	userEntry, err := b.user(req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
+	// Due to existence check, user will only be nil if it's a create operation
+	if userEntry == nil {
+		userEntry = &UserEntry{}
+	}
 
-	ttlStr := d.Get("ttl").(string)
-	maxTTLStr := d.Get("max_ttl").(string)
-	ttl, maxTTL, err := b.SanitizeTTL(ttlStr, maxTTLStr)
+	if _, ok := d.GetOk("password"); ok {
+		err = b.updateUserPassword(req, d, userEntry)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if policiesRaw, ok := d.GetOk("policies"); ok {
+		userEntry.Policies = policyutil.ParsePolicies(policiesRaw.(string))
+	}
+
+	ttlStr := userEntry.TTL.String()
+	if ttlStrRaw, ok := d.GetOk("ttl"); ok {
+		ttlStr = ttlStrRaw.(string)
+	}
+
+	maxTTLStr := userEntry.MaxTTL.String()
+	if maxTTLStrRaw, ok := d.GetOk("max_ttl"); ok {
+		maxTTLStr = maxTTLStrRaw.(string)
+	}
+
+	userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTL(ttlStr, maxTTLStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}
 
-	// Store it
-	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
-		PasswordHash: hash,
-		Policies:     policies,
-		TTL:          ttl,
-		MaxTTL:       maxTTL,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(entry); err != nil {
-		return nil, err
-	}
+	return nil, b.setUser(req.Storage, username, userEntry)
+}
 
-	return nil, nil
+func (b *backend) pathUserWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	password := d.Get("password").(string)
+	if req.Operation == logical.CreateOperation && password == "" {
+		return logical.ErrorResponse("missing password"), logical.ErrInvalidRequest
+	}
+	return b.userCreateUpdate(req, d)
 }
 
 type UserEntry struct {

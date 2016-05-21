@@ -117,7 +117,7 @@ func TestAuthTokenRenew(t *testing.T) {
 		t.Fatal("should not be allowed to renew root token")
 	}
 	if !strings.Contains(err.Error(), "lease is not renewable") {
-		t.Fatal("wrong error")
+		t.Fatalf("wrong error; got %v", err)
 	}
 
 	// Create a new token that should be renewable

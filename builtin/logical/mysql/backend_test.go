@@ -21,8 +21,9 @@ func TestBackend_basic(t *testing.T) {
 		"value": os.Getenv("MYSQL_DSN"),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d1, false),
 			testAccStepRole(t),
@@ -33,6 +34,7 @@ func TestBackend_basic(t *testing.T) {
 		},
 	})
 }
+
 func TestBackend_configConnection(t *testing.T) {
 	b := Backend()
 	d1 := map[string]interface{}{
@@ -48,8 +50,9 @@ func TestBackend_configConnection(t *testing.T) {
 	d4 := map[string]interface{}{}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d1, false),
 			testAccStepConfig(t, d2, false),
@@ -58,6 +61,7 @@ func TestBackend_configConnection(t *testing.T) {
 		},
 	})
 }
+
 func TestBackend_roleCrud(t *testing.T) {
 	b := Backend()
 
@@ -65,8 +69,9 @@ func TestBackend_roleCrud(t *testing.T) {
 		"connection_url": os.Getenv("MYSQL_DSN"),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d, false),
 			testAccStepRole(t),
@@ -84,8 +89,9 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, d, false),
 			testAccStepWriteLease(t),
@@ -108,7 +114,6 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 		Data:      d,
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
-			log.Printf("vishal: testAccStepConfig: resp: %#v\n", resp)
 			if expectError {
 				if resp.Data == nil {
 					return fmt.Errorf("data is nil")

@@ -17,7 +17,7 @@ import (
 )
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
-const TestEnvVar = "TF_ACC"
+const TestEnvVar = "VAULT_ACC"
 
 // TestCase is a single set of tests to run for a backend. A TestCase
 // should generally map 1:1 to each test method for your acceptance
@@ -43,6 +43,11 @@ type TestCase struct {
 	// in the case that the test can't guarantee all resources were
 	// properly cleaned up.
 	Teardown TestTeardownFunc
+
+	// AcceptanceTest, if set, the test case will be run only if
+	// the environment variable VAULT_ACC is set. If not this test case
+	// will be run as a unit test.
+	AcceptanceTest bool
 }
 
 // TestStep is a single step within a TestCase.
@@ -61,6 +66,10 @@ type TestStep struct {
 	// step will be called
 	Check TestCheckFunc
 
+	// PreFlight is called directly before execution of the request, allowing
+	// modification of the request paramters (e.g. Path) with dynamic values.
+	PreFlight PreFlightFunc
+
 	// ErrorOk, if true, will let erroneous responses through to the check
 	ErrorOk bool
 
@@ -77,12 +86,16 @@ type TestStep struct {
 // TestCheckFunc is the callback used for Check in TestStep.
 type TestCheckFunc func(*logical.Response) error
 
+// PreFlightFunc is used to modify request parameters directly before execution
+// in each TestStep.
+type PreFlightFunc func(*logical.Request) error
+
 // TestTeardownFunc is the callback used for Teardown in TestCase.
 type TestTeardownFunc func() error
 
 // Test performs an acceptance test on a backend with the given test case.
 //
-// Tests are not run unless an environmental variable "TF_ACC" is
+// Tests are not run unless an environmental variable "VAULT_ACC" is
 // set to some non-empty value. This is to avoid test cases surprising
 // a user by creating real resources.
 //
@@ -93,7 +106,7 @@ type TestTeardownFunc func() error
 func Test(t TestT, c TestCase) {
 	// We only run acceptance tests if an env var is set because they're
 	// slow and generally require some outside configuration.
-	if os.Getenv(TestEnvVar) == "" {
+	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf(
 			"Acceptance tests skipped unless env '%s' set",
 			TestEnvVar))
@@ -101,7 +114,7 @@ func Test(t TestT, c TestCase) {
 	}
 
 	// We require verbose mode so that the user knows what is going on.
-	if !testTesting && !testing.Verbose() {
+	if c.AcceptanceTest && !testTesting && !testing.Verbose() {
 		t.Fatal("Acceptance tests must be run with the -v flag on tests")
 		return
 	}
@@ -138,7 +151,7 @@ func Test(t TestT, c TestCase) {
 	init, err := core.Initialize(&vault.SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal("error initializing core: ", err)
 	}
@@ -182,13 +195,10 @@ func Test(t TestT, c TestCase) {
 	for i, s := range c.Steps {
 		log.Printf("[WARN] Executing test step %d", i+1)
 
-		// Make sure to prefix the path with where we mounted the thing
-		path := fmt.Sprintf("%s/%s", prefix, s.Path)
-
 		// Create the request
 		req := &logical.Request{
 			Operation: s.Operation,
-			Path:      path,
+			Path:      s.Path,
 			Data:      s.Data,
 		}
 		if !s.Unauthenticated {
@@ -201,6 +211,19 @@ func Test(t TestT, c TestCase) {
 			req.Connection = &logical.Connection{ConnState: s.ConnState}
 		}
 
+		if s.PreFlight != nil {
+			ct := req.ClientToken
+			req.ClientToken = ""
+			if err := s.PreFlight(req); err != nil {
+				t.Error(fmt.Sprintf("Failed preflight for step %d: %s", i+1, err))
+				break
+			}
+			req.ClientToken = ct
+		}
+
+		// Make sure to prefix the path with where we mounted the thing
+		req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
+
 		// Make the request
 		resp, err := core.HandleRequest(req)
 		if resp != nil && resp.Secret != nil {
@@ -210,24 +233,39 @@ func Test(t TestT, c TestCase) {
 				Path:      "sys/revoke/" + resp.Secret.LeaseID,
 			})
 		}
-		// If it's an error, but an error is expected, and one is also
-		// returned as a logical.ErrorResponse, let it go to the check
+
+		// Test step returned an error.
 		if err != nil {
-			if !resp.IsError() || (resp.IsError() && !s.ErrorOk) {
+			// But if an error is expected, do not fail the test step,
+			// regardless of whether the error is a 'logical.ErrorResponse'
+			// or not. Set the err to nil. If the error is a logical.ErrorResponse,
+			// it will be handled later.
+			if s.ErrorOk {
+				err = nil
+			} else {
+				// If the error is not expected, fail right away.
 				t.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
 				break
 			}
-			// Set it to nil here as we're catching on the
-			// logical.ErrorResponse instead
-			err = nil
 		}
+
+		// If the error is a 'logical.ErrorResponse' and if error was not expected,
+		// set the error so that this can be caught below.
 		if resp.IsError() && !s.ErrorOk {
 			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
 		}
+
+		// Either the 'err' was nil or if an error was expected, it was set to nil.
+		// Call the 'Check' function if there is one.
+		//
+		// TODO: This works perfectly for now, but it would be better if 'Check'
+		// function takes in both the response object and the error, and decide on
+		// the action on its own.
 		if err == nil && s.Check != nil {
 			// Call the test method
 			err = s.Check(resp)
 		}
+
 		if err != nil {
 			t.Error(fmt.Sprintf("Failed step %d: %s", i+1, err))
 			break

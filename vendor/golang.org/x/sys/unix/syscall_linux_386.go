@@ -181,6 +181,8 @@ func Seek(fd int, offset int64, whence int) (newoffset int64, err error) {
 //sysnb	Gettimeofday(tv *Timeval) (err error)
 //sysnb	Time(t *Time_t) (tt Time_t, err error)
 
+//sys	Utime(path string, buf *Utimbuf) (err error)
+
 // On x86 Linux, all the socket calls go through an extra indirection,
 // I think because the 5-register system call interface can't handle
 // the 6-argument calls like sendto and recvfrom.  Instead the

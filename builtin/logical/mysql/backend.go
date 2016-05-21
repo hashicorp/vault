@@ -74,9 +74,9 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 		return nil, err
 	}
 
-	conn := connConfig.ConnectionString
+	conn := connConfig.ConnectionURL
 	if len(conn) == 0 {
-		conn = connConfig.ConnectionURL
+		conn = connConfig.ConnectionString
 	}
 
 	b.db, err = sql.Open("mysql", conn)

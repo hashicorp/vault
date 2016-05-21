@@ -99,7 +99,8 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp3 := []string{testDynamicRoleName, testOTPRoleName}
 	resp4 := []string{testDynamicRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -128,7 +129,8 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -150,7 +152,8 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 		"cidr_list":    testCIDRList,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
@@ -179,7 +182,8 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 		"key_type":       testDynamicKeyType,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -192,7 +196,8 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 
 func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testNamedKeysDelete(t),
@@ -211,7 +216,8 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName, data, false),
@@ -227,7 +233,8 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 		"message": api.VerifyEchoResponse,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -264,7 +271,8 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
@@ -304,7 +312,8 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		AcceptanceTest: true,
+		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
 			testCredsWrite(t, testOTPRoleName, data, true),

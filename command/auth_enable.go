@@ -3,16 +3,18 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // AuthEnableCommand is a Command that enables a new endpoint.
 type AuthEnableCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *AuthEnableCommand) Run(args []string) int {
 	var description, path string
-	flags := c.Meta.FlagSet("auth-enable", FlagSetDefault)
+	flags := c.Meta.FlagSet("auth-enable", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -70,9 +72,7 @@ Usage: vault auth-enable [options] type
   access Vault.
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Auth Enable Options:
 
   -description=<desc>     Human-friendly description of the purpose for the

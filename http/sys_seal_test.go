@@ -304,3 +304,13 @@ func TestSysSeal_Permissions(t *testing.T) {
 	httpResp = testHttpPut(t, "child", addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, httpResp, 204)
 }
+
+func TestSysStepDown(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/step-down", nil)
+	testResponseStatus(t, resp, 204)
+}

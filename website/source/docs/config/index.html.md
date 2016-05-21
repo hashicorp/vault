@@ -32,6 +32,9 @@ telemetry {
 After the configuration is written, use the `-config` flag with `vault server`
 to specify where the configuration is.
 
+Starting with 0.5.2, limited configuration options can be changed on-the-fly by
+sending a SIGHUP to the server process. These are denoted below.
+
 ## Reference
 
 * `backend` (required) - Configures the storage backend where Vault data
@@ -66,11 +69,17 @@ to specify where the configuration is.
   lease duration for tokens and secrets. This is a string value using a suffix,
   e.g. "720h". Default value is 30 days.
 
-In production, you should only consider setting the `disable_mlock` option
-on Linux systems that only use encrypted swap or do not use swap at all.
-Vault does not currently support memory locking on Mac OS X and Windows
-and so the feature is automatically disabled on those platforms.  To give
-the Vault executable access to the `mlock` syscall on Linux systems:
+In production it is a risk to run Vault on systems where `mlock` is
+unavailable or the setting has been disabled via the `disable_mlock`.
+Disabling `mlock` is not recommended unless the systems running Vault only
+use encrypted swap or do not use swap at all.  Vault only supports memory
+locking on UNIX-like systems (Linux, FreeBSD, Darwin, etc).  Non-UNIX like
+systems (e.g. Windows, NaCL, Android) lack the primitives to keep a process's
+entire memory address space from spilling disk and is therefore automatically
+disabled on unsupported platforms.
+
+On Linux, to give the Vault executable the ability to use the `mlock` syscall
+without running the process as root, run:
 
 ```shell
 sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
@@ -93,10 +102,10 @@ The supported options are:
       by default that TLS will be used.
 
   * `tls_cert_file` (required unless disabled) - The path to the certificate
-      for TLS.
+      for TLS. This is reloaded via SIGHUP.
 
   * `tls_key_file` (required unless disabled) - The path to the private key
-      for the certificate.
+      for the certificate. This is reloaded via SIGHUP.
 
   * `tls_min_version` (optional) - **(Vault > 0.2)** If provided, specifies
       the minimum supported version of TLS. Accepted values are "tls10", "tls11"
@@ -168,9 +177,13 @@ All backends support the following options:
 
   * `advertise_addr` (optional) - For backends that support HA, this
     is the address to advertise to other Vault servers in the cluster for
-    request forwarding. Most HA backends will attempt to determine the
-    advertise address if not provided. This can also be set via the
-    `VAULT_ADVERTISE_ADDR` environment variable.
+    request forwarding. As an example, if a cluster contains nodes A, B, and C,
+    node A should set it to the address that B and C should redirect client
+    nodes to when A is the active node and B and C are standby nodes. This may
+    be the same address across nodes if using a load balancer or service
+    discovery. Most HA backends will attempt to determine the advertise address
+    if not provided.  This can also be set via the `VAULT_ADVERTISE_ADDR`
+    environment variable.
 
 #### Backend Reference: Consul
 

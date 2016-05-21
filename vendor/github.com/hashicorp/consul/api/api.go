@@ -122,12 +122,34 @@ type Config struct {
 	Token string
 }
 
-// DefaultConfig returns a default configuration for the client
+// DefaultConfig returns a default configuration for the client. By default this
+// will pool and reuse idle connections to Consul. If you have a long-lived
+// client object, this is the desired behavior and should make the most efficient
+// use of the connections to Consul. If you don't reuse a client object , which
+// is not recommended, then you may notice idle connections building up over
+// time. To avoid this, use the DefaultNonPooledConfig() instead.
 func DefaultConfig() *Config {
+	return defaultConfig(cleanhttp.DefaultPooledTransport)
+}
+
+// DefaultNonPooledConfig returns a default configuration for the client which
+// does not pool connections. This isn't a recommended configuration because it
+// will reconnect to Consul on every request, but this is useful to avoid the
+// accumulation of idle connections if you make many client objects during the
+// lifetime of your application.
+func DefaultNonPooledConfig() *Config {
+	return defaultConfig(cleanhttp.DefaultTransport)
+}
+
+// defaultConfig returns the default configuration for the client, using the
+// given function to make the transport.
+func defaultConfig(transportFn func() *http.Transport) *Config {
 	config := &Config{
-		Address:    "127.0.0.1:8500",
-		Scheme:     "http",
-		HttpClient: cleanhttp.DefaultClient(),
+		Address: "127.0.0.1:8500",
+		Scheme:  "http",
+		HttpClient: &http.Client{
+			Transport: transportFn(),
+		},
 	}
 
 	if addr := os.Getenv("CONSUL_HTTP_ADDR"); addr != "" {
@@ -172,7 +194,7 @@ func DefaultConfig() *Config {
 		}
 
 		if !doVerify {
-			transport := cleanhttp.DefaultTransport()
+			transport := transportFn()
 			transport.TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}

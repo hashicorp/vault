@@ -86,10 +86,14 @@ the settings of the "foo" key by reading it:
 
 ```
 $ vault read transit/keys/foo
-Key        	Value
-name        foo
-cipher_mode aes-gcm
-derived     false
+Key                     Value
+cipher_mode             aes-gcm
+deletion_allowed        false
+derived                 false
+keys                    map[1:1.459861712e+09]
+latest_version          1
+min_decryption_version  1
+name                    foo
 ````
 
 Now, if we wanted to encrypt a piece of plain text, we use the encrypt
@@ -113,7 +117,7 @@ $ vault write transit/decrypt/foo ciphertext=vault:v1:czEwyKqGZY/limnuzDCUUe5AK0
 Key      	Value
 plaintext	dGhlIHF1aWNrIGJyb3duIGZveAo=
 
-$ echo "dGhlIHF1aWNrIGJyb3duIGZveAo=" | base64 -D
+$ echo "dGhlIHF1aWNrIGJyb3duIGZveAo=" | base64 -d
 the quick brown fox
 ```
 
@@ -450,7 +454,7 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Generate a new high-entropy key and the valued encrypted with the named
+    Generate a new high-entropy key and the value encrypted with the named
     key. Optionally return the plaintext of the key as well. Whether plaintext
     is returned depends on the path; as a result, you can use Vault ACL
     policies to control whether a user is allowed to retrieve the plaintext

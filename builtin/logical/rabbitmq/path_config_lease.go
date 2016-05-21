@@ -36,7 +36,7 @@ func pathConfigLease(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathLeaseRead,
-			logical.UpdateOperation: b.pathLeastUpdate,
+			logical.UpdateOperation: b.pathLeaseUpdate,
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,
@@ -44,7 +44,7 @@ func pathConfigLease(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLeastUpdate(
+func (b *backend) pathLeaseUpdate(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	lease, leaseMax, err := validateLeases(d)
 	if err != nil {

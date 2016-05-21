@@ -74,12 +74,11 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	var serial string
-	var pemType string
-	var contentType string
-	var certEntry *logical.StorageEntry
+	var serial, pemType, contentType string
+	var certEntry, revokedEntry *logical.StorageEntry
 	var funcErr error
 	var certificate []byte
+	var revocationTime int64
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -114,23 +113,19 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		goto reply
 	}
 
-	_, funcErr = fetchCAInfo(req)
-	switch funcErr.(type) {
-	case certutil.UserError:
-		response = logical.ErrorResponse(fmt.Sprintf("%s", funcErr))
-		goto reply
-	case certutil.InternalError:
-		retErr = funcErr
-		goto reply
-	}
-
 	certEntry, funcErr = fetchCertBySerial(req, req.Path, serial)
-	switch funcErr.(type) {
-	case certutil.UserError:
-		response = logical.ErrorResponse(funcErr.Error())
-		goto reply
-	case certutil.InternalError:
-		retErr = funcErr
+	if funcErr != nil {
+		switch funcErr.(type) {
+		case certutil.UserError:
+			response = logical.ErrorResponse(funcErr.Error())
+			goto reply
+		case certutil.InternalError:
+			retErr = funcErr
+			goto reply
+		}
+	}
+	if certEntry == nil {
+		response = logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial))
 		goto reply
 	}
 
@@ -142,6 +137,26 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 			Bytes: certEntry.Value,
 		}
 		certificate = pem.EncodeToMemory(&block)
+	}
+
+	revokedEntry, funcErr = fetchCertBySerial(req, "revoked/", serial)
+	if funcErr != nil {
+		switch funcErr.(type) {
+		case certutil.UserError:
+			response = logical.ErrorResponse(funcErr.Error())
+			goto reply
+		case certutil.InternalError:
+			retErr = funcErr
+			goto reply
+		}
+	}
+	if revokedEntry != nil {
+		var revInfo revocationInfo
+		err := revokedEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)), nil
+		}
+		revocationTime = revInfo.RevocationTime
 	}
 
 reply:
@@ -161,6 +176,7 @@ reply:
 		response = nil
 	default:
 		response.Data["certificate"] = string(certificate)
+		response.Data["revocation_time"] = revocationTime
 	}
 
 	return

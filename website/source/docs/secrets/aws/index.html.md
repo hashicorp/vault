@@ -115,7 +115,8 @@ security_token  <nil>
 ```
 
 If you want keys with an STS token use the 'sts' endpoint instead of 'creds.'
-The aws/sts endpoint will always fetch STS credentials with a 1hr ttl.
+The aws/sts endpoint will always fetch STS credentials with a 1hr ttl. Note that STS credentials can only be generated
+for user inline policies.
 
 ```text
 $vault read aws/sts/deploy
@@ -153,16 +154,19 @@ The root credentials need permission to perform various IAM actions. These are t
     {
       "Effect": "Allow",
       "Action": [
+        "iam:AttachUserPolicy",
         "iam:CreateAccessKey",
         "iam:CreateUser",
-        "iam:PutUserPolicy",
+        "iam:DeleteAccessKey",
+        "iam:DeleteUser",
+        "iam:DeleteUserPolicy",
+        "iam:DetachUserPolicy",
+        "iam:ListAccessKeys",
+        "iam:ListAttachedUserPolicies",
         "iam:ListGroupsForUser",
         "iam:ListUserPolicies",
-        "iam:ListAccessKeys",
-        "iam:DeleteAccessKey",
-        "iam:DeleteUserPolicy",
-        "iam:RemoveUserFromGroup",
-        "iam:DeleteUser"
+        "iam:PutUserPolicy",
+        "iam:RemoveUserFromGroup"
       ],
       "Resource": [
         "arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:user/vault-*"
@@ -183,13 +187,16 @@ Vault generates STS tokens using the IAM credentials passed to aws/config.
 
 Those credentials must have two properties:
 
-- They must have permissions to call sts:GetFederatedToken.
+- They must have permissions to call `sts:GetFederationToken`.
 - The capabilities of those credentials have to be at least as permissive as those requested
 by policies attached to the STS creds.
 
 If either of those conditions are not met, a "403 not-authorized" error will be returned.
 
 See http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html for more details.
+
+Vault 0.5.1 or later is recommended when using STS tokens to avoid validation errors for exceeding
+the AWS limit of 32 characters on STS token names.
 
 ## A Note on Consistency
 

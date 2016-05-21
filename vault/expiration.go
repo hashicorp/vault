@@ -173,6 +173,14 @@ func (m *ExpirationManager) Stop() error {
 // Revoke is used to revoke a secret named by the given LeaseID
 func (m *ExpirationManager) Revoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
+
+	return m.revokeCommon(leaseID, false, false)
+}
+
+// revokeCommon does the heavy lifting. If force is true, we ignore a problem
+// during revocation and still remove entries/index/lease timers
+func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -185,8 +193,14 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	}
 
 	// Revoke the entry
-	if err := m.revokeEntry(le); err != nil {
-		return err
+	if !skipToken || le.Auth == nil {
+		if err := m.revokeEntry(le); err != nil {
+			if !force {
+				return err
+			} else {
+				m.logger.Printf("[WARN]: revocation from the backend failed, but in force mode so ignoring; error was: %s", err)
+			}
+		}
 	}
 
 	// Delete the entry
@@ -209,11 +223,56 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	return nil
 }
 
+// RevokeForce works similarly to RevokePrefix but continues in the case of a
+// revocation error; this is mostly meant for recovery operations
+func (m *ExpirationManager) RevokeForce(prefix string) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
+
+	return m.revokePrefixCommon(prefix, true)
+}
+
 // RevokePrefix is used to revoke all secrets with a given prefix.
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
+
+	return m.revokePrefixCommon(prefix, false)
+}
+
+// RevokeByToken is used to revoke all the secrets issued with a given token.
+// This is done by using the secondary index. It also removes the lease entry
+// for the token itself. As a result it should *ONLY* ever be called from the
+// token store's revokeSalted function.
+func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
+	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
+	// Lookup the leases
+	existing, err := m.lookupByToken(te.ID)
+	if err != nil {
+		return fmt.Errorf("failed to scan for leases: %v", err)
+	}
+
+	// Revoke all the keys
+	for idx, leaseID := range existing {
+		if err := m.Revoke(leaseID); err != nil {
+			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
+				leaseID, idx+1, len(existing), err)
+		}
+	}
+
+	tokenLeaseID := path.Join(te.Path, m.tokenStore.SaltID(te.ID))
+
+	// We want to skip the revokeEntry call as that will call back into
+	// revocation logic in the token store, which is what is running this
+	// function in the first place -- it'd be a deadlock loop. Since the only
+	// place that this function is called is revokeSalted in the token store,
+	// we're already revoking the token, so we just want to clean up the lease.
+	// This avoids spurious revocations later in the log when the timer runs
+	// out, and eases up resource usage.
+	return m.revokeCommon(tokenLeaseID, false, true)
+}
+
+func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error {
 	// Ensure there is a trailing slash
 	if !strings.HasSuffix(prefix, "/") {
 		prefix = prefix + "/"
@@ -229,27 +288,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
-		if err := m.Revoke(leaseID); err != nil {
-			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
-				leaseID, idx+1, len(existing), err)
-		}
-	}
-	return nil
-}
-
-// RevokeByToken is used to revoke all the secrets issued with
-// a given token. This is done by using the secondary index.
-func (m *ExpirationManager) RevokeByToken(token string) error {
-	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
-	// Lookup the leases
-	existing, err := m.lookupByToken(token)
-	if err != nil {
-		return fmt.Errorf("failed to scan for leases: %v", err)
-	}
-
-	// Revoke all the keys
-	for idx, leaseID := range existing {
-		if err := m.Revoke(leaseID); err != nil {
+		if err := m.revokeCommon(leaseID, force, false); err != nil {
 			return fmt.Errorf("failed to revoke '%s' (%d / %d): %v",
 				leaseID, idx+1, len(existing), err)
 		}
@@ -309,8 +348,8 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
-func (m *ExpirationManager) RenewToken(source string, token string,
-	increment time.Duration) (*logical.Auth, error) {
+func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
+	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 	// Compute the Lease ID
 	leaseID := path.Join(source, m.tokenStore.SaltID(token))
@@ -321,23 +360,32 @@ func (m *ExpirationManager) RenewToken(source string, token string,
 		return nil, err
 	}
 
-	// Check if the lease is renewable
+	// Check if the lease is renewable. Note that this also checks for a nil
+	// lease and errors in that case as well.
 	if err := le.renewable(); err != nil {
 		return nil, err
 	}
 
 	// Attempt to renew the auth entry
-	resp, err := m.renewAuthEntry(le, increment)
+	resp, err := m.renewAuthEntry(req, le, increment)
 	if err != nil {
 		return nil, err
 	}
 
-	// Fast-path if there is no renewal
 	if resp == nil {
 		return nil, nil
 	}
+
+	if resp.IsError() {
+		return &logical.Response{
+			Data: resp.Data,
+		}, nil
+	}
+
 	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
-		return resp.Auth, nil
+		return &logical.Response{
+			Auth: resp.Auth,
+		}, nil
 	}
 
 	// Attach the ClientToken
@@ -354,7 +402,9 @@ func (m *ExpirationManager) RenewToken(source string, token string,
 
 	// Update the expiration time
 	m.updatePending(le, resp.Auth.LeaseTotal())
-	return resp.Auth, nil
+	return &logical.Response{
+		Auth: resp.Auth,
+	}, nil
 }
 
 // Register is used to take a request and response with an associated
@@ -549,15 +599,21 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	return resp, nil
 }
 
-// renewAuthEntry is used to attempt renew of an auth entry
-func (m *ExpirationManager) renewAuthEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+// renewAuthEntry is used to attempt renew of an auth entry. Only the token
+// store should get the actual token ID intact.
+func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
 	auth.IssueTime = le.IssueTime
 	auth.Increment = increment
-	auth.ClientToken = ""
+	if strings.HasPrefix(le.Path, "auth/token/") {
+		auth.ClientToken = le.ClientToken
+	} else {
+		auth.ClientToken = ""
+	}
 
-	req := logical.RenewAuthRequest(le.Path, &auth, nil)
-	resp, err := m.router.Route(req)
+	authReq := logical.RenewAuthRequest(le.Path, &auth, nil)
+	authReq.Connection = req.Connection
+	resp, err := m.router.Route(authReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}

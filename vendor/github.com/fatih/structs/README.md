@@ -141,10 +141,9 @@ We can also get a slice of Fields from the Struct type to iterate over all
 fields. This is handy if you wish to examine all fields:
 
 ```go
-// Convert the fields of a struct to a []*Field
-fields := s.Fields()
+s := structs.New(server)
 
-for _, f := range fields {
+for _, f := range s.Fields() {
 	fmt.Printf("field name: %+v\n", f.Name())
 
 	if f.IsExported() {

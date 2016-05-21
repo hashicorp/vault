@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // AuthDisableCommand is a Command that enables a new endpoint.
 type AuthDisableCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *AuthDisableCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("auth-disable", FlagSetDefault)
+	flags := c.Meta.FlagSet("auth-disable", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -62,7 +64,6 @@ Usage: vault auth-disable [options] path
   If the command is exited early, the tokens will still be revoked.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

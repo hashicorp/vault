@@ -5,6 +5,14 @@ import "github.com/hashicorp/vault/logical/framework"
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
 func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["exclude_cn_from_sans"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `If true, the Common Name will not be
+included in DNS or Email Subject Alternate Names.
+Defaults to false (CN is included).`,
+	}
+
 	fields["format"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
 		Default: "pem",

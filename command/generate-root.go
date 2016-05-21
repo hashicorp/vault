@@ -12,11 +12,12 @@ import (
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/meta"
 )
 
 // GenerateRootCommand is a Command that generates a new root token.
 type GenerateRootCommand struct {
-	Meta
+	meta.Meta
 
 	// Key can be used to pre-seed the key. If it is set, it will not
 	// be asked with the `password` helper.
@@ -30,7 +31,7 @@ func (c *GenerateRootCommand) Run(args []string) int {
 	var init, cancel, status, genotp bool
 	var nonce, decode, otp, pgpKey string
 	var pgpKeyArr pgpkeys.PubKeyFilesFlag
-	flags := c.Meta.FlagSet("generate-root", FlagSetDefault)
+	flags := c.Meta.FlagSet("generate-root", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
 	flags.BoolVar(&cancel, "cancel", false, "")
 	flags.BoolVar(&status, "status", false, "")
@@ -314,9 +315,7 @@ Usage: vault generate-root [options] [key]
   final token value will be encrypted with this public key and base64-encoded.
   
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Rekey Options:
 
   -init                   Initialize the root generation attempt. This can only

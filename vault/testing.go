@@ -121,7 +121,7 @@ func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
 	result, err := core.Initialize(&SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

@@ -36,6 +36,15 @@ type User struct {
 	Revoke   []string `json:"revoke,omitempty"`
 }
 
+type UserRoles struct {
+	User  string `json:"user"`
+	Roles []Role `json:"roles"`
+}
+
+type userName struct {
+	User string `json:"user"`
+}
+
 func v2AuthURL(ep url.URL, action string, name string) *url.URL {
 	if name != "" {
 		ep.Path = path.Join(ep.Path, defaultV2AuthPrefix, action, name)
@@ -117,25 +126,25 @@ func NewAuthUserAPI(c Client) AuthUserAPI {
 }
 
 type AuthUserAPI interface {
-	// Add a user.
+	// AddUser adds a user.
 	AddUser(ctx context.Context, username string, password string) error
 
-	// Remove a user.
+	// RemoveUser removes a user.
 	RemoveUser(ctx context.Context, username string) error
 
-	// Get user details.
+	// GetUser retrieves user details.
 	GetUser(ctx context.Context, username string) (*User, error)
 
-	// Grant a user some permission roles.
+	// GrantUser grants a user some permission roles.
 	GrantUser(ctx context.Context, username string, roles []string) (*User, error)
 
-	// Revoke some permission roles from a user.
+	// RevokeUser revokes some permission roles from a user.
 	RevokeUser(ctx context.Context, username string, roles []string) (*User, error)
 
-	// Change the user's password.
+	// ChangePassword changes the user's password.
 	ChangePassword(ctx context.Context, username string, password string) (*User, error)
 
-	// List users.
+	// ListUsers lists the users.
 	ListUsers(ctx context.Context) ([]string, error)
 }
 
@@ -187,13 +196,20 @@ func (u *httpAuthUserAPI) ListUsers(ctx context.Context) ([]string, error) {
 		}
 		return nil, sec
 	}
+
 	var userList struct {
-		Users []string `json:"users"`
+		Users []User `json:"users"`
 	}
+
 	if err = json.Unmarshal(body, &userList); err != nil {
 		return nil, err
 	}
-	return userList.Users, nil
+
+	ret := make([]string, 0, len(userList.Users))
+	for _, u := range userList.Users {
+		ret = append(ret, u.User)
+	}
+	return ret, nil
 }
 
 func (u *httpAuthUserAPI) AddUser(ctx context.Context, username string, password string) error {
@@ -289,7 +305,14 @@ func (u *httpAuthUserAPI) modUser(ctx context.Context, req *authUserAPIAction) (
 	}
 	var user User
 	if err = json.Unmarshal(body, &user); err != nil {
-		return nil, err
+		var userR UserRoles
+		if urerr := json.Unmarshal(body, &userR); urerr != nil {
+			return nil, err
+		}
+		user.User = userR.User
+		for _, r := range userR.Roles {
+			user.Roles = append(user.Roles, r.Role)
+		}
 	}
 	return &user, nil
 }

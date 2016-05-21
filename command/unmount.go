@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // UnmountCommand is a Command that mounts a new mount.
 type UnmountCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *UnmountCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("mount", FlagSetDefault)
+	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -60,7 +62,6 @@ Usage: vault unmount [options] path
   by this backend will be revoked and its Vault data will be deleted.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

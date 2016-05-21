@@ -15,13 +15,14 @@ the configured physical storage for Vault. It is mounted at the `cubbyhole/`
 prefix by default and cannot be mounted elsewhere or removed.
 
 This backend differs from the `generic` backend in that the `generic` backend's
-values are accessible to any token with read privileges on that path. In this
-backend, paths are scoped per token; no token can read secrets placed in
-another token's cubbyhole. When the token expires, its cubbyhole is destroyed.
+values are accessible to any token with read privileges on that path. In
+`cubbyhole`, paths are scoped per token; no token can access another token's
+cubbyhole, whether to read, write, list, or for any other operation. When the
+token expires, its cubbyhole is destroyed.
 
 Also unlike the `generic` backend, because the cubbyhole's lifetime is linked
-to an authentication token, there is no concept of a lease or lease TTL for
-values contained in the token's cubbyhole.
+to that of an authentication token, there is no concept of a TTL for values
+contained in the token's cubbyhole.
 
 Writing to a key in the `cubbyhole` backend will replace the old value;
 the sub-fields are not merged together.
@@ -96,9 +97,7 @@ As expected, the value previously set is returned to us.
   <dd>
     Returns a list of secret entries at the specified location. Folders are
     suffixed with `/`. The input must be a folder; list on a file will not
-    return a value. Note that no policy-based filtering is performed on
-    returned keys; it is not recommended to put sensitive or secret values as
-    key names. The values themselves are not accessible via this command.
+    return a value. The values themselves are not accessible via this command.
   </dd>
 
   <dt>Method</dt>

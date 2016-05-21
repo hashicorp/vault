@@ -7,22 +7,23 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/kv-builder"
+	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
 )
 
 // AuditEnableCommand is a Command that mounts a new mount.
 type AuditEnableCommand struct {
-	Meta
+	meta.Meta
 
 	// A test stdin that can be used for tests
 	testStdin io.Reader
 }
 
 func (c *AuditEnableCommand) Run(args []string) int {
-	var desc, id string
-	flags := c.Meta.FlagSet("audit-enable", FlagSetDefault)
+	var desc, path string
+	flags := c.Meta.FlagSet("audit-enable", meta.FlagSetDefault)
 	flags.StringVar(&desc, "description", "", "")
-	flags.StringVar(&id, "id", "", "")
+	flags.StringVar(&path, "path", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -37,8 +38,8 @@ func (c *AuditEnableCommand) Run(args []string) int {
 	}
 
 	auditType := args[0]
-	if id == "" {
-		id = auditType
+	if path == "" {
+		path = auditType
 	}
 
 	// Build the options
@@ -67,7 +68,7 @@ func (c *AuditEnableCommand) Run(args []string) int {
 		return 1
 	}
 
-	err = client.Sys().EnableAudit(id, auditType, desc, opts)
+	err = client.Sys().EnableAudit(path, auditType, desc, opts)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error enabling audit backend: %s", err))
@@ -75,7 +76,7 @@ func (c *AuditEnableCommand) Run(args []string) int {
 	}
 
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully enabled audit backend '%s'!", auditType))
+		"Successfully enabled audit backend '%s' with path '%s'!", auditType, path))
 	return 0
 }
 
@@ -95,15 +96,13 @@ Usage: vault audit-enable [options] type [config...]
   Example: vault audit-enable file path=audit.log
 
 General Options:
-
-  ` + generalOptionsUsage() + `
-
+` + meta.GeneralOptionsUsage() + `
 Audit Enable Options:
 
   -description=<desc>     A human-friendly description for the backend. This
                           shows up only when querying the enabled backends.
 
-  -id=<id>                Specify a unique ID for this audit backend. This
+  -path=<path>            Specify a unique path for this audit backend. This
                           is purely for referencing this audit backend. By
                           default this will be the backend type.
 

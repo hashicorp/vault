@@ -13,6 +13,9 @@ import (
 // Milestone represents a Github repository milestone.
 type Milestone struct {
 	URL          *string    `json:"url,omitempty"`
+	HTMLURL      *string    `json:"html_url,omitempty"`
+	LabelsURL    *string    `json:"labels_url,omitempty"`
+	ID           *int       `json:"id,omitempty"`
 	Number       *int       `json:"number,omitempty"`
 	State        *string    `json:"state,omitempty"`
 	Title        *string    `json:"title,omitempty"`
@@ -22,6 +25,7 @@ type Milestone struct {
 	ClosedIssues *int       `json:"closed_issues,omitempty"`
 	CreatedAt    *time.Time `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 	DueOn        *time.Time `json:"due_on,omitempty"`
 }
 

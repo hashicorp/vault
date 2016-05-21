@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-  Package agent implements a client to an ssh-agent daemon.
-
-References:
-  [PROTOCOL.agent]:    http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.agent?rev=HEAD
-*/
+// Package agent implements the ssh-agent protocol, and provides both
+// a client and a server. The client can talk to a standard ssh-agent
+// that uses UNIX sockets, and one could implement an alternative
+// ssh-agent process using the sample server.
+//
+// References:
+//  [PROTOCOL.agent]:    http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.agent?rev=HEAD
 package agent
 
 import (

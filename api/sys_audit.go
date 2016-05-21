@@ -78,6 +78,7 @@ func (c *Sys) DisableAudit(path string) error {
 // documentation. Please refer to that documentation for more details.
 
 type Audit struct {
+	Path        string
 	Type        string
 	Description string
 	Options     map[string]string

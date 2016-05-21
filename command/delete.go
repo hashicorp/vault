@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // DeleteCommand is a Command that puts data into the Vault.
 type DeleteCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *DeleteCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("delete", FlagSetDefault)
+	flags := c.Meta.FlagSet("delete", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -60,7 +62,6 @@ Usage: vault delete [options] path
   whether delete is supported for a path and what the behavior is.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

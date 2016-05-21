@@ -1,0 +1,64 @@
+//
+// announcement bnr
+// --------------------------------------------------
+
+#announcement-bnr {
+  height: 40px;
+  flex-shrink: 0;
+  background-color: $black;
+
+  a,p{
+    font-size: 14px;
+    color: $white;
+    line-height: 40px;
+    margin-bottom: 0;
+  }
+
+  .link-blue{
+    margin-left: 5px;
+    color: $blue;
+    font-weight: 600;
+  }
+
+  .enterprise-logo{
+    position: relative;
+    top: 4px;
+
+    &:hover{
+      text-decoration: none;
+      svg{
+        rect{
+          fill: $blue;
+          @include transition(all .1s ease-in);
+        }
+      }
+    }
+
+    svg{
+      width: 128px;
+      fill: $white;
+      margin-right: 4px;
+      margin-left: 1px;
+
+      rect{
+        @include transition(all .1s ease-in);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  #announcement-bnr {
+    .tagline{
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 320px) {
+  #announcement-bnr {
+    a,p{
+      font-size: 12px;
+    }
+  }
+}

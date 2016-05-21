@@ -3,7 +3,7 @@ layout: "http"
 page_title: "HTTP API: /sys/revoke-prefix"
 sidebar_current: "docs-http-lease-revoke-prefix"
 description: |-
-  The `/sys/revoke-prefix` endpoint is used to revoke secrets based on prefix.
+  The `/sys/revoke-prefix` endpoint is used to revoke secrets or tokens based on prefix.
 ---
 
 # /sys/revoke-prefix
@@ -11,7 +11,10 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Revoke all secrets generated under a given prefix immediately.
+    Revoke all secrets (via a lease ID prefix) or tokens (via the tokens' path
+    property) generated under a given prefix immediately. This requires `sudo`
+    capability and access to it should be tightly controlled as it can be used
+    to revoke very large numbers of secrets/tokens at once.
   </dd>
 
   <dt>Method</dt>

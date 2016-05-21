@@ -13,6 +13,7 @@ import (
 // PullRequestComment represents a comment left on a pull request.
 type PullRequestComment struct {
 	ID               *int       `json:"id,omitempty"`
+	InReplyTo        *int       `json:"in_reply_to,omitempty"`
 	Body             *string    `json:"body,omitempty"`
 	Path             *string    `json:"path,omitempty"`
 	DiffHunk         *string    `json:"diff_hunk,omitempty"`

@@ -28,6 +28,19 @@ func rolesFields() map[string]*framework.FieldSchema {
 	}
 }
 
+func pathListRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "roles/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+
+		HelpSynopsis:    pathRoleHelpSyn,
+		HelpDescription: pathRoleHelpDesc,
+	}
+}
+
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
@@ -35,7 +48,7 @@ func pathRoles(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.CreateOperation: b.pathRoleCreate,
+			logical.UpdateOperation: b.pathRoleUpdate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -101,7 +114,17 @@ func (b *backend) pathRoleRead(
 	}, nil
 }
 
-func (b *backend) pathRoleCreate(
+func (b *backend) pathRoleList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("role/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
+func (b *backend) pathRoleUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name, err := validateName(data)
 	if err != nil {

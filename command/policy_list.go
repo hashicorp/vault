@@ -3,15 +3,17 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/meta"
 )
 
 // PolicyListCommand is a Command that enables a new endpoint.
 type PolicyListCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *PolicyListCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("policy-list", FlagSetDefault)
+	flags := c.Meta.FlagSet("policy-list", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -85,7 +87,6 @@ Usage: vault policies [options] [name]
   If a name of a policy is specified, that policy is outputted.
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

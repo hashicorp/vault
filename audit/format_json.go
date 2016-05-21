@@ -72,6 +72,7 @@ func (f *FormatJSON) FormatResponse(
 	if resp.Auth != nil {
 		respAuth = &JSONAuth{
 			ClientToken: resp.Auth.ClientToken,
+			Accessor:    resp.Auth.Accessor,
 			DisplayName: resp.Auth.DisplayName,
 			Policies:    resp.Auth.Policies,
 			Metadata:    resp.Auth.Metadata,
@@ -149,6 +150,7 @@ type JSONResponse struct {
 
 type JSONAuth struct {
 	ClientToken string            `json:"client_token,omitempty"`
+	Accessor    string            `json:"accessor,omitempty"`
 	DisplayName string            `json:"display_name"`
 	Policies    []string          `json:"policies"`
 	Metadata    map[string]string `json:"metadata"`

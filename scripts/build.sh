@@ -12,12 +12,12 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 cd "$DIR"
 
 # Get the git commit
-GIT_COMMIT=$(git rev-parse HEAD)
-GIT_DIRTY=$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)
+GIT_COMMIT="$(git rev-parse HEAD)"
+GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
 # Determine the arch/os combos we're building for
 XC_ARCH=${XC_ARCH:-"386 amd64 arm"}
-XC_OS=${XC_OS:-linux darwin windows freebsd openbsd}
+XC_OS=${XC_OS:-linux darwin windows freebsd openbsd netbsd}
 
 GOPATH=${GOPATH:-$(go env GOPATH)}
 case $(uname) in
@@ -33,7 +33,7 @@ rm -rf pkg/*
 mkdir -p bin/
 
 # If its dev mode, only build for ourself
-if [ "${TF_DEV}x" != "x" ]; then
+if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
     XC_OS=$(go env GOOS)
     XC_ARCH=$(go env GOARCH)
 fi
@@ -42,10 +42,8 @@ fi
 echo "==> Building..."
 gox \
     -os="${XC_OS}" \
-    -os="!freebsd" \
-    -os="!openbsd" \
     -arch="${XC_ARCH}" \
-    -ldflags "-X github.com/hashicorp/vault/version.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" \
+    -ldflags "-X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     .
 
@@ -61,7 +59,7 @@ for F in $(find ${DEV_PLATFORM} -mindepth 1 -maxdepth 1 -type f); do
     cp ${F} ${MAIN_GOPATH}/bin/
 done
 
-if [ "${TF_DEV}x" = "x" ]; then
+if [ "${VAULT_DEV_BUILD}x" = "x" ]; then
     # Zip and copy to the dist dir
     echo "==> Packaging..."
     for PLATFORM in $(find ./pkg -mindepth 1 -maxdepth 1 -type d); do

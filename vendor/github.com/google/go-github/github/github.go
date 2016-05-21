@@ -59,6 +59,9 @@ const (
 
 	// https://developer.github.com/changes/2016-02-11-issue-locking-api/
 	mediaTypeIssueLockingPreview = "application/vnd.github.the-key-preview+json"
+
+	// https://developer.github.com/changes/2016-02-24-commit-reference-sha-api/
+	mediaTypeCommitReferenceSHAPreview = "application/vnd.github.chitauri-preview+sha"
 )
 
 // A Client manages communication with the GitHub API.

@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/uuid"
 	"github.com/hashicorp/vault/logical"
@@ -52,7 +51,7 @@ func (b *backend) pathRoleCreateRead(
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
 	// Ensure username is unique

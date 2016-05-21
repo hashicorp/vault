@@ -217,7 +217,7 @@ type PageBuildEvent struct {
 	Build *PagesBuild `json:"build,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	ID     *string     `json:"id,omitempty"`
+	ID     *int        `json:"id,omitempty"`
 	Repo   *Repository `json:"repository,omitempty"`
 	Sender *User       `json:"sender,omitempty"`
 }
@@ -301,14 +301,15 @@ func (p PushEvent) String() string {
 
 // PushEventCommit represents a git commit in a GitHub PushEvent.
 type PushEventCommit struct {
-	SHA      *string       `json:"sha,omitempty"`
-	Message  *string       `json:"message,omitempty"`
-	Author   *CommitAuthor `json:"author,omitempty"`
-	URL      *string       `json:"url,omitempty"`
-	Distinct *bool         `json:"distinct,omitempty"`
-	Added    []string      `json:"added,omitempty"`
-	Removed  []string      `json:"removed,omitempty"`
-	Modified []string      `json:"modified,omitempty"`
+	SHA       *string       `json:"sha,omitempty"`
+	Message   *string       `json:"message,omitempty"`
+	Author    *CommitAuthor `json:"author,omitempty"`
+	Committer *CommitAuthor `json:"committer,omitempty"`
+	URL       *string       `json:"url,omitempty"`
+	Distinct  *bool         `json:"distinct,omitempty"`
+	Added     []string      `json:"added,omitempty"`
+	Removed   []string      `json:"removed,omitempty"`
+	Modified  []string      `json:"modified,omitempty"`
 }
 
 func (p PushEventCommit) String() string {
@@ -341,6 +342,10 @@ type PushEventRepository struct {
 	DefaultBranch   *string             `json:"default_branch,omitempty"`
 	MasterBranch    *string             `json:"master_branch,omitempty"`
 	Organization    *string             `json:"organization,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	URL     *string `json:"url,omitempty"`
+	HTMLURL *string `json:"html_url,omitempty"`
 }
 
 // PushEventRepoOwner is a basic reporesntation of user/org in a PushEvent payload

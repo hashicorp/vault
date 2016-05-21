@@ -6,8 +6,6 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const FixturePath = "./test-fixtures"
-
 func testClient(t *testing.T, addr string, token string) *api.Client {
 	config := api.DefaultConfig()
 	config.Address = addr

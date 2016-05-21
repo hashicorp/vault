@@ -50,4 +50,8 @@ The following table describes them:
     <td><tt>VAULT_SKIP_VERIFY</tt></td>
     <td>If set, do not verify Vault's presented certificate before communicating with it.  Setting this variable is not recommended except during testing.</td>
   </tr>
+  <tr>
+    <td><tt>VAULT_TLS_SERVER_NAME</tt></td>
+    <td>If set, use the given name as the SNI host when connecting via TLS.</td>
+  </tr>
 </table>

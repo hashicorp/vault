@@ -209,6 +209,13 @@ func (b *backend) pathSetSignedIntermediate(
 		return nil, err
 	}
 
+	entry.Key = "certs/" + cb.SerialNumber
+	entry.Value = inputBundle.CertificateBytes
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
+
 	// For ease of later use, also store just the certificate at a known
 	// location
 	entry.Key = "ca"

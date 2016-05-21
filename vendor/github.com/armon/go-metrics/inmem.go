@@ -25,6 +25,8 @@ type InmemSink struct {
 	// intervals is a slice of the retained intervals
 	intervals    []*IntervalMetrics
 	intervalLock sync.RWMutex
+	
+	rateDenom float64
 }
 
 // IntervalMetrics stores the aggregated metrics
@@ -66,6 +68,7 @@ func NewIntervalMetrics(intv time.Time) *IntervalMetrics {
 // about a sample
 type AggregateSample struct {
 	Count       int       // The count of emitted pairs
+	Rate	        float64   // The count of emitted pairs per time unit (usually 1 second)
 	Sum         float64   // The sum of values
 	SumSq       float64   // The sum of squared values
 	Min         float64   // Minimum value
@@ -92,7 +95,7 @@ func (a *AggregateSample) Mean() float64 {
 }
 
 // Ingest is used to update a sample
-func (a *AggregateSample) Ingest(v float64) {
+func (a *AggregateSample) Ingest(v float64, rateDenom float64) {
 	a.Count++
 	a.Sum += v
 	a.SumSq += (v * v)
@@ -102,6 +105,7 @@ func (a *AggregateSample) Ingest(v float64) {
 	if v > a.Max || a.Count == 1 {
 		a.Max = v
 	}
+	a.Rate = float64(a.Count)/rateDenom
 	a.LastUpdated = time.Now()
 }
 
@@ -123,6 +127,7 @@ func NewInmemSink(interval, retain time.Duration) *InmemSink {
 		interval:     interval,
 		retain:       retain,
 		maxIntervals: int(retain / interval),
+		rateDenom: float64(interval / time.Second),
 	}
 	i.intervals = make([]*IntervalMetrics, 0, i.maxIntervals)
 	return i
@@ -159,7 +164,7 @@ func (i *InmemSink) IncrCounter(key []string, val float32) {
 		agg = &AggregateSample{}
 		intv.Counters[k] = agg
 	}
-	agg.Ingest(float64(val))
+	agg.Ingest(float64(val), i.rateDenom)
 }
 
 func (i *InmemSink) AddSample(key []string, val float32) {
@@ -174,7 +179,7 @@ func (i *InmemSink) AddSample(key []string, val float32) {
 		agg = &AggregateSample{}
 		intv.Samples[k] = agg
 	}
-	agg.Ingest(float64(val))
+	agg.Ingest(float64(val), i.rateDenom)
 }
 
 // Data is used to retrieve all the aggregated metrics

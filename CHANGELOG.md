@@ -1,40 +1,221 @@
-## 0.5.1 (Unreleased)
+## 0.6.0 (Unreleased)
+
+SECURITY:
+
+ * Although `sys/revoke-prefix` was intended to revoke prefixes of secrets (via
+   lease IDs, which incorporate path information) and
+   `auth/token/revoke-prefix` was intended to revoke prefixes of tokens (using
+   the tokens' paths and, since 0.5.2, role information), in implementation
+   they both behaved exactly the same way since a single component in Vault is
+   responsible for managing lifetimes of both, and the type of the tracked
+   lifetime was not being checked. The end result was that either endpoint
+   could revoke both secret leases and tokens. We consider this a very minor
+   security issue as there are a number of mitigating factors: both endpoints
+   require `sudo` capability in addition to write capability, preventing
+   blanket ACL path globs from providing access; both work by using the prefix
+   to revoke as a part of the endpoint path, allowing them to be properly
+   ACL'd; and both are intended for emergency scenarios and users should
+   already not generally have access to either one. In order to prevent
+   confusion, we have simply removed `auth/token/revoke-prefix` in 0.6, and
+   `sys/revoke-prefix` will be meant for both leases and tokens instead.
 
 DEPRECATIONS/BREAKING CHANGES:
 
-* secret/pki: RSA keys less than 2048 bits are no longer supported. 1024-bit
-   keys are considered unsafe and are disallowed in the Internet PKI. The `pki`
-   backend has enforced SHA256 hashes in signatures from the beginning, and
-   software that can handle these hashes should be able to handle larger key
-   lengths. [GH-1095]
+ * `auth/token/revoke-prefix` has been removed. See the security notice for
+   details. [GH-1280]
 
 IMPROVEMENTS:
 
- * deps: Use the standardized Go 1.6 vendoring system
+ * command/auth: Restore the previous authenticated token if the `auth` command
+   fails to authenticate the provided token [GH-1233]
+ * command/write: `-format` and `-field` can now be used with the `write`
+   command [GH-1228]
+ * core: Add `mlock` support for FreeBSD, OpenBSD, NetBSD, and Darwin [GH-1297]
+ * core: Don't keep lease timers around when tokens are revoked [GH-1277]
+ * credential/cert: Renewal requests are rejected if the set of policies has
+   changed since the token was issued [GH-477]
+ * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
+   only return policies for local groups, plus a warning [GH-1283]
+ * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
+   DNS or Email Subject Alternate Names [GH-1220]
+ * sys/capabilities: Enforce ACL checks for requests that query the capabilities
+   of a token on a given path [GH-1221]
+
+BUG FIXES:
+
+ * command/read: Fix panic when using `-field` with a non-string value [GH-1308]
+ * command/token-lookup: Fix TTL showing as 0 depending on how a token was
+   created. This only affected the value shown at lookup, not the token
+   behavior itself. [GH-1306]
+ * credential/ldap: Fix problem where certain error conditions when configuring
+   or opening LDAP connections would cause a panic instead of return a useful
+   error message [GH-1262]
+ * credential/token: Fall back to normal parent-token semantics if
+   `allowed_policies` is empty for a role. Using `allowed_policies` of
+   `default` resulted in the same behavior anyways. [GH-1276]
+ * credential/various: Fix renewal conditions when `default` policy is not
+   contained in the backend config [GH-1256]
+ * secret/pki: Don't check whether a certificate is destined to be a CA
+   certificate if sign-verbatim endpoint is used [GH-1250]
+ 
+## 0.5.2 (March 16th, 2016)
+
+FEATURES:
+
+ * **MSSQL Backend**: Generate dynamic unique MSSQL database credentials based
+   on configured roles [GH-998]
+ * **Token Accessors**: Vault now provides an accessor with each issued token.
+   This accessor is an identifier that can be used for a limited set of
+   actions, notably for token revocation. This value can be logged in
+   plaintext to audit logs, and in combination with the plaintext metadata
+   logged to audit logs, provides a searchable and straightforward way to
+   revoke particular users' or services' tokens in many cases. To enable
+   plaintext audit logging of these accessors, set `hmac_accessor=false` when
+   enabling an audit backend.
+ * **Token Credential Backend Roles**: Roles can now be created in the `token`
+   credential backend that allow modifying token behavior in ways that are not
+   otherwise exposed or easily delegated. This allows creating tokens with a
+   fixed set (or subset) of policies (rather than a subset of the calling
+   token's), periodic tokens with a fixed TTL but no expiration, specified
+   prefixes, and orphans.
+ * **Listener Certificate Reloading**: Vault's configured listeners now reload
+   their TLS certificate and private key when the Vault process receives a
+   SIGHUP.
+
+IMPROVEMENTS:
+
+ * auth/token: Endpoints optionally accept tokens from the HTTP body rather
+   than just from the URLs [GH-1211]
+ * auth/token,sys/capabilities: Added new endpoints
+   `auth/token/lookup-accessor`, `auth/token/revoke-accessor` and
+   `sys/capabilities-accessor`, which enables performing the respective actions
+   with just the accessor of the tokens, without having access to the actual
+   token [GH-1188]
+ * core: Ignore leading `/` in policy paths [GH-1170]
+ * core: Ignore leading `/` in mount paths [GH-1172]
+ * command/policy-write: Provided HCL is now validated for format violations
+   and provides helpful information around where the violation occurred
+   [GH-1200]
+ * command/server: The initial root token ID when running in `-dev` mode can
+   now be specified via `-dev-root-token-id` or the environment variable
+   `VAULT_DEV_ROOT_TOKEN_ID` [GH-1162]
+ * command/server: The listen address when running in `-dev` mode can now be
+   specified via `-dev-listen-address` or the environment variable
+   `VAULT_DEV_LISTEN_ADDRESS` [GH-1169]
+ * command/server: The configured listeners now reload their TLS
+   certificates/keys when Vault is SIGHUP'd [GH-1196]
+ * command/step-down: New `vault step-down` command and API endpoint to force
+   the targeted node to give up active status, but without sealing. The node
+   will wait ten seconds before attempting to grab the lock again. [GH-1146]
+ * command/token-renew: Allow no token to be passed in; use `renew-self` in
+   this case. Change the behavior for any token being passed in to use `renew`.
+   [GH-1150]
+ * credential/app-id: Allow `app-id` parameter to be given in the login path;
+   this causes the `app-id` to be part of the token path, making it easier to
+   use with `revoke-prefix` [GH-424]
+ * credential/cert: Non-CA certificates can be used for authentication. They
+   must be matched exactly (issuer and serial number) for authentication, and
+   the certificate must carry the client authentication or 'any' extended usage
+   attributes. [GH-1153]
+ * credential/cert: Subject and Authority key IDs are output in metadata; this
+   allows more flexible searching/revocation in the audit logs [GH-1183]
+ * credential/cert: Support listing configured certs [GH-1212]
+ * credential/userpass: Add support for `create`/`update` capability
+   distinction in user path, and add user-specific endpoints to allow changing
+   the password and policies [GH-1216]
+ * credential/token: Add roles [GH-1155]
+ * secret/mssql: Add MSSQL backend [GH-998]
+ * secret/pki: Add revocation time (zero or Unix epoch) to `pki/cert/SERIAL`
+   endpoint [GH-1180]
+ * secret/pki: Sanitize serial number in `pki/revoke` endpoint to allow some
+   other formats [GH-1187]
+ * secret/ssh: Added documentation for `ssh/config/zeroaddress` endpoint.
+   [GH-1154]
+ * sys: Added new endpoints `sys/capabilities` and `sys/capabilities-self` to
+   fetch the capabilities of a token on a given path [GH-1171]
+ * sys: Added `sys/revoke-force`, which enables a user to ignore backend errors
+   when revoking a lease, necessary in some emergency/failure scenarios
+   [GH-1168]
+ * sys: The return codes from `sys/health` can now be user-specified via query
+   parameters [GH-1199]
+
+BUG FIXES:
+
+ * logical/cassandra: Apply hyphen/underscore replacement to the entire
+   generated username, not just the UUID, in order to handle token display name
+   hyphens [GH-1140]
+ * physical/etcd: Output actual error when cluster sync fails [GH-1141]
+ * vault/expiration: Not letting the error responses from the backends to skip
+   during renewals [GH-1176]
+
+## 0.5.1 (February 25th, 2016)
+ 
+DEPRECATIONS/BREAKING CHANGES:
+
+ * RSA keys less than 2048 bits are no longer supported in the PKI backend.
+   1024-bit keys are considered unsafe and are disallowed in the Internet PKI.
+   The `pki` backend has enforced SHA256 hashes in signatures from the
+   beginning, and software that can handle these hashes should be able to
+   handle larger key sizes. [GH-1095]
+ * The PKI backend now does not automatically delete expired certificates,
+   including from the CRL. Doing so could lead to a situation where a time
+   mismatch between the Vault server and clients could result in a certificate
+   that would not be considered expired by a client being removed from the CRL.
+   The new `pki/tidy` endpoint can be used to trigger expirations. [GH-1129]
+ * The `cert` backend now performs a variant of channel binding at renewal time
+   for increased security. In order to not overly burden clients, a notion of
+   identity is used. This functionality can be disabled. See the 0.5.1 upgrade
+   guide for more specific information [GH-1127]
+
+FEATURES:
+
+ * **Codebase Audit**: Vault's 0.5 codebase was audited by iSEC. (The terms of
+   the audit contract do not allow us to make the results public.) [GH-220]
+
+IMPROVEMENTS:
+
+ * api: The `VAULT_TLS_SERVER_NAME` environment variable can be used to control
+   the SNI header during TLS connections [GH-1131]
+ * api/health: Add the server's time in UTC to health responses [GH-1117]
  * command/rekey and command/generate-root: These now return the status at
    attempt initialization time, rather than requiring a separate fetch for the
    nonce [GH-1054] 
  * credential/cert: Don't require root/sudo tokens for the `certs/` and `crls/`
    paths; use normal ACL behavior instead [GH-468]
- * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
-   204 [GH-1086]
- * secret/github: Github backend will check the validity of original token
-   during renewal time [GH-1047]
+ * credential/github: The validity of the token used for login will be checked
+   at renewal time [GH-1047]
+ * credential/github: The `config` endpoint no longer requires a root token;
+   normal ACL path matching applies
+ * deps: Use the standardized Go 1.6 vendoring system
+ * secret/aws: Inform users of AWS-imposed policy restrictions around STS
+   tokens if they attempt to use an invalid policy [GH-1113]
+ * secret/mysql: The MySQL backend now allows disabling verification of the
+   `connection_url` [GH-1096]
  * secret/pki: Submitted CSRs are now verified to have the correct key type and
    minimum number of bits according to the role. The exception is intermediate
    CA signing and the `sign-verbatim` path [GH-1104]
- * secret/mysql: While configuring mysql backend, avoid verification of 
-   connection_url by disabling it using verify_connection option. [GH-1096]
+ * secret/pki: New `tidy` endpoint to allow expunging expired certificates.
+   [GH-1129]
+ * secret/postgresql: The PostgreSQL backend now allows disabling verification
+   of the `connection_url` [GH-1096]
+ * secret/ssh: When verifying an OTP, return 400 if it is not valid instead of
+   204 [GH-1086]
+ * credential/app-id: App ID backend will check the validity of app-id and user-id
+   during renewal time [GH-1039]
+ * credential/cert: TLS Certificates backend, during renewal, will now match the
+   client identity with the client identity used during login [GH-1127]
 
 BUG FIXES:
 
  * credential/ldap: Properly escape values being provided to search filters
    [GH-1100]
- * secret/postgresql: Add extra revocation statements to better handle more
-   permission scenarios [GH-1053]
+ * secret/aws: Capping on length of usernames for both IAM and STS types
+   [GH-1102]
  * secret/pki: If a cert is not found during lookup of a serial number,
    respond with a 400 rather than a 500 [GH-1085]
- * secret/aws: Capping on length of usernames for both IAM and STS types. [GH-1102]
+ * secret/postgresql: Add extra revocation statements to better handle more
+   permission scenarios [GH-1053]
+ * secret/postgresql: Make connection_url work properly [GH-1112]
 
 ## 0.5.0 (February 10, 2016)
 

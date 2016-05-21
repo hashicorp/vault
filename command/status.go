@@ -5,16 +5,17 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/meta"
 )
 
 // StatusCommand is a Command that outputs the status of whether
 // Vault is sealed or not as well as HA information.
 type StatusCommand struct {
-	Meta
+	meta.Meta
 }
 
 func (c *StatusCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("status", FlagSetDefault)
+	flags := c.Meta.FlagSet("status", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -97,7 +98,6 @@ Usage: vault status [options]
   code also reflects the seal status (0 unsealed, 2 sealed, 1 error).
 
 General Options:
-
-  ` + generalOptionsUsage()
+` + meta.GeneralOptionsUsage()
 	return strings.TrimSpace(helpText)
 }

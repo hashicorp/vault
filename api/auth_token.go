@@ -1,11 +1,11 @@
 package api
 
-// TokenAuth is used to perform token backend operations on Vault.
+// TokenAuth is used to perform token backend operations on Vault
 type TokenAuth struct {
 	c *Client
 }
 
-// Token is used to return the client for logical-backend API calls.
+// Token is used to return the client for token-backend API calls
 func (a *Auth) Token() *TokenAuth {
 	return &TokenAuth{c: a.c}
 }
@@ -25,8 +25,35 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*Secret, error) {
+	r := c.c.NewRequest("POST", "/v1/auth/token/create/"+roleName)
+	if err := r.SetJSONBody(opts); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 	r := c.c.NewRequest("GET", "/v1/auth/token/lookup/"+token)
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
+	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-accessor/"+accessor)
 
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
@@ -83,6 +110,19 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// RevokeAccessor revokes a token associated with the given accessor
+// along with all the child tokens.
+func (c *TokenAuth) RevokeAccessor(accessor string) error {
+	r := c.c.NewRequest("POST", "/v1/auth/token/revoke-accessor/"+accessor)
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 // RevokeOrphan revokes a token without revoking the tree underneath it (so
 // child tokens are orphaned rather than revoked)
 func (c *TokenAuth) RevokeOrphan(token string) error {
@@ -96,21 +136,8 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 	return nil
 }
 
-// RevokePrefix revokes a token based on a prefix, which can be used to revoke
-// e.g. all tokens issued by a certain credential mount
-func (c *TokenAuth) RevokePrefix(token string) error {
-	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-prefix/"+token)
-	resp, err := c.c.RawRequest(r)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
-}
-
 // RevokeSelf revokes the token making the call
-func (c *TokenAuth) RevokeSelf() error {
+func (c *TokenAuth) RevokeSelf(token string) error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {

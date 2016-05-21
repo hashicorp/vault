@@ -29,9 +29,9 @@ var (
 // Config is a configuration parsed from a DSN string
 type Config struct {
 	User         string            // Username
-	Passwd       string            // Password
+	Passwd       string            // Password (requires User)
 	Net          string            // Network type
-	Addr         string            // Network address
+	Addr         string            // Network address (requires Net)
 	DBName       string            // Database name
 	Params       map[string]string // Connection parameters
 	Collation    string            // Connection collation

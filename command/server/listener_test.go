@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io"
 	"net"
 	"testing"
@@ -9,14 +10,17 @@ import (
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
 
-func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn) {
+func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, certName string) {
 	serverCh := make(chan net.Conn, 1)
 	go func() {
 		server, err := ln.Accept()
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
-
+		if certName != "" {
+			tlsConn := server.(*tls.Conn)
+			tlsConn.Handshake()
+		}
 		serverCh <- server
 	}()
 
@@ -24,6 +28,18 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn) 
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	if certName != "" {
+		tlsConn := client.(*tls.Conn)
+		if len(tlsConn.ConnectionState().PeerCertificates) != 1 {
+			t.Fatalf("err: number of certs too long")
+		}
+		peerName := tlsConn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		if peerName != certName {
+			t.Fatalf("err: bad cert name %s, expected %s", peerName, certName)
+		}
+	}
+
 	server := <-serverCh
 	defer client.Close()
 	defer server.Close()

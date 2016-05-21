@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -15,7 +16,7 @@ func TestPolicyWrite(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &PolicyWriteCommand{
-		Meta: Meta{
+		Meta: meta.Meta{
 			ClientToken: token,
 			Ui:          ui,
 		},
@@ -24,7 +25,7 @@ func TestPolicyWrite(t *testing.T) {
 	args := []string{
 		"-address", addr,
 		"foo",
-		"./test-fixtures/config.hcl",
+		"./test-fixtures/policy.hcl",
 	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())

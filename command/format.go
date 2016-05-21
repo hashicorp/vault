@@ -3,6 +3,7 @@ package command
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -15,86 +16,110 @@ import (
 )
 
 func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
-	switch format {
-	case "json":
-		return outputFormatJSON(ui, secret)
-	case "yaml":
-		return outputFormatYAML(ui, secret)
-	case "table":
-		return outputFormatTable(ui, secret, true)
-	default:
-		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
-		return 1
-	}
+	return outputWithFormat(ui, format, secret, secret)
 }
 
 func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
-	switch format {
-	case "json":
-		return outputFormatJSONList(ui, secret)
-	case "yaml":
-		return outputFormatYAMLList(ui, secret)
-	case "table":
-		return outputFormatTableList(ui, secret)
-	default:
+	return outputWithFormat(ui, format, secret, secret.Data["keys"])
+}
+
+func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
+	formatter, ok := Formatters[strings.ToLower(format)]
+	if !ok {
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
 		return 1
 	}
-}
-
-func outputFormatJSON(ui cli.Ui, s *api.Secret) int {
-	b, err := json.Marshal(s)
-	if err != nil {
-		ui.Error(fmt.Sprintf(
-			"Error formatting secret: %s", err))
+	if err := formatter.Output(ui, secret, data); err != nil {
+		ui.Error(fmt.Sprintf("Could not output secret: %s", err.Error()))
 		return 1
 	}
-
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "\t")
-	ui.Output(out.String())
 	return 0
 }
 
-func outputFormatJSONList(ui cli.Ui, s *api.Secret) int {
-	b, err := json.Marshal(s.Data["keys"])
-	if err != nil {
-		ui.Error(fmt.Sprintf(
-			"Error formatting keys: %s", err))
-		return 1
-	}
-
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "\t")
-	ui.Output(out.String())
-	return 0
+type Formatter interface {
+	Output(ui cli.Ui, secret *api.Secret, data interface{}) error
 }
 
-func outputFormatYAML(ui cli.Ui, s *api.Secret) int {
-	b, err := yaml.Marshal(s)
-	if err != nil {
-		ui.Error(fmt.Sprintf(
-			"Error formatting secret: %s", err))
-		return 1
-	}
-
-	ui.Output(strings.TrimSpace(string(b)))
-	return 0
+var Formatters = map[string]Formatter{
+	"json":  JsonFormatter{},
+	"table": TableFormatter{},
+	"yaml":  YamlFormatter{},
 }
 
-func outputFormatYAMLList(ui cli.Ui, s *api.Secret) int {
-	b, err := yaml.Marshal(s.Data["keys"])
-	if err != nil {
-		ui.Error(fmt.Sprintf(
-			"Error formatting secret: %s", err))
-		return 1
-	}
-
-	ui.Output(strings.TrimSpace(string(b)))
-	return 0
+// An output formatter for json output of an object
+type JsonFormatter struct {
 }
 
-func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
+func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	b, err := json.Marshal(data)
+	if err == nil {
+		var out bytes.Buffer
+		json.Indent(&out, b, "", "\t")
+		ui.Output(out.String())
+	}
+	return err
+}
+
+// An output formatter for yaml output format of an object
+type YamlFormatter struct {
+}
+
+func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	b, err := yaml.Marshal(data)
+	if err == nil {
+		ui.Output(strings.TrimSpace(string(b)))
+	}
+	return err
+}
+
+// An output formatter for table output of an object
+type TableFormatter struct {
+}
+
+func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	// TODO: this should really use reflection like the other formatters do
+	if s, ok := data.(*api.Secret); ok {
+		return t.OutputSecret(ui, secret, s)
+	}
+	if s, ok := data.([]interface{}); ok {
+		return t.OutputList(ui, secret, s)
+	}
+	return errors.New("Cannot use the table formatter for this type")
+}
+
+func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interface{}) error {
+	config := columnize.DefaultConfig()
+	config.Delim = "♨"
+	config.Glue = "\t"
+	config.Prefix = ""
+
+	input := make([]string, 0, 5)
+
+	input = append(input, "Keys")
+
+	keys := make([]string, 0, len(list))
+	for _, k := range list {
+		keys = append(keys, k.(string))
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		input = append(input, fmt.Sprintf("%s", k))
+	}
+
+	if len(secret.Warnings) != 0 {
+		input = append(input, "")
+		input = append(input, "The following warnings were returned from the Vault server:")
+		for _, warning := range secret.Warnings {
+			input = append(input, fmt.Sprintf("* %s", warning))
+		}
+	}
+
+	ui.Output(columnize.Format(input, config))
+	return nil
+}
+
+func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 	config := columnize.DefaultConfig()
 	config.Delim = "♨"
 	config.Glue = "\t"
@@ -118,6 +143,7 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 
 	if s.Auth != nil {
 		input = append(input, fmt.Sprintf("token %s %s", config.Delim, s.Auth.ClientToken))
+		input = append(input, fmt.Sprintf("token_accessor %s %s", config.Delim, s.Auth.Accessor))
 		input = append(input, fmt.Sprintf("token_duration %s %d", config.Delim, s.Auth.LeaseDuration))
 		input = append(input, fmt.Sprintf("token_renewable %s %v", config.Delim, s.Auth.Renewable))
 		input = append(input, fmt.Sprintf("token_policies %s %v", config.Delim, s.Auth.Policies))
@@ -145,36 +171,5 @@ func outputFormatTable(ui cli.Ui, s *api.Secret, whitespace bool) int {
 	}
 
 	ui.Output(columnize.Format(input, config))
-	return 0
-}
-
-func outputFormatTableList(ui cli.Ui, s *api.Secret) int {
-	config := columnize.DefaultConfig()
-	config.Delim = "♨"
-	config.Glue = "\t"
-	config.Prefix = ""
-
-	input := make([]string, 0, 5)
-
-	input = append(input, "Keys")
-
-	keys := make([]string, 0, len(s.Data["keys"].([]interface{})))
-	for _, k := range s.Data["keys"].([]interface{}) {
-		keys = append(keys, k.(string))
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		input = append(input, fmt.Sprintf("%s", k))
-	}
-
-	if len(s.Warnings) != 0 {
-		input = append(input, "")
-		for _, warning := range s.Warnings {
-			input = append(input, fmt.Sprintf("* %s", warning))
-		}
-	}
-
-	ui.Output(columnize.Format(input, config))
-	return 0
+	return nil
 }
