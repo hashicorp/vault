@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -39,7 +38,7 @@ func (b *backend) secretCredsRenew(
 		return nil, err
 	}
 	if lease == nil {
-		lease = &configLease{Lease: 1 * time.Hour}
+		lease = &configLease{}
 	}
 
 	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
@@ -58,7 +57,7 @@ func (b *backend) secretCredsRevoke(
 	if !ok {
 		return nil, fmt.Errorf("secret is missing username internal data")
 	}
-	username, ok := usernameRaw.(string)
+	username := usernameRaw.(string)
 
 	// Get our connection
 	client, err := b.Client(req.Storage)

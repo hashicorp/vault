@@ -30,7 +30,11 @@ func pathRoleCreate(b *backend) *framework.Path {
 
 func (b *backend) pathRoleCreateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
+	// Validate name
+	name, err := validateName(data)
+	if err != nil {
+		return nil, err
+	}
 
 	// Get the role
 	role, err := b.Role(req.Storage, name)
@@ -50,21 +54,18 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{}
 	}
 
-	displayName := req.DisplayName
-	if len(displayName) > 26 {
-		displayName = displayName[:26]
-	}
-	userUUID := uuid.GenerateUUID()
-	username := fmt.Sprintf("%s-%s", displayName, userUUID)
-	if len(username) > 63 {
-		username = username[:63]
-	}
+	// Ensure username is unique
+	username := fmt.Sprintf("%s-%s", req.DisplayName, uuid.GenerateUUID())
 	password := uuid.GenerateUUID()
 
 	// Get our connection
 	client, err := b.Client(req.Storage)
 	if err != nil {
 		return nil, err
+	}
+
+	if client == nil {
+		return logical.ErrorResponse("unable to get client"), nil
 	}
 
 	// Create the user
@@ -85,7 +86,12 @@ func (b *backend) pathRoleCreateRead(
 		})
 
 		if err != nil {
-			return nil, err
+			// Delete the user because it's in an unknown state
+			_, rmErr := client.DeleteUser(username)
+			if rmErr != nil {
+				return logical.ErrorResponse(fmt.Sprintf("failed to update user: %s, failed to delete user: %s, user: %s", err, rmErr, username)), rmErr
+			}
+			return logical.ErrorResponse(fmt.Sprintf("failed to update user: %s, 	  user: %s", err, username)), err
 		}
 	}
 

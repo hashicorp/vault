@@ -56,7 +56,7 @@ Optionally, we can configure the lease settings for credentials generated
 by Vault. This is done by writing to the `config/lease` key:
 
 ```
-$ vault write rabbitmq/config/lease lease=1h lease_max=24h
+$ vault write rabbitmq/config/lease ttl=3600 ttl_max=86400
 Success! Data written to: rabbitmq/config/lease
 ```
 
@@ -162,8 +162,7 @@ subpath for interactive help output.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Configures the lease settings for generated credentials.
-    If not configured, leases default to 1 hour. This is a root
+    Configures the lease settings for generated credentials. This is a root
     protected endpoint.
   </dd>
 
@@ -177,16 +176,14 @@ subpath for interactive help output.
   <dd>
     <ul>
       <li>
-        <span class="param">lease</span>
+        <span class="param">ttl</span>
         <span class="param-flags">required</span>
-        The lease value provided as a string duration
-        with time suffix. Hour is the largest suffix.
+        The lease ttl provided in seconds.
       </li>
       <li>
-        <span class="param">lease_max</span>
+        <span class="param">ttl_max</span>
         <span class="param-flags">required</span>
-        The maximum lease value provided as a string duration
-        with time suffix. Hour is the largest suffix.
+        The maximum ttl provided in seconds.
       </li>
     </ul>
   </dd>
