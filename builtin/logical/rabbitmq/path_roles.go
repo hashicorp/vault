@@ -2,35 +2,40 @@ package rabbitmq
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func rolesFields() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		"name": &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: "Name of the role.",
+		},
+
+		"tags": &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: "Comma-separated list of tags for this role.",
+		},
+
+		"vhosts": &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: "A map of virtual hosts to permissions.",
+		},
+	}
+}
+
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
-		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Name of the role.",
-			},
-
-			"tags": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Comma-separated list of tags for this role.",
-			},
-
-			"vhosts": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "A map of virtual hosts to permissions.",
-			},
-		},
+		Fields:  rolesFields(),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.WriteOperation:  b.pathRoleCreate,
+			logical.CreateOperation: b.pathRoleCreate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -58,7 +63,13 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 
 func (b *backend) pathRoleDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+
+	name, err := validateName(data)
+	if err != nil {
+		return nil, err
+	}
+
+	err = req.Storage.Delete("role/" + name)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +79,13 @@ func (b *backend) pathRoleDelete(
 
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := b.Role(req.Storage, data.Get("name").(string))
+
+	name, err := validateName(data)
+	if err != nil {
+		return nil, err
+	}
+
+	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +103,10 @@ func (b *backend) pathRoleRead(
 
 func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
+	name, err := validateName(data)
+	if err != nil {
+		return nil, err
+	}
 	tags := data.Get("tags").(string)
 	rawVHosts := data.Get("vhosts").(string)
 
@@ -122,6 +142,15 @@ type vhostPermission struct {
 	Configure string `json:"configure"`
 	Write     string `json:"write"`
 	Read      string `json:"read"`
+}
+
+func validateName(data *framework.FieldData) (string, error) {
+	name := data.Get("name").(string)
+	if len(name) == 0 {
+		return "", errors.New("name is required")
+	}
+
+	return name, nil
 }
 
 const pathRoleHelpSyn = `

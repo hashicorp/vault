@@ -27,7 +27,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.WriteOperation: b.pathConnectionWrite,
+			logical.UpdateOperation: b.pathConnectionUpdate,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -35,7 +35,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	uri := data.Get("uri").(string)
 	username := data.Get("username").(string)
 	password := data.Get("password").(string)

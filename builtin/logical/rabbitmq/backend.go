@@ -21,17 +21,11 @@ func Backend() *framework.Backend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-			},
-		},
-
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
 			pathConfigLease(&b),
-			pathRoles(&b),
 			pathRoleCreate(&b),
+			pathRoles(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -94,7 +88,7 @@ func (b *backend) ResetClient() {
 
 // Lease returns the lease information
 func (b *backend) Lease(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+	entry, err := s.Get(leasePatternLabel)
 	if err != nil {
 		return nil, err
 	}
