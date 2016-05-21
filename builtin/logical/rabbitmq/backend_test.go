@@ -44,15 +44,25 @@ func TestBackend_roleCrud(t *testing.T) {
 	})
 }
 
+const (
+	uriEnv      = "RABBITMQ_CONNECTION_URI"
+	usernameEnv = "RABBITMQ_USERNAME"
+	passwordEnv = "RABBITMQ_PASSWORD"
+)
+
+func mustSet(name string) string {
+	return fmt.Sprintf("%s must be set for acceptance tests", name)
+}
+
 func testAccPreCheck(t *testing.T) {
-	if uri := os.Getenv("RABBITMQ_MG_URI"); uri == "" {
-		t.Fatal("RABBITMQ_MG_URI must be set for acceptance tests")
+	if uri := os.Getenv(uriEnv); uri == "" {
+		t.Fatal(mustSet(uriEnv))
 	}
-	if username := os.Getenv("RABBITMQ_MG_USERNAME"); username == "" {
-		t.Fatal("RABBITMQ_MG_USERNAME must be set for acceptance tests")
+	if username := os.Getenv(usernameEnv); username == "" {
+		t.Fatal(mustSet(usernameEnv))
 	}
-	if password := os.Getenv("RABBITMQ_MG_PASSWORD"); password == "" {
-		t.Fatal("RABBITMQ_MG_PASSWORD must be set for acceptance tests")
+	if password := os.Getenv(passwordEnv); password == "" {
+		t.Fatal(mustSet(passwordEnv))
 	}
 }
 
@@ -61,9 +71,9 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"uri":      os.Getenv("RABBITMQ_MG_URI"),
-			"username": os.Getenv("RABBITMQ_MG_USERNAME"),
-			"password": os.Getenv("RABBITMQ_MG_PASSWORD"),
+			"connection_uri": os.Getenv(uriEnv),
+			"username":       os.Getenv(usernameEnv),
+			"password":       os.Getenv(passwordEnv),
 		},
 	}
 }
@@ -100,7 +110,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
 
-			uri := os.Getenv("RABBITMQ_MG_URI")
+			uri := os.Getenv(uriEnv)
 
 			client, err := rabbithole.NewClient(uri, d.Username, d.Password)
 			if err != nil {
@@ -182,15 +192,15 @@ func testAccStepReadRole(t *testing.T, name, tags, rawVHosts string) logicaltest
 				}
 
 				if actualPermission.Configure != permission.Configure {
-					fmt.Errorf("expected permission %s to be %s, got %s", "configure", permission.Configure, actualPermission.Configure)
+					return fmt.Errorf("expected permission %s to be %s, got %s", "configure", permission.Configure, actualPermission.Configure)
 				}
 
 				if actualPermission.Write != permission.Write {
-					fmt.Errorf("expected permission %s to be %s, got %s", "write", permission.Write, actualPermission.Write)
+					return fmt.Errorf("expected permission %s to be %s, got %s", "write", permission.Write, actualPermission.Write)
 				}
 
 				if actualPermission.Read != permission.Read {
-					fmt.Errorf("expected permission %s to be %s, got %s", "read", permission.Read, actualPermission.Read)
+					return fmt.Errorf("expected permission %s to be %s, got %s", "read", permission.Read, actualPermission.Read)
 				}
 			}
 
