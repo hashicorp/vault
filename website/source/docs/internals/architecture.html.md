@@ -76,7 +76,7 @@ clarify what is being discussed:
 
 A very high level overview of Vault looks like this:
 
-![Architecture Overview](/assets/images/layers.png)
+[![Architecture Overview](/assets/images/layers.png)](/assets/images/layers.png)
 
 Let's begin to break down this picture. There is a clear separation of components
 that are inside or outside of the security barrier. Only the storage backend and
