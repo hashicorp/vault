@@ -40,6 +40,7 @@ mkdir -p bin/
 if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
     XC_OS=$(go env GOOS)
     XC_ARCH=$(go env GOARCH)
+    XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
 fi
 
 # Build!
