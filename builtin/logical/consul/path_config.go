@@ -52,7 +52,7 @@ func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, fmt.Errorf("error reading root configuration: %s", err)
+		return nil, nil, fmt.Errorf("error reading consul access configuration: %s", err)
 	}
 
 	return conf, nil, nil
@@ -68,17 +68,15 @@ func pathConfigAccessRead(
 		return logical.ErrorResponse(userErr.Error()), nil
 	}
 	if conf == nil {
-		return nil, fmt.Errorf("no user error reported but configuration not found")
+		return nil, fmt.Errorf("no user error reported but consul access configuration not found")
 	}
 
-	resp := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
 			"address": conf.Address,
 			"scheme":  conf.Scheme,
 		},
-	}
-
-	return resp, nil
+	}, nil
 }
 
 func pathConfigAccessWrite(
