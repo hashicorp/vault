@@ -191,14 +191,19 @@ func (c *Core) startRollback() error {
 		for _, entry := range c.mounts.Entries {
 			ret = append(ret, entry)
 		}
-		c.authLock.RLock()
-		defer c.authLock.RUnlock()
-		for _, entry := range c.auth.Entries {
-			if !strings.HasPrefix(entry.Path, "auth/") {
-				entry.Path = "auth/" + entry.Path
+		// NOTE NOTE NOTE
+		// We cannot do the below this way. Modifying the mount entries leads
+		// to those modified entries being persisted and that's very very bad
+		/*
+			c.authLock.RLock()
+			defer c.authLock.RUnlock()
+			for _, entry := range c.auth.Entries {
+				if !strings.HasPrefix(entry.Path, "auth/") {
+					entry.Path = "auth/" + entry.Path
+				}
+				ret = append(ret, entry)
 			}
-			ret = append(ret, entry)
-		}
+		*/
 		return ret
 	}
 	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router)

@@ -251,11 +251,18 @@ func (c *Core) setupCredentials() error {
 	var backend logical.Backend
 	var view *BarrierView
 	var err error
+	var persistNeeded bool
 
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
 	for _, entry := range c.auth.Entries {
+		// Work around some problematic code that existed in master for a while
+		if strings.HasPrefix(entry.Path, credentialRoutePrefix) {
+			entry.Path = strings.TrimPrefix(entry.Path, credentialRoutePrefix)
+			persistNeeded = true
+		}
+
 		// Create a barrier view using the UUID
 		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
@@ -290,6 +297,11 @@ func (c *Core) setupCredentials() error {
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
 	}
+
+	if persistNeeded {
+		return c.persistAuth(c.auth)
+	}
+
 	return nil
 }
 
