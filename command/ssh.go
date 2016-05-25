@@ -124,7 +124,9 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	// Port comes back as a json.Number which mapstructure doesn't like, so convert it
-	keySecret.Data["port"] = keySecret.Data["port"].(json.Number).String()
+	if keySecret.Data["port"] != nil {
+		keySecret.Data["port"] = keySecret.Data["port"].(json.Number).String()
+	}
 	var resp SSHCredentialResp
 	if err := mapstructure.Decode(keySecret.Data, &resp); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error parsing the credential response:%s", err))
