@@ -1,13 +1,13 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
 	"os/user"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/ssh"
@@ -27,7 +27,7 @@ type SSHCredentialResp struct {
 	Key      string `mapstructure:"key"`
 	Username string `mapstructure:"username"`
 	IP       string `mapstructure:"ip"`
-	Port     int    `mapstructure:"port"`
+	Port     string `mapstructure:"port"`
 }
 
 func (c *SSHCommand) Run(args []string) int {
@@ -123,13 +123,13 @@ func (c *SSHCommand) Run(args []string) int {
 		return OutputSecret(c.Ui, format, keySecret)
 	}
 
+	// Port comes back as a json.Number which mapstructure doesn't like, so convert it
+	keySecret.Data["port"] = keySecret.Data["port"].(json.Number).String()
 	var resp SSHCredentialResp
 	if err := mapstructure.Decode(keySecret.Data, &resp); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error parsing the credential response:%s", err))
 		return 1
 	}
-
-	port := strconv.Itoa(resp.Port)
 
 	if resp.KeyType == ssh.KeyTypeDynamic {
 		if len(resp.Key) == 0 {
@@ -148,7 +148,7 @@ func (c *SSHCommand) Run(args []string) int {
 		// Feel free to try and remove this dependency.
 		sshpassPath, err := exec.LookPath("sshpass")
 		if err == nil {
-			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-p", port, username + "@" + ip.String()}...)
+			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-p", resp.Port, username + "@" + ip.String()}...)
 			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
 			sshCmd.Stdin = os.Stdin
 			sshCmd.Stdout = os.Stdout
@@ -161,7 +161,7 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Output("OTP for the session is " + resp.Key)
 		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
 	}
-	sshCmdArgs = append(sshCmdArgs, []string{"-p", port, username + "@" + ip.String()}...)
+	sshCmdArgs = append(sshCmdArgs, []string{"-p", resp.Port, username + "@" + ip.String()}...)
 
 	sshCmd := exec.Command("ssh", sshCmdArgs...)
 	sshCmd.Stdin = os.Stdin
