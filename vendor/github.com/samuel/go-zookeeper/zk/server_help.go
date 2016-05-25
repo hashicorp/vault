@@ -88,8 +88,10 @@ func StartTestCluster(size int, stdout, stderr io.Writer) (*TestCluster, error) 
 			Srv:  srv,
 		})
 	}
+	if err := cluster.waitForStart(5, time.Second); err != nil {
+		return nil, err
+	}
 	success = true
-	time.Sleep(3 * time.Second) // Give the server time to become active. Should probably actually attempt to connect to verify.
 	return cluster, nil
 }
 
@@ -116,6 +118,50 @@ func (ts *TestCluster) Stop() error {
 		srv.Srv.Stop()
 	}
 	defer os.RemoveAll(ts.Path)
+	return ts.waitForStop(5, 1*time.Second)
+}
+
+// block until the cluster is up
+func (ts *TestCluster) waitForStart(maxRetry int, interval time.Duration) error {
+	// verify that the servers are up with SRVR
+	serverAddrs := make([]string, len(ts.Servers))
+	for i, s := range ts.Servers {
+		serverAddrs[i] = fmt.Sprintf("127.0.0.1:%d", s.Port)
+	}
+
+	for i := 0; i < maxRetry; i++ {
+		_, ok := FLWSrvr(serverAddrs, time.Second)
+		if ok {
+			return nil
+		}
+		time.Sleep(interval)
+	}
+	return fmt.Errorf("unable to verify health of servers!")
+}
+
+// block until the cluster is down
+func (ts *TestCluster) waitForStop(maxRetry int, interval time.Duration) error {
+	// verify that the servers are up with RUOK
+	serverAddrs := make([]string, len(ts.Servers))
+	for i, s := range ts.Servers {
+		serverAddrs[i] = fmt.Sprintf("127.0.0.1:%d", s.Port)
+	}
+
+	var success bool
+	for i := 0; i < maxRetry && !success; i++ {
+		success = true
+		for _, ok := range FLWRuok(serverAddrs, time.Second) {
+			if ok {
+				success = false
+			}
+		}
+		if !success {
+			time.Sleep(interval)
+		}
+	}
+	if !success {
+		return fmt.Errorf("unable to verify servers are down!")
+	}
 	return nil
 }
 

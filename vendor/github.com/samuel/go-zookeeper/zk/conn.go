@@ -596,7 +596,7 @@ func (c *Conn) recvLoop(conn net.Conn) error {
 
 		if res.Xid == -1 {
 			res := &watcherEvent{}
-			_, err := decodePacket(buf[16:16+blen], res)
+			_, err := decodePacket(buf[16:blen], res)
 			if err != nil {
 				return err
 			}
@@ -653,7 +653,7 @@ func (c *Conn) recvLoop(conn net.Conn) error {
 				if res.Err != 0 {
 					err = res.Err.toError()
 				} else {
-					_, err = decodePacket(buf[16:16+blen], req.recvStruct)
+					_, err = decodePacket(buf[16:blen], req.recvStruct)
 				}
 				if req.recvFunc != nil {
 					req.recvFunc(req, &res, err)
