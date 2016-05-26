@@ -25,6 +25,10 @@ const (
 	// systemBarrierPrefix is the prefix used for the
 	// system logical backend.
 	systemBarrierPrefix = "sys/"
+
+	// mountTableType is the value we expect to find for the mount table and
+	// corresponding entries
+	mountTableType = "mounts"
 )
 
 var (
@@ -55,6 +59,7 @@ var (
 
 // MountTable is used to represent the internal mount table
 type MountTable struct {
+	Type    string        `json:"type"`
 	Entries []*MountEntry `json:"entries"`
 }
 
@@ -64,6 +69,7 @@ type MountTable struct {
 // if modifying entries rather than modifying the table itself
 func (t *MountTable) ShallowClone() *MountTable {
 	mt := &MountTable{
+		Type:    t.Type,
 		Entries: make([]*MountEntry, len(t.Entries)),
 	}
 	for i, e := range t.Entries {
@@ -120,6 +126,7 @@ func (t *MountTable) Remove(path string) bool {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
+	Table       string            `json:"table"`             // The table it belongs to
 	Path        string            `json:"path"`              // Mount Path
 	Type        string            `json:"type"`              // Logical backend Type
 	Description string            `json:"description"`       // User-provided description
@@ -142,6 +149,7 @@ func (e *MountEntry) Clone() *MountEntry {
 		optClone[k] = v
 	}
 	return &MountEntry{
+		Table:       e.Table,
 		Path:        e.Path,
 		Type:        e.Type,
 		Description: e.Description,
@@ -409,6 +417,13 @@ func (c *Core) loadMounts() error {
 	// by type only.
 	if c.mounts != nil {
 		needPersist := false
+
+		// Upgrade to typed mount table
+		if c.mounts.Type == "" {
+			c.mounts.Type = mountTableType
+			needPersist = true
+		}
+
 		for _, requiredMount := range requiredMountTable().Entries {
 			foundRequired := false
 			for _, coreMount := range c.mounts.Entries {
@@ -419,6 +434,14 @@ func (c *Core) loadMounts() error {
 			}
 			if !foundRequired {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
+				needPersist = true
+			}
+		}
+
+		// Upgrade to table-scoped entries
+		for _, entry := range c.mounts.Entries {
+			if entry.Table == "" {
+				entry.Table = c.mounts.Type
 				needPersist = true
 			}
 		}
@@ -441,6 +464,25 @@ func (c *Core) loadMounts() error {
 
 // persistMounts is used to persist the mount table after modification
 func (c *Core) persistMounts(table *MountTable) error {
+	if table.Type != mountTableType {
+		c.logger.Printf(
+			"[ERR] core: given table to persist has type %s but need type %s",
+			table.Type,
+			mountTableType)
+		return fmt.Errorf("invalid table type given, not persisting")
+	}
+
+	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Printf(
+				"[ERR] core: entry in mount table with path %s has table value %s but is in table %s, refusing to persist",
+				entry.Path,
+				entry.Table,
+				table.Type)
+			return fmt.Errorf("invalid mount entry found, not persisting")
+		}
+	}
+
 	// Marshal the table
 	raw, err := json.Marshal(table)
 	if err != nil {
@@ -574,12 +616,15 @@ func (c *Core) mountEntrySysView(me *MountEntry) logical.SystemView {
 
 // defaultMountTable creates a default mount table
 func defaultMountTable() *MountTable {
-	table := &MountTable{}
+	table := &MountTable{
+		Type: mountTableType,
+	}
 	mountUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		panic(fmt.Sprintf("could not create default mount table UUID: %v", err))
 	}
 	genericMount := &MountEntry{
+		Table:       mountTableType,
 		Path:        "secret/",
 		Type:        "generic",
 		Description: "generic secret storage",
@@ -593,12 +638,15 @@ func defaultMountTable() *MountTable {
 // requiredMountTable() creates a mount table with entries required
 // to be available
 func requiredMountTable() *MountTable {
-	table := &MountTable{}
+	table := &MountTable{
+		Type: mountTableType,
+	}
 	cubbyholeUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		panic(fmt.Sprintf("could not create cubbyhole UUID: %v", err))
 	}
 	cubbyholeMount := &MountEntry{
+		Table:       mountTableType,
 		Path:        "cubbyhole/",
 		Type:        "cubbyhole",
 		Description: "per-token private secret storage",
@@ -610,6 +658,7 @@ func requiredMountTable() *MountTable {
 		panic(fmt.Sprintf("could not create sys UUID: %v", err))
 	}
 	sysMount := &MountEntry{
+		Table:       mountTableType,
 		Path:        "sys/",
 		Type:        "system",
 		Description: "system endpoints used for control, policy and debugging",

@@ -720,6 +720,7 @@ func (b *SystemBackend) handleMount(
 
 	// Create the mount entry
 	me := &MountEntry{
+		Table:       mountTableType,
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
@@ -1001,6 +1002,7 @@ func (b *SystemBackend) handleEnableAuth(
 
 	// Create the mount entry
 	me := &MountEntry{
+		Table:       credentialTableType,
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
@@ -1169,6 +1171,7 @@ func (b *SystemBackend) handleEnableAudit(
 
 	// Create the mount entry
 	me := &MountEntry{
+		Table:       auditTableType,
 		Path:        path,
 		Type:        backendType,
 		Description: description,

@@ -15,9 +15,10 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 
 	meUUID, _ := uuid.GenerateUUID()
 	err := core.mount(&MountEntry{
-		UUID: meUUID,
-		Path: "wraptest",
-		Type: "generic",
+		Table: mountTableType,
+		UUID:  meUUID,
+		Path:  "wraptest",
+		Type:  "generic",
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)

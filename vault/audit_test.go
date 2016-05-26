@@ -56,8 +56,9 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableAudit(me)
 	if err != nil {
@@ -115,8 +116,9 @@ func TestCore_DisableAudit(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err = c.enableAudit(me)
 	if err != nil {
@@ -195,6 +197,9 @@ func TestDefaultAuditTable(t *testing.T) {
 func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 0 {
 		t.Fatalf("bad: %v", table.Entries)
+	}
+	if table.Type != auditTableType {
+		t.Fatalf("bad: %v", *table)
 	}
 }
 

@@ -22,6 +22,10 @@ const (
 
 	// credentialRoutePrefix is the mount prefix used for the router
 	credentialRoutePrefix = "auth/"
+
+	// credentialTableType is the value we expect to find for the credential
+	// table and corresponding entries
+	credentialTableType = "auth"
 )
 
 var (
@@ -210,6 +214,26 @@ func (c *Core) loadCredentials() error {
 
 	// Done if we have restored the auth table
 	if c.auth != nil {
+		needPersist := false
+
+		// Upgrade to typed auth table
+		if c.auth.Type == "" {
+			c.auth.Type = credentialTableType
+			needPersist = true
+		}
+
+		// Upgrade to table-scoped entries
+		for _, entry := range c.auth.Entries {
+			if entry.Table == "" {
+				entry.Table = c.auth.Type
+				needPersist = true
+			}
+		}
+
+		if needPersist {
+			return c.persistAuth(c.auth)
+		}
+
 		return nil
 	}
 
@@ -224,6 +248,25 @@ func (c *Core) loadCredentials() error {
 
 // persistAuth is used to persist the auth table after modification
 func (c *Core) persistAuth(table *MountTable) error {
+	if table.Type != credentialTableType {
+		c.logger.Printf(
+			"[ERR] core: given table to persist has type %s but need type %s",
+			table.Type,
+			credentialTableType)
+		return fmt.Errorf("invalid table type given, not persisting")
+	}
+
+	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Printf(
+				"[ERR] core: entry in auth table with path %s has table value %s but is in table %s, refusing to persist",
+				entry.Path,
+				entry.Table,
+				table.Type)
+			return fmt.Errorf("invalid auth entry found, not persisting")
+		}
+	}
+
 	// Marshal the table
 	raw, err := json.Marshal(table)
 	if err != nil {
@@ -341,12 +384,15 @@ func (c *Core) newCredentialBackend(
 
 // defaultAuthTable creates a default auth table
 func defaultAuthTable() *MountTable {
-	table := &MountTable{}
+	table := &MountTable{
+		Type: credentialTableType,
+	}
 	tokenUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		panic(fmt.Sprintf("could not generate UUID for default auth table token entry: %v", err))
 	}
 	tokenAuth := &MountEntry{
+		Table:       credentialTableType,
 		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
