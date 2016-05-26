@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -327,19 +328,73 @@ func TestDefaultMountTable(t *testing.T) {
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	me := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.enableAudit(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	me = &MountEntry{
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err = c.enableCredential(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	testCore_MountTable_UpgradeToTyped_Common(t, c, "mounts")
+	testCore_MountTable_UpgradeToTyped_Common(t, c, "audits")
+	testCore_MountTable_UpgradeToTyped_Common(t, c, "credentials")
+}
+
+func testCore_MountTable_UpgradeToTyped_Common(
+	t *testing.T,
+	c *Core,
+	testType string) {
+
+	var path string
+	var mt *MountTable
+	switch testType {
+	case "mounts":
+		path = coreMountConfigPath
+		mt = c.mounts
+	case "audits":
+		path = coreAuditConfigPath
+		mt = c.audit
+	case "credentials":
+		path = coreAuthConfigPath
+		mt = c.auth
+	}
+
 	// Save the expected table
-	goodJson, err := json.Marshal(c.mounts)
+	goodJson, err := json.Marshal(mt)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a pre-typed version
-	c.mounts.Type = ""
-	for _, entry := range c.mounts.Entries {
+	mt.Type = ""
+	for _, entry := range mt.Entries {
 		entry.Table = ""
 	}
 
-	raw, err := json.Marshal(c.mounts)
+	raw, err := json.Marshal(mt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,20 +404,35 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	}
 
 	entry := &Entry{
-		Key:   coreMountConfigPath,
+		Key:   path,
 		Value: raw,
 	}
 	if err := c.barrier.Put(entry); err != nil {
 		t.Fatal(err)
 	}
 
+	var persistFunc func(*MountTable) error
+
 	// It should load successfully and be upgraded and persisted
-	err = c.loadMounts()
+	switch testType {
+	case "mounts":
+		err = c.loadMounts()
+		persistFunc = c.persistMounts
+		mt = c.mounts
+	case "credentials":
+		err = c.loadCredentials()
+		persistFunc = c.persistAuth
+		mt = c.auth
+	case "audits":
+		err = c.loadAudits()
+		persistFunc = c.persistAudit
+		mt = c.audit
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	entry, err = c.barrier.Get(coreMountConfigPath)
+	entry, err = c.barrier.Get(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,20 +442,23 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	}
 
 	// Now try saving invalid versions
-	c.mounts.Type = "auth"
-	if err := c.persistMounts(c.mounts); err == nil {
+	origTableType := mt.Type
+	mt.Type = "foo"
+	if err := persistFunc(mt); err == nil {
 		t.Fatal("expected error")
 	}
 
-	c.mounts.Type = mountTableType
-	c.mounts.Entries[0].Table = "foobar"
-	if err := c.persistMounts(c.mounts); err == nil {
-		t.Fatal("expected error")
-	}
+	if len(mt.Entries) > 0 {
+		mt.Type = origTableType
+		mt.Entries[0].Table = "bar"
+		if err := persistFunc(mt); err == nil {
+			t.Fatal("expected error")
+		}
 
-	c.mounts.Entries[0].Table = c.mounts.Type
-	if err := c.persistMounts(c.mounts); err != nil {
-		t.Fatal(err)
+		mt.Entries[0].Table = mt.Type
+		if err := persistFunc(mt); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

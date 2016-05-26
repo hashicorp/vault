@@ -41,8 +41,9 @@ func TestCore_EnableCredential(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableCredential(me)
 	if err != nil {
@@ -86,8 +87,9 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableCredential(me)
 	if err != nil {
@@ -109,8 +111,9 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 func TestCore_EnableCredential_Token(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
-		Path: "foo",
-		Type: "token",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "token",
 	}
 	err := c.enableCredential(me)
 	if err.Error() != "token credential backend cannot be instantiated" {
@@ -130,8 +133,9 @@ func TestCore_DisableCredential(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err = c.enableCredential(me)
 	if err != nil {
@@ -188,8 +192,9 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableCredential(me)
 	if err != nil {
@@ -259,6 +264,9 @@ func TestDefaultAuthTable(t *testing.T) {
 func verifyDefaultAuthTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 1 {
 		t.Fatalf("bad: %v", table.Entries)
+	}
+	if table.Type != credentialTableType {
+		t.Fatalf("bad: %v", *table)
 	}
 	for idx, entry := range table.Entries {
 		switch idx {

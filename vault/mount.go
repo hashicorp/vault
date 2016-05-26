@@ -26,7 +26,8 @@ const (
 	// system logical backend.
 	systemBarrierPrefix = "sys/"
 
-	// mountTableType is the value we expect to find for the mount table and corresponding entries
+	// mountTableType is the value we expect to find for the mount table and
+	// corresponding entries
 	mountTableType = "mounts"
 )
 
