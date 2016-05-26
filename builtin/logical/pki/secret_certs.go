@@ -38,12 +38,12 @@ reference`,
 func (b *backend) secretCredsRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Secret == nil {
-		return nil, fmt.Errorf("Secret is nil in request")
+		return nil, fmt.Errorf("secret is nil in request")
 	}
 
 	serialInt, ok := req.Secret.InternalData["serial_number"]
 	if !ok {
-		return nil, fmt.Errorf("Could not find serial in internal secret data")
+		return nil, fmt.Errorf("could not find serial in internal secret data")
 	}
 
 	serial := strings.Replace(strings.ToLower(serialInt.(string)), "-", ":", -1)

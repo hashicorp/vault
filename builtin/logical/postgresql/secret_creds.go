@@ -171,10 +171,10 @@ func (b *backend) secretCredsRevoke(
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not generate revocation statements for all rows: %v", rows.Err())), nil
+		return nil, fmt.Errorf("could not generate revocation statements for all rows: %s", rows.Err())
 	}
 	if lastStmtError != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not perform all revocation statements: %v", lastStmtError)), nil
+		return nil, fmt.Errorf("could not perform all revocation statements: %s", lastStmtError)
 	}
 
 	// Drop this user
