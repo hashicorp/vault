@@ -410,8 +410,8 @@
 			"Rev": "983d3a5fab1bf04d1b412465d2d9f8430e2e917e"
 		},
 		{
-			"ImportPath": "github.com/samuel/go-zookeeper/zk",
-			"Rev": "5250732bd2ed71d1e374212ebfc32760eca10c0a"
+			"ImportPath": "github.com/talbright/go-zookeeper/zk",
+			"Rev": "b2e8315c2bc4d7d61aa878a3ad3984076248bc74"
 		},
 		{
 			"ImportPath": "github.com/ugorji/go/codec",

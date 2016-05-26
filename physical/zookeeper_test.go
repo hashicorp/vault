@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/talbright/go-zookeeper/zk"
 )
 
 func TestZookeeperBackend(t *testing.T) {

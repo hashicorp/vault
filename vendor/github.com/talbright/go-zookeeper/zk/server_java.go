@@ -6,7 +6,25 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
+
+type retryError struct {
+	msg      string
+	duration time.Duration
+	attempts int
+}
+
+func newRetryError(msg string, duration time.Duration, attempts int) *retryError {
+	return &retryError{msg: msg, duration: duration, attempts: attempts}
+}
+
+func (e *retryError) Error() string {
+	return fmt.Sprintf("retry failed: %s (retried %d times over %v)", e.msg, e.attempts, e.duration*time.Duration(e.attempts))
+}
+
+var maxStartStopPolls = 30
+var startStopPollInterval = time.Second
 
 type ErrMissingServerConfigField string
 
@@ -109,15 +127,46 @@ func findZookeeperFatJar() string {
 	return ""
 }
 
+type serverState int
+
+const (
+	serverStateNew = iota
+	serverStateStopped
+	serverStateStarted
+	serverStateInconsistent
+)
+
+var serverStates = [...]string{
+	"init",
+	"stopped",
+	"started",
+	"inconsistent",
+}
+
+func (state serverState) String() string {
+	return serverStates[state]
+}
+
 type Server struct {
 	JarPath        string
 	ConfigPath     string
 	Stdout, Stderr io.Writer
-
-	cmd *exec.Cmd
+	Address        string
+	cmd            *exec.Cmd
+	state          serverState
 }
 
-func (srv *Server) Start() error {
+func (srv *Server) Start() (err error) {
+	DefaultLogger.Printf("starting %s [state:%v]", srv.Address, srv.state)
+	defer func() {
+		if err == nil {
+			srv.state = serverStateStarted
+			DefaultLogger.Printf("started %s successfully", srv.Address)
+		} else {
+			srv.state = serverStateInconsistent
+			DefaultLogger.Printf("start %s failed: %v", srv.Address, err)
+		}
+	}()
 	if srv.JarPath == "" {
 		srv.JarPath = findZookeeperFatJar()
 		if srv.JarPath == "" {
@@ -127,10 +176,48 @@ func (srv *Server) Start() error {
 	srv.cmd = exec.Command("java", "-jar", srv.JarPath, "server", srv.ConfigPath)
 	srv.cmd.Stdout = srv.Stdout
 	srv.cmd.Stderr = srv.Stderr
-	return srv.cmd.Start()
+	if err = srv.cmd.Start(); err == nil {
+		var i int
+		for ; i < maxStartStopPolls; i++ {
+			if ok := FLWRuok([]string{srv.Address}, time.Second); ok[0] {
+				return nil
+			}
+			time.Sleep(startStopPollInterval)
+		}
+		err = newRetryError(fmt.Sprintf("starting %v", srv), startStopPollInterval, i)
+	}
+	return
 }
 
-func (srv *Server) Stop() error {
-	srv.cmd.Process.Signal(os.Kill)
-	return srv.cmd.Wait()
+func (srv *Server) Stop() (err error) {
+	DefaultLogger.Printf("stopping %s [state:%v]", srv.Address, srv.state)
+	defer func() {
+		if err == nil {
+			srv.state = serverStateStopped
+			DefaultLogger.Printf("stopped %s successfully", srv.Address)
+		} else {
+			if err.Error() == "os: process already finished" {
+				srv.state = serverStateStopped
+			} else {
+				srv.state = serverStateInconsistent
+			}
+			DefaultLogger.Printf("stop %s failed: %v", srv.Address, err)
+		}
+	}()
+	errOk := srv.cmd.Process.Signal(os.Kill)
+	if errOk != nil {
+		DefaultLogger.Printf("error signaling kill while stopping %s: %v", srv.Address, errOk)
+	}
+	if errOk = srv.cmd.Wait(); errOk.Error() != "signal: killed" {
+		DefaultLogger.Printf("unexpected error from wait while stopping %s: %v", srv.Address, errOk)
+	}
+	var i int
+	for ; i < maxStartStopPolls; i++ {
+		if ok := FLWRuok([]string{srv.Address}, time.Second); !ok[0] {
+			return nil
+		}
+		time.Sleep(startStopPollInterval)
+	}
+	err = newRetryError(fmt.Sprintf("stopping %v", srv), startStopPollInterval, i)
+	return
 }
