@@ -55,7 +55,7 @@ clarify what is being discussed:
 * **Client Token** - A client token is a conceptually similar to a session cookie on a web site.
   Once a user authenticates, Vault returns a client token which is used for future requests.
   The token is used by Vault to verify the identity of the client and to enforce the applicable
-  ACL policies. Unlike a cookie on a web site, this token is passed via HTTP headers.
+  ACL policies. Like a cookie on a web site, this token is passed via HTTP headers.
 
 * **Secret** - A secret is the term for anything returned by Vault which contains confidential
   or cryptographic material. Not everything returned by Vault is a secret, for example
