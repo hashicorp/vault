@@ -94,7 +94,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	if !policyutil.EquivalentPolicies(user.Policies, req.Auth.Policies) {
-		return logical.ErrorResponse("policies have changed, not renewing"), nil
+		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(req, d)

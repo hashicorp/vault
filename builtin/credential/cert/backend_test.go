@@ -754,13 +754,7 @@ func Test_Renew(t *testing.T) {
 	}
 
 	resp, err = b.pathLoginRenew(req, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("got nil response from renew")
-	}
-	if !resp.IsError() {
+	if err == nil {
 		t.Fatal("expected error")
 	}
 

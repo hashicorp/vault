@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -83,7 +84,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
-		return logical.ErrorResponse("policies have changed, not renewing"), nil
+		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	return framework.LeaseExtend(0, 0, b.System())(req, d)

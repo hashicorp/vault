@@ -478,7 +478,7 @@ func (b *backend) pathLoginRenew(
 	// Cross check that the instance is still in 'running' state
 	_, err := b.validateInstance(req.Storage, instanceID, region)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
+		return nil, fmt.Errorf("failed to verify instance ID: %s", err)
 	}
 
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, instanceID)
@@ -492,7 +492,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 	if roleEntry == nil {
-		return logical.ErrorResponse("role entry not found"), nil
+		return nil, fmt.Errorf("role entry not found")
 	}
 
 	// If the login was made using the role tag, then max_ttl from tag

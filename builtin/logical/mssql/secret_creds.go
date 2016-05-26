@@ -141,12 +141,10 @@ func (b *backend) secretCredsRevoke(
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"could not generate sql statements for all rows: %v", rows.Err())), nil
+		return nil, fmt.Errorf("cound not generate sql statements for all rows: %s", rows.Err())
 	}
 	if lastStmtError != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"could not perform all sql statements: %v", lastStmtError)), nil
+		return nil, fmt.Errorf("could not perform all sql statements: %s", lastStmtError)
 	}
 
 	// Drop this login

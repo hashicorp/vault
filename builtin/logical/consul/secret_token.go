@@ -1,6 +1,8 @@
 package consul
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -34,12 +36,17 @@ func secretTokenRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	c, err := client(req.Storage)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
-	_, err = c.ACL().Destroy(d.Get("token").(string), nil)
+	tokenRaw, ok := req.Secret.InternalData["token"]
+	if !ok {
+		return nil, fmt.Errorf("secret is missing internal data: token")
+	}
+
+	_, err = c.ACL().Destroy(tokenRaw.(string), nil)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	return nil, nil
