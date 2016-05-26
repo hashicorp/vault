@@ -1373,7 +1373,7 @@ func (ts *TokenStore) authRenew(
 	}
 
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("original token role (%s) could not be found, not renewing", te.Role)), nil
+		return nil, fmt.Errorf("original token role (%s) could not be found, not renewing", te.Role)
 	}
 
 	// If role.Period is not zero, this is a periodic token. The TTL for a

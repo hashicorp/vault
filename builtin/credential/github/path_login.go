@@ -84,7 +84,7 @@ func (b *backend) pathLoginRenew(
 		verifyResp = verifyResponse
 	}
 	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.Policies) {
-		return logical.ErrorResponse("policies do not match"), nil
+		return nil, fmt.Errorf("policies do not match")
 	}
 
 	config, err := b.Config(req.Storage)
