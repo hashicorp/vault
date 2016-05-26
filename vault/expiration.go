@@ -576,10 +576,10 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	}
 
 	// Handle standard revocation via backends
-	_, err := m.router.Route(logical.RevokeRequest(
+	resp, err := m.router.Route(logical.RevokeRequest(
 		le.Path, le.Secret, le.Data))
-	if err != nil {
-		return fmt.Errorf("failed to revoke entry: %v", err)
+	if err != nil || (resp != nil && resp.IsError()) {
+		return fmt.Errorf("failed to revoke entry: resp:%#v err:%s", resp, err)
 	}
 	return nil
 }
@@ -593,8 +593,8 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to renew entry: %v", err)
+	if err != nil || (resp != nil && resp.IsError()) {
+		return nil, fmt.Errorf("failed to renew entry: resp:%#v err:%s", resp, err)
 	}
 	return resp, nil
 }
