@@ -720,6 +720,7 @@ func (b *SystemBackend) handleMount(
 
 	// Create the mount entry
 	me := &MountEntry{
+		Table:       mountTableType,
 		Path:        path,
 		Type:        logicalType,
 		Description: description,

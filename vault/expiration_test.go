@@ -965,8 +965,9 @@ func TestExpiration_RevokeForce(t *testing.T) {
 
 	core.logicalBackends["badrenew"] = badRenewFactory
 	me := &MountEntry{
-		Path: "badrenew/",
-		Type: "badrenew",
+		Table: mountTableType,
+		Path:  "badrenew/",
+		Type:  "badrenew",
 	}
 
 	err := core.mount(me)

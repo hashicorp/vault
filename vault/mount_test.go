@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
@@ -38,8 +39,9 @@ func TestCore_DefaultMountTable(t *testing.T) {
 func TestCore_Mount(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
-		Path: "foo",
-		Type: "generic",
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
 	}
 	err := c.mount(me)
 	if err != nil {
@@ -116,8 +118,9 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 
 	// Mount the noop backend
 	me := &MountEntry{
-		Path: "test/",
-		Type: "noop",
+		Table: mountTableType,
+		Path:  "test/",
+		Type:  "noop",
 	}
 	if err := c.mount(me); err != nil {
 		t.Fatalf("err: %v", err)
@@ -233,8 +236,9 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 	// Mount the noop backend
 	me := &MountEntry{
-		Path: "test/",
-		Type: "noop",
+		Table: mountTableType,
+		Path:  "test/",
+		Type:  "noop",
 	}
 	if err := c.mount(me); err != nil {
 		t.Fatalf("err: %v", err)
@@ -320,6 +324,71 @@ func TestDefaultMountTable(t *testing.T) {
 	verifyDefaultTable(t, table)
 }
 
+func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// Save the expected table
+	goodJson, err := json.Marshal(c.mounts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a pre-typed version
+	c.mounts.Type = ""
+	for _, entry := range c.mounts.Entries {
+		entry.Table = ""
+	}
+
+	raw, err := json.Marshal(c.mounts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if reflect.DeepEqual(raw, goodJson) {
+		t.Fatalf("bad: values here should be different")
+	}
+
+	entry := &Entry{
+		Key:   coreMountConfigPath,
+		Value: raw,
+	}
+	if err := c.barrier.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	// It should load successfully and be upgraded and persisted
+	err = c.loadMounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entry, err = c.barrier.Get(coreMountConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(entry.Value, goodJson) {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", string(goodJson), string(entry.Value))
+	}
+
+	// Now try saving invalid versions
+	c.mounts.Type = "auth"
+	if err := c.persistMounts(c.mounts); err == nil {
+		t.Fatal("expected error")
+	}
+
+	c.mounts.Type = mountTableType
+	c.mounts.Entries[0].Table = "foobar"
+	if err := c.persistMounts(c.mounts); err == nil {
+		t.Fatal("expected error")
+	}
+
+	c.mounts.Entries[0].Table = c.mounts.Type
+	if err := c.persistMounts(c.mounts); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func verifyDefaultTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 3 {
 		t.Fatalf("bad: %v", table.Entries)
@@ -347,6 +416,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
 			}
+		}
+		if entry.Table != mountTableType {
+			t.Fatalf("bad: %v", entry)
 		}
 		if entry.Description == "" {
 			t.Fatalf("bad: %v", entry)
