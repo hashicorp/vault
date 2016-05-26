@@ -43,6 +43,11 @@ func createBackend() *backend {
 }
 
 func TestBackend_config_access(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
 	accessConfig, process := testStartConsulServer(t)
 	defer testStopConsulServer(t, process)
 
