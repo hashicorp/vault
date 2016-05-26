@@ -275,6 +275,7 @@ func (b *backend) pathRoleRead(
 		return nil, fmt.Errorf("error converting role data to response")
 	}
 
+	// These values are deprecated and the entries are migrated on read
 	delete(resp.Data, "lease")
 	delete(resp.Data, "lease_max")
 	delete(resp.Data, "allowed_base_domain")
