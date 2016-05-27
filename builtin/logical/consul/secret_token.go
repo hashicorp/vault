@@ -1,8 +1,6 @@
 package consul
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -41,7 +39,11 @@ func secretTokenRevoke(
 
 	tokenRaw, ok := req.Secret.InternalData["token"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data: token")
+		// We return nil here because this is a pre-0.5.3 problem and there is
+		// nothing we can do about it. We already can't revoke the lease
+		// properly if it has been renewed and this is documented pre-0.5.3
+		// behavior with a security bulletin about it.
+		return nil, nil
 	}
 
 	_, err = c.ACL().Destroy(tokenRaw.(string), nil)
