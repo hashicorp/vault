@@ -24,6 +24,15 @@ for a revocation script as deemed necessary for any particular security
 response. The script is available at
 https://gist.github.com/jefferai/6233c2963f9407a858d84f9c27d725c0
 
+Please note that any outstanding leases for Consul tokens produced prior to
+0.5.3 that have been renewed will continue to exhibit this behavior. As a
+result, we recommend either revoking all tokens produced by the backend and
+issuing new ones, or if needed, a more advanced variant of the provided example
+could use the timestamp embedded in each generated token's name to decide which
+tokens are too old and should be deleted. This could then be run periodically
+up until the maximum lease time for any outstanding pre-0.5.3 tokens has
+expired.
+
 This is a security-only release. There are no other code changes since 0.5.2.
 The binaries have one additional change: they are built against Go 1.6.1 rather
 than Go 1.6, as Go 1.6.1 contains two security fixes to the Go programming
