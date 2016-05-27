@@ -40,6 +40,106 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_renew_revoke(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	config, process := testStartConsulServer(t)
+	defer testStopConsulServer(t, process)
+
+	beConfig := logical.TestBackendConfig()
+	beConfig.StorageView = &logical.InmemStorage{}
+	b, _ := Factory(beConfig)
+
+	req := &logical.Request{
+		Storage:   beConfig.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      config,
+	}
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Path = "roles/test"
+	req.Data = map[string]interface{}{
+		"policy": base64.StdEncoding.EncodeToString([]byte(testPolicy)),
+		"lease":  "6h",
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test"
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatal("resp nil or error")
+	}
+
+	generatedSecret := resp.Secret
+	generatedSecret.IssueTime = time.Now()
+	generatedSecret.TTL = 6 * time.Hour
+
+	var d struct {
+		Token string `mapstructure:"token"`
+	}
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("[WARN] Generated token: %s", d.Token)
+
+	// Build a client and verify that the credentials work
+	apiConfig := api.DefaultConfig()
+	apiConfig.Address = config["address"].(string)
+	apiConfig.Token = d.Token
+	client, err := api.NewClient(apiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("[WARN] Verifying that the generated token works...")
+	_, err = client.KV().Put(&api.KVPair{
+		Key:   "foo",
+		Value: []byte("bar"),
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.RenewOperation
+	req.Secret = generatedSecret
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+
+	req.Operation = logical.RevokeOperation
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("[WARN] Verifying that the generated token does not work...")
+	_, err = client.KV().Put(&api.KVPair{
+		Key:   "foo",
+		Value: []byte("bar"),
+	}, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestBackend_management(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
