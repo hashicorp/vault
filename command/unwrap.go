@@ -1,8 +1,6 @@
 package command
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"strings"
@@ -10,10 +8,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/meta"
-)
-
-const (
-	wrappedResponseLocation = "cubbyhole/response"
 )
 
 // UnwrapCommand is a Command that behaves like ReadCommand but specifically
@@ -58,9 +52,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 		return 2
 	}
 
-	client.SetToken(tokenID)
-
-	secret, err = c.getUnwrappedResponse(client)
+	secret, err = client.Logical().Unwrap(tokenID)
 	if err != nil {
 		c.Ui.Error(err.Error())
 		return 1
@@ -76,33 +68,6 @@ func (c *UnwrapCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.Ui, format, secret)
-}
-
-// getUnwrappedResponse is a helper to do the actual reading and unwrapping
-func (c *UnwrapCommand) getUnwrappedResponse(client *api.Client) (*api.Secret, error) {
-	secret, err := client.Logical().Read(wrappedResponseLocation)
-	if err != nil {
-		return nil, fmt.Errorf("Error reading %s: %s", wrappedResponseLocation, err)
-	}
-	if secret == nil {
-		return nil, fmt.Errorf("No value found at %s", wrappedResponseLocation)
-	}
-	if secret.Data == nil {
-		return nil, fmt.Errorf("\"data\" not found in wrapping response")
-	}
-	if _, ok := secret.Data["response"]; !ok {
-		return nil, fmt.Errorf("\"response\" not found in wrapping response \"data\" map")
-	}
-
-	wrappedSecret := new(api.Secret)
-	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	dec := json.NewDecoder(buf)
-	dec.UseNumber()
-	if err := dec.Decode(wrappedSecret); err != nil {
-		return nil, fmt.Errorf("Error unmarshaling wrapped secret: %s", err)
-	}
-
-	return wrappedSecret, nil
 }
 
 func (c *UnwrapCommand) Synopsis() string {
