@@ -136,11 +136,11 @@ func (b *AESGCMBarrier) Initialize(key []byte) error {
 // master key to encrypt it.
 func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 	// Create the keyring entry
-	buf, err := keyring.Serialize()
+	keyringBuf, err := keyring.Serialize()
+	defer memzero(keyringBuf)
 	if err != nil {
 		return fmt.Errorf("failed to serialize keyring: %v", err)
 	}
-	defer memzero(buf)
 
 	// Create the AES-GCM
 	gcm, err := b.aeadFromKey(keyring.MasterKey())
@@ -149,7 +149,7 @@ func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 	}
 
 	// Encrypt the barrier init value
-	value := b.encrypt(keyringPath, initialKeyTerm, gcm, buf)
+	value := b.encrypt(keyringPath, initialKeyTerm, gcm, keyringBuf)
 
 	// Create the keyring physical entry
 	pe := &physical.Entry{
@@ -166,11 +166,11 @@ func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 		Version: 1,
 		Value:   keyring.MasterKey(),
 	}
-	buf, err = key.Serialize()
+	keyBuf, err := key.Serialize()
+	defer memzero(keyBuf)
 	if err != nil {
 		return fmt.Errorf("failed to serialize master key: %v", err)
 	}
-	defer memzero(buf)
 
 	// Encrypt the master key
 	activeKey := keyring.ActiveKey()
@@ -178,7 +178,7 @@ func (b *AESGCMBarrier) persistKeyring(keyring *Keyring) error {
 	if err != nil {
 		return err
 	}
-	value = b.encrypt(masterKeyPath, activeKey.Term, aead, buf)
+	value = b.encrypt(masterKeyPath, activeKey.Term, aead, keyBuf)
 
 	// Update the masterKeyPath for standby instances
 	pe = &physical.Entry{
@@ -252,13 +252,13 @@ func (b *AESGCMBarrier) ReloadKeyring() error {
 
 	// Decrypt the barrier init key
 	plain, err := b.decrypt(keyringPath, gcm, out.Value)
+	defer memzero(plain)
 	if err != nil {
 		if strings.Contains(err.Error(), "message authentication failed") {
 			return ErrBarrierInvalidKey
 		}
 		return err
 	}
-	defer memzero(plain)
 
 	// Recover the keyring
 	keyring, err := DeserializeKeyring(plain)
@@ -288,6 +288,8 @@ func (b *AESGCMBarrier) ReloadMasterKey() error {
 		return nil
 	}
 
+	defer memzero(out.Value)
+
 	// Deserialize the master key
 	key, err := DeserializeKey(out.Value)
 	if err != nil {
@@ -303,7 +305,9 @@ func (b *AESGCMBarrier) ReloadMasterKey() error {
 	}
 
 	// Update the master key
+	oldKeyring := b.keyring
 	b.keyring = b.keyring.SetMasterKey(key.Value)
+	oldKeyring.Zeroize(false)
 	return nil
 }
 
@@ -332,13 +336,13 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 	if out != nil {
 		// Decrypt the barrier init key
 		plain, err := b.decrypt(keyringPath, gcm, out.Value)
+		defer memzero(plain)
 		if err != nil {
 			if strings.Contains(err.Error(), "message authentication failed") {
 				return ErrBarrierInvalidKey
 			}
 			return err
 		}
-		defer memzero(plain)
 
 		// Recover the keyring
 		keyring, err := DeserializeKeyring(plain)
@@ -378,8 +382,12 @@ func (b *AESGCMBarrier) Unseal(key []byte) error {
 	}
 
 	// Setup a new keyring, this is for backwards compatibility
-	keyring := NewKeyring()
-	keyring = keyring.SetMasterKey(key)
+	keyringNew := NewKeyring()
+	keyring := keyringNew.SetMasterKey(key)
+
+	// AddKey reuses the master, so we are only zeroizing after this call
+	defer keyringNew.Zeroize(false)
+
 	keyring, err = keyring.AddKey(&Key{
 		Term:    1,
 		Version: 1,
@@ -411,6 +419,7 @@ func (b *AESGCMBarrier) Seal() error {
 
 	// Remove the primary key, and seal the vault
 	b.cache = make(map[uint32]cipher.AEAD)
+	b.keyring.Zeroize(true)
 	b.keyring = nil
 	b.sealed = true
 	return nil
@@ -466,6 +475,7 @@ func (b *AESGCMBarrier) CreateUpgrade(term uint32) error {
 	// Get the key for this term
 	termKey := b.keyring.TermKey(term)
 	buf, err := termKey.Serialize()
+	defer memzero(buf)
 	if err != nil {
 		return err
 	}
@@ -515,6 +525,8 @@ func (b *AESGCMBarrier) CheckUpgrade() (bool, uint32, error) {
 	if entry == nil {
 		return false, 0, nil
 	}
+
+	defer memzero(entry.Value)
 
 	// Deserialize the key
 	key, err := DeserializeKey(entry.Value)
@@ -582,7 +594,9 @@ func (b *AESGCMBarrier) Rekey(key []byte) error {
 	}
 
 	// Swap the keyrings
+	oldKeyring := b.keyring
 	b.keyring = newKeyring
+	oldKeyring.Zeroize(false)
 	return nil
 }
 

@@ -180,3 +180,21 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	}
 	return k, nil
 }
+
+// N.B.:
+// Since Go 1.5 these are not reliable; see the documentation around the memzero
+// function. These are best-effort.
+func (k *Keyring) Zeroize(keysToo bool) {
+	if k == nil {
+		return
+	}
+	if k.masterKey != nil {
+		memzero(k.masterKey)
+	}
+	if !keysToo || k.keys == nil {
+		return
+	}
+	for _, key := range k.keys {
+		memzero(key.Value)
+	}
+}

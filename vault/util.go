@@ -24,6 +24,9 @@ import (
 // memory overwritten thereby mitigating some of the risk from this threat
 // vector.
 func memzero(b []byte) {
+	if b == nil {
+		return
+	}
 	for i := range b {
 		b[i] = 0
 	}
