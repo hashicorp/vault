@@ -108,7 +108,6 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 // Tidying of blacklist and whitelist are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
 func (b *backend) periodicFunc(req *logical.Request) error {
-
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().UTC().Before(b.nextTidyTime) {
