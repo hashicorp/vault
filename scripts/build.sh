@@ -11,13 +11,17 @@ DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
 # Change into that directory
 cd "$DIR"
 
+# Set build tags
+BUILD_TAGS="${BUILD_TAGS:-"vault"}"
+
 # Get the git commit
-GIT_COMMIT=$(git rev-parse HEAD)
-GIT_DIRTY=$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)
+GIT_COMMIT="$(git rev-parse HEAD)"
+GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
 # Determine the arch/os combos we're building for
-XC_ARCH=${XC_ARCH:-"386 amd64 arm"}
+XC_ARCH=${XC_ARCH:-"386 amd64"}
 XC_OS=${XC_OS:-linux darwin windows freebsd openbsd netbsd}
+XC_OSARCH=${XC_OSARCH:-"linux/386 linux/amd64 linux/arm darwin/386 darwin/amd64 windows/386 windows/amd64 freebsd/386 freebsd/amd64 freebsd/arm openbsd/386 openbsd/amd64 openbsd/arm netbsd/386 netbsd/amd64 netbsd/arm"}
 
 GOPATH=${GOPATH:-$(go env GOPATH)}
 case $(uname) in
@@ -36,15 +40,16 @@ mkdir -p bin/
 if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
     XC_OS=$(go env GOOS)
     XC_ARCH=$(go env GOARCH)
+    XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
 fi
 
 # Build!
 echo "==> Building..."
 gox \
-    -os="${XC_OS}" \
-    -arch="${XC_ARCH}" \
-    -ldflags "-X github.com/hashicorp/vault/version.GitCommit ${GIT_COMMIT}${GIT_DIRTY}" \
+    -osarch="${XC_OSARCH}" \
+    -ldflags "-X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
+    -tags="${BUILD_TAGS}" \
     .
 
 # Move all the compiled things to the $GOPATH/bin
