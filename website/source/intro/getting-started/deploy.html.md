@@ -19,8 +19,8 @@ seal/unseal process, and scaling Vault.
 ## Configuring Vault
 
 Vault is configured using [HCL](https://github.com/hashicorp/hcl) files.
-As a reminder, these files are also JSON-compatible. The configuration
-file for Vault is relatively simple. An example is shown below:
+As a reminder, JSON files are also fully HCL-compatible; HCL is a superset of JSON.
+The configuration file for Vault is relatively simple. An example is shown below:
 
 ```javascript
 backend "consul" {
