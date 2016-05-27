@@ -26,7 +26,7 @@ https://gist.github.com/jefferai/6233c2963f9407a858d84f9c27d725c0
 
 This is a security-only release. There are no other code changes since 0.5.2.
 The binaries have one additional change: they are built against Go 1.6.1 rather
-than Go 1.6, as Go 1.6.1 contained two security fixes to the Go programming
+than Go 1.6, as Go 1.6.1 contains two security fixes to the Go programming
 language itself.
 
 ## 0.5.2 (March 16th, 2016)
