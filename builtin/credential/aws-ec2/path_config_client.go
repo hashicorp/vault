@@ -1,4 +1,4 @@
-package aws
+package awsEc2
 
 import (
 	"github.com/fatih/structs"
@@ -193,7 +193,7 @@ Configure the client credentials that are used to query instance details from AW
 `
 
 const pathConfigClientHelpDesc = `
-AWS auth backend makes DescribeInstances API call to retrieve information regarding
-the instance that performs login. The aws_secret_key and aws_access_key registered with Vault should have the
-permissions to make the API call.
+aws-ec2 auth backend makes DescribeInstances API call to retrieve information regarding
+the instance that performs login. The aws_secret_key and aws_access_key registered with
+Vault should have the permissions to make the API call.
 `

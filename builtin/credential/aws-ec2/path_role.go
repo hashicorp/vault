@@ -1,4 +1,4 @@
-package aws
+package awsEc2
 
 import (
 	"fmt"
@@ -54,7 +54,7 @@ using the AMI ID specified by this parameter.`,
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/identity-whitelist/<instance_id>' endpoint.",
+				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint.",
 			},
 		},
 

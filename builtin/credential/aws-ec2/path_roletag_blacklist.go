@@ -1,4 +1,4 @@
-package aws
+package awsEc2
 
 import (
 	"encoding/base64"

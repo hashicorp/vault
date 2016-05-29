@@ -1,14 +1,14 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: AWS EC2"
-sidebar_current: "docs-auth-aws"
+page_title: "Auth Backend: AWS-EC2"
+sidebar_current: "docs-auth-aws-ec2"
 description: |-
-  The AWS EC2 backend allows automated authentication of AWS EC2 instances.
+  The AWS-EC2 backend allows automated authentication of AWS EC2 instances.
 ---
 
-# Auth Backend: AWS EC2
+# Auth Backend: aws-ec2
 
-The AWS EC2 auth backend provides a secure introduction mechanism for AWS EC2
+The AWS-EC2 auth backend provides a secure introduction mechanism for AWS EC2
 instances, allowing automated retrieval of a Vault token. Unlike most Vault
 authentication backends, this backend does not require first-deploying, or
 provisioning security-sensitive credentials (tokens, username/password, client
@@ -128,7 +128,7 @@ instance. The tag holds information that represents a *subset* of privileges tha
 are set on the role and are used to further restrict the set of the role's
 privileges for that particular instance.
 
-A `role_tag` can be created using `auth/aws/role/<role>/tag` endpoint
+A `role_tag` can be created using `auth/aws-ec2/role/<role>/tag` endpoint
 and is immutable. The information present in the tag is SHA256 hashed and HMAC
 protected. The per-role key to HMAC is only maintained in the backend. This prevents
 an adversarial operator from modifying the tag when setting it on the EC2 instance
@@ -153,7 +153,7 @@ If an EC2 instance loses its client nonce (due to a reboot, a stop/start of the
 client, etc.), subsequent login attempts will not succeed. If the client nonce
 is lost, normally the only option is to delete the entry corresponding to the
 instance ID from the identity `whitelist` in the backend. This can be done via
-the `auth/aws/identity-whitelist/<instance_id>` endpoint. This allows a new
+the `auth/aws-ec2/identity-whitelist/<instance_id>` endpoint. This allows a new
 client nonce to be accepted by the backend during the next login request.
 
 Under certain circumstances there is another useful setting. When the instance
@@ -213,7 +213,7 @@ to the operator. Although role tags are only restrictive (a tag cannot escalate
 privileges above what is set on its role), if a role tag is found to have been
 used incorrectly, and the administrator wants to ensure that the role tag has no
 further effect, the role tag can be placed on a `blacklist` via the endpoint
-`auth/aws/roletag-blacklist/<role_tag>`. Note that this will not invalidate the
+`auth/aws-ec2/roletag-blacklist/<role_tag>`. Note that this will not invalidate the
 tokens that were already issued; this only blocks any further login requests from
 those instances that have the blacklisted tag attached to them.
 
@@ -248,7 +248,7 @@ provided with the backend is applicable for many regions. Instances whose PKCS#7
 signatures cannot be verified by the default public certificate, can register a
 different public certificate which can be found [here]
 (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
-via the `auth/aws/config/certificate/<cert_name>` endpoint.
+via the `auth/aws-ec2/config/certificate/<cert_name>` endpoint.
 
 ### Dangling Tokens
 
@@ -274,19 +274,19 @@ Note: the client uses the official AWS SDK and will use environment variable or
 IAM role-provided credentials if available.
 
 ```
-$ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
+$ vault write auth/aws-ec2/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
 ```
 
 #### Configure the policies on the role.
 
 ```
-$ vault write auth/aws/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
+$ vault write auth/aws-ec2/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
 ```
 
 #### Perform the login operation
 
 ```
-$ vault write auth/aws/login role=dev-role pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=vault-client-nonce
+$ vault write auth/aws-ec2/login role=dev-role pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=vault-client-nonce
 ```
 
 
@@ -301,19 +301,19 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '
 #### Configure the credentials required to make AWS API calls.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
 ```
 
 #### Configure the policies on the role.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
 ```
 
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA","nonce":"vault-client-nonce"}'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d '{"role":"dev-role","pkcs7":"MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA","nonce":"vault-client-nonce"}'
 ```
 
 
@@ -347,7 +347,7 @@ The response will be in JSON. For example:
 ```
 
 ## API
-### /auth/aws/config/client
+### /auth/aws-ec2/config/client
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -368,7 +368,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/client`</dd>
+  <dd>`/auth/aws-ec2/config/client`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -412,7 +412,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/client`</dd>
+  <dd>`/auth/aws-ec2/config/client`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -452,7 +452,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/client`</dd>
+  <dd>`/auth/aws-ec2/config/client`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -465,7 +465,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/config/certificate/<cert_name>
+### /auth/aws-ec2/config/certificate/<cert_name>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -478,7 +478,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/certificate/<cert_name>`</dd>
+  <dd>`/auth/aws-ec2/config/certificate/<cert_name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -515,7 +515,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/certificate/<cert_name>`</dd>
+  <dd>`/auth/aws-ec2/config/certificate/<cert_name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -552,7 +552,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/certificates?list=true`</dd>
+  <dd>`/auth/aws-ec2/config/certificates?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -580,7 +580,7 @@ The response will be in JSON. For example:
   </dd>
 </dl>
 
-### /auth/aws/config/tidy/identity-whitelist
+### /auth/aws-ec2/config/tidy/identity-whitelist
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -592,7 +592,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws-ec2/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -631,7 +631,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws-ec2/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -669,7 +669,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws-ec2/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -683,7 +683,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws/config/tidy/roletag-blacklist
+### /auth/aws-ec2/config/tidy/roletag-blacklist
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -695,7 +695,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws-ec2/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -733,7 +733,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws-ec2/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -771,7 +771,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws-ec2/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -785,7 +785,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws/role/<role>
+### /auth/aws-ec2/role/<role>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -801,7 +801,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role>`</dd>
+  <dd>`/auth/aws-ec2/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -854,7 +854,7 @@ The response will be in JSON. For example:
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
       </li>
     </ul>
   </dd>
@@ -876,7 +876,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role>`</dd>
+  <dd>`/auth/aws-ec2/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -923,7 +923,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/roles?list=true`</dd>
+  <dd>`/auth/aws-ec2/roles?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -964,7 +964,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role>`</dd>
+  <dd>`/auth/aws-ec2/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -977,7 +977,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/role/<role>/tag
+### /auth/aws-ec2/role/<role>/tag
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -990,7 +990,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/role/<role>/tag`</dd>
+  <dd>`/auth/aws-ec2/role/<role>/tag`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1028,7 +1028,7 @@ The response will be in JSON. For example:
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/identity-whitelist endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws-ec2/identity-whitelist endpoint. Defaults to 'false'.
       </li>
     </ul>
     <ul>
@@ -1061,7 +1061,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/login
+### /auth/aws-ec2/login
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1075,7 +1075,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/login`</dd>
+  <dd>`/auth/aws-ec2/login`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1140,7 +1140,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/roletag-blacklist/<role_tag>
+### /auth/aws-ec2/roletag-blacklist/<role_tag>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1156,7 +1156,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/roletag-blacklist/<role_tag>`</dd>
+  <dd>`/auth/aws-ec2/roletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1187,7 +1187,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/broletag-blacklist/<role_tag>`</dd>
+  <dd>`/auth/aws-ec2/broletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1226,7 +1226,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/roletag-blacklist?list=true`</dd>
+  <dd>`/auth/aws-ec2/roletag-blacklist?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1266,7 +1266,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/roletag-blacklist/<role_tag>`</dd>
+  <dd>`/auth/aws-ec2/roletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1279,7 +1279,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/tidy/roletag-blacklist
+### /auth/aws-ec2/tidy/roletag-blacklist
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1291,7 +1291,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws-ec2/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1310,7 +1310,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/identity-whitelist/<instance_id>
+### /auth/aws-ec2/identity-whitelist/<instance_id>
 #### GET
 <dl class="api">
   <dt>Description</dt>
@@ -1322,7 +1322,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/identity-whitelist/<instance_id>`</dd>
+  <dd>`/auth/aws-ec2/identity-whitelist/<instance_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1371,7 +1371,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/identity-whitelist?list=true`</dd>
+  <dd>`/auth/aws-ec2/identity-whitelist?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1411,7 +1411,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/identity-whitelist/<instance_id>`</dd>
+  <dd>`/auth/aws-ec2/identity-whitelist/<instance_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1424,7 +1424,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws/tidy/identity-whitelist
+### /auth/aws-ec2/tidy/identity-whitelist
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1436,7 +1436,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws-ec2/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
