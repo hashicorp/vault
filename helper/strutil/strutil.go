@@ -1,6 +1,9 @@
 package strutil
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -37,6 +40,73 @@ func ParseStrings(input string) []string {
 		return parsed
 	}
 	return RemoveDuplicates(strings.Split(input, ","))
+}
+
+// Parses a comma separated list of `<key>=<value>` tuples into a
+// map[string]string.
+func ParseKeyValues(input string, out map[string]string) error {
+	keyValues := ParseStrings(input)
+	if len(keyValues) == 0 {
+		return nil
+	}
+
+	for _, keyValue := range keyValues {
+		shards := strings.Split(keyValue, "=")
+		key := strings.TrimSpace(shards[0])
+		value := strings.TrimSpace(shards[1])
+		if key == "" || value == "" {
+			return fmt.Errorf("invalid <key,value> pair: key:'%s' value:'%s'", key, value)
+		}
+		out[key] = value
+	}
+	return nil
+}
+
+// Parses arbitrary <key,value> tuples. The input can be one of
+// the following:
+// * JSON string
+// * Base64 encoded JSON string
+// * Comma separated list of `<key>=<value>` pairs
+// * Base64 encoded string containing comma separated list of
+//   `<key>=<value>` pairs
+//
+// Input will be parsed into the output paramater, which should
+// be a non-nil map[string]string.
+func ParseArbitraryKeyValues(input string, out map[string]string) (string, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return "", nil
+	}
+	if out == nil {
+		return "", fmt.Errorf("'out' is nil")
+	}
+
+	// Try to base64 decode the input. If successful, consider the decoded
+	// value as input.
+	inputBytes, err := base64.StdEncoding.DecodeString(input)
+	if err == nil {
+		input = string(inputBytes)
+	}
+
+	// Try to JSON unmarshal the input. If successful, consider that the
+	// metadata was supplied as JSON input.
+	err = json.Unmarshal([]byte(input), &out)
+	if err != nil {
+		// If JSON unmarshalling fails, consider that the input was
+		// supplied as a comma separated string of 'key=value' pairs.
+		if err = ParseKeyValues(input, out); err != nil {
+			return "", fmt.Errorf("failed to parse the input: %v", err)
+		}
+	}
+
+	// Validate the parsed input
+	for key, value := range out {
+		if key != "" && value == "" {
+			return "", fmt.Errorf("invalid value for key '%s'", key)
+		}
+	}
+
+	return input, nil
 }
 
 // Removes duplicate and empty elements from a slice of strings.

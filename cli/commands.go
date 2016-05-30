@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/version"
 
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
+	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAwsEc2 "github.com/hashicorp/vault/builtin/credential/aws-ec2"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -65,6 +66,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"syslog": auditSyslog.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
+					"approle":  credAppRole.Factory,
 					"cert":     credCert.Factory,
 					"aws-ec2":  credAwsEc2.Factory,
 					"app-id":   credAppId.Factory,
