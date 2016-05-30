@@ -79,8 +79,10 @@ func (b *backend) pathCredsCreateWrite(
 		// is the default username in the role. If neither is true, then
 		// that username is not allowed to generate a credential.
 		if err != nil && username != role.DefaultUser {
-			return logical.ErrorResponse("Username is not present is allowed users list."), nil
+			return logical.ErrorResponse("Username is not present is allowed users list"), nil
 		}
+	} else if username != role.DefaultUser {
+		return logical.ErrorResponse("Username has to be either in allowed users list or has to be a default username"), nil
 	}
 
 	// Validate the IP address
