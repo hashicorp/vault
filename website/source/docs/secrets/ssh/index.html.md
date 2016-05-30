@@ -437,10 +437,11 @@ username@ip:~$
         <span class="param">allowed_users</span>
         <span class="param-flags">optional for both types</span>
 	      (String)
-	      If this option is not specified, a client can request credentials
-        to log into any valid user at the remote host, including the admin
-        user. If this field is set, credentials can only be created for
-        the values in this list and the value of the `default_user` field.
+	      If this option is not specified, credentials can be created only for
+              `default_user` at the remote host. If this field is set, credentials
+              can be created only for the users in this list and for the `default_user`.
+              If this option is explicitly set to `*`, then credentials can be created
+              for any username.
       </li>
       <li>
         <span class="param">key_option_specs</span>

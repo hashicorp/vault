@@ -3,13 +3,16 @@ package ssh
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -60,6 +63,161 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 -----END RSA PRIVATE KEY-----
 `
 )
+
+func createBackend(conf *logical.BackendConfig) (*backend, error) {
+	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
+		HashFunc: salt.SHA256Hash,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var b backend
+	b.salt = salt
+	b.Backend = &framework.Backend{
+		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			Root: []string{
+				"config/*",
+				"keys/*",
+			},
+			Unauthenticated: []string{
+				"verify",
+			},
+		},
+
+		Paths: []*framework.Path{
+			pathConfigZeroAddress(&b),
+			pathKeys(&b),
+			pathListRoles(&b),
+			pathRoles(&b),
+			pathCredsCreate(&b),
+			pathLookup(&b),
+			pathVerify(&b),
+		},
+
+		Secrets: []*framework.Secret{
+			secretDynamicKey(&b),
+			secretOTP(&b),
+		},
+	}
+	return &b, nil
+}
+
+func TestBackend_allowed_users(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := createBackend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Backend.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"key_type":      "otp",
+		"default_user":  "ubuntu",
+		"cidr_list":     "52.207.235.245/16",
+		"allowed_users": "test",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/role1",
+		Storage:   config.StorageView,
+		Data:      roleData,
+	}
+
+	resp, err := b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+
+	credsData := map[string]interface{}{
+		"ip":       "52.207.235.245",
+		"username": "ubuntu",
+	}
+	credsReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "creds/role1",
+		Data:      credsData,
+	}
+
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+	if resp.Data["key"] == "" ||
+		resp.Data["key_type"] != "otp" ||
+		resp.Data["ip"] != "52.207.235.245" ||
+		resp.Data["username"] != "ubuntu" {
+		t.Fatalf("failed to create credential: resp:%#v", resp)
+	}
+
+	credsData["username"] = "test"
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+	if resp.Data["key"] == "" ||
+		resp.Data["key_type"] != "otp" ||
+		resp.Data["ip"] != "52.207.235.245" ||
+		resp.Data["username"] != "test" {
+		t.Fatalf("failed to create credential: resp:%#v", resp)
+	}
+
+	credsData["username"] = "random"
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
+	}
+
+	delete(roleData, "allowed_users")
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+
+	credsData["username"] = "ubuntu"
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+	if resp.Data["key"] == "" ||
+		resp.Data["key_type"] != "otp" ||
+		resp.Data["ip"] != "52.207.235.245" ||
+		resp.Data["username"] != "ubuntu" {
+		t.Fatalf("failed to create credential: resp:%#v", resp)
+	}
+
+	credsData["username"] = "test"
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
+	}
+
+	roleData["allowed_users"] = "*"
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+	if resp.Data["key"] == "" ||
+		resp.Data["key_type"] != "otp" ||
+		resp.Data["ip"] != "52.207.235.245" ||
+		resp.Data["username"] != "test" {
+		t.Fatalf("failed to create credential: resp:%#v", resp)
+	}
+}
 
 func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	_, err := vault.StartSSHHostTestServer()
