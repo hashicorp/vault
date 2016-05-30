@@ -440,6 +440,8 @@ username@ip:~$
 	      If this option is not specified, credentials can be created only for
               `default_user` at the remote host. If this field is set, credentials
               can be created only for the users in this list and for the `default_user`.
+              If this option is explicitly set to `*`, then credentials can be created
+              for any username.
       </li>
       <li>
         <span class="param">key_option_specs</span>

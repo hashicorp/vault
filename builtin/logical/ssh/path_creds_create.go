@@ -287,12 +287,22 @@ func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles
 // Checks if the username supplied by the user is present in the list of
 // allowed users registered which creation of role.
 func validateUsername(username, allowedUsers string) error {
+	if allowedUsers == "" {
+		return fmt.Errorf("username not in allowed users list")
+	}
+
+	// Role was explicitly configured to allow any username.
+	if allowedUsers == "*" {
+		return nil
+	}
+
 	userList := strings.Split(allowedUsers, ",")
 	for _, user := range userList {
-		if user == username {
+		if strings.TrimSpace(user) == username {
 			return nil
 		}
 	}
+
 	return fmt.Errorf("username not in allowed users list")
 }
 

@@ -200,6 +200,23 @@ func TestBackend_allowed_users(t *testing.T) {
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
 	}
+
+	roleData["allowed_users"] = "*"
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+
+	resp, err = b.HandleRequest(credsReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
+		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
+	}
+	if resp.Data["key"] == "" ||
+		resp.Data["key_type"] != "otp" ||
+		resp.Data["ip"] != "52.207.235.245" ||
+		resp.Data["username"] != "test" {
+		t.Fatalf("failed to create credential: resp:%#v", resp)
+	}
 }
 
 func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
