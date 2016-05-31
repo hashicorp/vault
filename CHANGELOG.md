@@ -75,6 +75,9 @@ IMPROVEMENTS:
  * audit: Add the DisplayName value to the copy of the Request object embedded
    in the associated Response, to match the original Request object [GH-1387]
  * audit: Enable auditing of the `seal` and `step-down` commands [GH-1435]
+ * backends: Remove most `root`/`sudo` paths in favor of normal ACL mechanisms.
+   A particular exception are any current MFA paths. A few paths in `token` and
+   `sys` also require `root` or `sudo`. [GH-1478]
  * command/auth: Restore the previous authenticated token if the `auth` command
    fails to authenticate the provided token [GH-1233]
  * command/write: `-format` and `-field` can now be used with the `write`
