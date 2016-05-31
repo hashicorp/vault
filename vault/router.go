@@ -68,6 +68,9 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		rootPaths:   pathsToRadix(paths.Root),
 		loginPaths:  pathsToRadix(paths.Unauthenticated),
 	}
+	if prefix == "auth/aws/" {
+		r.root.Insert("auth/aws-ec2/", re)
+	}
 	r.root.Insert(prefix, re)
 
 	return nil

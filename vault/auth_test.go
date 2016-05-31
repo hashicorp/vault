@@ -44,8 +44,12 @@ func TestAuth_UpgradeAWSEC2Auth(t *testing.T) {
 	// create an expected value
 	var expectedMt MountTable
 	expectedMt = *c.auth
-	expectedMt.Entries[1].Path = "aws-ec2/"
-	expectedMt.Entries[1].Type = "aws-ec2"
+
+	for _, entry := range expectedMt.Entries {
+		if entry.Type == "aws" {
+			entry.Type = "aws-ec2"
+		}
+	}
 	expected, err := json.Marshal(&expectedMt)
 	if err != nil {
 		t.Fatal(err)
