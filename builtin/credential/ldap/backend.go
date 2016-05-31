@@ -3,11 +3,12 @@ package ldap
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -20,13 +21,7 @@ func Backend() *framework.Backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: append([]string{
-				"config",
-				"groups/*",
-				"users/*",
-			},
-				mfa.MFARootPaths()...,
-			),
+			Root: mfa.MFARootPaths(),
 
 			Unauthenticated: []string{
 				"login/*",
@@ -195,7 +190,7 @@ func getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, error) 
 	return bindDN, nil
 }
 
-func getUserDN(cfg *ConfigEntry,c *ldap.Conn, bindDN string) (string , error) {
+func getUserDN(cfg *ConfigEntry, c *ldap.Conn, bindDN string) (string, error) {
 	userDN := ""
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
@@ -276,7 +271,7 @@ func getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, username strin
 			}
 			for _, rdn := range dn.RDNs {
 				for _, rdnTypeAndValue := range rdn.Attributes {
-					if strings.EqualFold(rdnTypeAndValue.Type, "CN" ) {
+					if strings.EqualFold(rdnTypeAndValue.Type, "CN") {
 						ldapMap[rdnTypeAndValue.Value] = true
 					}
 				}

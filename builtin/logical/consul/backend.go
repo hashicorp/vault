@@ -12,12 +12,6 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 func Backend() *framework.Backend {
 	var b backend
 	b.Backend = &framework.Backend{
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-			},
-		},
-
 		Paths: []*framework.Path{
 			pathConfigAccess(),
 			pathRoles(),

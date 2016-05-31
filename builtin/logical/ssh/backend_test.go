@@ -78,10 +78,6 @@ func createBackend(conf *logical.BackendConfig) (*backend, error) {
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-				"keys/*",
-			},
 			Unauthenticated: []string{
 				"verify",
 			},
