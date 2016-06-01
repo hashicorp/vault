@@ -36,8 +36,8 @@ func (c *SSHCommand) Run(args []string) int {
 	var sshCmdArgs []string
 	var sshDynamicKeyFileName string
 	flags := c.Meta.FlagSet("ssh", meta.FlagSetDefault)
-	flags.StringVar(&strictHostKeyChecking, "strict-host-key-checking", "ask", "")
-	flags.StringVar(&userKnownHostsFile, "user-known-hosts-file", "~/.ssh/known_hosts", "")
+	flags.StringVar(&strictHostKeyChecking, "strict-host-key-checking", "", "")
+	flags.StringVar(&userKnownHostsFile, "user-known-hosts-file", "", "")
 	flags.StringVar(&format, "format", "table", "")
 	flags.StringVar(&role, "role", "", "")
 	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
@@ -48,12 +48,24 @@ func (c *SSHCommand) Run(args []string) int {
 		return 1
 	}
 
-	if os.Getenv("VAULT_STRICT_HOST_KEY_CHECKING") != "" {
-		strictHostKeyChecking = os.Getenv("VAULT_STRICT_HOST_KEY_CHECKING")
+	// If the flag is already set then it takes the precedence. If the flag is not
+	// set, try setting it from env var.
+	if os.Getenv("VAULT_SSH_STRICT_HOST_KEY_CHECKING") != "" && strictHostKeyChecking == "" {
+		strictHostKeyChecking = os.Getenv("VAULT_SSH_STRICT_HOST_KEY_CHECKING")
+	}
+	// Assign default value if both flag and env var are not set
+	if strictHostKeyChecking == "" {
+		strictHostKeyChecking = "ask"
 	}
 
-	if os.Getenv("VAULT_USER_KNOWN_HOSTS_FILE") != "" {
-		userKnownHostsFile = os.Getenv("VAULT_USER_KNOWN_HOSTS_FILE")
+	// If the flag is already set then it takes the precedence. If the flag is not
+	// set, try setting it from env var.
+	if os.Getenv("VAULT_SSH_USER_KNOWN_HOSTS_FILE") != "" && userKnownHostsFile == "" {
+		userKnownHostsFile = os.Getenv("VAULT_SSH_USER_KNOWN_HOSTS_FILE")
+	}
+	// Assign default value if both flag and env var are not set
+	if userKnownHostsFile == "" {
+		userKnownHostsFile = "~/.ssh/known_hosts"
 	}
 
 	args = flags.Args()
@@ -295,7 +307,7 @@ SSH Options:
 					If 'sshpass' is employed to enable automated login, then if host key
 					is not "known" to the client, 'vault ssh' command will fail. Set this
 					option to "no" to bypass the host key checking. Defaults to "ask".
-					Can also be specified with VAULT_STRICT_HOST_KEY_CHECKING environment
+					Can also be specified with VAULT_SSH_STRICT_HOST_KEY_CHECKING environment
 					variable.
 
 	-user-known-hosts-file		This option corresponds to UserKnownHostsFile of SSH configuration.
@@ -303,7 +315,7 @@ SSH Options:
 					set to "/dev/null" along with "-strict-host-key-checking=no", both
 					warnings and host key checking can be avoided while establishing the
 					connection. Defaults to "~/.ssh/known_hosts". Can also be specified
-					with VAULT_USER_KNOWN_HOSTS_FILE environment variable.
+					with VAULT_SSH_USER_KNOWN_HOSTS_FILE environment variable.
 `
 	return strings.TrimSpace(helpText)
 }
