@@ -3,16 +3,13 @@ package ssh
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -64,52 +61,15 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 `
 )
 
-func createBackend(conf *logical.BackendConfig) (*backend, error) {
-	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
-		HashFunc: salt.SHA256Hash,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var b backend
-	b.salt = salt
-	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(backendHelp),
-
-		PathsSpecial: &logical.Paths{
-			Unauthenticated: []string{
-				"verify",
-			},
-		},
-
-		Paths: []*framework.Path{
-			pathConfigZeroAddress(&b),
-			pathKeys(&b),
-			pathListRoles(&b),
-			pathRoles(&b),
-			pathCredsCreate(&b),
-			pathLookup(&b),
-			pathVerify(&b),
-		},
-
-		Secrets: []*framework.Secret{
-			secretDynamicKey(&b),
-			secretOTP(&b),
-		},
-	}
-	return &b, nil
-}
-
 func TestBackend_allowed_users(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
