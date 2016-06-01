@@ -1280,6 +1280,11 @@ func (ts *TokenStore) handleLookup(
 		if !leaseTimes.ExpireTime.IsZero() {
 			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
 		}
+		if err := leaseTimes.renewable(); err == nil {
+			resp.Data["renewable"] = true
+		} else {
+			resp.Data["renewable"] = false
+		}
 	}
 
 	return resp, nil
