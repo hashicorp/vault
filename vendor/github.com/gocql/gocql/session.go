@@ -70,6 +70,12 @@ type Session struct {
 	isClosed bool
 }
 
+var queryPool = &sync.Pool{
+	New: func() interface{} {
+		return new(Query)
+	},
+}
+
 func addrsToHosts(addrs []string, defaultPort int) ([]*HostInfo, error) {
 	hosts := make([]*HostInfo, len(addrs))
 	for i, hostport := range addrs {
@@ -259,11 +265,17 @@ func (s *Session) SetTrace(trace Tracer) {
 // if it has not previously been executed.
 func (s *Session) Query(stmt string, values ...interface{}) *Query {
 	s.mu.RLock()
-	qry := &Query{stmt: stmt, values: values, cons: s.cons,
-		session: s, pageSize: s.pageSize, trace: s.trace,
-		prefetch: s.prefetch, rt: s.cfg.RetryPolicy, serialCons: s.cfg.SerialConsistency,
-		defaultTimestamp: s.cfg.DefaultTimestamp,
-	}
+	qry := queryPool.Get().(*Query)
+	qry.stmt = stmt
+	qry.values = values
+	qry.cons = s.cons
+	qry.session = s
+	qry.pageSize = s.pageSize
+	qry.trace = s.trace
+	qry.prefetch = s.prefetch
+	qry.rt = s.cfg.RetryPolicy
+	qry.serialCons = s.cfg.SerialConsistency
+	qry.defaultTimestamp = s.cfg.DefaultTimestamp
 	s.mu.RUnlock()
 	return qry
 }
@@ -947,6 +959,40 @@ func (q *Query) MapScanCAS(dest map[string]interface{}) (applied bool, err error
 	return applied, iter.Close()
 }
 
+// Release releases a query back into a pool of queries. Released Queries
+// cannot be reused.
+//
+// Example:
+// 		qry := session.Query("SELECT * FROM my_table")
+// 		qry.Exec()
+// 		qry.Release()
+func (q *Query) Release() {
+	q.reset()
+	queryPool.Put(q)
+}
+
+// reset zeroes out all fields of a query so that it can be safely pooled.
+func (q *Query) reset() {
+	q.stmt = ""
+	q.values = nil
+	q.cons = 0
+	q.pageSize = 0
+	q.routingKey = nil
+	q.routingKeyBuffer = nil
+	q.pageState = nil
+	q.prefetch = 0
+	q.trace = nil
+	q.session = nil
+	q.rt = nil
+	q.binding = nil
+	q.attempts = 0
+	q.totalLatency = 0
+	q.serialCons = 0
+	q.defaultTimestamp = false
+	q.disableSkipMetadata = false
+	q.disableAutoPage = false
+}
+
 // Iter represents an iterator that can be used to iterate over all rows that
 // were returned by a query. The iterator might send additional queries to the
 // database during the iteration if paging was enabled.
@@ -1116,15 +1162,16 @@ func (n *nextIter) fetch() *Iter {
 }
 
 type Batch struct {
-	Type             BatchType
-	Entries          []BatchEntry
-	Cons             Consistency
-	rt               RetryPolicy
-	attempts         int
-	totalLatency     int64
-	serialCons       SerialConsistency
-	defaultTimestamp bool
-	context          context.Context
+	Type                  BatchType
+	Entries               []BatchEntry
+	Cons                  Consistency
+	rt                    RetryPolicy
+	attempts              int
+	totalLatency          int64
+	serialCons            SerialConsistency
+	defaultTimestamp      bool
+	defaultTimestampValue int64
+	context               context.Context
 }
 
 // NewBatch creates a new batch operation without defaults from the cluster
@@ -1214,6 +1261,18 @@ func (b *Batch) SerialConsistency(cons SerialConsistency) *Batch {
 // Only available on protocol >= 3
 func (b *Batch) DefaultTimestamp(enable bool) *Batch {
 	b.defaultTimestamp = enable
+	return b
+}
+
+// WithTimestamp will enable the with default timestamp flag on the query
+// like DefaultTimestamp does. But also allows to define value for timestamp.
+// It works the same way as USING TIMESTAMP in the query itself, but
+// should not break prepared query optimization
+//
+// Only available on protocol >= 3
+func (b *Batch) WithTimestamp(timestamp int64) *Batch {
+	b.DefaultTimestamp(true)
+	b.defaultTimestampValue = timestamp
 	return b
 }
 

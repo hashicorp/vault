@@ -3974,6 +3974,34 @@ func (c *EC2) DescribeScheduledInstances(input *DescribeScheduledInstancesInput)
 	return out, err
 }
 
+const opDescribeSecurityGroupReferences = "DescribeSecurityGroupReferences"
+
+// DescribeSecurityGroupReferencesRequest generates a request for the DescribeSecurityGroupReferences operation.
+func (c *EC2) DescribeSecurityGroupReferencesRequest(input *DescribeSecurityGroupReferencesInput) (req *request.Request, output *DescribeSecurityGroupReferencesOutput) {
+	op := &request.Operation{
+		Name:       opDescribeSecurityGroupReferences,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeSecurityGroupReferencesInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &DescribeSecurityGroupReferencesOutput{}
+	req.Data = output
+	return
+}
+
+// [EC2-VPC only] Describes the VPCs on the other side of a VPC peering connection
+// that are referencing the security groups you've specified in this request.
+func (c *EC2) DescribeSecurityGroupReferences(input *DescribeSecurityGroupReferencesInput) (*DescribeSecurityGroupReferencesOutput, error) {
+	req, out := c.DescribeSecurityGroupReferencesRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opDescribeSecurityGroups = "DescribeSecurityGroups"
 
 // DescribeSecurityGroupsRequest generates a request for the DescribeSecurityGroups operation.
@@ -4325,6 +4353,36 @@ func (c *EC2) DescribeSpotPriceHistoryPages(input *DescribeSpotPriceHistoryInput
 	return page.EachPage(func(p interface{}, lastPage bool) bool {
 		return fn(p.(*DescribeSpotPriceHistoryOutput), lastPage)
 	})
+}
+
+const opDescribeStaleSecurityGroups = "DescribeStaleSecurityGroups"
+
+// DescribeStaleSecurityGroupsRequest generates a request for the DescribeStaleSecurityGroups operation.
+func (c *EC2) DescribeStaleSecurityGroupsRequest(input *DescribeStaleSecurityGroupsInput) (req *request.Request, output *DescribeStaleSecurityGroupsOutput) {
+	op := &request.Operation{
+		Name:       opDescribeStaleSecurityGroups,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeStaleSecurityGroupsInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &DescribeStaleSecurityGroupsOutput{}
+	req.Data = output
+	return
+}
+
+// [EC2-VPC only] Describes the stale security group rules for security groups
+// in a specified VPC. Rules are stale when they reference a deleted security
+// group in a peer VPC, or a security group in a peer VPC for which the VPC
+// peering connection has been deleted.
+func (c *EC2) DescribeStaleSecurityGroups(input *DescribeStaleSecurityGroupsInput) (*DescribeStaleSecurityGroupsOutput, error) {
+	req, out := c.DescribeStaleSecurityGroupsRequest(input)
+	err := req.Send()
+	return out, err
 }
 
 const opDescribeSubnets = "DescribeSubnets"
@@ -5311,6 +5369,36 @@ func (c *EC2) GetConsoleOutput(input *GetConsoleOutputInput) (*GetConsoleOutputO
 	return out, err
 }
 
+const opGetConsoleScreenshot = "GetConsoleScreenshot"
+
+// GetConsoleScreenshotRequest generates a request for the GetConsoleScreenshot operation.
+func (c *EC2) GetConsoleScreenshotRequest(input *GetConsoleScreenshotInput) (req *request.Request, output *GetConsoleScreenshotOutput) {
+	op := &request.Operation{
+		Name:       opGetConsoleScreenshot,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &GetConsoleScreenshotInput{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &GetConsoleScreenshotOutput{}
+	req.Data = output
+	return
+}
+
+// Retrieve a JPG-format screenshot of an instance to help with troubleshooting.
+//
+// For API calls, the returned content is base64-encoded. For command line
+// tools, the decoding is performed for you.
+func (c *EC2) GetConsoleScreenshot(input *GetConsoleScreenshotInput) (*GetConsoleScreenshotOutput, error) {
+	req, out := c.GetConsoleScreenshotRequest(input)
+	err := req.Send()
+	return out, err
+}
+
 const opGetPasswordData = "GetPasswordData"
 
 // GetPasswordDataRequest generates a request for the GetPasswordData operation.
@@ -6072,9 +6160,7 @@ func (c *EC2) MoveAddressToVpcRequest(input *MoveAddressToVpcInput) (req *reques
 // Elastic IP address is moved, it is no longer available for use in the EC2-Classic
 // platform, unless you move it back using the RestoreAddressToClassic request.
 // You cannot move an Elastic IP address that was originally allocated for use
-// in the EC2-VPC platform to the EC2-Classic platform. You cannot migrate an
-// Elastic IP address that's associated with a reverse DNS record. Contact AWS
-// account and billing support to remove the reverse DNS record.
+// in the EC2-VPC platform to the EC2-Classic platform.
 func (c *EC2) MoveAddressToVpc(input *MoveAddressToVpcInput) (*MoveAddressToVpcOutput, error) {
 	req, out := c.MoveAddressToVpcRequest(input)
 	err := req.Send()
@@ -6659,10 +6745,10 @@ func (c *EC2) ResetInstanceAttributeRequest(input *ResetInstanceAttributeInput) 
 }
 
 // Resets an attribute of an instance to its default value. To reset the kernel
-// or ramdisk, the instance must be in a stopped state. To reset the SourceDestCheck,
+// or ramdisk, the instance must be in a stopped state. To reset the sourceDestCheck,
 // the instance can be either running or stopped.
 //
-// The SourceDestCheck attribute controls whether source/destination checking
+// The sourceDestCheck attribute controls whether source/destination checking
 // is enabled. The default value is true, which means checking is enabled. This
 // value must be false for a NAT instance to perform NAT. For more information,
 // see NAT Instances (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_NAT_Instance.html)
@@ -6759,9 +6845,7 @@ func (c *EC2) RestoreAddressToClassicRequest(input *RestoreAddressToClassicInput
 // Restores an Elastic IP address that was previously moved to the EC2-VPC platform
 // back to the EC2-Classic platform. You cannot move an Elastic IP address that
 // was originally allocated for use in EC2-VPC. The Elastic IP address must
-// not be associated with an instance or network interface. You cannot restore
-// an Elastic IP address that's associated with a reverse DNS record. Contact
-// AWS account and billing support to remove the reverse DNS record.
+// not be associated with an instance or network interface.
 func (c *EC2) RestoreAddressToClassic(input *RestoreAddressToClassicInput) (*RestoreAddressToClassicOutput, error) {
 	req, out := c.RestoreAddressToClassicRequest(input)
 	err := req.Send()
@@ -6877,6 +6961,10 @@ func (c *EC2) RunInstancesRequest(input *RunInstancesInput) (req *request.Reques
 // To ensure faster instance launches, break up large requests into smaller
 // batches. For example, create five separate launch requests for 100 instances
 // each instead of one launch request for 500 instances.
+//
+// To tag your instance, ensure that it is running as CreateTags requires a
+// resource ID. For more information about tagging, see Tagging Your Amazon
+// EC2 Resources (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html).
 //
 // If you don't specify a security group when launching an instance, Amazon
 // EC2 uses the default security group. For more information, see Security Groups
@@ -7043,8 +7131,10 @@ func (c *EC2) StopInstancesRequest(input *StopInstancesInput) (req *request.Requ
 // and terminating instances, see Instance Lifecycle (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
-// For more information about troubleshooting, see Troubleshooting Stopping
-// Your Instance (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstancesStopping.html)
+// When you stop an instance, we attempt to shut it down forcibly after a short
+// while. If your instance appears stuck in the stopping state after a period
+// of time, there may be an issue with the underlying host computer. For more
+// information, see Troubleshooting Stopping Your Instance (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstancesStopping.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 func (c *EC2) StopInstances(input *StopInstancesInput) (*StopInstancesOutput, error) {
 	req, out := c.StopInstancesRequest(input)
@@ -9411,6 +9501,8 @@ type CreateFlowLogsInput struct {
 	LogGroupName *string `type:"string" required:"true"`
 
 	// One or more subnet, network interface, or VPC IDs.
+	//
+	// Constraints: Maximum of 1000 resources
 	ResourceIds []*string `locationName:"ResourceId" locationNameList:"item" type:"list" required:"true"`
 
 	// The type of resource on which to create the flow log.
@@ -9821,7 +9913,8 @@ type CreateNetworkAclEntryInput struct {
 	// The rule number for the entry (for example, 100). ACL entries are processed
 	// in ascending order by rule number.
 	//
-	// Constraints: Positive integer from 1 to 32766
+	// Constraints: Positive integer from 1 to 32766. The range 32767 to 65535
+	// is reserved for internal use.
 	RuleNumber *int64 `locationName:"ruleNumber" type:"integer" required:"true"`
 }
 
@@ -13898,7 +13991,7 @@ type DescribeInstancesInput struct {
 	// The maximum number of results to return in a single call. To retrieve the
 	// remaining results, make another call with the returned NextToken value. This
 	// value can be between 5 and 1000. You cannot specify this parameter and the
-	// instance IDs parameter in the same call.
+	// instance IDs parameter or tag filters in the same call.
 	MaxResults *int64 `locationName:"maxResults" type:"integer"`
 
 	// The token to request the next page of results.
@@ -15286,6 +15379,59 @@ func (s DescribeScheduledInstancesOutput) GoString() string {
 	return s.String()
 }
 
+type DescribeSecurityGroupReferencesInput struct {
+	_ struct{} `type:"structure"`
+
+	// Checks whether you have the required permissions for the operation, without
+	// actually making the request, and provides an error response. If you have
+	// the required permissions, the error response is DryRunOperation. Otherwise,
+	// it is UnauthorizedOperation.
+	DryRun *bool `type:"boolean"`
+
+	// One or more security group IDs in your account.
+	GroupId []*string `locationNameList:"item" type:"list" required:"true"`
+}
+
+// String returns the string representation
+func (s DescribeSecurityGroupReferencesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeSecurityGroupReferencesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeSecurityGroupReferencesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeSecurityGroupReferencesInput"}
+	if s.GroupId == nil {
+		invalidParams.Add(request.NewErrParamRequired("GroupId"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+type DescribeSecurityGroupReferencesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Information about the VPCs with the referencing security groups.
+	SecurityGroupReferenceSet []*SecurityGroupReference `locationName:"securityGroupReferenceSet" locationNameList:"item" type:"list"`
+}
+
+// String returns the string representation
+func (s DescribeSecurityGroupReferencesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeSecurityGroupReferencesOutput) GoString() string {
+	return s.String()
+}
+
 // Contains the parameters for DescribeSecurityGroups.
 type DescribeSecurityGroupsInput struct {
 	_ struct{} `type:"structure"`
@@ -16046,6 +16192,78 @@ func (s DescribeSpotPriceHistoryOutput) String() string {
 
 // GoString returns the string representation
 func (s DescribeSpotPriceHistoryOutput) GoString() string {
+	return s.String()
+}
+
+type DescribeStaleSecurityGroupsInput struct {
+	_ struct{} `type:"structure"`
+
+	// Checks whether you have the required permissions for the operation, without
+	// actually making the request, and provides an error response. If you have
+	// the required permissions, the error response is DryRunOperation. Otherwise,
+	// it is UnauthorizedOperation.
+	DryRun *bool `type:"boolean"`
+
+	// The maximum number of items to return for this request. The request returns
+	// a token that you can specify in a subsequent call to get the next set of
+	// results.
+	MaxResults *int64 `min:"5" type:"integer"`
+
+	// The token for the next set of items to return. (You received this token from
+	// a prior call.)
+	NextToken *string `min:"1" type:"string"`
+
+	// The ID of the VPC.
+	VpcId *string `type:"string" required:"true"`
+}
+
+// String returns the string representation
+func (s DescribeStaleSecurityGroupsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeStaleSecurityGroupsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeStaleSecurityGroupsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeStaleSecurityGroupsInput"}
+	if s.MaxResults != nil && *s.MaxResults < 5 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 5))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.VpcId == nil {
+		invalidParams.Add(request.NewErrParamRequired("VpcId"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+type DescribeStaleSecurityGroupsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The token to use when requesting the next set of items. If there are no additional
+	// items to return, the string is empty.
+	NextToken *string `locationName:"nextToken" type:"string"`
+
+	// Information about the stale security groups.
+	StaleSecurityGroupSet []*StaleSecurityGroup `locationName:"staleSecurityGroupSet" locationNameList:"item" type:"list"`
+}
+
+// String returns the string representation
+func (s DescribeStaleSecurityGroupsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeStaleSecurityGroupsOutput) GoString() string {
 	return s.String()
 }
 
@@ -18405,6 +18623,68 @@ func (s GetConsoleOutputOutput) String() string {
 
 // GoString returns the string representation
 func (s GetConsoleOutputOutput) GoString() string {
+	return s.String()
+}
+
+// Contains the parameters for the request.
+type GetConsoleScreenshotInput struct {
+	_ struct{} `type:"structure"`
+
+	// Checks whether you have the required permissions for the action, without
+	// actually making the request, and provides an error response. If you have
+	// the required permissions, the error response is DryRunOperation. Otherwise,
+	// it is UnauthorizedOperation.
+	DryRun *bool `type:"boolean"`
+
+	// The ID of the instance.
+	InstanceId *string `type:"string" required:"true"`
+
+	// When set to true, acts as keystroke input and wakes up an instance that's
+	// in standby or "sleep" mode.
+	WakeUp *bool `type:"boolean"`
+}
+
+// String returns the string representation
+func (s GetConsoleScreenshotInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetConsoleScreenshotInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *GetConsoleScreenshotInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "GetConsoleScreenshotInput"}
+	if s.InstanceId == nil {
+		invalidParams.Add(request.NewErrParamRequired("InstanceId"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// Contains the output of the request.
+type GetConsoleScreenshotOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The data that comprises the image.
+	ImageData *string `locationName:"imageData" type:"string"`
+
+	// The ID of the instance.
+	InstanceId *string `locationName:"instanceId" type:"string"`
+}
+
+// String returns the string representation
+func (s GetConsoleScreenshotOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s GetConsoleScreenshotOutput) GoString() string {
 	return s.String()
 }
 
@@ -21483,7 +21763,28 @@ type NatGateway struct {
 	// The ID of the NAT gateway.
 	NatGatewayId *string `locationName:"natGatewayId" type:"string"`
 
+	// Reserved. If you need to sustain traffic greater than the documented limits
+	// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+	// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+	ProvisionedBandwidth *ProvisionedBandwidth `locationName:"provisionedBandwidth" type:"structure"`
+
 	// The state of the NAT gateway.
+	//
+	//   pending: The NAT gateway is being created and is not ready to process
+	// traffic.
+	//
+	//   failed: The NAT gateway could not be created. Check the failureCode and
+	// failureMessage fields for the reason.
+	//
+	//   available: The NAT gateway is able to process traffic. This status remains
+	// until you delete the NAT gateway, and does not indicate the health of the
+	// NAT gateway.
+	//
+	//   deleting: The NAT gateway is in the process of being terminated and may
+	// still be processing traffic.
+	//
+	//   deleted: The NAT gateway has been terminated and is no longer processing
+	// traffic.
 	State *string `locationName:"state" type:"string" enum:"NatGatewayState"`
 
 	// The ID of the subnet in which the NAT gateway is located.
@@ -22173,6 +22474,48 @@ func (s PropagatingVgw) String() string {
 
 // GoString returns the string representation
 func (s PropagatingVgw) GoString() string {
+	return s.String()
+}
+
+// Reserved. If you need to sustain traffic greater than the documented limits
+// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+type ProvisionedBandwidth struct {
+	_ struct{} `type:"structure"`
+
+	// Reserved. If you need to sustain traffic greater than the documented limits
+	// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+	// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+	ProvisionTime *time.Time `locationName:"provisionTime" type:"timestamp" timestampFormat:"iso8601"`
+
+	// Reserved. If you need to sustain traffic greater than the documented limits
+	// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+	// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+	Provisioned *string `locationName:"provisioned" type:"string"`
+
+	// Reserved. If you need to sustain traffic greater than the documented limits
+	// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+	// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+	RequestTime *time.Time `locationName:"requestTime" type:"timestamp" timestampFormat:"iso8601"`
+
+	// Reserved. If you need to sustain traffic greater than the documented limits
+	// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+	// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+	Requested *string `locationName:"requested" type:"string"`
+
+	// Reserved. If you need to sustain traffic greater than the documented limits
+	// (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-nat-gateway.html),
+	// contact us through the Support Center (https://console.aws.amazon.com/support/home?).
+	Status *string `locationName:"status" type:"string"`
+}
+
+// String returns the string representation
+func (s ProvisionedBandwidth) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ProvisionedBandwidth) GoString() string {
 	return s.String()
 }
 
@@ -23760,6 +24103,9 @@ type ResetInstanceAttributeInput struct {
 	_ struct{} `type:"structure"`
 
 	// The attribute to reset.
+	//
+	// You can only reset the following attributes: kernel | ramdisk | sourceDestCheck.
+	// To change an instance attribute, use ModifyInstanceAttribute.
 	Attribute *string `locationName:"attribute" type:"string" required:"true" enum:"InstanceAttributeName"`
 
 	// Checks whether you have the required permissions for the action, without
@@ -25114,6 +25460,30 @@ func (s SecurityGroup) GoString() string {
 	return s.String()
 }
 
+// Describes a VPC with a security group that references your security group.
+type SecurityGroupReference struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of your security group.
+	GroupId *string `locationName:"groupId" type:"string" required:"true"`
+
+	// The ID of the VPC with the referencing security group.
+	ReferencingVpcId *string `locationName:"referencingVpcId" type:"string" required:"true"`
+
+	// The ID of the VPC peering connection.
+	VpcPeeringConnectionId *string `locationName:"vpcPeeringConnectionId" type:"string"`
+}
+
+// String returns the string representation
+func (s SecurityGroupReference) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SecurityGroupReference) GoString() string {
+	return s.String()
+}
+
 // Describes the time period for a Scheduled Instance to start its first schedule.
 // The time period must span less than one day.
 type SlotDateTimeRangeRequest struct {
@@ -25821,6 +26191,77 @@ func (s SpotPrice) GoString() string {
 	return s.String()
 }
 
+// Describes a stale rule in a security group.
+type StaleIpPermission struct {
+	_ struct{} `type:"structure"`
+
+	// The start of the port range for the TCP and UDP protocols, or an ICMP type
+	// number. A value of -1 indicates all ICMP types.
+	FromPort *int64 `locationName:"fromPort" type:"integer"`
+
+	// The IP protocol name (for tcp, udp, and icmp) or number (see Protocol Numbers)
+	// (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+	IpProtocol *string `locationName:"ipProtocol" type:"string"`
+
+	// One or more IP ranges. Not applicable for stale security group rules.
+	IpRanges []*string `locationName:"ipRanges" locationNameList:"item" type:"list"`
+
+	// One or more prefix list IDs for an AWS service. Not applicable for stale
+	// security group rules.
+	PrefixListIds []*string `locationName:"prefixListIds" locationNameList:"item" type:"list"`
+
+	// The end of the port range for the TCP and UDP protocols, or an ICMP type
+	// number. A value of -1 indicates all ICMP types.
+	ToPort *int64 `locationName:"toPort" type:"integer"`
+
+	// One or more security group pairs. Returns the ID of the referenced security
+	// group and VPC, and the ID and status of the VPC peering connection.
+	UserIdGroupPairs []*UserIdGroupPair `locationName:"groups" locationNameList:"item" type:"list"`
+}
+
+// String returns the string representation
+func (s StaleIpPermission) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s StaleIpPermission) GoString() string {
+	return s.String()
+}
+
+// Describes a stale security group (a security group that contains stale rules).
+type StaleSecurityGroup struct {
+	_ struct{} `type:"structure"`
+
+	// The description of the security group.
+	Description *string `locationName:"description" type:"string"`
+
+	// The ID of the security group.
+	GroupId *string `locationName:"groupId" type:"string" required:"true"`
+
+	// The name of the security group.
+	GroupName *string `locationName:"groupName" type:"string"`
+
+	// Information about the stale inbound rules in the security group.
+	StaleIpPermissions []*StaleIpPermission `locationName:"staleIpPermissions" locationNameList:"item" type:"list"`
+
+	// Information about the stale outbound rules in the security group.
+	StaleIpPermissionsEgress []*StaleIpPermission `locationName:"staleIpPermissionsEgress" locationNameList:"item" type:"list"`
+
+	// The ID of the VPC for the security group.
+	VpcId *string `locationName:"vpcId" type:"string"`
+}
+
+// String returns the string representation
+func (s StaleSecurityGroup) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s StaleSecurityGroup) GoString() string {
+	return s.String()
+}
+
 // Contains the parameters for StartInstances.
 type StartInstancesInput struct {
 	_ struct{} `type:"structure"`
@@ -26381,7 +26822,8 @@ type UserIdGroupPair struct {
 	// The status of a VPC peering connection, if applicable.
 	PeeringStatus *string `locationName:"peeringStatus" type:"string"`
 
-	// The ID of an AWS account.
+	// The ID of an AWS account. For a referenced security group in another VPC,
+	// the account ID of the referenced security group is returned.
 	//
 	// [EC2-Classic] Required when adding or removing rules that reference a security
 	// group in another AWS account.
@@ -26816,9 +27258,9 @@ func (s VpcEndpoint) GoString() string {
 type VpcPeeringConnection struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the peer VPC. CIDR block information is not returned when
-	// creating a VPC peering connection, or when describing a VPC peering connection
-	// that's in the initiating-request or pending-acceptance state.
+	// Information about the accepter VPC. CIDR block information is not returned
+	// when creating a VPC peering connection, or when describing a VPC peering
+	// connection that's in the initiating-request or pending-acceptance state.
 	AccepterVpcInfo *VpcPeeringConnectionVpcInfo `locationName:"accepterVpcInfo" type:"structure"`
 
 	// The time that an unaccepted VPC peering connection will expire.
@@ -27460,6 +27902,14 @@ const (
 	InstanceTypeM24xlarge = "m2.4xlarge"
 	// @enum InstanceType
 	InstanceTypeCr18xlarge = "cr1.8xlarge"
+	// @enum InstanceType
+	InstanceTypeX14xlarge = "x1.4xlarge"
+	// @enum InstanceType
+	InstanceTypeX18xlarge = "x1.8xlarge"
+	// @enum InstanceType
+	InstanceTypeX116xlarge = "x1.16xlarge"
+	// @enum InstanceType
+	InstanceTypeX132xlarge = "x1.32xlarge"
 	// @enum InstanceType
 	InstanceTypeI2Xlarge = "i2.xlarge"
 	// @enum InstanceType

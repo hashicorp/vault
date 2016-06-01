@@ -123,11 +123,12 @@ func (a *AggregateSample) String() string {
 // NewInmemSink is used to construct a new in-memory sink.
 // Uses an aggregation interval and maximum retention period.
 func NewInmemSink(interval, retain time.Duration) *InmemSink {
+	rateTimeUnit := time.Second
 	i := &InmemSink{
 		interval:     interval,
 		retain:       retain,
 		maxIntervals: int(retain / interval),
-		rateDenom: float64(interval / time.Second),
+		rateDenom: float64(interval.Nanoseconds()) / float64(rateTimeUnit.Nanoseconds()),
 	}
 	i.intervals = make([]*IntervalMetrics, 0, i.maxIntervals)
 	return i

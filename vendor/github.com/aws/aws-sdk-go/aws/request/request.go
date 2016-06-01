@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client/metadata"
 )
 
@@ -77,7 +78,13 @@ func New(cfg aws.Config, clientInfo metadata.ClientInfo, handlers Handlers,
 	}
 
 	httpReq, _ := http.NewRequest(method, "", nil)
-	httpReq.URL, _ = url.Parse(clientInfo.Endpoint + p)
+
+	var err error
+	httpReq.URL, err = url.Parse(clientInfo.Endpoint + p)
+	if err != nil {
+		httpReq.URL = &url.URL{}
+		err = awserr.New("InvalidEndpointURL", "invalid endpoint uri", err)
+	}
 
 	r := &Request{
 		Config:     cfg,
@@ -91,7 +98,7 @@ func New(cfg aws.Config, clientInfo metadata.ClientInfo, handlers Handlers,
 		HTTPRequest: httpReq,
 		Body:        nil,
 		Params:      params,
-		Error:       nil,
+		Error:       err,
 		Data:        data,
 	}
 	r.SetBufferBody([]byte{})
@@ -185,7 +192,6 @@ func debugLogReqError(r *Request, stage string, retrying bool, err error) {
 // which occurred will be returned.
 func (r *Request) Build() error {
 	if !r.built {
-		r.Error = nil
 		r.Handlers.Validate.Run(r)
 		if r.Error != nil {
 			debugLogReqError(r, "Validate Request", false, r.Error)

@@ -36,6 +36,7 @@ type Issue struct {
 	Milestone        *Milestone        `json:"milestone,omitempty"`
 	PullRequestLinks *PullRequestLinks `json:"pull_request,omitempty"`
 	Repository       *Repository       `json:"repository,omitempty"`
+	Reactions        *Reactions        `json:"reactions,omitempty"`
 
 	// TextMatches is only populated from search results that request text matches
 	// See: search.go and https://developer.github.com/v3/search/#text-match-metadata
@@ -131,6 +132,9 @@ func (s *IssuesService) listIssues(u string, opt *IssueListOptions) ([]Issue, *R
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
 	issues := new([]Issue)
 	resp, err := s.client.Do(req, issues)
 	if err != nil {
@@ -195,6 +199,9 @@ func (s *IssuesService) ListByRepo(owner string, repo string, opt *IssueListByRe
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
 	issues := new([]Issue)
 	resp, err := s.client.Do(req, issues)
 	if err != nil {
@@ -213,6 +220,9 @@ func (s *IssuesService) Get(owner string, repo string, number int) (*Issue, *Res
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	issue := new(Issue)
 	resp, err := s.client.Do(req, issue)

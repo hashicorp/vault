@@ -15,6 +15,7 @@ type IssueComment struct {
 	ID        *int       `json:"id,omitempty"`
 	Body      *string    `json:"body,omitempty"`
 	User      *User      `json:"user,omitempty"`
+	Reactions *Reactions `json:"reactions,omitempty"`
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 	URL       *string    `json:"url,omitempty"`
@@ -61,6 +62,10 @@ func (s *IssuesService) ListComments(owner string, repo string, number int, opt 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
 	comments := new([]IssueComment)
 	resp, err := s.client.Do(req, comments)
 	if err != nil {
@@ -80,6 +85,10 @@ func (s *IssuesService) GetComment(owner string, repo string, id int) (*IssueCom
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
 	comment := new(IssueComment)
 	resp, err := s.client.Do(req, comment)
 	if err != nil {

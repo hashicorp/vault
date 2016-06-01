@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 type TestServer struct {
 	Port int
 	Path string
@@ -88,7 +92,7 @@ func StartTestCluster(size int, stdout, stderr io.Writer) (*TestCluster, error) 
 			Srv:  srv,
 		})
 	}
-	if err := cluster.waitForStart(5, time.Second); err != nil {
+	if err := cluster.waitForStart(10, time.Second); err != nil {
 		return nil, err
 	}
 	success = true
@@ -118,10 +122,10 @@ func (ts *TestCluster) Stop() error {
 		srv.Srv.Stop()
 	}
 	defer os.RemoveAll(ts.Path)
-	return ts.waitForStop(5, 1*time.Second)
+	return ts.waitForStop(5, time.Second)
 }
 
-// block until the cluster is up
+// waitForStart blocks until the cluster is up
 func (ts *TestCluster) waitForStart(maxRetry int, interval time.Duration) error {
 	// verify that the servers are up with SRVR
 	serverAddrs := make([]string, len(ts.Servers))
@@ -136,10 +140,10 @@ func (ts *TestCluster) waitForStart(maxRetry int, interval time.Duration) error 
 		}
 		time.Sleep(interval)
 	}
-	return fmt.Errorf("unable to verify health of servers!")
+	return fmt.Errorf("unable to verify health of servers")
 }
 
-// block until the cluster is down
+// waitForStop blocks until the cluster is down
 func (ts *TestCluster) waitForStop(maxRetry int, interval time.Duration) error {
 	// verify that the servers are up with RUOK
 	serverAddrs := make([]string, len(ts.Servers))
@@ -160,7 +164,7 @@ func (ts *TestCluster) waitForStop(maxRetry int, interval time.Duration) error {
 		}
 	}
 	if !success {
-		return fmt.Errorf("unable to verify servers are down!")
+		return fmt.Errorf("unable to verify servers are down")
 	}
 	return nil
 }

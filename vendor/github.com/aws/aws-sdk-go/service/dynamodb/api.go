@@ -47,10 +47,10 @@ func (c *DynamoDB) BatchGetItemRequest(input *BatchGetItemInput) (req *request.R
 // operation returns a value for UnprocessedKeys. You can use this value to
 // retry the operation starting with the next item to get.
 //
-// If you request more than 100 items BatchGetItem will return a ValidationException
+//  If you request more than 100 items BatchGetItem will return a ValidationException
 // with the message "Too many items requested for the BatchGetItem call".
 //
-// For example, if you ask to retrieve 100 items, but each individual item
+//  For example, if you ask to retrieve 100 items, but each individual item
 // is 300 KB in size, the system returns 52 items (so as not to exceed the 16
 // MB limit). It also returns an appropriate UnprocessedKeys value so you can
 // get the next page of results. If desired, your application can include its
@@ -78,7 +78,7 @@ func (c *DynamoDB) BatchGetItemRequest(input *BatchGetItemInput) (req *request.R
 // In order to minimize response latency, BatchGetItem retrieves items in parallel.
 //
 // When designing your application, keep in mind that DynamoDB does not return
-// attributes in any particular order. To help parse the response by item, include
+// items in any particular order. To help parse the response by item, include
 // the primary key values for the items in your request in the AttributesToGet
 // parameter.
 //
@@ -125,7 +125,7 @@ func (c *DynamoDB) BatchWriteItemRequest(input *BatchWriteItemInput) (req *reque
 // can comprise as many as 25 put or delete requests. Individual items to be
 // written can be as large as 400 KB.
 //
-//  BatchWriteItem cannot update items. To update items, use the UpdateItem
+//   BatchWriteItem cannot update items. To update items, use the UpdateItem
 // API.
 //
 //  The individual PutItem and DeleteItem operations specified in BatchWriteItem
@@ -186,9 +186,9 @@ func (c *DynamoDB) BatchWriteItemRequest(input *BatchWriteItemInput) (req *reque
 //
 //   There are more than 25 requests in the batch.
 //
-//  Any individual item in a batch exceeds 400 KB.
+//   Any individual item in a batch exceeds 400 KB.
 //
-//  The total request size exceeds 16 MB.
+//   The total request size exceeds 16 MB.
 func (c *DynamoDB) BatchWriteItem(input *BatchWriteItemInput) (*BatchWriteItemOutput, error) {
 	req, out := c.BatchWriteItemRequest(input)
 	err := req.Send()
@@ -219,10 +219,10 @@ func (c *DynamoDB) CreateTableRequest(input *CreateTableInput) (req *request.Req
 // table names must be unique within each region. That is, you can have two
 // tables with same name if you create the tables in different regions.
 //
-// CreateTable is an asynchronous operation. Upon receiving a CreateTable request,
-// DynamoDB immediately returns a response with a TableStatus of CREATING. After
-// the table is created, DynamoDB sets the TableStatus to ACTIVE. You can perform
-// read and write operations only on an ACTIVE table.
+//  CreateTable is an asynchronous operation. Upon receiving a CreateTable
+// request, DynamoDB immediately returns a response with a TableStatus of CREATING.
+// After the table is created, DynamoDB sets the TableStatus to ACTIVE. You
+// can perform read and write operations only on an ACTIVE table.
 //
 // You can optionally define secondary indexes on the new table, as part of
 // the CreateTable operation. If you want to create multiple tables with secondary
@@ -357,23 +357,33 @@ func (c *DynamoDB) DescribeLimitsRequest(input *DescribeLimitsInput) (req *reque
 // the capacity you are currently using to those limits imposed by your account
 // so that you have enough time to apply for an increase before you hit a limit.
 //
-//  For example, you could use one of the AWS SDKs to do the following:
+// For example, you could use one of the AWS SDKs to do the following:
 //
 //  Call DescribeLimits for a particular region to obtain your current account
-// limits on provisioned capacity there. Create a variable to hold the aggregate
-// read capacity units provisioned for all your tables in that region, and one
-// to hold the aggregate write capacity units. Zero them both. Call ListTables
-// to obtain a list of all your DynamoDB tables. For each table name listed
-// by ListTables, do the following:
+// limits on provisioned capacity there.
 //
-//  Call DescribeTable with the table name. Use the data returned by DescribeTable
-// to add the read capacity units and write capacity units provisioned for the
-// table itself to your variables. If the table has one or more global secondary
-// indexes (GSIs), loop over these GSIs and add their provisioned capacity values
-// to your variables as well.   Report the account limits for that region returned
-// by DescribeLimits, along with the total current provisioned capacity levels
-// you have calculated.  This will let you see whether you are getting close
-// to your account-level limits.
+//  Create a variable to hold the aggregate read capacity units provisioned
+// for all your tables in that region, and one to hold the aggregate write capacity
+// units. Zero them both.
+//
+//  Call ListTables to obtain a list of all your DynamoDB tables.
+//
+//   For each table name listed by ListTables, do the following:
+//
+//  Call DescribeTable with the table name.
+//
+//  Use the data returned by DescribeTable to add the read capacity units and
+// write capacity units provisioned for the table itself to your variables.
+//
+//  If the table has one or more global secondary indexes (GSIs), loop over
+// these GSIs and add their provisioned capacity values to your variables as
+// well.
+//
+//    Report the account limits for that region returned by DescribeLimits,
+// along with the total current provisioned capacity levels you have calculated.
+//
+//   This will let you see whether you are getting close to your account-level
+// limits.
 //
 // The per-table limits apply only when you are creating a new table. They
 // restrict the sum of the provisioned capacity of the new table itself and
@@ -384,7 +394,7 @@ func (c *DynamoDB) DescribeLimitsRequest(input *DescribeLimitsInput) (req *reque
 // the aggregate provisioned capacity over all your tables and GSIs cannot exceed
 // either of the per-account limits.
 //
-// DescribeLimits should only be called periodically. You can expect throttling
+//   DescribeLimits should only be called periodically. You can expect throttling
 // errors if you call it more than once in a minute.
 //
 //  The DescribeLimits Request element has no content.
@@ -452,7 +462,7 @@ func (c *DynamoDB) GetItemRequest(input *GetItemInput) (req *request.Request, ou
 // The GetItem operation returns a set of attributes for the item with the given
 // primary key. If there is no matching item, GetItem does not return any data.
 //
-// GetItem provides an eventually consistent read by default. If your application
+//  GetItem provides an eventually consistent read by default. If your application
 // requires a strongly consistent read, set ConsistentRead to true. Although
 // a strongly consistent read might take more time than an eventually consistent
 // read, it always returns the last updated value.
@@ -601,8 +611,9 @@ func (c *DynamoDB) QueryRequest(input *QueryInput) (req *request.Request, output
 // set size limit of 1 MB, the query stops and results are returned to the user
 // with the LastEvaluatedKey element to continue the query in a subsequent operation.
 // Unlike a Scan operation, a Query operation never returns both an empty result
-// set and a LastEvaluatedKey value. LastEvaluatedKey is only provided if the
-// results exceed 1 MB, or if you have used the Limit parameter.
+// set and a LastEvaluatedKey value. LastEvaluatedKey is only provided if you
+// have used the Limit parameter, or if the result set exceeds 1 MB (prior to
+// applying a filter).
 //
 // You can query a table, a local secondary index, or a global secondary index.
 // For a query on a table or on a local secondary index, you can set the ConsistentRead
@@ -743,17 +754,17 @@ func (c *DynamoDB) UpdateTableRequest(input *UpdateTableInput) (req *request.Req
 //
 // You can only perform one of the following operations at once:
 //
-//  Modify the provisioned throughput settings of the table.
+//   Modify the provisioned throughput settings of the table.
 //
-// Enable or disable Streams on the table.
+//   Enable or disable Streams on the table.
 //
-// Remove a global secondary index from the table.
+//   Remove a global secondary index from the table.
 //
-//  Create a new global secondary index on the table. Once the index begins
+//   Create a new global secondary index on the table. Once the index begins
 // backfilling, you can use UpdateTable to perform other operations.
 //
-//  UpdateTable is an asynchronous operation; while it is executing, the table
-// status changes from ACTIVE to UPDATING. While it is UPDATING, you cannot
+//    UpdateTable is an asynchronous operation; while it is executing, the
+// table status changes from ACTIVE to UPDATING. While it is UPDATING, you cannot
 // issue another UpdateTable request. When the table returns to the ACTIVE state,
 // the UpdateTable operation is complete.
 func (c *DynamoDB) UpdateTable(input *UpdateTableInput) (*UpdateTableOutput, error) {
@@ -771,8 +782,11 @@ type AttributeDefinition struct {
 
 	// The data type for the attribute, where:
 	//
-	//  S - the attribute is of type String N - the attribute is of type Number
-	// B - the attribute is of type Binary
+	//   S - the attribute is of type String
+	//
+	//   N - the attribute is of type Number
+	//
+	//   B - the attribute is of type Binary
 	AttributeType *string `type:"string" required:"true" enum:"ScalarAttributeType"`
 }
 
@@ -877,10 +891,10 @@ type AttributeValueUpdate struct {
 	//
 	//  If an item with the specified Key is found in the table:
 	//
-	//   PUT - Adds the specified attribute to the item. If the attribute already
+	//    PUT - Adds the specified attribute to the item. If the attribute already
 	// exists, it is replaced by the new value.
 	//
-	//   DELETE - If no value is specified, the attribute and its value are removed
+	//    DELETE - If no value is specified, the attribute and its value are removed
 	// from the item. The data type of the specified value must match the existing
 	// value's data type.
 	//
@@ -889,7 +903,7 @@ type AttributeValueUpdate struct {
 	// DELETE action specified [a,c], then the final attribute value would be [b].
 	// Specifying an empty set is an error.
 	//
-	//   ADD - If the attribute does not already exist, then the attribute and
+	//    ADD - If the attribute does not already exist, then the attribute and
 	// its values are added to the item. If the attribute does exist, then the behavior
 	// of ADD depends on the data type of the attribute:
 	//
@@ -925,12 +939,12 @@ type AttributeValueUpdate struct {
 	//
 	//    If no item with the specified Key is found:
 	//
-	//   PUT - DynamoDB creates a new item with the specified primary key, and
+	//    PUT - DynamoDB creates a new item with the specified primary key, and
 	// then adds the attribute.
 	//
-	//   DELETE - Nothing happens; there is no attribute to delete.
+	//    DELETE - Nothing happens; there is no attribute to delete.
 	//
-	//   ADD - DynamoDB creates an item with the supplied primary key and number
+	//    ADD - DynamoDB creates an item with the supplied primary key and number
 	// (or set of numbers) for the attribute value. The only data types allowed
 	// are number and number set; no other data types can be specified.
 	Action *string `type:"string" enum:"AttributeAction"`
@@ -965,7 +979,7 @@ type BatchGetItemInput struct {
 	//
 	// Each element in the map of items to retrieve consists of the following:
 	//
-	//   ConsistentRead - If true, a strongly consistent read is used; if false
+	//    ConsistentRead - If true, a strongly consistent read is used; if false
 	// (the default), an eventually consistent read is used.
 	//
 	//    ExpressionAttributeNames - One or more substitution tokens for attribute
@@ -983,34 +997,34 @@ type BatchGetItemInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	//   Keys - An array of primary key attribute values that define specific items
-	// in the table. For each primary key, you must provide all of the key attributes.
-	// For example, with a simple primary key, you only need to provide the partition
-	// key value. For a composite key, you must provide both the partition key value
-	// and the sort key value.
+	//    Keys - An array of primary key attribute values that define specific
+	// items in the table. For each primary key, you must provide all of the key
+	// attributes. For example, with a simple primary key, you only need to provide
+	// the partition key value. For a composite key, you must provide both the partition
+	// key value and the sort key value.
 	//
-	//   ProjectionExpression - A string that identifies one or more attributes
+	//    ProjectionExpression - A string that identifies one or more attributes
 	// to retrieve from the table. These attributes can include scalars, sets, or
 	// elements of a JSON document. The attributes in the expression must be separated
 	// by commas.
@@ -1032,9 +1046,9 @@ type BatchGetItemInput struct {
 	// This parameter allows you to retrieve attributes of type List or Map; however,
 	// it cannot retrieve individual elements within a List or a Map.
 	//
-	// The names of one or more attributes to retrieve. If no attribute names are
-	// provided, then all attributes will be returned. If any of the requested attributes
-	// are not found, they will not appear in the result.
+	//  The names of one or more attributes to retrieve. If no attribute names
+	// are provided, then all attributes will be returned. If any of the requested
+	// attributes are not found, they will not appear in the result.
 	//
 	// Note that AttributesToGet has no effect on provisioned throughput consumption.
 	// DynamoDB determines capacity units consumed based on item size, not on the
@@ -1044,7 +1058,7 @@ type BatchGetItemInput struct {
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -1052,10 +1066,10 @@ type BatchGetItemInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 }
 
@@ -1103,9 +1117,9 @@ type BatchGetItemOutput struct {
 	//
 	// Each element consists of:
 	//
-	//   TableName - The table that consumed the provisioned throughput.
+	//    TableName - The table that consumed the provisioned throughput.
 	//
-	//   CapacityUnits - The total number of capacity units consumed.
+	//    CapacityUnits - The total number of capacity units consumed.
 	ConsumedCapacity []*ConsumedCapacity `type:"list"`
 
 	// A map of table name to a list of items. Each object in Responses consists
@@ -1120,14 +1134,14 @@ type BatchGetItemOutput struct {
 	//
 	// Each element consists of:
 	//
-	//   Keys - An array of primary key attribute values that define specific items
-	// in the table.
+	//    Keys - An array of primary key attribute values that define specific
+	// items in the table.
 	//
-	//   AttributesToGet - One or more attributes to be retrieved from the table
+	//    AttributesToGet - One or more attributes to be retrieved from the table
 	// or index. By default, all attributes are returned. If a requested attribute
 	// is not found, it does not appear in the result.
 	//
-	//   ConsistentRead - The consistency of a read operation. If set to true,
+	//    ConsistentRead - The consistency of a read operation. If set to true,
 	// then a strongly consistent read is used; otherwise, an eventually consistent
 	// read is used.
 	//
@@ -1154,20 +1168,20 @@ type BatchWriteItemInput struct {
 	// to be performed (DeleteRequest or PutRequest). Each element in the map consists
 	// of the following:
 	//
-	//   DeleteRequest - Perform a DeleteItem operation on the specified item.
+	//    DeleteRequest - Perform a DeleteItem operation on the specified item.
 	// The item to be deleted is identified by a Key subelement:
 	//
-	//   Key - A map of primary key attribute values that uniquely identify the
+	//    Key - A map of primary key attribute values that uniquely identify the
 	// ! item. Each entry in this map consists of an attribute name and an attribute
 	// value. For each primary key, you must provide all of the key attributes.
 	// For example, with a simple primary key, you only need to provide a value
 	// for the partition key. For a composite primary key, you must provide values
 	// for both the partition key and the sort key.
 	//
-	//     PutRequest - Perform a PutItem operation on the specified item. The
+	//      PutRequest - Perform a PutItem operation on the specified item. The
 	// item to be put is identified by an Item subelement:
 	//
-	//   Item - A map of attributes and their values. Each entry in this map consists
+	//    Item - A map of attributes and their values. Each entry in this map consists
 	// of an attribute name and an attribute value. Attribute values must not be
 	// null; string and binary type attributes must have lengths greater than zero;
 	// and set type attributes must not be empty. Requests that contain empty values
@@ -1181,7 +1195,7 @@ type BatchWriteItemInput struct {
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -1189,10 +1203,10 @@ type BatchWriteItemInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// Determines whether item collection metrics are returned. If set to SIZE,
@@ -1236,9 +1250,9 @@ type BatchWriteItemOutput struct {
 	//
 	// Each element consists of:
 	//
-	//   TableName - The table that consumed the provisioned throughput.
+	//    TableName - The table that consumed the provisioned throughput.
 	//
-	//   CapacityUnits - The total number of capacity units consumed.
+	//    CapacityUnits - The total number of capacity units consumed.
 	ConsumedCapacity []*ConsumedCapacity `type:"list"`
 
 	// A list of tables that were processed by BatchWriteItem and, for each table,
@@ -1247,10 +1261,10 @@ type BatchWriteItemOutput struct {
 	//
 	// Each entry consists of the following subelements:
 	//
-	//   ItemCollectionKey - The partition key value of the item collection. This
+	//    ItemCollectionKey - The partition key value of the item collection. This
 	// is the same as the partition key value of the item.
 	//
-	//   SizeEstimateRange - An estimate of item collection size, expressed in
+	//    SizeEstimateRange - An estimate of item collection size, expressed in
 	// GB. This is a two-element array containing a lower bound and an upper bound
 	// for the estimate. The estimate includes the size of all the items in the
 	// table, plus the size of all attributes projected into all of the local secondary
@@ -1269,17 +1283,17 @@ type BatchWriteItemOutput struct {
 	// Each UnprocessedItems entry consists of a table name and, for that table,
 	// a list of operations to perform (DeleteRequest or PutRequest).
 	//
-	//   DeleteRequest - Perform a DeleteItem operation on the specified item.
+	//    DeleteRequest - Perform a DeleteItem operation on the specified item.
 	// The item to be deleted is identified by a Key subelement:
 	//
-	//   Key - A map of primary key attribute values that uniquely identify the
+	//    Key - A map of primary key attribute values that uniquely identify the
 	// item. Each entry in this map consists of an attribute name and an attribute
 	// value.
 	//
-	//     PutRequest - Perform a PutItem operation on the specified item. The
+	//      PutRequest - Perform a PutItem operation on the specified item. The
 	// item to be put is identified by an Item subelement:
 	//
-	//   Item - A map of attributes and their values. Each entry in this map consists
+	//    Item - A map of attributes and their values. Each entry in this map consists
 	// of an attribute name and an attribute value. Attribute values must not be
 	// null; string and binary type attributes must have lengths greater than zero;
 	// and set type attributes must not be empty. Requests that contain empty values
@@ -1331,7 +1345,7 @@ func (s Capacity) GoString() string {
 //
 //  EQ | LE | LT | GE | GT | BEGINS_WITH | BETWEEN
 //
-// Condition is also used in a QueryFilter, which evaluates the query results
+//  Condition is also used in a QueryFilter, which evaluates the query results
 // and returns only the desired values.
 //
 //   For a Scan operation, Condition is used in a ScanFilter, which evaluates
@@ -1358,122 +1372,122 @@ type Condition struct {
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// The following are descriptions of each comparison operator.
 	//
-	//   EQ : Equal. EQ is supported for all datatypes, including lists and maps.
+	//    EQ : Equal. EQ is supported for all datatypes, including lists and maps.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
-	// an AttributeValue element of a different type than the one provided in the
-	// request, the value does not match. For example, {"S":"6"} does not equal
-	// {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, Binary, String Set, Number Set, or Binary Set. If an item
+	// contains an AttributeValue element of a different type than the one provided
+	// in the request, the value does not match. For example, {"S":"6"} does not
+	// equal {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    NE : Not equal. NE is supported for all datatypes, including lists and
+	//     NE : Not equal. NE is supported for all datatypes, including lists and
 	// maps.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// Binary, String Set, Number Set, or Binary Set. If an item contains an AttributeValue
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue of type String,
+	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
+	// an AttributeValue of a different type than the one provided in the request,
+	// the value does not match. For example, {"S":"6"} does not equal {"N":"6"}.
+	// Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    LE : Less than or equal.
+	//     LE : Less than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one provided in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	// does not compare to {"NS":["6", "2", "1"]}.
+	//
+	//     LT : Less than.
+	//
+	//  AttributeValueList can contain only one AttributeValue of type String,
 	// Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    LT : Less than.
+	//     GE : Greater than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not compare to {"NS":["6", "2", "1"]}.
-	//
-	//    GE : Greater than or equal.
-	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    GT : Greater than.
+	//     GT : Greater than.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
+	//     NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the existence of an attribute, not its data type.
+	//  This operator tests for the existence of an attribute, not its data type.
 	// If the data type of attribute "a" is null, and you evaluate it using NOT_NULL,
 	// the result is a Boolean true. This result is because the attribute "a" exists;
 	// its data type is not relevant to the NOT_NULL comparison operator.
 	//
-	//    NULL : The attribute does not exist. NULL is supported for all datatypes,
+	//     NULL : The attribute does not exist. NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the nonexistence of an attribute, not its data type.
-	// If the data type of attribute "a" is null, and you evaluate it using NULL,
-	// the result is a Boolean false. This is because the attribute "a" exists;
+	//  This operator tests for the nonexistence of an attribute, not its data
+	// type. If the data type of attribute "a" is null, and you evaluate it using
+	// NULL, the result is a Boolean false. This is because the attribute "a" exists;
 	// its data type is not relevant to the NULL comparison operator.
 	//
-	//    CONTAINS : Checks for a subsequence, or value in a set.
+	//     CONTAINS : Checks for a subsequence, or value in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is of type String, then the operator checks for a substring match. If the
-	// target attribute of the comparison is of type Binary, then the operator looks
-	// for a subsequence of the target that matches the input. If the target attribute
-	// of the comparison is a set ("SS", "NS", or "BS"), then the operator evaluates
-	// to true if it finds an exact match with any member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is of type String, then the operator checks for a substring match.
+	// If the target attribute of the comparison is of type Binary, then the operator
+	// looks for a subsequence of the target that matches the input. If the target
+	// attribute of the comparison is a set ("SS", "NS", or "BS"), then the operator
+	// evaluates to true if it finds an exact match with any member of the set.
 	//
 	// CONTAINS is supported for lists: When evaluating "a CONTAINS b", "a" can
 	// be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
+	//    NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
 	// in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is a String, then the operator checks for the absence of a substring match.
-	// If the target attribute of the comparison is Binary, then the operator checks
-	// for the absence of a subsequence of the target that matches the input. If
-	// the target attribute of the comparison is a set ("SS", "NS", or "BS"), then
-	// the operator evaluates to true if it does not find an exact match with any
-	// member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is a String, then the operator checks for the absence of a substring
+	// match. If the target attribute of the comparison is Binary, then the operator
+	// checks for the absence of a subsequence of the target that matches the input.
+	// If the target attribute of the comparison is a set ("SS", "NS", or "BS"),
+	// then the operator evaluates to true if it does not find an exact match with
+	// any member of the set.
 	//
 	// NOT_CONTAINS is supported for lists: When evaluating "a NOT CONTAINS b",
 	// "a" can be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   BEGINS_WITH : Checks for a prefix.
+	//    BEGINS_WITH : Checks for a prefix.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String or
+	//  AttributeValueList can contain only one AttributeValue of type String or
 	// Binary (not a Number or a set type). The target attribute of the comparison
 	// must be of type String or Binary (not a Number or a set type).
 	//
-	//    IN : Checks for matching elements within two sets.
+	//     IN : Checks for matching elements within two sets.
 	//
-	// AttributeValueList can contain one or more AttributeValue elements of type
+	//  AttributeValueList can contain one or more AttributeValue elements of type
 	// String, Number, or Binary (not a set type). These attributes are compared
 	// against an existing set type attribute of an item. If any elements of the
 	// input set are present in the item attribute, the expression evaluates to
 	// true.
 	//
-	//   BETWEEN : Greater than or equal to the first value, and less than or equal
-	// to the second value.
+	//    BETWEEN : Greater than or equal to the first value, and less than or
+	// equal to the second value.
 	//
-	// AttributeValueList must contain two AttributeValue elements of the same
+	//  AttributeValueList must contain two AttributeValue elements of the same
 	// type, either String, Number, or Binary (not a set type). A target attribute
 	// matches if the target value is greater than, or equal to, the first element
 	// and less than, or equal to, the second element. If an item contains an AttributeValue
@@ -1637,32 +1651,32 @@ type CreateTableInput struct {
 	// One or more global secondary indexes (the maximum is five) to be created
 	// on the table. Each global secondary index in the array includes the following:
 	//
-	//   IndexName - The name of the global secondary index. Must be unique only
+	//    IndexName - The name of the global secondary index. Must be unique only
 	// for this table.
 	//
-	//    KeySchema - Specifies the key schema for the global secondary index.
+	//     KeySchema - Specifies the key schema for the global secondary index.
 	//
-	//   Projection - Specifies attributes that are copied (projected) from the
+	//    Projection - Specifies attributes that are copied (projected) from the
 	// table into the index. These are in addition to the primary key attributes
 	// and index key attributes, which are automatically projected. Each attribute
 	// specification is composed of:
 	//
-	//   ProjectionType - One of the following:
+	//    ProjectionType - One of the following:
 	//
-	//   KEYS_ONLY - Only the index and primary keys are projected into the index.
+	//    KEYS_ONLY - Only the index and primary keys are projected into the index.
 	//
-	//   INCLUDE - Only the specified table attributes are projected into the index.
-	// The list of projected attributes are in NonKeyAttributes.
+	//    INCLUDE - Only the specified table attributes are projected into the
+	// index. The list of projected attributes are in NonKeyAttributes.
 	//
-	//   ALL - All of the table attributes are projected into the index.
+	//    ALL - All of the table attributes are projected into the index.
 	//
-	//     NonKeyAttributes - A list of one or more non-key attribute names that
+	//      NonKeyAttributes - A list of one or more non-key attribute names that
 	// are projected into the secondary index. The total count of attributes provided
 	// in NonKeyAttributes, summed across all of the secondary indexes, must not
 	// exceed 20. If you project the same attribute into two different indexes,
 	// this counts as two distinct attributes when determining the total.
 	//
-	//     ProvisionedThroughput - The provisioned throughput settings for the
+	//      ProvisionedThroughput - The provisioned throughput settings for the
 	// global secondary index, consisting of read and write capacity units.
 	GlobalSecondaryIndexes []*GlobalSecondaryIndex `type:"list"`
 
@@ -1673,15 +1687,15 @@ type CreateTableInput struct {
 	//
 	// Each KeySchemaElement in the array is composed of:
 	//
-	//   AttributeName - The name of this key attribute.
+	//    AttributeName - The name of this key attribute.
 	//
-	//   KeyType - The role that the key attribute will assume:
+	//    KeyType - The role that the key attribute will assume:
 	//
-	//  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//     The partition key of an item is also known as its hash attribute. The
+	//      The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -1690,8 +1704,8 @@ type CreateTableInput struct {
 	// attribute" derives from the way DynamoDB stores items with the same partition
 	// key physically close together, in sorted order by the sort key value.
 	//
-	// For a simple primary key (partition key), you must provide exactly one element
-	// with a KeyType of HASH.
+	//  For a simple primary key (partition key), you must provide exactly one
+	// element with a KeyType of HASH.
 	//
 	// For a composite primary key (partition key and sort key), you must provide
 	// exactly two elements, in this order: The first element must have a KeyType
@@ -1708,27 +1722,27 @@ type CreateTableInput struct {
 	//
 	// Each local secondary index in the array includes the following:
 	//
-	//   IndexName - The name of the local secondary index. Must be unique only
+	//    IndexName - The name of the local secondary index. Must be unique only
 	// for this table.
 	//
-	//    KeySchema - Specifies the key schema for the local secondary index. The
-	// key schema must begin with the same partition key as the table.
+	//     KeySchema - Specifies the key schema for the local secondary index.
+	// The key schema must begin with the same partition key as the table.
 	//
-	//   Projection - Specifies attributes that are copied (projected) from the
+	//    Projection - Specifies attributes that are copied (projected) from the
 	// table into the index. These are in addition to the primary key attributes
 	// and index key attributes, which are automatically projected. Each attribute
 	// specification is composed of:
 	//
-	//   ProjectionType - One of the following:
+	//    ProjectionType - One of the following:
 	//
-	//   KEYS_ONLY - Only the index and primary keys are projected into the index.
+	//    KEYS_ONLY - Only the index and primary keys are projected into the index.
 	//
-	//   INCLUDE - Only the specified table attributes are projected into the index.
-	// The list of projected attributes are in NonKeyAttributes.
+	//    INCLUDE - Only the specified table attributes are projected into the
+	// index. The list of projected attributes are in NonKeyAttributes.
 	//
-	//   ALL - All of the table attributes are projected into the index.
+	//    ALL - All of the table attributes are projected into the index.
 	//
-	//     NonKeyAttributes - A list of one or more non-key attribute names that
+	//      NonKeyAttributes - A list of one or more non-key attribute names that
 	// are projected into the secondary index. The total count of attributes provided
 	// in NonKeyAttributes, summed across all of the secondary indexes, must not
 	// exceed 20. If you project the same attribute into two different indexes,
@@ -1745,24 +1759,24 @@ type CreateTableInput struct {
 
 	// The settings for DynamoDB Streams on the table. These settings consist of:
 	//
-	//   StreamEnabled - Indicates whether Streams is to be enabled (true) or disabled
-	// (false).
+	//    StreamEnabled - Indicates whether Streams is to be enabled (true) or
+	// disabled (false).
 	//
-	//   StreamViewType - When an item in the table is modified, StreamViewType
+	//    StreamViewType - When an item in the table is modified, StreamViewType
 	// determines what information is written to the table's stream. Valid values
 	// for StreamViewType are:
 	//
-	//  KEYS_ONLY - Only the key attributes of the modified item are written to
-	// the stream.
-	//
-	// NEW_IMAGE - The entire item, as it appears after it was modified, is written
+	//    KEYS_ONLY - Only the key attributes of the modified item are written
 	// to the stream.
 	//
-	// OLD_IMAGE - The entire item, as it appeared before it was modified, is written
-	// to the stream.
-	//
-	// NEW_AND_OLD_IMAGES - Both the new and the old item images of the item are
+	//    NEW_IMAGE - The entire item, as it appears after it was modified, is
 	// written to the stream.
+	//
+	//    OLD_IMAGE - The entire item, as it appeared before it was modified, is
+	// written to the stream.
+	//
+	//    NEW_AND_OLD_IMAGES - Both the new and the old item images of the item
+	// are written to the stream.
 	StreamSpecification *StreamSpecification `type:"structure"`
 
 	// The name of the table to create.
@@ -1918,7 +1932,8 @@ type DeleteItemInput struct {
 	//
 	// These function names are case-sensitive.
 	//
-	//   Comparison operators:  = |  |  |  | = | = | BETWEEN | IN
+	//   Comparison operators:  = | &#x3C;&#x3E; | &#x3C; | &#x3E; | &#x3C;= |
+	// &#x3E;= | BETWEEN | IN
 	//
 	//    Logical operators: AND | OR | NOT
 	//
@@ -1926,7 +1941,7 @@ type DeleteItemInput struct {
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// ConditionExpression replaces the legacy ConditionalOperator and Expected
+	//   ConditionExpression replaces the legacy ConditionalOperator and Expected
 	// parameters.
 	ConditionExpression *string `type:"string"`
 
@@ -1937,17 +1952,17 @@ type DeleteItemInput struct {
 	//
 	//  A logical operator to apply to the conditions in the Expected map:
 	//
-	//  AND - If all of the conditions evaluate to true, then the entire map evaluates
-	// to true.
+	//    AND - If all of the conditions evaluate to true, then the entire map
+	// evaluates to true.
 	//
-	// OR - If at least one of the conditions evaluate to true, then the entire
+	//    OR - If at least one of the conditions evaluate to true, then the entire
 	// map evaluates to true.
 	//
-	//  If you omit ConditionalOperator, then AND is the default.
+	//   If you omit ConditionalOperator, then AND is the default.
 	//
 	// The operation will succeed only if the entire map evaluates to true.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	ConditionalOperator *string `type:"string" enum:"ConditionalOperator"`
 
 	// This is a legacy parameter, for backward compatibility. New applications
@@ -1972,9 +1987,9 @@ type DeleteItemInput struct {
 	// If the Expected map evaluates to true, then the conditional operation succeeds;
 	// otherwise, it fails.
 	//
-	// Expected contains the following:
+	//  Expected contains the following:
 	//
-	//   AttributeValueList - One or more values to evaluate against the supplied
+	//    AttributeValueList - One or more values to evaluate against the supplied
 	// attribute. The number of values in the list depends on the ComparisonOperator
 	// being used.
 	//
@@ -1982,132 +1997,133 @@ type DeleteItemInput struct {
 	//
 	// String value comparisons for greater than, equals, or less than are based
 	// on ASCII character code values. For example, a is greater than A, and a is
-	// greater than B. For a list of code values, see http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters.
+	// greater than B. For a list of code values, see http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters
+	// (http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters).
 	//
 	// For type Binary, DynamoDB treats each byte of the binary data as unsigned
 	// when it compares binary values.
 	//
-	//   ComparisonOperator - A comparator for evaluating attributes in the AttributeValueList.
+	//    ComparisonOperator - A comparator for evaluating attributes in the AttributeValueList.
 	// When performing the comparison, DynamoDB uses strongly consistent reads.
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// The following are descriptions of each comparison operator.
 	//
-	//   EQ : Equal. EQ is supported for all datatypes, including lists and maps.
+	//    EQ : Equal. EQ is supported for all datatypes, including lists and maps.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
-	// an AttributeValue element of a different type than the one provided in the
-	// request, the value does not match. For example, {"S":"6"} does not equal
-	// {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, Binary, String Set, Number Set, or Binary Set. If an item
+	// contains an AttributeValue element of a different type than the one provided
+	// in the request, the value does not match. For example, {"S":"6"} does not
+	// equal {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    NE : Not equal. NE is supported for all datatypes, including lists and
+	//     NE : Not equal. NE is supported for all datatypes, including lists and
 	// maps.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// Binary, String Set, Number Set, or Binary Set. If an item contains an AttributeValue
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue of type String,
+	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
+	// an AttributeValue of a different type than the one provided in the request,
+	// the value does not match. For example, {"S":"6"} does not equal {"N":"6"}.
+	// Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    LE : Less than or equal.
+	//     LE : Less than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one provided in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	// does not compare to {"NS":["6", "2", "1"]}.
+	//
+	//     LT : Less than.
+	//
+	//  AttributeValueList can contain only one AttributeValue of type String,
 	// Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    LT : Less than.
+	//     GE : Greater than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not compare to {"NS":["6", "2", "1"]}.
-	//
-	//    GE : Greater than or equal.
-	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    GT : Greater than.
+	//     GT : Greater than.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
+	//     NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the existence of an attribute, not its data type.
+	//  This operator tests for the existence of an attribute, not its data type.
 	// If the data type of attribute "a" is null, and you evaluate it using NOT_NULL,
 	// the result is a Boolean true. This result is because the attribute "a" exists;
 	// its data type is not relevant to the NOT_NULL comparison operator.
 	//
-	//    NULL : The attribute does not exist. NULL is supported for all datatypes,
+	//     NULL : The attribute does not exist. NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the nonexistence of an attribute, not its data type.
-	// If the data type of attribute "a" is null, and you evaluate it using NULL,
-	// the result is a Boolean false. This is because the attribute "a" exists;
+	//  This operator tests for the nonexistence of an attribute, not its data
+	// type. If the data type of attribute "a" is null, and you evaluate it using
+	// NULL, the result is a Boolean false. This is because the attribute "a" exists;
 	// its data type is not relevant to the NULL comparison operator.
 	//
-	//    CONTAINS : Checks for a subsequence, or value in a set.
+	//     CONTAINS : Checks for a subsequence, or value in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is of type String, then the operator checks for a substring match. If the
-	// target attribute of the comparison is of type Binary, then the operator looks
-	// for a subsequence of the target that matches the input. If the target attribute
-	// of the comparison is a set ("SS", "NS", or "BS"), then the operator evaluates
-	// to true if it finds an exact match with any member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is of type String, then the operator checks for a substring match.
+	// If the target attribute of the comparison is of type Binary, then the operator
+	// looks for a subsequence of the target that matches the input. If the target
+	// attribute of the comparison is a set ("SS", "NS", or "BS"), then the operator
+	// evaluates to true if it finds an exact match with any member of the set.
 	//
 	// CONTAINS is supported for lists: When evaluating "a CONTAINS b", "a" can
 	// be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
+	//    NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
 	// in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is a String, then the operator checks for the absence of a substring match.
-	// If the target attribute of the comparison is Binary, then the operator checks
-	// for the absence of a subsequence of the target that matches the input. If
-	// the target attribute of the comparison is a set ("SS", "NS", or "BS"), then
-	// the operator evaluates to true if it does not find an exact match with any
-	// member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is a String, then the operator checks for the absence of a substring
+	// match. If the target attribute of the comparison is Binary, then the operator
+	// checks for the absence of a subsequence of the target that matches the input.
+	// If the target attribute of the comparison is a set ("SS", "NS", or "BS"),
+	// then the operator evaluates to true if it does not find an exact match with
+	// any member of the set.
 	//
 	// NOT_CONTAINS is supported for lists: When evaluating "a NOT CONTAINS b",
 	// "a" can be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   BEGINS_WITH : Checks for a prefix.
+	//    BEGINS_WITH : Checks for a prefix.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String or
+	//  AttributeValueList can contain only one AttributeValue of type String or
 	// Binary (not a Number or a set type). The target attribute of the comparison
 	// must be of type String or Binary (not a Number or a set type).
 	//
-	//    IN : Checks for matching elements within two sets.
+	//     IN : Checks for matching elements within two sets.
 	//
-	// AttributeValueList can contain one or more AttributeValue elements of type
+	//  AttributeValueList can contain one or more AttributeValue elements of type
 	// String, Number, or Binary (not a set type). These attributes are compared
 	// against an existing set type attribute of an item. If any elements of the
 	// input set are present in the item attribute, the expression evaluates to
 	// true.
 	//
-	//   BETWEEN : Greater than or equal to the first value, and less than or equal
-	// to the second value.
+	//    BETWEEN : Greater than or equal to the first value, and less than or
+	// equal to the second value.
 	//
-	// AttributeValueList must contain two AttributeValue elements of the same
+	//  AttributeValueList must contain two AttributeValue elements of the same
 	// type, either String, Number, or Binary (not a set type). A target attribute
 	// matches if the target value is greater than, or equal to, the first element
 	// and less than, or equal to, the second element. If an item contains an AttributeValue
@@ -2122,27 +2138,27 @@ type DeleteItemInput struct {
 	// For backward compatibility with previous DynamoDB releases, the following
 	// parameters can be used instead of AttributeValueList and ComparisonOperator:
 	//
-	//   Value - A value for DynamoDB to compare with an attribute.
+	//    Value - A value for DynamoDB to compare with an attribute.
 	//
-	//   Exists - A Boolean value that causes DynamoDB to evaluate the value before
+	//    Exists - A Boolean value that causes DynamoDB to evaluate the value before
 	// attempting the conditional operation:
 	//
 	//   If Exists is true, DynamoDB will check to see if that attribute value
 	// already exists in the table. If it is found, then the condition evaluates
 	// to true; otherwise the condition evaluate to false.
 	//
-	//  If Exists is false, DynamoDB assumes that the attribute value does not
+	//   If Exists is false, DynamoDB assumes that the attribute value does not
 	// exist in the table. If in fact the value does not exist, then the assumption
 	// is valid and the condition evaluates to true. If the value is found, despite
 	// the assumption that it does not exist, the condition evaluates to false.
 	//
-	//  Note that the default value for Exists is true.
+	//   Note that the default value for Exists is true.
 	//
 	//   The Value and Exists parameters are incompatible with AttributeValueList
 	// and ComparisonOperator. Note that if you use both sets of parameters at once,
 	// DynamoDB will return a ValidationException exception.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	Expected map[string]*ExpectedAttributeValue `type:"map"`
 
 	// One or more substitution tokens for attribute names in an expression. The
@@ -2159,25 +2175,25 @@ type DeleteItemInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -2187,16 +2203,16 @@ type DeleteItemInput struct {
 	// value. For example, suppose that you wanted to check whether the value of
 	// the ProductStatus attribute was one of the following:
 	//
-	// Available | Backordered | Discontinued
+	//  Available | Backordered | Discontinued
 	//
 	// You would first need to specify ExpressionAttributeValues as follows:
 	//
-	// { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
+	//  { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
 	// }
 	//
 	// You could then use these values in an expression, such as this:
 	//
-	// ProductStatus IN (:avail, :back, :disc)
+	//  ProductStatus IN (:avail, :back, :disc)
 	//
 	// For more information on expression attribute values, see Specifying Conditions
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
@@ -2215,7 +2231,7 @@ type DeleteItemInput struct {
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -2223,10 +2239,10 @@ type DeleteItemInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// Determines whether item collection metrics are returned. If set to SIZE,
@@ -2238,10 +2254,13 @@ type DeleteItemInput struct {
 	// Use ReturnValues if you want to get the item attributes as they appeared
 	// before they were deleted. For DeleteItem, the valid values are:
 	//
-	//   NONE - If ReturnValues is not specified, or if its value is NONE, then
+	//    NONE - If ReturnValues is not specified, or if its value is NONE, then
 	// nothing is returned. (This setting is the default for ReturnValues.)
 	//
-	//   ALL_OLD - The content of the old item is returned.
+	//    ALL_OLD - The content of the old item is returned.
+	//
+	//    The ReturnValues parameter is used by several DynamoDB operations; however,
+	// DeleteItem does not recognize any values other than NONE or ALL_OLD.
 	ReturnValues *string `type:"string" enum:"ReturnValue"`
 
 	// The name of the table from which to delete the item.
@@ -2301,11 +2320,11 @@ type DeleteItemOutput struct {
 	//
 	// Each ItemCollectionMetrics element consists of:
 	//
-	//  ItemCollectionKey - The partition key value of the item collection. This
+	//    ItemCollectionKey - The partition key value of the item collection. This
 	// is the same as the partition key value of the item itself.
 	//
-	// SizeEstimateRange - An estimate of item collection size, in gigabytes. This
-	// value is a two-element array containing a lower bound and an upper bound
+	//    SizeEstimateRange - An estimate of item collection size, in gigabytes.
+	// This value is a two-element array containing a lower bound and an upper bound
 	// for the estimate. The estimate includes the size of all the items in the
 	// table, plus the size of all attributes projected into all of the local secondary
 	// indexes on that table. Use this estimate to measure whether a local secondary
@@ -2515,7 +2534,7 @@ func (s DescribeTableOutput) GoString() string {
 // In this case, the conditional operation succeeds only if the comparison evaluates
 // to false.
 //
-//   Value and Exists are incompatible with AttributeValueList and ComparisonOperator.
+//    Value and Exists are incompatible with AttributeValueList and ComparisonOperator.
 // Note that if you use both sets of parameters at once, DynamoDB will return
 // a ValidationException exception.
 type ExpectedAttributeValue struct {
@@ -2543,122 +2562,122 @@ type ExpectedAttributeValue struct {
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// The following are descriptions of each comparison operator.
 	//
-	//   EQ : Equal. EQ is supported for all datatypes, including lists and maps.
+	//    EQ : Equal. EQ is supported for all datatypes, including lists and maps.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
-	// an AttributeValue element of a different type than the one provided in the
-	// request, the value does not match. For example, {"S":"6"} does not equal
-	// {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, Binary, String Set, Number Set, or Binary Set. If an item
+	// contains an AttributeValue element of a different type than the one provided
+	// in the request, the value does not match. For example, {"S":"6"} does not
+	// equal {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    NE : Not equal. NE is supported for all datatypes, including lists and
+	//     NE : Not equal. NE is supported for all datatypes, including lists and
 	// maps.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// Binary, String Set, Number Set, or Binary Set. If an item contains an AttributeValue
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue of type String,
+	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
+	// an AttributeValue of a different type than the one provided in the request,
+	// the value does not match. For example, {"S":"6"} does not equal {"N":"6"}.
+	// Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    LE : Less than or equal.
+	//     LE : Less than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one provided in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	// does not compare to {"NS":["6", "2", "1"]}.
+	//
+	//     LT : Less than.
+	//
+	//  AttributeValueList can contain only one AttributeValue of type String,
 	// Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    LT : Less than.
+	//     GE : Greater than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not compare to {"NS":["6", "2", "1"]}.
-	//
-	//    GE : Greater than or equal.
-	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    GT : Greater than.
+	//     GT : Greater than.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
+	//     NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the existence of an attribute, not its data type.
+	//  This operator tests for the existence of an attribute, not its data type.
 	// If the data type of attribute "a" is null, and you evaluate it using NOT_NULL,
 	// the result is a Boolean true. This result is because the attribute "a" exists;
 	// its data type is not relevant to the NOT_NULL comparison operator.
 	//
-	//    NULL : The attribute does not exist. NULL is supported for all datatypes,
+	//     NULL : The attribute does not exist. NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the nonexistence of an attribute, not its data type.
-	// If the data type of attribute "a" is null, and you evaluate it using NULL,
-	// the result is a Boolean false. This is because the attribute "a" exists;
+	//  This operator tests for the nonexistence of an attribute, not its data
+	// type. If the data type of attribute "a" is null, and you evaluate it using
+	// NULL, the result is a Boolean false. This is because the attribute "a" exists;
 	// its data type is not relevant to the NULL comparison operator.
 	//
-	//    CONTAINS : Checks for a subsequence, or value in a set.
+	//     CONTAINS : Checks for a subsequence, or value in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is of type String, then the operator checks for a substring match. If the
-	// target attribute of the comparison is of type Binary, then the operator looks
-	// for a subsequence of the target that matches the input. If the target attribute
-	// of the comparison is a set ("SS", "NS", or "BS"), then the operator evaluates
-	// to true if it finds an exact match with any member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is of type String, then the operator checks for a substring match.
+	// If the target attribute of the comparison is of type Binary, then the operator
+	// looks for a subsequence of the target that matches the input. If the target
+	// attribute of the comparison is a set ("SS", "NS", or "BS"), then the operator
+	// evaluates to true if it finds an exact match with any member of the set.
 	//
 	// CONTAINS is supported for lists: When evaluating "a CONTAINS b", "a" can
 	// be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
+	//    NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
 	// in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is a String, then the operator checks for the absence of a substring match.
-	// If the target attribute of the comparison is Binary, then the operator checks
-	// for the absence of a subsequence of the target that matches the input. If
-	// the target attribute of the comparison is a set ("SS", "NS", or "BS"), then
-	// the operator evaluates to true if it does not find an exact match with any
-	// member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is a String, then the operator checks for the absence of a substring
+	// match. If the target attribute of the comparison is Binary, then the operator
+	// checks for the absence of a subsequence of the target that matches the input.
+	// If the target attribute of the comparison is a set ("SS", "NS", or "BS"),
+	// then the operator evaluates to true if it does not find an exact match with
+	// any member of the set.
 	//
 	// NOT_CONTAINS is supported for lists: When evaluating "a NOT CONTAINS b",
 	// "a" can be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   BEGINS_WITH : Checks for a prefix.
+	//    BEGINS_WITH : Checks for a prefix.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String or
+	//  AttributeValueList can contain only one AttributeValue of type String or
 	// Binary (not a Number or a set type). The target attribute of the comparison
 	// must be of type String or Binary (not a Number or a set type).
 	//
-	//    IN : Checks for matching elements within two sets.
+	//     IN : Checks for matching elements within two sets.
 	//
-	// AttributeValueList can contain one or more AttributeValue elements of type
+	//  AttributeValueList can contain one or more AttributeValue elements of type
 	// String, Number, or Binary (not a set type). These attributes are compared
 	// against an existing set type attribute of an item. If any elements of the
 	// input set are present in the item attribute, the expression evaluates to
 	// true.
 	//
-	//   BETWEEN : Greater than or equal to the first value, and less than or equal
-	// to the second value.
+	//    BETWEEN : Greater than or equal to the first value, and less than or
+	// equal to the second value.
 	//
-	// AttributeValueList must contain two AttributeValue elements of the same
+	//  AttributeValueList must contain two AttributeValue elements of the same
 	// type, either String, Number, or Binary (not a set type). A target attribute
 	// matches if the target value is greater than, or equal to, the first element
 	// and less than, or equal to, the second element. If an item contains an AttributeValue
@@ -2684,10 +2703,10 @@ type ExpectedAttributeValue struct {
 	//
 	// DynamoDB returns a ValidationException if:
 	//
-	//   Exists is true but there is no Value to check. (You expect a value to
+	//    Exists is true but there is no Value to check. (You expect a value to
 	// exist, but don't specify what that value is.)
 	//
-	//   Exists is false but you also provide a Value. (You cannot expect an attribute
+	//    Exists is false but you also provide a Value. (You cannot expect an attribute
 	// to have a value, while also expecting it not to exist.)
 	Exists *bool `type:"boolean"`
 
@@ -2723,9 +2742,9 @@ type GetItemInput struct {
 	// This parameter allows you to retrieve attributes of type List or Map; however,
 	// it cannot retrieve individual elements within a List or a Map.
 	//
-	// The names of one or more attributes to retrieve. If no attribute names are
-	// provided, then all attributes will be returned. If any of the requested attributes
-	// are not found, they will not appear in the result.
+	//  The names of one or more attributes to retrieve. If no attribute names
+	// are provided, then all attributes will be returned. If any of the requested
+	// attributes are not found, they will not appear in the result.
 	//
 	// Note that AttributesToGet has no effect on provisioned throughput consumption.
 	// DynamoDB determines capacity units consumed based on item size, not on the
@@ -2751,25 +2770,25 @@ type GetItemInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -2793,13 +2812,13 @@ type GetItemInput struct {
 	// For more information, see Accessing Item Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// ProjectionExpression replaces the legacy AttributesToGet parameter.
+	//   ProjectionExpression replaces the legacy AttributesToGet parameter.
 	ProjectionExpression *string `type:"string"`
 
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -2807,10 +2826,10 @@ type GetItemInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// The name of the table containing the requested item.
@@ -2886,11 +2905,11 @@ type GlobalSecondaryIndex struct {
 	// The complete key schema for a global secondary index, which consists of one
 	// or more pairs of attribute names and key types:
 	//
-	//  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//   The partition key of an item is also known as its hash attribute. The
+	//    The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -2983,7 +3002,7 @@ type GlobalSecondaryIndexDescription struct {
 	// DynamoDB will do so. After all items have been processed, the backfilling
 	// operation is complete and Backfilling is false.
 	//
-	// For indexes that were created during a CreateTable operation, the Backfilling
+	//  For indexes that were created during a CreateTable operation, the Backfilling
 	// attribute does not appear in the DescribeTable output.
 	Backfilling *bool `type:"boolean"`
 
@@ -3000,13 +3019,13 @@ type GlobalSecondaryIndexDescription struct {
 
 	// The current state of the global secondary index:
 	//
-	//   CREATING - The index is being created.
+	//    CREATING - The index is being created.
 	//
-	//   UPDATING - The index is being updated.
+	//    UPDATING - The index is being updated.
 	//
-	//   DELETING - The index is being deleted.
+	//    DELETING - The index is being deleted.
 	//
-	//   ACTIVE - The index is ready for use.
+	//    ACTIVE - The index is ready for use.
 	IndexStatus *string `type:"string" enum:"IndexStatus"`
 
 	// The number of items in the specified index. DynamoDB updates this value approximately
@@ -3016,11 +3035,11 @@ type GlobalSecondaryIndexDescription struct {
 	// The complete key schema for a global secondary index, which consists of one
 	// or more pairs of attribute names and key types:
 	//
-	//  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//   The partition key of an item is also known as its hash attribute. The
+	//    The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -3052,26 +3071,27 @@ func (s GlobalSecondaryIndexDescription) GoString() string {
 
 // Represents one of the following:
 //
-//  A new global secondary index to be added to an existing table.
+//   A new global secondary index to be added to an existing table.
 //
-// New provisioned throughput parameters for an existing global secondary index.
+//   New provisioned throughput parameters for an existing global secondary
+// index.
 //
-// An existing global secondary index to be removed from an existing table.
+//   An existing global secondary index to be removed from an existing table.
 type GlobalSecondaryIndexUpdate struct {
 	_ struct{} `type:"structure"`
 
 	// The parameters required for creating a global secondary index on an existing
 	// table:
 	//
-	//  IndexName
+	//    IndexName
 	//
-	// KeySchema
+	//    KeySchema
 	//
-	// AttributeDefinitions
+	//    AttributeDefinitions
 	//
-	// Projection
+	//    Projection
 	//
-	// ProvisionedThroughput
+	//    ProvisionedThroughput
 	Create *CreateGlobalSecondaryIndexAction `type:"structure"`
 
 	// The name of an existing global secondary index to be removed.
@@ -3169,11 +3189,11 @@ type KeySchemaElement struct {
 
 	// The role that this key attribute will assume:
 	//
-	//  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//   The partition key of an item is also known as its hash attribute. The
+	//    The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -3246,25 +3266,25 @@ type KeysAndAttributes struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -3283,7 +3303,7 @@ type KeysAndAttributes struct {
 	// For more information, see Accessing Item Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// ProjectionExpression replaces the legacy AttributesToGet parameter.
+	//   ProjectionExpression replaces the legacy AttributesToGet parameter.
 	ProjectionExpression *string `type:"string"`
 }
 
@@ -3398,11 +3418,11 @@ type LocalSecondaryIndex struct {
 	// The complete key schema for the local secondary index, consisting of one
 	// or more pairs of attribute names and key types:
 	//
-	//  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//   The partition key of an item is also known as its hash attribute. The
+	//    The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -3490,11 +3510,11 @@ type LocalSecondaryIndexDescription struct {
 	// The complete key schema for the local secondary index, consisting of one
 	// or more pairs of attribute names and key types:
 	//
-	//  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//   The partition key of an item is also known as its hash attribute. The
+	//    The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -3536,12 +3556,12 @@ type Projection struct {
 
 	// The set of attributes that are projected into the index:
 	//
-	//   KEYS_ONLY - Only the index and primary keys are projected into the index.
+	//    KEYS_ONLY - Only the index and primary keys are projected into the index.
 	//
-	//   INCLUDE - Only the specified table attributes are projected into the index.
-	// The list of projected attributes are in NonKeyAttributes.
+	//    INCLUDE - Only the specified table attributes are projected into the
+	// index. The list of projected attributes are in NonKeyAttributes.
 	//
-	//   ALL - All of the table attributes are projected into the index.
+	//    ALL - All of the table attributes are projected into the index.
 	ProjectionType *string `type:"string" enum:"ProjectionType"`
 }
 
@@ -3674,7 +3694,8 @@ type PutItemInput struct {
 	//
 	// These function names are case-sensitive.
 	//
-	//   Comparison operators:  = |  |  |  | = | = | BETWEEN | IN
+	//   Comparison operators:  = | &#x3C;&#x3E; | &#x3C; | &#x3E; | &#x3C;= |
+	// &#x3E;= | BETWEEN | IN
 	//
 	//    Logical operators: AND | OR | NOT
 	//
@@ -3682,7 +3703,7 @@ type PutItemInput struct {
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	//  ConditionExpression replaces the legacy ConditionalOperator and Expected
+	//   ConditionExpression replaces the legacy ConditionalOperator and Expected
 	// parameters.
 	ConditionExpression *string `type:"string"`
 
@@ -3693,17 +3714,17 @@ type PutItemInput struct {
 	//
 	//  A logical operator to apply to the conditions in the Expected map:
 	//
-	//  AND - If all of the conditions evaluate to true, then the entire map evaluates
-	// to true.
+	//    AND - If all of the conditions evaluate to true, then the entire map
+	// evaluates to true.
 	//
-	// OR - If at least one of the conditions evaluate to true, then the entire
+	//    OR - If at least one of the conditions evaluate to true, then the entire
 	// map evaluates to true.
 	//
-	//  If you omit ConditionalOperator, then AND is the default.
+	//   If you omit ConditionalOperator, then AND is the default.
 	//
 	// The operation will succeed only if the entire map evaluates to true.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	ConditionalOperator *string `type:"string" enum:"ConditionalOperator"`
 
 	// This is a legacy parameter, for backward compatibility. New applications
@@ -3714,9 +3735,9 @@ type PutItemInput struct {
 	//  A map of attribute/condition pairs. Expected provides a conditional block
 	// for the PutItem operation.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	//
-	// Each element of Expected consists of an attribute name, a comparison operator,
+	//  Each element of Expected consists of an attribute name, a comparison operator,
 	// and one or more values. DynamoDB compares the attribute with the value(s)
 	// you supplied, using the comparison operator. For each Expected element, the
 	// result of the evaluation is either true or false.
@@ -3730,9 +3751,9 @@ type PutItemInput struct {
 	// If the Expected map evaluates to true, then the conditional operation succeeds;
 	// otherwise, it fails.
 	//
-	// Expected contains the following:
+	//  Expected contains the following:
 	//
-	//   AttributeValueList - One or more values to evaluate against the supplied
+	//    AttributeValueList - One or more values to evaluate against the supplied
 	// attribute. The number of values in the list depends on the ComparisonOperator
 	// being used.
 	//
@@ -3740,132 +3761,133 @@ type PutItemInput struct {
 	//
 	// String value comparisons for greater than, equals, or less than are based
 	// on ASCII character code values. For example, a is greater than A, and a is
-	// greater than B. For a list of code values, see http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters.
+	// greater than B. For a list of code values, see http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters
+	// (http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters).
 	//
 	// For type Binary, DynamoDB treats each byte of the binary data as unsigned
 	// when it compares binary values.
 	//
-	//   ComparisonOperator - A comparator for evaluating attributes in the AttributeValueList.
+	//    ComparisonOperator - A comparator for evaluating attributes in the AttributeValueList.
 	// When performing the comparison, DynamoDB uses strongly consistent reads.
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// The following are descriptions of each comparison operator.
 	//
-	//   EQ : Equal. EQ is supported for all datatypes, including lists and maps.
+	//    EQ : Equal. EQ is supported for all datatypes, including lists and maps.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
-	// an AttributeValue element of a different type than the one provided in the
-	// request, the value does not match. For example, {"S":"6"} does not equal
-	// {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, Binary, String Set, Number Set, or Binary Set. If an item
+	// contains an AttributeValue element of a different type than the one provided
+	// in the request, the value does not match. For example, {"S":"6"} does not
+	// equal {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    NE : Not equal. NE is supported for all datatypes, including lists and
+	//     NE : Not equal. NE is supported for all datatypes, including lists and
 	// maps.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// Binary, String Set, Number Set, or Binary Set. If an item contains an AttributeValue
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue of type String,
+	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
+	// an AttributeValue of a different type than the one provided in the request,
+	// the value does not match. For example, {"S":"6"} does not equal {"N":"6"}.
+	// Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    LE : Less than or equal.
+	//     LE : Less than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one provided in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	// does not compare to {"NS":["6", "2", "1"]}.
+	//
+	//     LT : Less than.
+	//
+	//  AttributeValueList can contain only one AttributeValue of type String,
 	// Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    LT : Less than.
+	//     GE : Greater than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not compare to {"NS":["6", "2", "1"]}.
-	//
-	//    GE : Greater than or equal.
-	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    GT : Greater than.
+	//     GT : Greater than.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
+	//     NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the existence of an attribute, not its data type.
+	//  This operator tests for the existence of an attribute, not its data type.
 	// If the data type of attribute "a" is null, and you evaluate it using NOT_NULL,
 	// the result is a Boolean true. This result is because the attribute "a" exists;
 	// its data type is not relevant to the NOT_NULL comparison operator.
 	//
-	//    NULL : The attribute does not exist. NULL is supported for all datatypes,
+	//     NULL : The attribute does not exist. NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the nonexistence of an attribute, not its data type.
-	// If the data type of attribute "a" is null, and you evaluate it using NULL,
-	// the result is a Boolean false. This is because the attribute "a" exists;
+	//  This operator tests for the nonexistence of an attribute, not its data
+	// type. If the data type of attribute "a" is null, and you evaluate it using
+	// NULL, the result is a Boolean false. This is because the attribute "a" exists;
 	// its data type is not relevant to the NULL comparison operator.
 	//
-	//    CONTAINS : Checks for a subsequence, or value in a set.
+	//     CONTAINS : Checks for a subsequence, or value in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is of type String, then the operator checks for a substring match. If the
-	// target attribute of the comparison is of type Binary, then the operator looks
-	// for a subsequence of the target that matches the input. If the target attribute
-	// of the comparison is a set ("SS", "NS", or "BS"), then the operator evaluates
-	// to true if it finds an exact match with any member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is of type String, then the operator checks for a substring match.
+	// If the target attribute of the comparison is of type Binary, then the operator
+	// looks for a subsequence of the target that matches the input. If the target
+	// attribute of the comparison is a set ("SS", "NS", or "BS"), then the operator
+	// evaluates to true if it finds an exact match with any member of the set.
 	//
 	// CONTAINS is supported for lists: When evaluating "a CONTAINS b", "a" can
 	// be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
+	//    NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
 	// in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is a String, then the operator checks for the absence of a substring match.
-	// If the target attribute of the comparison is Binary, then the operator checks
-	// for the absence of a subsequence of the target that matches the input. If
-	// the target attribute of the comparison is a set ("SS", "NS", or "BS"), then
-	// the operator evaluates to true if it does not find an exact match with any
-	// member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is a String, then the operator checks for the absence of a substring
+	// match. If the target attribute of the comparison is Binary, then the operator
+	// checks for the absence of a subsequence of the target that matches the input.
+	// If the target attribute of the comparison is a set ("SS", "NS", or "BS"),
+	// then the operator evaluates to true if it does not find an exact match with
+	// any member of the set.
 	//
 	// NOT_CONTAINS is supported for lists: When evaluating "a NOT CONTAINS b",
 	// "a" can be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   BEGINS_WITH : Checks for a prefix.
+	//    BEGINS_WITH : Checks for a prefix.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String or
+	//  AttributeValueList can contain only one AttributeValue of type String or
 	// Binary (not a Number or a set type). The target attribute of the comparison
 	// must be of type String or Binary (not a Number or a set type).
 	//
-	//    IN : Checks for matching elements within two sets.
+	//     IN : Checks for matching elements within two sets.
 	//
-	// AttributeValueList can contain one or more AttributeValue elements of type
+	//  AttributeValueList can contain one or more AttributeValue elements of type
 	// String, Number, or Binary (not a set type). These attributes are compared
 	// against an existing set type attribute of an item. If any elements of the
 	// input set are present in the item attribute, the expression evaluates to
 	// true.
 	//
-	//   BETWEEN : Greater than or equal to the first value, and less than or equal
-	// to the second value.
+	//    BETWEEN : Greater than or equal to the first value, and less than or
+	// equal to the second value.
 	//
-	// AttributeValueList must contain two AttributeValue elements of the same
+	//  AttributeValueList must contain two AttributeValue elements of the same
 	// type, either String, Number, or Binary (not a set type). A target attribute
 	// matches if the target value is greater than, or equal to, the first element
 	// and less than, or equal to, the second element. If an item contains an AttributeValue
@@ -3880,21 +3902,21 @@ type PutItemInput struct {
 	// For backward compatibility with previous DynamoDB releases, the following
 	// parameters can be used instead of AttributeValueList and ComparisonOperator:
 	//
-	//   Value - A value for DynamoDB to compare with an attribute.
+	//    Value - A value for DynamoDB to compare with an attribute.
 	//
-	//   Exists - A Boolean value that causes DynamoDB to evaluate the value before
+	//    Exists - A Boolean value that causes DynamoDB to evaluate the value before
 	// attempting the conditional operation:
 	//
 	//   If Exists is true, DynamoDB will check to see if that attribute value
 	// already exists in the table. If it is found, then the condition evaluates
 	// to true; otherwise the condition evaluate to false.
 	//
-	//  If Exists is false, DynamoDB assumes that the attribute value does not
+	//   If Exists is false, DynamoDB assumes that the attribute value does not
 	// exist in the table. If in fact the value does not exist, then the assumption
 	// is valid and the condition evaluates to true. If the value is found, despite
 	// the assumption that it does not exist, the condition evaluates to false.
 	//
-	//  Note that the default value for Exists is true.
+	//   Note that the default value for Exists is true.
 	//
 	//   The Value and Exists parameters are incompatible with AttributeValueList
 	// and ComparisonOperator. Note that if you use both sets of parameters at once,
@@ -3915,25 +3937,25 @@ type PutItemInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -3943,16 +3965,16 @@ type PutItemInput struct {
 	// value. For example, suppose that you wanted to check whether the value of
 	// the ProductStatus attribute was one of the following:
 	//
-	// Available | Backordered | Discontinued
+	//  Available | Backordered | Discontinued
 	//
 	// You would first need to specify ExpressionAttributeValues as follows:
 	//
-	// { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
+	//  { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
 	// }
 	//
 	// You could then use these values in an expression, such as this:
 	//
-	// ProductStatus IN (:avail, :back, :disc)
+	//  ProductStatus IN (:avail, :back, :disc)
 	//
 	// For more information on expression attribute values, see Specifying Conditions
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
@@ -3981,7 +4003,7 @@ type PutItemInput struct {
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -3989,10 +4011,10 @@ type PutItemInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// Determines whether item collection metrics are returned. If set to SIZE,
@@ -4005,11 +4027,14 @@ type PutItemInput struct {
 	// before they were updated with the PutItem request. For PutItem, the valid
 	// values are:
 	//
-	//   NONE - If ReturnValues is not specified, or if its value is NONE, then
+	//    NONE - If ReturnValues is not specified, or if its value is NONE, then
 	// nothing is returned. (This setting is the default for ReturnValues.)
 	//
-	//   ALL_OLD - If PutItem overwrote an attribute name-value pair, then the
+	//    ALL_OLD - If PutItem overwrote an attribute name-value pair, then the
 	// content of the old item is returned.
+	//
+	//    The ReturnValues parameter is used by several DynamoDB operations; however,
+	// PutItem does not recognize any values other than NONE or ALL_OLD.
 	ReturnValues *string `type:"string" enum:"ReturnValue"`
 
 	// The name of the table to contain the item.
@@ -4069,11 +4094,11 @@ type PutItemOutput struct {
 	//
 	// Each ItemCollectionMetrics element consists of:
 	//
-	//  ItemCollectionKey - The partition key value of the item collection. This
+	//    ItemCollectionKey - The partition key value of the item collection. This
 	// is the same as the partition key value of the item itself.
 	//
-	// SizeEstimateRange - An estimate of item collection size, in gigabytes. This
-	// value is a two-element array containing a lower bound and an upper bound
+	//    SizeEstimateRange - An estimate of item collection size, in gigabytes.
+	// This value is a two-element array containing a lower bound and an upper bound
 	// for the estimate. The estimate includes the size of all the items in the
 	// table, plus the size of all attributes projected into all of the local secondary
 	// indexes on that table. Use this estimate to measure whether a local secondary
@@ -4128,9 +4153,9 @@ type QueryInput struct {
 	// This parameter allows you to retrieve attributes of type List or Map; however,
 	// it cannot retrieve individual elements within a List or a Map.
 	//
-	// The names of one or more attributes to retrieve. If no attribute names are
-	// provided, then all attributes will be returned. If any of the requested attributes
-	// are not found, they will not appear in the result.
+	//  The names of one or more attributes to retrieve. If no attribute names
+	// are provided, then all attributes will be returned. If any of the requested
+	// attributes are not found, they will not appear in the result.
 	//
 	// Note that AttributesToGet has no effect on provisioned throughput consumption.
 	// DynamoDB determines capacity units consumed based on item size, not on the
@@ -4159,17 +4184,17 @@ type QueryInput struct {
 	//
 	//  A logical operator to apply to the conditions in a QueryFilter map:
 	//
-	//  AND - If all of the conditions evaluate to true, then the entire map evaluates
-	// to true.
+	//    AND - If all of the conditions evaluate to true, then the entire map
+	// evaluates to true.
 	//
-	// OR - If at least one of the conditions evaluate to true, then the entire
+	//    OR - If at least one of the conditions evaluate to true, then the entire
 	// map evaluates to true.
 	//
-	//  If you omit ConditionalOperator, then AND is the default.
+	//   If you omit ConditionalOperator, then AND is the default.
 	//
 	// The operation will succeed only if the entire map evaluates to true.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	ConditionalOperator *string `type:"string" enum:"ConditionalOperator"`
 
 	// Determines the read consistency model: If set to true, then the operation
@@ -4202,25 +4227,25 @@ type QueryInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -4230,16 +4255,16 @@ type QueryInput struct {
 	// value. For example, suppose that you wanted to check whether the value of
 	// the ProductStatus attribute was one of the following:
 	//
-	// Available | Backordered | Discontinued
+	//  Available | Backordered | Discontinued
 	//
 	// You would first need to specify ExpressionAttributeValues as follows:
 	//
-	// { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
+	//  { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
 	// }
 	//
 	// You could then use these values in an expression, such as this:
 	//
-	// ProductStatus IN (:avail, :back, :disc)
+	//  ProductStatus IN (:avail, :back, :disc)
 	//
 	// For more information on expression attribute values, see Specifying Conditions
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
@@ -4256,7 +4281,7 @@ type QueryInput struct {
 	//  For more information, see Filter Expressions (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/QueryAndScan.html#FilteringResults)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// FilterExpression replaces the legacy QueryFilter and ConditionalOperator
+	//   FilterExpression replaces the legacy QueryFilter and ConditionalOperator
 	// parameters.
 	FilterExpression *string `type:"string"`
 
@@ -4287,26 +4312,26 @@ type QueryInput struct {
 	//
 	// Valid comparisons for the sort key condition are as follows:
 	//
-	//   sortKeyName = :sortkeyval - true if the sort key value is equal to :sortkeyval.
+	//    sortKeyName = :sortkeyval - true if the sort key value is equal to :sortkeyval.
 	//
-	//   sortKeyName  :sortkeyval - true if the sort key value is less than :sortkeyval.
+	//    sortKeyName < :sortkeyval - true if the sort key value is less than :sortkeyval.
 	//
-	//   sortKeyName = :sortkeyval - true if the sort key value is less than or
-	// equal to :sortkeyval.
-	//
-	//   sortKeyName  :sortkeyval - true if the sort key value is greater than
-	// :sortkeyval.
-	//
-	//   sortKeyName = :sortkeyval - true if the sort key value is greater than
+	//    sortKeyName <= :sortkeyval - true if the sort key value is less than
 	// or equal to :sortkeyval.
 	//
-	//   sortKeyName BETWEEN :sortkeyval1 AND :sortkeyval2 - true if the sort key
-	// value is greater than or equal to :sortkeyval1, and less than or equal to
-	// :sortkeyval2.
+	//    sortKeyName > :sortkeyval - true if the sort key value is greater than
+	// :sortkeyval.
 	//
-	//   begins_with (sortKeyName, :sortkeyval) - true if the sort key value begins
-	// with a particular operand. (You cannot use this function with a sort key
-	// that is of type Number.) Note that the function name begins_with is case-sensitive.
+	//    sortKeyName >=  :sortkeyval - true if the sort key value is greater than
+	// or equal to :sortkeyval.
+	//
+	//    sortKeyName BETWEEN :sortkeyval1 AND :sortkeyval2 - true if the sort
+	// key value is greater than or equal to :sortkeyval1, and less than or equal
+	// to :sortkeyval2.
+	//
+	//    begins_with ( sortKeyName, :sortkeyval ) - true if the sort key value
+	// begins with a particular operand. (You cannot use this function with a sort
+	// key that is of type Number.) Note that the function name begins_with is case-sensitive.
 	//
 	//   Use the ExpressionAttributeValues parameter to replace tokens such as
 	// :partitionval and :sortval with actual values at runtime.
@@ -4317,17 +4342,21 @@ type QueryInput struct {
 	// reserved word. For example, the following KeyConditionExpression parameter
 	// causes an error because Size is a reserved word:
 	//
-	//   Size = :myval   To work around this, define a placeholder (such a #S)
-	// to represent the attribute name Size. KeyConditionExpression then is as follows:
+	//   Size = :myval
 	//
-	//   #S = :myval   For a list of reserved words, see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
+	//   To work around this, define a placeholder (such a #S) to represent the
+	// attribute name Size. KeyConditionExpression then is as follows:
+	//
+	//   #S = :myval
+	//
+	//   For a list of reserved words, see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
 	// For more information on ExpressionAttributeNames and ExpressionAttributeValues,
 	// see Using Placeholders for Attribute Names and Values (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ExpressionPlaceholders.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	//  KeyConditionExpression replaces the legacy KeyConditions parameter.
+	//   KeyConditionExpression replaces the legacy KeyConditions parameter.
 	KeyConditionExpression *string `type:"string"`
 
 	// This is a legacy parameter, for backward compatibility. New applications
@@ -4344,15 +4373,15 @@ type QueryInput struct {
 	// the partition key will be retrieved. If a FilterExpression or QueryFilter
 	// is present, it will be applied after the items are retrieved.
 	//
-	// For a query on an index, you can have conditions only on the index key attributes.
-	// You must provide the index partition key name and value as an EQ condition.
-	// You can optionally provide a second condition, referring to the index sort
-	// key.
+	//  For a query on an index, you can have conditions only on the index key
+	// attributes. You must provide the index partition key name and value as an
+	// EQ condition. You can optionally provide a second condition, referring to
+	// the index sort key.
 	//
 	// Each KeyConditions element consists of an attribute name to compare, along
 	// with the following:
 	//
-	//   AttributeValueList - One or more values to evaluate against the supplied
+	//    AttributeValueList - One or more values to evaluate against the supplied
 	// attribute. The number of values in the list depends on the ComparisonOperator
 	// being used.
 	//
@@ -4366,7 +4395,7 @@ type QueryInput struct {
 	// For Binary, DynamoDB treats each byte of the binary data as unsigned when
 	// it compares binary values.
 	//
-	//   ComparisonOperator - A comparator for evaluating attributes, for example,
+	//    ComparisonOperator - A comparator for evaluating attributes, for example,
 	// equals, greater than, less than, and so on.
 	//
 	// For KeyConditions, only the following comparison operators are supported:
@@ -4375,56 +4404,56 @@ type QueryInput struct {
 	//
 	// The following are descriptions of these comparison operators.
 	//
-	//   EQ : Equal.
+	//    EQ : Equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one specified in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	//  AttributeValueList can contain only one AttributeValue of type String,
+	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one specified in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    LE : Less than or equal.
+	//     LE : Less than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one provided in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	// does not compare to {"NS":["6", "2", "1"]}.
+	//
+	//     LT : Less than.
+	//
+	//  AttributeValueList can contain only one AttributeValue of type String,
 	// Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    LT : Less than.
+	//     GE : Greater than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not compare to {"NS":["6", "2", "1"]}.
-	//
-	//    GE : Greater than or equal.
-	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    GT : Greater than.
+	//     GT : Greater than.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    BEGINS_WITH : Checks for a prefix.
+	//     BEGINS_WITH : Checks for a prefix.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String or
+	//  AttributeValueList can contain only one AttributeValue of type String or
 	// Binary (not a Number or a set type). The target attribute of the comparison
 	// must be of type String or Binary (not a Number or a set type).
 	//
-	//    BETWEEN : Greater than or equal to the first value, and less than or
+	//     BETWEEN : Greater than or equal to the first value, and less than or
 	// equal to the second value.
 	//
-	// AttributeValueList must contain two AttributeValue elements of the same
+	//  AttributeValueList must contain two AttributeValue elements of the same
 	// type, either String, Number, or Binary (not a set type). A target attribute
 	// matches if the target value is greater than, or equal to, the first element
 	// and less than, or equal to, the second element. If an item contains an AttributeValue
@@ -4445,7 +4474,8 @@ type QueryInput struct {
 	// size exceeds 1 MB before DynamoDB reaches this limit, it stops the operation
 	// and returns the matching values up to the limit, and a key in LastEvaluatedKey
 	// to apply in a subsequent operation to continue the operation. For more information,
-	// see Query and Scan in the Amazon DynamoDB Developer Guide.
+	// see Query and Scan (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/QueryAndScan.html)
+	// in the Amazon DynamoDB Developer Guide.
 	Limit *int64 `min:"1" type:"integer"`
 
 	// A string that identifies one or more attributes to retrieve from the table.
@@ -4459,7 +4489,7 @@ type QueryInput struct {
 	// For more information, see Accessing Item Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// ProjectionExpression replaces the legacy AttributesToGet parameter.
+	//   ProjectionExpression replaces the legacy AttributesToGet parameter.
 	ProjectionExpression *string `type:"string"`
 
 	// This is a legacy parameter, for backward compatibility. New applications
@@ -4472,13 +4502,13 @@ type QueryInput struct {
 	//
 	// This parameter does not support attributes of type List or Map.
 	//
-	// A QueryFilter is applied after the items have already been read; the process
+	//  A QueryFilter is applied after the items have already been read; the process
 	// of filtering does not consume any additional read capacity units.
 	//
-	// If you provide more than one condition in the QueryFilter map, then by default
-	// all of the conditions must evaluate to true. In other words, the conditions
-	// are ANDed together. (You can use the ConditionalOperator parameter to OR
-	// the conditions instead. If you do this, then at least one of the conditions
+	//  If you provide more than one condition in the QueryFilter map, then by
+	// default all of the conditions must evaluate to true. In other words, the
+	// conditions are ANDed together. (You can use the ConditionalOperator parameter
+	// to OR the conditions instead. If you do this, then at least one of the conditions
 	// must evaluate to true, rather than all of them.)
 	//
 	// Note that QueryFilter does not allow key attributes. You cannot define a
@@ -4487,7 +4517,7 @@ type QueryInput struct {
 	// Each QueryFilter element consists of an attribute name to compare, along
 	// with the following:
 	//
-	//   AttributeValueList - One or more values to evaluate against the supplied
+	//    AttributeValueList - One or more values to evaluate against the supplied
 	// attribute. The number of values in the list depends on the operator specified
 	// in ComparisonOperator.
 	//
@@ -4504,12 +4534,12 @@ type QueryInput struct {
 	// For information on specifying data types in JSON, see JSON Data Format (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DataFormat.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	//  ComparisonOperator - A comparator for evaluating attributes. For example,
+	//    ComparisonOperator - A comparator for evaluating attributes. For example,
 	// equals, greater than, less than, etc.
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// For complete descriptions of all comparison operators, see the Condition
@@ -4520,7 +4550,7 @@ type QueryInput struct {
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -4528,10 +4558,10 @@ type QueryInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// Specifies the order for index traversal: If true (default), the traversal
@@ -4554,18 +4584,18 @@ type QueryInput struct {
 	// specific item attributes, the count of matching items, or in the case of
 	// an index, some or all of the attributes projected into the index.
 	//
-	//   ALL_ATTRIBUTES - Returns all of the item attributes from the specified
+	//    ALL_ATTRIBUTES - Returns all of the item attributes from the specified
 	// table or index. If you query a local secondary index, then for each matching
 	// item in the index DynamoDB will fetch the entire item from the parent table.
 	// If the index is configured to project all item attributes, then all of the
 	// data can be obtained from the local secondary index, and no fetching is required.
 	//
-	//   ALL_PROJECTED_ATTRIBUTES - Allowed only when querying an index. Retrieves
+	//    ALL_PROJECTED_ATTRIBUTES - Allowed only when querying an index. Retrieves
 	// all attributes that have been projected into the index. If the index is configured
 	// to project all attributes, this return value is equivalent to specifying
 	// ALL_ATTRIBUTES.
 	//
-	//   COUNT - Returns the number of matching items, rather than the matching
+	//    COUNT - Returns the number of matching items, rather than the matching
 	// items themselves.
 	//
 	//    SPECIFIC_ATTRIBUTES - Returns only the attributes listed in AttributesToGet.
@@ -4590,7 +4620,7 @@ type QueryInput struct {
 	// (This usage is equivalent to specifying AttributesToGet without any value
 	// for Select.)
 	//
-	// If you use the ProjectionExpression parameter, then the value for Select
+	//  If you use the ProjectionExpression parameter, then the value for Select
 	// can only be SPECIFIC_ATTRIBUTES. Any other value for Select will return an
 	// error.
 	Select *string `type:"string" enum:"Select"`
@@ -4724,9 +4754,9 @@ type ScanInput struct {
 	// This parameter allows you to retrieve attributes of type List or Map; however,
 	// it cannot retrieve individual elements within a List or a Map.
 	//
-	// The names of one or more attributes to retrieve. If no attribute names are
-	// provided, then all attributes will be returned. If any of the requested attributes
-	// are not found, they will not appear in the result.
+	//  The names of one or more attributes to retrieve. If no attribute names
+	// are provided, then all attributes will be returned. If any of the requested
+	// attributes are not found, they will not appear in the result.
 	//
 	// Note that AttributesToGet has no effect on provisioned throughput consumption.
 	// DynamoDB determines capacity units consumed based on item size, not on the
@@ -4740,17 +4770,17 @@ type ScanInput struct {
 	//
 	//  A logical operator to apply to the conditions in a ScanFilter map:
 	//
-	//  AND - If all of the conditions evaluate to true, then the entire map evaluates
-	// to true.
+	//    AND - If all of the conditions evaluate to true, then the entire map
+	// evaluates to true.
 	//
-	// OR - If at least one of the conditions evaluate to true, then the entire
+	//    OR - If at least one of the conditions evaluate to true, then the entire
 	// map evaluates to true.
 	//
-	//  If you omit ConditionalOperator, then AND is the default.
+	//   If you omit ConditionalOperator, then AND is the default.
 	//
 	// The operation will succeed only if the entire map evaluates to true.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	ConditionalOperator *string `type:"string" enum:"ConditionalOperator"`
 
 	// A Boolean value that determines the read consistency model during the scan:
@@ -4794,25 +4824,25 @@ type ScanInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -4822,16 +4852,16 @@ type ScanInput struct {
 	// value. For example, suppose that you wanted to check whether the value of
 	// the ProductStatus attribute was one of the following:
 	//
-	// Available | Backordered | Discontinued
+	//  Available | Backordered | Discontinued
 	//
 	// You would first need to specify ExpressionAttributeValues as follows:
 	//
-	// { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
+	//  { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
 	// }
 	//
 	// You could then use these values in an expression, such as this:
 	//
-	// ProductStatus IN (:avail, :back, :disc)
+	//  ProductStatus IN (:avail, :back, :disc)
 	//
 	// For more information on expression attribute values, see Specifying Conditions
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
@@ -4845,10 +4875,10 @@ type ScanInput struct {
 	//  A FilterExpression is applied after the items have already been read; the
 	// process of filtering does not consume any additional read capacity units.
 	//
-	// For more information, see Filter Expressions (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/QueryAndScan.html#FilteringResults)
+	//  For more information, see Filter Expressions (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/QueryAndScan.html#FilteringResults)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// FilterExpression replaces the legacy ScanFilter and ConditionalOperator
+	//   FilterExpression replaces the legacy ScanFilter and ConditionalOperator
 	// parameters.
 	FilterExpression *string `type:"string"`
 
@@ -4865,7 +4895,8 @@ type ScanInput struct {
 	// size exceeds 1 MB before DynamoDB reaches this limit, it stops the operation
 	// and returns the matching values up to the limit, and a key in LastEvaluatedKey
 	// to apply in a subsequent operation to continue the operation. For more information,
-	// see Query and Scan in the Amazon DynamoDB Developer Guide.
+	// see Query and Scan (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/QueryAndScan.html)
+	// in the Amazon DynamoDB Developer Guide.
 	Limit *int64 `min:"1" type:"integer"`
 
 	// A string that identifies one or more attributes to retrieve from the specified
@@ -4879,13 +4910,13 @@ type ScanInput struct {
 	// For more information, see Accessing Item Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// ProjectionExpression replaces the legacy AttributesToGet parameter.
+	//   ProjectionExpression replaces the legacy AttributesToGet parameter.
 	ProjectionExpression *string `type:"string"`
 
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -4893,10 +4924,10 @@ type ScanInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// This is a legacy parameter, for backward compatibility. New applications
@@ -4907,9 +4938,9 @@ type ScanInput struct {
 	//  A condition that evaluates the scan results and returns only the desired
 	// values.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	//
-	// If you specify more than one condition in the ScanFilter map, then by default
+	//  If you specify more than one condition in the ScanFilter map, then by default
 	// all of the conditions must evaluate to true. In other words, the conditions
 	// are ANDed together. (You can use the ConditionalOperator parameter to OR
 	// the conditions instead. If you do this, then at least one of the conditions
@@ -4918,7 +4949,7 @@ type ScanInput struct {
 	// Each ScanFilter element consists of an attribute name to compare, along
 	// with the following:
 	//
-	//   AttributeValueList - One or more values to evaluate against the supplied
+	//    AttributeValueList - One or more values to evaluate against the supplied
 	// attribute. The number of values in the list depends on the operator specified
 	// in ComparisonOperator .
 	//
@@ -4935,12 +4966,12 @@ type ScanInput struct {
 	// For information on specifying data types in JSON, see JSON Data Format (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DataFormat.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	//  ComparisonOperator - A comparator for evaluating attributes. For example,
+	//    ComparisonOperator - A comparator for evaluating attributes. For example,
 	// equals, greater than, less than, etc.
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// For complete descriptions of all comparison operators, see Condition (http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Condition.html).
@@ -4967,9 +4998,14 @@ type ScanInput struct {
 	// The attributes to be returned in the result. You can retrieve all item attributes,
 	// specific item attributes, or the count of matching items.
 	//
-	//   ALL_ATTRIBUTES - Returns all of the item attributes.
+	//    ALL_ATTRIBUTES - Returns all of the item attributes.
 	//
-	//   COUNT - Returns the number of matching items, rather than the matching
+	//    ALL_PROJECTED_ATTRIBUTES - Allowed only when querying an index. Retrieves
+	// all attributes that have been projected into the index. If the index is configured
+	// to project all attributes, this return value is equivalent to specifying
+	// ALL_ATTRIBUTES.
+	//
+	//    COUNT - Returns the number of matching items, rather than the matching
 	// items themselves.
 	//
 	//    SPECIFIC_ATTRIBUTES - Returns only the attributes listed in AttributesToGet.
@@ -5116,24 +5152,24 @@ type StreamSpecification struct {
 
 	// The DynamoDB Streams settings for the table. These settings consist of:
 	//
-	//   StreamEnabled - Indicates whether DynamoDB Streams is enabled (true) or
-	// disabled (false) on the table.
+	//    StreamEnabled - Indicates whether DynamoDB Streams is enabled (true)
+	// or disabled (false) on the table.
 	//
-	//   StreamViewType - When an item in the table is modified, StreamViewType
+	//    StreamViewType - When an item in the table is modified, StreamViewType
 	// determines what information is written to the stream for this table. Valid
 	// values for StreamViewType are:
 	//
-	//  KEYS_ONLY - Only the key attributes of the modified item are written to
-	// the stream.
-	//
-	// NEW_IMAGE - The entire item, as it appears after it was modified, is written
+	//    KEYS_ONLY - Only the key attributes of the modified item are written
 	// to the stream.
 	//
-	// OLD_IMAGE - The entire item, as it appeared before it was modified, is written
-	// to the stream.
-	//
-	// NEW_AND_OLD_IMAGES - Both the new and the old item images of the item are
+	//    NEW_IMAGE - The entire item, as it appears after it was modified, is
 	// written to the stream.
+	//
+	//    OLD_IMAGE - The entire item, as it appeared before it was modified, is
+	// written to the stream.
+	//
+	//    NEW_AND_OLD_IMAGES - Both the new and the old item images of the item
+	// are written to the stream.
 	StreamViewType *string `type:"string" enum:"StreamViewType"`
 }
 
@@ -5156,9 +5192,9 @@ type TableDescription struct {
 	//
 	// Each AttributeDefinition object in this array is composed of:
 	//
-	//   AttributeName - The name of the attribute.
+	//    AttributeName - The name of the attribute.
 	//
-	//   AttributeType - The data type for the attribute.
+	//    AttributeType - The data type for the attribute.
 	AttributeDefinitions []*AttributeDefinition `type:"list"`
 
 	// The date and time when the table was created, in UNIX epoch time (http://www.epochconverter.com/)
@@ -5168,57 +5204,57 @@ type TableDescription struct {
 	// The global secondary indexes, if any, on the table. Each index is scoped
 	// to a given partition key value. Each element is composed of:
 	//
-	//   Backfilling - If true, then the index is currently in the backfilling
+	//    Backfilling - If true, then the index is currently in the backfilling
 	// phase. Backfilling occurs only when a new global secondary index is added
 	// to the table; it is the process by which DynamoDB populates the new index
 	// with data from the table. (This attribute does not appear for indexes that
 	// were created during a CreateTable operation.)
 	//
-	//   IndexName - The name of the global secondary index.
+	//    IndexName - The name of the global secondary index.
 	//
-	//   IndexSizeBytes - The total size of the global secondary index, in bytes.
+	//    IndexSizeBytes - The total size of the global secondary index, in bytes.
 	// DynamoDB updates this value approximately every six hours. Recent changes
 	// might not be reflected in this value.
 	//
-	//   IndexStatus - The current status of the global secondary index:
+	//    IndexStatus - The current status of the global secondary index:
 	//
-	//   CREATING - The index is being created.
+	//    CREATING - The index is being created.
 	//
-	//   UPDATING - The index is being updated.
+	//    UPDATING - The index is being updated.
 	//
-	//   DELETING - The index is being deleted.
+	//    DELETING - The index is being deleted.
 	//
-	//   ACTIVE - The index is ready for use.
+	//    ACTIVE - The index is ready for use.
 	//
-	//     ItemCount - The number of items in the global secondary index. DynamoDB
+	//      ItemCount - The number of items in the global secondary index. DynamoDB
 	// updates this value approximately every six hours. Recent changes might not
 	// be reflected in this value.
 	//
-	//   KeySchema - Specifies the complete index key schema. The attribute names
+	//    KeySchema - Specifies the complete index key schema. The attribute names
 	// in the key schema must be between 1 and 255 characters (inclusive). The key
 	// schema must begin with the same partition key as the table.
 	//
-	//   Projection - Specifies attributes that are copied (projected) from the
+	//    Projection - Specifies attributes that are copied (projected) from the
 	// table into the index. These are in addition to the primary key attributes
 	// and index key attributes, which are automatically projected. Each attribute
 	// specification is composed of:
 	//
-	//   ProjectionType - One of the following:
+	//    ProjectionType - One of the following:
 	//
-	//   KEYS_ONLY - Only the index and primary keys are projected into the index.
+	//    KEYS_ONLY - Only the index and primary keys are projected into the index.
 	//
-	//   INCLUDE - Only the specified table attributes are projected into the index.
-	// The list of projected attributes are in NonKeyAttributes.
+	//    INCLUDE - Only the specified table attributes are projected into the
+	// index. The list of projected attributes are in NonKeyAttributes.
 	//
-	//   ALL - All of the table attributes are projected into the index.
+	//    ALL - All of the table attributes are projected into the index.
 	//
-	//     NonKeyAttributes - A list of one or more non-key attribute names that
+	//      NonKeyAttributes - A list of one or more non-key attribute names that
 	// are projected into the secondary index. The total count of attributes provided
 	// in NonKeyAttributes, summed across all of the secondary indexes, must not
 	// exceed 20. If you project the same attribute into two different indexes,
 	// this counts as two distinct attributes when determining the total.
 	//
-	//     ProvisionedThroughput - The provisioned throughput settings for the
+	//      ProvisionedThroughput - The provisioned throughput settings for the
 	// global secondary index, consisting of read and write capacity units, along
 	// with data about increases and decreases.
 	//
@@ -5232,15 +5268,15 @@ type TableDescription struct {
 
 	// The primary key structure for the table. Each KeySchemaElement consists of:
 	//
-	//   AttributeName - The name of the attribute.
+	//    AttributeName - The name of the attribute.
 	//
-	//   KeyType - The role of the attribute:
+	//    KeyType - The role of the attribute:
 	//
-	// .  HASH - partition key
+	//    HASH - partition key
 	//
-	//  RANGE - sort key
+	//    RANGE - sort key
 	//
-	//   The partition key of an item is also known as its hash attribute. The
+	//    The partition key of an item is also known as its hash attribute. The
 	// term "hash attribute" derives from DynamoDB' usage of an internal hash function
 	// to evenly distribute data items across partitions, based on their partition
 	// key values.
@@ -5249,7 +5285,7 @@ type TableDescription struct {
 	// attribute" derives from the way DynamoDB stores items with the same partition
 	// key physically close together, in sorted order by the sort key value.
 	//
-	//   For more information about primary keys, see Primary Key (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DataModel.html#DataModelPrimaryKey)
+	//    For more information about primary keys, see Primary Key (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DataModel.html#DataModelPrimaryKey)
 	// in the Amazon DynamoDB Developer Guide.
 	KeySchema []*KeySchemaElement `min:"1" type:"list"`
 
@@ -5264,11 +5300,11 @@ type TableDescription struct {
 	// However, the combination of the following three elements is guaranteed to
 	// be unique:
 	//
-	//  the AWS customer ID.
+	//   the AWS customer ID.
 	//
-	// the table name.
+	//   the table name.
 	//
-	// the StreamLabel.
+	//   the StreamLabel.
 	LatestStreamLabel *string `type:"string"`
 
 	// Represents one or more local secondary indexes on the table. Each index is
@@ -5277,37 +5313,37 @@ type TableDescription struct {
 	// data within a given item collection cannot exceed 10 GB. Each element is
 	// composed of:
 	//
-	//   IndexName - The name of the local secondary index.
+	//    IndexName - The name of the local secondary index.
 	//
-	//   KeySchema - Specifies the complete index key schema. The attribute names
+	//    KeySchema - Specifies the complete index key schema. The attribute names
 	// in the key schema must be between 1 and 255 characters (inclusive). The key
 	// schema must begin with the same partition key as the table.
 	//
-	//   Projection - Specifies attributes that are copied (projected) from the
+	//    Projection - Specifies attributes that are copied (projected) from the
 	// table into the index. These are in addition to the primary key attributes
 	// and index key attributes, which are automatically projected. Each attribute
 	// specification is composed of:
 	//
-	//   ProjectionType - One of the following:
+	//    ProjectionType - One of the following:
 	//
-	//   KEYS_ONLY - Only the index and primary keys are projected into the index.
+	//    KEYS_ONLY - Only the index and primary keys are projected into the index.
 	//
-	//   INCLUDE - Only the specified table attributes are projected into the index.
-	// The list of projected attributes are in NonKeyAttributes.
+	//    INCLUDE - Only the specified table attributes are projected into the
+	// index. The list of projected attributes are in NonKeyAttributes.
 	//
-	//   ALL - All of the table attributes are projected into the index.
+	//    ALL - All of the table attributes are projected into the index.
 	//
-	//     NonKeyAttributes - A list of one or more non-key attribute names that
+	//      NonKeyAttributes - A list of one or more non-key attribute names that
 	// are projected into the secondary index. The total count of attributes provided
 	// in NonKeyAttributes, summed across all of the secondary indexes, must not
 	// exceed 20. If you project the same attribute into two different indexes,
 	// this counts as two distinct attributes when determining the total.
 	//
-	//     IndexSizeBytes - Represents the total size of the index, in bytes. DynamoDB
-	// updates this value approximately every six hours. Recent changes might not
-	// be reflected in this value.
+	//      IndexSizeBytes - Represents the total size of the index, in bytes.
+	// DynamoDB updates this value approximately every six hours. Recent changes
+	// might not be reflected in this value.
 	//
-	//   ItemCount - Represents the number of items in the index. DynamoDB updates
+	//    ItemCount - Represents the number of items in the index. DynamoDB updates
 	// this value approximately every six hours. Recent changes might not be reflected
 	// in this value.
 	//
@@ -5335,13 +5371,13 @@ type TableDescription struct {
 
 	// The current state of the table:
 	//
-	//   CREATING - The table is being created.
+	//    CREATING - The table is being created.
 	//
-	//   UPDATING - The table is being updated.
+	//    UPDATING - The table is being updated.
 	//
-	//   DELETING - The table is being deleted.
+	//    DELETING - The table is being deleted.
 	//
-	//   ACTIVE - The table is ready for use.
+	//    ACTIVE - The table is ready for use.
 	TableStatus *string `type:"string" enum:"TableStatus"`
 }
 
@@ -5431,19 +5467,19 @@ type UpdateItemInput struct {
 	// Each AttributeUpdates element consists of an attribute name to modify, along
 	// with the following:
 	//
-	//   Value - The new value, if applicable, for this attribute.
+	//    Value - The new value, if applicable, for this attribute.
 	//
-	//   Action - A value that specifies how to perform the update. This action
+	//    Action - A value that specifies how to perform the update. This action
 	// is only valid for an existing attribute whose data type is Number or is a
 	// set; do not use ADD for other data types.
 	//
 	// If an item with the specified primary key is found in the table, the following
 	// values perform the following actions:
 	//
-	//   PUT - Adds the specified attribute to the item. If the attribute already
+	//    PUT - Adds the specified attribute to the item. If the attribute already
 	// exists, it is replaced by the new value.
 	//
-	//   DELETE - Removes the attribute and its value, if no value is specified
+	//    DELETE - Removes the attribute and its value, if no value is specified
 	// for DELETE. The data type of the specified value must match the existing
 	// value's data type.
 	//
@@ -5452,7 +5488,7 @@ type UpdateItemInput struct {
 	// DELETE action specifies [a,c], then the final attribute value is [b]. Specifying
 	// an empty set is an error.
 	//
-	//   ADD - Adds the specified value to the item, if the attribute does not
+	//    ADD - Adds the specified value to the item, if the attribute does not
 	// already exist. If the attribute does exist, then the behavior of ADD depends
 	// on the data type of the attribute:
 	//
@@ -5484,14 +5520,14 @@ type UpdateItemInput struct {
 	//     If no item with the specified key is found in the table, the following
 	// values perform the following actions:
 	//
-	//   PUT - Causes DynamoDB to create a new item with the specified primary
+	//    PUT - Causes DynamoDB to create a new item with the specified primary
 	// key, and then adds the attribute.
 	//
-	//   DELETE - Nothing happens, because attributes cannot be deleted from a
+	//    DELETE - Nothing happens, because attributes cannot be deleted from a
 	// nonexistent item. The operation succeeds, but DynamoDB does not create a
 	// new item.
 	//
-	//   ADD - Causes DynamoDB to create an item with the supplied primary key
+	//    ADD - Causes DynamoDB to create an item with the supplied primary key
 	// and number (or set of numbers) for the attribute value. The only data types
 	// allowed are Number and Number Set.
 	//
@@ -5509,7 +5545,8 @@ type UpdateItemInput struct {
 	//
 	// These function names are case-sensitive.
 	//
-	//   Comparison operators:  = |  |  |  | = | = | BETWEEN | IN
+	//   Comparison operators:  = | &#x3C;&#x3E; | &#x3C; | &#x3E; | &#x3C;= |
+	// &#x3E;= | BETWEEN | IN
 	//
 	//    Logical operators: AND | OR | NOT
 	//
@@ -5517,7 +5554,7 @@ type UpdateItemInput struct {
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// ConditionExpression replaces the legacy ConditionalOperator and Expected
+	//   ConditionExpression replaces the legacy ConditionalOperator and Expected
 	// parameters.
 	ConditionExpression *string `type:"string"`
 
@@ -5528,17 +5565,17 @@ type UpdateItemInput struct {
 	//
 	//  A logical operator to apply to the conditions in the Expected map:
 	//
-	//  AND - If all of the conditions evaluate to true, then the entire map evaluates
-	// to true.
+	//    AND - If all of the conditions evaluate to true, then the entire map
+	// evaluates to true.
 	//
-	// OR - If at least one of the conditions evaluate to true, then the entire
+	//    OR - If at least one of the conditions evaluate to true, then the entire
 	// map evaluates to true.
 	//
-	//  If you omit ConditionalOperator, then AND is the default.
+	//   If you omit ConditionalOperator, then AND is the default.
 	//
 	// The operation will succeed only if the entire map evaluates to true.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	ConditionalOperator *string `type:"string" enum:"ConditionalOperator"`
 
 	// This is a legacy parameter, for backward compatibility. New applications
@@ -5563,9 +5600,9 @@ type UpdateItemInput struct {
 	// If the Expected map evaluates to true, then the conditional operation succeeds;
 	// otherwise, it fails.
 	//
-	// Expected contains the following:
+	//  Expected contains the following:
 	//
-	//   AttributeValueList - One or more values to evaluate against the supplied
+	//    AttributeValueList - One or more values to evaluate against the supplied
 	// attribute. The number of values in the list depends on the ComparisonOperator
 	// being used.
 	//
@@ -5573,132 +5610,133 @@ type UpdateItemInput struct {
 	//
 	// String value comparisons for greater than, equals, or less than are based
 	// on ASCII character code values. For example, a is greater than A, and a is
-	// greater than B. For a list of code values, see http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters.
+	// greater than B. For a list of code values, see http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters
+	// (http://en.wikipedia.org/wiki/ASCII#ASCII_printable_characters).
 	//
 	// For type Binary, DynamoDB treats each byte of the binary data as unsigned
 	// when it compares binary values.
 	//
-	//   ComparisonOperator - A comparator for evaluating attributes in the AttributeValueList.
+	//    ComparisonOperator - A comparator for evaluating attributes in the AttributeValueList.
 	// When performing the comparison, DynamoDB uses strongly consistent reads.
 	//
 	// The following comparison operators are available:
 	//
-	// EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
+	//  EQ | NE | LE | LT | GE | GT | NOT_NULL | NULL | CONTAINS | NOT_CONTAINS
 	// | BEGINS_WITH | IN | BETWEEN
 	//
 	// The following are descriptions of each comparison operator.
 	//
-	//   EQ : Equal. EQ is supported for all datatypes, including lists and maps.
+	//    EQ : Equal. EQ is supported for all datatypes, including lists and maps.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
-	// an AttributeValue element of a different type than the one provided in the
-	// request, the value does not match. For example, {"S":"6"} does not equal
-	// {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, Binary, String Set, Number Set, or Binary Set. If an item
+	// contains an AttributeValue element of a different type than the one provided
+	// in the request, the value does not match. For example, {"S":"6"} does not
+	// equal {"N":"6"}. Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    NE : Not equal. NE is supported for all datatypes, including lists and
+	//     NE : Not equal. NE is supported for all datatypes, including lists and
 	// maps.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// Binary, String Set, Number Set, or Binary Set. If an item contains an AttributeValue
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not equal {"NS":["6", "2", "1"]}.
+	//  AttributeValueList can contain only one AttributeValue of type String,
+	// Number, Binary, String Set, Number Set, or Binary Set. If an item contains
+	// an AttributeValue of a different type than the one provided in the request,
+	// the value does not match. For example, {"S":"6"} does not equal {"N":"6"}.
+	// Also, {"N":"6"} does not equal {"NS":["6", "2", "1"]}.
 	//
-	//    LE : Less than or equal.
+	//     LE : Less than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
+	// element of a different type than the one provided in the request, the value
+	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
+	// does not compare to {"NS":["6", "2", "1"]}.
+	//
+	//     LT : Less than.
+	//
+	//  AttributeValueList can contain only one AttributeValue of type String,
 	// Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    LT : Less than.
+	//     GE : Greater than or equal.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String, Number,
-	// or Binary (not a set type). If an item contains an AttributeValue element
-	// of a different type than the one provided in the request, the value does
-	// not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
-	// does not compare to {"NS":["6", "2", "1"]}.
-	//
-	//    GE : Greater than or equal.
-	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    GT : Greater than.
+	//     GT : Greater than.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If an item contains an AttributeValue
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If an item contains an AttributeValue
 	// element of a different type than the one provided in the request, the value
 	// does not match. For example, {"S":"6"} does not equal {"N":"6"}. Also, {"N":"6"}
 	// does not compare to {"NS":["6", "2", "1"]}.
 	//
-	//    NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
+	//     NOT_NULL : The attribute exists. NOT_NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the existence of an attribute, not its data type.
+	//  This operator tests for the existence of an attribute, not its data type.
 	// If the data type of attribute "a" is null, and you evaluate it using NOT_NULL,
 	// the result is a Boolean true. This result is because the attribute "a" exists;
 	// its data type is not relevant to the NOT_NULL comparison operator.
 	//
-	//    NULL : The attribute does not exist. NULL is supported for all datatypes,
+	//     NULL : The attribute does not exist. NULL is supported for all datatypes,
 	// including lists and maps.
 	//
-	// This operator tests for the nonexistence of an attribute, not its data type.
-	// If the data type of attribute "a" is null, and you evaluate it using NULL,
-	// the result is a Boolean false. This is because the attribute "a" exists;
+	//  This operator tests for the nonexistence of an attribute, not its data
+	// type. If the data type of attribute "a" is null, and you evaluate it using
+	// NULL, the result is a Boolean false. This is because the attribute "a" exists;
 	// its data type is not relevant to the NULL comparison operator.
 	//
-	//    CONTAINS : Checks for a subsequence, or value in a set.
+	//     CONTAINS : Checks for a subsequence, or value in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is of type String, then the operator checks for a substring match. If the
-	// target attribute of the comparison is of type Binary, then the operator looks
-	// for a subsequence of the target that matches the input. If the target attribute
-	// of the comparison is a set ("SS", "NS", or "BS"), then the operator evaluates
-	// to true if it finds an exact match with any member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is of type String, then the operator checks for a substring match.
+	// If the target attribute of the comparison is of type Binary, then the operator
+	// looks for a subsequence of the target that matches the input. If the target
+	// attribute of the comparison is a set ("SS", "NS", or "BS"), then the operator
+	// evaluates to true if it finds an exact match with any member of the set.
 	//
 	// CONTAINS is supported for lists: When evaluating "a CONTAINS b", "a" can
 	// be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
+	//    NOT_CONTAINS : Checks for absence of a subsequence, or absence of a value
 	// in a set.
 	//
-	// AttributeValueList can contain only one AttributeValue element of type String,
-	// Number, or Binary (not a set type). If the target attribute of the comparison
-	// is a String, then the operator checks for the absence of a substring match.
-	// If the target attribute of the comparison is Binary, then the operator checks
-	// for the absence of a subsequence of the target that matches the input. If
-	// the target attribute of the comparison is a set ("SS", "NS", or "BS"), then
-	// the operator evaluates to true if it does not find an exact match with any
-	// member of the set.
+	//  AttributeValueList can contain only one AttributeValue element of type
+	// String, Number, or Binary (not a set type). If the target attribute of the
+	// comparison is a String, then the operator checks for the absence of a substring
+	// match. If the target attribute of the comparison is Binary, then the operator
+	// checks for the absence of a subsequence of the target that matches the input.
+	// If the target attribute of the comparison is a set ("SS", "NS", or "BS"),
+	// then the operator evaluates to true if it does not find an exact match with
+	// any member of the set.
 	//
 	// NOT_CONTAINS is supported for lists: When evaluating "a NOT CONTAINS b",
 	// "a" can be a list; however, "b" cannot be a set, a map, or a list.
 	//
-	//   BEGINS_WITH : Checks for a prefix.
+	//    BEGINS_WITH : Checks for a prefix.
 	//
-	// AttributeValueList can contain only one AttributeValue of type String or
+	//  AttributeValueList can contain only one AttributeValue of type String or
 	// Binary (not a Number or a set type). The target attribute of the comparison
 	// must be of type String or Binary (not a Number or a set type).
 	//
-	//    IN : Checks for matching elements within two sets.
+	//     IN : Checks for matching elements within two sets.
 	//
-	// AttributeValueList can contain one or more AttributeValue elements of type
+	//  AttributeValueList can contain one or more AttributeValue elements of type
 	// String, Number, or Binary (not a set type). These attributes are compared
 	// against an existing set type attribute of an item. If any elements of the
 	// input set are present in the item attribute, the expression evaluates to
 	// true.
 	//
-	//   BETWEEN : Greater than or equal to the first value, and less than or equal
-	// to the second value.
+	//    BETWEEN : Greater than or equal to the first value, and less than or
+	// equal to the second value.
 	//
-	// AttributeValueList must contain two AttributeValue elements of the same
+	//  AttributeValueList must contain two AttributeValue elements of the same
 	// type, either String, Number, or Binary (not a set type). A target attribute
 	// matches if the target value is greater than, or equal to, the first element
 	// and less than, or equal to, the second element. If an item contains an AttributeValue
@@ -5713,27 +5751,27 @@ type UpdateItemInput struct {
 	// For backward compatibility with previous DynamoDB releases, the following
 	// parameters can be used instead of AttributeValueList and ComparisonOperator:
 	//
-	//   Value - A value for DynamoDB to compare with an attribute.
+	//    Value - A value for DynamoDB to compare with an attribute.
 	//
-	//   Exists - A Boolean value that causes DynamoDB to evaluate the value before
+	//    Exists - A Boolean value that causes DynamoDB to evaluate the value before
 	// attempting the conditional operation:
 	//
 	//   If Exists is true, DynamoDB will check to see if that attribute value
 	// already exists in the table. If it is found, then the condition evaluates
 	// to true; otherwise the condition evaluate to false.
 	//
-	//  If Exists is false, DynamoDB assumes that the attribute value does not
+	//   If Exists is false, DynamoDB assumes that the attribute value does not
 	// exist in the table. If in fact the value does not exist, then the assumption
 	// is valid and the condition evaluates to true. If the value is found, despite
 	// the assumption that it does not exist, the condition evaluates to false.
 	//
-	//  Note that the default value for Exists is true.
+	//   Note that the default value for Exists is true.
 	//
 	//   The Value and Exists parameters are incompatible with AttributeValueList
 	// and ComparisonOperator. Note that if you use both sets of parameters at once,
 	// DynamoDB will return a ValidationException exception.
 	//
-	// This parameter does not support attributes of type List or Map.
+	//  This parameter does not support attributes of type List or Map.
 	Expected map[string]*ExpectedAttributeValue `type:"map"`
 
 	// One or more substitution tokens for attribute names in an expression. The
@@ -5750,25 +5788,25 @@ type UpdateItemInput struct {
 	//   Use the # character in an expression to dereference an attribute name.
 	// For example, consider the following attribute name:
 	//
-	// Percentile
+	//    Percentile
 	//
-	// The name of this attribute conflicts with a reserved word, so it cannot
+	//   The name of this attribute conflicts with a reserved word, so it cannot
 	// be used directly in an expression. (For the complete list of reserved words,
 	// see Reserved Words (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html)
 	// in the Amazon DynamoDB Developer Guide). To work around this, you could specify
 	// the following for ExpressionAttributeNames:
 	//
-	// {"#P":"Percentile"}
+	//    {"#P":"Percentile"}
 	//
-	// You could then use this substitution in an expression, as in this example:
+	//   You could then use this substitution in an expression, as in this example:
 	//
-	// #P = :val
+	//    #P = :val
 	//
-	// Tokens that begin with the : character are expression attribute values,
+	//    Tokens that begin with the : character are expression attribute values,
 	// which are placeholders for the actual value at runtime.
 	//
-	// For more information on expression attribute names, see Accessing Item Attributes
-	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
+	//  For more information on expression attribute names, see Accessing Item
+	// Attributes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html)
 	// in the Amazon DynamoDB Developer Guide.
 	ExpressionAttributeNames map[string]*string `type:"map"`
 
@@ -5778,16 +5816,16 @@ type UpdateItemInput struct {
 	// value. For example, suppose that you wanted to check whether the value of
 	// the ProductStatus attribute was one of the following:
 	//
-	// Available | Backordered | Discontinued
+	//  Available | Backordered | Discontinued
 	//
 	// You would first need to specify ExpressionAttributeValues as follows:
 	//
-	// { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
+	//  { ":avail":{"S":"Available"}, ":back":{"S":"Backordered"}, ":disc":{"S":"Discontinued"}
 	// }
 	//
 	// You could then use these values in an expression, such as this:
 	//
-	// ProductStatus IN (:avail, :back, :disc)
+	//  ProductStatus IN (:avail, :back, :disc)
 	//
 	// For more information on expression attribute values, see Specifying Conditions
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.SpecifyingConditions.html)
@@ -5806,7 +5844,7 @@ type UpdateItemInput struct {
 	// Determines the level of detail about provisioned throughput consumption that
 	// is returned in the response:
 	//
-	//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+	//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 	// operation, together with ConsumedCapacity for each table and secondary index
 	// that was accessed.
 	//
@@ -5814,10 +5852,10 @@ type UpdateItemInput struct {
 	// any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 	// information for table(s).
 	//
-	// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-	// operation.
+	//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+	// the operation.
 	//
-	// NONE - No ConsumedCapacity details are included in the response.
+	//    NONE - No ConsumedCapacity details are included in the response.
 	ReturnConsumedCapacity *string `type:"string" enum:"ReturnConsumedCapacity"`
 
 	// Determines whether item collection metrics are returned. If set to SIZE,
@@ -5830,17 +5868,17 @@ type UpdateItemInput struct {
 	// either before or after they were updated. For UpdateItem, the valid values
 	// are:
 	//
-	//   NONE - If ReturnValues is not specified, or if its value is NONE, then
+	//    NONE - If ReturnValues is not specified, or if its value is NONE, then
 	// nothing is returned. (This setting is the default for ReturnValues.)
 	//
-	//   ALL_OLD - If UpdateItem overwrote an attribute name-value pair, then the
-	// content of the old item is returned.
+	//    ALL_OLD - If UpdateItem overwrote an attribute name-value pair, then
+	// the content of the old item is returned.
 	//
-	//   UPDATED_OLD - The old versions of only the updated attributes are returned.
+	//    UPDATED_OLD - The old versions of only the updated attributes are returned.
 	//
-	//   ALL_NEW - All of the attributes of the new version of the item are returned.
+	//    ALL_NEW - All of the attributes of the new version of the item are returned.
 	//
-	//   UPDATED_NEW - The new versions of only the updated attributes are returned.
+	//    UPDATED_NEW - The new versions of only the updated attributes are returned.
 	//
 	//   There is no additional cost associated with requesting a return value
 	// aside from the small network and processing overhead of receiving a larger
@@ -5857,27 +5895,27 @@ type UpdateItemInput struct {
 	//
 	// The following action values are available for UpdateExpression.
 	//
-	//   SET - Adds one or more attributes and values to an item. If any of these
+	//    SET - Adds one or more attributes and values to an item. If any of these
 	// attribute already exist, they are replaced by the new values. You can also
 	// use SET to add or subtract from an attribute that is of type Number. For
 	// example: SET myNum = myNum + :val
 	//
-	// SET supports the following functions:
+	//  SET supports the following functions:
 	//
-	//  if_not_exists (path, operand) - if the item does not contain an attribute
+	//    if_not_exists (path, operand) - if the item does not contain an attribute
 	// at the specified path, then if_not_exists evaluates to operand; otherwise,
 	// it evaluates to path. You can use this function to avoid overwriting an attribute
 	// that may already be present in the item.
 	//
-	// list_append (operand, operand) - evaluates to a list with a new element
+	//    list_append (operand, operand) - evaluates to a list with a new element
 	// added to it. You can append the new element to the start or the end of the
 	// list by reversing the order of the operands.
 	//
-	//  These function names are case-sensitive.
+	//   These function names are case-sensitive.
 	//
-	//   REMOVE - Removes one or more attributes from an item.
+	//    REMOVE - Removes one or more attributes from an item.
 	//
-	//   ADD - Adds the specified value to the item, if the attribute does not
+	//    ADD - Adds the specified value to the item, if the attribute does not
 	// already exist. If the attribute does exist, then the behavior of ADD depends
 	// on the data type of the attribute:
 	//
@@ -5905,17 +5943,17 @@ type UpdateItemInput struct {
 	// Both sets must have the same primitive data type. For example, if the existing
 	// data type is a set of strings, the Value must also be a set of strings.
 	//
-	//   The ADD action only supports Number and set data types. In addition, ADD
-	// can only be used on top-level attributes, not nested attributes.
+	//    The ADD action only supports Number and set data types. In addition,
+	// ADD can only be used on top-level attributes, not nested attributes.
 	//
-	//    DELETE - Deletes an element from a set.
+	//     DELETE - Deletes an element from a set.
 	//
 	// If a set of values is specified, then those values are subtracted from the
 	// old set. For example, if the attribute value was the set [a,b,c] and the
 	// DELETE action specifies [a,c], then the final attribute value is [b]. Specifying
 	// an empty set is an error.
 	//
-	// The DELETE action only supports set data types. In addition, DELETE can
+	//  The DELETE action only supports set data types. In addition, DELETE can
 	// only be used on top-level attributes, not nested attributes.
 	//
 	//    You can have many actions in a single expression, such as the following:
@@ -5925,7 +5963,7 @@ type UpdateItemInput struct {
 	// (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.Modifying.html)
 	// in the Amazon DynamoDB Developer Guide.
 	//
-	// UpdateExpression replaces the legacy AttributeUpdates parameter.
+	//   UpdateExpression replaces the legacy AttributeUpdates parameter.
 	UpdateExpression *string `type:"string"`
 }
 
@@ -6004,14 +6042,14 @@ type UpdateTableInput struct {
 	// An array of one or more global secondary indexes for the table. For each
 	// index in the array, you can request one action:
 	//
-	//  Create - add a new global secondary index to the table.
+	//    Create - add a new global secondary index to the table.
 	//
-	// Update - modify the provisioned throughput settings of an existing global
+	//    Update - modify the provisioned throughput settings of an existing global
 	// secondary index.
 	//
-	// Delete - remove a global secondary index from the table.
+	//    Delete - remove a global secondary index from the table.
 	//
-	//  For more information, see Managing Global Secondary Indexes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.OnlineOps.html)
+	//   For more information, see Managing Global Secondary Indexes (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.OnlineOps.html)
 	// in the Amazon DynamoDB Developer Guide.
 	GlobalSecondaryIndexUpdates []*GlobalSecondaryIndexUpdate `type:"list"`
 
@@ -6202,7 +6240,7 @@ const (
 // Determines the level of detail about provisioned throughput consumption that
 // is returned in the response:
 //
-//  INDEXES - The response includes the aggregate ConsumedCapacity for the
+//    INDEXES - The response includes the aggregate ConsumedCapacity for the
 // operation, together with ConsumedCapacity for each table and secondary index
 // that was accessed.
 //
@@ -6210,10 +6248,10 @@ const (
 // any indexes at all. In these cases, specifying INDEXES will only return ConsumedCapacity
 // information for table(s).
 //
-// TOTAL - The response includes only the aggregate ConsumedCapacity for the
-// operation.
+//    TOTAL - The response includes only the aggregate ConsumedCapacity for
+// the operation.
 //
-// NONE - No ConsumedCapacity details are included in the response.
+//    NONE - No ConsumedCapacity details are included in the response.
 const (
 	// @enum ReturnConsumedCapacity
 	ReturnConsumedCapacityIndexes = "INDEXES"

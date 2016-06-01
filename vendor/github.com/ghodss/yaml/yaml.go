@@ -15,12 +15,12 @@ import (
 func Marshal(o interface{}) ([]byte, error) {
 	j, err := json.Marshal(o)
 	if err != nil {
-		return nil, fmt.Errorf("error marshaling into JSON: ", err)
+		return nil, fmt.Errorf("error marshaling into JSON: %v", err)
 	}
 
 	y, err := JSONToYAML(j)
 	if err != nil {
-		return nil, fmt.Errorf("error converting JSON to YAML: ", err)
+		return nil, fmt.Errorf("error converting JSON to YAML: %v", err)
 	}
 
 	return y, nil

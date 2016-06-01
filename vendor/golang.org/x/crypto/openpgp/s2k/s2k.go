@@ -4,7 +4,7 @@
 
 // Package s2k implements the various OpenPGP string-to-key transforms as
 // specified in RFC 4800 section 3.7.1.
-package s2k
+package s2k // import "golang.org/x/crypto/openpgp/s2k"
 
 import (
 	"crypto"
@@ -251,7 +251,7 @@ func HashIdToHash(id byte) (h crypto.Hash, ok bool) {
 }
 
 // HashIdToString returns the name of the hash function corresponding to the
-// given OpenPGP hash id, or panics if id is unknown.
+// given OpenPGP hash id.
 func HashIdToString(id byte) (name string, ok bool) {
 	for _, m := range hashToHashIdMapping {
 		if m.id == id {

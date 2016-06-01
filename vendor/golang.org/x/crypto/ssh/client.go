@@ -101,12 +101,6 @@ func (c *connection) clientHandshake(dialAddress string, config *ClientConfig) e
 		return err
 	}
 
-	if packet, err := c.transport.readPacket(); err != nil {
-		return err
-	} else if packet[0] != msgNewKeys {
-		return unexpectedMessageError(msgNewKeys, packet[0])
-	}
-
 	// We just did the key change, so the session ID is established.
 	c.sessionID = c.transport.getSessionID()
 
