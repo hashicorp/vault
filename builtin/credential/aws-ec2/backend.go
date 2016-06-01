@@ -160,7 +160,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 }
 
 const backendHelp = `
-AWS-EC2 auth backend takes in PKCS#7 signature of an AWS EC2 instance and a client
+aws-ec2 auth backend takes in PKCS#7 signature of an AWS EC2 instance and a client
 created nonce to authenticates the EC2 instance with Vault.
 
 Authentication is backed by a preconfigured role in the backend. The role

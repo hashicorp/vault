@@ -3,12 +3,12 @@ layout: "docs"
 page_title: "Auth Backend: AWS-EC2"
 sidebar_current: "docs-auth-aws-ec2"
 description: |-
-  The AWS-EC2 backend allows automated authentication of AWS EC2 instances.
+  The aws-ec2 backend allows automated authentication of AWS EC2 instances.
 ---
 
 # Auth Backend: aws-ec2
 
-The AWS-EC2 auth backend provides a secure introduction mechanism for AWS EC2
+The aws-ec2 auth backend provides a secure introduction mechanism for AWS EC2
 instances, allowing automated retrieval of a Vault token. Unlike most Vault
 authentication backends, this backend does not require first-deploying, or
 provisioning security-sensitive credentials (tokens, username/password, client
