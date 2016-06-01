@@ -1,6 +1,8 @@
 package consul
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,9 +33,50 @@ func pathConfigAccess() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:   pathConfigAccessRead,
 			logical.UpdateOperation: pathConfigAccessWrite,
 		},
 	}
+}
+
+func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
+	entry, err := storage.Get("config/access")
+	if err != nil {
+		return nil, nil, err
+	}
+	if entry == nil {
+		return nil, fmt.Errorf(
+				"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint"),
+			nil
+	}
+
+	conf := &accessConfig{}
+	if err := entry.DecodeJSON(conf); err != nil {
+		return nil, nil, fmt.Errorf("error reading consul access configuration: %s", err)
+	}
+
+	return conf, nil, nil
+}
+
+func pathConfigAccessRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	conf, userErr, intErr := readConfigAccess(req.Storage)
+	if intErr != nil {
+		return nil, intErr
+	}
+	if userErr != nil {
+		return logical.ErrorResponse(userErr.Error()), nil
+	}
+	if conf == nil {
+		return nil, fmt.Errorf("no user error reported but consul access configuration not found")
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"address": conf.Address,
+			"scheme":  conf.Scheme,
+		},
+	}, nil
 }
 
 func pathConfigAccessWrite(

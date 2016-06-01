@@ -7,20 +7,16 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func client(s logical.Storage) (*api.Client, error) {
-	entry, err := s.Get("config/access")
-	if err != nil {
-		return nil, err
+func client(s logical.Storage) (*api.Client, error, error) {
+	conf, userErr, intErr := readConfigAccess(s)
+	if intErr != nil {
+		return nil, nil, intErr
 	}
-	if entry == nil {
-		return nil, fmt.Errorf(
-			"root credentials haven't been configured. Please configure\n" +
-				"them at the '/root' endpoint")
+	if userErr != nil {
+		return nil, userErr, nil
 	}
-
-	var conf accessConfig
-	if err := entry.DecodeJSON(&conf); err != nil {
-		return nil, fmt.Errorf("error reading root configuration: %s", err)
+	if conf == nil {
+		return nil, nil, fmt.Errorf("no error received but no configuration found")
 	}
 
 	consulConf := api.DefaultNonPooledConfig()
@@ -28,5 +24,6 @@ func client(s logical.Storage) (*api.Client, error) {
 	consulConf.Scheme = conf.Scheme
 	consulConf.Token = conf.Token
 
-	return api.NewClient(consulConf)
+	client, err := api.NewClient(consulConf)
+	return client, nil, err
 }

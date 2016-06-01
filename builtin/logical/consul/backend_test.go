@@ -8,15 +8,88 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
+
+func createBackend() *backend {
+	var b backend
+	b.Backend = &framework.Backend{
+		PathsSpecial: &logical.Paths{
+			Root: []string{
+				"config/*",
+			},
+		},
+
+		Paths: []*framework.Path{
+			pathConfigAccess(),
+			pathRoles(),
+			pathToken(&b),
+		},
+
+		Secrets: []*framework.Secret{
+			secretToken(&b),
+		},
+	}
+	return &b
+}
+
+func TestBackend_config_access(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	accessConfig, process := testStartConsulServer(t)
+	defer testStopConsulServer(t, process)
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := createBackend()
+	_, err := b.Backend.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	confReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Storage:   storage,
+		Data:      accessConfig,
+	}
+
+	resp, err := b.HandleRequest(confReq)
+	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+	}
+
+	confReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(confReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+	}
+
+	expected := map[string]interface{}{
+		"address": "127.0.0.1:8500",
+		"scheme":  "http",
+	}
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
+	}
+	if resp.Data["token"] != nil {
+		t.Fatalf("token should not be set in the response")
+	}
+}
 
 func TestBackend_basic(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
