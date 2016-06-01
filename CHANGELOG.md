@@ -98,11 +98,15 @@ IMPROVEMENTS:
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
+ * credential/token: Sanitize policies and add `default` policies in appropriate
+   places [GH-1235]
  * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
    providers [GH-307]
  * secret/aws: Support for STS AssumeRole functionality [GH-1318]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
+ * secret/consul: Reading consul access configuration supported. The response
+   will contain non-sensitive information only [GH-1445]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
 
@@ -115,6 +119,11 @@ BUG FIXES:
  * command/various: Tell the JSON decoder to not convert all numbers to floats;
    fixes some various places where numbers were showing up in scientific
    notation
+ * command/server: Prioritized `devRootTokenID` and `devListenAddress` flags
+   over their respective env vars [GH-1480]
+ * command/ssh: Provided option to disable host key checking. The automated
+   variant of `vault ssh` command uses `sshpass` which was failing to handle
+   host key checking presented by the `ssh` binary. [GH-1473]
  * core: Properly persist mount-tuned TTLs for auth backends [GH-1371]
  * core: Don't accidentally crosswire SIGINT to the reload handler [GH-1372]
  * credential/github: Make organization comparison case-insensitive during
