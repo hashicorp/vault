@@ -1,4 +1,4 @@
-package awsEc2
+package awsec2
 
 import (
 	"time"

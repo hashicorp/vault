@@ -226,7 +226,7 @@ func (c *Core) loadCredentials() error {
 		for _, entry := range c.auth.Entries {
 			// The auth backend "aws-ec2" was named "aws" in the master.
 			// This is to support upgrade procedure from "aws" to "aws-ec2".
-			if entry.Path == "aws/" {
+			if entry.Type == "aws" {
 				entry.Type = "aws-ec2"
 				needPersist = true
 			}
