@@ -64,7 +64,7 @@ type TokenStore struct {
 
 	policyLookupFunc func(string) (*Policy, error)
 
-	tokenLocks map[string]sync.RWMutex
+	tokenLocks map[string]*sync.RWMutex
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -91,12 +91,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	}
 	t.salt = salt
 
-	t.tokenLocks = map[string]sync.RWMutex{}
+	t.tokenLocks = map[string]*sync.RWMutex{}
 	for i := int64(0); i < 256; i++ {
 		t.tokenLocks[fmt.Sprintf("%2x",
-			strconv.FormatInt(i, 16))] = sync.RWMutex{}
+			strconv.FormatInt(i, 16))] = &sync.RWMutex{}
 	}
-	t.tokenLocks["custom"] = sync.RWMutex{}
+	t.tokenLocks["custom"] = &sync.RWMutex{}
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -569,14 +569,14 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	return nil
 }
 
-func (ts *TokenStore) getTokenLock(id string) sync.RWMutex {
+func (ts *TokenStore) getTokenLock(id string) *sync.RWMutex {
 	// Find our multilevel lock, or fall back to global
-	var lock sync.RWMutex
+	var lock *sync.RWMutex
 	var ok bool
 	if len(id) >= 2 {
 		lock, ok = ts.tokenLocks[id[0:2]]
 	}
-	if !ok {
+	if !ok || lock == nil {
 		// Fall back for custom token IDs
 		lock = ts.tokenLocks["custom"]
 	}
