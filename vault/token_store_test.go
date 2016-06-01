@@ -1016,6 +1016,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(3600),
 		"role":             "",
 		"explicit_max_ttl": int64(0),
+		"renewable":        true,
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1058,6 +1059,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(3600),
 		"role":             "",
 		"explicit_max_ttl": int64(0),
+		"renewable":        true,
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
