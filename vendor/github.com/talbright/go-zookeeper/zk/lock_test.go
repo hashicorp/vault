@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"regexp"
 	"testing"
 	"time"
 )
@@ -91,4 +92,47 @@ func TestMultiLevelLock(t *testing.T) {
 	if err := l.Unlock(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestLockWithData(t *testing.T) {
+	ts, err := StartTestCluster(1, nil, logWriter{t: t, p: "[ZKERR] "})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ts.Stop()
+	zk, _, err := ts.ConnectAll()
+	if err != nil {
+		t.Fatalf("Connect returned error: %+v", err)
+	}
+	defer zk.Close()
+	path := "/test-with-data-lock/lock"
+	nodeData := []byte("hello zk")
+	l := NewLock(zk, path, WorldACLPermAll)
+	var lockPath string
+
+	if lockPath, err = l.LockWithData(nodeData); err != nil {
+		t.Fatal(err)
+	}
+
+	var validLockPath = regexp.MustCompile(`.*/_c_.*?-lock-0{10}$`)
+	if yes := validLockPath.MatchString(lockPath); !yes {
+		t.Fatalf("lock path was incorrect")
+	}
+
+	if yes, _, err := zk.Exists(lockPath); !yes || err != nil {
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Fatalf("lock was not created")
+		}
+	}
+
+	if data, _, err := zk.Get(lockPath); err != nil || string(data) != "hello zk" {
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Fatalf("lock data was not set")
+		}
+	}
+
 }

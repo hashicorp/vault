@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/talbright/go-zookeeper/zk"
 )
 
 const (
