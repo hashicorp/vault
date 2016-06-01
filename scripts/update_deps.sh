@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -e
+
+TOOL=vault
+
+## Make a temp dir
+tempdir=$(mktemp -d update-${TOOL}-deps.XXXXXX)
+
+## Set paths
+export GOPATH="$(pwd)/${tempdir}"
+export PATH="${GOPATH}/bin:${PATH}"
+cd $tempdir
+
+## Get Vault
+mkdir -p src/github.com/hashicorp
+cd src/github.com/hashicorp
+echo "Fetching ${TOOL}..."
+git clone https://github.com/hashicorp/${TOOL}
+cd ${TOOL}
+
+## Clean out earlier vendoring
+rm -rf Godeps vendor
+
+## Get govendor
+go get github.com/kardianos/govendor
+
+## Init
+govendor init
+
+## Filter out tags in testing packages
+sed -i -e 's/test/test appengine go1.7/' vendor/vendor.json
+
+## Fetch deps
+echo "Fetching deps, will take some time..."
+govendor fetch +missing
+
+echo "Done; to commit run \n\ncd ${GOPATH}/src/github.com/hashicorp/${TOOL}\n"
