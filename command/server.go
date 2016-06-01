@@ -63,11 +63,11 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" {
+	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
 		devRootTokenID = os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")
 	}
 
-	if os.Getenv("VAULT_DEV_LISTEN_ADDRESS") != "" {
+	if os.Getenv("VAULT_DEV_LISTEN_ADDRESS") != "" && devListenAddress == "" {
 		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
