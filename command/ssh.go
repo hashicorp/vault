@@ -47,6 +47,15 @@ func (c *SSHCommand) Run(args []string) int {
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
+
+	if os.Getenv("VAULT_STRICT_HOST_KEY_CHECKING") != "" {
+		strictHostKeyChecking = os.Getenv("VAULT_STRICT_HOST_KEY_CHECKING")
+	}
+
+	if os.Getenv("VAULT_USER_KNOWN_HOSTS_FILE") != "" {
+		userKnownHostsFile = os.Getenv("VAULT_USER_KNOWN_HOSTS_FILE")
+	}
+
 	args = flags.Args()
 	if len(args) < 1 {
 		c.Ui.Error("ssh expects at least one argument")
@@ -286,12 +295,15 @@ SSH Options:
 					If 'sshpass' is employed to enable automated login, then if host key
 					is not "known" to the client, 'vault ssh' command will fail. Set this
 					option to "no" to bypass the host key checking. Defaults to "ask".
+					Can also be specified with VAULT_STRICT_HOST_KEY_CHECKING environment
+					variable.
 
 	-user-known-hosts-file		This option corresponds to UserKnownHostsFile of SSH configuration.
 					Assigns the file to use for storing the host keys. If this option is
 					set to "/dev/null" along with "-strict-host-key-checking=no", both
 					warnings and host key checking can be avoided while establishing the
-					connection. Defaults to "~/.ssh/known_hosts".
+					connection. Defaults to "~/.ssh/known_hosts". Can also be specified
+					with VAULT_USER_KNOWN_HOSTS_FILE environment variable.
 `
 	return strings.TrimSpace(helpText)
 }
