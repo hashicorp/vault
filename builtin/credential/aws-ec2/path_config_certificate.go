@@ -1,4 +1,4 @@
-package aws
+package awsec2
 
 import (
 	"crypto/x509"

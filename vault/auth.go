@@ -224,6 +224,12 @@ func (c *Core) loadCredentials() error {
 
 		// Upgrade to table-scoped entries
 		for _, entry := range c.auth.Entries {
+			// The auth backend "aws-ec2" was named "aws" in the master.
+			// This is to support upgrade procedure from "aws" to "aws-ec2".
+			if entry.Type == "aws" {
+				entry.Type = "aws-ec2"
+				needPersist = true
+			}
 			if entry.Table == "" {
 				entry.Table = c.auth.Type
 				needPersist = true
