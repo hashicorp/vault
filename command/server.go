@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/armon/go-metrics/prometheus"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/logutils"
@@ -587,6 +588,15 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	// Configure the statsd sink
 	if telConfig.StatsdAddr != "" {
 		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
+		if err != nil {
+			return err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	// Configure the prometheus sink
+	if telConfig.EnablePrometheus {
+		sink, err := prometheus.NewPrometheusSink()
 		if err != nil {
 			return err
 		}

@@ -16,6 +16,10 @@
 			"Rev": "f303b03b91d770a11a39677f1d3b55da4002bbcb"
 		},
 		{
+			"ImportPath": "github.com/armon/go-metrics/prometheus",
+			"Rev": "f303b03b91d770a11a39677f1d3b55da4002bbcb"
+		},
+		{
 			"ImportPath": "github.com/armon/go-radix",
 			"Rev": "4239b77079c7b5d1243b7b4736304ce8ddb6f0f2"
 		},
