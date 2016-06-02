@@ -16,7 +16,7 @@ func TestTCPListener(t *testing.T) {
 	ln, _, _, err := tcpListenerFactory(map[string]string{
 		"address":     "127.0.0.1:0",
 		"tls_disable": "1",
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -52,7 +52,7 @@ func TestTCPListener_tls(t *testing.T) {
 		"address":       "127.0.0.1:0",
 		"tls_cert_file": wd + "reload_foo.pem",
 		"tls_key_file":  wd + "reload_foo.key",
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

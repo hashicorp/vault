@@ -6,17 +6,19 @@ import (
 	_ "crypto/sha512"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"sync"
 )
 
 // ListenerFactory is the factory function to create a listener.
-type ListenerFactory func(map[string]string) (net.Listener, map[string]string, ReloadFunc, error)
+type ListenerFactory func(map[string]string, io.Writer) (net.Listener, map[string]string, ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
-	"tcp": tcpListenerFactory,
+	"tcp":   tcpListenerFactory,
+	"atlas": atlasListenerFactory,
 }
 
 // tlsLookup maps the tls_min_version configuration to the internal value
@@ -28,13 +30,13 @@ var tlsLookup = map[string]uint16{
 
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
-func NewListener(t string, config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
+func NewListener(t string, config map[string]string, logger io.Writer) (net.Listener, map[string]string, ReloadFunc, error) {
 	f, ok := BuiltinListeners[t]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown listener type: %s", t)
 	}
 
-	return f(config)
+	return f(config, logger)
 }
 
 func listenerWrapTLS(
