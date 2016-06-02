@@ -6,7 +6,8 @@ Vault [![Build Status](https://travis-ci.org/hashicorp/vault.svg)](https://travi
 
 -	Website: https://www.vaultproject.io
 -	IRC: `#vault-tool` on Freenode
--	Mailing list: [Google Groups](https://groups.google.com/group/vault-tool)
+-	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
+-	Discussion list: [Google Groups](https://groups.google.com/group/vault-tool)
 
 ![Vault](https://raw.githubusercontent.com/hashicorp/vault/master/website/source/assets/images/logo-big.png?token=AAAFE8XmW6YF5TNuk3cosDGBK-sUGPEjks5VSAa2wA%3D%3D)
 
