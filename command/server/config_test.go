@@ -16,17 +16,18 @@ func TestLoadConfigFile(t *testing.T) {
 	expected := &Config{
 		Listeners: []*Listener{
 			&Listener{
-				Type: "tcp",
+				Type: "atlas",
 				Config: map[string]string{
-					"address": "127.0.0.1:443",
+					"token":          "foobar",
+					"infrastructure": "foo/bar",
+					"endpoint":       "https://foo.bar:1111",
+					"node_id":        "foo_node",
 				},
 			},
 			&Listener{
-				Type: "atlas",
+				Type: "tcp",
 				Config: map[string]string{
-					Token:          "foobar",
-					Infrastructure: "foo/bar",
-					Endpoint:       "https://foo.bar:1111",
+					"address": "127.0.0.1:443",
 				},
 			},
 		},
@@ -83,9 +84,10 @@ func TestLoadConfigFile_json(t *testing.T) {
 			&Listener{
 				Type: "atlas",
 				Config: map[string]string{
-					Token:          "foobar",
-					Infrastructure: "foo/bar",
-					Endpoint:       "https://foo.bar:1111",
+					"token":          "foobar",
+					"infrastructure": "foo/bar",
+					"endpoint":       "https://foo.bar:1111",
+					"node_id":        "foo_node",
 				},
 			},
 		},

@@ -428,6 +428,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"address",
 			"endpoint",
 			"infrastructure",
+			"node_id",
 			"tls_disable",
 			"tls_cert_file",
 			"tls_key_file",
@@ -455,6 +456,9 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 				}
 				if m["infrastructure"] == "" {
 					return multierror.Prefix(fmt.Errorf("'infrastructure' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
+				}
+				if m["node_id"] == "" {
+					return multierror.Prefix(fmt.Errorf("'node_id' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
 				}
 			}
 		}

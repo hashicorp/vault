@@ -7,6 +7,7 @@ listener "atlas" {
     token = "foobar"
     infrastructure = "foo/bar"
     endpoint = "https://foo.bar:1111"
+    node_id = "foo_node"
 }
 
 listener "tcp" {
