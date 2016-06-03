@@ -463,12 +463,12 @@ shutdown:
 			// Abort if service discovery is disabled or a
 			// reconcile handler is active
 			if !c.disableRegistration && atomic.CompareAndSwapInt64(&checkLock, 0, 1) {
-				// Enter handler with serviceRegLock held
+				// Enter handler with checkLock held
 				go func() {
 					defer atomic.CompareAndSwapInt64(&checkLock, 1, 0)
 					for !shutdown {
-						unsealed := sealedFunc()
-						if err := c.runCheck(unsealed); err != nil {
+						sealed := sealedFunc()
+						if err := c.runCheck(sealed); err != nil {
 							c.logger.Printf("[WARN]: consul: check unable to talk with Consul backend: %v", err)
 							time.Sleep(consulRetryInterval)
 							continue
@@ -573,12 +573,11 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc a
 	return serviceID, nil
 }
 
-// runCheck immediately pushes a TTL check.  Assumes c.serviceLock is held
-// exclusively.
-func (c *ConsulBackend) runCheck(unsealed bool) error {
+// runCheck immediately pushes a TTL check.
+func (c *ConsulBackend) runCheck(sealed bool) error {
 	// Run a TTL check
 	agent := c.client.Agent()
-	if unsealed {
+	if !sealed {
 		return agent.PassTTL(c.checkID(), "Vault Unsealed")
 	} else {
 		return agent.FailTTL(c.checkID(), "Vault Sealed")
