@@ -301,14 +301,14 @@ func (c *ServerCommand) Run(args []string) int {
 		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
 		if ok {
 			activeFunc := func() bool {
-				if isLeader, _, err := core.Leader(); err != nil {
+				if isLeader, _, err := core.Leader(); err == nil {
 					return isLeader
 				}
 				return false
 			}
 
 			sealedFunc := func() bool {
-				if sealed, err := core.Sealed(); err != nil {
+				if sealed, err := core.Sealed(); err == nil {
 					return sealed
 				}
 				return true
