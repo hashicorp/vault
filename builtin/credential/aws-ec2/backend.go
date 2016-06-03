@@ -51,7 +51,7 @@ type backend struct {
 	EC2ClientsMap map[string]*ec2.EC2
 }
 
-func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
+func Backend(conf *logical.BackendConfig) (*backend, error) {
 	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
 		HashFunc: salt.SHA256Hash,
 	})
@@ -96,7 +96,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		},
 	}
 
-	return b.Backend, nil
+	return b, nil
 }
 
 // periodicFunc performs the tasks that the backend wishes to do periodically.

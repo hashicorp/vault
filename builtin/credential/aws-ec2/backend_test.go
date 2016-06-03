@@ -6,63 +6,11 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
-
-func createBackend(conf *logical.BackendConfig) (*backend, error) {
-	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
-		HashFunc: salt.SHA256Hash,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	b := &backend{
-		// Setting the periodic func to be run once in an hour.
-		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod: time.Hour,
-		Salt:               salt,
-		EC2ClientsMap:      make(map[string]*ec2.EC2),
-	}
-
-	b.Backend = &framework.Backend{
-		PeriodicFunc: b.periodicFunc,
-		AuthRenew:    b.pathLoginRenew,
-		Help:         backendHelp,
-		PathsSpecial: &logical.Paths{
-			Unauthenticated: []string{
-				"login",
-			},
-		},
-		Paths: []*framework.Path{
-			pathLogin(b),
-			pathListRole(b),
-			pathListRoles(b),
-			pathRole(b),
-			pathRoleTag(b),
-			pathConfigClient(b),
-			pathConfigCertificate(b),
-			pathConfigTidyRoletagBlacklist(b),
-			pathConfigTidyIdentityWhitelist(b),
-			pathListCertificates(b),
-			pathListRoletagBlacklist(b),
-			pathRoletagBlacklist(b),
-			pathTidyRoletagBlacklist(b),
-			pathListIdentityWhitelist(b),
-			pathIdentityWhitelist(b),
-			pathTidyIdentityWhitelist(b),
-		},
-	}
-
-	return b, nil
-}
 
 func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// create a backend
@@ -70,11 +18,11 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,11 +241,11 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -347,11 +295,11 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,11 +349,11 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,11 +374,11 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -451,11 +399,11 @@ func TestBackend_ConfigClient(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -588,11 +536,11 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -739,11 +687,11 @@ func TestBackend_pathRole(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -865,11 +813,11 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -942,11 +890,11 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1006,11 +954,11 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1135,11 +1083,11 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
-	b, err := createBackend(config)
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Backend.Setup(config)
+	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
