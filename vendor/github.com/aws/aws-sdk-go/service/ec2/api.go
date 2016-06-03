@@ -5389,10 +5389,9 @@ func (c *EC2) GetConsoleScreenshotRequest(input *GetConsoleScreenshotInput) (req
 	return
 }
 
-// Retrieve a JPG-format screenshot of an instance to help with troubleshooting.
+// Retrieve a JPG-format screenshot of a running instance to help with troubleshooting.
 //
-// For API calls, the returned content is base64-encoded. For command line
-// tools, the decoding is performed for you.
+// The returned content is base64-encoded.
 func (c *EC2) GetConsoleScreenshot(input *GetConsoleScreenshotInput) (*GetConsoleScreenshotOutput, error) {
 	req, out := c.GetConsoleScreenshotRequest(input)
 	err := req.Send()
@@ -18608,7 +18607,7 @@ type GetConsoleOutputOutput struct {
 	// The ID of the instance.
 	InstanceId *string `locationName:"instanceId" type:"string"`
 
-	// The console output, Base64 encoded. If using a command line tool, the tools
+	// The console output, base64-encoded. If using a command line tool, the tools
 	// decode the output for you.
 	Output *string `locationName:"output" type:"string"`
 
@@ -25931,6 +25930,10 @@ type SpotFleetRequestConfigData struct {
 	// the Spot fleet.
 	ExcessCapacityTerminationPolicy *string `locationName:"excessCapacityTerminationPolicy" type:"string" enum:"ExcessCapacityTerminationPolicy"`
 
+	// The number of units fulfilled by this request compared to the set target
+	// capacity.
+	FulfilledCapacity *float64 `locationName:"fulfilledCapacity" type:"double"`
+
 	// Grants the Spot fleet permission to terminate Spot instances on your behalf
 	// when you cancel its Spot fleet request using CancelSpotFleetRequests or when
 	// the Spot fleet request expires, if you set terminateInstancesWithExpiration.
@@ -25950,6 +25953,16 @@ type SpotFleetRequestConfigData struct {
 	// Indicates whether running Spot instances should be terminated when the Spot
 	// fleet request expires.
 	TerminateInstancesWithExpiration *bool `locationName:"terminateInstancesWithExpiration" type:"boolean"`
+
+	// The type of request. Indicates whether the fleet will only request the target
+	// capacity or also attempt to maintain it. When you request a certain target
+	// capacity, the fleet will only place the required bids. It will not attempt
+	// to replenish Spot instances if capacity is diminished, nor will it submit
+	// bids in alternative Spot pools if capacity is not available. When you want
+	// to maintain a certain target capacity, fleet will place the required bids
+	// to meet this target capacity. It will also automatically replenish any interrupted
+	// instances. Default: maintain.
+	Type *string `locationName:"type" type:"string" enum:"FleetType"`
 
 	// The start date and time of the request, in UTC format (for example, YYYY-MM-DDTHH:MM:SSZ).
 	// The default is to start fulfilling the request immediately.
@@ -27731,6 +27744,13 @@ const (
 	ExportTaskStateCancelled = "cancelled"
 	// @enum ExportTaskState
 	ExportTaskStateCompleted = "completed"
+)
+
+const (
+	// @enum FleetType
+	FleetTypeRequest = "request"
+	// @enum FleetType
+	FleetTypeMaintain = "maintain"
 )
 
 const (

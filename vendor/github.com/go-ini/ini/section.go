@@ -139,6 +139,26 @@ func (s *Section) Keys() []*Key {
 	return keys
 }
 
+// ParentKeys returns list of keys of parent section.
+func (s * Section) ParentKeys() []*Key {
+	var parentKeys []*Key
+	sname := s.name
+	for {
+		if i := strings.LastIndex(sname, "."); i > -1 {
+			sname = sname[:i]
+			sec, err := s.f.GetSection(sname)
+			if err != nil {
+				continue
+			}
+			parentKeys = append(parentKeys, sec.Keys()...)
+		} else {
+			break
+		}
+
+	}
+	return parentKeys
+}
+
 // KeyStrings returns list of key names of section.
 func (s *Section) KeyStrings() []string {
 	list := make([]string, len(s.keyList))
