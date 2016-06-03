@@ -15,32 +15,9 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
-
-func createBackend() *backend {
-	var b backend
-	b.Backend = &framework.Backend{
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-			},
-		},
-
-		Paths: []*framework.Path{
-			pathConfigAccess(),
-			pathRoles(),
-			pathToken(&b),
-		},
-
-		Secrets: []*framework.Secret{
-			secretToken(&b),
-		},
-	}
-	return &b
-}
 
 func TestBackend_config_access(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
@@ -55,8 +32,8 @@ func TestBackend_config_access(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b := createBackend()
-	_, err := b.Backend.Setup(config)
+	b := Backend()
+	_, err := b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
