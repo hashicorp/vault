@@ -1,11 +1,12 @@
 package server
 
 import (
+	"io"
 	"net"
 	"time"
 )
 
-func tcpListenerFactory(config map[string]string) (net.Listener, map[string]string, ReloadFunc, error) {
+func tcpListenerFactory(config map[string]string, _ io.Writer) (net.Listener, map[string]string, ReloadFunc, error) {
 	addr, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"
