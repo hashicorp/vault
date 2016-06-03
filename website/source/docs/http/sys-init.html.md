@@ -87,7 +87,7 @@ description: |-
 
   <dt>See Also</dt>
   <dd>
-    For more information on the GPG/keybase process please see the
+    For more information on the PGP/Keybase.io process please see the
     [Vault GPG and Keybase integration documentation](/docs/concepts/pgp-gpg-keybase.html).
   </dd>
 </dl>

@@ -128,10 +128,10 @@ the _unseal keys_ and the _initial root token_. This is the
 **only time ever** that all of this data is known by Vault, and also the
 only time that the unseal keys should ever be so close together.
 
-For the purpose of this getting started guide, save all these keys
+For the purpose of this getting started guide, save all of these keys
 somewhere, and continue. In a real deployment scenario, you would never
 save these keys together. Instead, you would likely use Vault's PGP and
-keybase support to encrypt each of these keys with the users' GPG keys.
+Keybase.io support to encrypt each of these keys with the users' PGP keys.
 This prevents one single person from having all the unseal keys. Please
 see the documentation on [using PGP keys with Vault](/docs/concepts/pgp-gpg-keybase-integration.html)
 for more information.
