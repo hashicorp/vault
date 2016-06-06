@@ -65,8 +65,10 @@ sending a SIGHUP to the server process. These are denoted below.
   for tokens and secrets. This is a string value using a suffix, e.g. "720h".
   Default value is 30 days. This value cannot be larger than `max_lease_ttl`.
 
-* `max_lease_ttl` (optional) - Configures the maximum possible
-  lease duration for tokens and secrets. This is a string value using a suffix,
+* `max_lease_ttl` (optional) - Configures the maximum length of time that
+  tokens and secrets can be used before Vault revokes them.
+  This period is measured from the moment the token/secret is created.
+  This is a string value; use a suffix of `h` to specify in hours, or `m` for minutes.
   e.g. "720h". Default value is 30 days.
 
 In production it is a risk to run Vault on systems where `mlock` is
