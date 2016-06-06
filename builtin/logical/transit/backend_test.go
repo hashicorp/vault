@@ -575,7 +575,7 @@ func TestPolicyFuzzing(t *testing.T) {
 }
 
 func testPolicyFuzzingCommon(t *testing.T, be *backend) {
-	storage := &logical.LockingInmemStorage{}
+	storage := &logical.InmemStorage{}
 	wg := sync.WaitGroup{}
 
 	funcs := []string{"encrypt", "decrypt", "rotate", "change_min_version"}
