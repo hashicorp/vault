@@ -89,3 +89,17 @@ result, rather than always decode as a `float64`, numbers are returned as a
 `int64`, `float64`, or simply used as a `string` value. This fixes some display
 errors where numbers were being decoded as `float64` and printed in scientific
 notation.
+
+## List Operations Return `404` On No Keys Found
+
+Previously, list operations on an endpoint with no keys found would return an
+empty response object. Now, a `404` will be returned instead.
+
+## Consul TTL Checks Automatically Registered
+
+If using the Consul HA storage backend, Vault will now automatically register
+itself as the `vault` service and perform its own health checks/lifecycle
+status management. This behavior can be adjusted or turned off in Vault's
+configuration; see the
+[documentation](https://www.vaultproject.io/docs/config/index.html#check_timeout)
+for details.
