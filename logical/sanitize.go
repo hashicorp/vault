@@ -1,5 +1,7 @@
 package logical
 
+import "time"
+
 // This logic was pulled from the http package so that it can be used for
 // encoding wrapped responses as well. It simply translates the logical request
 // to an http response, with the values we want and omitting the values we
@@ -52,7 +54,7 @@ type HTTPAuth struct {
 }
 
 type HTTPWrapInfo struct {
-	Token        string `json:"token"`
-	TTL          int    `json:"ttl"`
-	CreationTime int64  `json:"creation_time"`
+	Token        string    `json:"token"`
+	TTL          int       `json:"ttl"`
+	CreationTime time.Time `json:"creation_time"`
 }

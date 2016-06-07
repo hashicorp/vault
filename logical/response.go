@@ -35,9 +35,9 @@ type WrapInfo struct {
 	// The token containing the wrapped response
 	Token string
 
-	// The creation time in seconds since Unix epoch. This can be used with the
-	// TTL to figure out an expected expiration.
-	CreationTime int64
+	// The creation time. This can be used with the TTL to figure out an
+	// expected expiration.
+	CreationTime time.Time
 }
 
 // Response is a struct that stores the response of a request.

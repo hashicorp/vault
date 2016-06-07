@@ -176,9 +176,9 @@ type JSONSecret struct {
 }
 
 type JSONWrapInfo struct {
-	TTL          int    `json:"ttl"`
-	Token        string `json:"token"`
-	CreationTime int64  `json:"creation_time"`
+	TTL          int       `json:"ttl"`
+	Token        string    `json:"token"`
+	CreationTime time.Time `json:"creation_time"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

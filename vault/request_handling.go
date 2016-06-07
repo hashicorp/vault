@@ -375,10 +375,11 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
 	// wrapping token ID in the audit logs, so that it can be determined from
 	// the audit logs whether the token was ever actually used.
+	creationTime := time.Now()
 	te := TokenEntry{
 		Path:           req.Path,
 		Policies:       []string{"cubbyhole-response-wrapping"},
-		CreationTime:   time.Now().Unix(),
+		CreationTime:   creationTime.Unix(),
 		TTL:            resp.WrapInfo.TTL,
 		NumUses:        1,
 		ExplicitMaxTTL: resp.WrapInfo.TTL,
@@ -390,7 +391,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	resp.WrapInfo.Token = te.ID
-	resp.WrapInfo.CreationTime = te.CreationTime
+	resp.WrapInfo.CreationTime = creationTime
 
 	httpResponse := logical.SanitizeResponse(resp)
 

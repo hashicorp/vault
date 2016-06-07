@@ -42,7 +42,7 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 		}
 	case "wrapping_token_creation_time":
 		if secret.WrapInfo != nil {
-			val = secret.WrapInfo.CreationTime
+			val = secret.WrapInfo.CreationTime.String()
 		}
 	case "refresh_interval":
 		val = secret.LeaseDuration

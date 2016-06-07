@@ -70,7 +70,7 @@ func TestCopy_response(t *testing.T) {
 		WrapInfo: &logical.WrapInfo{
 			TTL:          60,
 			Token:        "foo",
-			CreationTime: 100000,
+			CreationTime: time.Now(),
 		},
 	}
 	arg := expected
@@ -140,7 +140,7 @@ func TestHash(t *testing.T) {
 				WrapInfo: &logical.WrapInfo{
 					TTL:          60,
 					Token:        "bar",
-					CreationTime: 100000,
+					CreationTime: now,
 				},
 			},
 			&logical.Response{
@@ -150,7 +150,7 @@ func TestHash(t *testing.T) {
 				WrapInfo: &logical.WrapInfo{
 					TTL:          60,
 					Token:        "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					CreationTime: 100000,
+					CreationTime: now,
 				},
 			},
 		},
