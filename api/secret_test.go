@@ -20,7 +20,8 @@ func TestParseSecret(t *testing.T) {
 	],
 	"wrap_info": {
 		"token": "token",
-		"ttl": 60
+		"ttl": 60,
+		"creation_time": 100000
 	}
 }`)
 
@@ -40,8 +41,9 @@ func TestParseSecret(t *testing.T) {
 			"a warning!",
 		},
 		WrapInfo: &SecretWrapInfo{
-			Token: "token",
-			TTL:   60,
+			Token:        "token",
+			TTL:          60,
+			CreationTime: int64(100000),
 		},
 	}
 	if !reflect.DeepEqual(secret, expected) {

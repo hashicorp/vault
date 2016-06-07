@@ -52,6 +52,7 @@ type HTTPAuth struct {
 }
 
 type HTTPWrapInfo struct {
-	Token string `json:"token"`
-	TTL   int    `json:"ttl"`
+	Token        string `json:"token"`
+	TTL          int    `json:"ttl"`
+	CreationTime int64  `json:"creation_time"`
 }

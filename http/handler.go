@@ -185,6 +185,9 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 		}
 		req.WrapTTL = time.Duration(seconds) * time.Second
 	}
+	if int64(req.WrapTTL) < 0 {
+		return req, fmt.Errorf("requested wrap ttl cannot be negative")
+	}
 
 	return req, nil
 }

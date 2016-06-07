@@ -46,7 +46,7 @@ func (f *FormatJSON) FormatRequest(
 			Path:        req.Path,
 			Data:        req.Data,
 			RemoteAddr:  getRemoteAddr(req),
-			WrapTTL:     int64(req.WrapTTL / time.Second),
+			WrapTTL:     int(req.WrapTTL / time.Second),
 		},
 	})
 }
@@ -90,8 +90,9 @@ func (f *FormatJSON) FormatResponse(
 	var respWrapInfo *JSONWrapInfo
 	if resp.WrapInfo != nil {
 		respWrapInfo = &JSONWrapInfo{
-			TTL:   int64(resp.WrapInfo.TTL / time.Second),
-			Token: resp.WrapInfo.Token,
+			TTL:          int(resp.WrapInfo.TTL / time.Second),
+			Token:        resp.WrapInfo.Token,
+			CreationTime: resp.WrapInfo.CreationTime,
 		}
 	}
 
@@ -113,7 +114,7 @@ func (f *FormatJSON) FormatResponse(
 			Path:       req.Path,
 			Data:       req.Data,
 			RemoteAddr: getRemoteAddr(req),
-			WrapTTL:    int64(req.WrapTTL / time.Second),
+			WrapTTL:    int(req.WrapTTL / time.Second),
 		},
 
 		Response: JSONResponse{
@@ -151,7 +152,7 @@ type JSONRequest struct {
 	Path        string                 `json:"path"`
 	Data        map[string]interface{} `json:"data"`
 	RemoteAddr  string                 `json:"remote_address"`
-	WrapTTL     int64                  `json:"wrap_ttl"`
+	WrapTTL     int                    `json:"wrap_ttl"`
 }
 
 type JSONResponse struct {
@@ -175,8 +176,9 @@ type JSONSecret struct {
 }
 
 type JSONWrapInfo struct {
-	TTL   int64  `json:"ttl"`
-	Token string `json:"token"`
+	TTL          int    `json:"ttl"`
+	Token        string `json:"token"`
+	CreationTime int64  `json:"creation_time"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

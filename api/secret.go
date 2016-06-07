@@ -32,8 +32,9 @@ type Secret struct {
 
 // SecretWrapInfo contains wrapping information if we have it.
 type SecretWrapInfo struct {
-	Token string `json:"token"`
-	TTL   int    `json:"ttl"`
+	Token        string `json:"token"`
+	TTL          int    `json:"ttl"`
+	CreationTime int64  `json:"creation_time"`
 }
 
 // SecretAuth is the structure containing auth information if we have it.
